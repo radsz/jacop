@@ -136,6 +136,8 @@ TOKEN :
 |     < RBOX: "]" >
 |     < LB: "{" >
 |     < RB: "}" >
+// |     < LBBAR: "{|" >
+// |     < RBBAR: "|}" >
 }
 
 /* OPERATORS */
@@ -365,7 +367,7 @@ void constraint_item() #Constraint:
 {}
 {
     <CONSTRAINT> constraint_elem() annotations()
- 	{  	// jjtThis.dump(""); 
+        {      // jjtThis.dump("");
 	    cc.generateAlias(jjtThis);
 	    // jjtThis.removeChildren();
         }
@@ -560,6 +562,10 @@ void int_ti_expr_tail() #IntTiExprTail:
 	  }
     | <LB> int_literals() <RB> 
 	   {jjtThis.setType(2);}
+
+    // | <LBBAR> set_element()
+    //       ( <COMMA> set_element() )* <RBBAR>
+    //       {jjtThis.setType(3);}
 }
 
 // float_ti_expr_tail:
@@ -660,7 +666,7 @@ void non_array_flat_expr() :
 {
 //     LOOKAHEAD(set_literal())
     LOOKAHEAD(3)
-	set_literal()
+        set_literal()
 	| scalar_flat_expr()
 }
 
@@ -693,7 +699,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
     aa = array_access_expr()
 	{ jjtThis.setType(3); 
 	  jjtThis.setIdent(aa.getIdent()); 
-	  jjtThis.setInt(aa.getIndex()); 
+	  jjtThis.setInt(aa.getIndex());
 	}
     | t = <IDENT> 
 	{ jjtThis.setType(2); jjtThis.setIdent(t.image); }
@@ -838,13 +844,15 @@ ArrayList<Integer> l = new ArrayList<Integer>();
 void set_literal() #SetLiteral:
 {}
 {
-
     ( <LB> [ scalar_flat_exprs() ] <RB>
 	{jjtThis.setType(1);}
      )
     | (int_flat_expr() <DOTDOT> int_flat_expr() 
 	{jjtThis.setType(0);}
        )
+    // | <LBBAR> [ (set_element())
+    //     ( <COMMA> set_element() )* ] <RBBAR>
+    //     {jjtThis.setType(2);}
 }
 
 // array_literal:
@@ -855,6 +863,14 @@ void array_literal() #ArrayLiteral:
 {}
 {
     <LBOX> [ non_array_flat_exprs() ] <RBOX>
+}
+
+void set_element() #SetElement:
+{}
+{
+    LOOKAHEAD(2)
+        int_flat_expr() <DOTDOT> int_flat_expr()
+        | scalar_flat_expr()
 }
 
 //---------------------------------------------------------------------------

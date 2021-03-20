@@ -11,7 +11,7 @@ public class ASTIntTiExprTail extends SimpleNode {
         super(p, id);
     }
 
-    //type 0=int; 1=interval; 2=list
+    //type 0=int; 1=interval; 2=list; 3=range set
     int type = -1;
     int low, high;
 
@@ -48,6 +48,9 @@ public class ASTIntTiExprTail extends SimpleNode {
                 break;
             case 2:
                 typeS = "(list): ";
+                break;
+            case 3:
+                typeS = "(range): ";
                 break;
             default:
                 throw new RuntimeException("Internal parsing error; " + getClass().getName());

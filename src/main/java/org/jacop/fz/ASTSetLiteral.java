@@ -12,7 +12,7 @@ public class ASTSetLiteral extends SimpleNode {
     }
 
     // My additions
-    // 0 - interval, 1 - list
+    // 0 - interval, 1 - list, 2 - range set
     int type;
 
     public void setType(int t) {
@@ -25,7 +25,7 @@ public class ASTSetLiteral extends SimpleNode {
 
     public String toString() {
         String tt = "";
-        tt = (type == 0) ? "interval" : "list";
+        tt = (type == 0) ? "interval" : (type == 1) ? "list" : "range";
         return super.toString() + "(" + tt + ")";
     }
 }

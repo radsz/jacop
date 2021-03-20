@@ -1,4 +1,4 @@
-/**
+/*
  * Support.java
  * This file is part of JaCoP.
  * <p>
@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.fz.constraints;
 
 import org.jacop.constraints.Alldistinct;
@@ -39,13 +40,12 @@ import org.jacop.fz.*;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
-
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
+/*
  * Basic support for generation of constraints in flatzinc
  *
  * @author Krzysztof Kuchcinski
@@ -61,13 +61,14 @@ public class Support implements ParserTreeConstants {
     public Options options;
 
     // =========== Annotations ===========
-    public boolean boundsConsistency = true, domainConsistency = false;
+    public boolean boundsConsistency = true;
+    public boolean domainConsistency = false;
     public int constraintPriority = -1;
     // defines_var-- not used yet
     public IntVar definedVar = null;
 
     // comparison operators
-    final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+    static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
     boolean intPresent = true;
     boolean floatPresent = true;
@@ -92,7 +93,7 @@ public class Support implements ParserTreeConstants {
             return node.getInt();
         else if (node.getType() == 2) // ident
             return dictionary.getInt(node.getIdent());
-        else if (node.getType() == 3) {// array access
+        else if (node.getType() == 3) { // array access
             int[] intTable = dictionary.getIntArray(node.getIdent());
             if (intTable == null) {
                 intPresent = false;
@@ -131,7 +132,7 @@ public class Support implements ParserTreeConstants {
             for (int i = 0; i < count; i++) {
                 ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
                 int el = getInt(child);
-                // 		if (el == Integer.MIN_VALUE)
+                //              if (el == Integer.MIN_VALUE)
                 if (!intPresent)
                     return null;
                 else
@@ -150,11 +151,11 @@ public class Support implements ParserTreeConstants {
     }
 
     public IntVar getVariable(ASTScalarFlatExpr node) {
-        if (node.getType() == 0) {// int
+        if (node.getType() == 0) { // int
             int val = node.getInt();
             return dictionary.getConstant(val);
         }
-        if (node.getType() == 1) {// bool
+        if (node.getType() == 1) { // bool
             int val = node.getInt();
             return dictionary.getConstant(val);
         } else if (node.getType() == 2) { // ident
@@ -164,7 +165,7 @@ public class Support implements ParserTreeConstants {
                 return dictionary.getConstant(bInt); // new IntVar(store, bInt, bInt);
             }
             return int_boolVar;
-        } else if (node.getType() == 3) {// array access
+        } else if (node.getType() == 3) { // array access
             if (node.getInt() >= dictionary.getVariableArray(node.getIdent()).length || node.getInt() < 0) {
                 throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt() + 1) + "]");
             } else {
@@ -177,7 +178,7 @@ public class Support implements ParserTreeConstants {
 
     FloatVar getFloatVariable(ASTScalarFlatExpr node) {
 
-        if (node.getType() == 5) {// float
+        if (node.getType() == 5) { // float
             double val = node.getFloat();
             // if (val == 0) return zero;
             // else if (val == 1) return one;
@@ -190,7 +191,7 @@ public class Support implements ParserTreeConstants {
                 return new FloatVar(store, bFloat, bFloat);
             }
             return float_Var;
-        } else if (node.getType() == 3) {// array access
+        } else if (node.getType() == 3) { // array access
             if (node.getInt() >= dictionary.getVariableFloatArray(node.getIdent()).length || node.getFloat() < 0) {
                 throw new IllegalArgumentException("Index out of bound for " + node.getIdent() + "[" + (node.getInt() + 1) + "]");
             } else
@@ -237,7 +238,7 @@ public class Support implements ParserTreeConstants {
             return node.getFloat();
         else if (node.getType() == 2) // ident
             return dictionary.getFloat(node.getIdent());
-        else if (node.getType() == 3) {// array access
+        else if (node.getType() == 3) { // array access
             double[] floatTable = dictionary.getFloatArray(node.getIdent());
             if (floatTable == null) {
                 floatPresent = false;
@@ -285,7 +286,7 @@ public class Support implements ParserTreeConstants {
             }
             return aa;
         } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
+            if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
                 // array of var
                 IntVar[] v = dictionary.getVariableArray(((ASTScalarFlatExpr) node).getIdent());
                 if (v != null)
@@ -321,7 +322,7 @@ public class Support implements ParserTreeConstants {
             }
             return aa;
         } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
+            if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
                 // array of var
                 FloatVar[] v = dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
                 return v;
@@ -344,7 +345,7 @@ public class Support implements ParserTreeConstants {
                 s[arrayIndex++] = getSetLiteral(node, i);
             }
         } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
+            if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
                 s = dictionary.getSetArray(((ASTScalarFlatExpr) node).getIdent());
                 if (s == null) { // there is still a chance that the var_array has constant sets ;)
                     SetVar[] sVar = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
@@ -356,7 +357,7 @@ public class Support implements ParserTreeConstants {
                         s = new IntDomain[sVar.length];
                         for (int i = 0; i < sVar.length; i++)
                             s[i] = sVar[i].dom().glb();
-                        // 			    System.out.println(((SetDomain)sVar[i].dom()).glb());
+                        //                          System.out.println(((SetDomain)sVar[i].dom()).glb());
                     }
                 }
             } else {
@@ -379,7 +380,7 @@ public class Support implements ParserTreeConstants {
             }
             return s;
         } else if (node.getId() == JJTSCALARFLATEXPR) {
-            if (((ASTScalarFlatExpr) node).getType() == 2) {// ident
+            if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
                 s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
                 if (s != null)
                     return s;
@@ -392,6 +393,7 @@ public class Support implements ParserTreeConstants {
     }
 
     IntDomain getSetLiteral(SimpleNode node, int index) {
+        // node.dump("Support.getSetLiteral ");
         SimpleNode child = (SimpleNode) node.jjtGetChild(index);
         if (child.getId() == JJTSETLITERAL) {
             switch (((ASTSetLiteral) child).getType()) {
@@ -406,6 +408,7 @@ public class Support implements ParserTreeConstants {
                         else
                             return new IntervalDomain(i1, i2);
                     }
+                    break;
                 case 1: // list
                     IntDomain s = new IntervalDomain();
                     int el = -1111;
@@ -415,6 +418,23 @@ public class Support implements ParserTreeConstants {
                         s.unionAdapt(el);
                     }
                     return s;
+                case 2: // range
+                    IntDomain d = new IntervalDomain();
+                    int n = child.jjtGetNumChildren();
+                    for (int i = 0; i < n; i++) {
+
+                        SimpleNode setElement = (SimpleNode) child.jjtGetChild(i);
+                        if (setElement.getId() == JJTSETELEMENT) {
+                            SimpleNode e1 = (SimpleNode) setElement.jjtGetChild(0);
+                            if (e1.getId() == JJTSCALARFLATEXPR) {
+                                d.unionAdapt(((ASTScalarFlatExpr) e1).getInt());
+                            } else if (e1.getId() == JJTINTFLATEXPR) {
+                                SimpleNode e2 = (SimpleNode) setElement.jjtGetChild(1);
+                                d.unionAdapt(new Interval(((ASTIntFlatExpr) e1).getInt(), ((ASTIntFlatExpr) e2).getInt()));
+                            }
+                        }
+                    }
+                    return d;
                 default:
                     throw new IllegalArgumentException("Set type not supported; compilation aborted.");
             }
@@ -429,6 +449,8 @@ public class Support implements ParserTreeConstants {
                     return dictionary.getSetArray(((ASTScalarFlatExpr) child).getIdent())[((ASTScalarFlatExpr) child).getInt()];
                 case 4: // string
                 case 5: // float
+                    throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+                default:
                     throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
             }
         }
@@ -457,27 +479,27 @@ public class Support implements ParserTreeConstants {
         for (int i = 1; i < constraintWithAnnotations.jjtGetNumChildren(); i++) {
             ASTAnnotation ann = (ASTAnnotation) constraintWithAnnotations.jjtGetChild(i);
 
-	    // ann.dump("");
-	    // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
-	    constraintPriority = -1;
+            // ann.dump("");
+            // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
+            constraintPriority = -1;
 
-	    if (ann.getAnnId().equals("$expr")) {
-		ASTScalarFlatExpr n = (ASTScalarFlatExpr)ann.jjtGetChild(0).jjtGetChild(0);
-		if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
-		    boundsConsistency = true;
-		    domainConsistency = false;
-		} else if (n.getIdent().equals("domain")) {
-		    boundsConsistency = false;
-		    domainConsistency = true;
-		}
-	    } else if (ann.getAnnId().equals("defines_var")) {  // no used in JaCoP yet
-		SimpleNode child = (SimpleNode) ann.jjtGetChild(0);		
+            if (ann.getAnnId().equals("$expr")) {
+                ASTScalarFlatExpr n = (ASTScalarFlatExpr)ann.jjtGetChild(0).jjtGetChild(0);
+                if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
+                    boundsConsistency = true;
+                    domainConsistency = false;
+                } else if (n.getIdent().equals("domain")) {
+                    boundsConsistency = false;
+                    domainConsistency = true;
+                }
+            } else if (ann.getAnnId().equals("defines_var")) {  // no used in JaCoP yet
+                SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
                 ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
                 Var v = getAnnVar(expr);
 
                 definedVar = (IntVar) v;
             } else if (ann.getAnnId().equals("priority")) {
-		SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
+                SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
                 ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
                 int val = getAnnInt(expr);
 
@@ -485,7 +507,7 @@ public class Support implements ParserTreeConstants {
             }
 
         }
-	// System.out.println("defines " + definedVar);
+        // System.out.println("defines " + definedVar);
     }
 
     Var getAnnVar(ASTAnnExpr node) {
@@ -502,9 +524,8 @@ public class Support implements ParserTreeConstants {
 
         ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
         if (e != null) {
-	    return getInt(e);
-	}
-        else {
+            return getInt(e);
+        } else {
             throw new IllegalArgumentException("Wrong definition od \"priority\" annotation" + node);
         }
     }
@@ -522,12 +543,12 @@ public class Support implements ParserTreeConstants {
         poseAlldistinctConstraints();
 
         // generate channeling constraints instead of reified constraints
-	reif.pose();
+        reif.pose();
     }
 
     void poseAlldistinctConstraints() {
         for (IntVar[] v : parameterListForAlldistincts) {
-	    Alldistinct ad = new Alldistinct(v);
+            Alldistinct ad = new Alldistinct(v);
             store.impose(ad);
             if (options.debug())
                 System.out.println("% " + ad);
@@ -557,20 +578,20 @@ public class Support implements ParserTreeConstants {
 
     void pose(Constraint c) throws FailException {
 
-	if (constraintPriority >= 0 && constraintPriority <= 4)
-	    store.imposeWithConsistency(c, constraintPriority);
-	else
-	    store.imposeWithConsistency(c);
+        if (constraintPriority >= 0 && constraintPriority <= 4)
+            store.imposeWithConsistency(c, constraintPriority);
+        else
+            store.imposeWithConsistency(c);
 
         if (options.debug())
             System.out.println("% " + c);
     }
 
     public void addReified(IntVar x, int v, IntVar b) {
-	reif.add(x, v, b);
+        reif.add(x, v, b);
     }
 
     public void poseReified(Support s) {
-	reif.pose();
+        reif.pose();
     }
 }
