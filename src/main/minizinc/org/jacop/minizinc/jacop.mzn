@@ -49,3 +49,13 @@ include "soft_all_different_int.mzn";
 include "soft_global_cardinality_int.mzn";
 include "GCC.mzn";
 include "channel.mzn";
+
+%% ===== JaCoP graph constraints =====
+opt bool: use_jacop_graph_constraints;
+
+include "graph/graph_match.mzn";
+include "graph/digraph_match.mzn";
+include "graph/sub_graph_match.mzn";
+include "graph/sub_digraph_match.mzn";
+include "graph/clique.mzn";
+include "graph/graph_isomorphism.mzn";
