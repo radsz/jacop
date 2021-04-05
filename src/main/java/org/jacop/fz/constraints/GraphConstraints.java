@@ -73,6 +73,7 @@ class GraphConstraints implements ParserTreeConstants {
                                                    int[].class, int[].class, IntVar[].class, int.class);
             Object constraint = cons.newInstance(t, p, targetType, patternType, m, offset);
             support.poseDC((DecomposedConstraint)constraint);
+
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName
                                        + " is not available in this version; requires org.jacop.graph.");
@@ -101,10 +102,7 @@ class GraphConstraints implements ParserTreeConstants {
         String cName = "GraphMatch";
 
         /*
-	Graph target = buildGraph(t, target_type, index_min);
-	Graph pattern = buildGraph(p, pattern_type, index_min);
-
-	GraphMatch c = new GraphMatch(store, target, pattern);
+	GraphMatch c = new GraphMatch(store, t, p, target_type, pattern_type, index_min, match, true);
         support.pose(c);
 
 	IntVar[] matchVars = c.variables();
@@ -118,21 +116,24 @@ class GraphConstraints implements ParserTreeConstants {
         */
 
         try {
-            Class<?> c = Class.forName("org.jacop.graph." + cName);
-            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
-                                                   int[].class, int[].class, int.class, boolean.class);
-            Object constraint = cons.newInstance(store, t, p, target_type, pattern_type, index_min, true);
-            support.pose((Constraint)constraint);
-
-            java.lang.reflect.Method mthd = constraint.getClass().getMethod("variables", null);
-            Object[] matchVars = (Object[])mthd.invoke(constraint, null);
-
+            IntVar[] matchVars = null;
             if (index_min == 0)
                 for (int i = 0; i < match.length; i++) 
-                    support.pose(new XeqY((IntVar)matchVars[i], match[i]));
-            else
-                for (int i = 0; i < match.length; i++)
-                    support.pose(new XplusCeqZ((IntVar)matchVars[i], index_min, match[i]));
+                    matchVars = match;
+            else {
+                matchVars = new IntVar[match.length];
+                for (int i = 0; i < match.length; i++) {
+                    matchVars[i] = new IntVar(store, "node_" + i, 0, pattern_type.length - 1);
+                    support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+                }
+            }
+
+            Class<?> c = Class.forName("org.jacop.graph." + cName);
+            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
+                                                   int[].class, int[].class, int.class, IntVar[].class, boolean.class);
+            Object constraint = cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, true);
+            support.pose((Constraint)constraint);
+
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName
                                        + " is not available in this version; requires org.jacop.graph.");
@@ -176,22 +177,24 @@ class GraphConstraints implements ParserTreeConstants {
         */
 
         try {
-            Class<?> c = Class.forName("org.jacop.graph." + cName);
-            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
-                                                   int[].class, int[].class,
-                                                   int.class, boolean.class);
-            Object constraint = cons.newInstance(store, t, p, target_type, pattern_type, index_min, false);
-            support.pose((Constraint)constraint);
-
-            java.lang.reflect.Method mthd = constraint.getClass().getMethod("variables", null);
-            Object[] matchVars = (Object[])mthd.invoke(constraint, null);
-
+            IntVar[] matchVars = null;
             if (index_min == 0)
                 for (int i = 0; i < match.length; i++) 
-                    support.pose(new XeqY((IntVar)matchVars[i], match[i]));
-            else
-                for (int i = 0; i < match.length; i++)
-                    support.pose(new XplusCeqZ((IntVar)matchVars[i], index_min, match[i]));
+                    matchVars = match;
+            else {
+                matchVars = new IntVar[match.length];
+                for (int i = 0; i < match.length; i++) {
+                    matchVars[i] = new IntVar(store, "node_" + i, 0, pattern_type.length - 1);
+                    support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+                }
+            }
+
+            Class<?> c = Class.forName("org.jacop.graph." + cName);
+            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
+                                                   int[].class, int[].class, int.class, IntVar[].class, boolean.class);
+            Object constraint = cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, false);
+            support.pose((Constraint)constraint);
+
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName
                                        + " is not available in this version; requires org.jacop.graph.");
@@ -218,6 +221,7 @@ class GraphConstraints implements ParserTreeConstants {
         IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
         int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
         String cName = "SubGraphMatch";
+
         /*
 	Graph target = buildGraph(t, target_type, index_min);
 	Graph pattern = buildGraph(p, pattern_type, index_min);
@@ -238,23 +242,24 @@ class GraphConstraints implements ParserTreeConstants {
         */
 
         try {
-            Class<?> c = Class.forName("org.jacop.graph." + cName);
-            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
-                                                   int[].class, int[].class,
-                                                   int.class, boolean.class);
-            Object constraint = cons.newInstance(store, t, p,
-                                                 target_type, pattern_type, index_min, true);
-            support.pose((Constraint)constraint);
-
-            java.lang.reflect.Method mthd = constraint.getClass().getMethod("variables", null);
-            Object[] matchVars = (Object[])mthd.invoke(constraint, null);
-
+            IntVar[] matchVars = null;
             if (index_min == 0)
                 for (int i = 0; i < match.length; i++) 
-                    support.pose(new XeqY((IntVar)matchVars[i], match[i]));
-            else
-                for (int i = 0; i < match.length; i++)
-                    support.pose(new XplusCeqZ((IntVar)matchVars[i], index_min, match[i]));
+                    matchVars = match;
+            else {
+                matchVars = new IntVar[match.length];
+                for (int i = 0; i < match.length; i++) {
+                    matchVars[i] = new IntVar(store, "node_" + i, 0, target_type.length - 1);
+                    support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+                }
+            }
+
+            Class<?> c = Class.forName("org.jacop.graph." + cName);
+            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
+                                                   int[].class, int[].class, int.class, IntVar[].class, boolean.class);
+            Object constraint = cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, true);
+            support.pose((Constraint)constraint);
+
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName
                                        + " is not available in this version; requires org.jacop.graph.");
@@ -304,23 +309,24 @@ class GraphConstraints implements ParserTreeConstants {
         */
         
         try {
-            Class<?> c = Class.forName("org.jacop.graph." + cName);
-            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
-                                                   int[].class, int[].class,
-                                                   int.class, boolean.class);
-            Object constraint = cons.newInstance(store, t, p,
-                                                 target_type, pattern_type, index_min, false);
-            support.pose((Constraint)constraint);
-
-            java.lang.reflect.Method mthd = constraint.getClass().getMethod("variables", null);
-            Object[] matchVars = (Object[])mthd.invoke(constraint, null);
-
+            IntVar[] matchVars = null;
             if (index_min == 0)
                 for (int i = 0; i < match.length; i++) 
-                    support.pose(new XeqY((IntVar)matchVars[i], match[i]));
-            else
-                for (int i = 0; i < match.length; i++)
-                    support.pose(new XplusCeqZ((IntVar)matchVars[i], index_min, match[i]));
+                    matchVars = match;
+            else {
+                matchVars = new IntVar[match.length];
+                for (int i = 0; i < match.length; i++) {
+                    matchVars[i] = new IntVar(store, "node_" + i, 0, target_type.length - 1);
+                    support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+                }
+            }
+
+            Class<?> c = Class.forName("org.jacop.graph." + cName);
+            Constructor<?> cons = c.getConstructor(Store.class, int[].class, int[].class,
+                                                   int[].class, int[].class, int.class, IntVar[].class, boolean.class);
+            Object constraint = cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, false);
+            support.pose((Constraint)constraint);
+
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName
                                        + " is not available in this version; requires org.jacop.graph.");
@@ -366,18 +372,11 @@ class GraphConstraints implements ParserTreeConstants {
 
         try {
             Class<?> cls = Class.forName("org.jacop.graph." + cName);
-            Constructor<?> cons = cls.getConstructor(Store.class, int[].class, int[].class, int.class, IntVar.class);
-            Object constraint = cons.newInstance(store, g, type, index_min, cost);
+            Constructor<?> cons = cls.getConstructor(Store.class, int[].class, int[].class,
+                                                     int.class, IntVar[].class, IntVar.class);
+            Object constraint = cons.newInstance(store, g, type, index_min, c, cost);
             support.pose((Constraint)constraint);
 
-            java.lang.reflect.Method mthd = constraint.getClass().getMethod("variables", null);
-            Object[] vars = (Object[])mthd.invoke(constraint, null);
-
-            if (vars.length != c.length)
-                throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size the same as pattern graph");
-
-            for (int i = 0; i < c.length; i++) 
-                support.pose(new XeqY((IntVar)vars[i], c[i]));
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName
                                        + " is not available in this version; requires org.jacop.graph.");
@@ -395,48 +394,4 @@ class GraphConstraints implements ParserTreeConstants {
                                        + " is not available in this version; requires org.jacop.graph.");
         }
     }
-    
-    // public Graph buildGraph(int[] edges, int[] type, int lb) {
-
-    //     int min = Arrays.stream(edges).min().getAsInt();
-    //     int max = Arrays.stream(edges).max().getAsInt();
-	
-    //     int nn = max-min+1;
-    //     Node[] nodes = new Node[nn];
-
-    //     for (int i = 0; i < nn; i++) 
-    //         nodes[i] = new Node(type[i]);
-
-    //     for (int i=0; i < edges.length/2; i++) {
-    //         int s = edges[2*i] - lb;
-    //         int e = edges[2*i+1] - lb;
-    //         nodes[s].addPort( new Port( e, Def.connection));
-    //         nodes[e].addPort( new Port( s, Def.connection));
-    //         // System.out.println("% | "+ s + ", "+ e);
-    //     }
-
-    //     return new Graph( nodes );
-    // }    
-
-    // public Graph buildDiGraph(int[] edges, int[] type, int lb) {
-
-    //     int min = Arrays.stream(edges).min().getAsInt();
-    //     int max = Arrays.stream(edges).max().getAsInt();
-	
-    //     int nn = max-min+1;
-    //     Node[] nodes = new Node[nn];
-
-    //     for (int i = 0; i < nn; i++) 
-    //         nodes[i] = new Node(type[i]);
-
-    //     for (int i=0; i < edges.length/2; i++) {
-    //         int s = edges[2*i] - lb;
-    //         int e = edges[2*i+1] - lb;
-    //         nodes[s].addPort( new Port( e, Def.output) );
-    //         nodes[e].addPort( new Port( s, Def.input) );
-    //         // System.out.println("% | "+ s + ", "+ e);
-    //     }
-
-    //     return new Graph( nodes );
-    // }    
 }

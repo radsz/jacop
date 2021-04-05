@@ -8,7 +8,13 @@ Version 4.9
    AFCMaxDeg/AFCMax for variable selection instead of input order
    criteria.
 
-3. Bug corrections, code cleaning and performance improvements.
+3. Adding to minizinc graph constraints on (sub-)graph isomorphism,
+   matching and clique. Prepared to use package org.jacop.graph that
+   will make it possible to used graph global constraints
+   instead. This is controlled by variable use_jacop_graph_constraints
+   = true in minizinc library file jacop.mzn.
+
+4. Bug corrections, code cleaning and performance improvements.
 
 Version 4.8
 =============

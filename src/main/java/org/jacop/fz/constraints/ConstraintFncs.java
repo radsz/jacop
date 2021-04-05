@@ -39,6 +39,7 @@ public final class ConstraintFncs {
     OperationConstraints oc;
     ElementConstraints ec;
     GlobalConstraints gc;
+    GraphConstraints graph;
     SetConstraints sc;
     FloatComparisonConstraints fcc;
     FloatLinearConstraints flc;
@@ -56,6 +57,7 @@ public final class ConstraintFncs {
         fcc = new FloatComparisonConstraints(support);
         flc = new FloatLinearConstraints(support);
         foc = new FloatOperationConstraints(support);
+        graph = new GraphConstraints(support);
     }
 
     // Boolean constraints
@@ -863,6 +865,32 @@ public final class ConstraintFncs {
 
     public void float_pow(SimpleNode n) {
         foc.gen_float_pow(n);
+    }
+
+    // =========== graph constraints ===========
+
+    public void jacop_graph_match(SimpleNode n) {
+	graph.gen_jacop_graph_match(n);
+    }
+
+    public void jacop_digraph_match(SimpleNode n) {
+	graph.gen_jacop_digraph_match(n);
+    }
+
+    public void jacop_sub_graph_match(SimpleNode n) {
+	graph.gen_jacop_sub_graph_match(n);
+    }
+
+    public void jacop_sub_digraph_match(SimpleNode n) {
+	graph.gen_jacop_sub_digraph_match(n);
+    }
+
+    public void jacop_clique(SimpleNode n) {
+	graph.gen_jacop_clique(n);
+    }
+
+    public void jacop_graph_isomorphism(SimpleNode n) {
+        graph.gen_jacop_graph_isomorphism(n);
     }
 
     // public void float_cosh(SimpleNode n) {foc.gen_float_cosh(n);}
