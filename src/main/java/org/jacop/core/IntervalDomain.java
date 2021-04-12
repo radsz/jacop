@@ -745,15 +745,35 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
         assert checkInvariants() == null : checkInvariants();
 
-        for (int m = 0; m < size; m++) {
+        // // naive method
+        // for (int m = 0; m < size; m++) {
+        //     Interval i = intervals[m];
+        //     if (i.max >= value)
+        //         if (value >= i.min)
+        //             return true;
+        // }
+
+        // return false;
+
+        // binary search algorithm
+        int l = 0;
+        int r = size - 1;
+
+        while (l <= r) {
+            // Java (l + r) / 2 rounds-up down (floor) like Math.floorDiv((l + r), 2);
+            // but shift right by one position does it also and it is faster ;)
+            int m = (l + r) >> 1;
             Interval i = intervals[m];
-            if (i.max >= value)
-                if (value >= i.min)
-                    return true;
+
+            if (value > i.max)
+                l = m + 1;
+            else if (value >= i.min)
+                return true;
+            else
+                r = m - 1;
         }
 
         return false;
-
     }
 
     /**

@@ -1,4 +1,4 @@
- /*
+/*
  * GraphConstraints.java
  * This file is part of JaCoP.
  * <p>
@@ -32,7 +32,6 @@ package org.jacop.fz.constraints;
 
 import org.jacop.constraints.*;
 import org.jacop.core.*;
-//import org.jacop.graph.*;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
@@ -40,7 +39,7 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Set;
 
-/**
+/*
  * Generation of graph constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
@@ -93,7 +92,7 @@ class GraphConstraints implements ParserTreeConstants {
     }
     
     void gen_jacop_graph_match(SimpleNode node) {
-	int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
@@ -102,17 +101,17 @@ class GraphConstraints implements ParserTreeConstants {
         String cName = "GraphMatch";
 
         /*
-	GraphMatch c = new GraphMatch(store, t, p, target_type, pattern_type, index_min, match, true);
+        GraphMatch c = new GraphMatch(store, t, p, target_type, pattern_type, index_min, match, true);
         support.pose(c);
 
-	IntVar[] matchVars = c.variables();
+        IntVar[] matchVars = c.variables();
 
-	if (index_min == 0)
-	    for (int i = 0; i < match.length; i++) 
-		support.pose(new XeqY(matchVars[i], match[i]));
-	else
-	    for (int i = 0; i < match.length; i++)
-		support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+        if (index_min == 0)
+            for (int i = 0; i < match.length; i++) 
+                support.pose(new XeqY(matchVars[i], match[i]));
+        else
+            for (int i = 0; i < match.length; i++)
+                support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
         */
 
         try {
@@ -152,7 +151,7 @@ class GraphConstraints implements ParserTreeConstants {
     }
 
     void gen_jacop_digraph_match(SimpleNode node) {
-	int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
@@ -161,19 +160,19 @@ class GraphConstraints implements ParserTreeConstants {
         String cName = "GraphMatch";
 
         /*
-	Graph target = buildDiGraph(t, target_type, index_min);
-	Graph pattern = buildDiGraph(p, pattern_type, index_min);
+        Graph target = buildDiGraph(t, target_type, index_min);
+        Graph pattern = buildDiGraph(p, pattern_type, index_min);
 
-	GraphMatch c = new GraphMatch(store, target, pattern);
-	support.pose(c);
-	IntVar[] matchVars = c.variables();
+        GraphMatch c = new GraphMatch(store, target, pattern);
+        support.pose(c);
+        IntVar[] matchVars = c.variables();
 
-	if (index_min == 0)
-	    for (int i = 0; i < match.length; i++) 
-		support.pose(new XeqY(matchVars[i], match[i]));
-	else
-	    for (int i = 0; i < match.length; i++)
-		support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+        if (index_min == 0)
+            for (int i = 0; i < match.length; i++) 
+                support.pose(new XeqY(matchVars[i], match[i]));
+        else
+            for (int i = 0; i < match.length; i++)
+                support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
         */
 
         try {
@@ -214,7 +213,7 @@ class GraphConstraints implements ParserTreeConstants {
     }
 
     void gen_jacop_sub_graph_match(SimpleNode node) {
-	int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
@@ -223,22 +222,22 @@ class GraphConstraints implements ParserTreeConstants {
         String cName = "SubGraphMatch";
 
         /*
-	Graph target = buildGraph(t, target_type, index_min);
-	Graph pattern = buildGraph(p, pattern_type, index_min);
+        Graph target = buildGraph(t, target_type, index_min);
+        Graph pattern = buildGraph(p, pattern_type, index_min);
 
-	SubGraphMatch c = new SubGraphMatch(store, target, pattern);
-	support.pose(c);
-	IntVar[] matchVars = c.variables();
+        SubGraphMatch c = new SubGraphMatch(store, target, pattern);
+        support.pose(c);
+        IntVar[] matchVars = c.variables();
 
-	if (matchVars.length != match.length)
-	    throw new IllegalArgumentException("%% ERROR: sub_graph_match must have pattern size the same as pattern graph");
-	    
-	if (index_min == 0)
-	    for (int i = 0; i < match.length; i++) 
-		support.pose(new XeqY(matchVars[i], match[i]));
-	else
-	    for (int i = 0; i < match.length; i++)
-		support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+        if (matchVars.length != match.length)
+            throw new IllegalArgumentException("%% ERROR: sub_graph_match must have pattern size the same as pattern graph");
+            
+        if (index_min == 0)
+            for (int i = 0; i < match.length; i++) 
+                support.pose(new XeqY(matchVars[i], match[i]));
+        else
+            for (int i = 0; i < match.length; i++)
+                support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
         */
 
         try {
@@ -279,7 +278,7 @@ class GraphConstraints implements ParserTreeConstants {
     }
 
     void gen_jacop_sub_digraph_match(SimpleNode node) {
-	int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
@@ -288,24 +287,24 @@ class GraphConstraints implements ParserTreeConstants {
         String cName = "SubGraphMatch";
 
         /*
-	Graph target = buildDiGraph(t, target_type, index_min);
-	Graph pattern = buildDiGraph(p, pattern_type, index_min);
+        Graph target = buildDiGraph(t, target_type, index_min);
+        Graph pattern = buildDiGraph(p, pattern_type, index_min);
 
-	// GraphMatchDecomposed c = new GraphMatchDecomposed(store, target, pattern);
-	// support.poseDC(c);
-	SubGraphMatch c = new SubGraphMatch(store, target, pattern);
-	support.pose(c);
-	IntVar[] matchVars = c.variables();
+        // GraphMatchDecomposed c = new GraphMatchDecomposed(store, target, pattern);
+        // support.poseDC(c);
+        SubGraphMatch c = new SubGraphMatch(store, target, pattern);
+        support.pose(c);
+        IntVar[] matchVars = c.variables();
 
-	if (matchVars.length != match.length)
-	    throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size the same as pattern graph");
+        if (matchVars.length != match.length)
+            throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size the same as pattern graph");
 
-	if (index_min == 0)
-	    for (int i = 0; i < match.length; i++) 
-		support.pose(new XeqY(matchVars[i], match[i]));
-	else
-	    for (int i = 0; i < match.length; i++)
-		support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
+        if (index_min == 0)
+            for (int i = 0; i < match.length; i++) 
+                support.pose(new XeqY(matchVars[i], match[i]));
+        else
+            for (int i = 0; i < match.length; i++)
+                support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
         */
         
         try {
@@ -346,29 +345,29 @@ class GraphConstraints implements ParserTreeConstants {
     }
 
     void gen_jacop_clique(SimpleNode node) {
-	int[] g = support.getIntArray((SimpleNode) node.jjtGetChild(0));
-	IntVar[] c = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        int[] g = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] c = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
         String cName = "Clique";
 
-	int[] type = new int[c.length];
+        int[] type = new int[c.length];
         Arrays.fill(type, 1);
 
         IntVar cost = new IntVar(store, 0, IntDomain.MaxInt);
 
-	// Graph graph = buildGraph(g, type, index_min);
+        // Graph graph = buildGraph(g, type, index_min);
 
-	// // CliqueDecomposed ctr = new CliqueDecomposed(store, graph, cost);
-	// // support.poseDC(ctr);
-	// Clique ctr = new Clique(store, graph, cost);
-	// support.pose(ctr);
-	// IntVar[] vars = ctr.variables();
+        // // CliqueDecomposed ctr = new CliqueDecomposed(store, graph, cost);
+        // // support.poseDC(ctr);
+        // Clique ctr = new Clique(store, graph, cost);
+        // support.pose(ctr);
+        // IntVar[] vars = ctr.variables();
 
-	// if (vars.length != c.length)
-	//     throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size the same as pattern graph");
+        // if (vars.length != c.length)
+        //     throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size the same as pattern graph");
 
-	// for (int i = 0; i < c.length; i++) 
-	//     support.pose(new XeqY(vars[i], c[i]));
+        // for (int i = 0; i < c.length; i++) 
+        //     support.pose(new XeqY(vars[i], c[i]));
 
         try {
             Class<?> cls = Class.forName("org.jacop.graph." + cName);
