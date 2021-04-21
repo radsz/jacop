@@ -34,41 +34,41 @@ import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * SumWeight constraint implements the weighted summation over several
- * variables . It provides the weighted sum from all variables on the list.
- * The weights are integers.
- * <p>
- * Use when number of variables is greater than 15, otherwise use LinearInt.
+ * variables. It provides the weighted sum from all variables on the
+ * list.  The weights are integers.
+ * <p> 
+ * Use when number of variables is large (for example, greater than
+ * 30), otherwise use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 3.1
+ * @version 4.8
  */
 public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a list of variables being summed.
      */
-    final protected IntVar list[];
+    protected final IntVar[] list;
 
     /**
      * It specifies a list of weights associated with the variables being summed.
      */
-    final protected long weights[];
+    protected final long[] weights;
 
     /**
      * It specifies value to which SumWeight is equal to.
      */
-    final protected long equalTo;
+    protected final long equalTo;
 
     /**
      * The sum of grounded variables.
@@ -83,6 +83,8 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
     /**
+     * SumWeight constraint implements the weighted summation over several
+     * variables.
      * @param list    the list of varibales
      * @param weights the list of weights
      * @param sum     the resulting sum
@@ -92,6 +94,8 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
     }
 
     /**
+     * SumWeight constraint implements the weighted summation over several
+     * variables.
      * @param list    the list of varibales
      * @param weights the list of weights
      * @param equalTo the value to which SumWeight is equal to.
@@ -229,7 +233,8 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
                 IntVar v = list[i];
 
                 long w = weights[i];
-                int divMin, divMax;
+                int divMin;
+                int divMax;
                 if (w > 0) {
                     divMin = long2int(divRoundUp((min + lMaxArray[i]), w));
                     divMax = long2int(divRoundDown((max + lMinArray[i]), w));
@@ -401,7 +406,8 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
         long s1 = Math.multiplyExact(equalTo, -1);
         long s2 = Math.multiplyExact(equalTo, -1);
 
-        long sumMin = 0, sumMax = 0;
+        long sumMin = 0;
+        long sumMax = 0;
         if (s1 <= s2) {
             sumMin = Math.addExact(sumMin, s1);
             sumMax = Math.addExact(sumMax, s2);

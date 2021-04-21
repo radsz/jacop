@@ -707,8 +707,12 @@ class LinearConstraints implements ParserTreeConstants {
                                 support.pose(new SumBool(vect, "==", p2[pos]));
                             else if (vect.length == 2)
                                 support.pose(new XplusYeqZ(vect[0], vect[1], p2[pos]));
-                            else
-                                support.pose(new SumInt(vect, "==", p2[pos]));
+                            else {
+                                if (vect.length < 30) 
+                                    support.pose(new SumInt(vect, "==", p2[pos]));
+                                else
+                                    support.pose(new Sum(vect, p2[pos]));
+                            }
                         } else {
                             // p3 != 0
                             IntVar[] vect = new IntVar[p1.length];
@@ -731,8 +735,12 @@ class LinearConstraints implements ParserTreeConstants {
                                 support.pose(new SumBool(vect, "==", v));
                             else if (vect.length == 2)
                                 support.pose(new XplusYeqZ(vect[0], vect[1], v));
-                            else
-                                support.pose(new SumInt(vect, "==", v));
+                            else {
+                                if (vect.length < 30)
+                                    support.pose(new SumInt(vect, "==", p2[pos]));
+                                else
+                                    support.pose(new Sum(vect, p2[pos]));
+                            }
                         }
                     } else if (allWeightsOne(p1)) {
                         IntVar v = support.dictionary.getConstant(p3);

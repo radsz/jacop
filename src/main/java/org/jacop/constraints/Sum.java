@@ -32,32 +32,30 @@ package org.jacop.constraints;
 
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * Sum constraint implements the summation over several Variable's . It provides
  * the sum from all Variable's on the list.
+ * <p>
+ * Use when number of variables is large (for example, greater than
+ * 30), otherwise use SumInt.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.8
  */
 
-
-/**
- * @deprecated As of release 4.3.1 replaced by SumInt constraint.
- */
-@Deprecated public class Sum extends Constraint implements SatisfiedPresent {
+public class Sum extends Constraint implements SatisfiedPresent {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies the variables to be summed.
      */
-    public IntVar list[];
+    public IntVar[] list;
 
     /**
      * It specifies variable sum to store the overall sum of the variables being summed up.
@@ -90,7 +88,7 @@ import java.util.stream.Stream;
         this.sum = sum;
         this.list = Arrays.copyOf(list, list.length);
 
-        checkForOverflow();
+        // checkForOverflow();
 
         setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
     }
@@ -109,16 +107,17 @@ import java.util.stream.Stream;
     @Override public void consistency(Store store) {
 
 
+        int pointer = nextGroundedPosition.value();
+        long sumGroundedLocal = sumGrounded.value();
+
         do {
 
             store.propagationHasOccurred = false;
 
-            int pointer = nextGroundedPosition.value();
+            long lMin = sumGroundedLocal;
+            long lMax = lMin;
 
-            int lMin = sumGrounded.value();
-            int lMax = lMin;
-
-            int sumJustGrounded = 0;
+            long sumJustGrounded = 0;
 
             for (int i = pointer; i < list.length; i++) {
                 IntDomain currentDomain = list[i].domain;
@@ -140,8 +139,7 @@ import java.util.stream.Stream;
                 lMax += currentDomain.max();
             }
 
-            nextGroundedPosition.update(pointer);
-            sumGrounded.update(sumGrounded.value() + sumJustGrounded);
+            sumGroundedLocal += sumJustGrounded;
 
             lMin += sumJustGrounded;
             lMax += sumJustGrounded;
@@ -155,33 +153,33 @@ import java.util.stream.Stream;
             if (sum.max() < lMax)
                 needAdaptMax = true;
 
-            sum.domain.in(store.level, sum, lMin, lMax);
+            sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
 
             store.propagationHasOccurred = false;
-
-            int min = sum.min() - lMax;
-            int max = sum.max() - lMin;
 
             if (needAdaptMin && !needAdaptMax)
                 for (int i = pointer; i < list.length; i++) {
                     IntVar v = list[i];
-                    v.domain.inMin(store.level, v, min + v.max());
+                    v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
                 }
 
             if (!needAdaptMin && needAdaptMax)
                 for (int i = pointer; i < list.length; i++) {
                     IntVar v = list[i];
-                    v.domain.inMax(store.level, v, max + v.min());
+                    v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
                 }
 
             if (needAdaptMin && needAdaptMax)
                 for (int i = pointer; i < list.length; i++) {
                     IntVar v = list[i];
-                    v.domain.in(store.level, v, min + v.max(), max + v.min());
+                    v.domain.in(store.level, v, long2int(sum.min() - lMax + v.max()),
+                                long2int(sum.max() - lMin + v.min()));
                 }
 
         } while (store.propagationHasOccurred);
 
+        nextGroundedPosition.update(pointer);
+        sumGrounded.update(long2int(sumGroundedLocal));
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -210,20 +208,20 @@ import java.util.stream.Stream;
         return sumAll == sum.min();
     }
 
-    void checkForOverflow() {
+    // void checkForOverflow() {
 
-        int sumMin = 0, sumMax = 0;
-        for (int i = 0; i < list.length; i++) {
-            int n1 = list[i].min();
-            int n2 = list[i].max();
+    //     int sumMin = 0, sumMax = 0;
+    //     for (int i = 0; i < list.length; i++) {
+    //         int n1 = list[i].min();
+    //         int n2 = list[i].max();
 
-            sumMin = Math.addExact(sumMin, n1);
-            sumMax = Math.addExact(sumMax, n2);
-        }
+    //         sumMin = Math.addExact(sumMin, n1);
+    //         sumMax = Math.addExact(sumMax, n2);
+    //     }
 
-        Math.subtractExact(sumMin, sum.max());
-        Math.subtractExact(sumMax, sum.min());
-    }
+    //     Math.subtractExact(sumMin, sum.max());
+    //     Math.subtractExact(sumMax, sum.min());
+    // }
 
     @Override public String toString() {
 
