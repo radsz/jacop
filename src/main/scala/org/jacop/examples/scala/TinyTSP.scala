@@ -59,8 +59,8 @@ object TinyTSP extends App with jacop {
 
   circuit(visit)
 
-  val result = minimize(search(visit, input_order, indomain_min), distance, () => printValue)
-  statistics
+  val result = minimize(search(visit, input_order, indomain_min), distance, () => printValue())
+  statistics()
 
   def printValue() : Unit = {
     print(" 1 -> ")

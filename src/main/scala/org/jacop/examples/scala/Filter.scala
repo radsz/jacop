@@ -94,7 +94,7 @@ object Filter extends App with jacop {
   val tr = List.tabulate(t.length)(i => List(t(i), r(i)))
 
   // numberSolutions(2)
-  val result = minimize(search_vector(tr, smallest_min, indomain_min), end, () => printSol)
+  val result = minimize(search_vector(tr, smallest_min, indomain_min), end, () => printSol())
   // numberSolutions(2)
   // val result = minimize_seq( List(search(t, smallest_min, indomain_min), search(r, input_order, indomain_min)), 
   // end, printSol )

@@ -59,6 +59,6 @@ object Powell extends App with jacop {
   scala.math.sqrt(10.0) * (x(0) - x(3)) * (x(0) - x(3)) #= 0.0
 
   val result = satisfyAll(search_float(x.toList, input_order), () => println(x.toList))
-  statistics
+  statistics()
 
 }

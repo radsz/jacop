@@ -106,7 +106,7 @@ object Parcel extends App with jacop {
   val cost = sum(costs)
 
   val result = minimize_seq(List(search(costs, max_regret, indomain_min), search(cities, input_order, indomain_min)), cost, printSol())
-  statistics
+  statistics()
 
   def printSol() = () => {
     print(cities.toList)

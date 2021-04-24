@@ -84,7 +84,7 @@ object Jobshop extends App with jacop {
   }
 
   val t_list: List[IntVar] = List.tabulate(n, k)((i, j) => t(i)(j)).flatten
-  val result = minimize(search(t_list, smallest, indomain_min), end, () => printSol)
+  val result = minimize(search(t_list, smallest, indomain_min), end, () => printSol())
 
   //printSol)
 
