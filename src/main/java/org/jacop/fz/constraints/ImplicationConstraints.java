@@ -1,5 +1,5 @@
 /*
- * ReificationConstraints.java
+ * ImplicationConstraints.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import org.jacop.core.*;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
-import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.ChannelImply;
 
 /**
  * It collects all int_eq_reif constraint to create Channel
@@ -45,7 +45,7 @@ import org.jacop.constraints.ChannelReif;
  */
 
 
-class ReificationConstraints {
+class ImplicationConstraints {
 
     Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
 
@@ -53,7 +53,7 @@ class ReificationConstraints {
 
     Support support;
 
-    public ReificationConstraints(Support support) {
+    public ImplicationConstraints(Support support) {
         this.support = support;
     }
 
@@ -91,7 +91,7 @@ class ReificationConstraints {
             Map<Integer,IntVar> vb = e.getValue();
 
             if (vb.size() > minSize)
-                support.pose(new ChannelReif(var, vb));
+                support.pose(new ChannelImply(var, vb));
         }
     }
 

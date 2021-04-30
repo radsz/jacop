@@ -77,6 +77,7 @@ public class Support implements ParserTreeConstants {
     ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
 
     ReificationConstraints reif = new ReificationConstraints(this);
+    ImplicationConstraints imply = new ImplicationConstraints(this);
 
     public Support(Store store, Tables d, SatTranslation sat) {
         this.store = store;
@@ -544,6 +545,8 @@ public class Support implements ParserTreeConstants {
 
         // generate channeling constraints instead of reified constraints
         reif.pose();
+        // generate channeling constraints instead of implied constraints
+        imply.pose();
     }
 
     void poseAlldistinctConstraints() {
@@ -593,5 +596,13 @@ public class Support implements ParserTreeConstants {
 
     public void poseReified(Support s) {
         reif.pose();
+    }
+
+    public void addImplied(IntVar x, int v, IntVar b) {
+        imply.add(x, v, b);
+    }
+
+    public void poseImplied(Support s) {
+        imply.pose();
     }
 }

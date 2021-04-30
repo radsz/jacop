@@ -675,6 +675,10 @@ class ComparisonConstraints implements ParserTreeConstants {
 	    switch (operation) {
 
 	    case Support.eq:
+
+		if (support.imply.size(v1) > support.imply.minSize) // do not generate reified; channel will be generated
+		    return;
+
 		if (!v1.domain.contains(i2)) {
 		    v3.domain.in(store.level, v3, 0, 0);
 		    return;

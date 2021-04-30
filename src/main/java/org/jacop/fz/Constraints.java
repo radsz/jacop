@@ -210,7 +210,26 @@ public class Constraints implements ParserTreeConstants {
 		    return;
 
 		support.addReified(x, v, b);
+	    }  else if (p.startsWith("int_eq_imp")) {
+                ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+                ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+                ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+		IntVar b = support.getVariable(p3);
+		IntVar x;
+		int v;
+
+		if (p2.getType() == 0) { // second argument integer
+		    x = support.getVariable(p1);
+		    v = support.getInt(p2);
+		} else if (p1.getType() == 0) { // first argument integer
+		    x = support.getVariable(p2);
+		    v = support.getInt(p1);
+		} else // no integers
+		    return;
+
+		support.addImplied(x, v, b);
 	    }
+
         }
     }
 }

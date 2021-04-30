@@ -1,5 +1,5 @@
 /*
- * Channel.java
+ * ChannelImply.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -39,13 +39,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 /**
- * Channel constraints "constraint" {@literal <=>} B.
+ * ChannelImply constraints "B {@literal =>} constraint".
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.8
  */
 
-public class Channel extends Constraint implements SatisfiedPresent {
+public class ChannelImply extends Constraint implements SatisfiedPresent {
 
     static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -69,16 +69,16 @@ public class Channel extends Constraint implements SatisfiedPresent {
     Map<Integer,IntVar> valueMap = new HashMap<>();
 
     /**
-     * It creates Channel constraint.
+     * It creates ChannelImply constraint.
      *
      * @param x variable to be checked.
      * @param bs array representing the status of equality x = i.
      * @param value array of values that are checked against x.
      */
-    public Channel(IntVar x, IntVar[] bs, int[] value) {
+    public ChannelImply(IntVar x, IntVar[] bs, int[] value) {
 
         if (value.length != bs.length)
-            throw new IllegalArgumentException("Channel: Status array size ("
+            throw new IllegalArgumentException("ChannelImply: Status array size ("
                                                + bs.length
                                                + "), has not equal size as number of values "
                                                + value.length);
@@ -86,7 +86,7 @@ public class Channel extends Constraint implements SatisfiedPresent {
         checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
         for (IntVar b : bs)
             if (b.min() > 1 || b.max() < 0)
-                throw new IllegalArgumentException("Channel: Variable b in reified constraint must have domain at most 0..1");
+                throw new IllegalArgumentException("ChannelImply: Variable b in reified constraint must have domain at most 0..1");
 
         numberId = idNumber.incrementAndGet();
         this.x = x;
@@ -104,22 +104,22 @@ public class Channel extends Constraint implements SatisfiedPresent {
     }
 
     /**
-     * It creates Channel constraint.
+     * It creates ChannelImply constraint.
      *
      * @param x variable to be checked.
      * @param bs array representing the status of equality x = i.
      * @param value set of values that are checked against x.
      */
-    public Channel(IntVar x, IntVar[] bs, IntDomain value) {
+    public ChannelImply(IntVar x, IntVar[] bs, IntDomain value) {
         this(x, bs, toArray(value));
     }
 
-    public Channel(IntVar x, IntVar[] bs) {
+    public ChannelImply(IntVar x, IntVar[] bs) {
 
         this(x, bs, toArray(x.domain));
     }
 
-    public Channel(IntVar x, Map<Integer, ? extends IntVar> bs) {
+    public ChannelImply(IntVar x, Map<Integer, ? extends IntVar> bs) {
 
         numberId = idNumber.incrementAndGet();
 
@@ -160,12 +160,14 @@ public class Channel extends Constraint implements SatisfiedPresent {
 
         for (int i = start; i < n; i++) {
 
-            if (item[i].b.max() == 0)
-                x.domain.inComplement(store.level, x, item[i].value);
+            if (item[i].b.max() == 0) {
+                swap(start, i);
+                start++;
+            }
             else if (item[i].b.min() == 1)
                 x.domain.in(store.level, x, item[i].value, item[i].value);
 
-            if (! x.domain.contains(item[i].value)) {
+            if (item[i].b.max() != 0 && ! x.domain.contains(item[i].value)) {
                 item[i].b.domain.in(store.level, item[i].b, 0, 0);
                 swap(start, i);
                 start++;
@@ -177,12 +179,11 @@ public class Channel extends Constraint implements SatisfiedPresent {
 
         if (x.singleton()) {
             IntVar b = valueMap.get(x.value());
-            b.domain.in(store.level, b, 1, 1);
 
             for (int i = start; i < n; i++)
                 if (item[i].b != b)
                     item[i].b.domain.in(store.level, item[i].b, 0, 0);
-            return;
+                
         }
 
         position.update(start);
@@ -232,7 +233,7 @@ public class Channel extends Constraint implements SatisfiedPresent {
 
     @Override public String toString() {
 
-        return id() + " : Channel(" + x + ", " + Arrays.asList(item) + " )";
+        return id() + " : ChannelImply(" + x + ", " + Arrays.asList(item) + " )";
     }
 
     static class Item {

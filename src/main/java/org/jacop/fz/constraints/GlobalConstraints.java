@@ -1277,7 +1277,7 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] bs = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         IntDomain vs = support.getSetLiteral(node, 2);
 
-        support.pose(new Channel(x, bs, vs));
+        support.pose(new ChannelReif(x, bs, vs));
 
         // Decomposition
         // int[] values = new int[vs.getSize()];
