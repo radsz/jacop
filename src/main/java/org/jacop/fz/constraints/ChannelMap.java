@@ -1,5 +1,5 @@
 /*
- * ImplicationConstraints.java
+ * ChannelMap.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,10 +34,9 @@ import org.jacop.core.*;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
-import org.jacop.constraints.ChannelImply;
 
 /**
- * It collects all int_eq_imp constraint to create ChannelImply
+ * It collects all int_eq_(reif|imp) constraint to create Channel(Reif|Imply)
  * constraints, if possible.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -45,21 +44,65 @@ import org.jacop.constraints.ChannelImply;
  */
 
 
-class ImplicationConstraints extends ChannelMap {
+class ChannelMap {
 
-    public ImplicationConstraints(Support support) {
-        super(support);
+    Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
+
+    int minSize = 1;
+
+    Support support;
+
+    public ChannelMap(Support support) {
+        this.support = support;
     }
 
-    void pose() {
+    public void add(IntVar x, int v, IntVar b) {
+        Map<Integer, IntVar> map = cs.get(x);
+
+        if (map != null)
+            if (map.get(v) != null) {
+                support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
+            } else {
+                map.put(v, b);
+                cs.put(x, map);
+            }
+        else {
+            map = new HashMap<>();
+            map.put(v, b);
+            cs.put(x, map);
+        }
+    }
+
+    public int size(IntVar v) {
+        Map<Integer, IntVar> m = cs.get(v);
+
+        if (m != null)
+            return m.size();
+        else
+            return 0;
+    }
+
+    public String toString() {
+
+        StringBuilder result = new StringBuilder();
+
         Set<Map.Entry<IntVar, Map<Integer,IntVar>>> entries = cs.entrySet();
 
         for (Map.Entry<IntVar, Map<Integer,IntVar>> e : entries) {
             IntVar var = e.getKey();
             Map<Integer,IntVar> vb = e.getValue();
+            Set<Map.Entry<Integer,IntVar>> es = vb.entrySet();
 
-            if (vb.size() > minSize)
-                support.pose(new ChannelImply(var, vb));
+            result.append(var + "[");
+
+            for (Map.Entry<Integer,IntVar> ei : es) {
+                int val = ei.getKey();
+                IntVar bb = ei.getValue();
+
+                result.append("[" + val + ", " + bb + "]");
+            }
         }
+        result.append("]");
+        return result.toString();
     }
 }

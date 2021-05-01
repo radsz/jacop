@@ -160,9 +160,12 @@ public class ChannelReif extends Constraint implements SatisfiedPresent {
 
         for (int i = start; i < n; i++) {
 
-            if (item[i].b.max() == 0)
+            if (item[i].b.max() == 0) {
                 x.domain.inComplement(store.level, x, item[i].value);
-            else if (item[i].b.min() == 1)
+                swap(start, i);
+                start++;
+                continue;
+            } else if (item[i].b.min() == 1)
                 x.domain.in(store.level, x, item[i].value, item[i].value);
 
             if (! x.domain.contains(item[i].value)) {

@@ -163,11 +163,11 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
             if (item[i].b.max() == 0) {
                 swap(start, i);
                 start++;
-            }
-            else if (item[i].b.min() == 1)
+                continue;
+            } else if (item[i].b.min() == 1)
                 x.domain.in(store.level, x, item[i].value, item[i].value);
 
-            if (item[i].b.max() != 0 && ! x.domain.contains(item[i].value)) {
+            if (! x.domain.contains(item[i].value)) {
                 item[i].b.domain.in(store.level, item[i].b, 0, 0);
                 swap(start, i);
                 start++;

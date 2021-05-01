@@ -37,50 +37,18 @@ import java.util.HashMap;
 import org.jacop.constraints.ChannelReif;
 
 /**
- * It collects all int_eq_reif constraint to create Channel
+ * It collects all int_eq_reif constraint to create ChannelReif
  * constraints, if possible.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.7
+ * @version 4.8
  */
 
 
-class ReificationConstraints {
-
-    Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
-
-    int minSize = 1;
-
-    Support support;
+class ReificationConstraints extends ChannelMap  {
 
     public ReificationConstraints(Support support) {
-        this.support = support;
-    }
-
-    public void add(IntVar x, int v, IntVar b) {
-        Map<Integer, IntVar> map = cs.get(x);
-
-        if (map != null)
-            if (map.get(v) != null) {
-                support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
-            } else {
-                map.put(v, b);
-                cs.put(x, map);
-            }
-        else {
-            map = new HashMap<>();
-            map.put(v, b);
-            cs.put(x, map);
-        }
-    }
-
-    public int size(IntVar v) {
-        Map<Integer, IntVar> m = cs.get(v);
-
-        if (m != null)
-            return m.size();
-        else
-            return 0;
+        super(support);
     }
 
     void pose() {
@@ -93,29 +61,5 @@ class ReificationConstraints {
             if (vb.size() > minSize)
                 support.pose(new ChannelReif(var, vb));
         }
-    }
-
-    public String toString() {
-
-        StringBuilder result = new StringBuilder();
-
-        Set<Map.Entry<IntVar, Map<Integer,IntVar>>> entries = cs.entrySet();
-
-        for (Map.Entry<IntVar, Map<Integer,IntVar>> e : entries) {
-            IntVar var = e.getKey();
-            Map<Integer,IntVar> vb = e.getValue();
-            Set<Map.Entry<Integer,IntVar>> es = vb.entrySet();
-
-            result.append(var + "[");
-
-            for (Map.Entry<Integer,IntVar> ei : es) {
-                int val = ei.getKey();
-                IntVar bb = ei.getValue();
-
-                result.append("[" + val + ", " + bb + "]");
-            }
-        }
-        result.append("]");
-        return result.toString();
     }
 }
