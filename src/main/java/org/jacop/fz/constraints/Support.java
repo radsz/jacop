@@ -68,7 +68,7 @@ public class Support implements ParserTreeConstants {
     public IntVar definedVar = null;
 
     // comparison operators
-    static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+    final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
     boolean intPresent = true;
     boolean floatPresent = true;
@@ -575,8 +575,10 @@ public class Support implements ParserTreeConstants {
     void poseDC(DecomposedConstraint c) throws FailException {
 
         store.imposeDecompositionWithConsistency(c);
-        if (options.debug())
-            System.out.println("% " + c);
+        if (options.debug()) {
+            String s = "% " + c.toString();
+            System.out.println(s.replaceAll("\n", "\n% "));
+        }
     }
 
     void pose(Constraint c) throws FailException {
@@ -586,8 +588,10 @@ public class Support implements ParserTreeConstants {
         else
             store.imposeWithConsistency(c);
 
-        if (options.debug())
-            System.out.println("% " + c);
+        if (options.debug()) {
+            String s = "% " + c.toString();
+            System.out.println(s.replaceAll("\n", "\n% "));
+        }
     }
 
     public void addReified(IntVar x, int v, IntVar b) {
