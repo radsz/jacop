@@ -514,12 +514,20 @@ public final class ConstraintFncs {
         gc.gen_jacop_minimum_arg_int(n);
     }
 
+    public void jacop_minimum_arg_bool(SimpleNode n) {
+        gc.gen_jacop_minimum_arg_bool(n);
+    }
+
     public void jacop_minimum(SimpleNode n) {
         gc.gen_jacop_minimum(n);
     }
 
     public void jacop_maximum_arg_int(SimpleNode n) {
         gc.gen_jacop_maximum_arg_int(n);
+    }
+
+    public void jacop_maximum_arg_bool(SimpleNode n) {
+        gc.gen_jacop_maximum_arg_bool(n);
     }
 
     public void jacop_maximum(SimpleNode n) {
