@@ -684,10 +684,6 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new ArgMin(x, index, offset - 1));
     }
 
-    void gen_jacop_minimum_arg_bool(SimpleNode node) {
-        gen_jacop_minimum_arg_int(node);
-    }
-
     void gen_jacop_minimum(SimpleNode node) {
         IntVar n = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -701,10 +697,6 @@ class GlobalConstraints implements ParserTreeConstants {
         int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         support.pose(new ArgMax(x, index, offset - 1));
-    }
-
-    void gen_jacop_maximum_arg_bool(SimpleNode node) {
-        gen_jacop_maximum_arg_int(node);
     }
 
     void gen_jacop_maximum(SimpleNode node) {
