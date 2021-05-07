@@ -929,7 +929,7 @@ public class Solve implements ParserTreeConstants {
             if (lastSolution != null)
                 helperSolutionPrinter(lastSolution.toString());
 
-	    if (options.getAll())
+	    if (options.getAll() || costVariable != null)
 		System.out.println("==========");
 
             if (options.getStatistics()) {
