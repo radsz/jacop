@@ -6,7 +6,9 @@ Properties:
 Java specific:
 ==============
 - max_edge_find_size: use edge finder in the cumulative constraints if
-  it contains less tasks than this number; default 100.
+  it contains less tasks than this number; default 100. This applies
+  to Cumulative constraint only, CumulativeUnary uses edge finding
+  always.
 
 - sub_circuit_scc_pruning: use pruning method based on strongly
   connected components; default true (one of sub_circuit_* must be true).

@@ -177,8 +177,7 @@ public class Cumulative extends CumulativeBasic {
 	tree.clearTree();
 
 	TaskView[] lctList = new TaskNormalView[taskNormal.length];
-	for (int i = 0; i < taskNormal.length; i++)
-	    lctList[i] = new TaskNormalView(taskNormal[i]);
+        System.arraycopy(taskNormal, 0, lctList, 0, lctList.length);
 	Arrays.sort(lctList, (o1, o2) -> {
             return o1.lct() - o2.lct();
         });// task lct incremental comparator
@@ -314,9 +313,7 @@ public class Cumulative extends CumulativeBasic {
                 int diff = Integer.MIN_VALUE;
                 if (envlc != Long.MIN_VALUE) {
                     long tmp = envlc - (cap - (long) ci) * (long) t[l].lct();
-                    long diffLong = divRoundUp(tmp, ci);
-                    if (diffLong > Integer.MIN_VALUE && diffLong < Integer.MAX_VALUE)
-                        diff = (int) diffLong;
+                    diff = long2int(divRoundUp(tmp, ci));
                 }
                 upd = Math.max(upd, diff);
                 update[capi][l] = upd;

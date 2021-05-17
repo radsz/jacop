@@ -483,7 +483,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         }
     }
 
-    int long2int(long value) {
+    public int long2int(long value) {
         if (value > (long) Integer.MAX_VALUE)
             return Integer.MAX_VALUE;
         else if (value < (long) Integer.MIN_VALUE)
