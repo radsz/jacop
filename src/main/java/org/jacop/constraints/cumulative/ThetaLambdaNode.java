@@ -31,7 +31,7 @@
 
 package org.jacop.constraints.cumulative;
 
-/**
+/*
  * Implements ThetaLambdaNode for ThetaLambdaTree.
  *
  * @author Krzysztof Kuchcinski
@@ -56,7 +56,7 @@ class ThetaLambdaNode extends TreeNode {
 
     public String toString() {
         String taskNo = task != null ? "\ntask = " + task.index : "";
-        return "node: " + index + taskNo + "\ne = " + e + "\nenv = " + env +//"\nbase_envC = "+base_envC+
+        return "node: " + index + taskNo + "\ne = " + e + "\nenv = " + env + //"\nbase_envC = "+base_envC+
             "\nenvC = " + envC + "\neLambda = " + eLambda + "\nenvLambda = " + envLambda + "\nresponsibleELambda = " + responsibleELambda
             + "\nresponsibleEnvLambda = " + responsibleEnvLambda;
     }

@@ -32,7 +32,7 @@ package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
 
-/**
+/*
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
@@ -53,7 +53,7 @@ abstract class TaskView extends Task {
 
     abstract int lst();
 
-    abstract long env(long C);
+    abstract long env(long c);
 
     abstract void updateEdgeFind(int storeLevel, int upd);
 

@@ -35,7 +35,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 
-/**
+/*
  * Implements ThetaLambdaUnaryTree and operations on this tree for Cumulative constraint
  *
  * @author Krzysztof Kuchcinski

@@ -32,7 +32,7 @@ package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
 
-/**
+/*
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
@@ -43,7 +43,9 @@ class Task {
 
     int index;
 
-    final IntVar start, dur, res;
+    final IntVar start;
+    final IntVar dur;
+    final IntVar res;
 
     int treeIndex;
 

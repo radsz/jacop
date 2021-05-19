@@ -32,7 +32,7 @@ package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
 
-/**
+/*
  * Represents tasks for cumulative constraint
  *
  * @author Krzysztof Kuchcinski
@@ -62,8 +62,8 @@ class TaskReversedView extends TaskView {
         return lct() - dur.min();
     }
 
-    long env(long C) {
-        return C * (long) est() + e();
+    long env(long c) {
+        return c * (long) est() + e();
     }
 
     void updateEdgeFind(int storeLevel, int lct) {

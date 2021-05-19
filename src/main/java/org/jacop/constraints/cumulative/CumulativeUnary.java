@@ -33,12 +33,11 @@ package org.jacop.constraints.cumulative;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-/**
+/*
  * CumulativeUnary implements the scheduling constraint for unary resources using
  * <p>
  * overload, not-first-not-last and detectable algorithms based on
@@ -54,11 +53,11 @@ public class CumulativeUnary extends Cumulative {
 
     private boolean doProfile = false;
 
-    /**
+    /*
      * Local copies of tasks in normal and reserved views
      */
-    final private TaskView[] tvn;
-    final private TaskView[] tvr;
+    private final TaskView[] tvn;
+    private final TaskView[] tvr;
 
     private Comparator<TaskView> taskIncLctComparator = (o1, o2) -> (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
 

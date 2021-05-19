@@ -33,10 +33,9 @@ package org.jacop.constraints.cumulative;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
 import java.util.*;
 
-/**
+/*
  * Cumulative implements the scheduling constraint using
  * <p>
  * edge-finding (edgeFind) algorithms based on
@@ -140,7 +139,7 @@ public class Cumulative extends CumulativeBasic {
     }
 
     public void doQuadraticEdgeFind(boolean doQEF) {
-	doQuadraticEdgeFind = doQEF;
+        doQuadraticEdgeFind = doQEF;
     }
     
     @Override public void consistency(Store store) {
@@ -153,10 +152,10 @@ public class Cumulative extends CumulativeBasic {
 
             if (!store.propagationHasOccurred && doEdgeFind) {
                 // overloadCheck();  // not needed if profile propagator is used
-		if (doQuadraticEdgeFind)
-		    edgeFindQuad(store);
-		else
-		    edgeFind(store);
+                if (doQuadraticEdgeFind)
+                    edgeFindQuad(store);
+                else
+                    edgeFind(store);
             }
 
         } while (store.propagationHasOccurred);
@@ -165,37 +164,39 @@ public class Cumulative extends CumulativeBasic {
     /*
     void overloadCheck() {
 
-	TaskView[] estList = new TaskNormalView[taskNormal.length];
-	System.arraycopy(taskNormal, 0, estList, 0, estList.length);
-	Arrays.sort(estList, (o1, o2) -> {
+        TaskView[] estList = new TaskNormalView[taskNormal.length];
+        System.arraycopy(taskNormal, 0, estList, 0, estList.length);
+        Arrays.sort(estList, (o1, o2) -> {
             return o1.est() - o2.est();
         }); // task est incremental comparator
-	// System.out.println(java.util.Arrays.asList(estList));
+        // System.out.println(java.util.Arrays.asList(estList));
 
-	ThetaLambdaTree tree = new ThetaLambdaTree(limit);
-	tree.buildTree(estList);
-	tree.clearTree();
+        ThetaLambdaTree tree = new ThetaLambdaTree(limit);
+        tree.buildTree(estList);
+        tree.clearTree();
 
-	TaskView[] lctList = new TaskNormalView[taskNormal.length];
+        TaskView[] lctList = new TaskNormalView[taskNormal.length];
         System.arraycopy(taskNormal, 0, lctList, 0, lctList.length);
-	Arrays.sort(lctList, (o1, o2) -> {
+        Arrays.sort(lctList, (o1, o2) -> {
             return o1.lct() - o2.lct();
         });// task lct incremental comparator
-	//System.out.println(java.util.Arrays.asList(lctList));
+        //System.out.println(java.util.Arrays.asList(lctList));
 
     
-	long C = (long)limit.max();
-	for (int j = 0; j < lctList.length; j++) {
-	    tree.enableNode(lctList[j].treeIndex, lctList[j].res.min());
+        long C = (long)limit.max();
+        for (int j = 0; j < lctList.length; j++) {
+            tree.enableNode(lctList[j].treeIndex, lctList[j].res.min());
 
-	    // System.out.println("j = " + j +", lctList[j].treeIndex = "+lctList[j].treeIndex+", tree.rootNode().env "+ tree.rootNode().env +", lctList[j].lct() = " + lctList[j].lct() + ", C = "+ C);
+            // System.out.println("j = " + j +", lctList[j].treeIndex = "+lctList[j].treeIndex+",
+            // tree.rootNode().env "+ tree.rootNode().env +", lctList[j].lct() = " +
+            // lctList[j].lct() + ", C = "+ C);
 
-	    if (tree.rootNode().env > C * (long)lctList[j].lct()) {
-		// System.out.println("FAIL");
+            if (tree.rootNode().env > C * (long)lctList[j].lct()) {
+                // System.out.println("FAIL");
 
-		throw Store.failException;
-	    }
-	}
+                throw Store.failException;
+            }
+        }
     }
     */
 
@@ -356,95 +357,94 @@ public class Cumulative extends CumulativeBasic {
 
     private void edgeFindQuad(Store store) {
 
-	edgeFindQuad(store, taskNormal);
+        edgeFindQuad(store, taskNormal);
         edgeFindQuad(store, taskReversed);
 
     }
 
     private void edgeFindQuad(Store store, TaskView[] tn) {
 
-	long C = (long)limit.max();
-	TaskView[] ts = filterZeroTasks(tn);
+        long C = (long)limit.max();
+        TaskView[] ts = filterZeroTasks(tn);
         if (ts == null)
             return;
 
-	int n = ts.length;
-	// sorted by non-decreasing deadline (lct)
+        int n = ts.length;
+        // sorted by non-decreasing deadline (lct)
         Arrays.sort(ts, (TaskView o1, TaskView o2) -> o1.lct() - o2.lct());
     
-	int[] LB = new int[n];
-	int[] Dupd = new int[n];
-	int[] SLupd = new int[n];
-	for (int i = 0; i < n; i++)
-	    LB[i] = ts[i].est();
+        int[] LB = new int[n];
+        int[] Dupd = new int[n];
+        int[] SLupd = new int[n];
+        for (int i = 0; i < n; i++)
+            LB[i] = ts[i].est();
         Arrays.fill(Dupd, Integer.MIN_VALUE);
         Arrays.fill(SLupd, Integer.MIN_VALUE);
-	long[] E = new long[n];
+        long[] E = new long[n];
 
-	Integer[] t1 = new Integer[n];
-	Integer[] t2 = new Integer[n];
-	for (int i = 0; i < n; i++) 
-	    t1[i] = i;
-	System.arraycopy(t1, 0, t2, 0, n);
+        Integer[] t1 = new Integer[n];
+        Integer[] t2 = new Integer[n];
+        for (int i = 0; i < n; i++)
+            t1[i] = i;
+        System.arraycopy(t1, 0, t2, 0, n);
 
-	// tasks t1 sorted by non-incereasing relese dates (est)
+        // tasks t1 sorted by non-incereasing relese dates (est)
         Arrays.sort(t1, (Integer o1, Integer o2) -> ts[o2.intValue()].est() - ts[o1.intValue()].est());
-	// tasks t2 sorted by non-decreasing relese dates (est)
+        // tasks t2 sorted by non-decreasing relese dates (est)
         Arrays.sort(t2, (Integer o1, Integer o2) -> ts[o1.intValue()].est() - ts[o2.intValue()].est());
 
-	for (TaskView u : ts) {
+        for (TaskView u : ts) {
 
-	    long Energy = 0, maxEnergy = 0;
-	    int rr = Integer.MIN_VALUE;
+            long Energy = 0;
+            long maxEnergy = 0;
+            int rr = Integer.MIN_VALUE;
 
-	    for (int i : t1) {
-		TaskView t = ts[i];
+            for (int i : t1) {
+                TaskView t = ts[i];
 
-		if (t.lct() <= u.lct()) {
-		    Energy += t.e();
+                if (t.lct() <= u.lct()) {
+                    Energy += t.e();
 
-		    if (rr == Integer.MIN_VALUE || (float)Energy/(float)(u.lct()-t.est()) > (float)maxEnergy/((float)u.lct()-(float)rr)) {
-			maxEnergy = Energy;
-			rr = t.est();
-		    }
-		}
-		else if (rr != Integer.MIN_VALUE) {
-		    long rest = maxEnergy - (C - t.res().min())*(u.lct() - rr);
-		    if (rest > 0)
-			Dupd[i] = (int)Math.max(Dupd[i], rr + divRoundUp(rest, t.res().max()));
+                    if (rr == Integer.MIN_VALUE || (float)Energy / (float)(u.lct() - t.est()) > (float)maxEnergy / ((float)u.lct() - (float)rr)) {
+                        maxEnergy = Energy;
+                        rr = t.est();
+                    }
+                } else if (rr != Integer.MIN_VALUE) {
+                    long rest = maxEnergy - (C - t.res().min()) * (u.lct() - rr);
+                    if (rest > 0)
+                        Dupd[i] = (int)Math.max(Dupd[i], rr + divRoundUp(rest, t.res().max()));
 
-		    
-		    if (maxEnergy + t.res.min()*(t.ect() - rr) > C*(u.lct() - rr))
-			LB[i] = Math.max(LB[i], Dupd[i]);
-		}
-		E[i] = Energy;
-	    }
+                    if (maxEnergy + t.res.min() * (t.ect() - rr) > C * (u.lct() - rr))
+                        LB[i] = Math.max(LB[i], Dupd[i]);
+                }
+                E[i] = Energy;
+            }
 
-	    long minSL = Integer.MAX_VALUE;
-	    int rt = u.lct();
-	    for (int i : t2) {
-		TaskView t = ts[i];
+            long minSL = Integer.MAX_VALUE;
+            int rt = u.lct();
+            for (int i : t2) {
+                TaskView t = ts[i];
 
-		if (C*(u.lct() - t.est()) - E[i] < minSL) {
-		    rt = t.est();
-		    minSL = C*(u.lct() - rt) - E[i];
-		}
+                if (C * (u.lct() - t.est()) - E[i] < minSL) {
+                    rt = t.est();
+                    minSL = C * (u.lct() - rt) - E[i];
+                }
 
-		if (t.lct() > u.lct()) {
-		    
-		    long rest = t.res().min()*(u.lct() - rt) - minSL;
-		    if (rt <= u.lct() && rest > 0) 
-			SLupd[i] = (int)Math.max(SLupd[i], rt + divRoundUp(rest, t.res().max()));
+                if (t.lct() > u.lct()) {
 
-		    if (t.ect() >= u.lct() || minSL - t.e() < 0) 
-		    	LB[i] = Math.max(Math.max(LB[i], Dupd[i]), SLupd[i]);
-		}
-	    }
-	}
+                    long rest = t.res().min() * (u.lct() - rt) - minSL;
+                    if (rt <= u.lct() && rest > 0)
+                        SLupd[i] = (int)Math.max(SLupd[i], rt + divRoundUp(rest, t.res().max()));
 
-	// update LB's
-	for (int i = 0; i < n; i++)
-	    ts[i].updateEdgeFind(store.level, LB[i]);
+                    if (t.ect() >= u.lct() || minSL - t.e() < 0)
+                        LB[i] = Math.max(Math.max(LB[i], Dupd[i]), SLupd[i]);
+                }
+            }
+        }
+
+        // update LB's
+        for (int i = 0; i < n; i++)
+            ts[i].updateEdgeFind(store.level, LB[i]);
     }
     
     TaskView[] filterZeroTasks(TaskView[] ts) {
@@ -487,7 +487,7 @@ public class Cumulative extends CumulativeBasic {
 
         result.append(taskNormal[taskNormal.length - 1]);
 
-        result.append(" ]").append(", limit = ").append(limit).append(", quad="+doQuadraticEdgeFind+" )");
+        result.append(" ]").append(", limit = ").append(limit).append(", quad=" + doQuadraticEdgeFind + " )");
 
         return result.toString();
 

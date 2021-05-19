@@ -36,7 +36,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -44,7 +43,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * CumulativePrimary implements the cumulative constraint using time tabling
  * algorithm.
  *
@@ -56,33 +55,34 @@ class CumulativePrimary extends Constraint {
 
     private static AtomicInteger idNumber = new AtomicInteger(0);
 
-    private static final boolean debug = false, debugNarr = false;
+    private static final boolean debug = false;
+    private static final boolean debugNarr = false;
 
     private Comparator<Event> eventComparator = (o1, o2) -> {
         int dateDiff = o1.date() - o2.date();
         return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
     };
 
-    /**
+    /*
      * start times of tasks
      */
-    final private IntVar[] start;
+    private final IntVar[] start;
 
-    /**
+    /*
      * All durations and resources of the constraint
      */
-    final private int[] dur;
-    final private int[] res;
+    private final int[] dur;
+    private final int[] res;
 
     private int[] activeMap;
     private TimeStamp<Integer> activePnt;
 
-    /**
+    /*
      * It specifies the limit of the profile of cumulative use of resources.
      */
-    final public IntVar limit;
+    public final IntVar limit;
 
-    /**
+    /*
      * It creates a cumulative constraint.
      *
      * @param starts    variables denoting starts of the tasks.
@@ -114,9 +114,9 @@ class CumulativePrimary extends Constraint {
         dur = Arrays.copyOf(durations, durations.length);
         res = Arrays.copyOf(resources, resources.length);
         start = Arrays.copyOf(starts, starts.length);
-	activeMap = new int[start.length];
-	for (int i = 0; i < start.length; i++)
-	    activeMap[i] = i;
+        activeMap = new int[start.length];
+        for (int i = 0; i < start.length; i++)
+            activeMap[i] = i;
 
         setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
@@ -124,7 +124,7 @@ class CumulativePrimary extends Constraint {
 
     }
 
-    /**
+    /*
      * It creates a cumulative constraint.
      *
      * @param starts    variables denoting starts of the tasks.
@@ -176,18 +176,19 @@ class CumulativePrimary extends Constraint {
     // Sweep algorithm for profile
     void sweepPruning(Store store) {
 
-	Event[] es = new Event[4 * start.length];
+        Event[] es = new Event[4 * start.length];
         int limitMax = limit.max();
 
         int j = 0;
-        int minProfile = Integer.MAX_VALUE, maxProfile = Integer.MIN_VALUE;
-	int first = activePnt.value();
+        int minProfile = Integer.MAX_VALUE;
+        int maxProfile = Integer.MIN_VALUE;
+        int first = activePnt.value();
         for (int i = first; i < start.length; i++) {
-	    int k = activeMap[i];
+            int k = activeMap[i];
 
             // mandatory task parts to create profile
-            int min = start[k].max(), // t.lst()
-                max = start[k].min() + dur[k];  // t.ect()
+            int min = start[k].max(); // t.lst()
+            int max = start[k].min() + dur[k];  // t.ect()
             if (min < max) {
                 es[j++] = new Event(profile, k, min, res[k]);
                 es[j++] = new Event(profile, k, max, -res[k]);
@@ -195,13 +196,13 @@ class CumulativePrimary extends Constraint {
                 maxProfile = (max > maxProfile) ? max : maxProfile;
             }
         }
-	if (j == 0)  // no mandatory parts
+        if (j == 0)  // no mandatory parts
             return;
 
         for (int i = first; i < start.length; i++) {
             // overlapping tasks for pruning
             // from start to end
-	    int k = activeMap[i];
+            int k = activeMap[i];
 
             if (!start[k].singleton()) {  // task that are ground are considered for manadatory tasks
                 int min = start[k].min(); //t.est();
@@ -230,7 +231,7 @@ class CumulativePrimary extends Constraint {
 
         // used for start variable pruning
         int[] startExcluded = new int[start.length];
-	boolean[] startConsidered = new boolean[start.length];
+        boolean[] startConsidered = new boolean[start.length];
 
         for (int i = 0; i < N; i++) {
 
@@ -262,7 +263,7 @@ class CumulativePrimary extends Constraint {
                             if (! startConsidered[ti]) {
                                 if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                                     startExcluded[ti] = e.date() - dur[ti] + 1;
-				    startConsidered[ti] = true;
+                                    startConsidered[ti] = true;
                                 }
                             } else //startExcluded[ti] != Integer.MAX_VALUE
                                 if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
@@ -291,8 +292,8 @@ class CumulativePrimary extends Constraint {
                     // ========= for start pruning
                     if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
                         startExcluded[ti] = e.date();
-			startConsidered[ti] = true;
-		    }
+                        startConsidered[ti] = true;
+                    }
 
                     tasksToPrune.set(ti);
                     break;
@@ -325,40 +326,41 @@ class CumulativePrimary extends Constraint {
             }
         }
 
-       if (!store.propagationHasOccurred)
-           removeNotUsedProfleTasks();
+        if (!store.propagationHasOccurred)
+            removeNotUsedProfleTasks();
 
     }
 
     private void removeNotUsedProfleTasks() {
 
-	// remove ground tasks that make profile but do not contribute
-	// to pruning of other tasks; they are located outside the
-	// range of tasks
-	int minPrune = Integer.MAX_VALUE, maxPrune = Integer.MIN_VALUE;
-	int first = activePnt.value();
-	for (int i = first; i < start.length; i++) {
-	    int k = activeMap[i];
+        // remove ground tasks that make profile but do not contribute
+        // to pruning of other tasks; they are located outside the
+        // range of tasks
+        int minPrune = Integer.MAX_VALUE;
+        int maxPrune = Integer.MIN_VALUE;
+        int first = activePnt.value();
+        for (int i = first; i < start.length; i++) {
+            int k = activeMap[i];
 
-	    if (!start[k].singleton()) {
-		int min = start[k].min();
-		int max = start[k].max() + dur[k];
-		minPrune = (min < minPrune) ? min : minPrune;
-		maxPrune = (max > maxPrune) ? max : maxPrune;
-	    }
-	}
+            if (!start[k].singleton()) {
+                int min = start[k].min();
+                int max = start[k].max() + dur[k];
+                minPrune = (min < minPrune) ? min : minPrune;
+                maxPrune = (max > maxPrune) ? max : maxPrune;
+            }
+        }
 
-	for (int i = first; i < start.length; i++) {
-	    int k = activeMap[i];
+        for (int i = first; i < start.length; i++) {
+            int k = activeMap[i];
 
-	    int s = start[k].min();
-	    int e = start[k].max() + dur[k];
-	    if (start[k].singleton() && (s > maxPrune || e < minPrune)) {
-		swap(first, i);
-		first++;
-	    }
-	}
-	activePnt.update(first);
+            int s = start[k].min();
+            int e = start[k].max() + dur[k];
+            if (start[k].singleton() && (s > maxPrune || e < minPrune)) {
+                swap(first, i);
+                first++;
+            }
+        }
+        activePnt.update(first);
     }
 
     private void swap(int i, int j) {
@@ -370,7 +372,9 @@ class CumulativePrimary extends Constraint {
     }
 
     // event type
-    private static final int profile = 0, pruneStart = 1, pruneEnd = 2;
+    private static final int profile = 0;
+    private static final int pruneStart = 1;
+    private static final int pruneEnd = 2;
 
 
     private static class Event {
