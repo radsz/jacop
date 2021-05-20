@@ -1298,6 +1298,19 @@ public abstract class IntDomain extends Domain {
     }
 
     /*
+     * Finds result interval by constant for multiplication of {a..b} * c
+     */
+    public static final Interval mulBounds(int a, int b, int c) {
+
+        int ac = multiplyInt(a, c);
+        int bc = multiplyInt(b, c);
+        int min = Math.min(ac, bc);
+        int max = Math.max(ac, bc);
+
+        return new Interval(min, max);
+    }
+
+    /*
      * Finds result interval for {a..b}^2
      */
     public static final Interval squareBounds(int a, int b) {
@@ -1394,6 +1407,31 @@ public abstract class IntDomain extends Domain {
             throw Store.failException; // can happen if a..b or c..d are not proper intervals
 
         return result;
+    }
+
+    /*
+     * Finds result interval by constnat division of {a..b} / c for div and mod constraints
+     */
+    public static final Interval divIntBounds(int a, int b, int c) {
+
+        int min;
+        int max;
+
+        if (c == 0) // case 1
+            throw Store.failException;
+        else  { // case 2
+            double ac = (double) a / c;
+            double bc = (double) b / c;
+            double low = Math.min(ac, bc);
+            double high = Math.max(ac, bc);
+            min = (int) Math.round(Math.ceil(low));
+            max = (int) Math.round(Math.floor(high));
+            if (min > max)
+                throw Store.failException;
+
+            return new Interval(min, max);
+
+        }
     }
 
     /**

@@ -31,10 +31,9 @@
 package org.jacop.constraints;
 
 import org.jacop.core.*;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * Constraint X * C #= Z
  * <p>
  * Boundary consistency is used.
@@ -45,22 +44,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XmulCeqZ extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x * c = z.
      */
-    final public IntVar x;
+    public final IntVar x;
 
     /**
      * It specifies constant c in constraint x * c = z.
      */
-    final public int c;
+    public final int c;
 
     /**
      * It specifies variable x in constraint x * c = z.
      */
-    final public IntVar z;
+    public final IntVar z;
 
     /**
      * It constructs a constraint X * C = Z.
@@ -90,12 +89,12 @@ public class XmulCeqZ extends PrimitiveConstraint {
                 store.propagationHasOccurred = false;
 
                 // Bounds for X
-                Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
+                Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), c);
 
                 x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
                 // Bounds for Z
-                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c, c);
+                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c);
 
                 z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
