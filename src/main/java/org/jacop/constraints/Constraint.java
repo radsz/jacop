@@ -30,17 +30,17 @@
 
 package org.jacop.constraints;
 
+import static java.util.stream.Collectors.joining;
+
 import org.jacop.api.*;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
-
 import java.util.*;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.joining;
 
-/**
+/*
  * Standard unified interface/abstract class for all constraints.
  * <p>
  * Defines how to construct a constraint, impose, check satisfiability,
@@ -210,7 +210,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         if (c instanceof RemoveLevelLate)
             fixpoint.add((RemoveLevelLate)c);
         if (c.constraintScope != null)
-            c.constraintScope.forEach( ic -> computeFixpoint(ic, fixpoint));
+            c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
         return fixpoint;
     }
 
@@ -441,23 +441,23 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         throw new UnsupportedOperationException();
     }
 
-    /**
+    /*
      * Handling of AFC (accumulated failure fail) for constraints
      *
      */
     float afcWeight = 1.0f;
 
     public float afc() {
-	return afcWeight;
+        return afcWeight;
     }
     
     public void updateAFC(Set<Constraint> allConstraints, float decay) {
-	afcWeight += 1.0f;
+        afcWeight += 1.0f;
 
-	if (decay < 1.0f)
-	    for (Constraint c : allConstraints)
-		if (!this.equals(c))
-		    c.afcWeight = c.afcWeight * decay;
+        if (decay < 1.0f)
+            for (Constraint c : allConstraints)
+                if (!this.equals(c))
+                    c.afcWeight = c.afcWeight * decay;
     }
     
     /**
@@ -483,7 +483,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
         }
     }
 
-    public int long2int(long value) {
+    public static int long2int(long value) {
         if (value > (long) Integer.MAX_VALUE)
             return Integer.MAX_VALUE;
         else if (value < (long) Integer.MIN_VALUE)

@@ -1390,7 +1390,6 @@ public abstract class IntDomain extends Domain {
             result = divIntBounds(a, b, 1, d);
         else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
             result = divIntBounds(a, b, c, -1);
-
         else if ((c > 0 || d < 0) && c <= d) { // case 5
             double ac = (double) a / c;
             double ad = (double) a / d;
@@ -1419,19 +1418,29 @@ public abstract class IntDomain extends Domain {
 
         if (c == 0) // case 1
             throw Store.failException;
-        else  { // case 2
-            double ac = (double) a / c;
-            double bc = (double) b / c;
-            double low = Math.min(ac, bc);
-            double high = Math.max(ac, bc);
-            min = (int) Math.round(Math.ceil(low));
-            max = (int) Math.round(Math.floor(high));
+        else if (c > 0) {
+            min = Constraint.long2int(divRoundUp(a, c));
+            max = Constraint.long2int(divRoundDown(b, c));
             if (min > max)
                 throw Store.failException;
 
             return new Interval(min, max);
+        } else { // c < 0
+            min = Constraint.long2int(divRoundUp(b, c));
+            max = Constraint.long2int(divRoundDown(a, c));
+            if (min > max)
+                throw Store.failException;
 
+            return new Interval(min, max);
         }
+    }
+
+    public static long divRoundDown(long a, long b) {
+        return Math.floorDiv(a,b);
+    }
+
+    public static long divRoundUp(long a, long b) {
+        return -Math.floorDiv(-a,b);
     }
 
     /**

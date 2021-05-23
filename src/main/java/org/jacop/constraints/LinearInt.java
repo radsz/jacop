@@ -33,13 +33,12 @@ package org.jacop.constraints;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-/**
+/*
  * LinearInt constraint implements the weighted summation over several
  * variables .
  * <p>
@@ -64,15 +63,15 @@ public class LinearInt extends PrimitiveConstraint {
 
     boolean reified = true;
 
-    /**
+    /*
      * Defines relations
      */
-    final static byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
+    static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
 
-    /**
+    /*
      * Defines negated relations
      */
-    final static byte[] negRel = {ne, //eq=0,
+    static final byte[] negRel = {ne, //eq=0,
         gt, //le=1,
         ge, //lt=2,
         eq, //ne=3,
@@ -80,7 +79,7 @@ public class LinearInt extends PrimitiveConstraint {
         lt  //ge=5;
     };
 
-    /**
+    /*
      * It specifies what relations is used by this constraint
      */
 
@@ -89,12 +88,12 @@ public class LinearInt extends PrimitiveConstraint {
     /**
      * It specifies a list of variables being summed.
      */
-    IntVar x[];
+    IntVar[] x;
 
     /**
      * It specifies a list of weights associated with the variables being summed.
      */
-    long a[];
+    long[] a;
 
     /**
      * It specifies variable for the overall sum.
@@ -111,20 +110,21 @@ public class LinearInt extends PrimitiveConstraint {
      */
     int l;
 
-    /**
+    /*
      * It specifies "variability" of each variable
      */
     long[] I;
 
-    /**
+    /*
      * It specifies sum of lower bounds (min values) and sum of upper bounds (max values)
      */
-    long sumMin, sumMax;
+    long sumMin;
+    long sumMax;
 
     protected LinearInt() {
     }
 
-    /**
+    /*
      * @param store   current store
      * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
@@ -155,7 +155,7 @@ public class LinearInt extends PrimitiveConstraint {
         numberId = idNumber.incrementAndGet();
     }
 
-    /**
+    /*
      * @param store   current store
      * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
@@ -173,7 +173,7 @@ public class LinearInt extends PrimitiveConstraint {
 
     // ======== new constructors ===============
 
-    /**
+    /*
      * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
@@ -201,7 +201,7 @@ public class LinearInt extends PrimitiveConstraint {
         numberId = idNumber.incrementAndGet();
     }
 
-    /**
+    /*
      * @param list    variables which are being multiplied by weights.
      * @param weights weight for each variable.
      * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
@@ -311,7 +311,7 @@ public class LinearInt extends PrimitiveConstraint {
 
                     // if (!reified)
                     //     if (sumMax <= b && sumMin >= b)
-                    // 	removeConstraint();
+                    //  removeConstraint();
 
                     break;
 
@@ -388,8 +388,10 @@ public class LinearInt extends PrimitiveConstraint {
     }
 
     void computeInit() {
-        long f = 0, e = 0;
-        long min, max;
+        long f = 0;
+        long e = 0;
+        long min;
+        long max;
         int i = 0;
         // positive weights
         for (; i < pos; i++) {
@@ -419,14 +421,15 @@ public class LinearInt extends PrimitiveConstraint {
         if (sumMin > b)
             throw store.failException;
 
-        long min, max;
+        long min;
+        long max;
         int i = 0;
         // positive weights
         for (; i < pos; i++) {
             if (I[i] > b - sumMin) {
                 min = x[i].min() * a[i];
                 max = min + I[i];
-                if (pruneMax(x[i], divRoundDown(b - sumMin + min, a[i]))) {
+                if (pruneMax(x[i], IntDomain.divRoundDown(b - sumMin + min, a[i]))) {
                     long newMax = (long) x[i].max() * a[i];
                     sumMax -= max - newMax;
                     I[i] = newMax - min;
@@ -438,7 +441,7 @@ public class LinearInt extends PrimitiveConstraint {
             if (I[i] > b - sumMin) {
                 min = x[i].max() * a[i];
                 max = min + I[i];
-                if (pruneMin(x[i], divRoundUp(-(b - sumMin + min), -a[i]))) {
+                if (pruneMin(x[i], IntDomain.divRoundUp(-(b - sumMin + min), -a[i]))) {
                     long newMax = (long) x[i].min() * a[i];
                     sumMax -= max - newMax;
                     I[i] = newMax - min;
@@ -452,14 +455,15 @@ public class LinearInt extends PrimitiveConstraint {
         if (sumMax < b)
             throw store.failException;
 
-        long min, max;
+        long min;
+        long max;
         int i = 0;
         // positive weights
         for (; i < pos; i++) {
             if (I[i] > -(b - sumMax)) {
                 max = x[i].max() * a[i];
                 min = max - I[i];
-                if (pruneMin(x[i], divRoundUp(b - sumMax + max, a[i]))) {
+                if (pruneMin(x[i], IntDomain.divRoundUp(b - sumMax + max, a[i]))) {
                     long nmin = (long) x[i].min() * a[i];
                     sumMin += nmin - min;
                     I[i] = max - nmin;
@@ -471,7 +475,7 @@ public class LinearInt extends PrimitiveConstraint {
             if (I[i] > -(b - sumMax)) {
                 max = x[i].min() * a[i];
                 min = max - I[i];
-                if (pruneMax(x[i], divRoundDown(-(b - sumMax + max), -a[i]))) {
+                if (pruneMax(x[i], IntDomain.divRoundDown(-(b - sumMax + max), -a[i]))) {
                     long newMin = (long) x[i].max() * a[i];
                     sumMin += newMin - min;
                     I[i] = max - newMin;
@@ -485,7 +489,8 @@ public class LinearInt extends PrimitiveConstraint {
         if (sumMin == sumMax && b == sumMin)
             throw store.failException;
 
-        long min, max;
+        long min;
+        long max;
         int i = 0;
         // positive weights
         for (; i < pos; i++) {
@@ -551,7 +556,8 @@ public class LinearInt extends PrimitiveConstraint {
 
     public boolean satisfiedEq() {
 
-        long sMin = 0L, sMax = 0L;
+        long sMin = 0L;
+        long sMax = 0L;
         int i = 0;
         for (; i < pos; i++) {
             sMin += (long) x[i].min() * a[i];
@@ -567,7 +573,8 @@ public class LinearInt extends PrimitiveConstraint {
 
     public boolean satisfiedNeq() {
 
-        long sMax = 0L, sMin = 0L;
+        long sMax = 0L;
+        long sMin = 0L;
         int i = 0;
         for (; i < pos; i++) {
             sMin += (long) x[i].min() * a[i];
@@ -633,25 +640,11 @@ public class LinearInt extends PrimitiveConstraint {
                 return satisfiedGtEq(b + 1);
             case ge:
                 return satisfiedGtEq(b);
+            default:
+                return false;
+                // throw new RuntimeException("Internal error in " + getClass().getName());
         }
 
-        return false;
-    }
-
-    private long divRoundDown(long a, long b) {
-        // return Math.floorDiv(a,b);
-        if (a >= 0)
-            return a / b;
-        else // a < 0
-            return (a - b + 1) / b;
-    }
-
-    private long divRoundUp(long a, long b) {
-        // return -Math.floorDiv(-a,b);
-        if (a >= 0)
-            return (a + b - 1) / b;
-        else // a < 0
-            return a / b;
     }
 
     public byte relation(String r) {
@@ -693,14 +686,15 @@ public class LinearInt extends PrimitiveConstraint {
                 return ">";
             case ge:
                 return ">=";
+            default:
+                return "?";
         }
-
-        return "?";
     }
 
     void checkForOverflow() {
 
-        long sMin = 0, sMax = 0;
+        long sMin = 0;
+        long sMax = 0;
         int i = 0;
         for (; i < pos; i++) {
             long n1 = Math.multiplyExact((long) x[i].min(), a[i]);

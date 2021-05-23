@@ -236,11 +236,11 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
                 int divMin;
                 int divMax;
                 if (w > 0) {
-                    divMin = long2int(divRoundUp((min + lMaxArray[i]), w));
-                    divMax = long2int(divRoundDown((max + lMinArray[i]), w));
+                    divMin = long2int(IntDomain.divRoundUp((min + lMaxArray[i]), w));
+                    divMax = long2int(IntDomain.divRoundDown((max + lMinArray[i]), w));
                 } else { // w < 0
-                    divMin = long2int(divRoundUp(-(max + lMinArray[i]), -w));
-                    divMax = long2int(divRoundDown(-(min + lMaxArray[i]), -w));
+                    divMin = long2int(IntDomain.divRoundUp(-(max + lMinArray[i]), -w));
+                    divMax = long2int(IntDomain.divRoundDown(-(min + lMaxArray[i]), -w));
                 }
 
                 if (divMin > divMax)
@@ -254,22 +254,6 @@ public class SumWeight extends Constraint implements UsesQueueVariable, Satisfie
 
         } while (store.propagationHasOccurred);
 
-    }
-
-    private long divRoundDown(long a, long b) {
-        // return Math.floorDiv(a,b);
-        if (a >= 0)
-            return a / b;
-        else // a < 0
-            return (a - b + 1) / b;
-    }
-
-    private long divRoundUp(long a, long b) {
-        // return -Math.floorDiv(-a,b);
-        if (a >= 0)
-            return (a + b - 1) / b;
-        else // a < 0
-            return a / b;
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {

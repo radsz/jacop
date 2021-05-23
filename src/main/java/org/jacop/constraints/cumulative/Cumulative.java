@@ -314,7 +314,7 @@ public class Cumulative extends CumulativeBasic {
                 int diff = Integer.MIN_VALUE;
                 if (envlc != Long.MIN_VALUE) {
                     long tmp = envlc - (cap - (long) ci) * (long) t[l].lct();
-                    diff = long2int(divRoundUp(tmp, ci));
+                    diff = long2int(IntDomain.divRoundUp(tmp, ci));
                 }
                 upd = Math.max(upd, diff);
                 update[capi][l] = upd;
@@ -412,7 +412,7 @@ public class Cumulative extends CumulativeBasic {
                 } else if (rr != Integer.MIN_VALUE) {
                     long rest = maxEnergy - (C - t.res().min()) * (u.lct() - rr);
                     if (rest > 0)
-                        Dupd[i] = (int)Math.max(Dupd[i], rr + divRoundUp(rest, t.res().max()));
+                        Dupd[i] = (int)Math.max(Dupd[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
 
                     if (maxEnergy + t.res.min() * (t.ect() - rr) > C * (u.lct() - rr))
                         LB[i] = Math.max(LB[i], Dupd[i]);
@@ -434,7 +434,7 @@ public class Cumulative extends CumulativeBasic {
 
                     long rest = t.res().min() * (u.lct() - rt) - minSL;
                     if (rt <= u.lct() && rest > 0)
-                        SLupd[i] = (int)Math.max(SLupd[i], rt + divRoundUp(rest, t.res().max()));
+                        SLupd[i] = (int)Math.max(SLupd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
 
                     if (t.ect() >= u.lct() || minSL - t.e() < 0)
                         LB[i] = Math.max(Math.max(LB[i], Dupd[i]), SLupd[i]);
@@ -491,13 +491,6 @@ public class Cumulative extends CumulativeBasic {
 
         return result.toString();
 
-    }
-
-    private long divRoundUp(long a, long b) {
-        if (a >= 0)
-            return (a + b - 1) / b;
-        else // a < 0
-            return a / b;
     }
 
 }
