@@ -157,12 +157,14 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
     @Override public void consistency(final Store store) {
 
         int start = position.value();
+        boolean startChanged = false;
 
         for (int i = start; i < n; i++) {
 
             if (item[i].b.max() == 0) {
                 swap(start, i);
                 start++;
+                startChanged = true;
                 continue;
             } else if (item[i].b.min() == 1)
                 x.domain.in(store.level, x, item[i].value, item[i].value);
@@ -171,8 +173,12 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
                 item[i].b.domain.in(store.level, item[i].b, 0, 0);
                 swap(start, i);
                 start++;
+                startChanged = true;
             }
         }
+
+        if (startChanged)
+            position.update(start);
 
         if (start == n)
             return;
@@ -185,8 +191,6 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
                     item[i].b.domain.in(store.level, item[i].b, 0, 0);
                 
         }
-
-        position.update(start);
 
     }
 

@@ -86,17 +86,17 @@ public class XmulCeqZ extends PrimitiveConstraint {
         if (c != 0)
             do {
 
+                // Bounds for Z
+                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c);
+
+                z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+
                 store.propagationHasOccurred = false;
 
                 // Bounds for X
                 Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), c);
 
                 x.domain.in(store.level, x, xBounds.min(), xBounds.max());
-
-                // Bounds for Z
-                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c);
-
-                z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
             } while (store.propagationHasOccurred);
         else
