@@ -169,7 +169,7 @@ public class AtLeast extends PrimitiveConstraint {
             for (int i = start; i < list.length; i++) {
                 IntVar v = list[i];
                 if (!v.singleton() && v.domain.contains(value))
-                    v.domain.in(store.level, v, value, value);
+                    v.domain.inValue(store.level, v, value);
             }
             if (!reified)
                 removeConstraint();

@@ -164,7 +164,7 @@ public class CountVar extends PrimitiveConstraint {
                 numberEq += numberMayBe;
                 numberMayBe = 0;
 
-                counter.domain.in(store.level, counter, numberEq, numberEq);
+                counter.domain.inValue(store.level, counter, numberEq);
                 removeConstraint();
                 return;
             }
@@ -177,7 +177,7 @@ public class CountVar extends PrimitiveConstraint {
             if (value.singleton()) {
                 numberMayBe = 0;
 
-                counter.domain.in(store.level, counter, numberEq, numberEq);
+                counter.domain.inValue(store.level, counter, numberEq);
                 removeConstraint();
                 return;
             }

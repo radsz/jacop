@@ -280,7 +280,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
             if (zeroCounters != null)
                 for (IntVar zeroCounter : zeroCounters)
-                    zeroCounter.domain.in(store.level, zeroCounter, 0, 0);
+                    zeroCounter.domain.inValue(store.level, zeroCounter, 0);
 
             int k = 0;
 

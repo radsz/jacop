@@ -184,12 +184,12 @@ public class SumBool extends PrimitiveConstraint {
                     if (sumValue == min)
                         for (int i = 0; i < l; i++)
                             if (!x[i].singleton())
-                                x[i].domain.in(store.level, x[i], 0, 0);
+                                x[i].domain.inValue(store.level, x[i], 0);
 
                     if (sumValue == max)
                         for (int i = 0; i < l; i++)
                             if (!x[i].singleton())
-                                x[i].domain.in(store.level, x[i], 1, 1);
+                                x[i].domain.inValue(store.level, x[i], 1);
                 }
                 break;
             case le:
@@ -204,7 +204,7 @@ public class SumBool extends PrimitiveConstraint {
 
                     for (int i = 0; i < l; i++)
                         if (!x[i].singleton())
-                            x[i].domain.in(store.level, x[i], 0, 0);
+                            x[i].domain.inValue(store.level, x[i], 0);
                 }
                 break;
             case lt:
@@ -219,7 +219,7 @@ public class SumBool extends PrimitiveConstraint {
 
                     for (int i = 0; i < l; i++)
                         if (!x[i].singleton())
-                            x[i].domain.in(store.level, x[i], 0, 0);
+                            x[i].domain.inValue(store.level, x[i], 0);
 
                 }
                 break;
@@ -247,7 +247,7 @@ public class SumBool extends PrimitiveConstraint {
 
                     for (int i = 0; i < l; i++)
                         if (!x[i].singleton())
-                            x[i].domain.in(store.level, x[i], 1, 1);
+                            x[i].domain.inValue(store.level, x[i], 1);
                 }
                 break;
             case ge:
@@ -262,7 +262,7 @@ public class SumBool extends PrimitiveConstraint {
 
                     for (int i = 0; i < l; i++)
                         if (!x[i].singleton())
-                            x[i].domain.in(store.level, x[i], 1, 1);
+                            x[i].domain.inValue(store.level, x[i], 1);
                 }
                 break;
 

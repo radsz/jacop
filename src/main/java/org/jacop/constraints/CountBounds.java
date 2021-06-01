@@ -34,7 +34,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,22 +49,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class CountBounds extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies a lower and upper bounds of occurences of the specified value in a list.
      */
-    final int lb, ub;
+    final int lb;
+    final int ub;
 
     /**
      * The list of variables which are checked and counted if equal to specified value.
      */
-    final public IntVar list[];
+    public final IntVar[] list;
 
     /**
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    final public int value;
+    public final int value;
 
     /*
      * Defines first position of the variable that are not considered;
@@ -95,7 +95,7 @@ public class CountBounds extends PrimitiveConstraint {
 
         this.list = Arrays.copyOf(list, list.length);
         this.lb = lb;
-	this.ub = ub;
+        this.ub = ub;
         this.value = value;
 
         setScope(list);
@@ -140,81 +140,77 @@ public class CountBounds extends PrimitiveConstraint {
     @Override public void consistency(final Store store) {
 
         int numberEq = equal.value();
-	int numberMayBe = 0;
-	int start = position.value();
+        int numberMayBe = 0;
+        int start = position.value();
         for (int i = start; i < list.length; i++) {
-	    IntVar v = list[i];
+            IntVar v = list[i];
             if (v.domain.contains(value))
                 if (v.singleton()) {
                     numberEq++;
-		    swap(start, i);
-		    start++;
-		}
-                else
+                    swap(start, i);
+                    start++;
+                } else
                     numberMayBe++;
-	    else { // does not have the value in its domain
+            else { // does not have the value in its domain
                 swap(start, i);
-		start++;
-	    }	    
+                start++;
+            }
         }
 
-	if (numberEq > ub || numberMayBe + numberEq < lb) {
-	    throw store.failException;
-	}
-        else if (numberMayBe + numberEq == lb) {
+        if (numberEq > ub || numberMayBe + numberEq < lb) {
+            throw store.failException;
+        } else if (numberMayBe + numberEq == lb) {
             for (int i = start; i < list.length; i++) {
-		IntVar v = list[i];
-		v.domain.in(store.level, v, value, value);
+                IntVar v = list[i];
+                v.domain.inValue(store.level, v, value);
             }
 
             removeConstraint();
         } else if (numberEq == ub) {
             for (int i = start; i < list.length; i++) {
-		IntVar v = list[i];
-		v.domain.inComplement(store.level, v, value);
-	    }
-	    
+                IntVar v = list[i];
+                v.domain.inComplement(store.level, v, value);
+            }
+            
+            removeConstraint();
+        } else if (numberEq >= lb && numberMayBe + numberEq <= ub) {
             removeConstraint();
         }
-	else if (numberEq >= lb && numberMayBe + numberEq <= ub) {
-            removeConstraint();
-	}
 
-	equal.update(numberEq);
-	position.update(start);	
+        equal.update(numberEq);
+        position.update(start); 
     }
 
     @Override public void notConsistency(final Store store) {
 
         int numberEq = equal.value();
-	int numberMayBe = 0;
-	int start = position.value();
+        int numberMayBe = 0;
+        int start = position.value();
         for (int i = start; i < list.length; i++) {
-	    IntVar v = list[i];
+            IntVar v = list[i];
             if (v.domain.contains(value))
                 if (v.singleton()) {
                     numberEq++;
-		    swap(start, i);
-		    start++;
-		}
-                else
+                    swap(start, i);
+                    start++;
+                } else
                     numberMayBe++;
-	    else { // does not have the value in its domain
+            else { // does not have the value in its domain
                 swap(start, i);
-		start++;
-	    }
-	}
+                start++;
+            }
+        }
 
-	if (numberEq > ub || numberEq + numberMayBe < lb) {
-	    removeConstraint();
-	    return;
-	}
+        if (numberEq > ub || numberEq + numberMayBe < lb) {
+            removeConstraint();
+            return;
+        }
 
-	if (start == list.length && numberEq >= lb && numberEq <= ub)
-	    throw Store.failException;
+        if (start == list.length && numberEq >= lb && numberEq <= ub)
+            throw Store.failException;
 
-	equal.update(numberEq);
-	position.update(start);
+        equal.update(numberEq);
+        position.update(start);
     }
 
     private void swap(int i, int j) {
@@ -227,28 +223,30 @@ public class CountBounds extends PrimitiveConstraint {
 
     @Override public boolean satisfied() {
 
-        int eq = 0, notEq = 0;
+        int eq = 0;
+        int notEq = 0;
 
         for (IntVar v : list)
             if (v.singleton(value))
                 eq++;
-	    else if (!v.domain.contains(value))
-		notEq++;
+            else if (!v.domain.contains(value))
+                notEq++;
 
-	return (eq + notEq == list.length && eq >= lb && eq <= ub);
+        return (eq + notEq == list.length && eq >= lb && eq <= ub);
     }
 
     @Override public boolean notSatisfied() {
 
-        int eq = 0, notEq = 0;
+        int eq = 0;
+        int notEq = 0;
 
         for (IntVar v : list)
             if (v.singleton(value))
                 eq++;
-	    else if (!v.domain.contains(value))
-		notEq++;
+            else if (!v.domain.contains(value))
+                notEq++;
 
-	return (eq + notEq == list.length && (eq < lb || eq > ub));
+        return (eq + notEq == list.length && (eq < lb || eq > ub));
     }
 
     @Override public String toString() {
@@ -268,5 +266,4 @@ public class CountBounds extends PrimitiveConstraint {
         return result.toString();
 
     }
-
 }

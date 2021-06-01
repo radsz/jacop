@@ -37,11 +37,10 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;
 import org.jacop.util.QueueForward;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * Constraint b {@literal =>} c (implication or half-reification)
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -66,7 +65,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
     Store store;
 
-    final private QueueForward<PrimitiveConstraint> queueForward;
+    private final QueueForward<PrimitiveConstraint> queueForward;
 
     /**
      * It constructs ifthen constraint.
@@ -92,16 +91,16 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public void consistency(Store store) {
 
-	if (c.satisfied()) {
-	    removeConstraint();
+        if (c.satisfied()) {
+            removeConstraint();
         } else if (c.notSatisfied()) {
-	    b.domain.in(store.level, b, 0,0);
-	    removeConstraint();
-	} else if (b.max() == 0) {
-	    removeConstraint();
+            b.domain.inValue(store.level, b, 0);
+            removeConstraint();
+        } else if (b.max() == 0) {
+            removeConstraint();
         } else if (b.min() == 1) {
-	    c.consistency(store);
-	}
+            c.consistency(store);
+        }
     }
 
     @Override public boolean notSatisfied() {
@@ -111,7 +110,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void notConsistency(Store store) {
 
         c.notConsistency(store);
-        b.domain.in(store.level, b, 1, 1);
+        b.domain.inValue(store.level, b, 1);
 
     }
 
@@ -207,7 +206,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
     @Override public boolean satisfied() {
 
-	return (b.min() == 1 && c.satisfied()) || (b.max() == 0);
+        return (b.min() == 1 && c.satisfied()) || (b.max() == 0);
 
     }
 

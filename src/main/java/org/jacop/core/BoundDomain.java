@@ -341,6 +341,36 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     }
 
+    @Override public void inValue(int storeLevel, IntVar var, int value) {
+
+        if (!(value >= min && value <= max))
+            throw failException;
+
+        if (min == value && max == value) // ground and equal value already
+            return;
+
+        if (stamp == storeLevel) {
+
+            this.min = value;
+            this.max = value;
+        } else {
+
+            assert stamp < storeLevel;
+
+            BoundDomain result = new BoundDomain(value, value);
+
+            result.modelConstraints = modelConstraints;
+            result.searchConstraints = searchConstraints;
+            result.stamp = storeLevel;
+            result.previousDomain = this;
+            result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+            result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+            ((IntVar) var).domain = result;
+        }
+
+        var.domainHasChanged(GROUND);
+    }
+
     @Override public void in(int storeLevel, Var var, IntDomain domain) {
 
         in(storeLevel, var, domain.min(), domain.max());

@@ -33,13 +33,12 @@ package org.jacop.constraints;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * ElementVariableFast constraint defines a relation
  * list[index - indexOffset] = value. This version uses bounds consistency.
  * <p>
@@ -55,7 +54,7 @@ import java.util.stream.Stream;
 
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
@@ -64,12 +63,12 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
     /**
      * It specifies variable index within an element constraint list[index - indexOffset] = value.
      */
-    final public IntVar index;
+    public final IntVar index;
 
     /**
      * It specifies variable value within an element constraint list[index - indexOffset] = value.
      */
-    final public IntVar value;
+    public final IntVar value;
 
     /**
      * It specifies indexOffset within an element constraint list[index - indexOffset] = value.
@@ -80,7 +79,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
      * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
      */
-    final public IntVar list[];
+    public final IntVar[] list;
 
     /**
      * It constructs an element constraint.
@@ -176,7 +175,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
 
         if (value.singleton() && index.singleton()) {
             IntVar v = list[index.value() - 1 - indexOffset];
-            v.domain.in(store.level, v, value.value(), value.value());
+            v.domain.inValue(store.level, v, value.value());
             removeConstraint();
             return;
         }
@@ -217,7 +216,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
             lp.domain.in(store.level, lp, value.domain);
 
             // if (value.singleton())
-            // 	removeConstraint();
+            //  removeConstraint();
         }
     }
 

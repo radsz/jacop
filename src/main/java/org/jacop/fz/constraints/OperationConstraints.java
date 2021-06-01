@@ -63,13 +63,13 @@ class OperationConstraints implements ParserTreeConstants {
 
         if (v1.singleton() && v2.singleton()) {
             int min = java.lang.Math.min(v1.value(), v2.value());
-            v3.domain.in(store.level, v3, min, min);
+            v3.domain.inValue(store.level, v3, min);
         } else if (v1.singleton() && v1.value() <= v2.min()) {
             int min = v1.value();
-            v3.domain.in(store.level, v3, min, min);
+            v3.domain.inValue(store.level, v3, min);
         } else if (v2.singleton() && v2.value() <= v1.min()) {
             int min = v2.value();
-            v3.domain.in(store.level, v3, min, min);
+            v3.domain.inValue(store.level, v3, min);
         } else if (v1.min() >= v2.max())
             support.pose(new XeqY(v2, v3));
         else if (v2.min() >= v1.max())
@@ -91,13 +91,13 @@ class OperationConstraints implements ParserTreeConstants {
 
         if (v1.singleton() && v2.singleton()) {
             int max = java.lang.Math.max(v1.value(), v2.value());
-            v3.domain.in(store.level, v3, max, max);
+            v3.domain.inValue(store.level, v3, max);
         } else if (v1.singleton() && v1.value() >= v2.max()) {
             int max = v1.value();
-            v3.domain.in(store.level, v3, max, max);
+            v3.domain.inValue(store.level, v3, max);
         } else if (v2.singleton() && v2.value() >= v1.max()) {
             int max = v2.value();
-            v3.domain.in(store.level, v3, max, max);
+            v3.domain.inValue(store.level, v3, max);
         } else if (v1.min() >= v2.max())
             support.pose(new XeqY(v1, v3));
         else if (v2.min() >= v1.max())
@@ -156,7 +156,7 @@ class OperationConstraints implements ParserTreeConstants {
                 support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
             else if (c == 0) {
                 IntVar v3 = support.getVariable(p3);
-                v3.domain.in(store.level, v3, 0, 0);
+                v3.domain.inValue(store.level, v3, 0);
             } else
                 support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
         } else if (p2.getType() == 0) {// p2 int
@@ -165,7 +165,7 @@ class OperationConstraints implements ParserTreeConstants {
                 support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
             else if (c == 0) {
                 IntVar v3 = support.getVariable(p3);
-                v3.domain.in(store.level, v3, 0, 0);
+                v3.domain.inValue(store.level, v3, 0);
             } else
                 support.pose(new XmulCeqZ(support.getVariable(p1), support.getInt(p2), support.getVariable(p3)));
         } else if (p3.getType() == 0) {// p3 int
@@ -178,7 +178,7 @@ class OperationConstraints implements ParserTreeConstants {
                 else
                     support.pose(new AndBoolSimple(v1, v2, v3));
             } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0))
-                v3.domain.in(store.level, v3, 0, 0);
+                v3.domain.inValue(store.level, v3, 0);
             else
                 support.pose(new XmulYeqZ(v1, v2, v3));
         }

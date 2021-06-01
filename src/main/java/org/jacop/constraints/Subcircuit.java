@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import org.jacop.core.*;
 import org.jacop.util.SophisticatedLengauerTarjan;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -54,7 +53,8 @@ public class Subcircuit extends Alldiff {
 
     boolean firstConsistencyCheck = true;
 
-    boolean useSCC = true, useDominance = true;
+    boolean useSCC = true;
+    boolean useDominance = true;
 
     int idd = 0;
 
@@ -260,7 +260,7 @@ public class Subcircuit extends Alldiff {
 
                 if (sccLength == 1)
                     // the scc is of size one => it must be self-cycle
-                    list[i].domain.in(store.level, list[i], i + 1, i + 1);
+                    list[i].domain.inValue(store.level, list[i], i + 1);
                 // check if more than 1 sub-cycle possible
                 for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
                     if (!list[cv].domain.contains(cv + 1))
@@ -277,7 +277,7 @@ public class Subcircuit extends Alldiff {
         if (realCycle != null && realCycle.cardinality() < list.length) {
             // possible cycle found, the rest must be self-loop
             for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1))
-                list[j].domain.in(store.level, list[j], j + 1, j + 1);
+                list[j].domain.inValue(store.level, list[j], j + 1);
         }
     }
 

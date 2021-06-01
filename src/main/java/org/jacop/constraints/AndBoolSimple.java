@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable
@@ -46,17 +45,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AndBoolSimple extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variables which all must be equal to 1 to set result variable to 1.
      */
-    final public IntVar a, b;
+    public final IntVar a;
+    public final IntVar b;
 
     /**
      * It specifies variable result, storing the result of and function performed a list of variables.
      */
-    final public IntVar result;
+    public final IntVar result;
 
     /**
      * It constructs AndBoolSimple.
@@ -86,18 +86,18 @@ public class AndBoolSimple extends PrimitiveConstraint {
     public void consistency(final Store store) {
 
         if (a.max() == 0 || b.max() == 0) {
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
             removeConstraint();
         } else if (a.min() == 1 && b.min() == 1)
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
         else if (result.min() == 1) {
-            a.domain.in(store.level, a, 1, 1);
-            b.domain.in(store.level, b, 1, 1);
+            a.domain.inValue(store.level, a, 1);
+            b.domain.inValue(store.level, b, 1);
         } else if (result.max() == 0)
             if (a.min() == 1)
-                b.domain.in(store.level, b, 0, 0);
+                b.domain.inValue(store.level, b, 0);
             else if (b.min() == 1)
-                a.domain.in(store.level, a, 0, 0);
+                a.domain.inValue(store.level, a, 0);
 
     }
 
@@ -105,18 +105,18 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
         // result = not a OR not b
         if (a.max() == 0 || b.max() == 0) {
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
             removeConstraint();
         } else if (a.min() == 1 && b.min() == 1)
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
         else if (result.max() == 0) {
-            a.domain.in(store.level, a, 1, 1);
-            b.domain.in(store.level, b, 1, 1);
+            a.domain.inValue(store.level, a, 1);
+            b.domain.inValue(store.level, b, 1);
         } else if (result.min() == 1)
             if (a.min() == 1)
-                b.domain.in(store.level, b, 0, 0);
+                b.domain.inValue(store.level, b, 0);
             else if (b.min() == 1)
-                a.domain.in(store.level, a, 0, 0);
+                a.domain.inValue(store.level, a, 0);
 
     }
 

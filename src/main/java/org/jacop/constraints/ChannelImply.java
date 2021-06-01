@@ -167,10 +167,10 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
                 startChanged = true;
                 continue;
             } else if (item[i].b.min() == 1)
-                x.domain.in(store.level, x, item[i].value, item[i].value);
+                x.domain.inValue(store.level, x, item[i].value);
 
             if (! x.domain.contains(item[i].value)) {
-                item[i].b.domain.in(store.level, item[i].b, 0, 0);
+                item[i].b.domain.inValue(store.level, item[i].b, 0);
                 swap(start, i);
                 start++;
                 startChanged = true;
@@ -188,7 +188,7 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
 
             for (int i = start; i < n; i++)
                 if (item[i].b != b)
-                    item[i].b.domain.in(store.level, item[i].b, 0, 0);
+                    item[i].b.domain.inValue(store.level, item[i].b, 0);
                 
         }
 

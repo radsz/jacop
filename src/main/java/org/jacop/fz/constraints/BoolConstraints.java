@@ -66,9 +66,9 @@ class BoolConstraints implements ParserTreeConstants {
         if (support.options.useSat())
             sat.generate_and(a1, v);
         else if (allVarOne(a1))
-            v.domain.in(store.level, v, 1, 1);
+            v.domain.inValue(store.level, v, 1);
         else if (atLeastOneVarZero(a1))
-            v.domain.in(store.level, v, 0, 0);
+            v.domain.inValue(store.level, v, 0);
         else
             support.poseDC(new AndBool(a1, v));
     }
@@ -81,7 +81,7 @@ class BoolConstraints implements ParserTreeConstants {
         if (allVarOne(a1))
             return;
         else if (atLeastOneVarZero(a1))
-            v.domain.in(store.level, v, 0, 0);
+            v.domain.inValue(store.level, v, 0);
         else
             support.pose(new Implies(v, new AndBoolVector(a1, support.dictionary.getConstant(1))));
     }
@@ -128,9 +128,9 @@ class BoolConstraints implements ParserTreeConstants {
 		else
 		    support.pose(new SumBool(a1, ">=", v));
             else if (allVarZero(a1))
-                v.domain.in(store.level, v, 0, 0);
+                v.domain.inValue(store.level, v, 0);
             else if (atLeastOneVarOne(a1))
-                v.domain.in(store.level, v, 1, 1);
+                v.domain.inValue(store.level, v, 1);
             else
                 support.poseDC(new OrBool(a1, v));
         }
@@ -147,7 +147,7 @@ class BoolConstraints implements ParserTreeConstants {
 	    else
 		support.pose(new SumBool(a1, ">=", v));
 	else if (allVarZero(a1))
-	    v.domain.in(store.level, v, 0, 0);
+	    v.domain.inValue(store.level, v, 0);
 	else if (atLeastOneVarOne(a1))
 	    return;
 	else
@@ -264,7 +264,7 @@ class BoolConstraints implements ParserTreeConstants {
                 if (v1.equals(v2))
                     if (reified) {
                         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-                        r.domain.in(store.level, r, 1, 1);
+                        r.domain.inValue(store.level, r, 1);
                         return;
                     } else
                         return; // already satisfied since a variable is both negated and not negated
@@ -272,7 +272,7 @@ class BoolConstraints implements ParserTreeConstants {
         if (a1.length == 0 && a2.length == 0)
             if (reified || implied) {
                 IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-                r.domain.in(store.level, r, 1, 1);
+                r.domain.inValue(store.level, r, 1);
                 return;
             } else
                 return;
@@ -289,7 +289,7 @@ class BoolConstraints implements ParserTreeConstants {
                 if (a1[i].min() == 1)
                     if (reified || implied) {
                         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-                        r.domain.in(store.level, r, 1, 1);
+                        r.domain.inValue(store.level, r, 1);
                         return;
                     } else
                         return; // already satisfied since a variable is both negated and not negated
@@ -301,7 +301,7 @@ class BoolConstraints implements ParserTreeConstants {
                 if (a2[i].max() == 0)
                     if (reified || implied) {
                         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-                        r.domain.in(store.level, r, 1, 1);
+                        r.domain.inValue(store.level, r, 1);
                         return;
                     } else
                         return; // already satisfied since a variable is both negated and not negated
@@ -311,7 +311,7 @@ class BoolConstraints implements ParserTreeConstants {
             if (a1reduced.size() == 0 && a2reduced.size() == 0)
                 if (reified || implied) {
                     IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-                    r.domain.in(store.level, r, 0, 0);
+                    r.domain.inValue(store.level, r, 0);
                     return;
                 } else
                     throw store.failException;

@@ -31,12 +31,11 @@
 package org.jacop.constraints;
 
 import org.jacop.core.*;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable
  * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
@@ -152,7 +151,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
         if (result.min() == 1) {
             for (int i = start; i < l; i++)
-                list[i].domain.in(store.level, list[i], 1, 1);
+                list[i].domain.inValue(store.level, list[i], 1);
             return;
         }
 
@@ -161,7 +160,7 @@ public class AndBoolVector extends PrimitiveConstraint {
                 swap(start, i);
                 start++;
             } else if (list[i].max() == 0) {
-                result.domain.in(store.level, result, 0, 0);
+                result.domain.inValue(store.level, result, 0);
                 removeConstraint();
                 return;
             }
@@ -169,12 +168,12 @@ public class AndBoolVector extends PrimitiveConstraint {
         position.update(start);
 
         if (start == l) {
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
             return;
         }
 
         if (result.max() == 0 && start == l - 1)
-            list[index_01].domain.in(store.level, list[index_01], 0, 0);
+            list[index_01].domain.inValue(store.level, list[index_01], 0);
 
         if ((l - start) < 3)
             queueIndex = 0;
@@ -196,7 +195,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
         if (result.max() == 0) {
             for (int i = start; i < l; i++)
-                list[i].domain.in(store.level, list[i], 1, 1);
+                list[i].domain.inValue(store.level, list[i], 1);
             return;
         }
 
@@ -205,19 +204,19 @@ public class AndBoolVector extends PrimitiveConstraint {
                 swap(start, i);
                 start++;
             } else if (list[i].max() == 0) {
-                result.domain.in(store.level, result, 1, 1);
+                result.domain.inValue(store.level, result, 1);
                 return;
             }
         }
         position.update(start);
 
         if (start == l) {
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
             return;
         }
 
         if (result.max() == 0 && start == l - 1)
-            list[index_01].domain.in(store.level, list[index_01], 1, 1);
+            list[index_01].domain.inValue(store.level, list[index_01], 1);
 
         if ((l - start) < 3)
             queueIndex = 0;

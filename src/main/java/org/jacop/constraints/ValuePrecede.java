@@ -34,14 +34,13 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * It defines Value Precedence constraint for integers.
  * <p>
  * Value precedence of s over t in an integer sequence x = [x0,..., xn−1]
@@ -58,22 +57,23 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ValuePrecede extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     Store store;
 
     /**
      * It specifies lists of variables for the constraint.
      */
-    final public IntVar[] x;
+    public final IntVar[] x;
     private int n;
 
     /**
      * It specifies values s and t for the constraint.
      */
-    protected final int s, t;
+    protected final int s;
+    protected final int t;
 
-    /**
+    /*
      * Defines variables alpha, beta, gamma for the algorithm
      */
     private TimeStamp<Integer> alpha;
@@ -142,7 +142,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
         return IntDomain.ANY;
     }
 
-    /**
+    /*
      *
      */
     @Override public void consistency(Store store) {
@@ -226,7 +226,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
         if (b > gamma.value()) {
             int a = alpha.value();
-            x[a].domain.in(store.level, x[a], s, s);
+            x[a].domain.inValue(store.level, x[a], s);
             removeConstraint();
         }
         beta.update(b);
@@ -238,7 +238,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
             gamma.update(i);
             if (beta.value() > i) {
                 int a = alpha.value();
-                x[a].domain.in(store.level, x[a], s, s);
+                x[a].domain.inValue(store.level, x[a], s);
                 removeConstraint();
             }
         }
@@ -247,7 +247,8 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
     @Override public boolean satisfied() {
 
-        int firstS = -1, firstT = -1;
+        int firstS = -1;
+        int firstT = -1;
         for (int i = 0; i < x.length; i++) {
             if (x[i].singleton()) {
                 if (firstS == -1 && x[i].singleton(s))

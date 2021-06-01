@@ -208,7 +208,7 @@ public class AtMost extends PrimitiveConstraint {
         } else if (numberMayBe + numberEq == counter + 1) {
             for (int i = start; i < list.length; i++) {
                 IntVar v = list[i];
-                v.domain.in(store.level, v, value, value);
+                v.domain.inValue(store.level, v, value);
             }
             if (!reified)
                 removeConstraint();

@@ -33,11 +33,10 @@ package org.jacop.constraints;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 import org.jacop.util.QueueForward;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-/**
+/*
  * Reified constraints "constraint" {@literal <=>} B
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -46,19 +45,19 @@ import java.util.stream.Stream;
 
 public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies constraint c which status is being checked.
      */
-    final public PrimitiveConstraint c;
+    public final PrimitiveConstraint c;
 
     /**
      * It specifies variable b which stores status of the constraint (0 - for certain not satisfied, 1 - for certain satisfied).
      */
-    final public IntVar b;
+    public final IntVar b;
 
-    final private QueueForward<PrimitiveConstraint> queueForward;
+    private final QueueForward<PrimitiveConstraint> queueForward;
 
     private boolean needRemoveLevelLate = false;
 
@@ -86,10 +85,10 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void consistency(final Store store) {
 
         if (c.satisfied()) {
-            b.domain.in(store.level, b, 1, 1);
+            b.domain.inValue(store.level, b, 1);
             removeConstraint();
         } else if (c.notSatisfied()) {
-            b.domain.in(store.level, b, 0, 0);
+            b.domain.inValue(store.level, b, 0);
             removeConstraint();
         } else if (b.max() == 0) // C must be false
             c.notConsistency(store);
@@ -100,10 +99,10 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     @Override public void notConsistency(final Store store) {
 
         if (c.satisfied()) {
-            b.domain.in(store.level, b, 0, 0);
+            b.domain.inValue(store.level, b, 0);
             removeConstraint();
         } else if (c.notSatisfied()) {
-            b.domain.in(store.level, b, 1, 1);
+            b.domain.inValue(store.level, b, 1);
             removeConstraint();
         } else if (b.max() == 0) // C must be true
             c.consistency(store);
@@ -197,13 +196,13 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     @Override public boolean satisfied() {
-        IntDomain Bdom = b.dom();
-        return (Bdom.min() == 1 && c.satisfied()) || (Bdom.max() == 0 && c.notSatisfied());
+        IntDomain bDom = b.dom();
+        return (bDom.min() == 1 && c.satisfied()) || (bDom.max() == 0 && c.notSatisfied());
     }
 
     @Override public boolean notSatisfied() {
-        IntDomain Bdom = b.dom();
-        return (Bdom.max() == 0 && c.satisfied()) || (Bdom.min() == 1 && c.notSatisfied());
+        IntDomain bDom = b.dom();
+        return (bDom.max() == 0 && c.satisfied()) || (bDom.min() == 1 && c.notSatisfied());
     }
 
     @Override public String toString() {

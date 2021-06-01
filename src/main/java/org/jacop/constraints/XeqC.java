@@ -34,10 +34,9 @@ import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * Constraints X #= C
  * <p>
  * Domain consistency is used.
@@ -48,17 +47,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XeqC extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies the constant to which a specified variable should be equal to.
      */
-    final public int c;
+    public final int c;
 
     /**
      * It specifies the variable which is constrained to be equal to the specified value.
      */
-    final public IntVar x;
+    public final IntVar x;
 
     /**
      * It constructs the constraint X = C.
@@ -83,7 +82,7 @@ public class XeqC extends PrimitiveConstraint {
 
     @Override public void consistency(final Store store) {
 
-        x.domain.in(store.level, x, c, c);
+        x.domain.inValue(store.level, x, c);
 
     }
 

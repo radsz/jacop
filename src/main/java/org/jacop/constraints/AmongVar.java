@@ -423,7 +423,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         if (noRoleY == (listOfY.length - alreadyCover)) {
             if (debugAll)
                 System.out.println("........N must be equal to " + countCoverMin);
-            n.domain.in(store.level, n, countCoverMin, countCoverMin);
+            n.domain.inValue(store.level, n, countCoverMin); //, countCoverMin);
         }
 
         K = K.subtract(U);
@@ -617,7 +617,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                                     yIndex.put(tmp, yInt);
                                 }
                                 lastIndex++;
-                                y_last.domain.in(store.level, y_last, v, v);
+                                y_last.domain.inValue(store.level, y_last, v); //, v);
 
                                 mustBeCoveredNow = mustBeCoveredNow.subtract(v, v);
                             }

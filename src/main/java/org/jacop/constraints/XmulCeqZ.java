@@ -100,7 +100,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
 
             } while (store.propagationHasOccurred);
         else
-            z.domain.in(store.level, z, 0, 0);
+            z.domain.inValue(store.level, z, 0);
     }
 
     @Override public void notConsistency(final Store store) {

@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import org.jacop.core.*;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -150,7 +149,7 @@ public class OrBoolVector extends PrimitiveConstraint {
 
         for (int i = start; i < l; i++) {
             if (list[i].min() == 1) {
-                result.domain.in(store.level, result, 1, 1);
+                result.domain.inValue(store.level, result, 1);
                 removeConstraint();
                 return;
             } else if (list[i].max() == 0) {
@@ -161,15 +160,15 @@ public class OrBoolVector extends PrimitiveConstraint {
         position.update(start);
 
         if (start == l)
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
 
         // for case >, then the in() will fail as the constraint should.
         if (result.min() == 1 && start >= l - 1)
-            list[index_01].domain.in(store.level, list[index_01], 1, 1);
+            list[index_01].domain.inValue(store.level, list[index_01], 1);
 
         if (result.max() == 0 && start < l)
             for (int i = start; i < l; i++)
-                list[i].domain.in(store.level, list[i], 0, 0);
+                list[i].domain.inValue(store.level, list[i], 0);
 
         if ((l - start) < 3)
             queueIndex = 0;
@@ -195,7 +194,7 @@ public class OrBoolVector extends PrimitiveConstraint {
 
         for (int i = start; i < l; i++) {
             if (list[i].min() == 1) {
-                result.domain.in(store.level, result, 0, 0);
+                result.domain.inValue(store.level, result, 0);
                 return;
             } else if (list[i].max() == 0) {
                 swap(start, i);
@@ -205,15 +204,15 @@ public class OrBoolVector extends PrimitiveConstraint {
         position.update(start);
 
         if (start == l)
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
 
         // for case >, then the in() will fail as the constraint should.
         if (result.min() == 1 && start < l)
             for (int i = 0; i < l; i++)
-                list[i].domain.in(store.level, list[i], 0, 0);
+                list[i].domain.inValue(store.level, list[i], 0);
 
         if (result.max() == 0 && start >= l - 1)
-            list[index_01].domain.in(store.level, list[index_01], 1, 1);
+            list[index_01].domain.inValue(store.level, list[index_01], 1);
 
         // } while (store.propagationHasOccurred);
 
@@ -261,7 +260,8 @@ public class OrBoolVector extends PrimitiveConstraint {
 
         int start = position.value();
 
-        int x1 = 0, x0 = start;
+        int x1 = 0;
+        int x0 = start;
 
         for (int i = start; i < l; i++) {
             if (list[i].min() == 1)

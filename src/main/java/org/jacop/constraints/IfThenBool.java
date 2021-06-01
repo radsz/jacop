@@ -31,11 +31,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint ( X {@literal =>} Y ) {@literal <=>} Z.
@@ -46,13 +45,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class IfThenBool extends PrimitiveConstraint {
 
-	/*
-   * X | Y | Z
-	 * 0   0   1
-	 * 0   1   1
-	 * 1   0   0
-	 * 1   1   1
-	 */
+         /*
+          * X | Y | Z
+          * 0   0   1
+          * 0   1   1
+          * 1   0   0
+          * 1   1   1
+          */
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -117,12 +116,12 @@ public class IfThenBool extends PrimitiveConstraint {
     @Override public void consistency(Store store) {
 
         if (z.max() == 0) {
-            x.domain.in(store.level, x, 1, 1);
-            y.domain.in(store.level, y, 0, 0);
+            x.domain.inValue(store.level, x, 1);
+            y.domain.inValue(store.level, y, 0);
         }
 
         if (x.max() == 0) {
-            z.domain.in(store.level, z, 1, 1);
+            z.domain.inValue(store.level, z, 1);
         } else if (x.min() == 1) {
             z.domain.in(store.level, z, y.domain);
             y.domain.in(store.level, y, z.domain);
@@ -134,7 +133,7 @@ public class IfThenBool extends PrimitiveConstraint {
             if (z.singleton())
                 x.domain.inComplement(store.level, x, z.value());
         } else if (y.min() == 1) {
-            z.domain.in(store.level, z, 1, 1);
+            z.domain.inValue(store.level, z, 1);
         }
 
     }
@@ -164,7 +163,7 @@ public class IfThenBool extends PrimitiveConstraint {
             if (x.singleton()) {
 
                 if (x.max() == 0) {
-                    z.domain.in(store.level, z, 0, 0);
+                    z.domain.inValue(store.level, z, 0);
                 }
 
                 if (x.min() == 1) {
@@ -183,13 +182,13 @@ public class IfThenBool extends PrimitiveConstraint {
                 }
 
                 if (y.min() == 1) {
-                    z.domain.in(store.level, z, 0, 0);
+                    z.domain.inValue(store.level, z, 0);
                 }
             }
 
             if (z.min() == 1) {
-                x.domain.in(store.level, x, 1, 1);
-                y.domain.in(store.level, y, 0, 0);
+                x.domain.inValue(store.level, x, 1);
+                y.domain.inValue(store.level, y, 0);
             }
 
         } while (store.propagationHasOccurred);

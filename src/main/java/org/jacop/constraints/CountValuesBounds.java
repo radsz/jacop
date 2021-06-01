@@ -36,7 +36,6 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,32 +52,32 @@ import java.util.stream.Stream;
 
 public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It counts the number of occurences of the specified value in a list.
      */
-    final public Bounds[] counter;
+    public final Bounds[] counter;
 
-    /**
+    /*
      * lower and upper bounds on values occurence
      */
     int[] lb;
     int[] ub;
     
-    final public Bounds counterRest;
-    final public Bounds[] extendedCounter;
+    public final Bounds counterRest;
+    public final Bounds[] extendedCounter;
 
     /**
      * The list of variables which are checked and counted if equal to specified value.
      */
-    final public IntVar list[];
-    final private int n; // length of the list
+    public final IntVar[] list;
+    private final int n; // length of the list
 
     /**
      * The value to which is any variable is equal to makes the constraint count it.
      */
-    final public int[] values;
+    public final int[] values;
     final IntDomain valuesDomain;
     final IntDomain valuesDomainComplement;
 
@@ -109,29 +108,29 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
         this.queueIndex = 1;
         this.numberId = idNumber.incrementAndGet();
 
-	this.n = list.length;
+        this.n = list.length;
         this.list = Arrays.copyOf(list, n);
         this.lb = lb;
         this.ub = ub;
         this.values = values;
-	this.counter = new Bounds[values.length];
-	this.counterRest = new Bounds(0, n);
-	
-	this.valuesDomain = new IntervalDomain();
-	for (int i=0; i < values.length; i++) {
-	    int v = values[i];
-	    counter[i] = new Bounds(lb[i], ub[i]);
-	    valuesDomain.unionAdapt(v);
-	}
-	this.valuesDomainComplement = valuesDomain.complement();
+        this.counter = new Bounds[values.length];
+        this.counterRest = new Bounds(0, n);
+        
+        this.valuesDomain = new IntervalDomain();
+        for (int i = 0; i < values.length; i++) {
+            int v = values[i];
+            counter[i] = new Bounds(lb[i], ub[i]);
+            valuesDomain.unionAdapt(v);
+        }
+        this.valuesDomainComplement = valuesDomain.complement();
 
-	extendedCounter = new Bounds[counter.length+1];
-	for (int i = 0; i < counter.length; i++) {
-	    extendedCounter[i] = counter[i];	    
-	}
-	extendedCounter[counter.length] = counterRest;
+        extendedCounter = new Bounds[counter.length + 1];
+        for (int i = 0; i < counter.length; i++) {
+            extendedCounter[i] = counter[i];        
+        }
+        extendedCounter[counter.length] = counterRest;
 
-	setScope(Arrays.stream(list));
+        setScope(Arrays.stream(list));
 
     }
 
@@ -149,16 +148,18 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
     // registers the constraint in the constraint store and
     // initialize stateful variables
-    @SuppressWarnings("unchecked") @Override public void impose(Store store) {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void impose(Store store) {
 
         super.impose(store);
 
         position = new TimeStamp<>(store, 0);
-	equal = new TimeStamp[values.length];
-	for (int i = 0; i < values.length; i++) {
-	    equal[i] = new TimeStamp<>(store, 0);
-	}
-	rest = new TimeStamp<>(store, 0);
+        equal = new TimeStamp[values.length];
+        for (int i = 0; i < values.length; i++) {
+            equal[i] = new TimeStamp<>(store, 0);
+        }
+        rest = new TimeStamp<>(store, 0);
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -167,110 +168,111 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
     @Override public void consistency(final Store store) {
 
-	int start = position.value();
-	int[] numberMayBe = new int[values.length];
-	int[] numberEq = new int[values.length];
-	int restEq, restMayBe;
+        int start = position.value();
+        int[] numberMayBe = new int[values.length];
+        int[] numberEq = new int[values.length];
+        int restEq;
+        int restMayBe;
 
-	restEq = rest.value();
-	for (int i = 0; i < values.length; i++)
-	    numberEq[i] = equal[i].value();
+        restEq = rest.value();
+        for (int i = 0; i < values.length; i++)
+            numberEq[i] = equal[i].value();
 
-	do {
+        do {
 
-	    store.propagationHasOccurred = false;
+            store.propagationHasOccurred = false;
 
-	    restMayBe = 0;
-	    for (int i = 0; i < values.length; i++)
-		numberMayBe[i] = 0;
+            restMayBe = 0;
+            for (int i = 0; i < values.length; i++)
+                numberMayBe[i] = 0;
 
-	    for (int i = start; i < n; i++) {
-		IntVar v = list[i];
-		int noValuesInDomain = 0;
-		int mayBe = 0;
+            for (int i = start; i < n; i++) {
+                IntVar v = list[i];
+                int noValuesInDomain = 0;
+                int mayBe = 0;
 
-		for (int j = 0; j < values.length; j++) {
-		    if (v.domain.contains(values[j]))
-			if (v.singleton()) {
-			    numberEq[j]++;
-			    swap(start, i);
-			    start++;
-			}
-			else {
-			    numberMayBe[j]++;
-			}
-		    else { // does not have the values in its domain
-			noValuesInDomain++;
-		    }
-		}
+                for (int j = 0; j < values.length; j++) {
+                    if (v.domain.contains(values[j]))
+                        if (v.singleton()) {
+                            numberEq[j]++;
+                            swap(start, i);
+                            start++;
+                        } else {
+                            numberMayBe[j]++;
+                        }
+                    else { // does not have the values in its domain
+                        noValuesInDomain++;
+                    }
+                }
 
-		if (! v.domain.subtract(valuesDomain).isEmpty())
-		    restMayBe++;
+                if (! v.domain.subtract(valuesDomain).isEmpty())
+                    restMayBe++;
 
-		if (noValuesInDomain == values.length) {
-		    swap(start, i);
-		    start++;
-		    restEq++;
-		}
-	    }
+                if (noValuesInDomain == values.length) {
+                    swap(start, i);
+                    start++;
+                    restEq++;
+                }
+            }
 
-	    counterRest.in(restEq, restEq + restMayBe);
+            counterRest.in(restEq, restEq + restMayBe);
 
-	    for (int i = 0; i < values.length; i++) 	    
-	    	counter[i].in(numberEq[i], numberEq[i] + numberMayBe[i]);
+            for (int i = 0; i < values.length; i++)         
+                counter[i].in(numberEq[i], numberEq[i] + numberMayBe[i]);
 
-	    int min = 0, max = 0;
-	    for (int i = 0; i < extendedCounter.length; i++) {
-	    	min += extendedCounter[i].min();
-	    	max += extendedCounter[i].max();
-	    }
-	    for (int i = 0; i < extendedCounter.length; i++) { // sum(extendedCounter) == n (list length)
-	    	extendedCounter[i].in(n - max + extendedCounter[i].max(), n - min + extendedCounter[i].min());
-	    }
+            int min = 0;
+            int max = 0;
+            for (int i = 0; i < extendedCounter.length; i++) {
+                min += extendedCounter[i].min();
+                max += extendedCounter[i].max();
+            }
+            for (int i = 0; i < extendedCounter.length; i++) { // sum(extendedCounter) == n (list length)
+                extendedCounter[i].in(n - max + extendedCounter[i].max(), n - min + extendedCounter[i].min());
+            }
 
-	    for (int i = 0; i < values.length; i++) {
+            for (int i = 0; i < values.length; i++) {
 
-		if (numberMayBe[i] == counter[i].min() - numberEq[i]) {
+                if (numberMayBe[i] == counter[i].min() - numberEq[i]) {
 
-		    for (int j = start; j < n; j++) {
-			IntVar v = list[j];
-			if (v.domain.contains(values[i]))
-			    v.domain.in(store.level, v, values[i], values[i]);
+                    for (int j = start; j < n; j++) {
+                        IntVar v = list[j];
+                        if (v.domain.contains(values[i]))
+                            v.domain.inValue(store.level, v, values[i]);
 
-		    }
-		} else if (numberEq[i] == counter[i].max()) {
+                    }
+                } else if (numberEq[i] == counter[i].max()) {
 
-		    for (int j = start; j < n; j++) {
-			IntVar v = list[j];
-			v.domain.inComplement(store.level, v, values[i]);
-		    }
-		}
-	    }
+                    for (int j = start; j < n; j++) {
+                        IntVar v = list[j];
+                        v.domain.inComplement(store.level, v, values[i]);
+                    }
+                }
+            }
 
-	    if (restMayBe == counterRest.min() - restEq) {
+            if (restMayBe == counterRest.min() - restEq) {
 
-	    	for (int j = start; j < n; j++) {
-	    	    IntVar v = list[j];
-	    	    if (! v.domain.subtract(valuesDomain).isEmpty()) {
-			v.domain.in(store.level, v, valuesDomainComplement);
-	    	    }
-	    	}
-	    } else if (restEq == counterRest.max()) {
+                for (int j = start; j < n; j++) {
+                    IntVar v = list[j];
+                    if (! v.domain.subtract(valuesDomain).isEmpty()) {
+                        v.domain.in(store.level, v, valuesDomainComplement);
+                    }
+                }
+            } else if (restEq == counterRest.max()) {
 
-	    	for (int j = start; j < n; j++) {
-	    	    IntVar v = list[j];
-	    	    v.domain.in(store.level, v, valuesDomain);
-	    	}
-	    }
+                for (int j = start; j < n; j++) {
+                    IntVar v = list[j];
+                    v.domain.in(store.level, v, valuesDomain);
+                }
+            }
 
-	} while (store.propagationHasOccurred);
+        } while (store.propagationHasOccurred);
 
-	for (int i = 0; i < values.length; i++) {
-	    equal[i].update(numberEq[i]);	    
-	}
-	rest.update(restEq);	    
+        for (int i = 0; i < values.length; i++) {
+            equal[i].update(numberEq[i]);           
+        }
+        rest.update(restEq);        
 
-	position.update(start);
+        position.update(start);
 
     }
 
@@ -284,19 +286,19 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
     public boolean satisfied() {
 
-	for (int i = 0; i < counter.length; i++) {
-	    int v = values[i];
+        for (int i = 0; i < counter.length; i++) {
+            int v = values[i];
 
-	    int cc = 0;
-	    for (int j = 0; j < n; j++) {
-		if (list[j].singleton(v))
-		    cc++;
-	    }
-	    if (cc < counter[i].lb || cc > counter[i].ub)
-		return false;
-	}
+            int cc = 0;
+            for (int j = 0; j < n; j++) {
+                if (list[j].singleton(v))
+                    cc++;
+            }
+            if (cc < counter[i].lb || cc > counter[i].ub)
+                return false;
+        }
 
-	return true;
+        return true;
     }
 
     @Override public String toString() {
@@ -304,8 +306,8 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
         StringBuilder result = new StringBuilder(id());
 
         result.append(" : CountValuesBounds(").append(java.util.Arrays.asList(list)).append(", ");
-	result.append(java.util.Arrays.toString(lb)).append(", ").append(java.util.Arrays.toString(ub)).append(", ")
-	    .append(java.util.Arrays.toString(values));
+        result.append(java.util.Arrays.toString(lb)).append(", ").append(java.util.Arrays.toString(ub)).append(", ")
+            .append(java.util.Arrays.toString(values));
 
         return result.toString();
 
@@ -314,51 +316,52 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
     private static class Bounds {
 
-	int min, max;
-	final int lb, ub;
+        int min;
+        int max;
+        final int lb;
+        final int ub;
 
-	Bounds(int min, int max) {
-	    this.min = min;
-	    this.max = max;
-	    this.lb = min;
-	    this.ub = max;
-	}
-	
-	void in(int min, int max) {
-	    if (min > ub || max < lb) {
-		throw Store.failException;
-	    } else {
-		if (min > lb)
-		    this.min = min;
-		else
-		    this.min = lb;
+        Bounds(int min, int max) {
+            this.min = min;
+            this.max = max;
+            this.lb = min;
+            this.ub = max;
+        }
+        
+        void in(int min, int max) {
+            if (min > ub || max < lb) {
+                throw Store.failException;
+            } else {
+                if (min > lb)
+                    this.min = min;
+                else
+                    this.min = lb;
 
-		if (max < ub)
-		    this.max = max;
-		else
-		    this.max = ub;
-	    }
-	}
+                if (max < ub)
+                    this.max = max;
+                else
+                    this.max = ub;
+            }
+        }
 
-	int min() {
-	    return min;
-	}
+        int min() {
+            return min;
+        }
 
-	int max() {
-	    return max;
-	}
+        int max() {
+            return max;
+        }
 
-	boolean singleton() {
-	    return min == max;
-	}
+        boolean singleton() {
+            return min == max;
+        }
 
-	@Override public String toString() {
+        @Override public String toString() {
 
-	    StringBuilder result = new StringBuilder();
+            StringBuilder result = new StringBuilder();
 
-	    result.append(min+"("+lb+").."+max+"("+ub+")");
-	    return result.toString();
-	}
+            result.append(min + "(" + lb + ").." + max + "(" + ub + ")");
+            return result.toString();
+        }
     }
-
 }

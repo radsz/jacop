@@ -523,7 +523,7 @@ class GlobalConstraints implements ParserTreeConstants {
             return;
         } else if (c.singleton(x.length)) {
             for (IntVar v : x) 
-                v.domain.in(store.level, v, y, y);
+                v.domain.inValue(store.level, v, y);
             return;
         }
         
@@ -533,7 +533,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 xs.add(v);
         }
         if (xs.size() == 0) {
-            c.domain.in(store.level, c, 0, 0);
+            c.domain.inValue(store.level, c, 0);
             return;
         } else if (c.singleton()) 
             support.pose(new CountBounds(xs, y, c.value(), c.value()));
@@ -618,7 +618,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 xs.add(v);
         }
         if (xs.size() == 0) {
-            c.domain.in(store.level, c, 0, 0);
+            c.domain.inValue(store.level, c, 0);
             return;
         } else if (y.singleton())
             support.pose(new Count(xs, c, y.value()));

@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import org.jacop.core.*;
 import org.jacop.util.QueueForward;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -45,19 +44,19 @@ import java.util.stream.Stream;
 
 public class Xor extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies constraint c, which status must satisfy xor relationship with variable b.
      */
-    final public PrimitiveConstraint c;
+    public final PrimitiveConstraint c;
 
     /**
      * It specifies variable b, which boolean status must satisfy xor relationship with status of constraint c.
      */
-    final public IntVar b;
+    public final IntVar b;
 
-    final private QueueForward<PrimitiveConstraint> queueForward;
+    private final QueueForward<PrimitiveConstraint> queueForward;
 
     private boolean needRemoveLevelLate = false;
 
@@ -95,9 +94,9 @@ public class Xor extends PrimitiveConstraint {
         else if (b.min() == 1)  // C must be false
             c.notConsistency(store);
         else if (c.satisfied())
-            b.domain.in(store.level, b, 0, 0);
+            b.domain.inValue(store.level, b, 0);
         else if (c.notSatisfied())
-            b.domain.in(store.level, b, 1, 1);
+            b.domain.inValue(store.level, b, 1);
     }
 
     @Override public int getNestedPruningEvent(Var var, boolean mode) {
@@ -207,9 +206,9 @@ public class Xor extends PrimitiveConstraint {
         else if (b.min() == 1) // C must be true
             c.consistency(store);
         else if (c.satisfied())
-            b.domain.in(store.level, b, 1, 1);
+            b.domain.inValue(store.level, b, 1);
         else if (c.notSatisfied())
-            b.domain.in(store.level, b, 0, 0);
+            b.domain.inValue(store.level, b, 0);
 
     }
 

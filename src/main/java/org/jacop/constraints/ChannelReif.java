@@ -171,7 +171,7 @@ public class ChannelReif extends Constraint implements SatisfiedPresent {
                 x.domain.in(store.level, x, item[i].value, item[i].value);
 
             if (! x.domain.contains(item[i].value)) {
-                item[i].b.domain.in(store.level, item[i].b, 0, 0);
+                item[i].b.domain.inValue(store.level, item[i].b, 0);
                 swap(start, i);
                 start++;
                 startChanged = true;
@@ -186,11 +186,11 @@ public class ChannelReif extends Constraint implements SatisfiedPresent {
 
         if (x.singleton()) {
             IntVar b = valueMap.get(x.value());
-            b.domain.in(store.level, b, 1, 1);
+            b.domain.inValue(store.level, b, 1);
 
             for (int i = start; i < n; i++)
                 if (item[i].b != b)
-                    item[i].b.domain.in(store.level, item[i].b, 0, 0);
+                    item[i].b.domain.inValue(store.level, item[i].b, 0);
             return;
         }
 

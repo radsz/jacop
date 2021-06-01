@@ -34,7 +34,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,18 +51,19 @@ import java.util.stream.Stream;
 
 public class BoolClause extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies lists of variables for the constraint.
      */
-    final public IntVar[] x;
-    final public IntVar[] y;
+    public final IntVar[] x;
+    public final IntVar[] y;
 
     /**
      * It specifies length of lists x and y respectively.
      */
-    private final int lx, ly;
+    private final int lx;
+    private final int ly;
 
     /**
      * Defines first position of the variable that is not ground to 0 (positionX) or 0 (positionY).
@@ -165,7 +165,7 @@ public class BoolClause extends PrimitiveConstraint {
                 return;
             }
         }
-	positionX.update(startX);
+        positionX.update(startX);
 
         for (int i = startY; i < ly; i++) {
             if (y[i].min() == 1) {
@@ -176,17 +176,17 @@ public class BoolClause extends PrimitiveConstraint {
                 return;
             }
         }
-	positionY.update(startY);
+        positionY.update(startY);
 
         // all x = 0 and all y = 1 => FAIL
         if (startX == lx && startY == ly)
             throw Store.failException;
             // last x must be 1
         else if (startX == lx - 1 && startY == ly)
-            x[lx - 1].domain.in(store.level, x[lx - 1], 1, 1);
+            x[lx - 1].domain.inValue(store.level, x[lx - 1], 1);
             // last y must be 0
         else if (startX == lx && startY == ly - 1)
-            y[ly - 1].domain.in(store.level, y[ly - 1], 0, 0);
+            y[ly - 1].domain.inValue(store.level, y[ly - 1], 0);
 
         if (lx - startX + ly + startY < 5)
             queueIndex = 0;
@@ -210,9 +210,9 @@ public class BoolClause extends PrimitiveConstraint {
     @Override public void notConsistency(Store store) {
 
         for (int i = 0; i < lx; i++)
-            x[i].domain.in(store.level, x[i], 0, 0);
+            x[i].domain.inValue(store.level, x[i], 0);
         for (int i = 0; i < ly; i++)
-            y[i].domain.in(store.level, y[i], 1, 1);
+            y[i].domain.inValue(store.level, y[i], 1);
 
         removeConstraint();
 
@@ -230,7 +230,7 @@ public class BoolClause extends PrimitiveConstraint {
                 swap(x, startX, i);
                 startX++;
             }
-	positionX.update(startX);
+        positionX.update(startX);
 
         for (int i = startY; i < ly; i++)
             if (y[i].max() == 0)
@@ -239,7 +239,7 @@ public class BoolClause extends PrimitiveConstraint {
                 swap(y, startY, i);
                 startY++;
             }
-	positionY.update(startY);
+        positionY.update(startY);
 
         return false;
 
@@ -256,7 +256,7 @@ public class BoolClause extends PrimitiveConstraint {
                 startX++;
             } else
                 return false;
-	positionX.update(startX);
+        positionX.update(startX);
 
         for (int i = startY; i < ly; i++)
             if (y[i].min() == 1) {
@@ -264,7 +264,7 @@ public class BoolClause extends PrimitiveConstraint {
                 startY++;
             } else
                 return false;
-	positionY.update(startY);
+        positionY.update(startY);
 
         return startX == lx && startY == ly;
     }
@@ -289,5 +289,4 @@ public class BoolClause extends PrimitiveConstraint {
         resultString.append("])");
         return resultString.toString();
     }
-
 }

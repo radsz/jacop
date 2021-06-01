@@ -159,13 +159,13 @@ public class Count extends PrimitiveConstraint {
         if (numberMayBe == counter.min() - numberEq) {
             for (int i = start; i < list.length; i++) {
 		IntVar v = list[i];
-		v.domain.in(store.level, v, value, value);
+		v.domain.inValue(store.level, v, value);
             }
 
             numberEq += numberMayBe;
             numberMayBe = 0;
 
-            counter.domain.in(store.level, counter, numberEq, numberEq);
+            counter.domain.inValue(store.level, counter, numberEq);
             removeConstraint();
             return;
 
@@ -177,7 +177,7 @@ public class Count extends PrimitiveConstraint {
 
             numberMayBe = 0;
 
-            counter.domain.in(store.level, counter, numberEq, numberEq);
+            counter.domain.inValue(store.level, counter, numberEq);
             removeConstraint();
             return;
         }

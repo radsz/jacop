@@ -188,7 +188,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
                     if (constant_int(node, initChild)) {
                         initVal = getScalarFlatExpr(node, initChild);
-                        varInt.domain.in(store.level, varInt, initVal, initVal);
+                        varInt.domain.inValue(store.level, varInt, initVal);
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(varInt, initVar);
@@ -222,7 +222,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
                     if (constant_int(node, initChild)) {
                         initVal = getScalarFlatExpr(node, initChild);
-                        varInt.domain.in(store.level, varInt, initVal, initVal);
+                        varInt.domain.inValue(store.level, varInt, initVal);
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(varInt, initVar);
@@ -252,7 +252,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
                     if (constant_int(node, initChild)) {
                         initVal = getScalarFlatExpr(node, initChild);
-                        varInt.domain.in(store.level, varInt, initVal, initVal);
+                        varInt.domain.inValue(store.level, varInt, initVal);
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(varInt, initVar);
@@ -273,7 +273,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
                     if (constant_int(node, initChild)) {
                         initVal = getScalarFlatExpr(node, initChild);
-                        boolVar.domain.in(store.level, boolVar, initVal, initVal);
+                        boolVar.domain.inValue(store.level, boolVar, initVal);
                     } else {
                         initVar = getScalarFlatExpr_var(store, node, initChild);
                         XeqY c = new XeqY(boolVar, initVar);

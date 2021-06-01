@@ -396,6 +396,62 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
 
     /**
+     * It updates the domain to have a single value within its domain.
+     * The type of update is decided by the value of stamp. It informs the
+     * variable of a change if it occurred.
+     */
+    @Override public void inValue(int storeLevel, IntVar var, int value) {
+
+        assert checkInvariants() == null : checkInvariants();
+
+        if (singleton && value == min)  // singleton(c)
+            return;
+
+        if (! contains(value))
+            throw failException;
+
+        // Pruning has occurred.
+
+        if (stamp == storeLevel) {
+
+            bits = 1L << 63;
+            min = value;
+            max = value;
+            singleton = true;
+            size = 1;
+
+            assert checkInvariants() == null : checkInvariants();
+
+            var.domainHasChanged(IntDomain.GROUND);
+
+        } else {
+
+            assert stamp < storeLevel;
+
+            SmallDenseDomain result = new SmallDenseDomain();
+            result.bits = 1L << 63;
+            result.min = value;
+            result.max = value;
+            result.singleton = true;
+            result.size = 1;            
+
+            result.modelConstraints = modelConstraints;
+            result.searchConstraints = searchConstraints;
+            result.stamp = storeLevel;
+            result.previousDomain = this;
+            result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+            result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+            ((IntVar) var).domain = result;
+
+            assert checkInvariants() == null : checkInvariants();
+            assert result.checkInvariants() == null : result.checkInvariants();
+
+            var.domainHasChanged(IntDomain.GROUND);
+
+        }
+    }
+
+    /**
      * It updates the domain to have values only within the interval min..max.
      * The type of update is decided by the value of stamp. It informs the
      * variable of a change if it occurred.

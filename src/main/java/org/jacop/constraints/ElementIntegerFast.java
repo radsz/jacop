@@ -34,12 +34,11 @@ package org.jacop.constraints;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * ElementIntegerFast constraint defines a relation
  * list[index - indexOffset] = value. This version uses bounds consistency.
  * <p>
@@ -55,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ElementIntegerFast extends Constraint implements Stateful, SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     boolean firstConsistencyCheck = true;
 
@@ -64,12 +63,12 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
     /**
      * It specifies variable index within an element constraint list[index - indexOffset] = value.
      */
-    final public IntVar index;
+    public final IntVar index;
 
     /**
      * It specifies variable value within an element constraint list[index - indexOffset] = value.
      */
-    final public IntVar value;
+    public final IntVar value;
 
     /**
      * It specifies indexOffset within an element constraint list[index - indexOffset] = value.
@@ -80,7 +79,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
      * It specifies list of variables within an element constraint list[index - indexOffset] = value.
      * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
      */
-    final public int list[];
+    public final int[] list;
 
     /*
      * Defines if the current list is order (ascending, descending), needs detection (detect)
@@ -194,7 +193,8 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
                 int min = IntDomain.MaxInt;
                 int max = IntDomain.MinInt;
                 IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
-                boolean asc = true, desc = true;
+                boolean asc = true;
+                boolean desc = true;
                 int previous = list[index.min() - 1 - indexOffset];
 
                 for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
@@ -230,10 +230,10 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
                 if (index.singleton()) {
                     int position = index.value() - 1 - indexOffset;
-                    value.domain.in(store.level, value, list[position], list[position]);
+                    value.domain.inValue(store.level, value, list[position]);
                     removeConstraint();
                 }
-            } else {// sort == none
+            } else { // sort == none
 
                 int min = IntDomain.MaxInt;
                 int max = IntDomain.MinInt;
@@ -260,7 +260,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
                 if (index.singleton()) {
                     int position = index.value() - 1 - indexOffset;
-                    value.domain.in(store.level, value, list[position], list[position]);
+                    value.domain.inValue(store.level, value, list[position]);
                     removeConstraint();
                 }
             }

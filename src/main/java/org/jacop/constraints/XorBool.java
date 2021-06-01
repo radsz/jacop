@@ -1,4 +1,4 @@
-/**
+/*
  * XorBool.java
  * <p>
  * This file is part of JaCoP.
@@ -35,7 +35,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -49,28 +48,28 @@ import java.util.stream.Stream;
 
 public class XorBool extends PrimitiveConstraint {
 
-	/*
+        /*
    * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
-	 * is True, and the rest are False. It gives False if an even number of its arguments is True, 
-	 * and the rest are False.
-	 *
-	 * For two arguments the truth table is
-	 *
-	 * X | Y | Z
-	 * 0   0   0
-	 * 0   1   1
-	 * 1   0   1
-	 * 1   1   0
-	 */
+         * is True, and the rest are False. It gives False if an even number of its arguments is True, 
+         * and the rest are False.
+         *
+         * For two arguments the truth table is
+         *
+         * X | Y | Z
+         * 0   0   0
+         * 0   1   1
+         * 1   0   1
+         * 1   1   0
+         */
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variables x for the constraint.
      */
-    final public IntVar[] x;
+    public final IntVar[] x;
 
-    final public IntVar y;
+    public final IntVar y;
 
     /**
      * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
@@ -134,20 +133,20 @@ public class XorBool extends PrimitiveConstraint {
 
         if (numberOnes + numberZeros == x.length)
             if ((numberOnes & 1) == 1)
-                y.domain.in(store.level, y, 1, 1);
+                y.domain.inValue(store.level, y, 1);
             else
-                y.domain.in(store.level, y, 0, 0);
+                y.domain.inValue(store.level, y, 0);
         else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
             if (y.min() == 1)
                 if ((numberOnes & 1) == 1)
-                    nonGround.domain.in(store.level, nonGround, 0, 0);
+                    nonGround.domain.inValue(store.level, nonGround, 0);
                 else
-                    nonGround.domain.in(store.level, nonGround, 1, 1);
+                    nonGround.domain.inValue(store.level, nonGround, 1);
             else if (y.max() == 0)
                 if ((numberOnes & 1) == 1)
-                    nonGround.domain.in(store.level, nonGround, 1, 1);
+                    nonGround.domain.inValue(store.level, nonGround, 1);
                 else
-                    nonGround.domain.in(store.level, nonGround, 0, 0);
+                    nonGround.domain.inValue(store.level, nonGround, 0);
 
     }
 
@@ -169,20 +168,20 @@ public class XorBool extends PrimitiveConstraint {
 
         if (numberOnes + numberZeros == x.length)
             if ((numberOnes & 1) == 1)
-                y.domain.in(store.level, y, 0, 0);
+                y.domain.inValue(store.level, y, 0);
             else
-                y.domain.in(store.level, y, 1, 1);
+                y.domain.inValue(store.level, y, 1);
         else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
             if (y.min() == 1)
                 if ((numberOnes & 1) == 1)
-                    nonGround.domain.in(store.level, nonGround, 1, 1);
+                    nonGround.domain.inValue(store.level, nonGround, 1);
                 else
-                    nonGround.domain.in(store.level, nonGround, 0, 0);
+                    nonGround.domain.inValue(store.level, nonGround, 0);
             else if (y.max() == 0)
                 if ((numberOnes & 1) == 1)
-                    nonGround.domain.in(store.level, nonGround, 0, 0);
+                    nonGround.domain.inValue(store.level, nonGround, 0);
                 else
-                    nonGround.domain.in(store.level, nonGround, 1, 1);
+                    nonGround.domain.inValue(store.level, nonGround, 1);
 
     }
 
@@ -196,9 +195,7 @@ public class XorBool extends PrimitiveConstraint {
                     return possibleEvent;
             }
             return IntDomain.GROUND;
-        }
-        // If notConsistency function mode
-        else {
+        } else { // If notConsistency function mode
             if (notConsistencyPruningEvents != null) {
                 Integer possibleEvent = notConsistencyPruningEvents.get(var);
                 if (possibleEvent != null)

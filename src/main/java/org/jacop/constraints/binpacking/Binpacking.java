@@ -251,7 +251,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
                     if (required + bi.weight > load[i].max())
                         bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
                     else if (possible - bi.weight < load[i].min())
-                        bi.bin.domain.in(store.level, bi.bin, i + minBinNumber, i + minBinNumber);
+                        bi.bin.domain.inValue(store.level, bi.bin, i + minBinNumber);
                 }
 
                 // Rule 3.2 "Search Pruning"
@@ -278,7 +278,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
                     if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j]))
                         candidates[j].bin.domain.inComplement(store.level, candidates[j].bin, i + minBinNumber);
                     if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required))
-                        candidates[j].bin.domain.in(store.level, candidates[j].bin, i + minBinNumber, i + minBinNumber);
+                        candidates[j].bin.domain.inValue(store.level, candidates[j].bin, i + minBinNumber);
                 }
             }
         }

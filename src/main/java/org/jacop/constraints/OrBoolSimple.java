@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * If at least one variable is equal 1 then result variable is equal 1 too.
@@ -52,7 +51,8 @@ public class OrBoolSimple extends PrimitiveConstraint {
     /**
      * It specifies variables which all must be equal to 1 to set result variable to 1.
      */
-    public IntVar a, b;
+    public IntVar a;
+    public IntVar b;
 
     /**
      * It specifies variable result, storing the result of or function performed a list of variables.
@@ -86,35 +86,35 @@ public class OrBoolSimple extends PrimitiveConstraint {
     public void consistency(Store store) {
         // a OR b = result
         if (a.max() == 0 && b.max() == 0)
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
         else if (a.min() == 1 || b.min() == 1) {
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
             removeConstraint();
         } else if (result.max() == 0) {
-            a.domain.in(store.level, a, 0, 0);
-            b.domain.in(store.level, b, 0, 0);
+            a.domain.inValue(store.level, a, 0);
+            b.domain.inValue(store.level, b, 0);
         } else if (result.min() == 1)
             if (a.max() == 0)
-                b.domain.in(store.level, b, 1, 1);
+                b.domain.inValue(store.level, b, 1);
             else if (b.max() == 0)
-                a.domain.in(store.level, a, 1, 1);
+                a.domain.inValue(store.level, a, 1);
     }
 
     @Override public void notConsistency(Store store) {
         // not(a OR b) = not a and not b = result
         if (a.min() == 1 || b.min() == 1) {
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
             removeConstraint();
         } else if (a.max() == 0 && b.max() == 0)
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
         else if (result.min() == 1) {
-            a.domain.in(store.level, a, 0, 0);
-            b.domain.in(store.level, b, 0, 0);
+            a.domain.inValue(store.level, a, 0);
+            b.domain.inValue(store.level, b, 0);
         } else if (result.max() == 0)
             if (a.max() == 0)
-                b.domain.in(store.level, b, 1, 1);
+                b.domain.inValue(store.level, b, 1);
             else if (b.max() == 0)
-                a.domain.in(store.level, a, 1, 1);
+                a.domain.inValue(store.level, a, 1);
     }
 
     @Override public boolean satisfied() {

@@ -169,9 +169,9 @@ class LinearConstraints implements ParserTreeConstants {
 
                 if (p2Fixed) {
                     if (s == p3)
-                        p4.domain.in(store.level, p4, 1, 1);
+                        p4.domain.inValue(store.level, p4, 1);
                     else
-                        p4.domain.in(store.level, p4, 0, 0);
+                        p4.domain.inValue(store.level, p4, 0);
                     return;
                 }
 
@@ -271,7 +271,7 @@ class LinearConstraints implements ParserTreeConstants {
                         if (p2[0].domain.isIntersecting(p3, p3))
                             support.pose(new Reified(new XneqC(p2[0], p3), p4));
                         else
-                            p4.domain.in(store.level, p4, 1, 1);
+                            p4.domain.inValue(store.level, p4, 1);
                     else {
                         t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
                         if (boolSum(p2))
@@ -284,7 +284,7 @@ class LinearConstraints implements ParserTreeConstants {
                         if (p2[0].domain.isIntersecting(-p3, -p3))
                             support.pose(new Reified(new XneqC(p2[0], -p3), p4));
                         else
-                            p4.domain.in(store.level, p4, 1, 1);
+                            p4.domain.inValue(store.level, p4, 1);
                     else {
                         t = support.dictionary.getConstant(-p3); // new IntVar(store, -p3, -p3);
                         if (boolSum(p2))
@@ -339,7 +339,7 @@ class LinearConstraints implements ParserTreeConstants {
                         support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
                 else if (boolSum(p2) && p3 == 0 && allNonPositive(p1))
                     // very special case: negative weighted sum of 0/1 variables <= 0 =>  (p4 = 1)
-                    p4.domain.in(store.level, p4, 1, 1);
+                    p4.domain.inValue(store.level, p4, 1);
                 else if (allWeightsOne(p1)) {
                     t = support.dictionary.getConstant(p3);
                     if (boolSum(p2))
@@ -420,7 +420,7 @@ class LinearConstraints implements ParserTreeConstants {
 
                 if (p2Fixed) {
                     if (s != p3)
-                        p4.domain.in(store.level, p4, 0, 0);
+                        p4.domain.inValue(store.level, p4, 0);
                     return;
                 }
 

@@ -158,7 +158,7 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
                 else
                     throw Store.failException;
             } else if (y.singleton(0))
-                z.domain.in(store.level, z, 1, 1);
+                z.domain.inValue(store.level, z, 1);
             else if (y.max() < -1) {
                 x.domain.in(store.level, x, -1, 1);
                 z.domain.in(store.level, z, -1, 1);

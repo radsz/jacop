@@ -721,7 +721,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable, Statef
                         System.out.println("Value " + matched + " has only this variable possible " + variable);
 
                     // store.in(variable, matched, matched);
-                    variable.domain.in(store.level, variable, matched, matched);
+                    variable.domain.inValue(store.level, variable, matched); //, matched);
 
                     // The above pruning does not require execution of
                     // consistency
@@ -784,7 +784,7 @@ public class Alldistinct extends Constraint implements UsesQueueVariable, Statef
                     if (valueMapVariable.get(value).get(0).dom().getSize() > 1) {
                         System.out.println("Transformation Alldistinct-Permutation and " + "missing propagation ");
 
-                        valueMapVariable.get(value).get(0).domain.in(store.level, valueMapVariable.get(value).get(0), value, value);
+                        valueMapVariable.get(value).get(0).domain.inValue(store.level, valueMapVariable.get(value).get(0), value); //, value);
 
                         variableQueue.add(valueMapVariable.get(value).get(0));
 

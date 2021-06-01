@@ -35,7 +35,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 import org.jacop.core.Store;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
@@ -54,17 +53,17 @@ import java.util.stream.Stream;
 
 public class Conditional extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * The list of 0/1 (Boolean) variables for assignment decision.
      */
-    final public IntVar[] b;
+    public final IntVar[] b;
 
     /**
      * The list of constraints that are to be selected.
      */
-    final public PrimitiveConstraint[] c;
+    public final PrimitiveConstraint[] c;
 
     /**
      * It constructs a Conditional constraint.
@@ -75,26 +74,26 @@ public class Conditional extends Constraint implements SatisfiedPresent {
     public Conditional(IntVar[] b, PrimitiveConstraint[] c) {
 
         checkInputForNullness(new String[] {"b", "c"}, new Object[][] {b, c});
-	assert (b.length == c.length) : "The length of the two lists in Conditional constraints must be equal";
-	for (IntVar be : b)
-	    assert (be.min() >= 0 && be.max() <= 1) : "The elements of condition list must be 0/1 variables";
-	if (b[b.length-1].min() != 1) 
-	    throw new IllegalArgumentException("Conditional constraint: the last element of conditions list must be 1 (true)");
-	
+        assert (b.length == c.length) : "The length of the two lists in Conditional constraints must be equal";
+        for (IntVar be : b)
+            assert (be.min() >= 0 && be.max() <= 1) : "The elements of condition list must be 0/1 variables";
+        if (b[b.length - 1].min() != 1) 
+            throw new IllegalArgumentException("Conditional constraint: the last element of conditions list must be 1 (true)");
+        
         this.queueIndex = 0;
         this.numberId = idNumber.incrementAndGet();
 
         this.b = Arrays.copyOf(b, b.length);
         this.c = Arrays.copyOf(c, c.length);
 
-	// collect variables of all constraints
-	List<Var> vs = new ArrayList<>();
-	for (int i = 0; i < c.length; i++) {
-	    Set<Var> cvs = c[i].arguments(); 
-	    for (Var v : cvs) 
-		vs.add(v);
-	}
-	
+        // collect variables of all constraints
+        List<Var> vs = new ArrayList<>();
+        for (int i = 0; i < c.length; i++) {
+            Set<Var> cvs = c[i].arguments(); 
+            for (Var v : cvs) 
+                vs.add(v);
+        }
+        
         setScope(Stream.concat(Arrays.stream(b), vs.stream()));
 
     }
@@ -115,52 +114,52 @@ public class Conditional extends Constraint implements SatisfiedPresent {
 
     @Override public void consistency(final Store store) {
 
-	boolean prune = true;
+        boolean prune = true;
 
-	while (prune) {
-	    int i = 0;
-	    LOOP: while (i < b.length) {
-		if (b[i].max() == 0) {
-		    i++;
-		    continue;
-		} else
-		    break LOOP;
-	    }
-	    prune = false;
+        while (prune) {
+            int i = 0;
+            LOOP: while (i < b.length) {
+                if (b[i].max() == 0) {
+                    i++;
+                    continue;
+                } else
+                    break LOOP;
+            }
+            prune = false;
 
-	    if (b[i].min() == 1) {
-		c[i].consistency(store);
-		
-		if (c[i].satisfied())
-		    removeConstraint();
-	    } else if (c[i].notSatisfied()) {
-		b[i].domain.in(store.level, b[i], 0, 0);
-		prune = true;
-	    } else if (b.length == 2 && c[i].satisfied()) {
-		b[i].domain.in(store.level, b[i], 1, 1);
-		prune = true;
-	    }
-	}
+            if (b[i].min() == 1) {
+                c[i].consistency(store);
+                
+                if (c[i].satisfied())
+                    removeConstraint();
+            } else if (c[i].notSatisfied()) {
+                b[i].domain.inValue(store.level, b[i], 0);
+                prune = true;
+            } else if (b.length == 2 && c[i].satisfied()) {
+                b[i].domain.inValue(store.level, b[i], 1);
+                prune = true;
+            }
+        }
     }
 
-    /**
+    /*
      * Informs wheter the constraint is satisfied
      * @return true if constraint is satisfied
      */
     @Override public boolean satisfied() {
-	
-	int i = 0;
-	LOOP: while (i < b.length) {
-	    if (b[i].max() == 0) {
-		i++;
-		continue;
-	    } else
-		break LOOP;
-	}
-	if (b[i].min() == 1 && c[i].satisfied())
-	    return true;
+        
+        int i = 0;
+        LOOP: while (i < b.length) {
+            if (b[i].max() == 0) {
+                i++;
+                continue;
+            } else
+                break LOOP;
+        }
+        if (b[i].min() == 1 && c[i].satisfied())
+            return true;
 
-	return false;
+        return false;
     }
 
     @Override public String toString() {
@@ -174,14 +173,14 @@ public class Conditional extends Constraint implements SatisfiedPresent {
             if (i < b.length - 1)
                 result.append(", ");
         }
-	result.append("], ");
-	
+        result.append("], ");
+        
         for (int i = 0; i < c.length; i++) {
             result.append(c[i]);
             if (i < c.length - 1)
                 result.append(", ");
         }
-	
+        
         result.append("]").append(" )");
 
         return result.toString();

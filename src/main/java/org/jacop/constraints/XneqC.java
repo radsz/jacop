@@ -34,10 +34,9 @@ import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
+/*
  * Constraints X #\= C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -46,17 +45,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XneqC extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
     /**
      * It specifies variable x in constraint x != c.
      */
-    final public IntVar x;
+    public final IntVar x;
 
     /**
      * It specifies constant c in constraint x != c.
      */
-    final public int c;
+    public final int c;
 
     /**
      * It constructs x != c constraint.
@@ -100,7 +99,7 @@ public class XneqC extends PrimitiveConstraint {
     }
 
     @Override public void notConsistency(final Store store) {
-        x.domain.in(store.level, x, c, c);
+        x.domain.inValue(store.level, x, c);
     }
 
     @Override public boolean notSatisfied() {

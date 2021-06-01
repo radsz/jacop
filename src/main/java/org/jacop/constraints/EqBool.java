@@ -34,7 +34,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -125,7 +124,9 @@ public class EqBool extends PrimitiveConstraint {
 
     public void consistency(Store store) {
 
-        int x1 = 0, x0 = 0, index_01 = 0;
+        int x1 = 0;
+        int x0 = 0;
+        int index_01 = 0;
 
         for (int i = 0; i < list.length; i++) {
             if (list[i].min() == 1)
@@ -140,25 +141,25 @@ public class EqBool extends PrimitiveConstraint {
 
             if (x0 > 0)
                 for (int i = 0; i < list.length; i++)
-                    list[i].domain.in(store.level, list[i], 0, 0);
+                    list[i].domain.inValue(store.level, list[i], 0);
             if (x1 > 0)
                 for (int i = 0; i < list.length; i++)
-                    list[i].domain.in(store.level, list[i], 1, 1);
+                    list[i].domain.inValue(store.level, list[i], 1);
 
         } else {
             if (result.max() == 0) {
                 if (x0 == 0 && x1 == list.length - 1)
-                    list[index_01].domain.in(store.level, list[index_01], 0, 0);
+                    list[index_01].domain.inValue(store.level, list[index_01], 0);
                 if (x1 == 0 && x0 == list.length - 1)
-                    list[index_01].domain.in(store.level, list[index_01], 1, 1);
+                    list[index_01].domain.inValue(store.level, list[index_01], 1);
             }
         }
 
         if (x0 > 0 && x1 > 0)
-            result.domain.in(store.level, result, 0, 0);
+            result.domain.inValue(store.level, result, 0);
 
         if (x0 == list.length || x1 == list.length)
-            result.domain.in(store.level, result, 1, 1);
+            result.domain.inValue(store.level, result, 1);
 
     }
 
@@ -168,7 +169,9 @@ public class EqBool extends PrimitiveConstraint {
 
             store.propagationHasOccurred = false;
 
-            int x1 = 0, x0 = 0, index_01 = 0;
+            int x1 = 0;
+            int x0 = 0;
+            int index_01 = 0;
 
             for (int i = 0; i < list.length; i++) {
                 if (list[i].min() == 1)
@@ -182,26 +185,26 @@ public class EqBool extends PrimitiveConstraint {
             if (result.min() == 1) {
 
                 if (x0 == 0 && x1 == list.length - 1)
-                    list[index_01].domain.in(store.level, list[index_01], 0, 0);
+                    list[index_01].domain.inValue(store.level, list[index_01], 0);
                 if (x1 == 0 && x0 == list.length - 1)
-                    list[index_01].domain.in(store.level, list[index_01], 1, 1);
+                    list[index_01].domain.inValue(store.level, list[index_01], 1);
 
             } else {
                 if (result.max() == 0) {
                     if (x0 > 0)
                         for (int i = 0; i < list.length; i++)
-                            list[i].domain.in(store.level, list[i], 0, 0);
+                            list[i].domain.inValue(store.level, list[i], 0);
                     if (x1 > 0)
                         for (int i = 0; i < list.length; i++)
-                            list[i].domain.in(store.level, list[i], 1, 1);
+                            list[i].domain.inValue(store.level, list[i], 1);
                 }
             }
 
             if (x0 > 0 && x1 > 0)
-                result.domain.in(store.level, result, 1, 1);
+                result.domain.inValue(store.level, result, 1);
 
             if (x0 == list.length || x1 == list.length)
-                result.domain.in(store.level, result, 0, 0);
+                result.domain.inValue(store.level, result, 0);
 
         } while (store.propagationHasOccurred);
 
@@ -214,7 +217,8 @@ public class EqBool extends PrimitiveConstraint {
 
         if (result.max() == 0) {
 
-            int x1 = 0, x0 = 0;
+            int x1 = 0;
+            int x0 = 0;
 
             for (int i = 0; i < list.length; i++) {
 
@@ -256,7 +260,8 @@ public class EqBool extends PrimitiveConstraint {
 
         if (result.max() == 0) {
 
-            int x1 = 0, x0 = 0;
+            int x1 = 0;
+            int x0 = 0;
 
             for (int i = 0; i < list.length; i++) {
 
@@ -276,7 +281,8 @@ public class EqBool extends PrimitiveConstraint {
 
             if (result.min() == 1) {
 
-                int x1 = 0, x0 = 0;
+                int x1 = 0;
+                int x0 = 0;
 
                 for (int i = 0; i < list.length; i++) {
 
