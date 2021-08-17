@@ -749,7 +749,7 @@ public abstract class IntDomain extends Domain {
      * cloned.
      */
 
-    @Override public void putModelConstraint(int storeLevel, Var var, Constraint C, int pruningEvent) {
+    @Override public void putModelConstraint(int storeLevel, Var var, Constraint c, int pruningEvent) {
 
         if (stamp < storeLevel) {
 
@@ -763,7 +763,7 @@ public abstract class IntDomain extends Domain {
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
             ((IntVar) var).domain = result;
 
-            result.putModelConstraint(storeLevel, var, C, pruningEvent);
+            result.putModelConstraint(storeLevel, var, c, pruningEvent);
             return;
         }
 
@@ -775,7 +775,7 @@ public abstract class IntDomain extends Domain {
 
             if (modelConstraintsToEvaluate[pruningEvent] > 0)
                 for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
-                    if (pruningEventConstraints[i] == C)
+                    if (pruningEventConstraints[i] == c)
                         alreadyImposed = true;
 
             int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
@@ -784,7 +784,7 @@ public abstract class IntDomain extends Domain {
                 Constraint[] newPruningEventConstraints = new Constraint[pruningConstraintsToEvaluate + 1];
 
                 System.arraycopy(pruningEventConstraints, 0, newPruningEventConstraints, 0, pruningConstraintsToEvaluate);
-                newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
+                newPruningEventConstraints[pruningConstraintsToEvaluate] = c;
 
                 Constraint[][] newModelConstraints = new Constraint[3][];
 
@@ -812,7 +812,7 @@ public abstract class IntDomain extends Domain {
 
             Constraint[] newPruningEventConstraints = new Constraint[1];
 
-            newPruningEventConstraints[0] = C;
+            newPruningEventConstraints[0] = c;
 
             Constraint[][] newModelConstraints = new Constraint[3][];
 
@@ -838,7 +838,7 @@ public abstract class IntDomain extends Domain {
 
     }
 
-    @Override public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
+    @Override public void removeModelConstraint(int storeLevel, Var var, Constraint c) {
 
         if (stamp < storeLevel) {
 
@@ -852,7 +852,7 @@ public abstract class IntDomain extends Domain {
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
             ((IntVar) var).domain = result;
 
-            result.removeModelConstraint(storeLevel, var, C);
+            result.removeModelConstraint(storeLevel, var, c);
             return;
         }
 
@@ -867,7 +867,7 @@ public abstract class IntDomain extends Domain {
             int i;
 
             for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-                if (pruningEventConstraints[i] == C) {
+                if (pruningEventConstraints[i] == c) {
                     isImposed = true;
                     break;
                 }
@@ -878,7 +878,7 @@ public abstract class IntDomain extends Domain {
 
                     modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = c;
                 }
 
                 int[] newModelConstraintsToEvaluate = new int[3];
@@ -908,7 +908,7 @@ public abstract class IntDomain extends Domain {
             int i;
 
             for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-                if (pruningEventConstraints[i] == C) {
+                if (pruningEventConstraints[i] == c) {
                     isImposed = true;
                     break;
                 }
@@ -919,7 +919,7 @@ public abstract class IntDomain extends Domain {
 
                     modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = c;
                 }
 
                 int[] newModelConstraintsToEvaluate = new int[3];
@@ -949,7 +949,7 @@ public abstract class IntDomain extends Domain {
             int i;
 
             for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
-                if (pruningEventConstraints[i] == C) {
+                if (pruningEventConstraints[i] == c) {
                     isImposed = true;
                     break;
                 }
@@ -963,7 +963,7 @@ public abstract class IntDomain extends Domain {
 
                     modelConstraints[pruningEvent][i] = modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+                    modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = c;
                 }
 
                 int[] newModelConstraintsToEvaluate = new int[3];
@@ -989,9 +989,9 @@ public abstract class IntDomain extends Domain {
      * cloned.
      */
 
-    @Override public void putSearchConstraint(int storeLevel, Var var, Constraint C) {
+    @Override public void putSearchConstraint(int storeLevel, Var var, Constraint c) {
 
-        if (!searchConstraints.contains(C)) {
+        if (!searchConstraints.contains(c)) {
 
             if (stamp < storeLevel) {
 
@@ -1007,12 +1007,12 @@ public abstract class IntDomain extends Domain {
                 result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
                 ((IntVar) var).domain = result;
 
-                result.putSearchConstraint(storeLevel, var, C);
+                result.putSearchConstraint(storeLevel, var, c);
                 return;
             }
 
             if (searchConstraints.size() == searchConstraintsToEvaluate) {
-                searchConstraints.add(C);
+                searchConstraints.add(c);
                 searchConstraintsToEvaluate++;
             } else {
                 // Exchange the first satisfied constraint with just added
@@ -1021,13 +1021,13 @@ public abstract class IntDomain extends Domain {
 
                 if (searchConstraintsCloned) {
                     Constraint firstSatisfied = searchConstraints.get(searchConstraintsToEvaluate);
-                    searchConstraints.set(searchConstraintsToEvaluate, C);
+                    searchConstraints.set(searchConstraintsToEvaluate, c);
                     searchConstraints.add(firstSatisfied);
                     searchConstraintsToEvaluate++;
                 } else {
                     searchConstraints = new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
                     searchConstraintsCloned = true;
-                    searchConstraints.add(C);
+                    searchConstraints.add(c);
                     searchConstraintsToEvaluate++;
                 }
             }
@@ -1040,10 +1040,10 @@ public abstract class IntDomain extends Domain {
      *
      * @param storeLevel the current level of the store.
      * @param var        the variable for which the constraint is being removed.
-     * @param C          the constraint being removed.
+     * @param c          the constraint being removed.
      */
 
-    public void removeSearchConstraint(int storeLevel, Var var, Constraint C) {
+    public void removeSearchConstraint(int storeLevel, Var var, Constraint c) {
 
         if (stamp < storeLevel) {
 
@@ -1057,7 +1057,7 @@ public abstract class IntDomain extends Domain {
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
             ((IntVar) var).domain = result;
 
-            result.removeSearchConstraint(storeLevel, var, C);
+            result.removeSearchConstraint(storeLevel, var, c);
             return;
         }
 
@@ -1068,10 +1068,10 @@ public abstract class IntDomain extends Domain {
         // TODO , improve by using interval find function.
 
         while (i < searchConstraintsToEvaluate) {
-            if (searchConstraints.get(i) == C) {
+            if (searchConstraints.get(i) == c) {
 
                 searchConstraints.set(i, searchConstraints.get(searchConstraintsToEvaluate - 1));
-                searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+                searchConstraints.set(searchConstraintsToEvaluate - 1, c);
                 searchConstraintsToEvaluate--;
 
                 break;
@@ -1085,7 +1085,7 @@ public abstract class IntDomain extends Domain {
      * removeConstraint function of Variable object.
      */
 
-    @Override public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint C) {
+    @Override public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint c) {
 
         if (stamp < storeLevel) {
 
@@ -1099,18 +1099,18 @@ public abstract class IntDomain extends Domain {
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
             ((IntVar) var).domain = result;
 
-            result.removeSearchConstraint(storeLevel, var, position, C);
+            result.removeSearchConstraint(storeLevel, var, position, c);
             return;
         }
 
         assert (stamp == storeLevel);
 
-        assert (searchConstraints.get(position) == C) : "Position of the removed constraint not specified properly";
+        assert (searchConstraints.get(position) == c) : "Position of the removed constraint not specified properly";
 
         if (position < searchConstraintsToEvaluate) {
 
             searchConstraints.set(position, searchConstraints.get(searchConstraintsToEvaluate - 1));
-            searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+            searchConstraints.set(searchConstraintsToEvaluate - 1, c);
             searchConstraintsToEvaluate--;
 
         }
@@ -1271,7 +1271,7 @@ public abstract class IntDomain extends Domain {
 
     }
 
-    private static final Random generator = new Random();
+    private static final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
     /**
      * It returns a random value from the domain.

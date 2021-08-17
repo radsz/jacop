@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import org.jacop.core.Var;
+import org.jacop.core.Store;
 import java.util.Random;
 
 /**
@@ -44,7 +45,7 @@ import java.util.Random;
 
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {
 
-    Random generator = new Random();
+    Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     
     /**
      * It constructs RandomVar Comparator.

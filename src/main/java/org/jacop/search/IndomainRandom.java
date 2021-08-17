@@ -32,7 +32,7 @@ package org.jacop.search;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-
+import org.jacop.core.Store;
 import java.util.Random;
 
 /**
@@ -53,7 +53,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
      * It specifies Indomain function, which assigns values randomly.
      */
     public IndomainRandom() {
-        generator = new Random();
+        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     }
 
     /**

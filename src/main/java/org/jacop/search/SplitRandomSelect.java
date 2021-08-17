@@ -33,7 +33,7 @@ package org.jacop.search;
 
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
-
+import org.jacop.core.Store;
 import java.util.Random;
 
 /**
@@ -66,7 +66,7 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
      */
     public SplitRandomSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
         super(variables, varSelect, indomain);
-        generator = new Random();
+        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     }
 
     /**
@@ -79,7 +79,7 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
      */
     public SplitRandomSelect(T[] variables, ComparatorVariable<T> varSelect, ComparatorVariable<T> tieBreakerVarSelect, Indomain<T> indomain) {
         super(variables, varSelect, tieBreakerVarSelect, indomain);
-        generator = new Random();
+        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     }
 
     @Override public T getChoiceVariable(int index) {
@@ -93,13 +93,13 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
         if (var == null)
             return null;
 
-	int value = var.min();
-	if (var.domain.getSize() == 2 && var.dom().domainID() == org.jacop.core.IntDomain.BoundDomainID) 
-	    value = var.min();
-	else
-	    value = super.getChoiceValue();
+        int value = var.min();
+        if (var.domain.getSize() == 2 && var.dom().domainID() == org.jacop.core.IntDomain.BoundDomainID) 
+            value = var.min();
+        else
+            value = super.getChoiceValue();
 
-	leftFirst = generator.nextBoolean();
+        leftFirst = generator.nextBoolean();
 
         if (leftFirst)
             if (var.max() != value)

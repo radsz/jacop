@@ -31,14 +31,14 @@
 package org.jacop.set.search;
 
 import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
 import org.jacop.search.Indomain;
 import org.jacop.set.core.SetVar;
-
 import java.util.Random;
 
 /**
  * IndomainMin - implements enumeration method based on the selection of the
- * maximal value in the domain of variable
+ * maximal value in the domain of variable.
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -52,7 +52,7 @@ public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
      * random generated.
      */
     public IndomainSetRandom() {
-        seed = new Random();
+        seed = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     }
 
     /**

@@ -14,7 +14,11 @@ Version 4.9
    instead. This is controlled by variable use_jacop_graph_constraints
    = true in minizinc library file jacop.mzn.
 
-4. Bug corrections, code cleaning and performance improvements.
+4. Random number generators can start from a given seed defined by
+   Store method setSeed(long seed). Faltzinc accepts option -r
+   (--random-seed) that defines the seed.
+
+5. Bug corrections, code cleaning and performance improvements.
 
 Version 4.8
 =============

@@ -32,7 +32,7 @@ package org.jacop.search;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
-
+import org.jacop.core.Store;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -62,7 +62,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int currentIndex = 0;
 
-    Random random = new Random();
+    Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
     /**
      * The constructor to create a simple choice select mechanism.
@@ -70,7 +70,8 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
      * @param variables variables upon which the choice points are created.
      * @param indomain  the value heuristic to choose a value for a given variable.
      */
-    @SuppressWarnings("unchecked") public RandomSelect(T[] variables, Indomain<T> indomain) {
+    @SuppressWarnings("unchecked")
+    public RandomSelect(T[] variables, Indomain<T> indomain) {
 
         position = Var.createEmptyPositioning();
 

@@ -38,7 +38,6 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
@@ -49,8 +48,8 @@ import java.util.function.Function;
  * Search. This search starts with several elite solutions and tries
  * to impove (minimizing cost variable) them by doing either search
  * assuming an elite solution or staring with an empty solution.
- * <p>
- * This implementation is based on paper "Solution-guided Multi-point
+ *
+ * <p>This implementation is based on paper "Solution-guided Multi-point
  * Constructive Search for Job Shop Scheduling" by J. Christopher
  * Beck, Journal of Artificial Intelligence Research 29 (2007) 49–77.
  *
@@ -69,12 +68,12 @@ public class SGMPCSearch {
     long searchStartTime;
 
     /**
-     * Variables for search
+     * Variables for search.
      */
     public IntVar[] vars;
 
     /**
-     * Cost variable
+     * Cost variable.
      */
     public IntVar cost;
 
@@ -83,7 +82,7 @@ public class SGMPCSearch {
      */ int searchCost;
 
     /**
-     * Parameters
+     * Parameters.
      */
 
     // p- probablity of selecting search starting from reference
@@ -100,10 +99,10 @@ public class SGMPCSearch {
     int l;
 
     // strategy to get limit l on fails
-    public final static int luby = 1;
-    public final static int poly = 2;
+    public static final int luby = 1;
+    public static final int poly = 2;
     int strategy = poly;
-    final static double precision = 1e-12;
+    static final double precision = 1e-12;
 
     // elite solutions 
     // at position 0 is cost and values of variables start at positions 1
@@ -167,7 +166,7 @@ public class SGMPCSearch {
     }
 
     /*
-     * 	Finds elite solutions if they do not exist yet
+     * Finds elite solutions if they do not exist yet.
      */
     public void findEliteSolutions() {
 
@@ -249,8 +248,8 @@ public class SGMPCSearch {
      */
     boolean improveSolution() {
 
-        Random rand = new Random();
-        Random randomSolution = new Random();
+        Random rand = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+        Random randomSolution = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
         searchStartTime = System.currentTimeMillis();
 
@@ -371,9 +370,8 @@ public class SGMPCSearch {
             else
                 l = 32;
 
-        }
-        // Luby
-        else {
+        }  else {
+            // Luby
             l = getLuby(lubyIndex);
 
             lubyIndex++;

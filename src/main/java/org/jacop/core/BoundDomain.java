@@ -31,7 +31,6 @@
 package org.jacop.core;
 
 import org.jacop.constraints.Constraint;
-
 import java.util.Iterator;
 import java.util.Random;
 
@@ -62,7 +61,7 @@ class BoundDomain extends IntDomain implements Cloneable {
      * It predefines empty domain so there is no need to constantly create it when
      * needed.
      */
-    final static public BoundDomain emptyDomain = new BoundDomain();
+    public static final BoundDomain emptyDomain = new BoundDomain();
 
 
     /**
@@ -97,7 +96,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
 
     /**
-     * @param i interval for union operation
+     * Union of interval i and current domain.
+     * @param i interval for union operation.
      */
     @Override public void unionAdapt(Interval i) {
 
@@ -116,7 +116,7 @@ class BoundDomain extends IntDomain implements Cloneable {
     }
 
     /**
-     *
+     * Adds "domain" to the current domain.
      */
     @Override public void addDom(IntDomain domain) {
 
@@ -246,12 +246,13 @@ class BoundDomain extends IntDomain implements Cloneable {
         return new BoundDomain(div(min, div), max / div);
     }
 
-    private int div(int A, int B) {
-        int Div, Rem;
+    private int div(int a, int b) {
+        int div;
+        int rem;
 
-        Div = A / B;
-        Rem = A % B;
-        return (Rem > 0) ? Div + 1 : Div;
+        div = a / b;
+        rem = a % b;
+        return (rem > 0) ? div + 1 : div;
     }
 
     @Override public int domainID() {
@@ -856,15 +857,15 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     @Override public String toStringConstraints() {
 
-        StringBuffer S = new StringBuffer("");
+        StringBuffer s = new StringBuffer("");
 
         for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
-            S.append(e.next().id());
+            s.append(e.next().id());
             if (e.hasNext())
-                S.append(", ");
+                s.append(", ");
         }
 
-        return S.toString();
+        return s.toString();
 
     }
 
@@ -962,6 +963,7 @@ class BoundDomain extends IntDomain implements Cloneable {
     }
 
     /**
+     * Checks invariants.
      * @return It returns the information about the first invariant which does not hold or null otherwise.
      */
     public String checkInvariants() {
@@ -1090,7 +1092,7 @@ class BoundDomain extends IntDomain implements Cloneable {
     }
 
 
-    private final static Random generator = new Random();
+    private static final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
     @Override public int getRandomValue() {
 

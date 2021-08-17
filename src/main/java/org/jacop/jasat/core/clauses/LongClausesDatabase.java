@@ -31,6 +31,7 @@
 package org.jacop.jasat.core.clauses;
 
 import org.jacop.jasat.utils.Utils;
+import org.jacop.core.Store;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -91,7 +92,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
      * TODO: Radek.
      */
 
-    Random generator = new Random();
+    Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
     public void assertLiteral(int literal) {
 

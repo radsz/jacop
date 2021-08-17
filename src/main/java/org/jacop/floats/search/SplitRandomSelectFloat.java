@@ -42,7 +42,6 @@ import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.SimpleSelect;
-
 import java.util.Random;
 
 // import org.jacop.search.Indomain;
@@ -91,7 +90,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
         currentIndex = new TimeStamp<Integer>(store, 0);
 
-        generator = new Random();
+        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     }
 
     /**
@@ -104,13 +103,13 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
      */
     public SplitRandomSelectFloat(Store store, T[] variables, ComparatorVariable<T> varSelect, ComparatorVariable<T> tieBreakerVarSelect) {
         // ,
-        // 	   Indomain<T> indomain) {
+        //         Indomain<T> indomain) {
 
         super(variables, varSelect, tieBreakerVarSelect, null);
 
         currentIndex = new TimeStamp<Integer>(store, 0);
 
-        generator = new Random();
+        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
     }
 
     @Override public T getChoiceVariable(int index) {
@@ -137,8 +136,8 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
         // System.out.println (var + ", value = " + value);
 
-	leftFirst = generator.nextBoolean();
-	
+        leftFirst = generator.nextBoolean();
+        
         if (leftFirst)
             if (((FloatVar) var).max() > value)
                 return new PlteqC((FloatVar) var, value);
@@ -176,5 +175,4 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
         return null;
     }
-
 }

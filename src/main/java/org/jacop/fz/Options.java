@@ -30,8 +30,8 @@
 
 package org.jacop.fz;
 
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
-
 import java.io.FileInputStream;
 
 /**
@@ -47,7 +47,9 @@ public class Options {
 
     String fileName;
 
-    boolean all = false, verbose = false;
+    boolean all = false;
+
+    boolean verbose = false;
 
     boolean statistics = false;
 
@@ -96,18 +98,19 @@ public class Options {
             String arg = args[0];
             if (arg.equals("-h") || arg.equals("--help")) {
                 System.out.println("Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n" + "Options:\n"
-		    + "    -h, --help\n"
+                    + "    -h, --help\n"
                     + "        Print this message.\n"
-		    + "    -a, --all, --all-solutions\n"
-		    + "    -v, --verbose\n"
+                    + "    -a, --all, --all-solutions\n"
+                    + "    -v, --verbose\n"
                     + "    -t <value>, --time-out <value>\n" + "        <value> - time in milisecond.\n"
-		    + "    -s, --statistics\n"
+                    + "    -s, --statistics\n"
                     + "    -n <value>, --num-solutions <value>\n" + "        <value> - limit on solution number.\n"
-		    + "    -f free search; no need to follow search annotations.\n"
+                    + "    -f free search; no need to follow search annotations.\n"
+                    + "    -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.\n"
                     + "    -b, --bound - use bounds consistency whenever possible;\n"
                     + "        overrides annotation \":: domain\" and selects constraints\n"
                     + "        implementing bounds consistency (default false).\n"
-		    + "    -sat use SAT solver for boolean constraints.\n"
+                    + "    -sat use SAT solver for boolean constraints.\n"
                     + "    -cs, --complementary-search - gathers all model, non-defined\n"
                     + "         variables to create the final search\n"
                     + "    -i, --interval print intervals instead of values for floating variables\n"
@@ -115,11 +118,11 @@ public class Options {
                     + "        overrides precision definition in search annotation.\n"
                     + "    --format <value> defines print-out format (uses precision method)\n"
                     + "        for floating-point variables.\n"
-		    + "    -o, --outputfile defines file for solver output\n"
- 		    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
-		    + "         and activity-based variable selection heuristic\n"
-		    + "    --step <value> distance step for cost function for floating-point optimization")
-		    ;
+                    + "    -o, --outputfile defines file for solver output\n"
+                    + "    -d, --decay decay factor for accumulated failure count (afc)\n"
+                    + "         and activity-based variable selection heuristic\n"
+                    + "    --step <value> distance step for cost function for floating-point optimization")
+                    ;
                 System.exit(0);
             } else { // input file
                 fileName = args[0];
@@ -130,10 +133,10 @@ public class Options {
                 // decode options
                 if (args[i].equals("-a") || args[i].equals("--all-solutions") || args[i].equals("--all")) {
                     all = true;
-		    if (number_solutions == -1)
-			number_solutions = Integer.MAX_VALUE;
-		    else
-			System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
+                    if (number_solutions == -1)
+                        number_solutions = Integer.MAX_VALUE;
+                    else
+                        System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
                     i++;
                 } else if (args[i].equals("-t") || args[i].equals("--time-out")) {
                     time_out = Integer.parseInt(args[++i]);
@@ -148,8 +151,8 @@ public class Options {
                     use_sat = true;
                     i++;
                 } else if (args[i].equals("-n") || args[i].equals("--num-solutions")) {
-		    if (number_solutions == Integer.MAX_VALUE)
-			System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
+                    if (number_solutions == Integer.MAX_VALUE)
+                        System.err.println("%% Option -a ignored since number of solutions has been specified by option -n");
                     number_solutions = Integer.parseInt(args[++i]);
                     if (number_solutions > 1)
                         all = true;
@@ -193,18 +196,22 @@ public class Options {
                     i++;
                 } else if (args[i].equals("-d") || args[i].equals("--decay")) {
                     decay = Float.parseFloat(args[++i]);
-		    if (decay < 0.0f || decay > 1.0f)
-			System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
-		    i++;
+                    if (decay < 0.0f || decay > 1.0f)
+                        System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
+                    i++;
                 } else if (args[i].equals("--step")) {
                     step = Double.parseDouble(args[++i]);
-		    if (step < 0.0f) {
-			System.err.println("%% Step for floating-point optimization is incorrect; assumed default step");
-			step = 0.0d;
-		    }
-		    FloatDomain.setStep(step);
-		    i++;
-		} else {
+                    if (step < 0.0f) {
+                        System.err.println("%% Step for floating-point optimization is incorrect; assumed default step");
+                        step = 0.0d;
+                    }
+                    FloatDomain.setStep(step);
+                    i++;
+                } else if (args[i].equals("-r") || args[i].equals("--random-seed")) {
+                    long seed = Long.parseLong(args[++i]);
+                    Store.setSeed(seed);
+                    i++;
+                } else {
                     System.out.println("%% fz2jacop: not recognized option " + args[i] + "; ignored");
                     i++;
                 }
@@ -311,7 +318,7 @@ public class Options {
 
 
     /**
-     * It defines whether to use bound consistency
+     * It defines whether to use bound consistency.
      *
      * @return true if bound consistency prefered, false otherwise (defult).
      */
@@ -320,7 +327,7 @@ public class Options {
     }
 
     /**
-     * It returns precision defined in the command line
+     * It returns precision defined in the command line.
      *
      * @return precision.
      */
@@ -383,12 +390,3 @@ public class Options {
         return complementary_search;
     }
 }
-
-
-
-
-
-
-
-
-

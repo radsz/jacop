@@ -39,7 +39,6 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.replace.ReifiedIfThen;
 import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
-
 import java.util.*;
 
 /**
@@ -55,7 +54,7 @@ public class Store {
      * It stores standard fail exception used when empty domain encountered.
      */
 
-    public final static FailException failException = new FailException();
+    public static final FailException failException = new FailException();
 
     /**
      * It specifies if some debugging information is printed.
@@ -207,7 +206,7 @@ public class Store {
 
 
     /**
-     * Number of calls to consistency methods of constraints
+     * Number of calls to consistency methods of constraints.
      */
     public long numberConsistencyCalls = 0;
 
@@ -269,17 +268,23 @@ public class Store {
     Set<Var>  variablesPrunned;
     
     /**
+     * It specifies the seed for random number generators.
+     */
+    static long seed;
+    static boolean seedPresent = false;
+
+    /**
      * Variable given as a parameter no longer watches constraint given as
      * parameter. This function will be called when watch is being moved from
      * one variable to another.
      *
      * @param v variable at which constraint is no longer watching.
-     * @param C constraint which is no longer watched by given variable.
+     * @param c constraint which is no longer watched by given variable.
      */
 
-    public void deregisterWatchedLiteralConstraint(Var v, Constraint C) {
+    public void deregisterWatchedLiteralConstraint(Var v, Constraint c) {
 
-        watchedConstraints.get(v).remove(C);
+        watchedConstraints.get(v).remove(c);
 
     }
 
@@ -287,17 +292,16 @@ public class Store {
      * Watched constraint given as parameter is being removed, no variable will
      * be watching it.
      *
-     * @param C constraint for which all watches are removed.
+     * @param c constraint for which all watches are removed.
      */
 
-    public void deregisterWatchedLiteralConstraint(Constraint C) {
+    public void deregisterWatchedLiteralConstraint(Constraint c) {
 
-        for (Var v : C.arguments()) {
+        for (Var v : c.arguments()) {
             Set<Constraint> forVariable = watchedConstraints.get(v);
             if (forVariable != null)
-                forVariable.remove(C);
+                forVariable.remove(c);
         }
-
     }
 
     /**
@@ -386,7 +390,8 @@ public class Store {
      * @param size specifies the initial number of variables.
      */
 
-    @SuppressWarnings("unchecked") public Store(int size) {
+    @SuppressWarnings("unchecked")
+    public Store(int size) {
 
         vars = new Var[size];
 
@@ -434,8 +439,8 @@ public class Store {
 
         propagationHasOccurred = true;
 
-	if (variableActivityManagement)
-	    variablesPrunned.add(var);
+        if (variableActivityManagement)
+            variablesPrunned.add(var);
 
         // It records V as being changed so backtracking later on can be invoked for this variable.
         recordChange(var);
@@ -546,10 +551,10 @@ public class Store {
 
                         currentConstraint.consistency(this);
 
-			if (variableActivityManagement) {
-			    updateActivities(currentConstraint);
-			    variablesPrunned.clear();
-			}
+                        if (variableActivityManagement) {
+                            updateActivities(currentConstraint);
+                            variablesPrunned.clear();
+                        }
                     }
 
                 currentQueue++;
@@ -564,13 +569,13 @@ public class Store {
                 if (variableWeightManagement)
                     currentConstraint.increaseWeight();
 
-		if (constraintAFCManagement)
-		    currentConstraint.updateAFC(allConstraints, decay);
+                if (constraintAFCManagement)
+                    currentConstraint.updateAFC(allConstraints, decay);
 
-		if (variableActivityManagement) {
-		    updateActivities(currentConstraint);
-		    variablesPrunned.clear();
-		}
+                if (variableActivityManagement) {
+                    updateActivities(currentConstraint);
+                    variablesPrunned.clear();
+                }
             }
 
             recentlyFailedConstraint = currentConstraint;
@@ -714,10 +719,10 @@ public class Store {
      * @param c constraint to be imposed.
      */
 
-    @SuppressWarnings("unchecked") public void impose(Constraint c) {
+    @SuppressWarnings("unchecked")
+    public void impose(Constraint c) {
 
-        Optional.ofNullable(replacements.get(c.getClass())).ifPresent(
-            l -> l.forEach( r -> {
+        Optional.ofNullable(replacements.get(c.getClass())).ifPresent(l -> l.forEach(r -> {
             if (r.isReplaceable(c)) {
                 r.replace(c).imposeDecomposition(this);
                 return;
@@ -994,8 +999,9 @@ public class Store {
         assert (trailManager.getLevel()
             == level) : "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()";
 
-        //	assert (!trailManager.trailContainsAllChanges
-        //			|| trailManager.levelInfo.get(trailManager.levelInfo.size() - 1) == level) : "An error. Trail should be containing all changes but it is not available";
+        //      assert (!trailManager.trailContainsAllChanges
+        //                      || trailManager.levelInfo.get(trailManager.levelInfo.size() - 1) == level) :
+        //                             "An error. Trail should be containing all changes but it is not available";
 
         trailManager.addChanged(recordedVariable.index);
 
@@ -1005,8 +1011,8 @@ public class Store {
      * It makes it possible to register replacement for a particular constraint
      * type.
      *
-     * @return true if replacement has been added and was not already registered, false otherwise.
      * @param replacement that is being registered.
+     * @return true if replacement has been added and was not already registered, false otherwise.
      *
      */
     public boolean registerReplacement(Replaceable<? extends Constraint> replacement) {
@@ -1134,8 +1140,8 @@ public class Store {
         for (int i = mutableVariables.size() - 1; i >= 0; i--)
             mutableVariables.get(i).removeLevel(rLevel);
 
-        for (RemoveLevelLate C : removeLevelLateListeners)
-            C.removeLevelLate(rLevel);
+        for (RemoveLevelLate c : removeLevelLateListeners)
+            c.removeLevelLate(rLevel);
 
         assert checkInvariants() == null : checkInvariants();
 
@@ -1221,11 +1227,11 @@ public class Store {
      * It throws an exception after printing trace information if tracing is
      * switched on.
      *
-     * @param X variable causing the failure exception.
+     * @param x variable causing the failure exception.
      * @throws FailException is always thrown.
      */
 
-    public void throwFailException(Var X) {
+    public void throwFailException(Var x) {
 
         throw failException;
 
@@ -1282,35 +1288,35 @@ public class Store {
     }
 
     public void setAllConstraints() {
-	allConstraints = getConstraints();
+        allConstraints = getConstraints();
     }
     
 
     public void setDecay(float d) {
-	decay = d;
+        decay = d;
     }
 
     public float getDecay() {
-	return decay ;
+        return decay ;
     }
 
     public void afcManagement(boolean m) {
-	constraintAFCManagement = m;
+        constraintAFCManagement = m;
     }
     
     public void activityManagement(boolean m) {
-	variableActivityManagement = m;
-	variablesPrunned = new HashSet<Var>();
+        variableActivityManagement = m;
+        variablesPrunned = new HashSet<Var>();
     }
 
     void updateActivities(Constraint constraint) {
-	for (Var v : variablesPrunned)
-	    v.updateActivity();
+        for (Var v : variablesPrunned)
+            v.updateActivity();
 
-	if (decay < 1.0f)
-	    for (Var v : constraint.arguments())
-		if (!variablesPrunned.contains(v))
-		    v.applyDecay();
+        if (decay < 1.0f)
+            for (Var v : constraint.arguments())
+                if (!variablesPrunned.contains(v))
+                    v.applyDecay();
     }
     
     /**
@@ -1387,4 +1393,23 @@ public class Store {
 
     }
 
+    public static void setSeed(long s) {
+        seed = s;
+        seedPresent = true;
+    }
+
+    public static long getSeed() {
+        if (seedPresent)
+            return seed;
+
+        throw new IllegalArgumentException("Not defined seed for random generator");
+    }
+
+    public static boolean seedPresent() {
+        return seedPresent;
+    }
+
+    public static void resetSeed() {
+        seedPresent = false;
+    }
 }

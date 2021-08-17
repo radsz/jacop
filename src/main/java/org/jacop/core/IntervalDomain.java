@@ -5934,7 +5934,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     }
 
-    private static final Random generator = new Random();
+    private static final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
     @Override public int getRandomValue() {
 
