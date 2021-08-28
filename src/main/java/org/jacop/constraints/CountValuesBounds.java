@@ -183,8 +183,7 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
             store.propagationHasOccurred = false;
 
             restMayBe = 0;
-            for (int i = 0; i < values.length; i++)
-                numberMayBe[i] = 0;
+            Arrays.fill(numberMayBe, 0);
 
             for (int i = start; i < n; i++) {
                 IntVar v = list[i];
