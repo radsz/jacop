@@ -1419,15 +1419,15 @@ public abstract class IntDomain extends Domain {
         if (c == 0) // case 1
             throw Store.failException;
         else if (c > 0) {
-            min = Constraint.long2int(divRoundUp(a, c));
-            max = Constraint.long2int(divRoundDown(b, c));
+            min = divRoundUp(a, c);
+            max = divRoundDown(b, c);
             if (min > max)
                 throw Store.failException;
 
             return new Interval(min, max);
         } else { // c < 0
-            min = Constraint.long2int(divRoundUp(b, c));
-            max = Constraint.long2int(divRoundDown(a, c));
+            min = divRoundUp(b, c);
+            max = divRoundDown(a, c);
             if (min > max)
                 throw Store.failException;
 
@@ -1440,6 +1440,14 @@ public abstract class IntDomain extends Domain {
     }
 
     public static long divRoundUp(long a, long b) {
+        return -Math.floorDiv(-a,b);
+    }
+
+    public static int divRoundDown(int a, int b) {
+        return Math.floorDiv(a,b);
+    }
+
+    public static int divRoundUp(int a, int b) {
         return -Math.floorDiv(-a,b);
     }
 
