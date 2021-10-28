@@ -67,7 +67,7 @@ class SetConstraints implements ParserTreeConstants {
             v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
 
             if (support.options.debug())
-                System.out.println("Cardinality of set " + v1 + " = " + v2);
+                System.out.println("% Cardinality of set " + v1 + " = " + v2);
 
         } else
             support.pose(new CardAeqX(v1, v2));
