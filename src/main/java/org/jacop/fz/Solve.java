@@ -1619,8 +1619,11 @@ public class Solve implements ParserTreeConstants {
         
         printBuffer.append("----------\n");
 
-        if (options.getAll())
+        if (options.getAll()) {
             System.out.print(printBuffer.toString());
+            // String s = "% " + store.toString();
+            // System.out.println(s.replaceAll("\n", "\n% "));
+        }
         else { // store the print-out
 
             lastSolution = printBuffer;

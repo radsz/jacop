@@ -52,6 +52,7 @@ import java.util.List;
 public class CumulativeUnary extends Cumulative {
 
     private boolean doProfile = false;
+    private boolean doEdgeFind = true;
 
     /*
      * Local copies of tasks in normal and reserved views
@@ -86,6 +87,15 @@ public class CumulativeUnary extends Cumulative {
             tvn[i] = new TaskNormalView(starts[i], durations[i], resources[i]);
             tvn[i].index = i;
         }
+
+        String s = System.getProperty("max_edge_find_size");
+        int limitOnEdgeFind = 100;
+        if (s != null)
+            limitOnEdgeFind = Integer.parseInt(s);
+        doEdgeFind = (starts.length <= limitOnEdgeFind);
+
+        if (!doEdgeFind)
+            doProfile = true;
     }
 
     /**
@@ -100,7 +110,32 @@ public class CumulativeUnary extends Cumulative {
     public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doProfile) {
 
         this(starts, durations, resources, limit);
-        this.doProfile = doProfile;
+
+        if (doEdgeFind)
+            this.doProfile = doProfile;
+        else
+            this.doProfile = true;
+    }
+
+    /**
+     * It creates a cumulative constraint.
+     *
+     * @param starts    variables denoting starts of the tasks.
+     * @param durations variables denoting durations of the tasks.
+     * @param resources variables denoting resource usage of the tasks.
+     * @param limit     the overall limit of resources which has to be used.
+     * @param doProfile defines whether to do profile-based propagation (true) or not (false); de     * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false); default is true
+     */
+    public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doProfile, boolean doEdgeFind) {
+
+        this(starts, durations, resources, limit);
+
+        if (!doProfile && !doEdgeFind)
+            System.err.println("% Warning: CumulativeUnary has no effect (no propagators defined).");
+        else {
+            this.doProfile = doProfile;
+            this.doEdgeFind = doEdgeFind;
+        }
     }
 
     /**
@@ -148,7 +183,7 @@ public class CumulativeUnary extends Cumulative {
             if (doProfile)
                 profileProp(store);
 
-            if (!store.propagationHasOccurred) {
+            if (doEdgeFind && !store.propagationHasOccurred) {
 
                 if (!doProfile)
                     overload(tn);

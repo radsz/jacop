@@ -180,8 +180,11 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
         if (startChanged)
             position.update(start);
 
-        if (start == n)
+        if (start == n) {
+            if (! x.singleton())
+                removeConstraint();
             return;
+        }
 
         if (x.singleton()) {
             IntVar b = valueMap.get(x.value());
