@@ -4,19 +4,21 @@ Version 4.9
 1. New constraints, Increasing and Decreasing, both for strict (<) and
    non-strict (=<) ordering.
 
-2. Changing complementary search (-cs option in flatzinc) to use
-   AFCMaxDeg/AFCMax for variable selection instead of input order
-   criteria.
-
-3. Adding to minizinc graph constraints on (sub-)graph isomorphism,
+2. Adding to minizinc graph constraints on (sub-)graph isomorphism,
    matching and clique. Prepared to use package org.jacop.graph that
    will make it possible to used graph global constraints
    instead. This is controlled by variable use_jacop_graph_constraints
    = true in minizinc library file jacop.mzn.
 
-4. Random number generators can start from a given seed defined by
+3. Random number generators can start from a given seed defined by
    Store method setSeed(long seed). Faltzinc accepts option -r
    (--random-seed) that defines the seed.
+
+4. Support for a new variable selection annotation for search (in
+   minizinc).  Annotation tiebreak takes two parameters (two variable
+   selection methods) and uses the first one as the main selection
+   method and the second one as tie breaking, in case when both main
+   selection methods has the same value.
 
 5. Bug corrections, code cleaning and performance improvements.
 

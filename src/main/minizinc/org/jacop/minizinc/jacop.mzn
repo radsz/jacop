@@ -18,6 +18,9 @@ annotation activity_min;
 annotation activity_max_deg;
 annotation activity_min_deg;
 
+annotation tiebreak(array[int] of ann: a);
+annotation tiebreak(ann: a1, ann: a2) = tiebreak([a1,a2]);
+
 %------------------------------------------------------------------------------%
 % Following search annotation is a place holders until it is included in the
 % MiniZinc distribution
