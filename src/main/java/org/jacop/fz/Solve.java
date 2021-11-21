@@ -211,6 +211,8 @@ public class Solve implements ParserTreeConstants {
             } else if (search_type.equals("priority_search")) {
                 run_single_search(solveKind, kind, si);
             } else {
+                if (search_type.equals("$expr"))
+                    search_type = ((ASTScalarFlatExpr)node.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0)).getIdent();
                 System.err.println("%% Warning: Not supported search annotation: \"" + search_type + "\"; ignored");
                 run_single_search(solveKind, kind, null);
             }
