@@ -204,7 +204,7 @@ public class ElementFloat extends Constraint implements UsesQueueVariable, State
 
             for (IntDomain duplicate : duplicates) {
                 if (indexDom.isIntersecting(duplicate)) {
-                    if (domValue.getSize() == 0)
+                    if (domValue.isEmpty())
                         domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
                     else
                         ((FloatIntervalDomain) domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
