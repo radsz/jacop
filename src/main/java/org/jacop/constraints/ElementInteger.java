@@ -250,7 +250,7 @@ public class ElementInteger extends Constraint implements UsesQueueVariable, Sta
                 // if (indexDom.getSize() < limitForDomainPruning)
                 for (IntDomain duplicate : duplicates) {
                     if (indexDom.isIntersecting(duplicate)) {
-                        if (domValue.getSize() == 0)
+                        if (domValue.isEmpty())
                             domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
                         else
                             ((IntervalDomain) domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);

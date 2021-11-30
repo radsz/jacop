@@ -741,8 +741,10 @@ public class Solve implements ParserTreeConstants {
                                + "\n%%%mzn-stat-end"
                                );
 
-            if (options.debug())
-                System.out.print(failStatistics);
+            if (options.debug()) {
+                String s = "% " + failStatistics.toString();
+                System.out.println(s.replaceAll("\n", "\n% "));
+            }
         }
     }
 
@@ -1316,8 +1318,10 @@ public class Solve implements ParserTreeConstants {
                                + "\n%%%mzn-stat-end");
         }
 
-        if (options.debug())
-            System.out.print(failStatistics);
+        if (options.debug()) {
+            String s = "% " + failStatistics.toString();
+            System.out.println(s.replaceAll("\n", "\n% "));
+        }
     }
 
     double getSearchTime_ms() {
