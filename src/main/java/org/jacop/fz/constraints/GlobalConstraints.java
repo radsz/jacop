@@ -749,6 +749,38 @@ class GlobalConstraints implements ParserTreeConstants {
         tbl = null;
         t = newT;
 
+        // remove ground variables and their respective values in touples
+        boolean[] toRemove= new boolean[t[0].length];
+        // Arrays.fill(toRemove, false);  // initialized by default to false
+        int numberToRemove = 0;
+        for (int i = 0; i < v.length; i++) {
+            if (v[i].singleton()) {
+                toRemove[i] = true;
+                numberToRemove++;
+            }
+        }
+        newT = new int[k][size - numberToRemove];
+        for (int i = 0; i < t.length; i++) {
+            int l = 0;
+            for (int j = 0; j < size; j++) {
+                if (!toRemove[j])
+                    newT[i][l++] = t[i][j];
+                else if (t[i][j] != v[j].value())
+                    throw store.failException;
+            }
+        }
+        IntVar[] newV = new IntVar[size - numberToRemove];
+        int l = 0;
+        for (int i = 0; i < v.length; i++) {
+            if (!toRemove[i])
+                newV[l++] = v[i];
+        }
+        t = newT;
+        v = newV;
+
+        if (v.length == 0)
+            return;
+
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 

@@ -76,7 +76,7 @@ class TaskNormalView extends TaskView {
     }
 
     void updateNotFirstNotLast(int storeLevel, int lct) {
-        int max = lct - dur.max();
+        int max = lct - dur.min();
         if (max < start.max())
             start.domain.inMax(storeLevel, start, max);
     }
