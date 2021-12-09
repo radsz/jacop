@@ -69,6 +69,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <aspectj.version>1.8.10</aspectj.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
+    	<closeTestReports>true</closeTestReports>
     </properties>
 
     <!-- In order to see logging output,
@@ -120,6 +121,7 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
                                 <exclude>**/MinizincBasedChosen.java</exclude>
                             </excludes>
+                	<disableXmlReport>${closeTestReports}</disableXmlReport>
                         </configuration>
                     </plugin>
 
@@ -151,6 +153,7 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
                                 <exclude>**/MinizincBasedChosen.java</exclude>
                             </excludes>
+                	<disableXmlReport>${closeTestReports}</disableXmlReport>
                         </configuration>
                     </plugin>
 
@@ -182,6 +185,7 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
                                 <exclude>**/MinizincBasedChosen.java</exclude>
                             </excludes>
+                	<disableXmlReport>${closeTestReports}</disableXmlReport>
                         </configuration>
                     </plugin>
 
@@ -213,6 +217,7 @@ setup to run configuration. -->
                                 <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
                                 <exclude>**/MinizincBasedChosen.java</exclude>
                             </excludes>
+                	<disableXmlReport>${closeTestReports}</disableXmlReport>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -532,6 +537,7 @@ setup to run configuration. -->
                         <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
                         <exclude>**/MinizincBasedChosen.java</exclude>
                     </excludes>
+                	<disableXmlReport>${closeTestReports}</disableXmlReport>
                 </configuration>
             </plugin>
 
