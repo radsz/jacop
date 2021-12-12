@@ -33,12 +33,13 @@ package org.jacop.constraints;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.core.TimeStamp;
 import org.jacop.util.SimpleHashSet;
-
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,10 +48,10 @@ import java.util.stream.Stream;
 
 /**
  * It constructs a LexOrder (lexicographical order) constraint.
- * <p>
- * The algorithm is based on paper
- * <p>
- * "Propagation algorithms for lexicographic ordering constraints" by
+ *
+ * <p>The algorithm is based on paper
+ *
+ * <p>"Propagation algorithms for lexicographic ordering constraints" by
  * Alan M. Frisch, Brahim Hnich, Zeynep Kiziltan, Ian Miguel, and Toby Walsh ,
  * Artificial Intelligence 170 (2006) 803-834.
  *
@@ -58,11 +59,11 @@ import java.util.stream.Stream;
  * @version 4.8
  */
 
-public class LexOrder extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
+public class LexOrder extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 
-    final static boolean debug = false;
+    static final boolean debug = false;
 
     /**
      * Two vectors that have to be lexicographically ordered.
@@ -71,23 +72,28 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
     public IntVar[] y;
 
     /**
-     * Is Lex enforcing "{@literal <}" relationship?
+     * Lex enforcing "{@literal <}" relationship (true).
      */
-    public boolean lexLT, originalLexLT;
+    public boolean lexLT;
+    public boolean originalLexLT;
 
     /**
-     * size of the longest vector
+     * size of the longest vector.
      */
     int n;
 
     boolean satisfied;
 
+    boolean firstConsistencyCheck = true;
+    int firstConsistencyLevel;
+
     private Store store;
 
-    private boolean satisfiedWhenDefined = false;
+    private TimeStamp<Integer> alpha;
+    private TimeStamp<Integer> beta;
 
-    private int alpha;
-    private int beta;
+    private int alphaValue;
+    private int betaValue;
 
     SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
     Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
@@ -95,9 +101,9 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     /**
      * It creates a lexicographical order for vectors x and y,
-     * <p>
-     * vectors x and y does not need to be of the same size.
-     * boolean lt defines if we require strict order, Lex_{{@literal <}} (lt = true) or Lex_{{@literal =<}} (lt = false)
+     *
+     * <p>vectors x and y does not need to be of the same size.
+     * boolean lt defines if we require strict order, Lex_{{@literal <}} (lt = true) or Lex_{{@literal =<}} (lt = false).
      *
      * @param x first vector constrained by LexOrder constraint.
      * @param y second vector constrained by LexOrder constraint.
@@ -118,33 +124,33 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
         numberId = idNumber.incrementAndGet();
 
         lexLT = lt;
-	originalLexLT = lt;
+        originalLexLT = lt;
 
         this.x = Arrays.copyOf(x, x.length);
         this.y = Arrays.copyOf(y, y.length);
 
-	n = Math.min(x.length, y.length);
+        n = Math.min(x.length, y.length);
 
-	// special cases; mostly on different sizes of vectors
-	if (x.length > 0 && y.length == 0)
-	    lexLT = true;  // changing relation to "<" to generate non-satisfiablity; empty is not greater than any non-empty vector
-	if (x.length == 0 && y.length > 0)
-	    lexLT = false;  // changing relation to "<=" to generate always satisfiablity; empty vector is always smaller
-	if (x.length > 1 && y.length >= 1 && x.length > y.length)
-	    lexLT = true;  // changing relation to "<" to generate correct pruning; x is longer therefore y must be always lexicographically greater
-	if (x.length >= 1 && y.length > 1 && x.length < y.length)
-	    lexLT = false;  // changing relation to "<=" to generate correct pruning; x is shorter therefore y must be always lexicographically greater or equal
+        // special cases; mostly on different sizes of vectors
+        if (x.length > 0 && y.length == 0)
+            lexLT = true;  // changing relation to "<" to generate non-satisfiablity; empty is not greater than any non-empty vector
+        if (x.length == 0 && y.length > 0)
+            lexLT = false;  // changing relation to "<=" to generate always satisfiablity; empty vector is always smaller
+        if (x.length > 1 && y.length >= 1 && x.length > y.length)
+            lexLT = true;  // changing relation to "<" to generate correct pruning; x is longer therefore y must be always lexicographically greater
+        if (x.length >= 1 && y.length > 1 && x.length < y.length)
+            lexLT = false;  // changing relation to "<=" to generate correct pruning;
+                            //x is shorter therefore y must be always lexicographically greater or equal
 
-	setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
-
+        setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
     }
 
     @Override public void impose(Store store) {
 
         this.store = store;
 
-        alpha = 0;
-        beta = 0;
+        alpha = new TimeStamp<>(store, 0);
+        beta = new TimeStamp<>(store, 0);
 
         for (int i = 0; i < n; i++) {
             int[] varPositions = varXToIndex.get(x[i]);
@@ -189,7 +195,17 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
         satisfied = false;
 
-        establishGACInit();
+        if (firstConsistencyCheck) {
+
+            establishGACInit();
+
+            firstConsistencyCheck = false;
+            firstConsistencyLevel = store.level;
+
+        }
+
+        alphaValue = alpha.value();
+        betaValue = beta.value();
 
         do {
 
@@ -201,16 +217,14 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
             while (!index.isEmpty()) {
                 int i = index.removeFirst();
 
-                // if ( !( i >= beta.value() || satisfied) )
-                if (!(i >= beta || satisfied))
+                if (!(i >= betaValue))
                     reestablishGAC(i);
             }
 
         } while (store.propagationHasOccurred);
 
-        // if (satisfied())
-        if (satisfied)
-            removeConstraint();
+        alpha.update(alphaValue);
+        beta.update(betaValue);
     }
 
     @Override public boolean satisfied() {
@@ -246,6 +260,11 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
             for (int i : iValY)
                 indexQueue.add(i);
 
+    }
+
+    @Override public void removeLevel(int level) {
+        if (level == firstConsistencyLevel)
+            firstConsistencyCheck = true;
     }
 
     @Override public void removeLevelLate(int level) {
@@ -290,7 +309,8 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
     protected void establishGACInit() {
 
         satisfied = false;
-        int a = 0, b = 0;
+        int a = 0;
+        int b = 0;
 
         while (a < n && eqSingletons(x[a], y[a]))
             a++;
@@ -300,9 +320,10 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
         if (a == n) {
             if (!lexLT) {
-                alpha = a;
-                beta = n + 1;
+                // alpha.update(a);
+                // beta.update(n + 1);
                 satisfied = true;
+                removeConstraint();
                 return; // satisfied already for le
             } else
                 throw Store.failException; // fail for lt;
@@ -330,8 +351,10 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
             if (a >= b)
                 throw Store.failException; // fail
 
-            alpha = a;
-            beta = b;
+            alpha.update(a);
+            beta.update(b);
+            alphaValue = a;
+            betaValue = b;
 
             reestablishGAC(a);
         }
@@ -342,18 +365,20 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     void reestablishGAC(int i) {
 
-        int a = alpha;
-        int b = beta;
+        int a = alphaValue;
+        int b = betaValue;
 
         if (debug) {
             System.out.println("reestablishGAC entry for " + i + ", alpha = " + a + ", beta = " + b);
             System.out.println(this);
         }
 
-        if (a > b || satisfied)
+        if (a > b || satisfied) {
+            removeConstraint();
             return;
+        }
 
-	if (i == a && (i + 1) == b)
+        if (i == a && (i + 1) == b)
             forceLT(i);
 
         if (i == a && (i + 1) < b) {
@@ -374,8 +399,8 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     public void updateAlpha() {
 
-        int a = alpha + 1;
-        int b = beta;
+        int a = alphaValue + 1;
+        int b = betaValue;
 
         if (debug)
             System.out.println("updateAlpha entry: a = " + a + ", b = " + b);
@@ -384,8 +409,9 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
             if (lexLT)
                 throw Store.failException; // fail
             else {
-                alpha = a;
+                // alpha.update(a);
                 satisfied = true;
+                removeConstraint();
                 return;
             }
 
@@ -393,10 +419,10 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
             throw Store.failException; // fail
 
         if (!eqSingletons(x[a], y[a])) {
-            alpha = a;
+            alphaValue = a;
             reestablishGAC(a);
         } else {
-            alpha = a;
+            alphaValue = a;
             updateAlpha();
         }
 
@@ -406,9 +432,9 @@ public class LexOrder extends Constraint implements UsesQueueVariable, Satisfied
 
     public void updateBeta(int i) {
 
-        int a = alpha;
+        int a = alphaValue;
         int b = i + 1;
-        beta = b;
+        betaValue = b;
 
         if (debug)
             System.out.println("updateBeta entry: a = " + a + ", b = " + b);

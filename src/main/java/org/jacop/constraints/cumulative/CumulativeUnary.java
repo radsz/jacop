@@ -124,7 +124,8 @@ public class CumulativeUnary extends Cumulative {
      * @param durations variables denoting durations of the tasks.
      * @param resources variables denoting resource usage of the tasks.
      * @param limit     the overall limit of resources which has to be used.
-     * @param doProfile defines whether to do profile-based propagation (true) or not (false); de     * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false); default is true
+     * @param doProfile defines whether to do profile-based propagation (true) or not (false); 
+     * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false); default is true
      */
     public CumulativeUnary(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, boolean doProfile, boolean doEdgeFind) {
 

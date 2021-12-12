@@ -750,7 +750,7 @@ class GlobalConstraints implements ParserTreeConstants {
         t = newT;
 
         // remove ground variables and their respective values in touples
-        boolean[] toRemove= new boolean[t[0].length];
+        boolean[] toRemove = new boolean[t[0].length];
         // Arrays.fill(toRemove, false);  // initialized by default to false
         int numberToRemove = 0;
         for (int i = 0; i < v.length; i++) {
@@ -867,10 +867,27 @@ class GlobalConstraints implements ParserTreeConstants {
             dfa.finalStates.add(s[final_states.nextElement() - 1]);
 
         for (int i = 0; i < Q; i++) {
+            // mapping current -> next & tarnasition condition
+            Map<Integer,IntDomain> condition = new java.util.HashMap<>();
             for (int j = 0; j < S; j++)
                 if (d[i * S + j] != 0) {
-                    s[i].transitions.add(new FSMTransition(new IntervalDomain(j + minIndex, j + minIndex), s[d[i * S + j] - minIndex]));
+                    int nextState = d[i * S + j] - minIndex;
+                    if (condition.containsKey(nextState)) {
+                        IntervalDomain c = (IntervalDomain)condition.get(nextState);
+                        c.addLastElement(j + minIndex);
+                        condition.put(nextState,c);
+                    } else
+                        condition.put(nextState, new IntervalDomain(j + minIndex, j + minIndex));
                 }
+
+            Set<Map.Entry<Integer,IntDomain>> entries = condition.entrySet();
+
+            for (Map.Entry<Integer,IntDomain> e : entries) {
+                int nextState = e.getKey();
+                IntDomain transition = e.getValue();
+
+                s[i].transitions.add(new FSMTransition(transition, s[nextState]));
+            }
         }
 
         support.pose(new Regular(dfa, xx));

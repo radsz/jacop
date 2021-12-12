@@ -80,6 +80,10 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     private TimeStamp<Integer> beta;
     private TimeStamp<Integer> gamma;
 
+    private int  alphaValue;
+    private int  betaValue;
+    private int  gammaValue;
+
     private boolean firstConsistencyCheck = true;
 
     private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
@@ -136,6 +140,11 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
         alpha = new TimeStamp<>(store, 0);
         beta = new TimeStamp<>(store, 0);
         gamma = new TimeStamp<>(store, 0);
+
+        alphaValue = 0;
+        betaValue = 0;
+        gammaValue = 0;
+
     }
 
     @Override public int getDefaultConsistencyPruningEvent() {
@@ -152,6 +161,10 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
             firstConsistencyCheck = false;
         }
 
+        alphaValue = alpha.value();
+        betaValue = beta.value();
+        gammaValue = gamma.value();
+        
         do {
 
             store.propagationHasOccurred = false;
@@ -166,17 +179,20 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
         } while (store.propagationHasOccurred);
 
+        alpha.update(alphaValue);
+        beta.update(betaValue);
+        gamma.update(gammaValue);
     }
 
     private void initialize() {
-        int a = alpha.value();
+        int a = alphaValue;
         while (a < n && !x[a].domain.contains(s)) {
             x[a].domain.inComplement(store.level, x[a], t);
             a++;
         }
-        alpha.update(a);
-        beta.update(a);
-        gamma.update(a);
+        alphaValue = a;
+        betaValue = a;
+        gammaValue = a;
 
         int g = a;
         if (a < n) {
@@ -184,15 +200,19 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
             do {
                 g++;
             } while (g < n && !x[g].singleton(t));
-            gamma.update(g);
+            gammaValue = g;
             updateBeta();
         }
+
+        alpha.update(alphaValue);
+        beta.update(betaValue);
+        gamma.update(gammaValue);
     }
 
     private void propagate(int i) {
-        int b = beta.value();
-        if (b <= gamma.value()) {
-            int a = alpha.value();
+        int b = betaValue;
+        if (b <= gammaValue) {
+            int a = alphaValue;
             if (i == a && !x[i].domain.contains(s)) {
                 a++;
                 while (a < b) {
@@ -206,8 +226,8 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
                 if (a < n) {
                     x[a].domain.inComplement(store.level, x[a], t);
                 }
-                alpha.update(a);
-                beta.update(a);
+                alphaValue = a;
+                betaValue = a;
                 if (a < n) {
                     updateBeta();
                 }
@@ -219,25 +239,25 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
     }
 
     private void updateBeta() {
-        int b = beta.value();
+        int b = betaValue;
         do {
             b++;
         } while (b < n && !x[b].domain.contains(s));
 
-        if (b > gamma.value()) {
-            int a = alpha.value();
+        if (b > gammaValue) {
+            int a = alphaValue;
             x[a].domain.inValue(store.level, x[a], s);
             removeConstraint();
         }
-        beta.update(b);
+        betaValue = b;
     }
 
     private void checkGamma(int i) {
-        int g = gamma.value();
-        if (beta.value() < g && i < g && x[i].singleton(t)) {
-            gamma.update(i);
-            if (beta.value() > i) {
-                int a = alpha.value();
+        int g = gammaValue;
+        if (betaValue < g && i < g && x[i].singleton(t)) {
+            gammaValue = i;
+            if (betaValue > i) {
+                int a = alphaValue;
                 x[a].domain.inValue(store.level, x[a], s);
                 removeConstraint();
             }

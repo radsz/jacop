@@ -42,7 +42,6 @@ import org.jacop.util.MDD;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
-
 import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.charset.Charset;
@@ -159,7 +158,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     public String latexFile = "/home/radek/";
 
     /**
-     * This is the counter of save-to-latex calls
+     * This is the counter of save-to-latex calls.
      */
     private int calls = 0;
 
@@ -180,33 +179,33 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     private TimeStamp<Integer> rightChange;
 
     /**
-     * The position of the currentTouchedIndex
+     * The position of the currentTouchedIndex.
      */
 
     private TimeStamp<Integer> touchedIndex;
 
     /**
-     * Stores the states of all graph levels
+     * Stores the states of all graph levels.
      */
     private RegState[][] stateLevels;
 
     /**
-     * Time-stamp for the number of active states in each level
-
+     * Time-stamp for the number of active states in each level.
      */
     private TimeStamp<Integer>[] activeLevels;
 
-    private int activeLevelsTemp[];
+    private int[] activeLevelsTemp;
 
 
     /**
      * Number of states in the graph
-     * used only during the printing to latex function
+     * used only during the printing to latex function.
      */
     int stateNumber;
 
     /**
-     * @todo, try to use PriorityQueue based on the number
+     * Queue of changed variables.
+     * TODO try to use PriorityQueue based on the number
      * of states for a given variable or a domain size to
      * pickup first variables which may result in failure faster.
      * It does not have to be fully correct ordering.
@@ -249,7 +248,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     boolean firstConsistencyCheck = true;
 
-    boolean levelHadChanged[];
+    boolean[] levelHadChanged;
 
     int firstConsistencyLevel;
 
@@ -266,12 +265,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     public FSM fsm;
 
     /**
-     * Array of the variables of the graph levels
+     * Array of the variables of the graph levels.
      */
     public IntVar[] list;
 
     /**
-     * Constructor need Store to initialize the time-stamps
+     * Constructor need Store to initialize the time-stamps.
      * @param fsm (deterministic) finite automaton
      * @param list variables which values have to be accepted by the automaton.
      */
@@ -281,7 +280,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         checkInputForNullness("list", list);
         checkInputForDuplicationSkipSingletons("list", list);
 
-        this.queueIndex = 1;
+        this.queueIndex = 3;
         this.list = Arrays.copyOf(list, list.length);
         this.fsm = fsm;
         numberId = idNumber.incrementAndGet();
@@ -292,15 +291,15 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     /**
-     * Initialization phase of the algorithm
+     * Initialization phase of the algorithm.
      *
-     * Considering that it needs to initialize the array of graph States - stateLevels,
+     * <p>Considering that it needs to initialize the array of graph States - stateLevels,
      * and, thus, it needs to know the actual number of the states on each level I found
      * nothing better then run the initialization phase with the complete NxN array of states
      * and then copy the useful ones into a final array (which is ugly)
      *
      *
-     * @param dfa
+     * @param dfa specification of deterministic finite automaton.
      */
 
     private void initializeARRAY(FSM dfa) {
@@ -325,7 +324,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         //The id's of the states are renamed to make the future graph in latex look pretty
         int level = 0;
 
-        FSMState array[] = new FSMState[stateNumber];
+        FSMState[] array = new FSMState[stateNumber];
 
         dfa.resize();
         for (FSMState s : dfa.allStates)
@@ -351,12 +350,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     else
                         outarc[level][s.id][t.successor.id] = dom;
 
-					/* If the edge is not empty them add the state to tmp set
-           * check that such states wasn't previously added.
-					 * 
-					 * If the level is the last, then check whether the state 
-					 * belongs to the set of accepted states 
-					 */
+                                        /* If the edge is not empty them add the state to tmp set
+                                         * check that such states wasn't previously added.
+                                         *
+                                         * <p>If the level is the last, then check whether the state
+                                         * belongs to the set of accepted states
+                                         */
 
                     if (dom.getSize() > 0)
                         if (level < levels - 1)
@@ -374,11 +373,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
         //initialize the last time-stamp because the counter didn't reach it.
     /* ----- delete the paths of the graph that doesn't reach the accepted state -----
-		 * 
-		 * 
-		 *  by calculating the reachable region of the graph starting from the accepted 
-		 *  states and following the edges in the opposite direction.
-		 */
+                 *
+                 *
+                 *  by calculating the reachable region of the graph starting from the accepted
+                 *  states and following the edges in the opposite direction.
+                 */
 
         while (level > 0) {
             tmp.clear();
@@ -491,7 +490,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
      *  Collects the damaged states, after pruning the domain of variable "var",
      *  and put these states in two separated sets.
      *
-     *  One with the states with zero incoming degree - these are the candidates
+     *  <p>One with the states with zero incoming degree - these are the candidates
      *  for the forward part.
      *  The other set consists of states with zero out-coming degree - these are
      *  the candidates for backward part.
@@ -601,6 +600,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     /**
      * It does backward check to remove inactive edges and states.
+     *
      * @param sucPrevLimit previous number of states at a given level.
      * @param level level for which the backward sweep is computed.
      * @return level at which the sweep has ended.
@@ -685,8 +685,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
                 //We are removing a damaged state, thus, all its arcs are removed and
                 //we must remember maximal degree of it
-                //		if (s.outDegree > maxDegreePrunned)
-                //			maxDegreePrunned = s.outDegree;
+                //              if (s.outDegree > maxDegreePrunned)
+                //                      maxDegreePrunned = s.outDegree;
 
                 for (int i = s.outDegree - 1; i >= 0; i--) {
 
@@ -721,8 +721,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
         }
 
-        //	if (maxDegreePrunned > arcsPrunned.value())
-        //		arcsPrunned.update(maxDegreePrunned);
+        //      if (maxDegreePrunned > arcsPrunned.value())
+        //              arcsPrunned.update(maxDegreePrunned);
 
 
 
@@ -1038,7 +1038,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     }
 
-    @Override @SuppressWarnings("unchecked") public void impose(Store store) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public void impose(Store store) {
 
         if (optimizedMDD)
             initializeARRAY(fsm.transformIntoMDD(list));
@@ -1075,20 +1077,20 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                         state.setSupports(supports[level], i);
                 }
 
-				/*
-				ValueEnumeration enumer = vars[level].domain.valueEnumeration();
-				
-				for (int v; enumer.hasMoreElements();) {
+                                /*
+                                ValueEnumeration enumer = vars[level].domain.valueEnumeration();
 
-					v = enumer.nextElement();
-					// function check - checks if there is a support, starting from the 
-					// current one.
-					if (supports[level].get(v) == null) {
-						this.vars[level].domain.inComplement(store.level, vars[level], v);
-						enumer.domainHasChanged();
-					}
-				}
-				*/
+                                for (int v; enumer.hasMoreElements();) {
+
+                                        v = enumer.nextElement();
+                                        // function check - checks if there is a support, starting from the
+                                        // current one.
+                                        if (supports[level].get(v) == null) {
+                                                this.vars[level].domain.inComplement(store.level, vars[level], v);
+                                                enumer.domainHasChanged();
+                                        }
+                                }
+                                */
 
             }
         }
@@ -1313,16 +1315,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     /**
-     * Initialization phase of the algorithm
+     * Initialization phase of the algorithm.
      *
-     * Considering that it needs to initialize the array of graph States - stateLevels,
+     * <p>Considering that it needs to initialize the array of graph States - stateLevels,
      * and, thus, it needs to know the actual number of the states on each level I found
      * nothing better then run the initialization phase with the complete NxN array of states
      * and then copy the useful ones into a final array (which is ugly)
      *
      */
 
-    @SuppressWarnings("unchecked") private void initializeARRAY(MDD mdd) {
+    @SuppressWarnings("unchecked")
+    private void initializeARRAY(MDD mdd) {
 
         int levels = this.list.length;
 

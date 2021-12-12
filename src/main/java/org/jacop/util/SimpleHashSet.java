@@ -45,13 +45,16 @@ import java.util.Arrays;
 
 public class SimpleHashSet<E> {
 
-    @SuppressWarnings("hiding") class Entry<E> {
+    @SuppressWarnings("hiding")
+    class Entry<E> {
 
-        @SuppressWarnings("unchecked") public Entry chain;
+        @SuppressWarnings("unchecked")
+        public Entry chain;
 
         public final E element;
 
-        @SuppressWarnings("unchecked") public Entry next;
+        @SuppressWarnings("unchecked")
+        public Entry next;
 
         /**
          * Create new entry.
@@ -69,7 +72,8 @@ public class SimpleHashSet<E> {
             next = n;
         }
 
-        @SuppressWarnings("unchecked") public boolean add(E addedElement) {
+        @SuppressWarnings("unchecked")
+        public boolean add(E addedElement) {
             if (element == addedElement)
                 return false;
             if (next != null)
@@ -82,7 +86,8 @@ public class SimpleHashSet<E> {
             }
         }
 
-        @SuppressWarnings("unchecked") public boolean contains(E checkedElement) {
+        @SuppressWarnings("unchecked")
+        public boolean contains(E checkedElement) {
             if (element == checkedElement)
                 return true;
             if (next != null)
@@ -116,12 +121,11 @@ public class SimpleHashSet<E> {
      * object's own hashCode, this method applies a "supplemental hash
      * function," which defends against poor quality hash functions. This is
      * critical because SimpleHashSet uses power-of two length hash tables.
-     * <p>
-     * <p>
-     * The shift distances in this function were chosen as the result of an
+     *
+     * <p><p>The shift distances in this function were chosen as the result of an
      * automated search over the entire four-dimensional search space.
-     * <p>
-     * This hash code function implementation is original Sun function proposed
+     *
+     * <p>This hash code function implementation is original Sun function proposed
      * in util package.
      */
 
@@ -234,7 +238,8 @@ public class SimpleHashSet<E> {
      * @return <tt>true</tt> if object is inserted and <tt>false</tt> if
      * object was already in the set.
      */
-    @SuppressWarnings("unchecked") public boolean add(E element) {
+    @SuppressWarnings("unchecked")
+    public boolean add(E element) {
         int hash = hash(element);
         int i = indexFor(hash, table.length);
 
@@ -273,9 +278,9 @@ public class SimpleHashSet<E> {
      */
     public void clear() {
 
-        //	Entry<E>[] tab = table;
-        //	for (int i = tab.length - 1; i >= 0; i--)
-        //		tab[i] = null;
+        //      Entry<E>[] tab = table;
+        //      for (int i = tab.length - 1; i >= 0; i--)
+        //              tab[i] = null;
 
         Arrays.fill(table, null);
 
@@ -289,7 +294,9 @@ public class SimpleHashSet<E> {
      * Clones this set.
      */
 
-    @Override @SuppressWarnings("unchecked") public Object clone() {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Object clone() {
         SimpleHashSet<E> result = new SimpleHashSet<E>();
 
         result.table = new Entry[table.length];
@@ -346,7 +353,8 @@ public class SimpleHashSet<E> {
      * @return the first entry which has been removed.
      */
 
-    @SuppressWarnings("unchecked") public E removeFirst() {
+    @SuppressWarnings("unchecked")
+    public E removeFirst() {
 
         if (size == 0)
             return null;
@@ -373,8 +381,8 @@ public class SimpleHashSet<E> {
      * Rehashes the contents of this set into a new array with a larger
      * capacity. This method is called automatically when the number of elements
      * in this set reaches its threshold.
-     * <p>
-     * If current capacity is MAXIMUM_CAPACITY, this method does not resize the
+     *
+     * <p>If current capacity is MAXIMUM_CAPACITY, this method does not resize the
      * set, but sets threshold to Integer.MAX_VALUE. This has the effect of
      * preventing future calls.
      *
@@ -382,7 +390,8 @@ public class SimpleHashSet<E> {
      *                    current capacity unless current capacity is MAXIMUM_CAPACITY
      *                    (in which case value is irrelevant).
      */
-    @SuppressWarnings("unchecked") void resize(int newCapacity) {
+    @SuppressWarnings("unchecked")
+    void resize(int newCapacity) {
 
         Entry[] oldTable = table;
         int oldCapacity = oldTable.length;
@@ -410,35 +419,43 @@ public class SimpleHashSet<E> {
      * Returns string representation of the hash set.
      */
 
-    @Override @SuppressWarnings("unchecked") public String toString() {
-        StringBuffer S = new StringBuffer();
+    @Override
+    @SuppressWarnings("unchecked")
+    public String toString() {
+        StringBuffer s = new StringBuffer();
 
-        S.append("SimpleHashSet[");
+        s.append("SimpleHashSet[");
 
         Entry[] tab = table;
+
+        boolean empty = true;
 
         for (int i = 0; i < tab.length; i++) {
 
             Entry<E> e = tab[i];
 
+            if (!empty && e != null)
+                s.append(",");
+
             while (e != null) {
-                S.append(e.element);
+                empty = false;
+                s.append(e.element);
                 e = e.next;
                 if (e != null)
-                    S.append(",");
+                    s.append(",");
             }
-
         }
 
-        S.append("]");
+        s.append("]");
 
-        return S.toString();
+        return s.toString();
     }
 
     /**
      * Transfer all entries from current table to newTable.
      */
-    @SuppressWarnings("unchecked") void transfer(Entry[] oldTable) {
+    @SuppressWarnings("unchecked")
+    void transfer(Entry[] oldTable) {
 
         size = 0;
 

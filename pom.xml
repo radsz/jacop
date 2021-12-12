@@ -69,6 +69,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <aspectj.version>1.8.10</aspectj.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
+        <dependency.locations.enabled>false</dependency.locations.enabled>
     </properties>
 
     <!-- In order to see logging output,
@@ -612,14 +613,6 @@ setup to run configuration. -->
 
     <reporting>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-project-info-reports-plugin</artifactId>
-                <version>2.8</version>
-                <configuration>
-                    <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jxr-plugin</artifactId>
