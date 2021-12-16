@@ -890,7 +890,8 @@ class GlobalConstraints implements ParserTreeConstants {
             }
         }
 
-        support.pose(new Regular(dfa, xx));
+        support.delayedConstraints.add(new Regular(dfa, xx));
+        // support.pose(new Regular(dfa, xx));
     }
 
     void gen_jacop_knapsack(SimpleNode node) {

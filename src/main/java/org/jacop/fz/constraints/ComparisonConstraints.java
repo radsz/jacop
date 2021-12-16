@@ -619,11 +619,15 @@ class ComparisonConstraints implements ParserTreeConstants {
                         support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
                         return;
                     }
-                    if (v2.singleton())
-                        c = new XeqC(v1, v2.value());
-                    else if (v1.singleton())
-                        c = new XeqC(v2, v1.value());
-                    else
+                    if (v2.singleton()) {
+                        // c = new XeqC(v1, v2.value());
+                        support.pose(fzXeqCReified(v1, v2.value(), v3));
+                        return;
+                    } else if (v1.singleton()) {
+                        // c = new XeqC(v2, v1.value());
+                        support.pose(fzXeqCReified(v2, v1.value(), v3));
+                        return;
+                    } else
                         c = new XeqY(v1, v2);
                     break;
                 case Support.ne:

@@ -538,8 +538,10 @@ public class Support implements ParserTreeConstants {
 
         for (Constraint c : delayedConstraints) {
             store.impose(c);
-            if (options.debug())
-                System.out.println("% " + c);
+            if (options.debug()) {
+                String s = "% " + c.toString();
+                System.out.println(s.replaceAll("\n", "\n% "));
+            }
         }
         poseAlldistinctConstraints();
 
@@ -553,8 +555,10 @@ public class Support implements ParserTreeConstants {
         for (IntVar[] v : parameterListForAlldistincts) {
             Alldistinct ad = new Alldistinct(v);
             store.impose(ad);
-            if (options.debug())
-                System.out.println("% " + ad);
+            if (options.debug()) {
+                String s = "% " + ad.toString();
+                System.out.println(s.replaceAll("\n", "\n% "));
+            }
         }
     }
 
