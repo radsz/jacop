@@ -734,9 +734,9 @@ public class Solve implements ParserTreeConstants {
                                + "\n%%%mzn-stat: restarts=" + String.format("%d", restarts)
                                + "\n%%%mzn-stat: propagations=" + String.format("%d", store.numberConsistencyCalls)
                                // + "\n%% Search decisions : "+ String.format("%d", decisions)
-                               + "\n%%%mzn-stat: failers=" + String.format("%d", wrong) //Wrong search decisions : 
+                               + "\n%%%mzn-stat: failures=" + String.format("%d", wrong) //Wrong search decisions : 
                                // + "\n%%%mzn-stat: backtracks=" + String.format("%d", backtracks)
-                               + "\n%%%mzn-stat; peakDepth=" + depth
+                               + "\n%%%mzn-stat: peakDepth=" + depth
                                + "\n%%%mzn-stat: solutions=" + solutions
                                + "\n%%%mzn-stat-end"
                                );
@@ -950,7 +950,7 @@ public class Solve implements ParserTreeConstants {
                                    + "\n%%man-stat: propagations=" + store.numberConsistencyCalls
                                    + "\n%%%mzn-stat: nodes=0"
                                    + "\n%%%mzn-stat: restarts=0"
-                                   + "\n%%%mzn-stat: failers=0"
+                                   + "\n%%%mzn-stat: failures=0"
                                    // + "\n%%%mzn-stat: backtracks=0"
                                    + "\n%%%mzn-stat: peakDepth=0"
                                    + "\n%%%mzn-stat: solutions=1"
@@ -1311,7 +1311,7 @@ public class Solve implements ParserTreeConstants {
                                + "\n%%%mzn-stat: restarts=" + String.format("%d", restarts)
                                + "\n%%%mzn-stat: propagations=" + String.format("%d", store.numberConsistencyCalls)
                                // + "\n%% Search decisions : " + String.format("%d", decisions)
-                               + "\n%%%mzn-stat: failers=" + String.format("%d", wrong) //Wrong search decisions : 
+                               + "\n%%%mzn-stat: failures=" + String.format("%d", wrong) //Wrong search decisions : 
                                // + "\n%%%mzn-stat: backtracks=" + String.format("%d", backtracks)
                                + "\n%%%mzn-stat: peakDepth=" + depth
                                + "\n%%%mzn-stat: solutions=" + solutions
