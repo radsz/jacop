@@ -277,7 +277,9 @@ public class Solve implements ParserTreeConstants {
 
         this.si = si;
 
-        // if (options.getVerbose()) {
+        if (solveKind == 1)
+            minimize = true;
+
         if (options.debug()) {
             String solve = "notKnown";
             switch (solveKind) {
@@ -289,7 +291,6 @@ public class Solve implements ParserTreeConstants {
                         ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
                         : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                     solve = "%% minimize(" + costMin + ") ";
-                    minimize = true;
                     break; // minimize
                 case 2:
                     Var costMax = (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
@@ -979,6 +980,9 @@ public class Solve implements ParserTreeConstants {
         
         this.si = si;
 
+        if (solveKind == 1)
+            minimize = true;
+
         // if (options.getVerbose()) {
         if (options.debug()) {
             String solve = "notKnown";
@@ -991,7 +995,6 @@ public class Solve implements ParserTreeConstants {
                         ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
                         : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
                     solve = "%% minimize(" + costMin + ") ";
-                    minimize = true;
                     break; // minimize
 
                 case 2:
