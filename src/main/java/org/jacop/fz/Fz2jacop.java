@@ -74,7 +74,8 @@ public class Fz2jacop {
 
         Options opt = new Options(args);
 
-        if (opt.getVerbose())
+        // if (opt.getVerbose())
+        if (opt.debug())
             System.out.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
 
         // Thread tread = java.lang.Thread.currentThread();

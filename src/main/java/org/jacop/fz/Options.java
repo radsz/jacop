@@ -230,7 +230,7 @@ public class Options {
         try {
             file = new FileInputStream(fileName);
         } catch (java.io.FileNotFoundException e) {
-            System.out.println("Flatzinc2JaCoP Parser Version 0.1:  File " + fileName + " not found.");
+            System.out.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
             System.exit(0);
         }
 
