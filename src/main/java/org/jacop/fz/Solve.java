@@ -957,7 +957,6 @@ public class Solve implements ParserTreeConstants {
                                    + "\n%%%mzn-stat: solveTime=" + "0"
                                    + "\n%%%mzn-stat: nodes=0"
                                    + "\n%%man-stat: propagations=" + store.numberConsistencyCalls
-                                   + "\n%%%mzn-stat: nodes=0"
                                    + "\n%%%mzn-stat: restarts=0"
                                    + "\n%%%mzn-stat: failures=0"
                                    // + "\n%%%mzn-stat: backtracks=0"
@@ -1630,7 +1629,7 @@ public class Solve implements ParserTreeConstants {
                         printBuffer.append("%%%mzn-stat: objective=" + (-((FloatVar)costVariable).value()) + "\n");
                 }
             double cpuTime = getSearchTime_ms();
-            printBuffer.append("%%%mzn-stat: nodes=" + nf.format(nodes) + "\n");
+            //printBuffer.append("%%%mzn-stat: nodes=" + nf.format(nodes) + "\n");
             if (nf.isGroupingUsed()) {
                 printBuffer.append("%%%mzn-stat: nodes=" + nf.format(nodes));
                 printBuffer.append(" (" + nf.format((cpuTime == 0) ? 0.0 : (double)nodes / (cpuTime / 1000)) + " nodes/s)\n");
