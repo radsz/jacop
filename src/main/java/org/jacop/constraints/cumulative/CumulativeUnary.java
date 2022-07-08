@@ -322,7 +322,7 @@ public class CumulativeUnary extends Cumulative {
                 tree.enableNode(j);
                 indexQ++;
             }
-            updateEST[i] = tree.ect(t[i].treeIndex);
+            updateEST[i] = Math.max(t[i].est(), tree.ect(t[i].treeIndex));
         }
 
         for (int i = 0; i < n; i++) {
