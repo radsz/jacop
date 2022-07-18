@@ -53,12 +53,12 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
 	this(store, store.getDecay());
     }
     
-    public ActivityMinDeg(Store store, float decay) {
+    public ActivityMinDeg(Store store, double decay) {
 	store.activityManagement(true);
 	store.setDecay(decay);
     }
     
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
 
         double right = var.activity() / var.getSizeFloat();
 
@@ -92,9 +92,9 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
 
     }
 
-    public float metric(T var) {
+    public double metric(T var) {
 
-        return var.activity() / ((float)var.getSizeFloat());
+        return var.activity() / var.getSizeFloat();
 
     }
 }

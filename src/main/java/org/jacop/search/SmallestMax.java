@@ -49,7 +49,7 @@ public class SmallestMax<T extends IntVar> implements ComparatorVariable<T> {
     public SmallestMax() {
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
         int right = var.dom().max();
         if (left < right)
             return 1;
@@ -68,7 +68,7 @@ public class SmallestMax<T extends IntVar> implements ComparatorVariable<T> {
         return 0;
     }
 
-    public float metric(T var) {
+    public double metric(T var) {
         return var.dom().max();
     }
 

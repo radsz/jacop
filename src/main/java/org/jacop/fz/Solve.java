@@ -803,8 +803,8 @@ public class Solve implements ParserTreeConstants {
             if (opt.debug())
                 setSearch.setConsistencyListener(failStatistics);
 
-            SelectChoicePoint<Var> setSelect = (options.freeSearch())
-                // || options.complementarySearch()) -- do not use it; too large overhead
+            SelectChoicePoint<Var> setSelect = (options.freeSearch()
+                                                || options.complementarySearch())
                 ? new SimpleSelect<Var>(set_search_variables, new AFCMaxDeg<Var>(store), new IndomainSetMin())
                 : new SimpleSelect<Var>(set_search_variables, null, new IndomainSetMin());
 
@@ -836,9 +836,9 @@ public class Solve implements ParserTreeConstants {
 
         if (int_search_variables.length != 0) {
             // add search containing int variables to be sure that they get a value
-            SelectChoicePoint<Var> intSelect = (options.freeSearch())
-                // || options.complementarySearch()) -- do not use it; too large overhead
-                ? new SimpleSelect(int_search_variables, new AFCMaxDeg(store), new IndomainMin())
+            SelectChoicePoint<Var> intSelect = (options.freeSearch()
+                                                || options.complementarySearch())
+                ?  new SimpleSelect(int_search_variables, new AFCMaxDeg(store), new IndomainMin())
                 : new SimpleSelect<Var>(int_search_variables, null, new IndomainMin());
 
             if (variable_selection == null)
@@ -873,8 +873,8 @@ public class Solve implements ParserTreeConstants {
 
         if (bool_search_variables.length != 0) {
             // add search containing boolean variables to be sure that they get a value
-            SelectChoicePoint<Var> boolSelect = (options.freeSearch())
-                // || options.complementarySearch()) -- do not use it; too large overhead
+            SelectChoicePoint<Var> boolSelect = (options.freeSearch()
+                                                 || options.complementarySearch())
                 ? new SimpleSelect<Var>(bool_search_variables, new AFCMax<Var>(store), new IndomainMin())
                 : new SimpleSelect<Var>(bool_search_variables, null, new IndomainMin());
 
@@ -968,9 +968,15 @@ public class Solve implements ParserTreeConstants {
             throw new TrivialSolution();
         }
 
-        return intAndSetSearch;
-    }   
+        // add restart search for free search (option -f)
+        // if (options.freeSearch()) {
+        //     int scale = int_search_variables.length + set_search_variables.length +
+        //         bool_search_variables.length + float_search_variables.length;
+        //     restartCalculator = new LubyCalculator(scale); // GeometricCalculator(10, 2);
+        // }
 
+        return intAndSetSearch;
+    }
 
     void run_sequence_search(int solveKind, SimpleNode kind, SearchItem si) {
 

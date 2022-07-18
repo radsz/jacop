@@ -77,7 +77,7 @@ public abstract class Var implements Backtrackable {
     /**
      * Pruning activity of this variable.
      */
-    float pruningActivity = 1.0f;
+    double pruningActivity = 1.0d;
 
     /**
      * This function returns current domain of the variable.
@@ -250,7 +250,7 @@ public abstract class Var implements Backtrackable {
 	pruningActivity += 1.0;
     }
 
-    public float activity() {
+    public double activity() {
 	return pruningActivity;
     }
     

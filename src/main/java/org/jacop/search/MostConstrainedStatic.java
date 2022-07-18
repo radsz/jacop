@@ -48,7 +48,7 @@ public class MostConstrainedStatic<T extends Var> implements ComparatorVariable<
     public MostConstrainedStatic() {
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
         int right = var.sizeConstraintsOriginal();
         if (left > right)
             return 1;
@@ -67,7 +67,7 @@ public class MostConstrainedStatic<T extends Var> implements ComparatorVariable<
         return 0;
     }
 
-    public float metric(T o) {
+    public double metric(T o) {
         return o.sizeConstraintsOriginal();
     }
 

@@ -52,7 +52,7 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
     public MaxRegretFloat() {
     }
 
-    public int compare(float ldiff, T var) {
+    public int compare(double ldiff, T var) {
 
         // ValueEnumeration rEnum = var.domain.valueEnumeration();
 
@@ -111,7 +111,7 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
 
     }
 
-    public float metric(T o) {
+    public double metric(T o) {
 
         // ValueEnumeration oEnum = o.domain.valueEnumeration();
 
@@ -124,7 +124,7 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
         double omin = o.min();
         double ominNext = ((FloatIntervalDomain) o.domain).nextValue(omin);
 
-        return (float) (ominNext - omin);
+        return ominNext - omin;
 
     }
 

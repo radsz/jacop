@@ -53,15 +53,15 @@ public class AFCMin<T extends Var> implements ComparatorVariable<T> {
 	this(store, store.getDecay());
     }
     
-    public AFCMin(Store store, float decay) {
+    public AFCMin(Store store, double decay) {
 	store.setAllConstraints();
 	store.afcManagement(true);
 	store.setDecay(decay);
     }
     
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
 
-        float right = afcValue(var);
+        double right = afcValue(var);
 
         if (left < right)
 
@@ -77,9 +77,9 @@ public class AFCMin<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
     
-        float left = afcValue(leftVar);
+        double left = afcValue(leftVar);
 
-        float right = afcValue(rightVar);
+        double right = afcValue(rightVar);
 
         if (left < right)
 
@@ -93,14 +93,14 @@ public class AFCMin<T extends Var> implements ComparatorVariable<T> {
 
     }
 
-    public float metric(T var) {
+    public double metric(T var) {
 
         return afcValue(var);
 
     }
 
-    float afcValue(Var v) {
-	float value = 0.0f;
+    double afcValue(Var v) {
+	double value = 0.0f;
 	for (Constraint c : v.dom().constraints())
 	    value += c.afc();
 	return value;

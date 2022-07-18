@@ -248,7 +248,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
             }
         }
 
-        float optimalMetric = mainComparator.metric(currentVariable);
+        double optimalMetric = mainComparator.metric(currentVariable);
         int optimalPosition = firstVariable;
 
         int comparison = 0;

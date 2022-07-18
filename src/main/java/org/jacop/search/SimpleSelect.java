@@ -163,7 +163,7 @@ import java.util.Map;
             return searchVariables[currentIndex];
         }
 
-        float optimalMetric = variableOrdering.metric(currentVariable);
+        double optimalMetric = variableOrdering.metric(currentVariable);
         int optimalPosition = index;
 
         int comparison = 0;

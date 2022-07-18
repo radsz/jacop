@@ -53,14 +53,14 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
 	this(store, store.getDecay());
     }
     
-    public ActivityMax(Store store, float decay) {
+    public ActivityMax(Store store, double decay) {
 	store.activityManagement(true);
 	store.setDecay(decay);
     }
     
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
 
-        float right = var.activity();
+        double right = var.activity();
 
         if (left > right)
 
@@ -76,9 +76,9 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
 
     public int compare(T leftVar, T rightVar) {
     
-        float left = leftVar.activity();
+        double left = leftVar.activity();
 
-        float right = rightVar.activity();
+        double right = rightVar.activity();
 
         if (left > right)
 
@@ -92,7 +92,7 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
 
     }
 
-    public float metric(T var) {
+    public double metric(T var) {
 
         return var.activity();
 

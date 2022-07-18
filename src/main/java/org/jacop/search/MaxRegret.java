@@ -50,7 +50,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     public MaxRegret() {
     }
 
-    public int compare(float ldiff, T var) {
+    public int compare(double ldiff, T var) {
 
         ValueEnumeration rEnum = var.domain.valueEnumeration();
 
@@ -103,7 +103,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
     }
 
-    public float metric(T o) {
+    public double metric(T o) {
 
         ValueEnumeration oEnum = o.domain.valueEnumeration();
 

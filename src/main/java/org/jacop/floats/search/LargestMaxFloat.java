@@ -49,7 +49,7 @@ public class LargestMaxFloat<T extends FloatVar> implements ComparatorVariable<T
     public LargestMaxFloat() {
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
         double right = var.dom().max();
         if (left > right)
             return 1;
@@ -68,8 +68,8 @@ public class LargestMaxFloat<T extends FloatVar> implements ComparatorVariable<T
         return 0;
     }
 
-    public float metric(T var) {
-        return (float) var.dom().max();
+    public double metric(T var) {
+        return var.dom().max();
     }
 
 }

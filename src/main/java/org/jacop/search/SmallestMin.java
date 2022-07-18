@@ -49,7 +49,7 @@ public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {
     public SmallestMin() {
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
         int right = var.dom().min();
         if (left < right)
             return 1;
@@ -68,7 +68,7 @@ public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {
         return 0;
     }
 
-    public float metric(T o) {
+    public double metric(T o) {
         return o.dom().min();
     }
 

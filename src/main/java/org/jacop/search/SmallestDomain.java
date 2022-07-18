@@ -49,7 +49,7 @@ public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
     public SmallestDomain() {
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
         int right = var.getSize();
 
         if (left < right)
@@ -70,7 +70,7 @@ public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
         return 0;
     }
 
-    public float metric(T var) {
+    public double metric(T var) {
         return var.getSize();
     }
 

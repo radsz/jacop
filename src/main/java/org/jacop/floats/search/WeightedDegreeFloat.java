@@ -54,7 +54,7 @@ public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T>
 	store.variableWeightManagement = true;
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
 
         double right = ((double) var.weight) / ((FloatVar) var).getSizeFloat();
 
@@ -88,9 +88,9 @@ public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T>
 
     }
 
-    public float metric(T var) {
+    public double metric(T var) {
 
-        return ((float) var.weight) / (float) ((FloatVar) var).getSizeFloat();
+        return var.weight / ((FloatVar) var).getSizeFloat();
 
     }
 

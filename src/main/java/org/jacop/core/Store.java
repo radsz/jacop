@@ -257,7 +257,7 @@ public class Store {
     boolean constraintAFCManagement = false;
     Set<Constraint>  allConstraints;
 
-    float decay = 0.99f;
+    double decay = 0.99d;
     
     /**
      * Variables for pruning count (variable activity) for constraints.
@@ -1292,12 +1292,12 @@ public class Store {
     }
     
 
-    public void setDecay(float d) {
+    public void setDecay(double d) {
         decay = d;
     }
 
-    public float getDecay() {
-        return decay ;
+    public double getDecay() {
+        return decay;
     }
 
     public void afcManagement(boolean m) {
@@ -1313,7 +1313,7 @@ public class Store {
         for (Var v : variablesPrunned)
             v.updateActivity();
 
-        if (decay < 1.0f)
+        if (decay < 1.0d)
             for (Var v : constraint.arguments())
                 if (!variablesPrunned.contains(v))
                     v.applyDecay();

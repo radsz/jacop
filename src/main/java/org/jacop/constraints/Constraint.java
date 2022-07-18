@@ -442,22 +442,23 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     /*
-     * Handling of AFC (accumulated failure fail) for constraints
+     * Handling of AFC (accumulated failure count) for constraints
      *
      */
-    float afcWeight = 1.0f;
+    double afcWeight = 1.0d;
 
-    public float afc() {
+    public double afc() {
         return afcWeight;
     }
     
-    public void updateAFC(Set<Constraint> allConstraints, float decay) {
-        afcWeight += 1.0f;
+    public void updateAFC(Set<Constraint> allConstraints, double decay) {
+        afcWeight = (afcWeight + 1.0d) / decay;
 
-        if (decay < 1.0f)
+        if (afcWeight > Double.MAX_VALUE * 1e-50) {
+            // re-scale weights
             for (Constraint c : allConstraints)
-                if (!this.equals(c))
-                    c.afcWeight = c.afcWeight * decay;
+                c.afcWeight *= 1e-150;
+        }
     }
     
     /**

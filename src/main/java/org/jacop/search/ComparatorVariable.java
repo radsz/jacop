@@ -49,7 +49,7 @@ public interface ComparatorVariable<T extends Var> {
      * @param var    variable which is compared to baseline.
      * @return 1 if metric is larger than variable, 0 if equal, -1 if baseline is smaller.
      */
-    int compare(float metric, T var);
+    int compare(double metric, T var);
 
     /**
      * It compares the metric of the left variable against the right one.
@@ -66,6 +66,6 @@ public interface ComparatorVariable<T extends Var> {
      * @param var variable for which metric is computed.
      * @return the metric of the variable according to the comparator.
      */
-    float metric(T var);
+    double metric(T var);
 
 }

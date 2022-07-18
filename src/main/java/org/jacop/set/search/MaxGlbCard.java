@@ -53,7 +53,7 @@ public class MaxGlbCard<T extends SetVar> implements ComparatorVariable<T> {
     /**
      * Compares the cardinality of the variables glb to the float value.
      */
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
 
         int right = var.dom().glb().getSize();
 
@@ -85,7 +85,7 @@ public class MaxGlbCard<T extends SetVar> implements ComparatorVariable<T> {
     /**
      * Returns the cardinality of the glb.
      */
-    public float metric(T var) {
+    public double metric(T var) {
         return var.dom().glb().getSize();
     }
 

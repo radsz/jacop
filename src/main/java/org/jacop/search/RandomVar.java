@@ -53,7 +53,7 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
     public RandomVar() {
     }
 
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
         double right = generator.nextFloat();
         if (left < right)
             return 1;
@@ -72,7 +72,7 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
         return 0;
     }
 
-    public float metric(T o) {
+    public double metric(T o) {
         return generator.nextFloat();
     }
 

@@ -54,7 +54,7 @@ public class MaxCardDiff<T extends SetVar> implements ComparatorVariable<T> {
     /**
      * Compares the cardinality difference of the variable to the float value.
      */
-    public int compare(float left, T var) {
+    public int compare(double left, T var) {
 
         SetDomain dom = var.dom();
 
@@ -90,7 +90,7 @@ public class MaxCardDiff<T extends SetVar> implements ComparatorVariable<T> {
     /**
      * Returns the metric(Cardinality difference) of the variable.
      */
-    public float metric(T var) {
+    public double metric(T var) {
         SetDomain dom = var.dom();
         return dom.lub().getSize() - dom.glb().getSize();
     }

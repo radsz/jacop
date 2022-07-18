@@ -145,7 +145,7 @@ public class DefaultSearchVars {
 		    if (v instanceof BooleanVar)
                     bool_vars.add(v);
 		    else  if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
-			bool_vars.add(v);
+		        bool_vars.add(v);
 		    else
 			int_vars.add(v);
             }
