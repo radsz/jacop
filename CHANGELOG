@@ -15,12 +15,18 @@ Version 4.9
    (--random-seed) that defines the seed.
 
 4. Support for a new variable selection annotation for search (in
-   minizinc).  Annotation tiebreak takes two parameters (two variable
-   selection methods) and uses the first one as the main selection
-   method and the second one as tie breaking, in case when both main
-   selection methods has the same value.
+   minizinc).  Annotation "tiebreak" takes two parameters (two
+   variable selection methods) and uses the first one as the main
+   selection method and the second one as tie breaking, in case when
+   both main selection methods has the same value. Example
+   tiebreak([first_fail,occurrence]).
 
-5. Bug corrections, code cleaning and performance improvements.
+5. Support for standard "warm_start" search annotation for int and
+   bool variables in minizinc. It starts search with a specified value
+   for a given variable and then continues with either indomain_min or
+   indomain_max.
+
+6. Bug corrections, code cleaning and performance improvements.
 
 Version 4.8
 =============

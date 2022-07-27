@@ -32,7 +32,6 @@
 package org.jacop.fz;
 
 import org.jacop.core.FailException;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -52,8 +51,8 @@ public class Fz2jacop {
      * It parses the provided file and parsing parameters followed by problem solving.
      *
      * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving.
-     *             <p>
-     *             TODO what are the conditions for different exceptions being thrown? Write little info below.
+     * 
+     * <p>TODO what are the conditions for different exceptions being thrown? Write little info below.
      */
 
     public static void main(String[] args) {
@@ -137,13 +136,13 @@ public class Fz2jacop {
             Runtime.getRuntime().removeShutdownHook(t);
 
             // long execTime = (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6;  // in ms
-	    long execTime = (parser.solver.initTime + parser.solver.searchTime) / (long) 1e+6; // in ms
+            long execTime = (parser.solver.initTime + parser.solver.searchTime) / (long) 1e+6; // in ms
             final long hr = TimeUnit.MILLISECONDS.toHours(execTime);
             final long min = TimeUnit.MILLISECONDS.toMinutes(execTime - TimeUnit.HOURS.toMillis(hr));
             final long sec = TimeUnit.MILLISECONDS.toSeconds(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
             final long ms = TimeUnit.MILLISECONDS
                 .toMillis(execTime - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
-            System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double)execTime/1000.0);
+            System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double)execTime / 1000.0);
             if (hr == 0) 
                 if (min == 0)
                     System.out.println(); //String.format("(%d.%03d)", sec, ms));

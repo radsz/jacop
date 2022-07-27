@@ -101,7 +101,7 @@ SPECIAL_TOKEN :
 // string_literal  \"[^"\n]*\"
 TOKEN :
 {
-    < STRING_LITERAL : "\"" (~["\n", "\r", "\f"])* "\"">
+    < STRING_LITERAL : "\"" (~["\n", "\r", "\f", "\""])* "\"">
 }
 
 // int_literal     -?[0-9]+|-?0x[0-9A-Fa-f]+|-?0o[0-7]+
@@ -710,7 +710,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 	} 
     | t = <INT_LITERAL> { jjtThis.setType(0); jjtThis.setInt(Integer.parseInt(t.image)); } 
     | t = <FLOAT_LITERAL> { jjtThis.setType(5); jjtThis.setFloat(Double.parseDouble(t.image));} 
-    | t = <STRING_LITERAL> { jjtThis.setType(4); } 
+    | t = <STRING_LITERAL> { jjtThis.setType(4); jjtThis.setString(t.image);}
 }
 
 // int_flat_expr:
