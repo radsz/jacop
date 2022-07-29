@@ -897,6 +897,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         store.setLevel(store.level + 1);
         depth = store.level;
 
+        if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
+            timeOutOccured = true;
+            return false;
+        }
+
         if (result)
             result = label(0);
 
@@ -906,13 +911,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         if (exitListener != null)
             exitListener.executedAtExit(store, solutionListener.solutionsNo());
-
-        if (timeOutOccured) {
-
-            if (printInfo)
-                System.out.println("Time-out " + tOut + "s");
-
-        }
 
         if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
 
@@ -931,7 +929,14 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 store.setLevel(store.level - 1);
             }
 
-            if (masterSearch == null)
+            if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
+                timeOutOccured = true;
+
+                if (printInfo)
+                    System.out.println("Time-out " + tOut + "s");
+
+                return false;
+            } else if (masterSearch == null)
                 return true;
             else
                 return result;
@@ -959,6 +964,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             if (raisedLevel) {
                 store.removeLevel(store.level);
                 store.setLevel(store.level - 1);
+            }
+
+            if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
+                timeOutOccured = true;
+
+                if (printInfo)
+                    System.out.println("Time-out " + tOut + "s");
             }
 
             return false;
