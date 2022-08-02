@@ -918,8 +918,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 if (costVariable != null)
                     if (costVariable instanceof IntVar)
                         System.out.println("Solution cost is " + costValue);
-                    else if (costVariable instanceof IntVar)
-                        System.out.println("Solution cost is " + costVariable.dom());
+                    else if (costVariable instanceof FloatVar)
+                        System.out.println("Solution cost is " + costValueFloat);
 
                 System.out.println(this);
             }
