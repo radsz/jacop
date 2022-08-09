@@ -33,6 +33,7 @@ package org.jacop.search;
 
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
+import org.jacop.core.Var;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will
@@ -106,6 +107,6 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
     }
 
     public String toString() {
-        return "" + java.util.Arrays.asList(searchVariables) + ", SplitSelect(" + variableOrdering +", "+ tieBreakingComparator + ", " + valueOrdering + ")";
+        return "" + java.util.Arrays.asList((Var[])searchVariables) + ", SplitSelect(" + variableOrdering +", "+ tieBreakingComparator + ", " + valueOrdering + ")";
     }
 }
