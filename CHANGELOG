@@ -26,7 +26,12 @@ Version 4.9
    for a given variable and then continues with either indomain_min or
    indomain_max.
 
-6. Bug corrections, code cleaning and performance improvements.
+6. New constraint generation for table constraints in flatzinc
+   interpreter. In cases when up to three variables are defined and
+   there exist up to three conflicting tuples JaCoP Or constraints are
+   generated instead.
+
+7. Bug corrections, code cleaning and performance improvements.
 
 Version 4.8
 =============

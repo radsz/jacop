@@ -804,14 +804,115 @@ class GlobalConstraints implements ParserTreeConstants {
                 if (support.options.debug())
                     System.out.println("% " + nv[0] + " in " + d);
 
-            } else if (t.length <= 64)
-                support.pose(new org.jacop.constraints.table.SimpleTable(nv, tt, true));
-            else
+            } else if (tt.length <= 64) {
+                generateTableConstraints(nv, tt);
+            } else
                 support.pose(new org.jacop.constraints.table.Table(nv, tt, true));
-        } else if (t.length <= 64)
-            support.pose(new org.jacop.constraints.table.SimpleTable(v, t, true));
-        else
+        } else if (t.length <= 64) {
+            generateTableConstraints(v, t);
+        } else
             support.pose(new org.jacop.constraints.table.Table(v, t, true));
+    }
+
+    void generateTableConstraints(IntVar[] v, int[][] t) {
+
+        int size = Arrays.asList(v).stream().mapToInt(x -> x.dom().getSize())
+            .reduce(1, (a,b) -> a * b);
+
+        if (v.length > 3 || size > 70) {
+            support.pose(new org.jacop.constraints.table.SimpleTable(v, t, true));
+        } else {
+
+            int[][] c = conflictTuples(v, t);
+
+            if (c != null && c.length <= 3) {
+                if (v.length == 1) {
+                    for (int i = 0; i < c.length; i++) {
+                        // support.pose(new XneqC(v[0], c[i][0]));
+                        v[0].domain.inComplement(store.level, v[0], c[i][0]);
+                        if (support.options.debug())
+                            System.out.println("% " + v[0] + " \\ " + c[i][0]);
+                    }
+                } else {
+                    for (int i = 0; i < c.length; i++) {
+                        XneqC[] x = new XneqC[c[i].length];
+                        for (int j = 0; j < c[i].length; j++) {
+                            x[j] = new XneqC(v[j], c[i][j]);
+                        }
+                        support.pose(new Or(x));
+                    }
+                }
+            } else
+                support.pose(new org.jacop.constraints.table.SimpleTable(v, t, true));
+        }
+    }
+
+    int[][] conflictTuples(IntVar[] v, int[][] t) {
+
+        int[][] r = product(v, t);
+
+        ArrayList<int[]> c = new ArrayList<>();
+        for (int i = 0; i < r.length; i++) {
+            boolean exists = false;
+            for (int j = 0; j < t.length; j++) {
+                if (eqTuples(r[i], t[j])) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists)
+                c.add(r[i]);
+        }
+
+        int[][] ca = c.toArray(new int[c.size()][2]);
+
+        return ca;
+    }
+
+    int[][] product(IntVar[] v, int[][] t) {
+
+        if (v.length == 1) {
+            int[][] r = new int[v[0].domain.getSize()][1];
+            int j = 0;
+            ValueEnumeration e1 = v[0].domain.valueEnumeration();
+            while (e1.hasMoreElements()) {
+                r[j++][0] = e1.nextElement();
+            }
+
+            return r;
+        } else {
+            IntVar[] vs = new IntVar[v.length - 1];
+            System.arraycopy(v, 1, vs, 0, v.length - 1);
+            int[][] rs = product(vs, t);
+            int n = v[0].domain.getSize() * rs.length;
+            int m = rs[0].length + 1;
+            int[][] r = new int[n][m];
+
+            int k = 0;
+            ValueEnumeration e1 = v[0].domain.valueEnumeration();
+            while (e1.hasMoreElements()) {
+                int val = e1.nextElement();
+
+                for (int i = 0; i < rs.length; i++) {
+                    r[i + k][0] = val;
+                    for (int j = 0; j < rs[i].length; j++) {
+                        r[i + k][j + 1] = rs[i][j];
+                    }
+                }
+                k += rs.length;
+            }
+
+            return r;
+        }
+    }
+
+    boolean eqTuples(int[] a, int[] b) {
+
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] != b[i])
+                return false;
+        }
+        return true;
     }
 
     void gen_jacop_assignment(SimpleNode node) {
