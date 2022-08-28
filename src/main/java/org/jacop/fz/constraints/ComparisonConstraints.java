@@ -438,7 +438,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                         // }
                         // else
                         // c = new XeqC(v1, i2);
-                        support.pose(fzXeqCReified(v1, i2, v3));
+                        support.pose(support.fzXeqCReified(v1, i2, v3));
                         return;
                     }
                     // break;
@@ -458,14 +458,17 @@ class ComparisonConstraints implements ParserTreeConstants {
                         return;
                     } else if (generateForNeqC(v1, i2, v3)) { // binary variable
                         return;
-                    } else
+                    } else {
                         // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in the current implementation
                         //     sat.generate_neC_reif(v1, i2, v3);
                         //     return;
                         // }
                         // else
-                        c = new XneqC(v1, i2);
-                    break;
+                        // c = new XneqC(v1, i2);
+                        support.pose(support.fzXneqCReified(v1, i2, v3));
+                        return;
+                    }
+                    // break;
                 case Support.lt:
                     if (v1.max() < i2) {
                         v3.domain.inValue(store.level, v3, 1);
@@ -540,7 +543,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                         return;
                     else {
                         //     c = new XeqC(v2, i1);
-                        support.pose(fzXeqCReified(v2, i1, v3));
+                        support.pose(support.fzXeqCReified(v2, i1, v3));
                         return;
                     }
                     // break;
@@ -554,9 +557,12 @@ class ComparisonConstraints implements ParserTreeConstants {
                         return;
                     } else if (generateForNeqC(v2, i1, v3))
                         return;
-                    else
-                        c = new XneqC(v2, i1);
-                    break;
+                    else {
+                        // c = new XneqC(v2, i1);
+                        support.pose(support.fzXneqCReified(v2, i1, v3));
+                        return;
+                    }
+                    // break;
                 case Support.lt:
                     if (i1 < v2.min()) {
                         v3.domain.inValue(store.level, v3, 1);
@@ -621,11 +627,11 @@ class ComparisonConstraints implements ParserTreeConstants {
                     }
                     if (v2.singleton()) {
                         // c = new XeqC(v1, v2.value());
-                        support.pose(fzXeqCReified(v1, v2.value(), v3));
+                        support.pose(support.fzXeqCReified(v1, v2.value(), v3));
                         return;
                     } else if (v1.singleton()) {
                         // c = new XeqC(v2, v1.value());
-                        support.pose(fzXeqCReified(v2, v1.value(), v3));
+                        support.pose(support.fzXeqCReified(v2, v1.value(), v3));
                         return;
                     } else
                         c = new XeqY(v1, v2);
@@ -697,7 +703,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                         return;
                     } else {
                         // c = new XeqC(v1, i2);
-                        support.pose(fzXeqCImplied(v1, i2, v3)); // specialized version of Implies...
+                        support.pose(support.fzXeqCImplied(v1, i2, v3)); // specialized version of Implies...
                         return;
                     }
                     // break;
@@ -713,9 +719,12 @@ class ComparisonConstraints implements ParserTreeConstants {
                     } else if (v3.min() == 1) {
                         v1.domain.inComplement(store.level, v1, i2);
                         return;
-                    } else
-                        c = new XneqC(v1, i2);
-                    break;
+                    } else {
+                       // c = new XneqC(v1, i2);
+                        support.pose(support.fzXneqCImplied(v1, i2, v3)); // specialized version of Implies...
+                        return;
+                    }
+                    // break;
                 case Support.lt:
                     if (v1.max() < i2) {
                         return;
@@ -800,7 +809,7 @@ class ComparisonConstraints implements ParserTreeConstants {
                         return;
                     } else {
                         //     c = new XeqC(v2, i1);
-                        support.pose(fzXeqCImplied(v2, i1, v3));
+                        support.pose(support.fzXeqCImplied(v2, i1, v3));
                         return;
                     }
                     // break;
@@ -812,9 +821,12 @@ class ComparisonConstraints implements ParserTreeConstants {
                     } else if (v2.min() == i1 && v2.singleton()) {
                         v3.domain.inValue(store.level, v3, 0);
                         return;
-                    } else
-                        c = new XneqC(v2, i1);
-                    break;
+                    } else {
+                        // c = new XneqC(v2, i1);
+                        support.pose(support.fzXneqCImplied(v2, i1, v3)); // specialized version of Implies...
+                        return;
+                    }
+                    // break;
                 case Support.lt:
                     if (i1 < v2.min()) {
                         v3.domain.inValue(store.level, v3, 1);
@@ -864,18 +876,30 @@ class ComparisonConstraints implements ParserTreeConstants {
 
             switch (operation) {
                 case Support.eq:
-                    if (v2.singleton())
-                        c = new XeqC(v1, v2.value());
-                    else if (v1.singleton())
-                        c = new XeqC(v2, v1.value());
+                    if (v2.singleton()) {
+                        // c = new XeqC(v1, v2.value());
+                        support.pose(support.fzXeqCImplied(v1, v2.value(), v3)); // specialized version of Implies...
+                        return;
+                    }
+                    else if (v1.singleton()) {
+                        // c = new XeqC(v2, v1.value());
+                        support.pose(support.fzXeqCImplied(v2, v1.value(), v3)); // specialized version of Implies...
+                        return;
+                    }
                     else
                         c = new XeqY(v1, v2);
                     break;
                 case Support.ne:
-                    if (v2.singleton())
-                        c = new XneqC(v1, v2.value());
-                    else if (v1.singleton())
-                        c = new XneqC(v2, v1.value());
+                    if (v2.singleton()) {
+                        // c = new XneqC(v1, v2.value());
+                        support.pose(support.fzXneqCImplied(v1, v2.value(), v3)); // specialized version of Implies...
+                        return;
+                    }
+                    else if (v1.singleton()) {
+                        // c = new XneqC(v2, v1.value());
+                        support.pose(support.fzXneqCImplied(v2, v1.value(), v3)); // specialized version of Implies...
+                        return;
+                    }
                     else
                         c = new XneqY(v1, v2);
                     break;
@@ -956,61 +980,5 @@ class ComparisonConstraints implements ParserTreeConstants {
 
     boolean binaryVar(IntVar v) {
         return v.min() >= 0 && v.max() <= 1;
-    }
-
-    Constraint fzXeqCReified(IntVar x, Integer c, IntVar b) {
-
-        return new Constraint(new IntVar[] {x, b}) {
-
-            @Override public void consistency(final Store store) {
-
-                if (x.singleton(c)) {
-                    b.domain.inValue(store.level, b, 1);
-                } else if (!x.domain.contains(c)) {
-                    b.domain.inValue(store.level, b, 0);
-                    removeConstraint();
-                } else if (b.max() == 0) { // x==c must be false
-                    x.domain.inComplement(store.level, x, c);
-                    removeConstraint();
-                } else if (b.min() == 1) // x==c must be true
-                    x.domain.inValue(store.level, x, c);
-            }
-
-            @Override public int getDefaultConsistencyPruningEvent() {
-                return IntDomain.ANY;
-            }
-
-            @Override public String toString() {
-                return "fz : XeqC_Reified(" + x + ", " + c + ", " + b + " )";
-            }
-        };
-    }
- 
-    Constraint fzXeqCImplied(IntVar x, Integer c, IntVar b) {
-
-        return new Constraint(new IntVar[] {x, b}) {
-
-            @Override public void consistency(final Store store) {
-
-                if (x.singleton(c)) {
-                    removeConstraint();
-                } else if (!x.domain.contains(c)) {
-                    b.domain.inValue(store.level, b, 0);
-                    removeConstraint();
-                } else if (b.max() == 0) {
-                    removeConstraint();
-                } else if (b.min() == 1) { // x==c must be true
-                    x.domain.inValue(store.level, x, c);
-                }
-            }
-
-            @Override public int getDefaultConsistencyPruningEvent() {
-                return IntDomain.ANY;
-            }
-
-            @Override public String toString() {
-                return "fz : XeqC_Implied(" + b + ", " + x + ", " + c + " )";
-            }
-        };
     }
 }

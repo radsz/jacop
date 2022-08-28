@@ -613,4 +613,119 @@ public class Support implements ParserTreeConstants {
     public void poseImplied(Support s) {
         imply.pose();
     }
+
+    // =========== Specialized constraints ===================
+
+    Constraint fzXeqCReified(IntVar x, int c, IntVar b) {
+
+        return new Constraint(new IntVar[] {x, b}) {
+
+            @Override public void consistency(final Store store) {
+
+                if (x.singleton(c)) {
+                    b.domain.inValue(store.level, b, 1);
+                } else if (!x.domain.contains(c)) {
+                    b.domain.inValue(store.level, b, 0);
+                    removeConstraint();
+                } else if (b.max() == 0) { // x==c must be false
+                    x.domain.inComplement(store.level, x, c);
+                    removeConstraint();
+                } else if (b.min() == 1) // x==c must be true
+                    x.domain.inValue(store.level, x, c);
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+
+            @Override public String toString() {
+                return "fz : XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+            }
+        };
+    }
+
+    Constraint fzXeqCImplied(IntVar x, int c, IntVar b) {
+
+        return new Constraint(new IntVar[] {x, b}) {
+
+            @Override public void consistency(final Store store) {
+
+                if (x.singleton(c)) {
+                    removeConstraint();
+                } else if (!x.domain.contains(c)) {
+                    b.domain.inValue(store.level, b, 0);
+                    removeConstraint();
+                } else if (b.max() == 0) {
+                    removeConstraint();
+                } else if (b.min() == 1) { // x==c must be true
+                    x.domain.inValue(store.level, x, c);
+                }
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+
+            @Override public String toString() {
+                return "fz : XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+            }
+        };
+    }
+
+    Constraint fzXneqCReified(IntVar x, int c, IntVar b) {
+
+        return new Constraint(new IntVar[] {x, b}) {
+
+            @Override public void consistency(final Store store) {
+
+                if (x.singleton(c)) {
+                    b.domain.inValue(store.level, b, 0);
+                } else if (!x.domain.contains(c)) {
+                    b.domain.inValue(store.level, b, 1);
+                    removeConstraint();
+                } else if (b.max() == 0) { // x!=c must be false
+                    x.domain.inValue(store.level, x, c);
+                    removeConstraint();
+                } else if (b.min() == 1) { // x!=c must be true
+                    x.domain.inComplement(store.level, x, c);
+                    removeConstraint();
+                }
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+
+            @Override public String toString() {
+                return "fz : XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+            }
+        };
+    }
+
+    Constraint fzXneqCImplied(IntVar x, int c, IntVar b) {
+
+        return new Constraint(new IntVar[] {x, b}) {
+
+            @Override public void consistency(final Store store) {
+
+                if (x.singleton(c)) {
+                    b.domain.inValue(store.level, b, 0);
+                } else if (!x.domain.contains(c)) {
+                    removeConstraint();
+                } else if (b.max() == 0) {
+                    removeConstraint();
+                } else if (b.min() == 1) { // x!=c must be true
+                    x.domain.inComplement(store.level, x, c);
+                }
+            }
+
+            @Override public int getDefaultConsistencyPruningEvent() {
+                return IntDomain.ANY;
+            }
+
+            @Override public String toString() {
+                return "fz : XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+            }
+        };
+    }
 }
