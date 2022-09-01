@@ -863,7 +863,7 @@ class LinearConstraints implements ParserTreeConstants {
                         p2[0].domain.inMax(store.level, p2[0], rhsValue);
 
                         if (support.options.debug())
-                            System.out.println("Pruned variable " + p2[0] + " to be <= " + rhsValue);
+                            System.out.println("% Pruned variable " + p2[0] + " to be <= " + rhsValue);
                         // support.pose(new XlteqC(p2[0], rhsValue));
                     }
                 } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
@@ -884,7 +884,10 @@ class LinearConstraints implements ParserTreeConstants {
                 else if (allWeightsOne(p1)) {
                     t = support.dictionary.getConstant(p3); //new IntVar(store, p3, p3);
                     if (boolSum(p2))
-                        support.pose(new SumBool(p2, "<=", t));
+                        if (p2.length == 2)
+                            support.pose(new XplusYlteqZ(p2[0], p2[1], t));
+                        else
+                            support.pose(new SumBool(p2, "<=", t));
                     else if (p2.length == 2)
                         support.pose(new XplusYlteqZ(p2[0], p2[1], t));
                     else
