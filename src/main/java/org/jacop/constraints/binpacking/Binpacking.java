@@ -86,7 +86,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     private final Map<IntVar, Integer> itemMap;
     private final Map<IntVar, Integer> binMap;
 
-    boolean LBpruning = false;
+    boolean LBpruning = true;
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
