@@ -201,6 +201,15 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             firstConsistencyCheck = false;
         }
 
+        boolean pruneLB = true;
+        BitSet binUsed = new BitSet(load.length + minBinNumber);
+        for (BinItem itemEl : item)
+            if (itemEl.bin.singleton())
+                binUsed.set(itemEl.bin.value());
+        if (binUsed.cardinality() == load.length)
+            // do not prune number of bins when all of them are already used.
+            pruneLB = false;
+
         store.propagationHasOccurred = false;
 
         // we check bins that changed recently only
@@ -307,7 +316,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         // re-evaluation, if there was a changed in any of variables
         if (store.propagationHasOccurred)
             store.addChanged(this);
-	else if (LBpruning)
+	else if (LBpruning && pruneLB)
 	    // when the constraint is fix-point check expensive LB computation
 	    lbNumberBins();
     }
