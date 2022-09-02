@@ -86,6 +86,8 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     private final Map<IntVar, Integer> itemMap;
     private final Map<IntVar, Integer> binMap;
 
+    boolean LBpruning = false;
+
     /**
      * It constructs the binpacking constraint for the supplied variable.
      *
@@ -182,6 +184,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
 
         this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
         minBinNumber = minBin;
+    }
+
+    public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean LBpruning) {
+        this(bin, load, w, minBin);
+        this.LBpruning = LBpruning;
     }
 
     @Override public void consistency(Store store) {
@@ -300,7 +307,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         // re-evaluation, if there was a changed in any of variables
         if (store.propagationHasOccurred)
             store.addChanged(this);
-	else
+	else if (LBpruning)
 	    // when the constraint is fix-point check expensive LB computation
 	    lbNumberBins();
     }
@@ -419,7 +426,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             if (i < item.length - 1)
                 result.append(", ");
         }
-        result.append("])");
+        result.append("], " + LBpruning + ")");
 
         return result.toString();
 

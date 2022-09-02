@@ -1136,7 +1136,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int min_bin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
         //support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
-        Constraint binPack = new Binpacking(bin, capacity, w, min_bin);
+        Constraint binPack = new Binpacking(bin, capacity, w, min_bin, false);
         support.delayedConstraints.add(binPack);
     }
 
