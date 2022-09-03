@@ -87,6 +87,7 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
     private final Map<IntVar, Integer> binMap;
 
     boolean LBpruning = true;
+    private TimeStamp<Boolean> LBpruningStamp;
 
     /**
      * It constructs the binpacking constraint for the supplied variable.
@@ -191,6 +192,11 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
         this.LBpruning = LBpruning;
     }
 
+    @Override public void impose(Store store) {
+        super.impose(store);
+        LBpruningStamp = new TimeStamp<>(store, true);
+    }
+
     @Override public void consistency(Store store) {
 
         // Rule "Pack All" -- chcecked only first time
@@ -201,14 +207,18 @@ public class Binpacking extends Constraint implements UsesQueueVariable, Statefu
             firstConsistencyCheck = false;
         }
 
-        boolean pruneLB = true;
-        BitSet binUsed = new BitSet(load.length + minBinNumber);
-        for (BinItem itemEl : item)
-            if (itemEl.bin.singleton())
-                binUsed.set(itemEl.bin.value());
-        if (binUsed.cardinality() == load.length)
-            // do not prune number of bins when all of them are already used.
-            pruneLB = false;
+        boolean pruneLB = LBpruning && LBpruningStamp.value();
+        if (pruneLB) {
+            BitSet binUsed = new BitSet(load.length + minBinNumber);
+            for (BinItem itemEl : item)
+                if (itemEl.bin.singleton())
+                    binUsed.set(itemEl.bin.value());
+            if (binUsed.cardinality() == load.length) {
+                // do not prune number of bins when all of them are already used.
+                pruneLB = false;
+                LBpruningStamp.update(false);
+            }
+        }
 
         store.propagationHasOccurred = false;
 
