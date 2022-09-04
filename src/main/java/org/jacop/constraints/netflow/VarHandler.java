@@ -41,7 +41,7 @@ import java.util.List;
  * network flow constraint.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public interface VarHandler {

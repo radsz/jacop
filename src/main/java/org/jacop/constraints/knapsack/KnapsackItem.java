@@ -41,7 +41,7 @@ import org.jacop.core.IntVar;
  * efficiency. In case of equal efficiency then item which is heavier is preferred.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.8
+ * @version 4.9
  */
 
 public final class KnapsackItem implements Comparable<KnapsackItem> {

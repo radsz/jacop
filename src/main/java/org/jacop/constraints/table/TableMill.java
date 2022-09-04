@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * TableMill generates tables for different constraint to be used in Table constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class TableMill {

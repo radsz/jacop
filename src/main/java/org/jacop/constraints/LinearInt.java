@@ -52,7 +52,7 @@ import java.util.stream.Stream;
  * by Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class LinearInt extends PrimitiveConstraint {

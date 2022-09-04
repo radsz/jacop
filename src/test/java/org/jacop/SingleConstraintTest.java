@@ -58,7 +58,7 @@ import static org.junit.Assert.assertThat;
  * It is performing testing based on simple problems containing only one constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class SingleConstraintTest extends TestHelper {
 

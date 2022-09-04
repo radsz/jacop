@@ -34,7 +34,7 @@ package org.jacop.floats.core;
  * It is thrown when search has encountered a dead end and backtracking must occurr.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class InternalException extends RuntimeException {

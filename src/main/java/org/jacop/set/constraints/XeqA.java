@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * is the only element of the set assigned to a set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class XeqA extends PrimitiveConstraint {

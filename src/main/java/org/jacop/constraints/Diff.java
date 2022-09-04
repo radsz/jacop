@@ -46,7 +46,7 @@ import java.util.function.Function;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

@@ -36,7 +36,7 @@ import org.jacop.core.Var;
  * Defines functionality for constant calculator for restart search
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class LinearCalculator<T extends Var> extends Calculator {

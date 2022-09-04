@@ -46,7 +46,7 @@ import java.util.List;
  * CP-AI-OR 2004,
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class CumulativeUnary extends Cumulative {

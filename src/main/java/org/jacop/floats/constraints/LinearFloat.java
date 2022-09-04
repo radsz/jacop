@@ -48,7 +48,7 @@ import java.util.List;
  * work currently.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class LinearFloat extends Linear implements UsesQueueVariable {

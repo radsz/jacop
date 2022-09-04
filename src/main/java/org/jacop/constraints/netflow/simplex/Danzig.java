@@ -36,7 +36,7 @@ package org.jacop.constraints.netflow.simplex;
  * might be large.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Danzig implements PivotRule {

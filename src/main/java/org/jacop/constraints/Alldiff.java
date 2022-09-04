@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * It extends basic functionality of Alldifferent constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Alldiff extends Alldifferent {

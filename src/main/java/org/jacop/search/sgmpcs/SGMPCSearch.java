@@ -54,7 +54,7 @@ import java.util.function.Function;
  * Beck, Journal of Artificial Intelligence Research 29 (2007) 49–77.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class SGMPCSearch {

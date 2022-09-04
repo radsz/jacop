@@ -44,7 +44,7 @@ import java.util.Properties;
  * changed before the Config object is given to the solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 @SuppressWarnings("serial") public class Config extends Properties {

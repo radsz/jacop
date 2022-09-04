@@ -49,7 +49,7 @@ import java.util.Map;
  * and arrays.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class DefaultSearchVars {
 

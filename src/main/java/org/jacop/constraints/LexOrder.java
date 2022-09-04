@@ -56,7 +56,7 @@ import java.util.stream.Stream;
  * Artificial Intelligence 170 (2006) 803-834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class LexOrder extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {

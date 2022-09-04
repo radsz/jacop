@@ -60,7 +60,7 @@ import java.text.NumberFormat;
  * that they are ground.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class Solve implements ParserTreeConstants {
 

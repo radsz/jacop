@@ -32,7 +32,7 @@ package org.jacop.core;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  *          <p>
  *          It specifies the interface of the backtrackable object which is being
  *          recorded by Backtrackable Manager.

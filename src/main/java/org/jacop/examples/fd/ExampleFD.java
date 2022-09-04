@@ -42,7 +42,7 @@ import java.util.List;
  * It is an abstract class to describe all necessary functions of any store.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public abstract class ExampleFD {

@@ -47,7 +47,7 @@ import java.util.stream.Stream;
  * variable counter.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class CountValues extends Constraint implements SatisfiedPresent {

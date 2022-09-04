@@ -39,7 +39,7 @@ import java.util.LinkedList;
  * some rectangles can share the same place.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 class ProfileItemCondition extends ProfileItem {

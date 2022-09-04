@@ -41,7 +41,7 @@ import java.util.Arrays;
  * It is helper class that allows perform quickly operation to setup tests.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class TestHelper {
 

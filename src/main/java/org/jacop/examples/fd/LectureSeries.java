@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It is a simple logic puzzle about lectures.
  *
  * @author Grzegorz Moskwa, Marcin Nowak, and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  *          <p>
  *          Last week at school was made varied by a series of lectures, one each
  *          day (Monday through Friday), in the auditorium.  None of the lectures

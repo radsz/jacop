@@ -39,7 +39,7 @@ import org.jacop.core.Var;
  * search finds a solution.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class CustomReport {

@@ -44,7 +44,7 @@ import java.util.ArrayList;
  * It shows the capabilities and usage of Knapsack constraint.
  *
  * @author Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  *          <p>
  *          It models and solves a simple knapsack problem. There
  *          are two different models. The first one uses quantity

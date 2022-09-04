@@ -54,7 +54,7 @@ import java.util.stream.Stream;
  * itself to the constraint queue.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Binpacking extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

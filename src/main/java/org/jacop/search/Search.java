@@ -42,7 +42,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variables used in this search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public interface Search<T extends Var> {

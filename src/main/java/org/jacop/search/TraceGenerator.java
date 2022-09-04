@@ -60,7 +60,7 @@ import java.util.*;
  * It generates xml format accepted by CPViz tool developed by Helmut Simonis.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 

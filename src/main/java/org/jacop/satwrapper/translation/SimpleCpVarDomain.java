@@ -43,7 +43,7 @@ import java.util.Arrays;
  * the domain of x (even '[x{@literal <=}max]', which is a tautology, for simplicity)
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 public class SimpleCpVarDomain extends SatCPBridge {
 

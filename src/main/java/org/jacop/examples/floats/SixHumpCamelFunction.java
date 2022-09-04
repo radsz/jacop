@@ -34,7 +34,7 @@ package org.jacop.examples.floats;
  * SixHumpCamelFunction function (a nonlinear standard problem).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 import org.jacop.constraints.Constraint;

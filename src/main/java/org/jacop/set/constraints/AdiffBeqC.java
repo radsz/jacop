@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * A \ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class AdiffBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {

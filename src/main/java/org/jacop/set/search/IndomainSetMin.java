@@ -39,7 +39,7 @@ import org.jacop.set.core.SetVar;
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class IndomainSetMin<T extends SetVar> implements Indomain<T> {

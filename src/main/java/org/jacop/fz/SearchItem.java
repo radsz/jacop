@@ -49,7 +49,7 @@ import java.util.HashMap;
  * The part of the parser responsible for parsing search part of the flatzinc specification.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class SearchItem implements ParserTreeConstants {
 

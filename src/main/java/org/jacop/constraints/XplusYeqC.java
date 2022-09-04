@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint X + Y #= C
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class XplusYeqC extends PrimitiveConstraint {

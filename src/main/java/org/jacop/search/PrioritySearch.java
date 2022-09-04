@@ -58,7 +58,7 @@ import java.util.List;
  *
  * @param <T> type of variable being used in the Search.
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 @SuppressWarnings("unchecked")

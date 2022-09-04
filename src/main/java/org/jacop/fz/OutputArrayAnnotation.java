@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * It stores information about the annotation for an output array.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class OutputArrayAnnotation {
 

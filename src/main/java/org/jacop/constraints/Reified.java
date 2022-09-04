@@ -40,7 +40,7 @@ import java.util.stream.Stream;
  * Reified constraints "constraint" {@literal <=>} B
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Reified extends PrimitiveConstraint implements UsesQueueVariable {

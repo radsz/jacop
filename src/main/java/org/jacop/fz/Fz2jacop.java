@@ -42,7 +42,7 @@ import java.nio.charset.Charset;
  * An executable to parse and execute the flatzinc file.
  *
  * @author Krzysztof Kuchcinki
- * @version 4.8
+ * @version 4.9
  */
 
 public class Fz2jacop {

@@ -46,7 +46,7 @@ import java.util.List;
  * It models and solves Nontransitive Dice Problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  *          <p>
  *          Nontransitive Dice problem is to assign to given number of dices
  *          a number to each side of the dice in such a way that

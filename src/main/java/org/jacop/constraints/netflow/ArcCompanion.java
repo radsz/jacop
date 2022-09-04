@@ -51,7 +51,7 @@ import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
  * also provides a hook for S-variables of any
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> {

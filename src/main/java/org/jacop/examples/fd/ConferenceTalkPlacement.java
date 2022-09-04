@@ -43,7 +43,7 @@ import java.util.*;
  * It solves a simple conference talk placement problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  *          <p>
  *          It solves a simple conference example problem, where different sessions
  *          must be scheduled according to the specified constraints.

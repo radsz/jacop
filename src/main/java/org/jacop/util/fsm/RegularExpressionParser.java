@@ -42,7 +42,7 @@ import java.util.List;
  * Instances of this class parse the word combination little language.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class RegularExpressionParser {

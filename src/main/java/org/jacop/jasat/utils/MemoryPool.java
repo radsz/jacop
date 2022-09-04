@@ -39,7 +39,7 @@ import org.jacop.jasat.core.SolverComponent;
  * Class containing int[] of different lengths, to avoid allocating/deallocating too much.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public final class MemoryPool implements SolverComponent {

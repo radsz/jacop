@@ -128,7 +128,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * backtracking) to improve the constraint further. 
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Regular extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {

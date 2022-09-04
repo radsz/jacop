@@ -45,7 +45,7 @@ import java.util.Map;
  * This represents a *single* clause.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public final class MapClause implements Iterable<Integer> {

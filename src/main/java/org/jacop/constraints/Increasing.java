@@ -42,7 +42,7 @@ import java.util.ArrayList;
  * Increasing constraint assures that all variables are in increasing order. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Increasing extends Constraint {

@@ -51,7 +51,7 @@ import java.util.Comparator;
  * counts the activity of literals
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 public final class ActivityModule implements ClauseListener, BackjumpListener, ConflictListener {
 

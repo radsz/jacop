@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class Nooverlap extends Constraint {

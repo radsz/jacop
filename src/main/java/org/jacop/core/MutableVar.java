@@ -36,7 +36,7 @@ import org.jacop.api.Stateful;
  * Standard mutable variable definition
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public interface MutableVar extends Stateful {

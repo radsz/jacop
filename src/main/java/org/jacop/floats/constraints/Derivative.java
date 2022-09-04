@@ -44,7 +44,7 @@ import java.util.*;
  * The derivative of f with respect to x
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Derivative {

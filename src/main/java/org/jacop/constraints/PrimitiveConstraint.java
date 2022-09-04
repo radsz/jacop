@@ -44,7 +44,7 @@ import java.util.Hashtable;
  * arguments to constraints Not, And, Or, etc.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public abstract class PrimitiveConstraint extends Constraint implements StoreAware, SatisfiedPresent {

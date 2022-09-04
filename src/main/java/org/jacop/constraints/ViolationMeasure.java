@@ -33,7 +33,7 @@ package org.jacop.constraints;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public enum ViolationMeasure {

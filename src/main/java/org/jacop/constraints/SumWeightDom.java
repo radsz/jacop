@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * The complexity of domain consistency is exponential in worst case. Use it carefully!
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 

@@ -74,7 +74,7 @@ import java.util.List;
  * http://www.helsinki.fi/~kvehkala/Kimmo_Vehkalahti_Windsor.pdf
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class SurvoPuzzle extends ExampleFD {

@@ -43,7 +43,7 @@ import org.jacop.search.ComparatorVariable;
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T> {

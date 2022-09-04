@@ -42,7 +42,7 @@ import java.util.List;
  * A simple model to solve Sudoku problem.
  *
  * @author Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Sudoku extends ExampleFD {

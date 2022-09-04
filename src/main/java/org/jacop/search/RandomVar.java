@@ -40,7 +40,7 @@ import java.util.Random;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {

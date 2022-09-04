@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle about blocks.
  *
  * @author Krzysztof "Vrbl" Wrobel and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  *          <p>
  *          Each of four alphabet blocks has a single letter of the alphabet on
  *          each of its six sides.  In all, the four blocks contain every letter

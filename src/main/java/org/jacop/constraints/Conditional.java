@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * b[k] = 1 (true) and all b[i] for i {@literal <} k are 0 (false).
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class Conditional extends Constraint implements SatisfiedPresent {

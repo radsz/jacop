@@ -50,7 +50,7 @@ import java.util.stream.Stream;
  * backtracking) to improve the constraint further.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

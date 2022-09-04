@@ -41,7 +41,7 @@ import org.jacop.search.ComparatorVariable;
  *
  * @param <T> variable of type FloatVar.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T> {

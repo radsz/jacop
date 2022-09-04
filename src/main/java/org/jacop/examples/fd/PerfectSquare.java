@@ -45,7 +45,7 @@ import java.util.List;
  * a square of a given size.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class PerfectSquare extends ExampleFD {

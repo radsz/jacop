@@ -53,7 +53,7 @@ import java.util.ArrayList;
  * It models and solves Steiner problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Steiner extends ExampleSet {

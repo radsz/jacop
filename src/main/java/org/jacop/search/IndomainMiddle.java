@@ -40,7 +40,7 @@ import org.jacop.core.IntervalDomain;
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class IndomainMiddle<T extends IntVar> implements Indomain<T> {

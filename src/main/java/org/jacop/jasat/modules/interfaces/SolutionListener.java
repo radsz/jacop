@@ -36,7 +36,7 @@ import org.jacop.jasat.core.SolverComponent;
  * module called when solution is found.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public interface SolutionListener extends SolverComponent {

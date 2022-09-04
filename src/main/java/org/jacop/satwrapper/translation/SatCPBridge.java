@@ -47,7 +47,7 @@ import org.jacop.satwrapper.WrapperComponent;
  * is the CP variable and v a value from its domain
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 public abstract class SatCPBridge implements WrapperComponent {
 

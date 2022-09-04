@@ -39,7 +39,7 @@ import org.jacop.search.ComparatorVariable;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class SmallestMaxFloat<T extends FloatVar> implements ComparatorVariable<T> {

@@ -44,7 +44,7 @@ import java.util.Map;
  * to the given successor state.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class RegStateDom extends RegState {

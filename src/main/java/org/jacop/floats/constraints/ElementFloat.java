@@ -55,7 +55,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * make addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class ElementFloat extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

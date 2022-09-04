@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {1}{@literal <=} {2}
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class AleB extends PrimitiveConstraint {

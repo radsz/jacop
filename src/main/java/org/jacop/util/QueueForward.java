@@ -41,7 +41,7 @@ import java.util.*;
  * as parameters to forward any changes of variables to the constraints that were provided as arguments.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class QueueForward<T extends Constraint> {
 

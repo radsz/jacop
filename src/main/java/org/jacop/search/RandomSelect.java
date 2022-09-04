@@ -42,7 +42,7 @@ import java.util.Random;
  * be enforced by search.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {

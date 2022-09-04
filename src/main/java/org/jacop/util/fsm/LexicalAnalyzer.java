@@ -36,7 +36,7 @@ import java.io.StringReader;
 
 /**
  * @author Polina Maakeva and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 class LexicalAnalyzer {

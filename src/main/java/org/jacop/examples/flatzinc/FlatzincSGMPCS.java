@@ -41,7 +41,7 @@ import org.jacop.search.sgmpcs.SGMPCSearch;
  * It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class FlatzincSGMPCS {
 

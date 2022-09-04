@@ -58,7 +58,7 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
  * the next restart twice harder to reach.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 public final class HeuristicRestartModule implements ConflictListener, BackjumpListener {
 

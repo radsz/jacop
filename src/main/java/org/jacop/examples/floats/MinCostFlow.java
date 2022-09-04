@@ -47,7 +47,7 @@ package org.jacop.examples.floats;
  * Wed Jun 14
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 import org.jacop.core.Store;

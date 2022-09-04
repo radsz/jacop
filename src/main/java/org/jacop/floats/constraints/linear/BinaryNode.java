@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Binary Node of the tree representing linear constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 

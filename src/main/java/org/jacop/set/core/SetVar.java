@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * Defines a Finite Domain Variable (FDV) and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class SetVar extends Var {

@@ -37,7 +37,7 @@ package org.jacop.examples.floats;
  * Based on minizinc model by Håkan Kjellerstrand.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 import org.jacop.core.Store;

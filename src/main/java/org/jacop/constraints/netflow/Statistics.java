@@ -34,7 +34,7 @@ package org.jacop.constraints.netflow;
  * This class stores all the statistics gather during the execution of the network flow constraint.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Statistics extends StatisticsBase {

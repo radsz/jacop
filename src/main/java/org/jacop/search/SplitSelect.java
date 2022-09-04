@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {

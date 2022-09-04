@@ -58,7 +58,7 @@ import java.util.stream.Stream;
  * and useful comments.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.8
+ * @version 4.9
  */
 
 public class Knapsack extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {

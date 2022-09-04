@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * variable from all variables on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class ArgMax extends Constraint implements SatisfiedPresent {

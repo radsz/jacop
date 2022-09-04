@@ -41,7 +41,7 @@ import java.util.List;
  * SatTranslation defines SAT clauses for typical logical constraints
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 public class SatTranslation {
 

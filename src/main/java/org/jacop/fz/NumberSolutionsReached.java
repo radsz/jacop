@@ -35,7 +35,7 @@ package org.jacop.fz;
  * solutions using option -n.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.8
+ * @version 4.9
  */
 
 public class NumberSolutionsReached extends RuntimeException {

@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraint "constraint1"{@literal #<=>} "constraint2"
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  */
 
 public class Eq extends PrimitiveConstraint implements UsesQueueVariable {

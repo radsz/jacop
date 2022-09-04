@@ -39,7 +39,7 @@ import java.util.List;
  * Source:
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.8
+ * @version 4.9
  * @see "Michel, P. and Lauther U. and Duzy, P., The Synthesis Approach to Digital System Design, Kluwer Academic Publisher, 1992"
  */
 
