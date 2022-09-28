@@ -122,7 +122,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     * @param min minimal value of a set interval.
     * @param max maximal value of a set interval.
     */
-  def this(min: Int, max: Int) {
+  def this(min: Int, max: Int) = {
     this()
     addDom(new org.jacop.core.IntervalDomain(min, max))
   }
@@ -133,7 +133,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     * @constructor Create a new ordered set containing one element.
     * @param el element of set.
     */
-  def this(el: Int) {
+  def this(el: Int) = {
     this()
     addDom(new org.jacop.core.IntervalDomain(el, el))
   }
@@ -1517,7 +1517,7 @@ class fsm extends org.jacop.util.fsm.FSM {
     * @constructor Creates a new FSM.
     * @param n number of states in this FSM.
     */
-  def this(n: Int) {
+  def this(n: Int) = {
     this()
     states = ArrayBuffer.tabulate(n)(i => new state)
     states.foreach(s => allStates.add(s))
