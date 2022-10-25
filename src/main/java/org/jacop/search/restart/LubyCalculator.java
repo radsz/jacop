@@ -33,7 +33,7 @@ package org.jacop.search.restart;
 import org.jacop.core.Var;
 
 /**
- * Defines functionality for constant calculator for restart search
+ * Defines functionality for constant calculator for restart search.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.9
@@ -45,24 +45,24 @@ public class LubyCalculator<T extends Var> extends Calculator {
     int n;
     
     public LubyCalculator(int scale) {
-	n = 1;
-	this.scale = (long)scale;
-        failLimit = this.scale*getLuby(n);
+        n = 1;
+        this.scale = (long)scale;
+        failLimit = this.scale * getLuby(n);
     }
 
     public void newLimit() {
-	numberFails = 0;
-	failLimit = scale*getLuby(++n);
+        numberFails = 0;
+        failLimit = scale * getLuby(++n);
     }
     
     public String toString() {
-	return "lubyCalculator("+scale+")";
+        return "lubyCalculator("+scale+")";
     }
 
     public int getLuby(int i) {
 
-	double precision = 1E-8;
-	
+        double precision = 1E-8;
+
         if (i == 1) {
             return 1;
         }

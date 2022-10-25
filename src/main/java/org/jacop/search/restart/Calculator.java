@@ -34,7 +34,7 @@ import org.jacop.core.Var;
 import org.jacop.search.ConsistencyListener;
 
 /**
- * Defines interface for a calculator for restart search
+ * Defines interface for a calculator for restart search.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.9
@@ -57,17 +57,15 @@ public abstract class Calculator<T extends Var> implements ConsistencyListener {
      */
     public boolean executeAfterConsistency(boolean consistent) {
 
-	if (child != null)
-	    child.executeAfterConsistency(consistent);
-	
+        if (child != null)
+            child.executeAfterConsistency(consistent);
+
         if (numberFails >= failLimit)
             return false;
-        else {
-            if (!consistent)
-                numberFails++;
+        else if (!consistent)
+            numberFails++;
 
-            return consistent;
-        }
+        return consistent;
     }
 
     public void setFailLimit(int limit) {
@@ -76,9 +74,9 @@ public abstract class Calculator<T extends Var> implements ConsistencyListener {
     }
 
     public boolean pointsExhausted() {
-	return numberFails >= failLimit;
+        return numberFails >= failLimit;
     }
-    
+
     public long getFailLimit() {
 
         return failLimit;
@@ -93,7 +91,7 @@ public abstract class Calculator<T extends Var> implements ConsistencyListener {
     }
 
     public void setChildrenListeners(ConsistencyListener child) {
-	this.child = child;
+        this.child = child;
     }
 
 }

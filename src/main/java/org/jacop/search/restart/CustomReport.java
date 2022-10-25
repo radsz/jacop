@@ -31,7 +31,6 @@
 package org.jacop.search.restart;
 
 import java.util.Arrays;
-
 import org.jacop.core.Var;
 
 /**
@@ -47,21 +46,21 @@ public class CustomReport {
     Var[] vars = null;
 
     public CustomReport(Var[] vs) {
-	addVariables(vs);
+        addVariables(vs);
     }
     
     public CustomReport() {
     }
     
     public void addVariables(Var[] vs) {
-	vars = new Var[vs.length];
-	for (int i = 0; i < vs.length; i++) {
-	    vars[i] = vs[i];
-	}
+        vars = new Var[vs.length];
+        for (int i = 0; i < vs.length; i++) {
+            vars[i] = vs[i];
+        }
     }
     
     public void report() {
-	System.out.println(Arrays.asList(vars));
+        System.out.println(Arrays.asList(vars));
 
     }
 }

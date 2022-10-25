@@ -33,7 +33,7 @@ package org.jacop.search.restart;
 import org.jacop.core.Var;
 
 /**
- * Defines functionality for constant calculator for restart search
+ * Defines functionality for constant calculator for restart search.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.9
@@ -46,19 +46,19 @@ public class GeometricCalculator<T extends Var> extends Calculator {
     int n;
     
     public GeometricCalculator(double base, int scale) {
-	n = 0;
+        n = 0;
         failLimit = scale;
-	this.base = base;
-	this.scale = scale;
+        this.base = base;
+        this.scale = scale;
     }
 
     public void newLimit() {
-	numberFails = 0;
-	double p = Double.valueOf(Math.pow(base, ++n));
-	failLimit = (long)p * scale;
+        numberFails = 0;
+        double p = Double.valueOf(Math.pow(base, ++n));
+        failLimit = (long)p * scale;
     }
     
     public String toString() {
-	return "geometricCalculator("+base+", "+scale+")";
+        return "geometricCalculator(" + base + ", " + scale + ")";
     }
 }

@@ -122,6 +122,10 @@ public class Solve implements ParserTreeConstants {
 
     int numberSolutions;
 
+    // relax and reconstruct
+    IntVar[] relaxVars;
+    int probability;
+
     /**
      * It creates a parser for the solve part of the flatzinc file.
      *
@@ -266,6 +270,10 @@ public class Solve implements ParserTreeConstants {
                      || s.search_type.equals("restart_luby")) {
                 if (!options.freeSearch())
                     restartCalculator = s.restartCalculator;
+            } else if (s.search_type.equals("relax_and_reconstruct")) {
+                // System.out.println("% " + s.relax_and_reconstruct_variables + ", " + s.probability);
+                relaxVars = s.relax_and_reconstruct_variables;
+                probability = s.probability;
             } else if (s.search_type.endsWith("_search"))// && !s.search_type.equals("priority_search"))
                 ns.add(s);
             else
@@ -482,9 +490,14 @@ public class Solve implements ParserTreeConstants {
                                 }
 
                                 rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
+                                rs.setRestartsLimit(options.getRestartLimit());
                                 int to = options.getTimeOut();
                                 if (to > 0)
                                     rs.setTimeOutMilliseconds(to);
+
+                                if (relaxVars != null)
+                                    rs.setRelaxAndReconstruct(relaxVars, probability);
+
                                 result = rs.labeling();
                             } else {
                                 if (options.debug()) {
@@ -524,9 +537,14 @@ public class Solve implements ParserTreeConstants {
                                 }
 
                                 rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, cost);
+                                rs.setRestartsLimit(options.getRestartLimit());
                                 int to = options.getTimeOut();
                                 if (to > 0)
                                     rs.setTimeOutMilliseconds(to);
+
+                                if (relaxVars != null)
+                                    rs.setRelaxAndReconstruct(relaxVars, probability);
+
                                 result = rs.labeling();
                             } else {
                                 if (options.debug()) {
@@ -569,9 +587,14 @@ public class Solve implements ParserTreeConstants {
                                 }
 
                                 rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, max_cost);
+                                rs.setRestartsLimit(options.getRestartLimit());
                                 int to = options.getTimeOut();
                                 if (to > 0)
                                     rs.setTimeOutMilliseconds(to);
+
+                                if (relaxVars != null)
+                                    rs.setRelaxAndReconstruct(relaxVars, probability);
+
                                 result = rs.labeling();
                             } else {
                                 if (options.debug()) {
@@ -654,7 +677,7 @@ public class Solve implements ParserTreeConstants {
             return;
         }
 
-        if (result) {
+        if (result ||  (rs != null && rs.atLeastOneSolution())) {
             if (!optimization && options.getAll()) {
                 if (!interrupted)
                     if (si.exploration().equals("complete"))
@@ -967,6 +990,7 @@ public class Solve implements ParserTreeConstants {
         //         bool_search_variables.length + float_search_variables.length;
         //     restartCalculator = new LubyCalculator(scale); // GeometricCalculator(10, 2);
         // }
+        // System.out.println("% !!! " + java.util.Arrays.asList(intAndSetSearch));
 
         return intAndSetSearch;
     }
@@ -1078,6 +1102,11 @@ public class Solve implements ParserTreeConstants {
 
                                 label = masterLabel;
                                 rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
+                                rs.setRestartsLimit(options.getRestartLimit());
+
+                                if (relaxVars != null)
+                                    rs.setRelaxAndReconstruct(relaxVars, probability);
+
                                 result = rs.labeling();
                             } else {
                                 if (options.debug()) {
@@ -1135,6 +1164,10 @@ public class Solve implements ParserTreeConstants {
                                 }
 
                                 rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
+                                rs.setRestartsLimit(options.getRestartLimit());
+                                if (relaxVars != null)
+                                    rs.setRelaxAndReconstruct(relaxVars, probability);
+
                                 result = rs.labeling();
                             } else {
 
@@ -1195,6 +1228,11 @@ public class Solve implements ParserTreeConstants {
 
                                 label = masterLabel;
                                 rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, max_cost);
+                                rs.setRestartsLimit(options.getRestartLimit());
+
+                                if (relaxVars != null)
+                                    rs.setRelaxAndReconstruct(relaxVars, probability);
+
                                 result = rs.labeling();
                             } else {
                                 if (options.debug()) {
@@ -1262,7 +1300,7 @@ public class Solve implements ParserTreeConstants {
             return;
         }
 
-        if (result) {
+        if (result || (rs != null && rs.atLeastOneSolution())) {
             if (!optimization && options.getAll()) {
                 if (!heuristicSeqSearch)
                     if (!anyTimeOutOccured(list_seq_searches)) {
@@ -1428,7 +1466,19 @@ public class Solve implements ParserTreeConstants {
             list_seq_searches.add(label);
             label.setPrintInfo(false);
         } else {
-            throw new IllegalArgumentException("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
+            DepthFirstSearch<Var>[] ls  = setSubSearchForAll(null, options);
+
+            if (ls[0] != null) {
+                label = ls[0];
+            } else if (ls[1] != null) {
+                label = ls[1];
+            } else if (ls[2] != null) {
+                label = ls[2];
+            } else if (ls[3] != null) {
+                label = ls[3];
+            }
+
+            // throw new IllegalArgumentException("!!! Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
         }
 
         return label;

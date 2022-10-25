@@ -22,6 +22,7 @@
 		   ["--format", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
 		   ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
  		   ["--decay", "decay factor for accumulated failure count (afc) and activity-based variable selection heuristic", "float", "0.99"],
-		   ["--step", "distance step for cost function for floating-point optimization (0 means 'minimal distance')", "float", "0"]
+		   ["--step", "distance step for cost function for floating-point optimization (0 means 'minimal distance')", "float", "0"],
+                   ["--restarts-limit", "limits number of restarts in restart search.", "int", "0"]
     		  ]
 }

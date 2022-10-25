@@ -78,6 +78,10 @@ public class SearchItem implements ParserTreeConstants {
 
     Map<Var, Integer> preferedValues;
 
+    // relax and reconstruct
+    IntVar[] relax_and_reconstruct_variables;
+    int probability;
+
     /**
      * It constructs search part parsing object based on dictionaries
      * provided as well as store object within which the search will take place.
@@ -224,6 +228,12 @@ public class SearchItem implements ParserTreeConstants {
             ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
             int scale = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
             restartCalculator = new GeometricCalculator(base, scale);
+        } else if (search_type.equals("relax_and_reconstruct")) {
+            SimpleNode expr1 = (SimpleNode)ann.jjtGetChild(0);
+            relax_and_reconstruct_variables = getVarArray(expr1);
+            ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
+            probability = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
+
         } else
             System.out.println("% Warning: Ignored search annotation " + search_type);
 

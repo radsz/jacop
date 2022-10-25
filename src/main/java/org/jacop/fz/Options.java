@@ -82,6 +82,8 @@ public class Options {
 
     String outputFilename = "";
 
+    int restartLimit = 0;
+
     /**
      * It constructs an Options object and parses all the parameters/options provided
      * to flatzinc to jacop parser.
@@ -121,7 +123,8 @@ public class Options {
                     + "    -o, --outputfile defines file for solver output\n"
                     + "    -d, --decay decay factor for accumulated failure count (afc)\n"
                     + "         and activity-based variable selection heuristic\n"
-                    + "    --step <value> distance step for cost function for floating-point optimization")
+                    + "    --step <value> distance step for cost function for floating-point optimization"
+                    + "    --restarts-limit <value> limits number of restarts in restart search")
                     ;
                 System.exit(0);
             } else { // input file
@@ -210,6 +213,9 @@ public class Options {
                 } else if (args[i].equals("-r") || args[i].equals("--random-seed")) {
                     long seed = Long.parseLong(args[++i]);
                     Store.setSeed(seed);
+                    i++;
+                } else if (args[i].equals("--restart-limit")) {
+                    restartLimit = Integer.parseInt(args[++i]);
                     i++;
                 } else {
                     System.out.println("%% fz2jacop: not recognized option " + args[i] + "; ignored");
@@ -388,5 +394,9 @@ public class Options {
      */
     public boolean complementarySearch() {
         return complementary_search;
+    }
+
+    public int getRestartLimit() {
+        return restartLimit;
     }
 }

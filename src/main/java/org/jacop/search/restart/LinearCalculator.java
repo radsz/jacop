@@ -33,7 +33,7 @@ package org.jacop.search.restart;
 import org.jacop.core.Var;
 
 /**
- * Defines functionality for constant calculator for restart search
+ * Defines functionality for constant calculator for restart search.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.9
@@ -45,17 +45,17 @@ public class LinearCalculator<T extends Var> extends Calculator {
     long n;
     
     public LinearCalculator(int scale) {
-	n = 1;
+        n = 1;
         failLimit = scale;
-	increment = (long)scale;
+        increment = (long)scale;
     }
 
     public void newLimit() {
-	numberFails = 0;
-	failLimit = ++n * increment;
+        numberFails = 0;
+        failLimit = ++n * increment;
     }
     
     public String toString() {
-	return "constantCalculator: "+numberFails+"("+failLimit+")";
+        return "constantCalculator: " + numberFails + "(" + failLimit + ")";
     }
 }
