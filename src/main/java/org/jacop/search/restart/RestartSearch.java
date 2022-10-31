@@ -80,8 +80,6 @@ public class RestartSearch<T extends Var> {
     private final Random generator;
     IntVar[] rarVars;
     int probability;
-    // probability (of 100) to stop restart search when fails not exhausted restart number
-    int stopProbability = 3;
     int[] values;
     int restartsLimit = 0; // no limit
 
@@ -142,13 +140,7 @@ public class RestartSearch<T extends Var> {
                 store.setLevel(store.level + 1);
 
                 if (values != null)
-                    for (int i = 0; i < rarVars.length; i++) {
-                        IntVar var = rarVars[i];
-                        int rn = generator.nextInt(101);
-                        if (rn <= probability) {
-                            var.domain.inValue(store.level, var, values[i]);
-                        }
-                    }
+                    assignRelaxedVariables();
             }
 
             // if (cost == null)
@@ -272,6 +264,29 @@ public class RestartSearch<T extends Var> {
             rarVars[i] = vs[i];
         }
         probability = p;
+    }
+
+    public void assignRelaxedVariables() {
+
+        for (int i = 0; i < rarVars.length; i++) {
+            IntVar var = rarVars[i];
+            int rn = generator.nextInt(101);
+            if (rn <= probability) {
+                var.domain.inValue(store.level, var, values[i]);
+            }
+        }
+    }
+
+    public int[] getLastSolution() {
+        return values;
+    }
+
+    public IntVar[] getRelaxedVariables() {
+        return rarVars;
+    }
+
+    public int getProbability() {
+        return probability;
     }
 
     public void setRestartsLimit(int l) {
