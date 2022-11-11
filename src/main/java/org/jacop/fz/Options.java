@@ -123,7 +123,7 @@ public class Options {
                     + "    -o, --outputfile defines file for solver output\n"
                     + "    -d, --decay decay factor for accumulated failure count (afc)\n"
                     + "         and activity-based variable selection heuristic\n"
-                    + "    --step <value> distance step for cost function for floating-point optimization"
+                    + "    --step <value> distance step for cost function for floating-point optimization\n"
                     + "    --restarts-limit <value> limits number of restarts in restart search")
                     ;
                 System.exit(0);
@@ -214,7 +214,7 @@ public class Options {
                     long seed = Long.parseLong(args[++i]);
                     Store.setSeed(seed);
                     i++;
-                } else if (args[i].equals("--restart-limit")) {
+                } else if (args[i].equals("--restarts-limit")) {
                     restartLimit = Integer.parseInt(args[++i]);
                     i++;
                 } else {

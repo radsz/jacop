@@ -150,16 +150,25 @@ public class SearchItem implements ParserTreeConstants {
 
         } else if (search_type.equals("seq_search")) {
             SimpleNode body = ((SimpleNode)ann.jjtGetChild(0));
+            search_type = "seq_search";
 
             makeVectorOfSearches(body);
 
         } else if (search_type.equals("warm_start")) {
+
             SimpleNode expr1 = (SimpleNode)ann.jjtGetChild(0);
             search_variables = getVarArray(expr1);
+
             SimpleNode expr2 = (SimpleNode)ann.jjtGetChild(1);
-            int[] values = getIntArray(expr2);
+            int[] values = null;
+            try {
+                values = getIntArray(expr2);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("%Not supported types of values in warm_start; compilation aborted");
+            }
+
             if (search_variables == null || values == null)
-                throw new IllegalArgumentException("Not supported variable type in warm_start; compilation aborted.");
+                throw new IllegalArgumentException("Not supported variable and/or value type in warm_start; compilation aborted.");
             preferedValues = new HashMap<>();
             int max = 0;
             int min = 0;
@@ -326,8 +335,13 @@ public class SearchItem implements ParserTreeConstants {
             SearchItem subSearch = new SearchItem(store, dictionary);
             subSearch.searchParameters(node, i);
 
-            search_seq.add(subSearch);
+            if (search_type == null && subSearch.search_type.equals("warm_start"))
+                search_seq.add(0, subSearch);
+            else
+                search_seq.add(subSearch);
         }
+
+        search_type = "seq_search";
     }
 
     SelectChoicePoint getSelect() {
@@ -759,10 +773,10 @@ public class SearchItem implements ParserTreeConstants {
             if (((ASTScalarFlatExpr) n).getType() == 2) // ident
                 return dictionary.getIntArray(((ASTScalarFlatExpr) n).getIdent());
             else {
-                throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
+                throw new IllegalArgumentException("Wrong parameters in integer array; compilation aborted.");
             }
         } else {
-            throw new IllegalArgumentException("Wrong type of variable array; compilation aborted.");
+            throw new IllegalArgumentException("Wrong parameters integer array; compilation aborted.");
         }
     }
 
@@ -945,8 +959,13 @@ public class SearchItem implements ParserTreeConstants {
             s.append(search_type + "(");
             if (search_variables == null)
                 s.append("[]");
-            else
+            else {
                 s.append("array1d(1.." + search_variables.length + ", " + Arrays.asList(search_variables));
+
+                if (search_type.equals("warm_start"))
+                    s.append(", " + preferedValues);
+            }
+
             s.append(", " + var_selection_heuristic + ", " + indomain + ", " + explore + ")");
             if (floatSearch)
                 s.append(", " + precision);

@@ -271,11 +271,13 @@ public class Solve implements ParserTreeConstants {
                 if (!options.freeSearch())
                     restartCalculator = s.restartCalculator;
             } else if (s.search_type.equals("relax_and_reconstruct")) {
-                // System.out.println("% " + s.relax_and_reconstruct_variables + ", " + s.probability);
                 relaxVars = s.relax_and_reconstruct_variables;
                 probability = s.probability;
-            } else if (s.search_type.endsWith("_search"))// && !s.search_type.equals("priority_search"))
+            } else if (s.search_type.endsWith("_search"))
                 ns.add(s);
+            else if (s.search_type.endsWith("warm_start")) {
+                ns.add(0, s);
+            }
             else
                 System.err.println("%% Warning: Not supported search annotation: " + s.search_type + "; ignored.");
 
@@ -1093,6 +1095,9 @@ public class Solve implements ParserTreeConstants {
                     if (options.runSearch()) {
                         try {
                             if (restartCalculator != null) {
+
+                                label = masterLabel;
+
                                 if (options.debug()) {
                                     System.out.print("% RestartSearch(" + restartCalculator + "), ");
                                     label.setSelectChoicePoint(masterSelect);
@@ -1100,7 +1105,6 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                label = masterLabel;
                                 rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
                                 rs.setRestartsLimit(options.getRestartLimit());
 
@@ -1219,6 +1223,9 @@ public class Solve implements ParserTreeConstants {
                     if (options.runSearch()) {
                         try {
                             if (restartCalculator != null) {
+
+                                label = masterLabel;
+
                                 if (options.debug()) {
                                     System.out.print("% RestartSearch(" + restartCalculator + "), ");
                                     label.setSelectChoicePoint(masterSelect);
@@ -1226,7 +1233,6 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                label = masterLabel;
                                 rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, max_cost);
                                 rs.setRestartsLimit(options.getRestartLimit());
 
