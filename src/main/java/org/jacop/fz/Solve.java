@@ -684,7 +684,7 @@ public class Solve implements ParserTreeConstants {
                 if (!interrupted)
                     if (si.exploration().equals("complete"))
                         if (!label.timeOutOccured) {
-                            if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions)
+                            if ((options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions) && relaxVars == null)
                                 System.out.println("==========");
                         } else
                             System.out.println("%% =====TIME-OUT=====");
@@ -693,7 +693,7 @@ public class Solve implements ParserTreeConstants {
             } else if (optimization) {
                 if (!interrupted && si.exploration().equals("complete"))
                     if (!label.timeOutOccured) {
-                        if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions)
+                        if ((options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions) && relaxVars == null)
                             System.out.println("==========");
                     } else
                         System.out.println("%% =====TIME-OUT=====");
@@ -1310,7 +1310,7 @@ public class Solve implements ParserTreeConstants {
             if (!optimization && options.getAll()) {
                 if (!heuristicSeqSearch)
                     if (!anyTimeOutOccured(list_seq_searches)) {
-                        if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions)
+                        if ((options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions) && relaxVars == null)
                             System.out.println("==========");
                     } else
                         System.out.println("%% =====TIME-OUT=====");
@@ -1319,7 +1319,7 @@ public class Solve implements ParserTreeConstants {
             } else if (optimization) {
                 if (!heuristicSeqSearch)
                     if (!anyTimeOutOccured(list_seq_searches)) {
-                        if (options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions)
+                        if ((options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions) && relaxVars == null)
                             System.out.println("==========");
                     } else
                         System.out.println("%% =====TIME-OUT=====");
