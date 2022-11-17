@@ -885,6 +885,10 @@ public class SearchItem implements ParserTreeConstants {
         return search_type;
     }
 
+    public void setSearchType(String st) {
+        search_type = st;
+    }
+
     public String exploration() {
         return explore;
     }

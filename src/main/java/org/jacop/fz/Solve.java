@@ -251,7 +251,14 @@ public class Solve implements ParserTreeConstants {
                 kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
                 solveKind = getKind(kind.getKind());
 
-                run_sequence_search(solveKind, kind, si);
+                // create seq_search from a number of searches without
+                // explicit sq_search annotation (no order defined)
+                SearchItem siq = new SearchItem(store, dictionary);
+                siq.setSearchType("seq_search");
+                for (SearchItem se : nsi)
+                    siq.addSearch(se);
+
+                run_sequence_search(solveKind, kind, siq);
             }
         } else {
             throw new IllegalArgumentException("%% Error: Not recognized structure of solve statement; compilation aborted");
