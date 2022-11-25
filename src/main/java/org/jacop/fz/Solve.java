@@ -1516,6 +1516,7 @@ public class Solve implements ParserTreeConstants {
         variable_selection = si.getWarmStartSelect();
         DepthFirstSearch label = new DepthFirstSearch<Var>();
         label.setAssignSolution(false);
+        label.setPrintInfo(false);
 
         if (options.debug())
             label.setConsistencyListener(failStatistics);
