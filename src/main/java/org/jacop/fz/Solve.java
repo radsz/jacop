@@ -686,7 +686,7 @@ public class Solve implements ParserTreeConstants {
             return;
         }
 
-        if (result ||  (rs != null && rs.atLeastOneSolution())) {
+        if (result ||  (rs != null && rs.atLeastOneSolution() && !interrupted)) {
             if (!optimization && options.getAll()) {
                 if (!interrupted)
                     if (si.exploration().equals("complete"))
@@ -1313,7 +1313,7 @@ public class Solve implements ParserTreeConstants {
             return;
         }
 
-        if (result || (rs != null && rs.atLeastOneSolution())) {
+        if (result || (rs != null && rs.atLeastOneSolution() && !interrupted)) {
             if (!optimization && options.getAll()) {
                 if (!heuristicSeqSearch)
                     if (!anyTimeOutOccured(list_seq_searches)) {
