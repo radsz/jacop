@@ -142,6 +142,27 @@ public class Solve implements ParserTreeConstants {
 
         dictionary = table;
 
+        // use restart search if defined by options in command line;
+        // default "none"
+        switch (opt.getRestartType()) {
+        case none:
+            break;
+        case constant:
+            restartCalculator = new ConstantCalculator(opt.getRestartScale());
+            break;
+        case linear:
+            restartCalculator = new LinearCalculator(opt.getRestartScale());
+            break;
+        case luby:
+            restartCalculator = new LubyCalculator(opt.getRestartScale());
+            break;
+        case geometric:
+            restartCalculator = new GeometricCalculator(opt.getRestartBase(), opt.getRestartScale());
+            break;
+        default:
+            throw new RuntimeException("Internal error; wrong restart type");
+        }
+
         int n = astTree.jjtGetNumChildren();
 
         for (int i = 0; i < n; i++) {

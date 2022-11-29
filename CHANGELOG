@@ -5,7 +5,9 @@ Version 4.10
    search. Avaiable in minizinc with search annotation
    relax_and_reconstruct in combination with restart annotation.
 
-2. Bug corrections, code cleaning and performance improvements.
+2. Command line options in flatzinc for restart search.
+
+3. Bug corrections, code cleaning and performance improvements.
 
 Version 4.9
 =============

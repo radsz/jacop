@@ -82,7 +82,13 @@ public class Options {
 
     String outputFilename = "";
 
+    public enum RestartType {none, constant, linear, luby, geometric}
+
+    public RestartType restartType = RestartType.none;
+
     int restartLimit = 0;
+    int scale = 250;
+    double base = 1.5;
 
     /**
      * It constructs an Options object and parses all the parameters/options provided
@@ -124,7 +130,10 @@ public class Options {
                     + "    -d, --decay decay factor for accumulated failure count (afc)\n"
                     + "         and activity-based variable selection heuristic\n"
                     + "    --step <value> distance step for cost function for floating-point optimization\n"
-                    + "    --restarts-limit <value> limits number of restarts in restart search")
+                    + "    --restart <value> defines restart search; one of \"none\", \"constant\", \"linear\", \"luby\", \"geometric\"\n"
+                    + "    --restart-base <value> base for geomteric restart search\n"
+                    + "    --restart-scale <value> scale for restart search\n"
+                    + "    --restart-limit <value> limits number of restarts in restart search")
                     ;
                 System.exit(0);
             } else { // input file
@@ -214,7 +223,35 @@ public class Options {
                     long seed = Long.parseLong(args[++i]);
                     Store.setSeed(seed);
                     i++;
-                } else if (args[i].equals("--restarts-limit")) {
+                } else if (args[i].equals("--restart")) {
+                    String type = args[++i];
+                    switch (type) {
+                    case "none":
+                        restartType = RestartType.none;
+                        break;
+                    case "constant":
+                        restartType = RestartType.constant;
+                        break;
+                    case "linear":
+                        restartType = RestartType.linear;
+                        break;
+                    case "luby":
+                        restartType = RestartType.luby;
+                        break;
+                    case "geometric":
+                        restartType = RestartType.geometric;
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Wrong argument " + type + " for option \"-restart\"");
+                    }
+                    i++;
+                } else if (args[i].equals("--restart-base")) {
+                    base = Double.parseDouble(args[++i]);
+                    i++;
+                } else if (args[i].equals("--restart-scale")) {
+                    scale = Integer.parseInt(args[++i]);
+                    i++;
+                } else if (args[i].equals("--restart-limit")) {
                     restartLimit = Integer.parseInt(args[++i]);
                     i++;
                 } else {
@@ -394,6 +431,18 @@ public class Options {
      */
     public boolean complementarySearch() {
         return complementary_search;
+    }
+
+    public RestartType getRestartType() {
+        return restartType;
+    }
+
+    public double getRestartBase() {
+        return base;
+    }
+
+    public int getRestartScale() {
+        return scale;
     }
 
     public int getRestartLimit() {

@@ -23,6 +23,10 @@
 		   ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
  		   ["--decay", "decay factor for accumulated failure count (afc) and activity-based variable selection heuristic", "float", "0.99"],
 		   ["--step", "distance step for cost function for floating-point optimization (0 means 'minimal distance')", "float", "0"],
-                   ["--restarts-limit", "limits number of restarts in restart search.", "int", "0"]
+                   ["--restart", "Restart search type",
+                         "opt:none:constant:linear:luby:geometric", "none"],
+                   ["--restart-base", "Base for geometric restart search", "float", "1.5"],
+                   ["--restart-scale", "Scale factor for restart search", "int", "250"],
+                   ["--restart-limit", "limits number of restarts in restart search.", "int", "0"]
     		  ]
 }
