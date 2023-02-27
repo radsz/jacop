@@ -251,4 +251,25 @@ class FloatOperationConstraints implements ParserTreeConstants {
 
         support.pose(new PdivQeqR(support.getFloatVariable(p1), support.getFloatVariable(p2), support.getFloatVariable(p3)));
     }
+
+    void gen_float_round(SimpleNode node) {
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+
+        support.pose(new RoundPeqX(support.getFloatVariable(p1), support.getVariable(p2)));
+    }
+
+    void gen_float_floor(SimpleNode node) {
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+
+        support.pose(new FloorPeqX(support.getFloatVariable(p1), support.getVariable(p2)));
+    }
+
+    void gen_float_ceil(SimpleNode node) {
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+
+        support.pose(new CeilPeqX(support.getFloatVariable(p1), support.getVariable(p2)));
+    }
 }
