@@ -97,10 +97,6 @@ public class RoundPeqX extends Constraint implements SatisfiedPresent {
                 Math.nextUp((double)x.min() - 0.5);
             double pMax = (x.max() < 0) ? Math.nextDown((double)x.max() + 0.5) :
                 Math.nextDown((double)x.max() + 0.5);
-            // double pMin = Math.min(p1, p2);
-            // double pMax = Math.max(p1, p2);
-            // System.out.println("% " + p1+".."+p2);
-            // System.out.println("% " + pMin+".."+pMax);
 
             p.domain.in(store.level, p, pMin, pMax);
 
@@ -138,7 +134,9 @@ public class RoundPeqX extends Constraint implements SatisfiedPresent {
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.max() <= p.max() && x.min() <= p.min();
+        return x.singleton() &&
+            p.min() > (double)x.value() - 0.5 &&
+            p.max() < (double)x.value() + 0.5;
     }
 
     @Override public String toString() {

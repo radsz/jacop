@@ -99,7 +99,9 @@ public class CeilPeqX extends Constraint implements SatisfiedPresent {
     }
 
     @Override public boolean satisfied() {
-        return grounded() && x.max() >= p.max() && x.min() >= p.min();
+        return x.singleton() &&
+            p.min() > (double)x.value() - 1.0 &&
+            p.max() <= (double)x.value();
     }
 
     @Override public String toString() {
