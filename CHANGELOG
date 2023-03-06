@@ -8,9 +8,16 @@ Version 4.10
 2. Implementation of round, floor and ceil constraints in both JaCoP
    (RoundPeqX, FloorPeqX and CeilPeqX) and for minizinc.
 
-3. Command line options in flatzinc for restart search.
+3. Implementation of channeling constraint, ChannelIntSet and
+   ChannelBoolSet. ChannelIntSet is defined for array of int variables
+   x and array of set variables s. They are related such that (x[i] =
+   j) <-> (i in y[j]). ChannelBoolSet id defined for array of Boolean
+   variables and a set variable and requires that i in s <-> b[i].
+   Available in minizinc as int_set_channel and Link_set_to_booleans.
 
-4. Bug corrections, code cleaning and performance improvements.
+4. Command line options in flatzinc for restart search.
+
+5. Bug corrections, code cleaning and performance improvements.
 
 Version 4.9
 =============

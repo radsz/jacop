@@ -279,6 +279,23 @@ class SetConstraints implements ParserTreeConstants {
         support.pose(new AunionBeqC(v1, v2, v3));
     }
 
+    void gen_int_set_channel(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode)node.jjtGetChild(0));
+        SetVar[] s = support.getSetVarArray((SimpleNode)node.jjtGetChild(1));
+        int offInt = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+        int offSet = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+        support.pose(new ChannelIntSet(x, s, offInt, offSet));
+    }
+
+    void gen_link_set_to_booleans(SimpleNode node) {
+        SetVar s = support.getSetVariable(node, 0);
+        IntVar[] b = support.getVarArray((SimpleNode)node.jjtGetChild(1));
+        int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+        support.pose(new ChannelBoolSet(b, s, offset));
+    }
+
     // Not present in current flatzinc
     void gen_set_superset(SimpleNode node) {
 

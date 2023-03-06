@@ -736,6 +736,14 @@ public final class ConstraintFncs {
         sc.gen_set_union(n);
     }
 
+    public void jacop_int_set_channel(SimpleNode n) {
+        sc.gen_int_set_channel(n);
+    }
+
+    public void jacop_link_set_to_booleans(SimpleNode n) {
+        sc.gen_link_set_to_booleans(n);
+    }
+
     // Floating-point comparisons
     public void float_eq(SimpleNode n) {
         fcc.gen_float_eq(n);
