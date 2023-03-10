@@ -123,7 +123,7 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
             /**
              * It computes the consistency of the constraint.
              *
-             * A /\ B = C
+             * A \/ B = C
              *
              * The list of rules to use.
              *

@@ -15,9 +15,12 @@ Version 4.10
    variables and a set variable and requires that i in s <-> b[i].
    Available in minizinc as int_set_channel and Link_set_to_booleans.
 
-4. Command line options in flatzinc for restart search.
+4.Implementation of set partitionin constraint, PartitionSet, and
+  related minizinc interface.
 
-5. Bug corrections, code cleaning and performance improvements.
+5 Command line options in flatzinc for restart search.
+
+6. Bug corrections, code cleaning and performance improvements.
 
 Version 4.9
 =============

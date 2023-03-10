@@ -744,6 +744,10 @@ public final class ConstraintFncs {
         sc.gen_link_set_to_booleans(n);
     }
 
+    public void jacop_partition_set(SimpleNode n) {
+        sc.gen_partition_set(n);
+    }
+
     // Floating-point comparisons
     public void float_eq(SimpleNode n) {
         fcc.gen_float_eq(n);

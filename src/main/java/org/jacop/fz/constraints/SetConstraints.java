@@ -296,6 +296,13 @@ class SetConstraints implements ParserTreeConstants {
         support.pose(new ChannelBoolSet(b, s, offset));
     }
 
+    void gen_partition_set(SimpleNode node) {
+        SetVar[] s = support.getSetVarArray((SimpleNode)node.jjtGetChild(0));
+        IntDomain u = support.getSetLiteral(node, 1);
+
+        support.pose(new PartitionSet(s, u));
+    }
+
     // Not present in current flatzinc
     void gen_set_superset(SimpleNode node) {
 

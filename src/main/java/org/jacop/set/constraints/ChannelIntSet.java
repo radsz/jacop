@@ -210,7 +210,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
     @Override public String toString() {
 
         StringBuffer result = new StringBuffer();
-        result.append("ChannelIntSet(");
+        result.append(id() + " : ChannelIntSet(");
         result.append(Arrays.asList(x)).append(", ").append(Arrays.asList(s));
         result.append(", " + offsetInt + ", " + offsetSet + ")");
         return result.toString();
