@@ -1,0 +1,6 @@
+output [show(sessions),show(slots),show(num_time_slots)];
+int: num_sessions = 11;
+int: max_time_slots = 11;
+array [1..num_sessions] of int: sessions;
+int: num_time_slots = max(sessions);
+array [1..max_time_slots] of set of int: slots;

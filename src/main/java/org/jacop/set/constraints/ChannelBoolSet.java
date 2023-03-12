@@ -40,7 +40,7 @@ import java.util.stream.Stream;
 
 /**
  * Channel constraint reqires the array of Booleans b to be a
- * representation of the set s: i in s <-> b[i]. Indexes start form 0,
+ * representation of the set s: i in s {@literal <->} b[i]. Indexes start form 0,
  * both for Boolean variables, by default. To define other starting
  * index use offset definitions.
  *

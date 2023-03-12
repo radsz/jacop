@@ -40,8 +40,8 @@ import java.util.stream.Stream;
 
 /**
  * Channel constraint requires that array of int variables x and array
- * of set variables y are related such that (x[i] = j) <-> (i in
- * s[j]).  Indexes start form 0, both for integer and set variables,
+ * of set variables y are related such that (x[i] = j) {@literal <->}
+ (i in s[j]).  Indexes start form 0, both for integer and set variables,
  * by default. To define other starting index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek

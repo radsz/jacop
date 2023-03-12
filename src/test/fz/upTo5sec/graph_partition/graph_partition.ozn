@@ -1,0 +1,4 @@
+output ([("edges_between:"++show(edges_between))++"\n"]++[show(x[i])++"\n" | i in 1..m])++["\n"];
+int: edges_between;
+int: m = 2;
+array [1..m] of set of int: x;

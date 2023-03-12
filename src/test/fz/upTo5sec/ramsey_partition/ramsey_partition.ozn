@@ -1,0 +1,2 @@
+output [show(x),"\n"];
+array [1..3] of set of int: x;
