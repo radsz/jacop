@@ -66,7 +66,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     /**
      * Constructs a list containing the elements of the specified collection, in
      * the order they are returned by the collection's iterator. The
-     * <tt>ArrayList</tt> instance has an initial capacity of 110% the size of
+     * {@code ArrayList} instance has an initial capacity of 110% the size of
      * the specified collection.
      *
      * @param c the collection whose elements are to be placed into this list.
@@ -184,7 +184,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     }
 
     /**
-     * Returns <tt>true</tt> if this list contains the specified element.
+     * Returns {@code true} if this list contains the specified element.
      *
      * @param elem element whose presence in this list is to be tested.
      * @return <code>true</code> if the specified element is present;
@@ -195,7 +195,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     }
 
     /**
-     * Increases the capacity of this <tt>ArrayList</tt> instance, if
+     * Increases the capacity of this {@code ArrayList} instance, if
      * necessary, to ensure that it can hold at least the number of elements
      * specified by the minimum capacity argument.
      *
@@ -256,7 +256,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
 
     /**
      * Searches for the first occurrence of the given argument, testing for
-     * equality using the <tt>equals</tt> method.
+     * equality using the {@code equals} method.
      *
      * @param elem an object.
      * @return the index of the first occurrence of the argument in this list;
@@ -344,9 +344,8 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     /**
      * Removes a single instance of the specified element from this list, if it
      * is present (optional operation). More formally, removes an element
-     * <tt>e</tt> such that <tt>(o==null ? e==null :
-     * o.equals(e))</tt>, if
-     * the list contains one or more such elements. Returns <tt>true</tt> if
+     * {@code e} such that {@code (o==null ? e==null : o.equals(e))}, if
+     * the list contains one or more such elements. Returns {@code true} if
      * the list contained the specified element (or equivalently, if the list
      * changed as a result of the call).
      * <p>
@@ -428,9 +427,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
      * <p>
      * If the list fits in the specified array with room to spare (i.e., the
      * array has more elements than the list), the element in the array
-     * immediately following the end of the collection is set to <tt>null</tt>.
+     * immediately following the end of the collection is set to {@code null}.
      * This is useful in determining the length of the list <i>only</i> if the
-     * caller knows that the list does not contain any <tt>null</tt> elements.
+     * caller knows that the list does not contain any {@code null} elements.
      *
      * @param <T> the type which is being stored by a SimpleArrayList.
      * @param a   the array into which the elements of the list are to be
@@ -470,9 +469,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     }
 
     /**
-     * Trims the capacity of this <tt>ArrayList</tt> instance to be the list's
+     * Trims the capacity of this {@code ArrayList} instance to be the list's
      * current size. An application can use this operation to minimize the
-     * storage of an <tt>ArrayList</tt> instance.
+     * storage of an {@code ArrayList} instance.
      */
     @SuppressWarnings("unchecked") public void trimToSize() {
         int oldCapacity = elementData.length;

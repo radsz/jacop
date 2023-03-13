@@ -138,7 +138,6 @@ public class OptParse<E> {
     /**
      * a class to handle one option
      *
-     * @param E the object to apply modifications to
      * @author simon
      */
     public static abstract class OptHandler<E> {

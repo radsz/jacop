@@ -34,7 +34,6 @@ package org.jacop.jasat.utils;
 /**
  * a factory for type E
  *
- * @param E the type to produce
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.9
  */

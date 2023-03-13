@@ -182,7 +182,7 @@ public class SimpleHashSet<E> {
     int threshold;
 
     /**
-     * Constructs an empty <tt>HashSet</tt> with the default initial capacity
+     * Constructs an empty {@code HashSet} with the default initial capacity
      * (16) and the default load factor (0.75).
      */
     public SimpleHashSet() {
@@ -193,7 +193,7 @@ public class SimpleHashSet<E> {
     }
 
     /**
-     * Constructs an empty <tt>HashSet</tt> with the specified initial
+     * Constructs an empty {@code HashSet} with the specified initial
      * capacity and the default load factor (0.75).
      *
      * @param initialCapacity the initial capacity.
@@ -204,7 +204,7 @@ public class SimpleHashSet<E> {
     }
 
     /**
-     * Constructs an empty <tt>HashSet</tt> with the specified initial
+     * Constructs an empty {@code HashSet} with the specified initial
      * capacity and load factor.
      *
      * @param initialCapacity The initial capacity.
@@ -235,7 +235,7 @@ public class SimpleHashSet<E> {
      * Adds the specified element to this set.
      *
      * @param element element with which the specified value is to be associated.
-     * @return <tt>true</tt> if object is inserted and <tt>false</tt> if
+     * @return {@code true} if object is inserted and {@code false} if
      * object was already in the set.
      */
     @SuppressWarnings("unchecked")
@@ -338,9 +338,9 @@ public class SimpleHashSet<E> {
     }
 
     /**
-     * Returns <tt>true</tt> if this set contains no elements.
+     * Returns {@code true} if this set contains no elements.
      *
-     * @return <tt>true</tt> if this set contains no elements.
+     * @return {@code true} if this set contains no elements.
      */
     public boolean isEmpty() {
         return size == 0;

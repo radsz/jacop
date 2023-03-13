@@ -1,5 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -104,7 +105,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M5</version>
+                        <version>3.0.0-M9</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -135,7 +136,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>2.19.1</version>
+                        <version>3.0.0-M9</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -166,7 +167,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>2.19.1</version>
+                        <version>3.0.0-M9</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -197,7 +198,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>2.19.1</version>
+                        <version>3.0.0-M9</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -306,7 +307,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-report-plugin</artifactId>
-                    <version>2.19.1</version>
+                    <version>3.0.0-M9</version>
                 </plugin>
 
                 <plugin>
@@ -334,7 +335,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-project-info-reports-plugin</artifactId>
-                    <version>2.9</version>
+                    <version>3.4.2</version>
                 </plugin>
 
                 <plugin>
@@ -352,7 +353,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.9.1</version>
+                    <version>4.0.0-M5</version>
                 </plugin>
 
             </plugins>
@@ -479,13 +480,13 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.4</version>
+                <version>3.5.0</version>
 
                 <configuration>
-                    <!--- Possible solution to not print any warrnings for Java 1.8
-                        <additionalparam>-Xdoclint:none</additionalparam>
-                    -->
-
+                  <failOnWarnings>false</failOnWarnings>
+                    <!--- Possible solution to not print any warrnings
+                        for Java 1.8 -->
+                    <additionalparam>-Xdoclint:none</additionalparam>
                     <sourceFileExcludes>
                         <sourcepath>
                             ${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc
@@ -504,10 +505,14 @@ setup to run configuration. -->
                 </configuration>
                 <executions>
                     <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
+                      <id>attach-javadocs</id>
+                      <configuration>
+                        <failOnWarnings>false</failOnWarnings>
+                        <additionalparam>-Xdoclint:none</additionalparam>
+                      </configuration>
+                      <goals>
+                        <goal>jar</goal>
+                      </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -515,9 +520,9 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19.1</version>
+                <version>3.0.0-M9</version>
                 <configuration>
-                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
+                  <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
@@ -539,7 +544,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
-                <version>3.9.1</version>
+                <version>4.0.0-M5</version>
                 <!-- Using later versions, for example when tried 3.4 the findbugs report stopped working-->
             </plugin>
 
@@ -548,7 +553,7 @@ setup to run configuration. -->
 
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.9</version>
+                <version>0.8.8</version>
                 <configuration>
                     <excludes>
                         <exclude>org/jacop/examples/scala/**/*.class</exclude>
@@ -621,7 +626,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.1.4</version>
+                <version>4.7.3.2</version>
                 <configuration>
                     <effort>Max</effort>      <!-- Other working value is Min -->
                     <threshold>Medium</threshold>  <!-- Other working value is Low, High -->
@@ -651,15 +656,16 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.4</version>
+                <version>3.5.0</version>
                 <configuration>
-                    <additionalparam>-Xdoclint:none</additionalparam>
+                  <failOnWarnings>false</failOnWarnings>
+                  <additionalparam>-Xdoclint:none</additionalparam>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>2.19.1</version>
+                <version>3.0.0-M9</version>
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                 </configuration>
@@ -681,8 +687,7 @@ setup to run configuration. -->
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.7.9</version>
+                <artifactId>jacoco-maven-plugin</artifactId>                <version>0.8.8</version>
                 <reportSets>
                     <reportSet>
                         <reports>
