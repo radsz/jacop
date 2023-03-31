@@ -897,15 +897,15 @@ public final class ConstraintFncs {
         foc.gen_float_pow(n);
     }
 
-    public void jacop_round(SimpleNode n) {
+    public void float_round(SimpleNode n) {
         foc.gen_float_round(n);
     }
 
-    public void jacop_floor(SimpleNode n) {
+    public void float_floor(SimpleNode n) {
         foc.gen_float_floor(n);
     }
 
-    public void jacop_ceil(SimpleNode n) {
+    public void float_ceil(SimpleNode n) {
         foc.gen_float_ceil(n);
     }
 
