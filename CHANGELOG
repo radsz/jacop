@@ -18,9 +18,14 @@ Version 4.10
 4.Implementation of set partitionin constraint, PartitionSet, and
   related minizinc interface.
 
-5 Command line options in flatzinc for restart search.
+5. Implementation of cumulative constraints, CumulativeOptional and
+   CumulativeUnaryOptional, for optional tasks. Available from
+   minizinc as cumulative and disjunctive with start times defined as
+   optional variables.
 
-6. Bug corrections, code cleaning and performance improvements.
+6. Command line options in flatzinc for restart search.
+
+7. Bug corrections, code cleaning and performance improvements.
 
 Version 4.9
 =============

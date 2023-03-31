@@ -663,6 +663,16 @@ public final class ConstraintFncs {
         gc.gen_jacop_channel(n);
     }
 
+    // =========== optional constraints ===========
+
+    public void jacop_cumulative_optional(SimpleNode n) {
+	gc.gen_jacop_cumulative_optional(n);
+    }
+
+    public void jacop_disjunctive_optional(SimpleNode n) {
+	gc.gen_jacop_disjunctive_optional(n);
+    }
+
     // Set constrints
     public void set_card(SimpleNode n) {
         sc.gen_set_card(n);

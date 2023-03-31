@@ -64,8 +64,8 @@ public class Cumulative extends CumulativeBasic {
 
     TaskView[] taskReversed;
 
-    private boolean doEdgeFind = true;
-    private boolean doQuadraticEdgeFind = false;
+    boolean doEdgeFind = true;
+    boolean doQuadraticEdgeFind = false;
     
     private Set<Integer> preComputedCapacities = null;
     private int[] preComputedCapMap;
@@ -200,7 +200,7 @@ public class Cumulative extends CumulativeBasic {
     }
     */
 
-    private void edgeFind(Store store) {
+    void edgeFind(Store store) {
 
         edgeFind(store, taskNormal);
         edgeFind(store, taskReversed);
@@ -355,7 +355,7 @@ public class Cumulative extends CumulativeBasic {
         }
     }
 
-    private void edgeFindQuad(Store store) {
+    void edgeFindQuad(Store store) {
 
         edgeFindQuad(store, taskNormal);
         edgeFindQuad(store, taskReversed);

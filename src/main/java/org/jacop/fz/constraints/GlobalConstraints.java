@@ -35,6 +35,8 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.geost.*;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -1438,6 +1440,31 @@ class GlobalConstraints implements ParserTreeConstants {
 
         // for (int j = 0; j < bs.length; j++)
         //     support.pose(new Reified(new XeqC(x, values[j]), bs[j]));
+    }
+
+    // optional global constraints
+
+    void gen_jacop_cumulative_optional(SimpleNode node) {
+        IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+        IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+        IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+
+        support.pose(new CumulativeOptional(str, dur, res, b, opt));
+    }
+
+    void gen_jacop_disjunctive_optional(SimpleNode node) {
+        IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+
+        IntVar one = support.dictionary.getConstant(1);
+        IntVar[] ones = new IntVar[str.length];
+        for (int i = 0; i < ones.length; i++) {
+            ones[i] = one;
+        }
+        support.pose(new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true));
     }
 
     boolean allVarOne(IntVar[] w) {

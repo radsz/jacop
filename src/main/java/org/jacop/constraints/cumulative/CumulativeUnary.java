@@ -51,14 +51,14 @@ import java.util.List;
 
 public class CumulativeUnary extends Cumulative {
 
-    private boolean doProfile = false;
-    private boolean doEdgeFind = true;
+    boolean doProfile = false;
+    boolean doEdgeFind = true;
 
     /*
      * Local copies of tasks in normal and reserved views
      */
-    private final TaskView[] tvn;
-    private final TaskView[] tvr;
+    final TaskView[] tvn;
+    final TaskView[] tvr;
 
     private Comparator<TaskView> taskIncLctComparator = (o1, o2) -> (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
 
@@ -196,7 +196,7 @@ public class CumulativeUnary extends Cumulative {
         } while (store.propagationHasOccurred);
     }
 
-    private void overload(TaskView[] ts) {
+    void overload(TaskView[] ts) {
 
         TaskView[] t = new TaskView[ts.length];
         System.arraycopy(ts, 0, t, 0, ts.length);
@@ -217,7 +217,7 @@ public class CumulativeUnary extends Cumulative {
         }
     }
 
-    private void notFirstNotLast(Store store, TaskView[] tn, TaskView[] tr) {
+    void notFirstNotLast(Store store, TaskView[] tn, TaskView[] tr) {
 
         notFirstNotLastPhase(store, tn);
         notFirstNotLastPhase(store, tr);
@@ -279,7 +279,7 @@ public class CumulativeUnary extends Cumulative {
     }
 
 
-    private void detectable(Store store, TaskView[] tn, TaskView[] tr) {
+    void detectable(Store store, TaskView[] tn, TaskView[] tr) {
         detectablePhase(store, tn);
         detectablePhase(store, tr);
     }
@@ -331,7 +331,7 @@ public class CumulativeUnary extends Cumulative {
 
     }
 
-    private void edgeFind(Store store, TaskView[] tn, TaskView[] tr) {
+    void edgeFind(Store store, TaskView[] tn, TaskView[] tr) {
 
         edgeFindPhase(store, tn);
         edgeFindPhase(store, tr);
