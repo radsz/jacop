@@ -143,10 +143,10 @@ public class RestartSearch<T extends Var> {
                     assignRelaxedVariables();
             }
 
-            // if (cost == null)
+            if (cost == null)
                 result = search.labeling(store, select);
-            // else
-            //     result = search.labeling(store, select, cost);
+            else
+                result = search.labeling(store, select, cost);
 
             if (rarVars != null) {
                 store.removeLevel(store.level);

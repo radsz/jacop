@@ -1626,8 +1626,9 @@ public class Solve implements ParserTreeConstants {
         }
 
         ComparatorVariable<IntVar> comparator = si.getVarSelect();
+        ComparatorVariable<IntVar> tieBreak = si.tieBreaking;
 
-        PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, searches);
+        PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, tieBreak, searches);
         label.setPrintInfo(false);
         label.setAssignSolution(false);
 

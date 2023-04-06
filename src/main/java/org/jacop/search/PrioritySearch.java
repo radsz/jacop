@@ -47,7 +47,7 @@ import java.util.List;
  * PrioritySearch selects first a row in the matrix based on metric of
  * the variable at the pririty vector. As soon as a row is choosen,
  * variables are selected for indomain method.  The row selection is
- * done with the help of pririty variable comparators. Two comparators
+ * done with the help of pririty variable comparatos. Two comparators
  * can be employed main and tiebreaking one. If two are not sufficient
  * to differentiate two rows than the lexigraphical ordering is used.
  *
@@ -69,6 +69,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     int n;  // length of priority variables and sub-vectors
     T[] priority;
     ComparatorVariable<T> comparator;
+    ComparatorVariable<T> tieBreak = null;
 
     DepthFirstSearch[] search;
 
@@ -82,7 +83,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     boolean solutionsReached = false;	
 	
     /**
-     * It constructs a PrioritySearch variable ordering.
+     * It constructs a PrioritySearch.
      *
      * @param priority       prority variables used to select a sub-vector of vars (row)
      * @param dfs            vector of depth first searches to be selected from; they must have SelectChoicePoint set.
@@ -114,6 +115,21 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    search[2*i+1].setMasterSearch(last);
 	}
 	this.allVars = getVariables(this);
+
+    }
+
+    /**
+     * It constructs a PrioritySearch.
+     *
+     * @param priority       prority variables used to select a sub-vector of vars (row)
+     * @param dfs            vector of depth first searches to be selected from; they must have SelectChoicePoint set.
+     * @param comparator     the variable comparator to choose the proper sub.search.
+     * @param tieBreak     the variable tie breaking comparator to choose the proper sub.search.
+     */
+    public PrioritySearch(T[] priority, ComparatorVariable<T> comparator, ComparatorVariable<T> tieBreak, DepthFirstSearch<T>[] dfs) {
+        this(priority, comparator, dfs);
+
+        this.tieBreak = tieBreak;
 
     }
 
@@ -583,11 +599,17 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	if (comparator != null) {
 	    double currentMeasure = comparator.metric(priority[current]);
 	    for (int i = current+1; i < n; i++) {
-		if (comparator.compare(currentMeasure, priority[i]) < 0 && ! visited.get(i)) {
-		    current = i;
-		currentMeasure = comparator.metric(priority[current]);
-		}
-	    }
+                if (! visited.get(i)) {
+                    if (comparator.compare(currentMeasure, priority[i]) < 0) {
+                        current = i;
+                        currentMeasure = comparator.metric(priority[current]);
+                    } else if (tieBreak != null
+                               && comparator.compare(currentMeasure, priority[i]) == 0
+                               && tieBreak.compare(currentMeasure, priority[i]) < 0) {
+                        current = i;
+                    }            
+                }
+            }
 	}
 	
 	return current;
@@ -661,6 +683,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         StringBuffer b  = new StringBuffer();
 
 	b.append("PrioritySearch(").append(java.util.Arrays.asList(priority)).append(", ").append(comparator.getClass().getName());
+
+        if (tieBreak == null)
+            b.append(", null");
+        else
+            b.append(", " + tieBreak.getClass().getName());
 
 	b.append(", [");
 	for (int i = 0; i < search.length/2; i++) {

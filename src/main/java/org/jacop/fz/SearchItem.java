@@ -930,8 +930,7 @@ public class SearchItem implements ParserTreeConstants {
                     else if (search_type.equals("float_search"))
                         tieBreaking = getFloatVarSelect();
                     else if (search_type.equals("priority_search")) {
-                        tieBreaking = null;
-                        System.err.println("% Warning: priority_search does not accept tiebreak annotation; ignored.");
+                        tieBreaking = getVarSelect();
                     }
 
                     if (count > 2)
