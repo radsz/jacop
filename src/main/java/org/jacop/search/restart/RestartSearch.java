@@ -95,7 +95,7 @@ public class RestartSearch<T extends Var> {
         lastNotNullSearch = ns;
 
         do {
-            ns.setCostVar(null); // cost is handled internally by restart search
+            // ns.setCostVar(null); // cost is handled internally by restart search
 
             if (ns instanceof PrioritySearch) {
                 ((PrioritySearch)ns).addRestartCalculator((PrioritySearch)ns, calculator);
@@ -171,7 +171,11 @@ public class RestartSearch<T extends Var> {
 
             if (result)
                 if (cost != null) {
-                    boundCost();
+                    if (!calculator.pointsExhausted())
+                        // optimization solution found and no better exists
+		        result = false;
+                    else
+                        boundCost();
                 } else
                     break; // single solution for satisfy search found
             else { // no result
