@@ -88,11 +88,11 @@ public class Increasing extends Constraint {
      *
      * @param x variables which must be in increasing order.
      */
-    public Increasing(List<IntVar> x) {
+    public Increasing(List<? extends IntVar> x) {
         this(x.toArray(new IntVar[x.size()]));
     }
 
-    public Increasing(List<IntVar> x, boolean strict) {
+    public Increasing(List<? extends IntVar> x, boolean strict) {
         this(x.toArray(new IntVar[x.size()]), strict);
     }
 

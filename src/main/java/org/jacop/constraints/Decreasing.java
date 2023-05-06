@@ -70,11 +70,11 @@ public class Decreasing extends Increasing {
      *
      * @param x variables which must be in decreasing order.
      */
-    public Decreasing(List<IntVar> x) {
+    public Decreasing(List<? extends IntVar> x) {
         this(x.toArray(new IntVar[x.size()]));
     }
 
-    public Decreasing(List<IntVar> x, boolean strict) {
+    public Decreasing(List<? extends IntVar> x, boolean strict) {
         this(x.toArray(new IntVar[x.size()]), strict);
     }
 
