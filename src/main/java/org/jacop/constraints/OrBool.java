@@ -75,7 +75,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param a      parameters
      * @param result result variable.
      */
-    public OrBool(List<IntVar> a, IntVar result) {
+    public OrBool(List<? extends IntVar> a, IntVar result) {
         this(a.toArray(new IntVar[a.size()]), result);
     }
 

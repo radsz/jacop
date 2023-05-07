@@ -103,7 +103,7 @@ public class Circuit extends Alldiff implements Stateful {
      *
      * @param list variables which must form a circuit.
      */
-    public Circuit(List<IntVar> list) {
+    public Circuit(List<? extends IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
     }
 

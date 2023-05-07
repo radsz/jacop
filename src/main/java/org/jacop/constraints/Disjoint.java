@@ -84,7 +84,7 @@ public class Disjoint extends Diff {
      * @param l2      list of variables denoting the length in the second dimension.
      * @param profile specifies if the profile should be computed.
      */
-    public Disjoint(List<IntVar> o1, List<IntVar> o2, List<IntVar> l1, List<IntVar> l2, boolean profile) {
+    public Disjoint(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2, boolean profile) {
         this(o1, o2, l1, l2);
         doProfile = profile;
     }

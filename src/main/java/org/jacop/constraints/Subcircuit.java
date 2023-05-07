@@ -111,7 +111,7 @@ public class Subcircuit extends Alldiff {
      *
      * @param list variables which must form a circuit.
      */
-    public Subcircuit(List<IntVar> list) {
+    public Subcircuit(List<? extends IntVar> list) {
         this(list.toArray(new IntVar[list.size()]));
     }
 

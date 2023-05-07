@@ -117,7 +117,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
      * @param kSet set of integer values against which we check if variables are equal to.
      * @param n    number of possible variables equal to a value from Kset.
      */
-    public Among(List<IntVar> list, IntervalDomain kSet, IntVar n) {
+    public Among(List<? extends IntVar> list, IntervalDomain kSet, IntVar n) {
         this(list.toArray(new IntVar[list.size()]), kSet, n);
     }
 

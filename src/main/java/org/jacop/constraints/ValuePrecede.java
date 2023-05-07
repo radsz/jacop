@@ -124,7 +124,7 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
      * @param t value occuring next
      * @param x list of arguments x's.
      */
-    public ValuePrecede(int s, int t, List<IntVar> x) {
+    public ValuePrecede(int s, int t, List<? extends IntVar> x) {
         this(s, t, x.toArray(new IntVar[x.size()]));
     }
 

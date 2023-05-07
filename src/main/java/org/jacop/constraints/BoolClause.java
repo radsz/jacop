@@ -104,7 +104,7 @@ public class BoolClause extends PrimitiveConstraint {
      * @param x list of positive arguments x's.
      * @param y list of negative arguments y's.
      */
-    public BoolClause(List<IntVar> x, List<IntVar> y) {
+    public BoolClause(List<? extends IntVar> x, List<? extends IntVar> y) {
         this(x.toArray(new IntVar[x.size()]), y.toArray(new IntVar[y.size()]));
     }
 

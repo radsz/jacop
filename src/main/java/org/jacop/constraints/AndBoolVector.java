@@ -103,7 +103,7 @@ public class AndBoolVector extends PrimitiveConstraint {
      * @param list   list of x's which must all be equal 1 to make result equal 1.
      * @param result variable which is equal 0 if any of x is equal to zero.
      */
-    public AndBoolVector(List<IntVar> list, IntVar result) {
+    public AndBoolVector(List<? extends IntVar> list, IntVar result) {
 
         this(list.toArray(new IntVar[list.size()]), result);
 

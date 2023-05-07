@@ -103,7 +103,7 @@ public class Diff2 extends Diff {
      * @param l2      list of variables denoting the length in the second dimension.
      * @param profile specifies if the profile should be computed.
      */
-    public Diff2(List<IntVar> o1, List<IntVar> o2, List<IntVar> l1, List<IntVar> l2, boolean profile) {
+    public Diff2(List<? extends IntVar> o1, List<? extends IntVar> o2, List<? extends IntVar> l1, List<? extends IntVar> l2, boolean profile) {
         this(o1, o2, l1, l2);
         doProfile = profile;
     }
@@ -227,7 +227,7 @@ public class Diff2 extends Diff {
      * @param rectangles    - list of rectangles, each rectangle represented by a list of variables.
      * @param exclusiveList - list of rectangles pairs which can overlap.
      */
-    public Diff2(List<List<IntVar>> rectangles, List<List<Integer>> exclusiveList) {
+    public Diff2(List<List<? extends IntVar>> rectangles, List<List<Integer>> exclusiveList) {
 
         queueIndex = 2;
         this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);

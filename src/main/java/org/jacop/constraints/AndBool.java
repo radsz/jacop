@@ -75,7 +75,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
      * @param a      parameters variable.
      * @param result variable.
      */
-    public AndBool(List<IntVar> a, IntVar result) {
+    public AndBool(List<? extends IntVar> a, IntVar result) {
         this(a.toArray(new IntVar[a.size()]), result);
     }
 
