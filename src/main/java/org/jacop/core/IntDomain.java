@@ -1302,10 +1302,15 @@ public abstract class IntDomain extends Domain {
      */
     public static final Interval mulBounds(int a, int b, int c) {
 
-        int ac = multiplyInt(a, c);
-        int bc = multiplyInt(b, c);
-        int min = Math.min(ac, bc);
-        int max = Math.max(ac, bc);
+        int min;
+        int max;
+        if (c >= 0) {
+            min = multiplyInt(a, c);
+            max = multiplyInt(b, c);
+        } else {
+            max = multiplyInt(a, c);
+            min = multiplyInt(b, c);
+        }
 
         return new Interval(min, max);
     }
