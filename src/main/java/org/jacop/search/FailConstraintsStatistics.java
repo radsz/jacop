@@ -85,11 +85,14 @@ public class FailConstraintsStatistics<T extends Var> implements ConsistencyList
     void collectFailStatistics(Constraint currentConstraint) {
 
         //======== add fail constraints classes to list of fails
-        Integer n = failConstraintsStatistics.get(currentConstraint.getClass().getSimpleName());
+        String cName = currentConstraint.getClass().getSimpleName();
+        if (cName == "")
+            cName = currentConstraint.getClass().getTypeName();
+        Integer n = failConstraintsStatistics.get(cName);
         if (n != null) {
-            failConstraintsStatistics.put(currentConstraint.getClass().getSimpleName(), ++n);
+            failConstraintsStatistics.put(cName, ++n);
         } else
-            failConstraintsStatistics.put(currentConstraint.getClass().getSimpleName(), 1);
+            failConstraintsStatistics.put(cName, 1);
 
         //======== add fail constraints id's to list of fails
         Integer k = failConstraintsIdStatistics.get(currentConstraint.id());

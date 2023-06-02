@@ -45,6 +45,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.atomic.AtomicInteger;
 /*
  * Basic support for generation of constraints in flatzinc
  *
@@ -616,9 +617,13 @@ public class Support implements ParserTreeConstants {
 
     // =========== Specialized constraints ===================
 
+    static final AtomicInteger n1 = new AtomicInteger(0);
+
     Constraint fzXeqCReified(IntVar x, int c, IntVar b) {
 
         return new Constraint(new IntVar[] {x, b}) {
+
+            int numberId = n1.incrementAndGet();
 
             @Override public void consistency(final Store store) {
 
@@ -639,14 +644,22 @@ public class Support implements ParserTreeConstants {
             }
 
             @Override public String toString() {
-                return "fz : XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+                return "fzXeqCReified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+            }
+
+            public String id() {
+                return "fzXeqCReified" + numberId;
             }
         };
     }
 
+    static final AtomicInteger n2 = new AtomicInteger(0);
+
     Constraint fzXeqCImplied(IntVar x, int c, IntVar b) {
 
         return new Constraint(new IntVar[] {x, b}) {
+
+            int numberId = n2.incrementAndGet();
 
             @Override public void consistency(final Store store) {
 
@@ -667,14 +680,22 @@ public class Support implements ParserTreeConstants {
             }
 
             @Override public String toString() {
-                return "fz : XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+                return "fzXeqCImplied" + numberId +": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+            }
+
+            public String id() {
+                return "fzXeqCImplied" + numberId;
             }
         };
     }
 
+    static final AtomicInteger n3 = new AtomicInteger(0);
+
     Constraint fzXneqCReified(IntVar x, int c, IntVar b) {
 
         return new Constraint(new IntVar[] {x, b}) {
+
+            int numberId = n3.incrementAndGet();
 
             @Override public void consistency(final Store store) {
 
@@ -697,14 +718,22 @@ public class Support implements ParserTreeConstants {
             }
 
             @Override public String toString() {
-                return "fz : XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+                return "fzXneqCReified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+            }
+
+            public String id() {
+                return "fzXneqCReified" + numberId;
             }
         };
     }
 
+    static final AtomicInteger n4 = new AtomicInteger(0);
+
     Constraint fzXneqCImplied(IntVar x, int c, IntVar b) {
 
         return new Constraint(new IntVar[] {x, b}) {
+
+            int numberId = n4.incrementAndGet();
 
             @Override public void consistency(final Store store) {
 
@@ -724,7 +753,11 @@ public class Support implements ParserTreeConstants {
             }
 
             @Override public String toString() {
-                return "fz : XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+                return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+            }
+
+            public String id() {
+                return "fzXneqCImplied" + numberId;
             }
         };
     }
