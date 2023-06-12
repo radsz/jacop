@@ -486,7 +486,6 @@ setup to run configuration. -->
                   <failOnWarnings>false</failOnWarnings>
                     <!--- Possible solution to not print any warrnings
                         for Java 1.8 -->
-                    <additionalparam>-Xdoclint:none</additionalparam>
                     <sourceFileExcludes>
                         <sourcepath>
                             ${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc
@@ -502,13 +501,14 @@ setup to run configuration. -->
                         <exclude>**/SimpleCharStream.java</exclude>
                         <exclude>**/ASTSolveItem.java</exclude>
                     </sourceFileExcludes>
+                    <doclint>none</doclint>
                 </configuration>
                 <executions>
                     <execution>
                       <id>attach-javadocs</id>
                       <configuration>
                         <failOnWarnings>false</failOnWarnings>
-                        <additionalparam>-Xdoclint:none</additionalparam>
+                        <doclint>none</doclint>
                       </configuration>
                       <goals>
                         <goal>jar</goal>
@@ -640,7 +640,7 @@ setup to run configuration. -->
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
                     <linkXRef>true</linkXRef>
-                    <targetJdk>1.7</targetJdk>
+                    <targetJdk>1.8</targetJdk>
                     <!-- Exclude automatically generated files from jjtree and javacc -->
                     <excludes>
                         <exclude>**/fz/Parser.java</exclude>
@@ -651,7 +651,7 @@ setup to run configuration. -->
                         <exclude>**/fz/SimpleCharStream.java</exclude>
                     </excludes>
                 </configuration>
-                <version>3.7</version>
+                <version>3.21.0</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -659,7 +659,7 @@ setup to run configuration. -->
                 <version>3.5.0</version>
                 <configuration>
                   <failOnWarnings>false</failOnWarnings>
-                  <additionalparam>-Xdoclint:none</additionalparam>
+                  <doclint>none</doclint>
                 </configuration>
             </plugin>
             <plugin>
