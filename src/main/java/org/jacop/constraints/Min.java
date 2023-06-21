@@ -112,48 +112,53 @@ public class Min extends Constraint implements SatisfiedPresent {
     @Override public void consistency(Store store) {
 
         int start = position.value();
-        IntVar var;
-        IntDomain vDom;
 
-        //@todo keep one variable with the smallest value as watched variable
-        // only check for other support if that smallest value is no longer part
-        // of the variable domain.
+        do {
 
-        int minValue = IntDomain.MaxInt;
-        int maxValue = IntDomain.MaxInt;
+            store.propagationHasOccurred = false;
+            IntVar var;
+            IntDomain vDom;
 
-        int minMin = min.min();
-        int maxMin = min.max();
-        for (int i = start; i < l; i++) {
-            var = list[i];
+            //@todo keep one variable with the smallest value as watched variable
+            // only check for other support if that smallest value is no longer part
+            // of the variable domain.
 
-            vDom = var.dom();
-            int varMin = vDom.min(), varMax = vDom.max();
+            int minValue = IntDomain.MaxInt;
+            int maxValue = IntDomain.MaxInt;
 
-            if (varMin > maxMin) {
-                swap(start, i);
-                start++;
-            } else if (varMin < minMin)
-                var.domain.inMin(store.level, var, minMin);
+            int minMin = min.min();
+            int maxMin = min.max();
+            for (int i = start; i < l; i++) {
+                var = list[i];
 
-            minValue = (minValue < varMin) ? minValue : varMin;
-            maxValue = (maxValue < varMax) ? maxValue : varMax;
-        }
+                vDom = var.dom();
+                int varMin = vDom.min(), varMax = vDom.max();
+
+                if (varMin > maxMin) {
+                    swap(start, i);
+                    start++;
+                } else if (varMin < minMin)
+                    var.domain.inMin(store.level, var, minMin);
+
+                minValue = (minValue < varMin) ? minValue : varMin;
+                maxValue = (maxValue < varMax) ? maxValue : varMax;
+            }
+
+            min.domain.in(store.level, min, minValue, maxValue);
+
+            if (start == l) // all variables have their min value greater than max value of min variable
+                throw Store.failException;
+
+            if (start == list.length - 1) { // one variable on the list is minimal; its is max < min of all other variables
+                list[start].domain.in(store.level, list[start], min.dom());
+
+                if (min.singleton())
+                    removeConstraint();
+
+            }
+        } while (store.propagationHasOccurred);
 
         position.update(start);
-
-        min.domain.in(store.level, min, minValue, maxValue);
-
-        if (start == l) // all variables have their min value greater than max value of min variable
-            throw Store.failException;
-
-        if (start == list.length - 1) { // one variable on the list is minimal; its is max < min of all other variables
-            list[start].domain.in(store.level, list[start], min.dom());
-
-            if (min.singleton())
-                removeConstraint();
-
-        }
 
     }
 
