@@ -1137,8 +1137,23 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] w = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int min_bin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
 
+        // ---- KK, 2023-06-21
+        // binpacking must not have duplicated variables there
+        // could be constants that have the same value and
+        // are duplicated.
+        IntVar[] cc = new IntVar[capacity.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < capacity.length; i++) {
+            if (varSet.contains(capacity[i]) && capacity[i].singleton())
+                cc[i] = new IntVar(store, capacity[i].min(), capacity[i].max());
+            else {
+                cc[i] = capacity[i];
+                varSet.add(capacity[i]);
+            }
+        }
+
         //support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
-        Constraint binPack = new Binpacking(bin, capacity, w, min_bin, true);
+        Constraint binPack = new Binpacking(bin, cc, w, min_bin, true);
         support.delayedConstraints.add(binPack);
     }
 

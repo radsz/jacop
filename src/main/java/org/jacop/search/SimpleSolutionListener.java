@@ -261,12 +261,15 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
                 vars[value] = current;
             }
 
-            solutions = new Domain[1][vars.length];
-            parentSolutionNo = new int[1];
+            if (vars != null) {
+                solutions = new Domain[1][vars.length];
+                parentSolutionNo = new int[1];
+            }
 
         }
 
-        recordSolution();
+        if (vars != null)
+            recordSolution();
 
         if (childrenSolutionListeners != null) {
             boolean code = false;

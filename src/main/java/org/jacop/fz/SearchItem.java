@@ -812,7 +812,14 @@ public class SearchItem implements ParserTreeConstants {
             }
             return aa;
         } else if (((ASTAnnotation)node).getAnnId() == "$expr") {
+            ASTAnnExpr m = ((ASTAnnExpr)node.jjtGetChild(0));
+            if (m.jjtGetChild(0).toString().equals("ArrayLiteral") && m.jjtGetChild(0).jjtGetNumChildren() == 0) {
+                // enpty vector
+                return new IntVar[0];
+            }
+
             SimpleNode n = (SimpleNode)node.jjtGetChild(0).jjtGetChild(0);
+
             if (((ASTScalarFlatExpr) n).getType() == 2) // ident
                 return dictionary.getVariableArray(((ASTScalarFlatExpr) n).getIdent());
             else {
