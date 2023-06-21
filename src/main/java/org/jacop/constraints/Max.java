@@ -113,46 +113,50 @@ public class Max extends Constraint implements SatisfiedPresent {
     @Override public void consistency(Store store) {
 
         int start = position.value();
-        IntVar var;
-        IntDomain vDom;
 
-        int minValue = IntDomain.MinInt;
-        int maxValue = IntDomain.MinInt;
+        do {
 
-        int maxMax = max.max();
-        int minMax = max.min();
-        for (int i = start; i < l; i++) {
+            store.propagationHasOccurred = false;
+            IntVar var;
+            IntDomain vDom;
 
-            var = list[i];
+            int minValue = IntDomain.MinInt;
+            int maxValue = IntDomain.MinInt;
 
-            vDom = var.dom();
-            int varMin = vDom.min(), varMax = vDom.max();
+            int maxMax = max.max();
+            int minMax = max.min();
+            for (int i = start; i < l; i++) {
 
-            if (varMax < minMax) {
-                swap(start, i);
-                start++;
-            } else if (varMax > maxMax)
-                var.domain.inMax(store.level, var, maxMax);
+                var = list[i];
 
-            minValue = (minValue > varMin) ? minValue : varMin;
-            maxValue = (maxValue > varMax) ? maxValue : varMax;
-        }
+                vDom = var.dom();
+                int varMin = vDom.min(), varMax = vDom.max();
+
+                if (varMax < minMax) {
+                    swap(start, i);
+                    start++;
+                } else if (varMax > maxMax)
+                    var.domain.inMax(store.level, var, maxMax);
+
+                minValue = (minValue > varMin) ? minValue : varMin;
+                maxValue = (maxValue > varMax) ? maxValue : varMax;
+            }
+
+            max.domain.in(store.level, max, minValue, maxValue);
+
+            if (start == l) // all variables have their max value lower than min value of max variable
+                throw Store.failException;
+
+            if (start == list.length - 1) { // one variable on the list is maximal; its is min > max of all other variables
+                list[start].domain.in(store.level, list[start], max.dom());
+
+                if (max.singleton())
+                    removeConstraint();
+
+            }
+        } while (store.propagationHasOccurred);
 
         position.update(start);
-
-        max.domain.in(store.level, max, minValue, maxValue);
-
-        if (start == l) // all variables have their max value lower than min value of max variable
-            throw Store.failException;
-
-        if (start == list.length - 1) { // one variable on the list is maximal; its is min > max of all other variables
-            list[start].domain.in(store.level, list[start], max.dom());
-
-            if (max.singleton())
-                removeConstraint();
-
-        }
-
     }
 
     private void swap(int i, int j) {
