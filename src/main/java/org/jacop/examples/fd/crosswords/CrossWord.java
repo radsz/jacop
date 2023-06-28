@@ -72,15 +72,14 @@ public class CrossWord extends ExampleFD {
 
     String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
 
-    Map<String, Integer> mapping = new HashMap<String, Integer>();
-    Map<Integer, String> mappingReverse = new HashMap<Integer, String>();
-
-
     Map<Integer, MDD> mdds = new HashMap<Integer, MDD>();
 
     char[][] crosswordTemplate =
-        {{'*', '_', '_', '_', '_'}, {'_', '_', '_', 'l', '_'}, {'_', '_', '_', '_', '_'}, {'_', 'e', '_', '_', '_'},
-            {'_', '_', 'm', '_', '_'}};
+        {{'*', '_', '_', '_', '_'},
+         {'_', '_', '_', 'l', '_'},
+         {'_', '_', '_', '_', '_'},
+         {'_', 'e', '_', '_', '_'},
+         {'_', '_', 'm', '_', '_'}};
 
     /**
      * model()
@@ -89,62 +88,7 @@ public class CrossWord extends ExampleFD {
 
         store = new Store();
 
-        mapping.put("q", 1);
-        mapping.put("w", 2);
-        mapping.put("e", 3);
-        mapping.put("r", 4);
-        mapping.put("t", 5);
-        mapping.put("z", 6);
-        mapping.put("u", 7);
-        mapping.put("i", 8);
-        mapping.put("o", 9);
-        mapping.put("p", 10);
-        mapping.put("a", 11);
-        mapping.put("s", 12);
-        mapping.put("d", 13);
-        mapping.put("f", 14);
-        mapping.put("g", 15);
-        mapping.put("h", 16);
-        mapping.put("j", 17);
-        mapping.put("k", 18);
-        mapping.put("l", 19);
-        mapping.put("y", 20);
-        mapping.put("x", 21);
-        mapping.put("c", 22);
-        mapping.put("v", 23);
-        mapping.put("b", 24);
-        mapping.put("n", 25);
-        mapping.put("m", 26);
-
-
-        mappingReverse.put(1, "q");
-        mappingReverse.put(2, "w");
-        mappingReverse.put(3, "e");
-        mappingReverse.put(4, "r");
-        mappingReverse.put(5, "t");
-        mappingReverse.put(6, "z");
-        mappingReverse.put(7, "u");
-        mappingReverse.put(8, "i");
-        mappingReverse.put(9, "o");
-        mappingReverse.put(10, "p");
-        mappingReverse.put(11, "a");
-        mappingReverse.put(12, "s");
-        mappingReverse.put(13, "d");
-        mappingReverse.put(14, "f");
-        mappingReverse.put(15, "g");
-        mappingReverse.put(16, "h");
-        mappingReverse.put(17, "j");
-        mappingReverse.put(18, "k");
-        mappingReverse.put(19, "l");
-        mappingReverse.put(20, "y");
-        mappingReverse.put(21, "x");
-        mappingReverse.put(22, "c");
-        mappingReverse.put(23, "v");
-        mappingReverse.put(24, "b");
-        mappingReverse.put(25, "n");
-        mappingReverse.put(26, "m");
-
-        blank = new IntVar(store, "blank", 1, 26);
+        blank = new IntVar(store, "blank", 'a', 'z');
 
         for (int s : wordSizesPrimitive)
             wordSizes.add(s);
@@ -164,9 +108,9 @@ public class CrossWord extends ExampleFD {
         for (int i = 0; i < r; i++) {
             for (int j = 0; j < c; j++) {
                 if (crosswordTemplate[i][j] != '*') {
-                    x[i][j] = new IntVar(store, "x_" + i + "_" + j, 1, 26);
+                    x[i][j] = new IntVar(store, "x_" + i + "_" + j, 'a', 'z');
                     if (crosswordTemplate[i][j] != '_') {
-                        store.impose(new XeqC(x[i][j], mapping.get(String.valueOf(crosswordTemplate[i][j]))));
+                        store.impose(new XeqC(x[i][j], crosswordTemplate[i][j]));
                     }
                 }
             }
@@ -252,7 +196,7 @@ public class CrossWord extends ExampleFD {
         for (int i = 0; i < r; i++) {
             for (int j = 0; j < c; j++) {
                 if (crossWordTemplate[i][j] != '*')
-                    System.out.print(mappingReverse.get(x[i][j].value()) + " ");
+                    System.out.print((char)x[i][j].value() + " ");
                 else
                     System.out.print("* ");
             }
@@ -299,7 +243,7 @@ public class CrossWord extends ExampleFD {
                         continue;
 
                     for (int i = 0; i < wordSize; i++) {
-                        tupleForGivenWord[i] = mapping.get(str.substring(i, i + 1));
+                        tupleForGivenWord[i] = str.charAt(i);
                     }
 
                     wordCount++;
@@ -308,8 +252,6 @@ public class CrossWord extends ExampleFD {
                     //   				lineCount++;
 
                 } // end while
-
-                inr.close();
 
             } catch (IOException e) {
                 System.out.println(e);
@@ -404,6 +346,7 @@ public class CrossWord extends ExampleFD {
         @Override public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
             boolean returnCode = super.executeAfterSolution(search, select);
+
 
             if (noSolutions % 10 == 0) {
                 System.out.println("Solution # " + noSolutions);
