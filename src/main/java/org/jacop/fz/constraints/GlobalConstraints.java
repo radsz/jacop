@@ -1292,15 +1292,13 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
 
         // ---- KK, 2023-06-29
-        // geost must not have duplicated variables there
-        // could be constants that have the same value and
-        // are duplicated.
+        // geost must not have duplicated variables
         IntVar[] xx = new IntVar[x.length];
         HashSet<IntVar> varSet = new HashSet<IntVar>();
         for (int i = 0; i < x.length; i++) {
             if (varSet.contains(x[i])) {
                 if (x[i].singleton())
-                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+                    xx[i] = x[i];
                 else {
                     xx[i] = new IntVar(store, x[i].min(), x[i].max());
                     support.pose(new XeqY(x[i], xx[i]));
