@@ -1179,6 +1179,27 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
         IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
 
+        // ---- KK, 2023-06-29
+        // geost must not have duplicated variables there
+        // could be constants that have the same value and
+        // are duplicated.
+        IntVar[] xx = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+                if (x[i].singleton())
+                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+                else {
+                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+                    support.pose(new XeqY(x[i], xx[i]));
+                    varSet.add(x[i]);
+                }
+            } else {
+                xx[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+
         // System.out.println("dim = " + dim);
         // System.out.print("rect_size = [");
         // for (int i = 0; i < rect_size.length; i++)
@@ -1235,7 +1256,7 @@ class GlobalConstraints implements ParserTreeConstants {
             IntVar[] coords = new IntVar[dim];
 
             for (int k = 0; k < dim; k++)
-                coords[k] = x[i * dim + k];
+                coords[k] = xx[i * dim + k];
 
             // System.out.println("coords = " + java.util.Arrays.asList(coords));
 
@@ -1270,6 +1291,27 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
         IntVar[] kind = support.getVarArray((SimpleNode) node.jjtGetChild(5));
 
+        // ---- KK, 2023-06-29
+        // geost must not have duplicated variables there
+        // could be constants that have the same value and
+        // are duplicated.
+        IntVar[] xx = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+                if (x[i].singleton())
+                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+                else {
+                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+                    support.pose(new XeqY(x[i], xx[i]));
+                    varSet.add(x[i]);
+                }
+            } else {
+                xx[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+
         // System.out.println("dim = " + dim);
         // System.out.print("rect_size = [");
         // for (int i = 0; i < rect_size.length; i++)
@@ -1326,7 +1368,7 @@ class GlobalConstraints implements ParserTreeConstants {
             IntVar[] coords = new IntVar[dim];
 
             for (int k = 0; k < dim; k++)
-                coords[k] = x[i * dim + k];
+                coords[k] = xx[i * dim + k];
 
             // System.out.println("coords = " + java.util.Arrays.asList(coords));
 
