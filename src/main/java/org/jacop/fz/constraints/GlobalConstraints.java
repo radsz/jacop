@@ -1188,7 +1188,7 @@ class GlobalConstraints implements ParserTreeConstants {
         for (int i = 0; i < x.length; i++) {
             if (varSet.contains(x[i])) {
                 if (x[i].singleton())
-                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
+                    xx[i] = x[i];
                 else {
                     xx[i] = new IntVar(store, x[i].min(), x[i].max());
                     support.pose(new XeqY(x[i], xx[i]));
