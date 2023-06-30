@@ -1781,7 +1781,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     @Override public String toString() {
         //TODO, proper string representation of the constraint.
         return "Geost(" + Arrays.asList(objects) + ", " + Arrays.asList(externalConstraints)
-            + Arrays.asList(shapeRegister) + ")";
+            + ", " + Arrays.asList(shapeRegister) + ")";
     }
 
 
