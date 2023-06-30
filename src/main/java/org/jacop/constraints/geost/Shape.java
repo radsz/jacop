@@ -282,7 +282,7 @@ public class Shape {
 
     @Override public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("Shape(");
+        builder.append("Shape(" + no + ",");
         for (DBox b : boxes)
             builder.append(b).append(", ");
         builder.deleteCharAt(builder.length() - 1);
