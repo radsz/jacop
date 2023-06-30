@@ -197,4 +197,9 @@ public class NonOverlapping implements ExternalConstraint {
         return objects;
     }
 
+    public String toString() {
+
+        return "(non_overlapping: " + Arrays.asList(objects) + ", " + "selected_dimensions: "
+            + Arrays.toString(selectedDimensions) + ")";
+    }
 }

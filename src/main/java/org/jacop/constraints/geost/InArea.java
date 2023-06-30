@@ -152,4 +152,7 @@ public class InArea implements ExternalConstraint {
         return null;
     }
 
+    public String toString() {
+        return "(in_area: " + allowedArea + " - holes(" + holes + "))";
+    }
 }
