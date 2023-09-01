@@ -626,6 +626,10 @@ public final class ConstraintFncs {
         gc.gen_jacop_bin_packing(n);
     }
 
+    public void jacop_bin_packing_capacity(SimpleNode n) {
+        gc.gen_jacop_bin_packing_capacity(n);
+    }
+
     public void jacop_float_maximum(SimpleNode n) {
         gc.gen_jacop_float_maximum(n);
     }

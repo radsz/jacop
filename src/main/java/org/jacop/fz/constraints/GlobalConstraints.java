@@ -1157,6 +1157,20 @@ class GlobalConstraints implements ParserTreeConstants {
         support.delayedConstraints.add(binPack);
     }
 
+    void gen_jacop_bin_packing_capacity(SimpleNode node) {
+        IntVar[] bin = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+        int[] capacity = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+        int[] w = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+        int min_bin = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+        IntVar[] load = new IntVar[capacity.length];
+        for (int i = 0; i < load.length; i++)
+            load[i] = new IntVar(store, 0, capacity[i]);
+
+        Constraint binPack = new Binpacking(bin, load, w, min_bin, true);
+        support.delayedConstraints.add(binPack);
+    }
+
     void gen_jacop_float_maximum(SimpleNode node) {
         FloatVar p2 = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
         FloatVar[] p1 = support.getFloatVarArray((SimpleNode) node.jjtGetChild(0));

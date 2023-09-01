@@ -15,8 +15,8 @@ Version 4.10
    variables and a set variable and requires that i in s <-> b[i].
    Available in minizinc as int_set_channel and Link_set_to_booleans.
 
-4.Implementation of set partitionin constraint, PartitionSet, and
-  related minizinc interface.
+4. Implementation of set partitionin constraint, PartitionSet, and
+   related minizinc interface.
 
 5. Implementation of cumulative constraints, CumulativeOptional and
    CumulativeUnaryOptional, for optional tasks. Available from
