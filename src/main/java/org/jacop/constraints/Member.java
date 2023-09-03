@@ -114,6 +114,7 @@ public class Member extends PrimitiveConstraint {
 
 	IntDomain d = new IntervalDomain();
 	boolean eGround = e.singleton();
+        int numberGround = 0;
 	for (int i = start; i < l; i++) {
 
 	    if (eGround && x[i].singleton() && x[i].value() == e.value()) {
@@ -124,8 +125,11 @@ public class Member extends PrimitiveConstraint {
 	    if (!x[i].domain.isIntersecting(e.domain)) {
 		swap(start, i);
 		start++;
-	    } else
+	    } else {
+                if (x[i].singleton())
+                    numberGround++;
 		d.unionAdapt(x[i].domain);
+            }
 	}
 
 	if (start == l)
@@ -133,7 +137,12 @@ public class Member extends PrimitiveConstraint {
 
 	e.domain.in(store.level, e, d);
 
-	if (start == l-1) {
+        if (l - start == numberGround && !e.singleton()) {
+            removeConstraint();
+            return;
+        }
+
+	if (start == l - 1) {
 	    x[l-1].domain.in(store.level, x[l-1], e.domain);
 	    e.domain.in(store.level, e, x[l-1].domain);
 	}

@@ -712,6 +712,24 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
+        int ground = 0;
+	IntDomain d = new IntervalDomain();
+        for (int i = 0; i < x.length; i++) {
+            if (x[i].singleton()) {
+                ground++;
+                d.unionAdapt(x[i].domain);
+            }
+        }
+        if (ground == x.length) {
+            y.domain.in(store.level, y, d);
+            return;
+        }
+
+        if (x.length == 1) {
+            support.pose(new XeqY(x[0], y));
+            return;
+        }
+
         support.pose(new org.jacop.constraints.Member(x, y));
     }
 
