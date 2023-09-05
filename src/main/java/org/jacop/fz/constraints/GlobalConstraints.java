@@ -1149,6 +1149,22 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new ValuePrecede(s, t, xs));
     }
 
+    void gen_jacop_value_precede_chain_int(SimpleNode node) {
+        int[] c = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
+        if (c.length > 1) {
+            HashSet<Integer> values = new HashSet<>();
+            values.add(c[0]);
+            for (int i = 1; i < c.length; i++) {
+                if (values.contains(c[i]))
+                    throw new IllegalArgumentException("%% Values in int_value_precede_chain must be distinct");
+                values.add(c[i]);
+                support.pose(new ValuePrecede(c[i - 1], c[i], x));
+            }
+        }
+    }
+
     void gen_jacop_bin_packing(SimpleNode node) {
         IntVar[] bin = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar[] capacity = support.getVarArray((SimpleNode) node.jjtGetChild(1));
