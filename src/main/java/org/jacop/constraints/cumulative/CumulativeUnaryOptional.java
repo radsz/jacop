@@ -184,7 +184,7 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         int k = 0;
 
         for (int i = 0; i < ts.length; i++)
-            if (ts[i].res.min() != 0 && ts[i].dur.min() != 0 && opt[i].min() != 0) {
+            if (ts[i].exists() && opt[i].min() != 0) {
                 nonZeroTasks[k] = ts[i];
                 ts[i].index = k++;
             }
