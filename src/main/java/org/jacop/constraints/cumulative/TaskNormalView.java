@@ -86,12 +86,4 @@ class TaskNormalView extends TaskView {
             start.domain.inMin(storeLevel, start, est);
     }
 
-    boolean exists() {
-        return dur.min() > 0 && res.min() > 0;
-    }
-
-    boolean maxNonZero() {
-        return dur.max() > 0 && res.max() > 0;
-    }
-
 }

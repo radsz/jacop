@@ -454,7 +454,7 @@ public class Cumulative extends CumulativeBasic {
             int k = 0;
 
             for (TaskView t1 : ts)
-                if (t1.res.min() != 0 && t1.dur.min() != 0) {
+                if (t1.exists()) {
                     nonZeroTasks[k] = t1;
                     t1.index = k++;
                 }

@@ -71,6 +71,14 @@ class Task {
         return (long) dur.min() * (long) res.min();
     }
 
+    boolean exists() {
+        return dur.min() > 0 && res.min() > 0;
+    }
+
+    boolean maxNonZero() {
+        return dur.max() > 0 && res.max() > 0;
+    }
+
     @Override public String toString() {
         return "[" + index + ": " + start + ", " + dur + ", " + res + "]";
     }

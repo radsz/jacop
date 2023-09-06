@@ -84,12 +84,4 @@ class TaskReversedView extends TaskView {
             start.domain.inMax(storeLevel, start, max);
     }
 
-    boolean exists() {
-        return dur.min() > 0 && res.min() > 0;
-    }
-
-    boolean maxNonZero() {
-        return dur.max() > 0 && res.max() > 0;
-    }
-
 }
