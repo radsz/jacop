@@ -269,11 +269,21 @@ class GlobalConstraints implements ParserTreeConstants {
         if (v.length <= 100) { // && v.length == dom.getSize()) {
             // we do not not pose Alldistinct directly because of possible inconsistency with its
             // intiallization; we collect all vectors and pose it at the end when all constraints are posed
-            // support.pose(new Alldistinct(v));
 
-            if (support.boundsConsistency || support.options.getBoundConsistency()) {
+            // if domains of variables are sparse => use alldistinct
+            // instead of alldiff (heuristic)
+            float q = 0;
+            int n = 0;
+            for (int i = 0; i < v.length; i++)
+                if (!v[i].singleton()) {
+                    q += (float)v[i].getSize() / (float)(v[i].max() - v[i].min() + 1);
+                    n++;
+                }
+            q = q / (float)n;
+            boolean sparse = q <= 0.5;
+
+            if ((support.boundsConsistency || support.options.getBoundConsistency()) && !sparse) {
                 support.pose(new Alldiff(v));
-                // System.out.println("Alldiff imposed");
             } else { // domain consistency
                 support.parameterListForAlldistincts.add(v);
             }
