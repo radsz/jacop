@@ -69,6 +69,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <aspectj.version>1.8.10</aspectj.version>
+        <scala.version>2.13.10</scala.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>
     </properties>
@@ -715,12 +716,12 @@ setup to run configuration. -->
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>2.13.10</version>
+            <version>${scala.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-compiler</artifactId>
-            <version>2.13.10</version>
+            <version>${scala.version}</version>
         </dependency>
 	<!--
 	<dependency>

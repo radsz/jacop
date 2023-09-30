@@ -30,8 +30,6 @@
 
 package org.jacop.search.restart;
 
-import org.jacop.core.Var;
-
 /**
  * Defines functionality for constant calculator for restart search.
  *
@@ -39,7 +37,7 @@ import org.jacop.core.Var;
  * @version 4.9
  */
 
-public class LinearCalculator<T extends Var> extends Calculator {
+public class LinearCalculator extends Calculator {
 
     long increment;
     long n;

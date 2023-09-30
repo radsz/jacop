@@ -30,7 +30,6 @@
 
 package org.jacop.search.restart;
 
-import org.jacop.core.Var;
 import org.jacop.search.ConsistencyListener;
 
 /**
@@ -40,7 +39,7 @@ import org.jacop.search.ConsistencyListener;
  * @version 4.9
  */
 
-public abstract class Calculator<T extends Var> implements ConsistencyListener {
+public abstract class Calculator implements ConsistencyListener {
 
     long numberFails = 0;
 

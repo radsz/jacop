@@ -30,8 +30,6 @@
 
 package org.jacop.search.restart;
 
-import org.jacop.core.Var;
-
 /**
  * Defines functionality for constant calculator for restart search.
  *
@@ -39,7 +37,7 @@ import org.jacop.core.Var;
  * @version 4.9
  */
 
-public class GeometricCalculator<T extends Var> extends Calculator {
+public class GeometricCalculator extends Calculator {
 
     int scale;
     double base;
