@@ -245,7 +245,7 @@ public class VariablesParameters implements ParserTreeConstants {
                         if (element < IntDomain.MinInt || element > IntDomain.MaxInt)
                             throw new ArithmeticException("Domain value for " + ident + " is too high/low (" + element + ")");
 
-                    ((IntVar) varInt).addDom(element, element);
+                    varInt.addDom(element, element);
                 }
                 table.addVariable(ident, varInt);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
@@ -290,16 +290,16 @@ public class VariablesParameters implements ParserTreeConstants {
             case 4: // set int
                 ident = ((ASTVarDeclItem) node).getIdent();
                 varSet = new SetVar(store, ident, new BoundSetDomain(MIN_INT, MAX_INT));
-                table.addSetVariable(ident, (SetVar) varSet);
+                table.addSetVariable(ident, varSet);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
 
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
-                        AeqS c = new AeqS((SetVar) varSet, setValue);
+                        AeqS c = new AeqS(varSet, setValue);
                         pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-                        AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
+                        AeqB c = new AeqB(varSet, (SetVar) initSetVar);
                         pose(store, c);
                     }
                 }
@@ -319,16 +319,16 @@ public class VariablesParameters implements ParserTreeConstants {
                     varSet =
                         new SetVar(store, ident, new BoundSetDomain(new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
 
-                table.addSetVariable(ident, (SetVar) varSet);
+                table.addSetVariable(ident, varSet);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
 
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
-                        AeqS c = new AeqS((SetVar) varSet, setValue);
+                        AeqS c = new AeqS(varSet, setValue);
                         pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-                        AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
+                        AeqB c = new AeqB(varSet, (SetVar) initSetVar);
                         pose(store, c);
                     }
                 }
@@ -345,16 +345,16 @@ public class VariablesParameters implements ParserTreeConstants {
                 for (Integer e : intList)
                     dom.addDom(e.intValue(), e.intValue());
                 varSet = new SetVar(store, ident, dom);
-                table.addSetVariable(ident, (SetVar) varSet);
+                table.addSetVariable(ident, varSet);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
 
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
-                        AeqS c = new AeqS((SetVar) varSet, setValue);
+                        AeqS c = new AeqS(varSet, setValue);
                         pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-                        AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
+                        AeqB c = new AeqB(varSet, (SetVar) initSetVar);
                         pose(store, c);
                     }
 
@@ -371,17 +371,17 @@ public class VariablesParameters implements ParserTreeConstants {
                 IntDomain domR = rangeDomain;
 
                 varSet = new SetVar(store, ident, new BoundSetDomain(new IntervalDomain(), rangeDomain));
-                table.addSetVariable(ident, (SetVar) varSet);
+                table.addSetVariable(ident, varSet);
 
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
 
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
-                        AeqS c = new AeqS((SetVar) varSet, setValue);
+                        AeqS c = new AeqS(varSet, setValue);
                         pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-                        AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
+                        AeqB c = new AeqB(varSet, (SetVar) initSetVar);
                         pose(store, c);
                     }
                 }
@@ -396,16 +396,16 @@ public class VariablesParameters implements ParserTreeConstants {
             case 7: // bool set
                 ident = ((ASTVarDeclItem) node).getIdent();
                 varSet = new SetVar(store, ident, new BoundSetDomain(0, 1));
-                table.addSetVariable(ident, (SetVar) varSet);
+                table.addSetVariable(ident, varSet);
                 if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
 
                     if (constant_set(node, initChild)) {
                         setValue = getSetLiteral(node, initChild);
-                        AeqS c = new AeqS((SetVar) varSet, setValue);
+                        AeqS c = new AeqS(varSet, setValue);
                         pose(store, c);
                     } else {
                         Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-                        AeqB c = new AeqB((SetVar) varSet, (SetVar) initSetVar);
+                        AeqB c = new AeqB(varSet, (SetVar) initSetVar);
                         pose(store, c);
                     }
                 }
@@ -1327,7 +1327,7 @@ public class VariablesParameters implements ParserTreeConstants {
             SetVar[] av = new SetVar[count];
             //System.out.println(child + " count = " + count);
             for (int i = 0; i < count; i++) {
-                av[i] = (SetVar) getSetFlatExpr_var(store, child, i);
+                av[i] = getSetFlatExpr_var(store, child, i);
             }
             return av;
         } else {

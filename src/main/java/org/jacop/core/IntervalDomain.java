@@ -2992,7 +2992,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             result.previousDomain = this;
             result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-            ((IntVar) var).domain = result;
+            var.domain = result;
 
         }
 

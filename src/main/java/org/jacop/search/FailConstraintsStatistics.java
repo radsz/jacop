@@ -47,7 +47,7 @@ import java.util.Map.Entry;
  * @version 4.9
  */
 
-public class FailConstraintsStatistics<T extends Var> implements ConsistencyListener {
+public class FailConstraintsStatistics implements ConsistencyListener {
 
     // data structures to collect fail constraint statistics
     public Map<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();

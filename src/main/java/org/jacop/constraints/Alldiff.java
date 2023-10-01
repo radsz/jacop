@@ -245,7 +245,7 @@ public class Alldiff extends Alldifferent {
             }
             pathset(t, x + 1, z, z);
             if (d[z] < bounds[z] - bounds[y]) {
-                throw store.failException;
+                throw Store.failException;
             }
             if (h[x] > x) {
                 int w = pathmax(h, h[x]);
@@ -277,7 +277,7 @@ public class Alldiff extends Alldifferent {
             }
             pathset(t, x - 1, z, z);
             if (d[z] < bounds[y] - bounds[z]) {
-                throw store.failException;
+                throw Store.failException;
             }
             if (h[x] < x) {
                 int w = pathmin(h, h[x]);

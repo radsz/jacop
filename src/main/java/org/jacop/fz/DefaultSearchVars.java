@@ -53,7 +53,9 @@ import java.util.Map;
  */
 public class DefaultSearchVars {
 
-    Var[] int_search_variables = new IntVar[0], set_search_variables = new SetVar[0], bool_search_variables = new BooleanVar[0];
+    IntVar[] int_search_variables = new IntVar[0];
+    SetVar[] set_search_variables = new SetVar[0];
+    BooleanVar[] bool_search_variables = new BooleanVar[0];
 
     FloatVar[] float_search_variables = new FloatVar[0];
 
@@ -81,22 +83,22 @@ public class DefaultSearchVars {
 
         // ==== Collect ALL OUTPUT variables ====
 
-        LinkedHashSet<Var> int_vars = new LinkedHashSet<Var>();
-        LinkedHashSet<Var> bool_vars = new LinkedHashSet<Var>();
-        LinkedHashSet<Var> set_vars = new LinkedHashSet<Var>();
-        LinkedHashSet<Var> float_vars = new LinkedHashSet<Var>();
+        LinkedHashSet<IntVar> int_vars = new LinkedHashSet<IntVar>();
+        LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<BooleanVar>();
+        LinkedHashSet<SetVar> set_vars = new LinkedHashSet<SetVar>();
+        LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<FloatVar>();
 
         // collect output arrays
         for (int i = 0; i < dictionary.outputArray.size(); i++)
             for (Var v : dictionary.outputArray.get(i).getArray()) {
                 if (v instanceof BooleanVar) {
                     if (!v.singleton())
-                        bool_vars.add(v);
+                        bool_vars.add((BooleanVar)v);
                 } else if (v instanceof IntVar) {
                     if (!v.singleton())
-                        int_vars.add(v);
+                        int_vars.add((IntVar)v);
                 } else if (v instanceof SetVar)
-                    set_vars.add(v);
+                    set_vars.add((SetVar)v);
                 else if (v instanceof FloatVar)
                     float_vars.add((FloatVar) v);
             }
@@ -104,17 +106,17 @@ public class DefaultSearchVars {
         for (Var v : dictionary.outputVariables) {
             if (v instanceof BooleanVar) {
                 if (!v.singleton())
-                    bool_vars.add(v);
+                    bool_vars.add((BooleanVar)v);
             } else if (v instanceof IntVar) {
                 if (!v.singleton())
-                    int_vars.add(v);
+                    int_vars.add((IntVar)v);
             } else if (v instanceof SetVar)
-                set_vars.add(v);
+                set_vars.add((SetVar)v);
             else if (v instanceof FloatVar)
                 float_vars.add((FloatVar) v);
         }
         int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
-        bool_search_variables = bool_vars.toArray(new IntVar[bool_vars.size()]);
+        bool_search_variables = bool_vars.toArray(new BooleanVar[bool_vars.size()]);
         set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
         float_search_variables = float_vars.toArray(new FloatVar[float_vars.size()]);
 
@@ -128,8 +130,8 @@ public class DefaultSearchVars {
      */
     void defaultVars() {
 
-        LinkedHashSet<Var> int_vars = new LinkedHashSet<Var>();
-        LinkedHashSet<Var> bool_vars = new LinkedHashSet<Var>();
+        LinkedHashSet<IntVar> int_vars = new LinkedHashSet<IntVar>();
+        LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<BooleanVar>();
         Set<Map.Entry<IntVar, IntVar>> aliasEntries = dictionary.aliasTable.entrySet();
 
 	Set<IntVar> aliasVars = new LinkedHashSet<IntVar>();
@@ -143,32 +145,32 @@ public class DefaultSearchVars {
             for (Var v : dictionary.defaultSearchArrays.get(i)) {
 		if (!v.singleton())
 		    if (v instanceof BooleanVar)
-                    bool_vars.add(v);
+                    bool_vars.add((BooleanVar)v);
 		    else  if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
-		        bool_vars.add(v);
+		        bool_vars.add((BooleanVar)v);
 		    else
-			int_vars.add(v);
+			int_vars.add((IntVar)v);
             }
         for (Var v : dictionary.defaultSearchVariables) {
 	    if (!v.singleton())
 	    	if (v instanceof BooleanVar)
-	    	    bool_vars.add(v);
+	    	    bool_vars.add((BooleanVar)v);
 	    	else if (((IntVar)v).min() >= 0 && ((IntVar)v).max() <= 1 && aliasVars.contains(v))
-	    	    bool_vars.add(v);
+	    	    bool_vars.add((BooleanVar)v);
 	    	else
-		    int_vars.add(v);
+		    int_vars.add((IntVar)v);
         }
         int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
-        bool_search_variables = bool_vars.toArray(new IntVar[bool_vars.size()]);
+        bool_search_variables = bool_vars.toArray(new BooleanVar[bool_vars.size()]);
 
         Arrays.sort(int_search_variables, domainSizeComparator);
 
-        LinkedHashSet<Var> set_vars = new LinkedHashSet<Var>();
+        LinkedHashSet<SetVar> set_vars = new LinkedHashSet<SetVar>();
         for (int i = 0; i < dictionary.defaultSearchSetArrays.size(); i++)
             for (Var v : dictionary.defaultSearchSetArrays.get(i))
-                set_vars.add(v);
+                set_vars.add((SetVar)v);
         for (Var v : dictionary.defaultSearchSetVariables)
-            set_vars.add(v);
+            set_vars.add((SetVar)v);
 
         set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
 
@@ -184,15 +186,15 @@ public class DefaultSearchVars {
         // ==== End collect guessed search variables ====
     }
 
-    Var[] getIntVars() {
+    IntVar[] getIntVars() {
         return int_search_variables;
     }
 
-    Var[] getSetVars() {
+    SetVar[] getSetVars() {
         return set_search_variables;
     }
 
-    Var[] getBoolVars() {
+    BooleanVar[] getBoolVars() {
         return bool_search_variables;
     }
 

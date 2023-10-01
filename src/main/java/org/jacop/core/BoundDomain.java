@@ -366,7 +366,7 @@ class BoundDomain extends IntDomain implements Cloneable {
             result.previousDomain = this;
             result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-            ((IntVar) var).domain = result;
+            var.domain = result;
         }
 
         var.domainHasChanged(GROUND);

@@ -153,7 +153,7 @@ public final class FloatInterval implements Cloneable {
         String result;
 
         if (!FloatDomain.intervalPrint && singleton())
-            result = String.format(locale, form, (double) ((min + max) / 2)); // mean value if singleton considering precision
+            result = String.format(locale, form, ((min + max) / 2)); // mean value if singleton considering precision
         else
             result = String.format(locale, form, min) + ".." + String
                 .format(locale, form, max);  // String.format("%.16f..%.16f", min, max); // interval

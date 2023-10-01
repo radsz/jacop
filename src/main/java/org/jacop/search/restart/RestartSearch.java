@@ -60,7 +60,7 @@ public class RestartSearch<T extends Var> {
     DepthFirstSearch<T> search;
     SelectChoicePoint<T> select;
     Calculator calculator;
-    SolutionListener lastSolutionListener;
+    SolutionListener<T> lastSolutionListener;
     CustomReport reportSolution = null;
 
     Search<T> lastNotNullSearch;

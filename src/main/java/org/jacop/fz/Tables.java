@@ -478,7 +478,7 @@ public class Tables {
      * @return the array of set variables with the given identity.
      */
     public SetVar[] getSetVariableArray(String ident) {
-        SetVar[] a = (SetVar[]) setVariableArrayTable.get(ident);
+        SetVar[] a = setVariableArrayTable.get(ident);
         if (a == null) {
             IntDomain[] setA = setArrayTable.get(ident);
             a = new SetVar[setA.length];

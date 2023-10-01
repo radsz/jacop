@@ -441,7 +441,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
             result.previousDomain = this;
             result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
             result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-            ((IntVar) var).domain = result;
+            var.domain = result;
 
             assert checkInvariants() == null : checkInvariants();
             assert result.checkInvariants() == null : result.checkInvariants();

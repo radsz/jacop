@@ -155,7 +155,7 @@ public class CPvizSudoku {
         for (int i = 0; i < noRows * noColumns; i++)
             for (int j = 0; j < noRows * noColumns; j++)
                 if (description[i][j] == 0) {
-                    elements[i][j] = new IntVar(store, "f[" + (int) (i + 1) + "," + (int) (j + 1) + "]", 1, noRows * noColumns);
+                    elements[i][j] = new IntVar(store, "f[" + (i + 1) + "," + (j + 1) + "]", 1, noRows * noColumns);
                 } else
                     elements[i][j] = new IntVar(store, "f[" + i + "," + j + "]", description[i][j], description[i][j]);
 

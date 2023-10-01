@@ -158,7 +158,7 @@ public class CountBounds extends PrimitiveConstraint {
         }
 
         if (numberEq > ub || numberMayBe + numberEq < lb) {
-            throw store.failException;
+            throw Store.failException;
         } else if (numberMayBe + numberEq == lb) {
             for (int i = start; i < list.length; i++) {
                 IntVar v = list[i];

@@ -74,7 +74,7 @@ class LinearConstraints implements ParserTreeConstants {
             if (s == par3.min())
                 return;
             else
-                throw store.failException;
+                throw Store.failException;
         }
 
         if (allWeightsOne(p1))
@@ -88,59 +88,59 @@ class LinearConstraints implements ParserTreeConstants {
     }
 
     void gen_int_lin_eq(SimpleNode node) {
-        int_lin_relation(support.eq, node);
+        int_lin_relation(Support.eq, node);
     }
 
     void gen_int_lin_eq_reif(SimpleNode node) {
-        int_lin_relation_reif(support.eq, node);
+        int_lin_relation_reif(Support.eq, node);
     }
 
     void gen_int_lin_eq_imp(SimpleNode node) {
-        int_lin_relation_imp(support.eq, node);
+        int_lin_relation_imp(Support.eq, node);
     }
 
     void gen_int_lin_ne(SimpleNode node) {
-        int_lin_relation(support.ne, node);
+        int_lin_relation(Support.ne, node);
     }
 
     void gen_int_lin_ne_reif(SimpleNode node) {
-        int_lin_relation_reif(support.ne, node);
+        int_lin_relation_reif(Support.ne, node);
     }
 
     void gen_int_lin_ne_imp(SimpleNode node) {
-        int_lin_relation_imp(support.ne, node);
+        int_lin_relation_imp(Support.ne, node);
     }
 
     void gen_int_lin_lt(SimpleNode node) {
-        int_lin_relation(support.lt, node);
+        int_lin_relation(Support.lt, node);
     }
 
     void gen_int_lin_lt_reif(SimpleNode node) {
-        int_lin_relation_reif(support.lt, node);
+        int_lin_relation_reif(Support.lt, node);
     }
 
     void gen_int_lin_lt_imp(SimpleNode node) {
-        int_lin_relation_imp(support.lt, node);
+        int_lin_relation_imp(Support.lt, node);
     }
 
     void gen_int_lin_le(SimpleNode node) {
-        int_lin_relation(support.le, node);
+        int_lin_relation(Support.le, node);
     }
 
     void gen_int_lin_le_reif(SimpleNode node) {
-        int_lin_relation_reif(support.le, node);
+        int_lin_relation_reif(Support.le, node);
     }
 
     void gen_int_lin_le_imp(SimpleNode node) {
-        int_lin_relation_imp(support.le, node);
+        int_lin_relation_imp(Support.le, node);
     }
 
     void gen_int_lin_gt_imp(SimpleNode node) {
-        int_lin_relation_imp(support.gt, node);
+        int_lin_relation_imp(Support.gt, node);
     }
 
     void gen_int_lin_ge_imp(SimpleNode node) {
-        int_lin_relation_imp(support.ge, node);
+        int_lin_relation_imp(Support.ge, node);
     }
 
     void int_lin_relation_reif(int operation, SimpleNode node) throws FailException {
@@ -616,7 +616,7 @@ class LinearConstraints implements ParserTreeConstants {
                     if (s == p3)
                         return;
                     else
-                        throw store.failException;
+                        throw Store.failException;
 
                 if (p1.length == 1) {
                     support.pose(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))); // new IntVar(store, p3, p3)));
@@ -768,7 +768,7 @@ class LinearConstraints implements ParserTreeConstants {
                     if (s != p3)
                         return;
                     else
-                        throw store.failException;
+                        throw Store.failException;
 
                 if (p1.length == 1 && p1[0] == 1)
                     p2[0].domain.inComplement(store.level, p2[0], p3);
@@ -805,7 +805,7 @@ class LinearConstraints implements ParserTreeConstants {
                     if (s < p3)
                         return;
                     else
-                        throw store.failException;
+                        throw Store.failException;
 
                 if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
                     support.pose(new XltY(p2[0], p2[1]));
@@ -846,7 +846,7 @@ class LinearConstraints implements ParserTreeConstants {
                     if (s <= p3)
                         return;
                     else
-                        throw store.failException;
+                        throw Store.failException;
 
                 if (p1.length == 1) {
 

@@ -366,7 +366,7 @@ public class Nooverlap extends Constraint {
             BitSet bs = new BitSet(rectangle.length);
             bs.flip(0, rectangle.length); // set all bits to true == all rectangles overlap
             bs.set(i, false);             // rectangle does not overlaps with itself
-            overlapping[i] = new TimeStamp(store, bs);
+            overlapping[i] = new TimeStamp<BitSet>(store, bs);
 
 	    // impose constraint on rectangle length >= 0
 	    rectangle[i].length(0).domain.inMin(store.level, rectangle[i].length(0), 0);

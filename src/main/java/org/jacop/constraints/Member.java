@@ -133,7 +133,7 @@ public class Member extends PrimitiveConstraint {
 	}
 
 	if (start == l)
-	    throw store.failException;
+	    throw Store.failException;
 
 	e.domain.in(store.level, e, d);
 

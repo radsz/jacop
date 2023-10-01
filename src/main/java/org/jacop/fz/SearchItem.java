@@ -176,7 +176,7 @@ public class SearchItem implements ParserTreeConstants {
                 IntVar var = (IntVar)search_variables[i];
                 int val = values[i];
 
-                if (((IntVar)var).domain.contains(val))
+                if (var.domain.contains(val))
                     if (preferedValues.get(var) != null && preferedValues.get(var) != val)
                         System.out.println("% Warning: Double defintion on warm_start for variable "
                                            + var + "(" + preferedValues.get(var)
@@ -488,9 +488,9 @@ public class SearchItem implements ParserTreeConstants {
             searchVars[i] = (SetVar) search_variables[i];
 
         if (tieBreaking == null)
-            return new SimpleSelect<SetVar>((SetVar[]) searchVars, var_sel, indom);
+            return new SimpleSelect<SetVar>(searchVars, var_sel, indom);
         else
-            return new SimpleSelect<SetVar>((SetVar[]) searchVars, var_sel, tieBreaking, indom);
+            return new SimpleSelect<SetVar>(searchVars, var_sel, tieBreaking, indom);
     }
 
     Indomain<SetVar> getIndomain4Set(String indomain) {
@@ -563,15 +563,15 @@ public class SearchItem implements ParserTreeConstants {
             return new WeightedDegree<IntVar>(store);
         } else if (var_selection_heuristic.equals("smallest_max")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
-            tieBreaking = new SmallestDomain();
+            tieBreaking = new SmallestDomain<Var>();
             return new SmallestMax<IntVar>();
         } else if (var_selection_heuristic.equals("smallest_most_constrained")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
-            tieBreaking = new MostConstrainedStatic();
+            tieBreaking = new MostConstrainedStatic<Var>();
             return new SmallestMin<IntVar>();
         } else if (var_selection_heuristic.equals("smallest_first_fail")) {
             // does not follow flatzinc standard (JaCoP specific) ;)
-            tieBreaking = new SmallestDomain();
+            tieBreaking = new SmallestDomain<Var>();
             return new SmallestMin<IntVar>();
         } else if (var_selection_heuristic.equals("afc_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)

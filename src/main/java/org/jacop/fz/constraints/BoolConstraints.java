@@ -314,7 +314,7 @@ class BoolConstraints implements ParserTreeConstants {
                     r.domain.inValue(store.level, r, 0);
                     return;
                 } else
-                    throw store.failException;
+                    throw Store.failException;
 
             PrimitiveConstraint c;
             if (a1reduced.size() == 0)

@@ -54,7 +54,7 @@ class GraphConstraints implements ParserTreeConstants {
         this.support = support;
     }
 
-    void gen_jacop_graph_isomorphism(SimpleNode node) {
+    <T extends Constraint> void gen_jacop_graph_isomorphism(SimpleNode node) {
 
         IntDomain[] t = support.getSetArray((SimpleNode) node.jjtGetChild(0));
         IntDomain[] p = support.getSetArray((SimpleNode) node.jjtGetChild(1));
@@ -71,7 +71,7 @@ class GraphConstraints implements ParserTreeConstants {
             Constructor<?> cons = c.getConstructor(IntDomain[].class, IntDomain[].class,
                                                    int[].class, int[].class, IntVar[].class, int.class);
             Object constraint = cons.newInstance(t, p, targetType, patternType, m, offset);
-            support.poseDC((DecomposedConstraint)constraint);
+            support.poseDC((DecomposedConstraint<T>)constraint);
 
         } catch (java.lang.ClassNotFoundException e) {
             throw new RuntimeException("% Constraint " + cName

@@ -108,7 +108,7 @@ public class Constraints implements ParserTreeConstants {
 	// model is consistent; it can happen that search will not
 	// find out inconsistency if all variables are ground
 	if (!store.consistency())
-	    throw store.failException;
+	    throw Store.failException;
     }
 
     void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {

@@ -71,7 +71,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     ComparatorVariable<T> comparator;
     ComparatorVariable<T> tieBreak = null;
 
-    DepthFirstSearch[] search;
+    DepthFirstSearch<T>[] search;
 
     BitSet visited;
 
@@ -110,7 +110,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		throw new RuntimeException("heuristic in depth first search must be set");
 
 	    search[2*i+1] = new LinkingSearch<T>(this);
-	    DepthFirstSearch last = lastSearch(dfs[i]);
+	    DepthFirstSearch<T> last = lastSearch(dfs[i]);
 	    last.addChildSearch(search[2*i+1]);
 	    search[2*i+1].setMasterSearch(last);
 	}
@@ -133,9 +133,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     }
 
-    DepthFirstSearch lastSearch(DepthFirstSearch dfs) {
+    DepthFirstSearch<T> lastSearch(DepthFirstSearch<T> dfs) {
 	DepthFirstSearch<T> ns = dfs;
-	DepthFirstSearch lastNotNullSearch = ns;
+	DepthFirstSearch<T> lastNotNullSearch = ns;
 	
 	do {
 	    lastNotNullSearch = ns;
@@ -160,7 +160,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         this.store = store;
 	((SimpleSolutionListener)solutionListener).setVariables(allVars);
 
-	for (DepthFirstSearch dfs: search)
+	for (DepthFirstSearch<T> dfs: search)
 	    dfs.setStore(store);
 
         if (store.raiseLevelBeforeConsistency) {
@@ -262,8 +262,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	if (solutionsLimit == -1)
 	    solutionsLimit = Integer.MAX_VALUE;
 	
-	for(DepthFirstSearch dfs : search) {
-	    DepthFirstSearch ns = dfs;
+	for(DepthFirstSearch<T> dfs : search) {
+	    DepthFirstSearch<T> ns = dfs;
 	    do {
 		ns.setStore(store);
 		ns.setCostVar(costVar);
@@ -367,11 +367,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	this.store = allVars[0].getStore();
 	((SimpleSolutionListener)solutionListener).setVariables(allVars);
 
-	for(DepthFirstSearch dfs : search) 
+	for(DepthFirstSearch<T> dfs : search) 
 	    dfs.setStore(store);
 
 	if (costVariable != null) {
-	    for(DepthFirstSearch dfs : search) {
+	    for(DepthFirstSearch<T> dfs : search) {
 		dfs.setCostVar(costVariable);
 		dfs.respectSolutionListenerAdvice = true;
 		dfs.costVariable = costVariable;
@@ -503,7 +503,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     @Override
     public int getNodes() {
 	nodes = 0;
-	for (DepthFirstSearch<Var> l : search) {
+	for (DepthFirstSearch<T> l : search) {
 	    nodes += l.getNodes();
 
 	    if (l.childSearches != null)
@@ -515,7 +515,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     @Override
     public int getDecisions() {
 	decisions = 0;
-	for (DepthFirstSearch<Var> l : search) {
+	for (DepthFirstSearch<T> l : search) {
 	    decisions += l.getDecisions();
 
 	    if (l.childSearches != null)
@@ -527,7 +527,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     @Override
     public int getWrongDecisions() {
 	wrongDecisions = 0;
-	for (DepthFirstSearch<Var> l : search) {
+	for (DepthFirstSearch<T> l : search) {
 	    wrongDecisions += l.getWrongDecisions();
 
 	    if (l.childSearches != null)
@@ -539,7 +539,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     @Override
     public int getBacktracks() {
 	numberBacktracks = 0;
-	for (DepthFirstSearch<Var> l : search) {
+	for (DepthFirstSearch<T> l : search) {
 	    numberBacktracks += l.getBacktracks();
 
 	    if (l.childSearches != null)
@@ -551,7 +551,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     @Override
     public int getMaximumDepth() {
 	maxDepthExcludePaths = 0;
-	for (DepthFirstSearch<Var> l : search) {
+	for (DepthFirstSearch<T> l : search) {
 	    maxDepthExcludePaths += l.getMaximumDepth();
 
 	    if (l.childSearches != null)
@@ -615,7 +615,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	return current;
     }
 
-    public T[] getVariables(PrioritySearch ps) {
+    public T[] getVariables(PrioritySearch<T> ps) {
 
 	T[] varsArray;
     	List<T> vars = new ArrayList<>();
@@ -627,7 +627,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		// PrioritySearch
 		T[] vs = null;
 		for (int j = 0; j < ps.search.length/2; j++) {
-		    vs = getVariables((PrioritySearch)ps.search[2*j]);
+		    vs = getVariables((PrioritySearch<T>)ps.search[2*j]);
 
 		}
 
@@ -651,15 +651,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     	return varsArray;
     }
 
-    public void addRestartCalculator(DepthFirstSearch s, Calculator calc) {
+    public void addRestartCalculator(DepthFirstSearch<T> s, Calculator calc) {
 
-	DepthFirstSearch[] ns = null;
+	DepthFirstSearch<T>[] ns = null;
 	if (s instanceof PrioritySearch)
 	    ns  = ((PrioritySearch)s).getSearchSeq();
 	else
 	    ns = new DepthFirstSearch[] {s};
 
-	for (DepthFirstSearch dfs : ns)
+	for (DepthFirstSearch<T> dfs : ns)
 	    if (dfs instanceof PrioritySearch) {
 		for (int i = 0; i < ((PrioritySearch)dfs).search.length/2; i++) {
 	    	    addRestartCalculator(((PrioritySearch)dfs).search[2*i], calc);
@@ -675,7 +675,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	solutionsLimit = no;
     }
 
-    public DepthFirstSearch[] getSearchSeq() {
+    public DepthFirstSearch<T>[] getSearchSeq() {
 	return search;
     }
     
@@ -700,9 +700,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     class LinkingSearch<T extends Var> extends DepthFirstSearch<T> {
 
-	DepthFirstSearch master;
+	DepthFirstSearch<T> master;
 	
-	LinkingSearch(DepthFirstSearch m) {
+	LinkingSearch(DepthFirstSearch<T> m) {
 	    master = m;
 	}
 
@@ -737,7 +737,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 	    }
 	}
 
-	void constraineCostFromChild(DepthFirstSearch child) {
+	void constraineCostFromChild(DepthFirstSearch<T> child) {
 	    if (costVariable instanceof IntVar) {
 		int newCost = child.costValue;
 

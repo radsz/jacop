@@ -118,7 +118,7 @@ public class AleB extends PrimitiveConstraint {
         // case for ground domains; check for <= domains
         if (a.domain.singleton() && b.domain.singleton())
             if (!setLexLE(a.domain.glb(), b.domain.glb()))
-                throw store.failException;
+                throw Store.failException;
 
 
         if (b.domain.glb().getSize() > 0) {
@@ -140,7 +140,7 @@ public class AleB extends PrimitiveConstraint {
                     } else if (ae < be) {
                         return; // b already greater
                     } else { // ae > be
-                        throw store.failException;
+                        throw Store.failException;
                     }
                 } else // b has more elements and up to now all exqual
                     return;

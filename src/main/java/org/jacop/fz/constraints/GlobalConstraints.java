@@ -161,7 +161,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
                 Cumulative cumul = new Cumulative(s, d, r, b);
 
-                if (2 * n * n < n * k * Math.log10((double) n) / Math.log10(2.0))
+                if (2 * n * n < n * k * Math.log10(n) / Math.log10(2.0))
                     // algorithm with complexity O(n^2) selected
                     cumul.doQuadraticEdgeFind(true);
                 // algorithm with complexity O(n*k*logn) is default
@@ -462,7 +462,7 @@ class GlobalConstraints implements ParserTreeConstants {
             if (varsContain(x, e))
                 newCover[n++] = i;
             else if (low[i] != 0)
-                throw store.failException;
+                throw Store.failException;
 
             gcc_dom = gcc_dom.union(e);
         }
@@ -796,7 +796,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 if (!toRemove[j])
                     newT[i][l++] = t[i][j];
                 else if (t[i][j] != v[j].value())
-                    throw store.failException;
+                    throw Store.failException;
             }
         }
         IntVar[] newV = new IntVar[size - numberToRemove];
@@ -1051,7 +1051,7 @@ class GlobalConstraints implements ParserTreeConstants {
                 break;
         }
 
-        DecomposedConstraint c = new Sequence(x, setImpl, q, min, max);
+        DecomposedConstraint<Constraint> c = new Sequence(x, setImpl, q, min, max);
         support.poseDC(c);
     }
 
@@ -1061,7 +1061,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] max = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-        DecomposedConstraint c = new Stretch(values, min, max, x);
+        DecomposedConstraint<Constraint> c = new Stretch(values, min, max, x);
         support.poseDC(c);
     }
 

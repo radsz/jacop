@@ -577,7 +577,7 @@ public class Support implements ParserTreeConstants {
         }
     }
 
-    void poseDC(DecomposedConstraint c) throws FailException {
+    <T extends Constraint> void poseDC(DecomposedConstraint<T> c) throws FailException {
 
         store.imposeDecompositionWithConsistency(c);
         if (options.debug()) {

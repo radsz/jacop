@@ -815,7 +815,7 @@ public class Solve implements ParserTreeConstants {
             searchVars.outputVars();
         }
 
-        Var[] int_search_variables = searchVars.getIntVars();
+        IntVar[] int_search_variables = searchVars.getIntVars();
         Var[] set_search_variables = searchVars.getSetVars();
         Var[] bool_search_variables = searchVars.getBoolVars();
         FloatVar[] float_search_variables = searchVars.getFloatVars();
@@ -884,7 +884,7 @@ public class Solve implements ParserTreeConstants {
             // add search containing int variables to be sure that they get a value
             SelectChoicePoint<Var> intSelect = (options.freeSearch()
                                                 || options.complementarySearch())
-                ?  new SimpleSelect(int_search_variables, new AFCMaxDeg(store), new IndomainMin())
+                ?  new SimpleSelect<Var>(int_search_variables, new AFCMaxDeg<Var>(store), new IndomainMin())
                 : new SimpleSelect<Var>(int_search_variables, null, new IndomainMin());
 
             if (variable_selection == null)

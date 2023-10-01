@@ -76,7 +76,7 @@ public class SatTranslation {
             else if (a2[i].min() != 1)
                 a2reduced.add(a2[i]);
         if (a1reduced.size() == 0 && a2reduced.size() == 0)
-            throw store.failException;
+            throw Store.failException;
         if (debug)
             System.out.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
 

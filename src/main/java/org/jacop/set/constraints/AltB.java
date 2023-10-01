@@ -120,7 +120,7 @@ public class AltB extends PrimitiveConstraint {
         // case for ground domains; check for < domains
         if (a.domain.singleton() && b.domain.singleton())
             if (!setLexLT(a.domain.glb(), b.domain.glb()))
-                throw store.failException;
+                throw Store.failException;
 
         if (b.domain.glb().getSize() > 0) {
             ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
@@ -141,7 +141,7 @@ public class AltB extends PrimitiveConstraint {
                     } else if (ae < be) {
                         return; // b already greater
                     } else { // ae > be
-                        throw store.failException;
+                        throw Store.failException;
                     }
                 } else // b has more elements and up to now all exqual
                     return;
@@ -151,7 +151,7 @@ public class AltB extends PrimitiveConstraint {
                 // a and b are equal to some point
                 int nextA = a.domain.lub().nextValue(ae);
                 if (b.domain.lub().max() <= nextA)
-                    throw store.failException;
+                    throw Store.failException;
             }
         }
     }

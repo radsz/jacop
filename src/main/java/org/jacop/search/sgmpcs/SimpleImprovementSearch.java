@@ -76,7 +76,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
     long timeOut;
 
-    public SGMPCSCalculator failCalculator;
+    public SGMPCSCalculator<Var> failCalculator;
 
     public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
         this.store = store;
@@ -93,7 +93,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
         label.setAssignSolution(false);
         label.setSolutionListener(new CostListener<IntVar>());
         label.getSolutionListener().recordSolutions(true);
-        failCalculator = new SGMPCSCalculator(failLimit);
+        failCalculator = new SGMPCSCalculator<>(failLimit);
         label.setConsistencyListener(failCalculator);
         label.setPrintInfo(false);
         label.setTimeOut(timeOut);
@@ -124,7 +124,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
         label.setAssignSolution(false);
         label.setSolutionListener(new CostListener<IntVar>());
         label.getSolutionListener().recordSolutions(true);
-        failCalculator = new SGMPCSCalculator(failLimit);
+        failCalculator = new SGMPCSCalculator<>(failLimit);
         label.setConsistencyListener(failCalculator);
         label.setPrintInfo(false);
         label.setTimeOut(timeOut);

@@ -799,7 +799,7 @@ public class Store {
      * @param c constraint to be imposed.
      */
 
-    public void imposeDecomposition(DecomposedConstraint c) {
+    public <T extends Constraint> void imposeDecomposition(DecomposedConstraint<T> c) {
 
         c.imposeDecomposition(this);
 
@@ -814,7 +814,7 @@ public class Store {
      * @param queueIndex specifies index of the queue for a constraint.
      */
 
-    public void imposeDecomposition(DecomposedConstraint c, int queueIndex) {
+    public <T extends Constraint> void imposeDecomposition(DecomposedConstraint<T> c, int queueIndex) {
 
         assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
 
@@ -830,7 +830,7 @@ public class Store {
      * @param c decomposed constraint to be imposed.
      */
 
-    public void imposeDecompositionWithConsistency(DecomposedConstraint c) {
+    public <T extends Constraint> void imposeDecompositionWithConsistency(DecomposedConstraint<T> c) {
 
         c.imposeDecomposition(this);
 

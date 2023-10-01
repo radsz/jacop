@@ -1070,13 +1070,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // automatically since it might not be the intention (we might
     // want to find only a single solution in the sub-search). This is
     // why it is not added to labeling with costVar.
-    void setOptimizationForChildSearches(DepthFirstSearch s, Var costVar) {
+    void setOptimizationForChildSearches(DepthFirstSearch<T> s, Var costVar) {
 
         // set cost and optimization for child searches
         if (s != null) {
-            DepthFirstSearch[] childs = (DepthFirstSearch[]) s.childSearches;
+            DepthFirstSearch<T>[] childs = (DepthFirstSearch<T>[]) s.childSearches;
             if (childs != null) {
-                for (DepthFirstSearch child : childs) {
+                for (DepthFirstSearch<T> child : childs) {
                     child.setCostVar(costVar);
                     child.setOptimize(true);
                     setOptimizationForChildSearches(child, costVar);
