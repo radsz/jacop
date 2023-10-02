@@ -334,7 +334,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             if (futureDomain.getSize() > 0)
                 U = lbSDom.subtract(futureDomain);
             else
-                U = (IntDomain) lbSDom.clone();
+                U = lbSDom.clone();
         } else
             U = new IntervalDomain();
 
@@ -488,7 +488,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         //shrinking of the Y domain will cause ubs's decrease
         IntDomain ubSDom = null;
         if (lbSDom.getSize() > 0)
-            ubSDom = (IntDomain) lbSDom.clone();
+            ubSDom = lbSDom.clone();
         else
             ubSDom = new IntervalDomain();
 

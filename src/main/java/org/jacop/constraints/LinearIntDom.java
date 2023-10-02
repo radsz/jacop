@@ -233,7 +233,7 @@ public class LinearIntDom extends LinearInt {
         // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " + java.util.Arrays.asList(support));
         for (int i = 0; i < l; i++)
             if (support[i] == null)
-                throw store.failException;
+                throw Store.failException;
             else
                 x[i].domain.in(store.level, x[i], support[i]);
     }

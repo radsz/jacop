@@ -409,7 +409,7 @@ import java.util.stream.Stream;
         if (c == 1)
             return d;
         else if (c == -1)
-            temp = (IntervalDomain) invertDom(d);
+            temp = invertDom(d);
         else {
             temp = new IntervalDomain();
             temp.intervals = new Interval[d.getSize()];
@@ -455,11 +455,11 @@ import java.util.stream.Stream;
             }
 
             int k = 0;
-            ((IntervalDomain) temp).intervals = new Interval[ranges.size()];
+            temp.intervals = new Interval[ranges.size()];
             for (int i = ranges.size() - 1; i >= 0; i--)
                 // temp.unionAdapt(ranges.get(i));
-                ((IntervalDomain) temp).intervals[k++] = ranges.get(i);
-            ((IntervalDomain) temp).size = k;
+                temp.intervals[k++] = ranges.get(i);
+            temp.size = k;
         }
         return temp;
     }

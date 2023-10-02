@@ -61,7 +61,7 @@ import java.util.List;
  * @version 4.9
  */
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked","serial"})
 public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     static final boolean debugAll = false;

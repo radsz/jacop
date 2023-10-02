@@ -55,6 +55,7 @@ import java.util.stream.Stream;
  * @version 4.9
  */
 
+@SuppressWarnings("serial")
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     Store store;

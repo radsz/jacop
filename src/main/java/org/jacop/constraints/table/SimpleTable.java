@@ -167,7 +167,8 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
         return IntDomain.ANY;
     }
 
-    @SuppressWarnings("unchecked") @Override public void impose(Store store) {
+    @SuppressWarnings("unchecked")
+    @Override public void impose(Store store) {
         this.store = store;
 
         super.impose(store);
@@ -270,7 +271,7 @@ public class SimpleTable extends Constraint implements UsesQueueVariable, Statef
 
             boolean empty = intersectWithMask();
             if (empty)
-                throw store.failException;
+                throw Store.failException;
         }
     }
 

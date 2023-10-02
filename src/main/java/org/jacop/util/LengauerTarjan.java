@@ -242,7 +242,7 @@ public class LengauerTarjan {
 
             p.println("}");
 
-            p.close();
+            // p.close(); not needed; aouto close
 	} catch (UnsupportedEncodingException e) {
 	    System.err.println("Unsupported encoding for file writing");
         } catch (Exception e) {

@@ -344,15 +344,15 @@ public class SearchItem implements ParserTreeConstants {
         search_type = "seq_search";
     }
 
-    SelectChoicePoint getSelect() {
-        if (search_type.equals("int_search") || search_type.equals("bool_search"))
-            return getIntSelect();
-        else if (search_type.equals("set_search"))
-            return getSetSelect();
-        else {
-            throw new IllegalArgumentException("Error: not recognized search type \"" + search_type + "\";");
-        }
-    }
+    // SelectChoicePoint getSelect() {
+    //     if (search_type.equals("int_search") || search_type.equals("bool_search"))
+    //         return getIntSelect();
+    //     else if (search_type.equals("set_search"))
+    //         return getSetSelect();
+    //     else {
+    //         throw new IllegalArgumentException("Error: not recognized search type \"" + search_type + "\";");
+    //     }
+    // }
 
     @SuppressWarnings("unchecked")
     SelectChoicePoint getWarmStartSelect() {
@@ -431,10 +431,10 @@ public class SearchItem implements ParserTreeConstants {
                 return sel;
             }
         } else if (var_selection_heuristic.equals("input_order")) {
-            Indomain indom = getIndomain(indomain);
+            Indomain<IntVar> indom = getIndomain(indomain);
             return new InputOrderSelect(store, search_variables, indom);
         } else {
-            Indomain indom = getIndomain(indomain);
+            Indomain<IntVar> indom = getIndomain(indomain);
             if (tieBreaking == null)
                 return new SimpleSelect(search_variables, var_sel, indom);
             else

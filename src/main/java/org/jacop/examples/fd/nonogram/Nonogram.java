@@ -124,7 +124,7 @@ public class Nonogram extends ExampleFD {
                 lines[n] = str;
                 n++;
             }
-            in.close();
+            // in.close(); not needed; auto close
         } catch (FileNotFoundException e) {
             System.err.println("I can not find file " + filename);
         } catch (IOException e) {

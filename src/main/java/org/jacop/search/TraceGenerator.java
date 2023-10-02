@@ -637,7 +637,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
 
                 int minV = minValue(tracedVar), maxV = maxValue(tracedVar);
                 visAtt.addAttribute("", "", "width", "CDATA", "" + tracedVar.size());
-                visAtt.addAttribute("", "", "height", "CDATA", "" + (int) (maxV - minV + 1));
+                visAtt.addAttribute("", "", "height", "CDATA", "" + (maxV - minV + 1));
 
                 visAtt.addAttribute("", "", "min", "CDATA", "" + minV);
                 visAtt.addAttribute("", "", "max", "CDATA", "" + maxV);
@@ -828,7 +828,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
                 for (int i = 0; i < tracedVar.size(); i++) {
 
                     AttributesImpl vAtts = new AttributesImpl();
-                    vAtts.addAttribute("", "", "index", "CDATA", "" + (int) (i + 1));
+                    vAtts.addAttribute("", "", "index", "CDATA", "" + (i + 1));
                     if (tracedVar.get(i) instanceof IntVar) {
                         IntVar v = (IntVar) tracedVar.get(i);
                         if (v.singleton()) { // IntVar
@@ -836,20 +836,20 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
                             hdVis.startElement("", "", "integer", vAtts);
                             hdVis.endElement("", "", "integer");
                         } else {
-                            vAtts.addAttribute("", "", "domain", "CDATA", intDomainToString((IntDomain) v.dom()));
+                            vAtts.addAttribute("", "", "domain", "CDATA", intDomainToString(v.dom()));
                             hdVis.startElement("", "", "dvar", vAtts);
                             hdVis.endElement("", "", "dvar");
                         }
                     } else { // setVar
                         SetVar v = (SetVar) tracedVar.get(i);
                         if (v.singleton()) { // IntVar
-                            vAtts.addAttribute("", "", "value", "CDATA", "" + setDomainToString((SetDomain) v.dom()));
+                            vAtts.addAttribute("", "", "value", "CDATA", "" + setDomainToString(v.dom()));
                             hdVis.startElement("", "", "sinteger", vAtts);
                             hdVis.endElement("", "", "sinteger");
                         } else {
                             // TODO, BUG? Why the same thing is written to low and high attribute?
-                            vAtts.addAttribute("", "", "low", "CDATA", setDomainToString((SetDomain) v.dom()));
-                            vAtts.addAttribute("", "", "high", "CDATA", setDomainToString((SetDomain) v.dom()));
+                            vAtts.addAttribute("", "", "low", "CDATA", setDomainToString(v.dom()));
+                            vAtts.addAttribute("", "", "high", "CDATA", setDomainToString(v.dom()));
                             hdVis.startElement("", "", "svar", vAtts);
                             hdVis.endElement("", "", "svar");
                         }
@@ -859,7 +859,7 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
                 }
                 if (varIndex.get(selectedVar) != null) {
                     AttributesImpl vFocus = new AttributesImpl();
-                    vFocus.addAttribute("", "", "index", "CDATA", "" + (int) (varIndex.get(selectedVar) + 1));
+                    vFocus.addAttribute("", "", "index", "CDATA", "" + (varIndex.get(selectedVar) + 1));
                     vFocus.addAttribute("", "", "group", "CDATA", "" + "default");
                     if (tryNode) {
                         vFocus.addAttribute("", "", "type", "CDATA", "");

@@ -72,8 +72,8 @@ public class MinLubCard<T extends SetVar> implements ComparatorVariable<T> {
      */
     public int compare(T leftVar, T rightVar) {
 
-        SetDomain leftSD = (SetDomain) leftVar.dom();
-        SetDomain rightSD = (SetDomain) rightVar.dom();
+        SetDomain leftSD = leftVar.dom();
+        SetDomain rightSD = rightVar.dom();
 
         int left = leftSD.lub().getSize();
         int right = rightSD.lub().getSize();
@@ -90,7 +90,7 @@ public class MinLubCard<T extends SetVar> implements ComparatorVariable<T> {
      */
     public double metric(T var) {
 
-        SetDomain SD = (SetDomain) var.dom();
+        SetDomain SD = var.dom();
         return SD.lub().getSize();
     }
 

@@ -37,6 +37,7 @@ package org.jacop.fz;
  * @version 4.9
  */
 
+@SuppressWarnings("serial")
 public class TrivialSolution extends RuntimeException {
 
     public TrivialSolution() {

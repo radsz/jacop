@@ -260,7 +260,7 @@ public class SurvoPuzzle extends ExampleFD {
 
             } // end while
 
-            inr.close();
+            // inr.close(); not needed; aiuto close
 
             //
             // Now we know everything to be known:

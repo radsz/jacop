@@ -442,7 +442,7 @@ public class MineSweeper extends ExampleFD {
 
             } // end while
 
-            inr.close();
+            // inr.close(); not needed; auto close
 
         } catch (IOException e) {
             System.out.println(e);

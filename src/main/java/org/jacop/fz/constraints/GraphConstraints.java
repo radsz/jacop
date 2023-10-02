@@ -54,6 +54,7 @@ class GraphConstraints implements ParserTreeConstants {
         this.support = support;
     }
 
+    @SuppressWarnings("unchecked")
     <T extends Constraint> void gen_jacop_graph_isomorphism(SimpleNode node) {
 
         IntDomain[] t = support.getSetArray((SimpleNode) node.jjtGetChild(0));

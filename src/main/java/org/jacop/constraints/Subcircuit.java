@@ -265,7 +265,7 @@ public class Subcircuit extends Alldiff {
                 for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
                     if (!list[cv].domain.contains(cv + 1))
                         if (realCycle != null) // second sub-cycle under creation -> wrong!
-                            throw store.failException;
+                            throw Store.failException;
                         else {
                             realCycle = cycleVar;
                             break;
@@ -402,7 +402,7 @@ public class Subcircuit extends Alldiff {
                     }
             }
         } else  // root does not reach all nodes -> FAIL
-            throw store.failException;
+            throw Store.failException;
 
         return pruning;
     }
@@ -441,7 +441,7 @@ public class Subcircuit extends Alldiff {
                     }
             }
         } else  // root does not reach all nodes -> FAIL
-            throw store.failException;
+            throw Store.failException;
 
         return pruning;
     }

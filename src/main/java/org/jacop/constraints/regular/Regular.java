@@ -1274,7 +1274,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             System.out.println("save latex file " + fileName);
             fs.write(this.toLatex(desc).getBytes("UTF-8"));
             fs.flush();
-            fs.close();
+            // fs.close(); not needed; auto close
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (NumberFormatException e) {
@@ -1304,7 +1304,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             System.out.println("save latex file " + fileName);
             fs.append(this.toLatex(desc));
             fs.flush();
-            fs.close();
+            // fs.close(); not needed; auto close
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (NumberFormatException e) {

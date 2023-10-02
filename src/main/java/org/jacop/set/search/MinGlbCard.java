@@ -90,7 +90,7 @@ public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {
      */
     public double metric(T var) {
 
-        SetDomain SD = (SetDomain) var.dom();
+        SetDomain SD = var.dom();
         return SD.glb().getSize();
     }
 

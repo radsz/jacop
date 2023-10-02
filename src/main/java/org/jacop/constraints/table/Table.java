@@ -298,7 +298,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
             rbs.intersectWithMask();
             if (rbs.isEmpty())
-                throw store.failException;
+                throw Store.failException;
         }
     }
 

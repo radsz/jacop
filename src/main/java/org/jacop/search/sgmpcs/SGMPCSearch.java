@@ -212,7 +212,7 @@ public class SGMPCSearch {
             System.out.println("%% Initial pool of solutions");
 
             for (int i = 0; i < solutionPool.length; i++) {
-                System.out.print("%% Solution " + (int) (i + 1) + ": ");
+                System.out.print("%% Solution " + (i + 1) + ": ");
                 for (int j = 0; j < v.length; j++)
                     System.out.print(solutionPool[i][j] + " ");
                 System.out.println();
@@ -233,7 +233,7 @@ public class SGMPCSearch {
             System.out.println("%% Selected best " + e + " solutions");
 
             for (int i = 0; i < e; i++) {
-                System.out.print("%% Solution " + (int) (i + 1) + ": ");
+                System.out.print("%% Solution " + (i + 1) + ": ");
                 for (int j = 0; j < v.length; j++)
                     System.out.print(elite[i][j] + " ");
                 System.out.println();

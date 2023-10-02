@@ -205,7 +205,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
         try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
             out.print(toGraph(name));
-            out.close();
+            // out.close(); not needed; auto close
         } catch (IOException e) {
             throw new RuntimeException("IO exception; ignored");
         }

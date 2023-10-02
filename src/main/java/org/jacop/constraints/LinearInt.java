@@ -419,7 +419,7 @@ public class LinearInt extends PrimitiveConstraint {
     void pruneLtEq(long b) {
 
         if (sumMin > b)
-            throw store.failException;
+            throw Store.failException;
 
         long min;
         long max;
@@ -453,7 +453,7 @@ public class LinearInt extends PrimitiveConstraint {
     void pruneGtEq(long b) {
 
         if (sumMax < b)
-            throw store.failException;
+            throw Store.failException;
 
         long min;
         long max;
@@ -487,7 +487,7 @@ public class LinearInt extends PrimitiveConstraint {
     void pruneNeq() {
 
         if (sumMin == sumMax && b == sumMin)
-            throw store.failException;
+            throw Store.failException;
 
         long min;
         long max;

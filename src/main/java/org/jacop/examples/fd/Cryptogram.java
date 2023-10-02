@@ -112,7 +112,7 @@ public class Cryptogram extends ExampleFD {
                         noLines++;
 
                     }
-                in.close();
+                // in.close(); not needed; aouto close
             } catch (FileNotFoundException e) {
                 System.err.println("File " + filename + " could not be found");
             } catch (IOException e) {

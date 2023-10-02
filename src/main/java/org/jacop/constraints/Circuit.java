@@ -365,7 +365,7 @@ public class Circuit extends Alldiff implements Stateful {
                     }
             }
         } else  // root does not reach all nodes -> FAIL
-            throw store.failException;
+            throw Store.failException;
 
         return pruning;
     }
@@ -404,7 +404,7 @@ public class Circuit extends Alldiff implements Stateful {
                     }
             }
         } else  // root does not reach all nodes -> FAIL
-            throw store.failException;
+            throw Store.failException;
 
         return pruning;
     }

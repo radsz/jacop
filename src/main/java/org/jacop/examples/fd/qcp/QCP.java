@@ -84,7 +84,7 @@ public class QCP extends ExampleFD {
                 lines[n] = str;
                 n++;
             }
-            in.close();
+            // in.close(); not needed; aouto close
         } catch (FileNotFoundException e) {
             System.err.println("You need to run this program in a directory that contains the required file.");
             System.err.println("I can not find file " + filename);
@@ -202,7 +202,7 @@ public class QCP extends ExampleFD {
         for (int i = 7; i < 16; i++)
             for (int j = 14; j < 22; j++)
                 if (!vars.get(i * n + j).singleton())
-                    transform.variablesTransformationScope.add((IntVar) vars.get(i * n + j));
+                    transform.variablesTransformationScope.add(vars.get(i * n + j));
 
         System.out.println(transform.variablesTransformationScope);
 
