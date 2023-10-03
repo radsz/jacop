@@ -68,6 +68,7 @@ class Model extends org.jacop.core.Store {
   * Implicit conversions of Int and Bool to IntVar and BoolVar. Used in overloaded operators.
   */
 trait jacop {
+  import scala.LowPriorityImplicits
   /**
     * Converts integer to IntVar.
     *
@@ -104,7 +105,8 @@ trait jacop {
     *
     * @param a array to be converted.
     */
-  implicit def arrayToList[A](a: Array[A]) = a.toList
+  implicit def arrayToList[A](a: Array[A]) : List[A] =
+    genericWrapArray(a).toList
 
   implicit def makeReifiable[T <: PrimitiveConstraint](reifC: T): Reifier[T] = new Reifier(reifC)
 

@@ -784,9 +784,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
 		    if (master.childSearches != null) {
 
-			 DepthFirstSearch childSearch = null;
+			 DepthFirstSearch<T> childSearch = null;
 
-			 for (DepthFirstSearch child : (DepthFirstSearch[])master.childSearches) {
+			 for (DepthFirstSearch<T> child : (DepthFirstSearch[])master.childSearches) {
 			    childSearch = child;
 			    child.setStore(store);
 			    child.getSolutionListener().setParentSolutionListener(solutionListener);
@@ -839,9 +839,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 			return false;
 		    }
 		} else if (master.childSearches != null) { // no optimization and child search
-		    DepthFirstSearch childSearch = null;
+		    DepthFirstSearch<T> childSearch = null;
 
-		    for (DepthFirstSearch child : (DepthFirstSearch[])master.childSearches) {
+		    for (DepthFirstSearch<T> child : (DepthFirstSearch[])master.childSearches) {
 			childSearch = child;
 			child.setStore(store);
 			child.getSolutionListener().setParentSolutionListener(solutionListener);
