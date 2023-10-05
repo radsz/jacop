@@ -102,10 +102,12 @@ public class FlatzincLoader {
         return parser.store;
     }
 
+    @SuppressWarnings("unchecked")
     public DepthFirstSearch<Var> getDFS() {
         return parser.solver.flatzincDFS;
     }
 
+    @SuppressWarnings("unchecked")
     public SelectChoicePoint<Var> getSelectChoicePoint() {
         return parser.solver.flatzincVariableSelection;
     }
@@ -114,7 +116,8 @@ public class FlatzincLoader {
         return parser.solver.flatzincCost;
     }
 
-    public Solve getSolve() {
+    @SuppressWarnings("unchecked")
+    public Solve<Var> getSolve() {
         return parser.solver;
     }
 
@@ -122,7 +125,7 @@ public class FlatzincLoader {
         return parser.dict;
     }
 
-    public SearchItem getSearch() {
+    public SearchItem<Var> getSearch() {
         return getSolve().getSearch();
     }
 

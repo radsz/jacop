@@ -62,7 +62,7 @@ import java.text.NumberFormat;
  * @author Krzysztof Kuchcinski
  * @version 4.9
  */
-public class Solve implements ParserTreeConstants {
+public class Solve<T extends Var> implements ParserTreeConstants {
 
     Tables dictionary;
     Options options;
@@ -75,8 +75,8 @@ public class Solve implements ParserTreeConstants {
     long searchTime = 0;
     
     //ComparatorVariable tieBreaking=null;
-    SelectChoicePoint<Var> variable_selection;
-    ArrayList<Search<Var>> list_seq_searches = null;
+    SelectChoicePoint<T> variable_selection;
+    ArrayList<Search<T>> list_seq_searches = null;
 
     boolean debug = false;
     boolean print_search_info = false;
@@ -86,27 +86,27 @@ public class Solve implements ParserTreeConstants {
 
     // restart search
     Calculator restartCalculator;
-    RestartSearch<Var> rs;
+    RestartSearch<T> rs;
     
     // -------- for print-out of statistics
     boolean singleSearch;
     boolean result;
     boolean optimization;
     boolean minimize = false;
-    SearchItem si;
+    SearchItem<T> si;
 
     // single search
     boolean defaultSearch;
-    DepthFirstSearch<Var> label;
-    DepthFirstSearch<Var>[] final_search;
+    DepthFirstSearch<T> label;
+    DepthFirstSearch<T>[] final_search;
 
     // sequence search 
-    Search<Var> final_search_seq;
+    Search<T> final_search_seq;
     // --------
 
     // Values for search created from flatzinc
-    DepthFirstSearch<Var> flatzincDFS;
-    SelectChoicePoint<Var> flatzincVariableSelection;
+    DepthFirstSearch<T> flatzincDFS;
+    SelectChoicePoint<T> flatzincVariableSelection;
     Var flatzincCost;
 
     int solveKind = -1;
@@ -225,7 +225,7 @@ public class Solve implements ParserTreeConstants {
             run_single_search(solveKind, kind, null);
         } else if (count == 2) { // single annotation
 
-            SearchItem si = new SearchItem(store, dictionary);
+            SearchItem<T> si = new SearchItem<>(store, dictionary);
             si.searchParameters(node, 0);
             // System.out.println("1. *** "+si);
             String search_type = si.type();
@@ -253,13 +253,13 @@ public class Solve implements ParserTreeConstants {
             }
         } else if (count > 2) { // several annotations
 
-            SearchItem si = new SearchItem(store, dictionary);
+            SearchItem<T> si = new SearchItem<>(store, dictionary);
             si.searchParametersForSeveralAnnotations(node, 0);
 
-            ArrayList<SearchItem> nsi = parseSearchAnnotations(si.search_seq);
+            ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.search_seq);
 
             if (nsi.size() == 1) { // single search (int, set, float, seq or priority) + other annotations (restart_*)
-                SearchItem fs = nsi.get(0);
+                SearchItem<T> fs = nsi.get(0);
 
                 kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
                 solveKind = getKind(kind.getKind());
@@ -274,9 +274,9 @@ public class Solve implements ParserTreeConstants {
 
                 // create seq_search from a number of searches without
                 // explicit sq_search annotation (no order defined)
-                SearchItem siq = new SearchItem(store, dictionary);
+                SearchItem<T> siq = new SearchItem<>(store, dictionary);
                 siq.setSearchType("seq_search");
-                for (SearchItem se : nsi)
+                for (SearchItem<T> se : nsi)
                     siq.addSearch(se);
 
                 run_sequence_search(solveKind, kind, siq);
@@ -286,10 +286,10 @@ public class Solve implements ParserTreeConstants {
         }
     }
 
-    ArrayList<SearchItem> parseSearchAnnotations(ArrayList<SearchItem> search_seq) {
-        ArrayList<SearchItem> ns = new ArrayList<SearchItem>();
+    ArrayList<SearchItem<T>> parseSearchAnnotations(ArrayList<SearchItem<T>> search_seq) {
+        ArrayList<SearchItem<T>> ns = new ArrayList<SearchItem<T>>();
 
-        for (SearchItem s : search_seq) 
+        for (SearchItem<T> s : search_seq) 
             if (s.search_type.equals("restart_none"))
                 continue;
             else if (s.search_type.equals("restart_constant")
@@ -312,7 +312,8 @@ public class Solve implements ParserTreeConstants {
         return ns;
     }
 
-    void run_single_search(int solveKind, SimpleNode kind, SearchItem si) {
+    @SuppressWarnings("unchecked")
+    void run_single_search(int solveKind, SimpleNode kind, SearchItem<T> si) {
 
         singleSearch = true;
 
@@ -352,7 +353,7 @@ public class Solve implements ParserTreeConstants {
 
         label = null;
         optimization = false;
-        list_seq_searches = new ArrayList<Search<Var>>();
+        list_seq_searches = new ArrayList<Search<T>>();
 
         label = null;
         if (si != null) {
@@ -444,11 +445,11 @@ public class Solve implements ParserTreeConstants {
 
         // adds child search for cost; to be sure that all variables get a value
         final_search = setSubSearchForAll(label, options);
-        Search<Var> last_search;
+        Search<T> last_search;
 
         if (si == null) {
             defaultSearch = true;
-            si = new SearchItem(store, dictionary);
+            si = new SearchItem<T>(store, dictionary);
             si.explore = "complete";
             if (final_search[0] != null) {
                 label = final_search[0];
@@ -472,7 +473,7 @@ public class Solve implements ParserTreeConstants {
                 list_seq_searches.add(label);
             }
         } else {
-            for (DepthFirstSearch<Var> s : final_search)
+            for (DepthFirstSearch<T> s : final_search)
                 if (s != null)
                     list_seq_searches.add(s);
         }
@@ -519,7 +520,7 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
+                                rs = new RestartSearch<T>(store, label, variable_selection, restartCalculator);
                                 rs.setRestartsLimit(options.getRestartLimit());
                                 int to = options.getTimeOut();
                                 if (to > 0)
@@ -566,7 +567,7 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, cost);
+                                rs = new RestartSearch<T>(store, label, variable_selection, restartCalculator, (T)cost);
                                 rs.setRestartsLimit(options.getRestartLimit());
                                 int to = options.getTimeOut();
                                 if (to > 0)
@@ -616,7 +617,7 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                rs = new RestartSearch<>(store, label, variable_selection, restartCalculator, max_cost);
+                                rs = new RestartSearch<T>(store, label, variable_selection, restartCalculator, (T)max_cost);
                                 rs.setRestartsLimit(options.getRestartLimit());
                                 int to = options.getTimeOut();
                                 if (to > 0)
@@ -663,10 +664,10 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    void searchForAll(DepthFirstSearch<Var> label) {
+    void searchForAll(DepthFirstSearch<T> label) {
 
-        DepthFirstSearch<Var> s = label;
-        DepthFirstSearch<Var> parentSearch = null;
+        DepthFirstSearch<T> s = label;
+        DepthFirstSearch<T> parentSearch = null;
         do {
             s.getSolutionListener().recordSolutions(false);
             s.getSolutionListener().searchAll(true);
@@ -679,7 +680,7 @@ public class Solve implements ParserTreeConstants {
             if (s.childSearches == null)
                 s = null;
             else
-                s = (DepthFirstSearch<Var>)s.childSearches[0];
+                s = (DepthFirstSearch<T>)s.childSearches[0];
         } while (s != null);
     }
 
@@ -764,7 +765,7 @@ public class Solve implements ParserTreeConstants {
                 solutions = label.getSolutionListener().solutionsNo();
             }
 
-            for (DepthFirstSearch<Var> l : final_search) {
+            for (DepthFirstSearch<T> l : final_search) {
                 if (l != null) {
                     nodes += l.getNodes();
                     decisions += l.getDecisions();
@@ -804,9 +805,9 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    DepthFirstSearch<Var>[] setSubSearchForAll(DepthFirstSearch<Var> label, Options opt) {
+    DepthFirstSearch<T>[] setSubSearchForAll(DepthFirstSearch<T> label, Options opt) {
 
-        DepthFirstSearch<Var>[] intAndSetSearch = new DepthFirstSearch[4];
+        DepthFirstSearch<T>[] intAndSetSearch = new DepthFirstSearch[4];
 
         DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
 
@@ -816,8 +817,8 @@ public class Solve implements ParserTreeConstants {
         }
 
         IntVar[] int_search_variables = searchVars.getIntVars();
-        Var[] set_search_variables = searchVars.getSetVars();
-        Var[] bool_search_variables = searchVars.getBoolVars();
+        SetVar[] set_search_variables = searchVars.getSetVars();
+        BooleanVar[] bool_search_variables = searchVars.getBoolVars();
         FloatVar[] float_search_variables = searchVars.getFloatVars();
 
         // if there are no output variables collect GUESSED SEARCH
@@ -839,30 +840,30 @@ public class Solve implements ParserTreeConstants {
             // System.out.println ("cost = " + costVariable);
         }
 
-        DepthFirstSearch<Var> lastSearch = label;
-        DepthFirstSearch<Var> intSearch = new DepthFirstSearch<Var>();
+        DepthFirstSearch<T> lastSearch = label;
+        DepthFirstSearch<T> intSearch = new DepthFirstSearch<>();
 
         if (set_search_variables.length != 0) {
             // add set search containing all variables to be sure that they get a value
-            DepthFirstSearch<Var> setSearch = new DepthFirstSearch<Var>();
+            DepthFirstSearch<T> setSearch = new DepthFirstSearch<T>();
 
             if (opt.debug())
                 setSearch.setConsistencyListener(failStatistics);
 
-            SelectChoicePoint<Var> setSelect = (options.freeSearch()
+            SelectChoicePoint<SetVar> setSelect = (options.freeSearch()
                                                 || options.complementarySearch())
-                ? new SimpleSelect<Var>(set_search_variables, new AFCMaxDeg<Var>(store), new IndomainSetMin())
-                : new SimpleSelect<Var>(set_search_variables, null, new IndomainSetMin());
+                ? new SimpleSelect<SetVar>(set_search_variables, new AFCMaxDeg<SetVar>(store), new IndomainSetMin<SetVar>())
+                : new SimpleSelect<SetVar>(set_search_variables, null, new IndomainSetMin<SetVar>());
 
             if (variable_selection == null)
-                variable_selection = setSelect;
-            setSearch.setSelectChoicePoint(setSelect);
+                variable_selection = (SelectChoicePoint<T>)setSelect;
+            setSearch.setSelectChoicePoint((SelectChoicePoint<T>)setSelect);
             setSearch.setPrintInfo(false);
             if (lastSearch != null)
                 lastSearch.addChildSearch(setSearch);
             lastSearch = setSearch;
             if (int_search_variables.length == 0 && bool_search_variables.length == 0 && float_search_variables.length == 0)
-                setSearch.setSolutionListener(new CostListener<Var>());
+                setSearch.setSolutionListener(new CostListener<T>());
 
             if (costVariable != null) {
                 intSearch.setCostVar(costVariable);
@@ -882,20 +883,20 @@ public class Solve implements ParserTreeConstants {
 
         if (int_search_variables.length != 0) {
             // add search containing int variables to be sure that they get a value
-            SelectChoicePoint<Var> intSelect = (options.freeSearch()
+            SelectChoicePoint<IntVar> intSelect = (options.freeSearch()
                                                 || options.complementarySearch())
-                ?  new SimpleSelect<Var>(int_search_variables, new AFCMaxDeg<Var>(store), new IndomainMin())
-                : new SimpleSelect<Var>(int_search_variables, null, new IndomainMin());
+                ?  new SimpleSelect<IntVar>(int_search_variables, new AFCMaxDeg<IntVar>(store), new IndomainMin<IntVar>())
+                : new SimpleSelect<IntVar>(int_search_variables, null, new IndomainMin<IntVar>());
 
             if (variable_selection == null)
-                variable_selection = intSelect;
-            intSearch.setSelectChoicePoint(intSelect);
+                variable_selection = (SelectChoicePoint<T>)intSelect;
+            intSearch.setSelectChoicePoint((SelectChoicePoint<T>)intSelect);
             intSearch.setPrintInfo(false);
             if (lastSearch != null)
                 lastSearch.addChildSearch(intSearch);
             lastSearch = intSearch;
             if (bool_search_variables.length == 0 && float_search_variables.length == 0) {
-                intSearch.setSolutionListener(new CostListener<Var>());
+                intSearch.setSolutionListener(new CostListener<T>());
 
                 if (costVariable != null) {
                     intSearch.setCostVar(costVariable);
@@ -912,27 +913,27 @@ public class Solve implements ParserTreeConstants {
 
         }
 
-        DepthFirstSearch<Var> boolSearch = new DepthFirstSearch<Var>();
+        DepthFirstSearch<T> boolSearch = new DepthFirstSearch<>();
 
         if (opt.debug())
             boolSearch.setConsistencyListener(failStatistics);
 
         if (bool_search_variables.length != 0) {
             // add search containing boolean variables to be sure that they get a value
-            SelectChoicePoint<Var> boolSelect = (options.freeSearch()
+            SelectChoicePoint<BooleanVar> boolSelect = (options.freeSearch()
                                                  || options.complementarySearch())
-                ? new SimpleSelect<Var>(bool_search_variables, new AFCMax<Var>(store), new IndomainMin())
-                : new SimpleSelect<Var>(bool_search_variables, null, new IndomainMin());
+                ? new SimpleSelect<BooleanVar>(bool_search_variables, new AFCMax<BooleanVar>(store), new IndomainMin<BooleanVar>())
+                : new SimpleSelect<BooleanVar>(bool_search_variables, null, new IndomainMin<BooleanVar>());
 
             if (variable_selection == null)
-                variable_selection = boolSelect;
-            boolSearch.setSelectChoicePoint(boolSelect);
+                variable_selection = (SelectChoicePoint<T>)boolSelect;
+            boolSearch.setSelectChoicePoint((SelectChoicePoint<T>)boolSelect);
             boolSearch.setPrintInfo(false);
             if (lastSearch != null)
                 lastSearch.addChildSearch(boolSearch);
             lastSearch = boolSearch;
             if (float_search_variables.length == 0) {
-                boolSearch.setSolutionListener(new CostListener<Var>());
+                boolSearch.setSolutionListener(new CostListener<T>());
 
                 if (costVariable != null) {
                     intSearch.setCostVar(costVariable);
@@ -951,7 +952,7 @@ public class Solve implements ParserTreeConstants {
 
         if (float_search_variables.length != 0) {
             // add float search containing all variables to be sure that they get a value
-            DepthFirstSearch<Var> floatSearch = new DepthFirstSearch<Var>();
+            DepthFirstSearch<T> floatSearch = new DepthFirstSearch<T>();
 
             if (opt.debug())
                 floatSearch.setConsistencyListener(failStatistics);
@@ -961,12 +962,12 @@ public class Solve implements ParserTreeConstants {
                 : new SplitSelectFloat<Var>(store, float_search_variables, null);
 
             if (variable_selection == null)
-                variable_selection = floatSelect;
-            floatSearch.setSelectChoicePoint(floatSelect);
+                variable_selection = (SelectChoicePoint<T>)floatSelect;
+            floatSearch.setSelectChoicePoint((SelectChoicePoint<T>)floatSelect);
             floatSearch.setPrintInfo(false);
             if (lastSearch != null)
                 lastSearch.addChildSearch(floatSearch);
-            floatSearch.setSolutionListener(new CostListener<Var>());
+            floatSearch.setSolutionListener(new CostListener<T>());
 
             if (costVariable != null) {
                 intSearch.setCostVar(costVariable);
@@ -1025,7 +1026,8 @@ public class Solve implements ParserTreeConstants {
         return intAndSetSearch;
     }
 
-    void run_sequence_search(int solveKind, SimpleNode kind, SearchItem si) {
+    @SuppressWarnings("unchecked")
+    void run_sequence_search(int solveKind, SimpleNode kind, SearchItem<T> si) {
 
         singleSearch = false;
 
@@ -1061,10 +1063,10 @@ public class Solve implements ParserTreeConstants {
             System.out.println(solve + " : " + si);
         }
 
-        DepthFirstSearch<Var> masterLabel = null;
-        DepthFirstSearch<Var> last_search = null;
-        SelectChoicePoint<Var> masterSelect = null;
-        list_seq_searches = new ArrayList<Search<Var>>();
+        DepthFirstSearch<T> masterLabel = null;
+        DepthFirstSearch<T> last_search = null;
+        SelectChoicePoint<T> masterSelect = null;
+        list_seq_searches = new ArrayList<Search<T>>();
 
         for (int i = 0; i < si.getSearchItems().size(); i++) {
             if (i == 0) { // master search
@@ -1074,7 +1076,7 @@ public class Solve implements ParserTreeConstants {
                 if (!print_search_info)
                     masterLabel.setPrintInfo(false);
             } else {
-                DepthFirstSearch<Var> label = sub_search(si.getSearchItems().get(i), last_search, false);
+                DepthFirstSearch<T> label = sub_search(si.getSearchItems().get(i), last_search, false);
                 last_search.addChildSearch(label);
                 last_search = getLastSearch(label);
                 if (!print_search_info)
@@ -1082,8 +1084,8 @@ public class Solve implements ParserTreeConstants {
             }
         }
 
-        DepthFirstSearch<Var>[] complementary_search = setSubSearchForAll(last_search, options);
-        for (DepthFirstSearch<Var> aComplementary_search : complementary_search) {
+        DepthFirstSearch<T>[] complementary_search = setSubSearchForAll(last_search, options);
+        for (DepthFirstSearch<T> aComplementary_search : complementary_search) {
             if (aComplementary_search != null) {
                 list_seq_searches.add(aComplementary_search);
                 if (!print_search_info)
@@ -1104,7 +1106,7 @@ public class Solve implements ParserTreeConstants {
 
         int to = options.getTimeOut();
         if (to > 0)
-            for (Search<Var> s : list_seq_searches)
+            for (Search<T> s : list_seq_searches)
                 s.setTimeOutMilliseconds(to);
 
         if (si.exploration() == null || si.exploration().equals("complete"))
@@ -1133,7 +1135,7 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
+                                rs = new RestartSearch<T>(store, masterLabel, masterSelect, restartCalculator);
                                 rs.setRestartsLimit(options.getRestartLimit());
 
                                 if (relaxVars != null)
@@ -1178,7 +1180,7 @@ public class Solve implements ParserTreeConstants {
 
                     // result = restart_search(masterLabel, masterSelect, cost, true);
 
-                    for (Search<Var> list_seq_searche : list_seq_searches)
+                    for (Search<T> list_seq_searche : list_seq_searches)
                         list_seq_searche.setOptimize(true);
 
                     if (options.runSearch()) {
@@ -1195,7 +1197,7 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, cost);
+                                rs = new RestartSearch<T>(store, masterLabel, masterSelect, restartCalculator, (T)cost);
                                 rs.setRestartsLimit(options.getRestartLimit());
                                 if (relaxVars != null)
                                     rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -1245,7 +1247,7 @@ public class Solve implements ParserTreeConstants {
 
                     // result = restart_search(masterLabel, masterSelect, cost, false);
 
-                    for (Search<Var> list_seq_searche : list_seq_searches)
+                    for (Search<T> list_seq_searche : list_seq_searches)
                         list_seq_searche.setOptimize(true);
 
                     if (options.runSearch()) {
@@ -1261,7 +1263,7 @@ public class Solve implements ParserTreeConstants {
                                     printSearch(label);
                                 }
 
-                                rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator, max_cost);
+                                rs = new RestartSearch<T>(store, masterLabel, masterSelect, restartCalculator, (T)max_cost);
                                 rs.setRestartsLimit(options.getRestartLimit());
 
                                 if (relaxVars != null)
@@ -1308,9 +1310,9 @@ public class Solve implements ParserTreeConstants {
 
 
     @SuppressWarnings("unchecked") 
-    DepthFirstSearch<Var> getLastSearch(DepthFirstSearch<Var> s) {
-        DepthFirstSearch<Var> ns = s;
-        DepthFirstSearch<Var> lastNotNullSearch = ns;
+    DepthFirstSearch<T> getLastSearch(DepthFirstSearch<T> s) {
+        DepthFirstSearch<T> ns = s;
+        DepthFirstSearch<T> lastNotNullSearch = ns;
 
         do {
 
@@ -1320,7 +1322,7 @@ public class Solve implements ParserTreeConstants {
             if (ns.childSearches == null)
                 ns = null;
             else
-                ns = (DepthFirstSearch<Var>)ns.childSearches[0];
+                ns = (DepthFirstSearch<T>)ns.childSearches[0];
         } while (ns != null);
 
         return lastNotNullSearch;
@@ -1369,7 +1371,7 @@ public class Solve implements ParserTreeConstants {
             int backtracks = 0;
             int depth = 0;
             int solutions = 0;
-            for (Search<Var> label : list_seq_searches) {
+            for (Search<T> label : list_seq_searches) {
                 nodes += label.getNodes();
                 decisions += label.getDecisions();
                 wrong += label.getWrongDecisions();
@@ -1414,18 +1416,18 @@ public class Solve implements ParserTreeConstants {
         return initTime / (long) 1e+6;
     }
 
-    boolean anyTimeOutOccured(ArrayList<Search<Var>> list_seq_searches) {
+    boolean anyTimeOutOccured(ArrayList<Search<T>> list_seq_searches) {
 
-        for (Search<Var> list_seq_searche : list_seq_searches)
-            if (((DepthFirstSearch) list_seq_searche).timeOutOccured)
+        for (Search<T> list_seq_searche : list_seq_searches)
+            if (((DepthFirstSearch<T>) list_seq_searche).timeOutOccured)
                 return true;
         return false;
     }
 
 
-    DepthFirstSearch<Var> sub_search(SearchItem si, DepthFirstSearch<Var> l, boolean master) {
-        DepthFirstSearch<Var> last_search = l;
-        DepthFirstSearch<Var> label = null;
+    DepthFirstSearch<T> sub_search(SearchItem<T> si, DepthFirstSearch<T> l, boolean master) {
+        DepthFirstSearch<T> last_search = l;
+        DepthFirstSearch<T> label = null;
 
         if (si.type().equals("int_search") || si.type().equals("bool_search")) {
             label = int_search(si);
@@ -1473,11 +1475,11 @@ public class Solve implements ParserTreeConstants {
         } else if (si.type().equals("seq_search")) {
             for (int i = 0; i < si.getSearchItems().size(); i++) {
                 if (i == 0) { // master search
-                    DepthFirstSearch<Var> label_seq = sub_search(si.getSearchItems().get(i), last_search, false);
+                    DepthFirstSearch<T> label_seq = sub_search(si.getSearchItems().get(i), last_search, false);
                     last_search = getLastSearch(label_seq);
                     label = label_seq;
                 } else {
-                    DepthFirstSearch<Var> label_seq = sub_search(si.getSearchItems().get(i), last_search, false);
+                    DepthFirstSearch<T> label_seq = sub_search(si.getSearchItems().get(i), last_search, false);
                     last_search.addChildSearch(label_seq);
                     last_search = getLastSearch(label_seq);
                 }
@@ -1500,7 +1502,7 @@ public class Solve implements ParserTreeConstants {
             list_seq_searches.add(label);
             label.setPrintInfo(false);
         } else {
-            DepthFirstSearch<Var>[] ls  = setSubSearchForAll(null, options);
+            DepthFirstSearch<T>[] ls  = setSubSearchForAll(null, options);
 
             if (ls[0] != null) {
                 label = ls[0];
@@ -1519,10 +1521,10 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    DepthFirstSearch<Var> int_search(SearchItem si) {
+    DepthFirstSearch<T> int_search(SearchItem<T> si) {
 
-        variable_selection = si.getIntSelect();
-        DepthFirstSearch<Var> label = new DepthFirstSearch<>();
+        variable_selection = (SelectChoicePoint<T>)si.getIntSelect();
+        DepthFirstSearch<T> label = new DepthFirstSearch<>();
         label.setAssignSolution(false);
 
         if (options.debug())
@@ -1532,10 +1534,10 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    DepthFirstSearch<Var> warm_start_search(SearchItem si) {
+    DepthFirstSearch<T> warm_start_search(SearchItem<T> si) {
 
-        variable_selection = si.getWarmStartSelect();
-        DepthFirstSearch<Var> label = new DepthFirstSearch<>();
+        variable_selection = (SelectChoicePoint<T>)si.getWarmStartSelect();
+        DepthFirstSearch<T> label = new DepthFirstSearch<>();
         label.setAssignSolution(false);
         label.setPrintInfo(false);
 
@@ -1546,10 +1548,10 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    DepthFirstSearch<Var> set_search(SearchItem si) {
+    DepthFirstSearch<T> set_search(SearchItem<T> si) {
 
-        variable_selection = si.getSetSelect();
-        DepthFirstSearch<Var> label = new DepthFirstSearch<>();
+        variable_selection = (SelectChoicePoint<T>)si.getSetSelect();
+        DepthFirstSearch<T> label = new DepthFirstSearch<>();
         label.setAssignSolution(false);
 
         if (options.debug())
@@ -1559,11 +1561,11 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    DepthFirstSearch<Var> float_search(SearchItem si) {
+    DepthFirstSearch<T> float_search(SearchItem<T> si) {
 
-        variable_selection = si.getFloatSelect();
+        variable_selection = (SelectChoicePoint<T>)si.getFloatSelect();
 
-        DepthFirstSearch<Var> label = new DepthFirstSearch<>();
+        DepthFirstSearch<T> label = new DepthFirstSearch<>();
         label.setAssignSolution(false);
 
         if (options.debug())
@@ -1578,16 +1580,16 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    DepthFirstSearch<Var> priority_search(SearchItem si) {
+    DepthFirstSearch<T> priority_search(SearchItem<T> si) {
 
         // System.out.println("============\n"+si);
         
-        ArrayList<SearchItem> dfs_s = si.getSearchItems();
-        DepthFirstSearch<Var>[] searches = new DepthFirstSearch[dfs_s.size()];
+        ArrayList<SearchItem<T>> dfs_s = si.getSearchItems();
+        DepthFirstSearch<T>[] searches = new DepthFirstSearch[dfs_s.size()];
         int i = 0;
-        for (SearchItem s : dfs_s) {
+        for (SearchItem<T> s : dfs_s) {
 
-            DepthFirstSearch<Var> subSearch = null;
+            DepthFirstSearch<T> subSearch = null;
             if (s.search_type.equals("int_search") || s.search_type.equals("bool_search")) {
                 subSearch = int_search(s);
                 subSearch.setSelectChoicePoint(variable_selection);
@@ -1606,7 +1608,7 @@ public class Solve implements ParserTreeConstants {
             } else if (s.search_type.equals("seq_search")) {
                 subSearch = sub_search(s, null, false);
 
-                DepthFirstSearch<Var> ns = subSearch;
+                DepthFirstSearch<T> ns = subSearch;
                 do {
                     ns.setPrintInfo(false);
                     // find next search
@@ -1625,10 +1627,13 @@ public class Solve implements ParserTreeConstants {
                 throw new RuntimeException("Error: Not supported search type " + s.search_type + "in priority_search; execution aborted");
         }
 
-        ComparatorVariable<IntVar> comparator = si.getVarSelect();
-        ComparatorVariable<IntVar> tieBreak = si.tieBreaking;
+        // ComparatorVariable<IntVar> comparator = si.getVarSelect();
+        // ComparatorVariable<IntVar> tieBreak = (ComparatorVariable<IntVar>)si.tieBreaking;
+        SearchItem<IntVar>.ComparatorsVar<IntVar> vs = (SearchItem<IntVar>.ComparatorsVar<IntVar>)si.getVarSelect();
+        ComparatorVariable<IntVar> comparator = vs.v1;
+        ComparatorVariable<IntVar> tieBreak = vs.v2;
 
-        PrioritySearch<Var> label = new PrioritySearch(si.vars(), comparator, tieBreak, searches);
+        PrioritySearch<T> label = new PrioritySearch<T>((T[])si.vars(), (ComparatorVariable<T>)comparator, (ComparatorVariable<T>)tieBreak, searches);
         label.setPrintInfo(false);
         label.setAssignSolution(false);
 
@@ -1638,7 +1643,7 @@ public class Solve implements ParserTreeConstants {
         int to = options.getTimeOut();
         if (to > 0) {
             label.setTimeOutMilliseconds(to);
-            for (DepthFirstSearch<Var> s : searches)
+            for (DepthFirstSearch<T> s : searches)
                 s.setTimeOutMilliseconds(to);
         }
 
@@ -1712,7 +1717,7 @@ public class Solve implements ParserTreeConstants {
         if (options.getVerbose()) {
             // print number of search nodes and CPU time for this solution
             int nodes = 0;
-            DepthFirstSearch<Var> dfs = label;
+            DepthFirstSearch<T> dfs = label;
             while (dfs != null) {
                 nodes += dfs.getNodes();
                 dfs = (dfs.childSearches == null) ? null : (DepthFirstSearch)dfs.childSearches[0];
@@ -1856,10 +1861,10 @@ public class Solve implements ParserTreeConstants {
     }
     */
 
-    void lds_search(DepthFirstSearch<Var> label, int lds_value) {
+    void lds_search(DepthFirstSearch<T> label, int lds_value) {
         //      System.out.println("LDS("+lds_value+")");
 
-        LDS<Var> lds = new LDS<Var>(lds_value);
+        LDS<T> lds = new LDS<>(lds_value);
         if (label.getExitChildListener() == null)
             label.setExitChildListener(lds);
         else
@@ -1867,11 +1872,11 @@ public class Solve implements ParserTreeConstants {
     }
 
 
-    void credit_search(DepthFirstSearch<Var> label, int creditValue, int bbsValue) {
+    void credit_search(DepthFirstSearch<T> label, int creditValue, int bbsValue) {
         //      System.out.println("Credit("+creditValue+", "+bbsValue+")");
 
         int maxDepth = 1000; //IntDomain.MaxInt;
-        CreditCalculator<Var> credit = new CreditCalculator<Var>(creditValue, bbsValue, maxDepth);
+        CreditCalculator<T> credit = new CreditCalculator<>(creditValue, bbsValue, maxDepth);
 
         if (label.getConsistencyListener() == null)
             label.setConsistencyListener(credit);
@@ -1883,7 +1888,7 @@ public class Solve implements ParserTreeConstants {
     }
 
     @SuppressWarnings("unchecked")
-    void printSearch(DepthFirstSearch<Var> s) {
+    void printSearch(DepthFirstSearch<T> s) {
 
         do {
 
@@ -1893,7 +1898,7 @@ public class Solve implements ParserTreeConstants {
             if (s.childSearches == null)
                 s = null;
             else {
-                s = (DepthFirstSearch<Var>)s.childSearches[0];
+                s = (DepthFirstSearch<T>)s.childSearches[0];
                 System.out.print(", ");
 
             }
@@ -1962,7 +1967,7 @@ public class Solve implements ParserTreeConstants {
         }
     }
 
-    public SearchItem getSearch() {
+    public SearchItem<T> getSearch() {
         return si;
     }
 

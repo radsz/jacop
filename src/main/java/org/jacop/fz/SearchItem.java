@@ -51,12 +51,12 @@ import java.util.HashMap;
  * @author Krzysztof Kuchcinski
  * @version 4.9
  */
-public class SearchItem implements ParserTreeConstants {
+public class SearchItem <T extends Var> implements ParserTreeConstants {
 
     Tables dictionary;
     Store store;
 
-    ArrayList<SearchItem> search_seq = new ArrayList<SearchItem>();
+    ArrayList<SearchItem<T>> search_seq = new ArrayList<SearchItem<T>>();
     Var[] search_variables;
     String search_type;
     String explore = "complete";
@@ -70,13 +70,17 @@ public class SearchItem implements ParserTreeConstants {
     int creditValue = 0;
     int bbsValue = 0;
 
-    ComparatorVariable tieBreaking = null;
+    // ComparatorVariable tieBreaking = null;
+    ComparatorsVar<T> selVars;
+    ComparatorVariable<IntVar> tieBreakingInt;
+    ComparatorVariable<SetVar> tieBreakingSet;
+    ComparatorVariable<FloatVar> tieBreakingFloat;
 
     Calculator restartCalculator = null;
 
     boolean prioritySearch = false;
 
-    Map<Var, Integer> preferedValues;
+    Map<IntVar, Integer> preferedValues;
 
     // relax and reconstruct
     IntVar[] relax_and_reconstruct_variables;
@@ -97,8 +101,6 @@ public class SearchItem implements ParserTreeConstants {
     void searchParameters(SimpleNode node, int n) {
 
         // node.dump("");
-
-        tieBreaking = null;
 
         ASTAnnotation ann = (ASTAnnotation) node.jjtGetChild(n);
         search_type = ann.getAnnId();
@@ -256,7 +258,7 @@ public class SearchItem implements ParserTreeConstants {
             int count = body.jjtGetNumChildren();
 
             for (int i = 0; i < count; i++) {
-                SearchItem subSearch = new SearchItem(store, dictionary);
+                SearchItem<T> subSearch = new SearchItem<>(store, dictionary);
 
                 ASTAnnotation ann = (ASTAnnotation)body.jjtGetChild(i);
                 // if (ann.getAnnId().equals("seq_search"))
@@ -332,7 +334,7 @@ public class SearchItem implements ParserTreeConstants {
         int count = node.jjtGetNumChildren();
 
         for (int i = 0; i < count - 1; i++) {
-            SearchItem subSearch = new SearchItem(store, dictionary);
+            SearchItem<T> subSearch = new SearchItem<>(store, dictionary);
             subSearch.searchParameters(node, i);
 
             if (search_type == null && subSearch.search_type.equals("warm_start"))
@@ -355,11 +357,11 @@ public class SearchItem implements ParserTreeConstants {
     // }
 
     @SuppressWarnings("unchecked")
-    SelectChoicePoint getWarmStartSelect() {
+    SelectChoicePoint<IntVar> getWarmStartSelect() {
 
-        Indomain indom = (indomain.equals("indomain_min"))
-            ? new IndomainDefaultValue(preferedValues, new IndomainMin())
-            : new IndomainDefaultValue(preferedValues, new IndomainMax());
+        Indomain<IntVar> indom = (indomain.equals("indomain_min"))
+            ? new IndomainDefaultValue<IntVar>(preferedValues, new IndomainMin<IntVar>())
+            : new IndomainDefaultValue<IntVar>(preferedValues, new IndomainMax<IntVar>());
         ArrayList<IntVar> sv = new ArrayList<>();
         for (int i = 0; i < search_variables.length; i++)
             if (preferedValues.containsKey(search_variables[i]))
@@ -371,23 +373,27 @@ public class SearchItem implements ParserTreeConstants {
         } else
             searchVars = sv.toArray(new IntVar[sv.size()]);
 
-        ComparatorVariable<IntVar> var_sel = getVarSelect();
+        ComparatorsVar<IntVar> vs = getVarSelect();
+        ComparatorVariable<IntVar> var_sel = vs.getVarSel();
 
         return new SimpleSelect<IntVar>(searchVars, var_sel, indom);
     }
 
     @SuppressWarnings("unchecked")
-    SelectChoicePoint getIntSelect() {
+    SelectChoicePoint<IntVar> getIntSelect() {
 
         if (var_selection_heuristic.equals("random")) {
-            Indomain indom = getIndomain(indomain);
+            Indomain<IntVar> indom = getIndomain(indomain);
             IntVar[] searchVars = new IntVar[search_variables.length];
             for (int i = 0; i < search_variables.length; i++)
                 searchVars[i] = (IntVar) search_variables[i];
-            return new RandomSelect(searchVars, indom);
+            return new RandomSelect<IntVar>(searchVars, indom);
         }
 
-        ComparatorVariable<IntVar> var_sel = getVarSelect();
+        ComparatorsVar<IntVar> vs = getVarSelect();
+        ComparatorVariable<IntVar> var_sel = vs.getVarSel();
+        ComparatorVariable<IntVar> tieBreaking =
+            (tieBreakingInt == null) ? vs.getTieSel() : tieBreakingInt;
         IntVar[] searchVars = new IntVar[search_variables.length];
         for (int i = 0; i < search_variables.length; i++)
             searchVars[i] = (IntVar) search_variables[i];
@@ -432,20 +438,23 @@ public class SearchItem implements ParserTreeConstants {
             }
         } else if (var_selection_heuristic.equals("input_order")) {
             Indomain<IntVar> indom = getIndomain(indomain);
-            return new InputOrderSelect(store, search_variables, indom);
+            return new InputOrderSelect<IntVar>(store, (IntVar[])search_variables, indom);
         } else {
             Indomain<IntVar> indom = getIndomain(indomain);
             if (tieBreaking == null)
-                return new SimpleSelect(search_variables, var_sel, indom);
+                return new SimpleSelect<IntVar>((IntVar[])search_variables, var_sel, indom);
             else
-                return new SimpleSelect(search_variables, var_sel, tieBreaking, indom);
+                return new SimpleSelect<IntVar>((IntVar[])search_variables, var_sel, tieBreaking, indom);
         }
     }
 
     @SuppressWarnings("unchecked")
-    SelectChoicePoint getFloatSelect() {
+    SelectChoicePoint<FloatVar> getFloatSelect() {
 
-        ComparatorVariable<FloatVar> var_sel = getFloatVarSelect();
+        ComparatorsVar<FloatVar> vs = getFloatVarSelect();
+        ComparatorVariable<FloatVar> var_sel = vs.getVarSel();
+        ComparatorVariable<FloatVar> tieBreaking =
+            (tieBreakingFloat == null) ? vs.getTieSel() : tieBreakingFloat;
         FloatVar[] searchVars = new FloatVar[search_variables.length];
         for (int i = 0; i < search_variables.length; i++)
             searchVars[i] = (FloatVar) search_variables[i];
@@ -478,9 +487,12 @@ public class SearchItem implements ParserTreeConstants {
 
 
     @SuppressWarnings("unchecked")
-    SelectChoicePoint getSetSelect() {
+    SelectChoicePoint<SetVar> getSetSelect() {
 
-        ComparatorVariable<SetVar> var_sel = getSetVarSelect();
+        ComparatorsVar<SetVar> vs = getSetVarSelect();
+        ComparatorVariable<SetVar> var_sel = vs.getVarSel();
+        ComparatorVariable<SetVar> tieBreaking =
+            (tieBreakingSet == null) ? vs.getTieSel() : tieBreakingSet;
         
         Indomain<SetVar> indom = getIndomain4Set(indomain);
         SetVar[] searchVars = new SetVar[search_variables.length];
@@ -531,72 +543,58 @@ public class SearchItem implements ParserTreeConstants {
     }
 
 
-    public ComparatorVariable<IntVar> getVarSelect() {
+    public ComparatorsVar<IntVar> getVarSelect() {
 
-        //tieBreaking = null;
         if (var_selection_heuristic == null || var_selection_heuristic.equals("input_order"))
-            return null;
+            return new ComparatorsVar<IntVar>(null);
         else if (var_selection_heuristic.equals("random"))
-            return new RandomVar<IntVar>();
+            return new ComparatorsVar<IntVar>(new RandomVar<IntVar>());
         else if (var_selection_heuristic.equals("first_fail"))
-            return new SmallestDomain<IntVar>();
+            return new ComparatorsVar<IntVar>(new SmallestDomain<IntVar>());
         else if (var_selection_heuristic.equals("anti_first_fail")) {
-            // does not follow flatzinc definition but may give better results ;)
-            //tieBreaking = new MostConstrainedStatic();
-            return new LargestDomain<IntVar>();
+            return new ComparatorsVar<IntVar>(new LargestDomain<IntVar>());
         } else if (var_selection_heuristic.equals("most_constrained")) {
-            tieBreaking = new MostConstrainedStatic<IntVar>();
-            return new SmallestDomain<IntVar>();
+            return new ComparatorsVar<IntVar>(new SmallestDomain<IntVar>(), new MostConstrainedStatic<IntVar>());
         } else if (var_selection_heuristic.equals("occurrence"))
-            return new MostConstrainedStatic<IntVar>();
+            return new ComparatorsVar<IntVar>(new MostConstrainedStatic<IntVar>());
         else if (var_selection_heuristic.equals("smallest")) {
-            // does not follow flatzinc definition but may give better results ;)
-            // tieBreaking = new MostConstrainedStatic();
-            //tieBreaking = new SmallestDomain();
-            // tieBreaking = new WeightedDegree(store);
-            return new SmallestMin<IntVar>();
+            return new ComparatorsVar<IntVar>(new SmallestMin<IntVar>());
         } else if (var_selection_heuristic.equals("largest"))
-            return new LargestMax<IntVar>();
+            return new ComparatorsVar<IntVar>(new LargestMax<IntVar>());
         else if (var_selection_heuristic.equals("max_regret"))
-            return new MaxRegret<IntVar>();
+            return new ComparatorsVar<IntVar>(new MaxRegret<IntVar>());
         else if (var_selection_heuristic.equals("dom_w_deg")) {
-            return new WeightedDegree<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new WeightedDegree<IntVar>(store));
         } else if (var_selection_heuristic.equals("smallest_max")) {
-            // does not follow flatzinc standard (JaCoP specific) ;)
-            tieBreaking = new SmallestDomain<Var>();
-            return new SmallestMax<IntVar>();
+            return new ComparatorsVar<IntVar>(new SmallestMax<IntVar>(), new SmallestDomain<IntVar>());
         } else if (var_selection_heuristic.equals("smallest_most_constrained")) {
-            // does not follow flatzinc standard (JaCoP specific) ;)
-            tieBreaking = new MostConstrainedStatic<Var>();
-            return new SmallestMin<IntVar>();
+            return new ComparatorsVar<IntVar>(new SmallestMin<IntVar>(), new MostConstrainedStatic<IntVar>());
         } else if (var_selection_heuristic.equals("smallest_first_fail")) {
-            // does not follow flatzinc standard (JaCoP specific) ;)
-            tieBreaking = new SmallestDomain<Var>();
-            return new SmallestMin<IntVar>();
+            return new ComparatorsVar<IntVar>(new SmallestMin<IntVar>(), new SmallestDomain<IntVar>());
         } else if (var_selection_heuristic.equals("afc_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMax<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new AFCMax<IntVar>(store));
         else if (var_selection_heuristic.equals("afc_min")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMin<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new AFCMin<IntVar>(store));
         else if (var_selection_heuristic.equals("afc_max_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMaxDeg<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new AFCMaxDeg<IntVar>(store));
         else if (var_selection_heuristic.equals("afc_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMinDeg<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new AFCMinDeg<IntVar>(store));
         else if (var_selection_heuristic.equals("activity_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMax<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new ActivityMax<IntVar>(store));
         else if (var_selection_heuristic.equals("activity_min"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMin<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new ActivityMin<IntVar>(store));
         else if (var_selection_heuristic.equals("activity_max_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMaxDeg<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new ActivityMaxDeg<IntVar>(store));
         else if (var_selection_heuristic.equals("activity_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMinDeg<IntVar>(store);
+            return new ComparatorsVar<IntVar>(new ActivityMinDeg<IntVar>(store));
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
@@ -604,126 +602,118 @@ public class SearchItem implements ParserTreeConstants {
         return null; // input_order
     }
 
-    public ComparatorVariable<FloatVar> getFloatVarSelect() {
+    public ComparatorsVar<FloatVar> getFloatVarSelect() {
 
-        // tieBreaking = null;
         if (var_selection_heuristic == null)
-            return null;
+            return new ComparatorsVar<FloatVar>(null);
         else if (var_selection_heuristic.equals("input_order"))
-            return null;
+            return new ComparatorsVar<FloatVar>(null);
         else if (var_selection_heuristic.equals("first_fail"))
-            return new SmallestDomainFloat<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new SmallestDomainFloat<FloatVar>());
         else if (var_selection_heuristic.equals("anti_first_fail")) {
-            // does not follow flatzinc definition but may give better results ;)
-            //tieBreaking = new MostConstrainedStatic();
-            return new LargestDomainFloat<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new LargestDomainFloat<FloatVar>());
         } else if (var_selection_heuristic.equals("most_constrained")) {
-            tieBreaking = new MostConstrainedStatic<FloatVar>();
-            return new SmallestDomainFloat<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new SmallestDomainFloat<FloatVar>(), new MostConstrainedStatic<FloatVar>());
         } else if (var_selection_heuristic.equals("occurrence"))
-            return new MostConstrainedStatic<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new MostConstrainedStatic<FloatVar>());
         else if (var_selection_heuristic.equals("smallest")) {
-            // does not follow flatzinc definition but may give better results ;)
-            // tieBreaking = new MostConstrainedStatic();
-            //tieBreaking = new SmallestDomain();
-            return new SmallestMinFloat<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new SmallestMinFloat<FloatVar>());
         } else if (var_selection_heuristic.equals("largest"))
-            return new LargestMaxFloat<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new LargestMaxFloat<FloatVar>());
         // else if (var_selection_heuristic.equals("max_regret"))
-        //     return new MaxRegret();
+        //     return new ComparatorsVar<FloatVar>(new MaxRegret());
         else if (var_selection_heuristic.equals("dom_w_deg")) {
-            return new WeightedDegree<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new WeightedDegree<FloatVar>(store));
         } else if (var_selection_heuristic.equals("afc_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMax<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new AFCMax<FloatVar>(store));
         else if (var_selection_heuristic.equals("afc_max_deg")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMaxDeg<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new AFCMaxDeg<FloatVar>(store));
         else if (var_selection_heuristic.equals("afc_min")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMin<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new AFCMin<FloatVar>(store));
         else if (var_selection_heuristic.equals("afc_min_deg")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMinDeg<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new AFCMinDeg<FloatVar>(store));
         else if (var_selection_heuristic.equals("activity_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMax<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new ActivityMax<FloatVar>(store));
         else if (var_selection_heuristic.equals("activity_max_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMaxDeg<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new ActivityMaxDeg<FloatVar>(store));
         else if (var_selection_heuristic.equals("activity_min"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMin<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new ActivityMin<FloatVar>(store));
         else if (var_selection_heuristic.equals("activity_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMinDeg<FloatVar>(store);
+            return new ComparatorsVar<FloatVar>(new ActivityMinDeg<FloatVar>(store));
         // for FloatVar's getSize() is not defined :(
         // afc*_deg and activity*_deg cannot be used
         else if (var_selection_heuristic.equals("random"))
-            return new RandomVar<FloatVar>();
+            return new ComparatorsVar<FloatVar>(new RandomVar<FloatVar>());
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
 
-        return null; // input_order
+        return new ComparatorsVar<FloatVar>(null); // input_order
     }
 
-    ComparatorVariable<SetVar> getSetVarSelect() {
+    ComparatorsVar<SetVar> getSetVarSelect() {
 
         if (var_selection_heuristic == null)
-            return null;
+            return new ComparatorsVar<SetVar>(null);
         else if (var_selection_heuristic.equals("input_order"))
-            return null;
+            return new ComparatorsVar<SetVar>(null);
         else if (var_selection_heuristic.equals("first_fail"))
-            return new MinCardDiff<SetVar>();
+            return new ComparatorsVar<SetVar>(new MinCardDiff<SetVar>());
         else if (var_selection_heuristic.equals("smallest"))
-            return new MinGlbCard<SetVar>();
+            return new ComparatorsVar<SetVar>(new MinGlbCard<SetVar>());
         else if (var_selection_heuristic.equals("occurrence"))
-            return new MostConstrainedStatic<SetVar>();
+            return new ComparatorsVar<SetVar>(new MostConstrainedStatic<SetVar>());
         else if (var_selection_heuristic.equals("anti_first_fail"))
-            return new MaxCardDiff<SetVar>();
+            return new ComparatorsVar<SetVar>(new MaxCardDiff<SetVar>());
         else if (var_selection_heuristic.equals("dom_w_deg")) {
-            // store.variableWeightManagement = true;
-            return new WeightedDegree<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new WeightedDegree<SetVar>(store));
         } else if (var_selection_heuristic.equals("afc_max")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMax<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new AFCMax<SetVar>(store));
         else if (var_selection_heuristic.equals("afc_min")) 
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMin<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new AFCMin<SetVar>(store));
         else if (var_selection_heuristic.equals("afc_max_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMaxDeg<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new AFCMaxDeg<SetVar>(store));
         else if (var_selection_heuristic.equals("afc_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new AFCMinDeg<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new AFCMinDeg<SetVar>(store));
         else if (var_selection_heuristic.equals("activity_max"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMax<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new ActivityMax<SetVar>(store));
         else if (var_selection_heuristic.equals("activity_min"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMin<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new ActivityMin<SetVar>(store));
         else if (var_selection_heuristic.equals("activity_max_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMaxDeg<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new ActivityMaxDeg<SetVar>(store));
         else if (var_selection_heuristic.equals("activity_min_deg"))
             // does not follow flatzinc standard (JaCoP specific) ;)
-            return new ActivityMinDeg<SetVar>(store);
+            return new ComparatorsVar<SetVar>(new ActivityMinDeg<SetVar>(store));
         //      else if (var_selection_heuristic.equals("most_constrained")) {
         //          tieBreaking = new MostConstrainedStatic();
         //          return new SmallestDomain();
         //      }
         else if (var_selection_heuristic.equals("largest"))
-            return new MaxLubCard<SetVar>();
+            return new ComparatorsVar<SetVar>(new MaxLubCard<SetVar>());
             //  else if (var_selection_heuristic.equals("max_regret"))
             //      return new MaxRegret();
         else if (var_selection_heuristic.equals("random"))
-            return new RandomVar<SetVar>();
+            return new ComparatorsVar<SetVar>(new RandomVar<SetVar>());
         else
             System.err
                 .println("Warning: Not implemented variable selection heuristic \"" + var_selection_heuristic + "\"; used input_order");
 
-        return null; // input_order
+        return new ComparatorsVar<SetVar>(null); // input_order
     }
 
     IntVar getVariable(ASTScalarFlatExpr node) {
@@ -912,7 +902,7 @@ public class SearchItem implements ParserTreeConstants {
         return search_variables;
     }
 
-    ArrayList<SearchItem> getSearchItems() {
+    ArrayList<SearchItem<T>> getSearchItems() {
         return search_seq;
     }
 
@@ -930,14 +920,15 @@ public class SearchItem implements ParserTreeConstants {
                     String varSel2 = ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(1).jjtGetChild(0).jjtGetChild(0)).getIdent();
 
                     var_selection_heuristic = varSel2;
+
                     if (search_type.equals("int_search"))
-                        tieBreaking = getVarSelect();
+                        tieBreakingInt = getVarSelect().getVarSel();
                     else if (search_type.equals("set_search"))
-                        tieBreaking = getSetVarSelect();
+                        tieBreakingSet = getSetVarSelect().getVarSel();
                     else if (search_type.equals("float_search"))
-                        tieBreaking = getFloatVarSelect();
+                        tieBreakingFloat = getFloatVarSelect().getVarSel();
                     else if (search_type.equals("priority_search")) {
-                        tieBreaking = getVarSelect();
+                        tieBreakingInt = getVarSelect().getVarSel();
                     }
 
                     if (count > 2)
@@ -952,7 +943,7 @@ public class SearchItem implements ParserTreeConstants {
             throw  new IllegalArgumentException("Not supported Variable selection annotation; compilation aborted.");
     }
 
-    public void addSearch(SearchItem si) {
+    public void addSearch(SearchItem<T> si) {
         search_seq.add(si);
     }
 
@@ -1006,5 +997,32 @@ public class SearchItem implements ParserTreeConstants {
             s.append("])");
         }
         return s.toString();
+    }
+
+    public class ComparatorsVar<T extends Var> {
+        ComparatorVariable<T> v1;
+        ComparatorVariable<T> v2;
+
+        public ComparatorsVar(ComparatorVariable<T> v1, ComparatorVariable<T> v2) {
+            this.v1 = v1;
+            this.v2 = v2;
+        }
+
+        public ComparatorsVar(ComparatorVariable<T> v1) {
+            this.v1 = v1;
+            this.v2 = null;
+        }
+
+        public ComparatorVariable<T> getVarSel() {
+            return v1;
+        }
+
+        public ComparatorVariable<T> getTieSel() {
+            return v2;
+        }
+
+        public String toString() {
+            return "(" + v1 +", " + v2 + ")";
+        }
     }
 }

@@ -84,7 +84,7 @@ public class RestartSearch<T extends Var> {
     int restartsLimit = 0; // no limit
 
     @SuppressWarnings("unchecked")
-    public RestartSearch(Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, Var cost) {
+    public RestartSearch(Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, T cost) {
         this.search = s;
         this.calculator = calculator;
         this.cost = cost;
