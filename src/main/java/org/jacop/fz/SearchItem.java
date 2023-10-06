@@ -921,7 +921,7 @@ public class SearchItem <T extends Var> implements ParserTreeConstants {
 
                     var_selection_heuristic = varSel2;
 
-                    if (search_type.equals("int_search"))
+                    if (search_type.equals("int_search") || search_type.equals("bool_search"))
                         tieBreakingInt = getVarSelect().getVarSel();
                     else if (search_type.equals("set_search"))
                         tieBreakingSet = getSetVarSelect().getVarSel();

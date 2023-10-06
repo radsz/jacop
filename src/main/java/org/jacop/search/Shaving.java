@@ -117,7 +117,7 @@ import java.util.*;
 
     boolean wrongDecisionEncountered;
 
-    private ExitChildListener[] exitChildListeners;
+    private ExitChildListener<T>[] exitChildListeners;
 
     private ConsistencyListener[] consistencyListeners;
 
@@ -133,7 +133,7 @@ import java.util.*;
 
     private int depth = 0;
 
-    List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList();
+    List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
 
     Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
 
@@ -205,7 +205,7 @@ import java.util.*;
         consistencyListeners = children;
     }
 
-    public void setChildrenListeners(ExitChildListener[] children) {
+    public void setChildrenListeners(ExitChildListener<T>[] children) {
 
         exitChildListeners = children;
     }
@@ -215,7 +215,7 @@ import java.util.*;
         consistencyListeners[0] = child;
     }
 
-    public void setChildrenListeners(ExitChildListener child) {
+    public void setChildrenListeners(ExitChildListener<T> child) {
         exitChildListeners = new ExitChildListener[1];
         exitChildListeners[0] = child;
     }
