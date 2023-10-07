@@ -77,6 +77,20 @@ class GlobalConstraints implements ParserTreeConstants {
     boolean useDisjunctions = false;
     boolean useCumulativeUnary = false;
 
+    java.util.Comparator<ArrayList<Integer>> rowComparator = new java.util.Comparator<ArrayList<Integer>>(){
+            @Override
+            public int compare(ArrayList<Integer> o1, ArrayList<Integer> o2) {
+                for (int i = 0; i < o1.size(); i++) {
+                    if (o1.get(i) > o2.get(i)) {
+                        return 1;
+                    } else if(o1.get(i) < o2.get(i)) {
+                        return -1;
+                    }
+                }
+                return 0; // all equal
+            }
+        };
+
     public GlobalConstraints(Support support) {
         this.store = support.store;
         this.support = support;
@@ -723,7 +737,7 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
         int ground = 0;
-	IntDomain d = new IntervalDomain();
+        IntDomain d = new IntervalDomain();
         for (int i = 0; i < x.length; i++) {
             if (x[i].singleton()) {
                 ground++;
@@ -751,6 +765,7 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new Reified(new org.jacop.constraints.Member(x, y), b));
     }
 
+    @SuppressWarnings("unchecked")
     void gen_jacop_table_int(SimpleNode node) {
         IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         int size = v.length;
@@ -811,6 +826,33 @@ class GlobalConstraints implements ParserTreeConstants {
         if (v.length == 0)
             return;
 
+        // ========== remove duplicated tuples in the table =============
+        ArrayList<Integer>[] tl = new ArrayList[t.length];
+        for (int i = 0; i < t.length; i++) {
+            ArrayList<Integer> tmp = new ArrayList<Integer>(t.length);
+            for (int j = 0; j < t[i].length; j++) {
+                tmp.add(t[i][j]);
+            }
+            tl[i] = tmp;
+        }
+        Arrays.sort(tl, 0, tl.length, rowComparator);
+
+        t = toIntArray(tl);
+
+        int[][] dt = new int[t.length][t[0].length];
+        int[] rc = t[0];
+        int kk = 0;
+        dt[kk++] = rc;
+        for (int i = 1; i < t.length; i++) {
+            if (!equalRows(rc, t[i])) {
+                dt[kk++] = t[i];
+                rc = t[i];
+            }
+        }
+
+        t = Arrays.copyOf(dt, kk);
+        // ============================
+
         int[] vu = uniqueIndex(v);
         if (vu.length != v.length) { // non unique variables
 
@@ -842,6 +884,24 @@ class GlobalConstraints implements ParserTreeConstants {
             generateTableConstraints(v, t);
         } else
             support.pose(new org.jacop.constraints.table.Table(v, t, true));
+    }
+
+    int[][] toIntArray(ArrayList<Integer>[] l) {
+        int[][] a = new int[l.length][l[0].size()];
+        for (int i = 0; i < l.length; i++) {
+            for (int j = 0; j < l[i].size(); j++) {
+                a[i][j] = l[i].get(j);
+            }
+        }
+        return a;
+    }
+
+    boolean equalRows(int[] r1, int[] r2) {
+        for (int i = 0; i < r1.length; i++) {
+            if (r1[i] != r2[i])
+                return false;
+        }
+        return true;
     }
 
     void generateTableConstraints(IntVar[] v, int[][] t) {
