@@ -1545,7 +1545,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
         PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
         for (int i = 0; i < n; i++) {
-            if (x[i].singleton())
+            if (y.singleton())
+                cs[i] = new XeqC(x[i], y.value());
+            else if (x[i].singleton())
                 cs[i] = new XeqC(y, x[i].value());
             else
                 cs[i] = new XeqY(y, x[i]);
@@ -1564,7 +1566,9 @@ class GlobalConstraints implements ParserTreeConstants {
         int n = x.length;
         PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
         for (int i = 0; i < n; i++) {
-            if (x[i].singleton())
+            if (y.singleton())
+                cs[i] = new PeqC(x[i], y.value());
+            else if (x[i].singleton())
                 cs[i] = new PeqC(y, x[i].value());
             else
                 cs[i] = new PeqQ(y, x[i]);
@@ -1585,7 +1589,9 @@ class GlobalConstraints implements ParserTreeConstants {
         int n = x.length;
         PrimitiveConstraint[] cs = new PrimitiveConstraint[n];
         for (int i = 0; i < n; i++) {
-            if (x[i].singleton())
+            if (y.singleton())
+                cs[i] = new AeqS(x[i], y.domain.glb());
+            else if (x[i].singleton())
                 cs[i] = new AeqS(y, x[i].domain.glb());
             else
                 cs[i] = new AeqB(y, x[i]);
