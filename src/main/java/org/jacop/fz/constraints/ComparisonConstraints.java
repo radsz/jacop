@@ -622,7 +622,10 @@ class ComparisonConstraints implements ParserTreeConstants {
                     else if (generateForEq(v2, v1, v3))
                         return;
                     else if (binaryVar(v1) && binaryVar(v2)) {
-                        support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
+                        if (support.options.useSat())
+                            support.sat.generate_eq_reif(v1, v2, v3);
+                        else
+                            support.pose(new Not(new XorBool(new IntVar[] {v1, v2}, v3)));
                         return;
                     }
                     if (v2.singleton()) {
@@ -642,7 +645,10 @@ class ComparisonConstraints implements ParserTreeConstants {
                     else if (generateForNeq(v2, v1, v3))
                         return;
                     else if (binaryVar(v1) && binaryVar(v2)) {
-                        support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
+                        if (support.options.useSat())
+                            support.sat.generate_neq_reif(v1, v2, v3);
+                        else
+                            support.pose(new XorBool(new IntVar[] {v1, v2}, v3));
                         return;
                     } else
                         c = new XneqY(v1, v2);

@@ -52,6 +52,10 @@ public class Constraints implements ParserTreeConstants {
     final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
     // ============ SAT solver interface ==============
+    float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
+    long boolClauses = 0;
+    long noConstraints = 0;
+    long bool2Int = 0;
     SatTranslation sat;
 
     Support support;
@@ -84,6 +88,14 @@ public class Constraints implements ParserTreeConstants {
     }
 
     void generateAllConstraints(SimpleNode astTree) throws Throwable {
+
+        if (support.options.debug())
+            System.out.println("% bool constraints = " + boolClauses + " of " +
+                               (noConstraints - bool2Int)+ " p = " +
+                               (float)(boolClauses)/(float)(noConstraints - bool2Int));
+
+        if ((float)(boolClauses)/(float)(noConstraints - bool2Int) >= satThreshold)
+            support.options.setSat();
 
         sat.debug = debug;
 
@@ -178,7 +190,14 @@ public class Constraints implements ParserTreeConstants {
 
             p = ((ASTConstElem) node).getName();
 
-            if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
+            noConstraints++;
+
+            if (p.startsWith("bool_clause") || p.startsWith("bool_not") ||
+                p.startsWith("bool_eq") || p.startsWith("array_bool_or"))
+                // || p.startsWith("array_bool") || p.startsWith("bool_xor"))
+                boolClauses++;
+            else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
+                bool2Int++;
 
                 ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
                 ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
@@ -229,7 +248,6 @@ public class Constraints implements ParserTreeConstants {
 
 		support.addImplied(x, v, b);
 	    }
-
         }
     }
 }

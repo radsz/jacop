@@ -34,6 +34,9 @@ import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XeqC;
+import org.jacop.floats.constraints.PeqC;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -106,7 +109,9 @@ class ElementConstraints implements ParserTreeConstants {
         for (int i = 0; i < listLength; i++)
             newP2[i] = p2[p1.min() - 1 + i];
 
-        if (support.options.getBoundConsistency())
+        if (p1.singleton(1) && newP2.length == 1)
+            support.pose(new XeqC(p3, newP2[0]));
+        else if (support.options.getBoundConsistency())
             support.pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
         else
             support.pose(new ElementInteger(p1, newP2, p3, p1.min() - 1));
@@ -118,6 +123,7 @@ class ElementConstraints implements ParserTreeConstants {
         IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
         IntVar[] p2var = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
         if (allSingleton(p2var)) {
             int[] p2int = new int[p2var.length];
             for (int i = 0; i < p2int.length; i++)
@@ -133,7 +139,9 @@ class ElementConstraints implements ParserTreeConstants {
             for (int i = 0; i < listLength; i++)
                 newP2[i] = p2var[p1.min() - 1 + i];
 
-            if (support.boundsConsistency || support.options.getBoundConsistency())
+            if (p1.singleton(1) && newP2.length == 1)
+                support.pose(new XeqY(newP2[0], p3));
+            else if (support.boundsConsistency || support.options.getBoundConsistency())
                 support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
             else
                 support.pose(new ElementVariable(p1, newP2, p3, p1.min() - 1));
@@ -212,7 +220,10 @@ class ElementConstraints implements ParserTreeConstants {
         for (int i = 0; i < listLength; i++)
             newP2[i] = p2[p1.min() - 1 + i];
 
-        support.pose(new ElementFloat(p1, newP2, p3, p1.min() - 1));
+        if (p1.singleton(1) && newP2.length == 1)
+            support.pose(new org.jacop.floats.constraints.PeqC(p3, newP2[0]));
+        else
+            support.pose(new ElementFloat(p1, newP2, p3, p1.min() - 1));
 
     }
 

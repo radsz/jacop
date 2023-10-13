@@ -397,6 +397,14 @@ public class Options {
     }
 
     /**
+     * sat is used.
+     *
+     */
+    public void setSat() {
+        use_sat = true;
+    }
+
+    /**
      * It defines whether to use debug information print-out.
      *
      * @return true if debugging information is printed, false otherwise
