@@ -317,10 +317,17 @@ class BoolConstraints implements ParserTreeConstants {
                     throw Store.failException;
 
             PrimitiveConstraint c;
-            if (a1reduced.size() == 0)
+            if (a1reduced.size() == 0) {
                 c = new AndBool(a2reduced, support.dictionary.getConstant(0)).decompose(store).get(0);
-            else if (a2reduced.size() == 0) {
-                c = new OrBool(a1reduced, support.dictionary.getConstant(1)).decompose(store).get(0);
+            } else if (a2reduced.size() == 0) {
+                if (reified) {
+                    IntVar b = support.getVariable((ASTScalarFlatExpr)node.jjtGetChild(2));
+                    support.poseDC(new OrBool(a1reduced, b));
+                    return;
+                } else {
+                    IntVar r = support.dictionary.getConstant(1);
+                    c = new OrBool(a1reduced, r).decompose(store).get(0);
+                }
             } else if (a1reduced.size() == 1 && a2reduced.size() == 1)
                 c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
             else
