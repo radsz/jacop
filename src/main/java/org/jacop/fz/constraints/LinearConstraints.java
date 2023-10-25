@@ -547,6 +547,8 @@ class LinearConstraints implements ParserTreeConstants {
                     t = support.dictionary.getConstant(p3);
                     if (boolSum(p2))
                         support.pose(new Implies(p4, new SumBool(p2, "<=", t)));
+                    else if (p2.length == 2)
+                        support.pose(new Implies(p4, new XplusYlteqZ(p2[0], p2[1], t)));
                     else
                         support.pose(new Implies(p4, new SumInt(p2, "<=", t)));
                 } else if (allWeightsMinusOne(p1)) {
