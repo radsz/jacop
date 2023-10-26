@@ -135,9 +135,6 @@ public class Conditional extends Constraint implements SatisfiedPresent {
             } else if (c[i].notSatisfied()) {
                 b[i].domain.inValue(store.level, b[i], 0);
                 prune = true;
-            } else if (b.length == 2 && c[i].satisfied()) {
-                b[i].domain.inValue(store.level, b[i], 1);
-                prune = true;
             }
         }
     }
