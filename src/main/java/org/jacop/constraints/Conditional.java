@@ -116,12 +116,11 @@ public class Conditional extends Constraint implements SatisfiedPresent {
 
         boolean prune = true;
 
+        int i = 0;
         while (prune) {
-            int i = 0;
             LOOP: while (i < b.length) {
                 if (b[i].max() == 0) {
                     i++;
-                    continue;
                 } else
                     break LOOP;
             }

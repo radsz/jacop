@@ -1532,6 +1532,18 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
         IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
+        // filter false values of b
+        ArrayList<IntVar> bn = new ArrayList<>();
+        ArrayList<IntVar> xn = new ArrayList<>();
+        for (int i = 0; i < b.length; i++) {
+            if (b[i].max() != 0) {
+                bn.add(b[i]);
+                xn.add(x[i]);
+            }
+        }
+        b = bn.toArray(new IntVar[bn.size()]);
+        x = xn.toArray(new IntVar[xn.size()]);
+
         int n = x.length;
         if (n == 2) {
             if (b[0].singleton(1)) {
@@ -1552,9 +1564,11 @@ class GlobalConstraints implements ParserTreeConstants {
             else
                 cs[i] = new XeqY(y, x[i]);
         }
-        if (n == 2)
+        if (n == 2) {
+            if (cs[0].satisfied() && cs[1].satisfied())
+                return;
             support.pose(new IfThenElse(new XeqC(b[0],1), cs[0], cs[1]));
-        else
+        } else
             support.pose(new Conditional(b, cs));
     }
 
