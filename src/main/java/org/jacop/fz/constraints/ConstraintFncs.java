@@ -671,6 +671,14 @@ public final class ConstraintFncs {
         gc.gen_jacop_channel(n);
     }
 
+    public void jacop_all_equal_int(SimpleNode n) {
+        gc.gen_jacop_all_equal_int(n);
+    }
+
+    public void jacop_all_equal_int_reif(SimpleNode n) {
+        gc.gen_jacop_all_equal_int_reif(n);
+    }
+
     // =========== optional constraints ===========
 
     public void jacop_cumulative_optional(SimpleNode n) {
