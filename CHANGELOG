@@ -23,9 +23,15 @@ Version 4.10
    minizinc as cumulative and disjunctive with start times defined as
    optional variables.
 
-6. Command line options in flatzinc for restart search.
+6. Implementation of AllEqual primitive constraint (can be reified)
+   and SeqPrecedeChain constraint (not incremental version since it
+   requires many TimeStamp variables and informing constraint which
+   variables have changed). Both constraints are available from
+   minizinc.
 
-7. Bug corrections, code cleaning and performance improvements.
+7. Command line options in flatzinc for restart search.
+
+8. Bug corrections, code cleaning and performance improvements.
 
 Version 4.9
 =============

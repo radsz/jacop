@@ -1201,14 +1201,14 @@ class GlobalConstraints implements ParserTreeConstants {
         int t = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-        // no repeated varibales allowed in ValuePrecede and
+        // no repeated variables allowed in ValuePrecede and
         // we create a new vector with different variables
         IntVar[] xs = new IntVar[x.length];
         HashSet<IntVar> varSet = new HashSet<IntVar>();
         for (int i = 0; i < x.length; i++) {
             if (varSet.contains(x[i])) {
                 IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
-                support.pose(new org.jacop.constraints.XeqY(x[i], tmp));
+                support.pose(new XeqY(x[i], tmp));
                 xs[i] = tmp;
             } else {
                 xs[i] = x[i];
@@ -1646,6 +1646,24 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
         support.pose(new AllEqual(x));
+    }
+
+    void gen_jacop_seq_precede_chain_int(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+
+        // keep only the unique variables in the original order
+        ArrayList<IntVar> xx = new ArrayList<>();
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (!varSet.contains(x[i])) {
+                xx.add(x[i]);
+                varSet.add(x[i]);
+            }
+        }
+        IntVar[] xs = xx.toArray(new IntVar[xx.size()]);
+        // System.out.println("% x.length = " + x.length + ", xs.length = " + xs.length);
+
+        support.pose(new SeqPrecedeChain(xs));
     }
 
     // optional global constraints
