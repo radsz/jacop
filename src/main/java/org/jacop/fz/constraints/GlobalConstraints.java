@@ -1208,24 +1208,9 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] c = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
-        // no diplicated variables allowed in ValuePrecede and
+        // no duplicated variables allowed in ValuePrecede and
         // we create a new vector with different variables
-        IntVar[] xs = new IntVar[x.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (varSet.contains(x[i])) {
-                if (x[i].singleton())
-                    xs[i] = new IntVar(store, x[i].min(), x[i].max());
-                else {
-                    IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
-                    support.pose(new XeqY(x[i], tmp));
-                    xs[i] = tmp;
-                }
-            } else {
-                xs[i] = x[i];
-                varSet.add(x[i]);
-            }
-        }
+        IntVar[] xs = removeDuplicates(x);
 
         if (c.length > 1) {
             HashSet<Integer> values = new HashSet<>();
