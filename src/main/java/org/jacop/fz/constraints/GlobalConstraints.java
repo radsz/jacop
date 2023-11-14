@@ -77,13 +77,13 @@ class GlobalConstraints implements ParserTreeConstants {
     boolean useDisjunctions = false;
     boolean useCumulativeUnary = false;
 
-    java.util.Comparator<ArrayList<Integer>> rowComparator = new java.util.Comparator<ArrayList<Integer>>(){
+    java.util.Comparator<ArrayList<Integer>> rowComparator = new java.util.Comparator<ArrayList<Integer>>() {
             @Override
             public int compare(ArrayList<Integer> o1, ArrayList<Integer> o2) {
                 for (int i = 0; i < o1.size(); i++) {
                     if (o1.get(i) > o2.get(i)) {
                         return 1;
-                    } else if(o1.get(i) < o2.get(i)) {
+                    } else if (o1.get(i) < o2.get(i)) {
                         return -1;
                     }
                 }
@@ -349,18 +349,9 @@ class GlobalConstraints implements ParserTreeConstants {
         // among must not have duplicated variables there
         // could be constants that have the same value and
         // are duplicated.
-        IntVar[] xx = new IntVar[x.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (varSet.contains(x[i]) && x[i].singleton())
-                xx[i] = new IntVar(store, x[i].min(), x[i].max());
-            else {
-                xx[i] = x[i];
-                varSet.add(x[i]);
-            }
-        }
+        IntVar[] xx = removeDuplicates(x);
         IntVar[] ss = new IntVar[s.length];
-        varSet = new HashSet<IntVar>();
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
         for (int i = 0; i < s.length; i++) {
             if (varSet.contains(s[i]) && s[i].singleton())
                 ss[i] = new IntVar(store, s[i].min(), s[i].max());
@@ -619,6 +610,21 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
         int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(2));
         int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+
+        int n = x.length;
+        long z = Arrays.stream(lb).filter(v -> v == 0).count();
+        long m = Arrays.stream(ub).filter(v -> v == n).count();
+        // System.out.println("% z = " + z + ", m = " + m + ", lb.length = "+ lb.length + ", x.length = " + n);
+
+        // skip constraint since lb is 0 and ub is the length of the
+        // list => does not constraint anything
+        if (z == m && z == lb.length) {
+            if (support.options.debug()) {
+                String s = "% SKIPPED " + new CountValuesBounds(x, lb, ub, values);
+                System.out.println(s.replaceAll("\n", "\n% "));
+            }
+            return;
+        }
 
         support.pose(new CountValuesBounds(x, lb, ub, values));
     }
@@ -1033,17 +1039,7 @@ class GlobalConstraints implements ParserTreeConstants {
         // ---- KK, 2018-07-27
         //regular must not have duplicated variables; we create all
         // different variables and equality constraints here
-        IntVar[] xx = new IntVar[x.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (varSet.contains(x[i])) {
-                xx[i] = new IntVar(store, x[i].min(), x[i].max());
-                support.pose(new XeqY(x[i], xx[i]));
-            } else {
-                xx[i] = x[i];
-                varSet.add(x[i]);
-            }
-        }
+        IntVar[] xx = removeDuplicates(x);
 
         // Build DFA
         FSM dfa = new FSM();
@@ -1201,20 +1197,9 @@ class GlobalConstraints implements ParserTreeConstants {
         int t = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-        // no repeated variables allowed in ValuePrecede and
+        // no duplicated variables allowed in ValuePrecede and
         // we create a new vector with different variables
-        IntVar[] xs = new IntVar[x.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (varSet.contains(x[i])) {
-                IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
-                support.pose(new XeqY(x[i], tmp));
-                xs[i] = tmp;
-            } else {
-                xs[i] = x[i];
-                varSet.add(x[i]);
-            }
-        }
+        IntVar[] xs = removeDuplicates(x);
 
         support.pose(new ValuePrecede(s, t, xs));
     }
@@ -1223,6 +1208,25 @@ class GlobalConstraints implements ParserTreeConstants {
         int[] c = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
+        // no diplicated variables allowed in ValuePrecede and
+        // we create a new vector with different variables
+        IntVar[] xs = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+                if (x[i].singleton())
+                    xs[i] = new IntVar(store, x[i].min(), x[i].max());
+                else {
+                    IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
+                    support.pose(new XeqY(x[i], tmp));
+                    xs[i] = tmp;
+                }
+            } else {
+                xs[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+
         if (c.length > 1) {
             HashSet<Integer> values = new HashSet<>();
             values.add(c[0]);
@@ -1230,9 +1234,27 @@ class GlobalConstraints implements ParserTreeConstants {
                 if (values.contains(c[i]))
                     throw new IllegalArgumentException("%% Values in int_value_precede_chain must be distinct");
                 values.add(c[i]);
-                support.pose(new ValuePrecede(c[i - 1], c[i], x));
+                support.pose(new ValuePrecede(c[i - 1], c[i], xs));
             }
         }
+    }
+
+    void gen_jacop_seq_precede_chain_int(SimpleNode node) {
+        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+
+        // keep only **unique** variables in the original order
+        ArrayList<IntVar> xx = new ArrayList<>();
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (!varSet.contains(x[i])) {
+                xx.add(x[i]);
+                varSet.add(x[i]);
+            }
+        }
+        IntVar[] xs = xx.toArray(new IntVar[xx.size()]);
+        // System.out.println("% x.length = " + x.length + ", xs.length = " + xs.length);
+
+        support.pose(new SeqPrecedeChain(xs));
     }
 
     void gen_jacop_bin_packing(SimpleNode node) {
@@ -1245,16 +1267,7 @@ class GlobalConstraints implements ParserTreeConstants {
         // binpacking must not have duplicated variables there
         // could be constants that have the same value and
         // are duplicated.
-        IntVar[] cc = new IntVar[capacity.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < capacity.length; i++) {
-            if (varSet.contains(capacity[i]) && capacity[i].singleton())
-                cc[i] = new IntVar(store, capacity[i].min(), capacity[i].max());
-            else {
-                cc[i] = capacity[i];
-                varSet.add(capacity[i]);
-            }
-        }
+        IntVar[] cc = removeDuplicates(capacity);
 
         //support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
         Constraint binPack = new Binpacking(bin, cc, w, min_bin, true);
@@ -1301,22 +1314,7 @@ class GlobalConstraints implements ParserTreeConstants {
         // geost must not have duplicated variables there
         // could be constants that have the same value and
         // are duplicated.
-        IntVar[] xx = new IntVar[x.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (varSet.contains(x[i])) {
-                if (x[i].singleton())
-                    xx[i] = x[i];
-                else {
-                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
-                    support.pose(new XeqY(x[i], xx[i]));
-                    varSet.add(x[i]);
-                }
-            } else {
-                xx[i] = x[i];
-                varSet.add(x[i]);
-            }
-        }
+        IntVar[] xx = removeDuplicates(x);
 
         // System.out.println("dim = " + dim);
         // System.out.print("rect_size = [");
@@ -1411,22 +1409,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
         // ---- KK, 2023-06-29
         // geost must not have duplicated variables
-        IntVar[] xx = new IntVar[x.length];
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (varSet.contains(x[i])) {
-                if (x[i].singleton())
-                    xx[i] = x[i];
-                else {
-                    xx[i] = new IntVar(store, x[i].min(), x[i].max());
-                    support.pose(new XeqY(x[i], xx[i]));
-                    varSet.add(x[i]);
-                }
-            } else {
-                xx[i] = x[i];
-                varSet.add(x[i]);
-            }
-        }
+        IntVar[] xx = removeDuplicates(x);
 
         // System.out.println("dim = " + dim);
         // System.out.print("rect_size = [");
@@ -1648,24 +1631,6 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new AllEqual(x));
     }
 
-    void gen_jacop_seq_precede_chain_int(SimpleNode node) {
-        IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-
-        // keep only the unique variables in the original order
-        ArrayList<IntVar> xx = new ArrayList<>();
-        HashSet<IntVar> varSet = new HashSet<IntVar>();
-        for (int i = 0; i < x.length; i++) {
-            if (!varSet.contains(x[i])) {
-                xx.add(x[i]);
-                varSet.add(x[i]);
-            }
-        }
-        IntVar[] xs = xx.toArray(new IntVar[xx.size()]);
-        // System.out.println("% x.length = " + x.length + ", xs.length = " + xs.length);
-
-        support.pose(new SeqPrecedeChain(xs));
-    }
-
     // optional global constraints
 
     void gen_jacop_cumulative_optional(SimpleNode node) {
@@ -1689,6 +1654,29 @@ class GlobalConstraints implements ParserTreeConstants {
             ones[i] = one;
         }
         support.pose(new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true));
+    }
+
+    IntVar[] removeDuplicates(IntVar[] x) {
+
+        // no diplicated variables allowed in a constraint and
+        // we create a new vector with all different variables
+        IntVar[] xs = new IntVar[x.length];
+        HashSet<IntVar> varSet = new HashSet<IntVar>();
+        for (int i = 0; i < x.length; i++) {
+            if (varSet.contains(x[i])) {
+                if (x[i].singleton())
+                    xs[i] = new IntVar(store, x[i].min(), x[i].max());
+                else {
+                    IntVar tmp = new IntVar(store, x[i].min(), x[i].max());
+                    support.pose(new XeqY(x[i], tmp));
+                    xs[i] = tmp;
+                }
+            } else {
+                xs[i] = x[i];
+                varSet.add(x[i]);
+            }
+        }
+        return xs;
     }
 
     boolean allVarOne(IntVar[] w) {
