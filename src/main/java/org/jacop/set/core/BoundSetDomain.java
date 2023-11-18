@@ -37,7 +37,7 @@ import org.jacop.core.*;
  * greatest lower bound(glb). The domain consist of zero, one or several sets.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.9
+ * @version 4.10
  */
 
 public class BoundSetDomain extends SetDomain implements Cloneable {

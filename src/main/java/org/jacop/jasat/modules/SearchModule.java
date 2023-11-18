@@ -44,7 +44,7 @@ import java.util.TimerTask;
  * A basic searching component, which controls the solver to solve the problem
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public final class SearchModule implements SolutionListener, ExplanationListener, StartStopListener {

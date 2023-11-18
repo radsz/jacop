@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It solves a simple logic puzzle about sport calendar.
  *
  * @author Michal Tonderski, Szymon Sieklucki, and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Title: Calendar Men
  *          Author of a logic puzzle: Alex Knight

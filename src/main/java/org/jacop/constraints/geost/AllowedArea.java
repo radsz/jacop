@@ -38,7 +38,7 @@ import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Constraint that represents a domain in which objects need to be contained
  */

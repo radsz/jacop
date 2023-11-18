@@ -46,7 +46,7 @@ import java.lang.Integer;
  * Practice of Constraint Programming * (CP'2018).
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 public class SeqPrecedeChain extends Constraint { 
 

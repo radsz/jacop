@@ -52,7 +52,7 @@ import java.util.stream.Stream;
  * The weights must be positive integers.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 @SuppressWarnings("serial")

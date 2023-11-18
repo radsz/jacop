@@ -43,7 +43,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
  * does not use sophisticated techniques for efficient backtracking.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class Diffn extends Nooverlap {

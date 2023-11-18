@@ -41,7 +41,7 @@ import java.util.function.Function;
  * Defines a variable and related operations on it.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public abstract class Var implements Backtrackable {

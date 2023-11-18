@@ -44,7 +44,7 @@ import java.util.List;
  * Nonpipelined Designs" IEEE Trans. on CAD, vol. 11, no. 8, August 1992.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class AR extends Filter {

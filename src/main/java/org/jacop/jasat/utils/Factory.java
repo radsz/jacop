@@ -35,7 +35,7 @@ package org.jacop.jasat.utils;
  * a factory for type E
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public interface Factory<E> {
 

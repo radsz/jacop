@@ -41,7 +41,7 @@ import java.util.List;
  * (Vol. 13, No. 3), pp. 88-96
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class FIR extends Filter {

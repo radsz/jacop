@@ -45,7 +45,7 @@ import java.util.Map;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class IndomainDefaultValue<T extends Var> implements Indomain<T> {

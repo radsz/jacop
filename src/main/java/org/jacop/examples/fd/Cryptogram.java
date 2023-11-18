@@ -49,7 +49,7 @@ import java.util.regex.Pattern;
  * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Cryptogram extends ExampleFD {

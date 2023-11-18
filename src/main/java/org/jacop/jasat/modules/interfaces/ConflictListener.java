@@ -38,7 +38,7 @@ import org.jacop.jasat.core.clauses.MapClause;
  * module that listens to conflicts that are discovered.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public interface ConflictListener extends SolverComponent {

@@ -40,7 +40,7 @@ import org.jacop.set.core.SetVar;
  *
  * @param <T> type of variable
  * @author Krzysztof Kuchcinski and Robert Åkemalm
- * @version 4.9
+ * @version 4.10
  */
 
 public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {

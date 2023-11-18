@@ -43,7 +43,7 @@ import java.util.List;
  * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28).
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class BIBD extends ExampleFD {

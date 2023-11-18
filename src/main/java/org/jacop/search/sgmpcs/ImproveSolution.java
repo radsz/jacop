@@ -40,7 +40,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of the variable for which choice point is being created.
  * @author krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public interface ImproveSolution<T extends Var> {

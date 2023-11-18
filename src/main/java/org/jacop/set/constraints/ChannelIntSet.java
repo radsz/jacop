@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * by default. To define other starting index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 

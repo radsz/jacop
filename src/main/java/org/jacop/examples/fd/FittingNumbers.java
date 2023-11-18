@@ -41,7 +41,7 @@ import java.util.ArrayList;
  * It is program to solve problem of fitting numbers to made them equal to zero.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Find how many copies of each numbers to take that its sum is equal to one of the specified domain.
  *          520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717, -1000

@@ -40,7 +40,7 @@ import java.util.ArrayList;
  * It is a simple logic puzzle about houses.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Each year the Glendale Women's Club sponsors a Historic Homes Tour in which
  *          five old houses are (with the owners' permission, of course) opened to the

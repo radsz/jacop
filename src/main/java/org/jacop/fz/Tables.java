@@ -49,7 +49,7 @@ import java.util.Set;
  * the variables which are used by search.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 public class Tables {
 

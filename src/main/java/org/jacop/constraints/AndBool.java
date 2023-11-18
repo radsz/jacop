@@ -42,7 +42,7 @@ import java.util.List;
  * and returns result.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {

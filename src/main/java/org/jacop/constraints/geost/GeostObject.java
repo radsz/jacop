@@ -40,7 +40,7 @@ import java.util.Collection;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          It contains all information about the Geost object as well as functionality to
  *          maintain the consistency among time variables.

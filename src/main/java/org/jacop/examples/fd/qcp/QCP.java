@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
  * It solves QuasiGroup Completion Problem (QCP).
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class QCP extends ExampleFD {

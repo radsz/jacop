@@ -42,7 +42,7 @@ import java.util.List;
  * Power Data Path Synthesis" ICCAD 1995
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class DOT extends Filter {

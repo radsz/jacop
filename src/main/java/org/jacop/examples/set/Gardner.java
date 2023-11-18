@@ -51,7 +51,7 @@ import java.util.ArrayList;
  * It specifies a simple Gardner problem which use set functionality from JaCoP.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Gardner extends ExampleSet {

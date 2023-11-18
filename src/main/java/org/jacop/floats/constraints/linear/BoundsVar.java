@@ -39,7 +39,7 @@ import org.jacop.core.Store;
  * values
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 class BoundsVar implements MutableVar {

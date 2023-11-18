@@ -41,7 +41,7 @@ import java.util.stream.Stream;
  * CumulativeOptional implements the scheduling constraint for optional tasks.
  * 
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
 

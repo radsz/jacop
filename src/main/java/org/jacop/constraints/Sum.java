@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * 30), otherwise use SumInt.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class Sum extends Constraint implements SatisfiedPresent {

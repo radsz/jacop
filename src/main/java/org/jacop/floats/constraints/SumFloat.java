@@ -43,7 +43,7 @@ import org.jacop.floats.core.FloatVar;
  * work currently.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class SumFloat extends LinearFloat {

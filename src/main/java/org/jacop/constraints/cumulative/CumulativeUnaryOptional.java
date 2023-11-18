@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * unary resources for optional tasks.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class CumulativeUnaryOptional extends CumulativeUnary {

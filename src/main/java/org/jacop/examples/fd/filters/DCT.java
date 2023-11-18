@@ -43,7 +43,7 @@ import java.util.List;
  * Circuits and Systems, Volume 12, Issue 8, Aug. 1993 Page(s):1107 - 1122
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class DCT extends Filter {

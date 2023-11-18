@@ -53,7 +53,7 @@ import java.util.StringTokenizer;
  * Ulle Endriss
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class MUCA extends ExampleFD {

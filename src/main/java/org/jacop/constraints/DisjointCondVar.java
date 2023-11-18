@@ -42,7 +42,7 @@ import java.util.List;
  * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 class DisjointCondVar implements MutableVar {

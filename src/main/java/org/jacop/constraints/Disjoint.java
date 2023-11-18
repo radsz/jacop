@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Zero-width rectangles does not overlap with any other rectangle.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Disjoint extends Diff {

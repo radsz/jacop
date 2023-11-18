@@ -45,7 +45,7 @@ import org.jacop.core.Var;
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {

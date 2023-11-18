@@ -35,7 +35,7 @@ package org.jacop.jasat.core;
  * An interface for solver components, that are connected together via the Core.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public interface SolverComponent {
 

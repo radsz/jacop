@@ -50,7 +50,7 @@ import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
  * sub-domain and it is inactive otherwise.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class DomainStructure implements VarHandler {

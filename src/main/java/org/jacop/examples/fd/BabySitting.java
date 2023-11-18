@@ -43,7 +43,7 @@ import java.util.ArrayList;
  * It is a simple logic puzzle about babysitting.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Each weekday, Bonnie takes care of five of the neighbors'
  *          children. The children's names are Keith, Libby, Margo, Nora, and

@@ -38,7 +38,7 @@ import java.util.Enumeration;
  * implements the interface Enumeration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public abstract class FloatIntervalEnumeration implements Enumeration<FloatInterval> {

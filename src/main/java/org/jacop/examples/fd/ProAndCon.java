@@ -41,7 +41,7 @@ import java.util.List;
  * It solves a simple logic puzzle about voting city council.
  *
  * @author Romam Gawelek, Marcin Kazmierczak, Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Logic Puzzle - Pro and Con
  *          Author: Monica Tenniel

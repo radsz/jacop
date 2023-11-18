@@ -31,7 +31,7 @@ package org.jacop.constraints.geost;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          It defines the necessary functionalities needed to define a lexicographical ordering
  *          of k-dimensional points.

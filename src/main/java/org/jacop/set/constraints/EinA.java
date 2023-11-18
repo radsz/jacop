@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * in the domain of the set variable.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class EinA extends PrimitiveConstraint {

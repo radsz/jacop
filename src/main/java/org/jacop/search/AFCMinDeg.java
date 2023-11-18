@@ -43,7 +43,7 @@ import org.jacop.constraints.Constraint;
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class AFCMinDeg<T extends Var> implements ComparatorVariable<T> {

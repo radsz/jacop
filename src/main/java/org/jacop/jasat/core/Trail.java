@@ -44,7 +44,7 @@ import java.util.Arrays;
  * they were asserted.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public final class Trail implements SolverComponent {

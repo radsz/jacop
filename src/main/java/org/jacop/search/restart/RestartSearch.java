@@ -51,7 +51,7 @@ import java.util.Random;
  *
  * @param <T> type of variables used in this search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class RestartSearch<T extends Var> {

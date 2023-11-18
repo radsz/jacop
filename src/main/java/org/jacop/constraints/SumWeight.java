@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 30), otherwise use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 

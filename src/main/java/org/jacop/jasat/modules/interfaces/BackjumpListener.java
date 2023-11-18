@@ -36,7 +36,7 @@ import org.jacop.jasat.core.SolverComponent;
  * interface for components that listen for backjumps, or restarts
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public interface BackjumpListener extends SolverComponent {
 

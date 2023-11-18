@@ -44,7 +44,7 @@ import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Pruning extends Network {

@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Constraints X {@literal >=} C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class XgteqC extends PrimitiveConstraint {

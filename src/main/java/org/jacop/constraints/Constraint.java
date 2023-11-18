@@ -47,7 +47,7 @@ import java.util.stream.Stream;
  * notSatisfiability, enforce consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {

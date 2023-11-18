@@ -38,7 +38,7 @@ import java.util.Set;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          InArea constraint allows on to define an area within which objects
  *          should be contained, as well as a collection of "holes" within the area

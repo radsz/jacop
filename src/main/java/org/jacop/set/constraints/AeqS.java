@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * is equal to a given set.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class AeqS extends PrimitiveConstraint {

@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * specified by variable value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class AtMost extends PrimitiveConstraint {

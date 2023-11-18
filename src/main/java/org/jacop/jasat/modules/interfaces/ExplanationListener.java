@@ -37,7 +37,7 @@ import org.jacop.jasat.core.clauses.MapClause;
  * module used when an explanation is found
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public interface ExplanationListener extends SolverComponent {
 

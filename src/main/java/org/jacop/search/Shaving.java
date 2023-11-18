@@ -69,7 +69,7 @@ import java.util.*;
  * pair.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 @SuppressWarnings("unchecked") public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener {

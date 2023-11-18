@@ -45,7 +45,7 @@ import java.util.Map;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Arithmetic extends DecomposedConstraint<Constraint> {

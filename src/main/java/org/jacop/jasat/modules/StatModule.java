@@ -44,7 +44,7 @@ import java.util.TimerTask;
  * collects statistics about the solver
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public final class StatModule
     implements AssertionListener, BackjumpListener, ConflictListener, ForgetListener, ClauseListener, PropagateListener, StartStopListener {

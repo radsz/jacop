@@ -45,7 +45,7 @@ import java.util.ArrayList;
  * Clearly this problem is not satisfiable.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class PigeonHole extends ExampleFD {

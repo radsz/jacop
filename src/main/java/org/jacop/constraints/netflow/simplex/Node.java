@@ -34,7 +34,7 @@ package org.jacop.constraints.netflow.simplex;
  * A node (vertex) in the network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public final class Node {

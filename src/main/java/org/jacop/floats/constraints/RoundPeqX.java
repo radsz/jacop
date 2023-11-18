@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class RoundPeqX extends Constraint implements SatisfiedPresent {

@@ -55,7 +55,7 @@ import static org.junit.Assert.fail;
  * Test Helper used by all Minizinc based tests.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class MinizincBasedTestsHelper {

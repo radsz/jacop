@@ -46,7 +46,7 @@ import java.util.function.BiFunction;
  * It specifies an adder using gates specified by extensional constraints.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Gates extends ExampleFD {

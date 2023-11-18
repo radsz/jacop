@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public class PplusQeqR extends PrimitiveConstraint {
 

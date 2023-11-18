@@ -36,7 +36,7 @@ import java.util.Arrays;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          This version of the ObstacleObject internal constraint allows the use
  *          of multiple d-boxes per shape.

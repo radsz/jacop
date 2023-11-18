@@ -39,7 +39,7 @@ import java.util.Map;
  * This tree is a main data structure used and required by Knapsack constraint.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.9
+ * @version 4.10
  */
 
 public class Tree {

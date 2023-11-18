@@ -45,7 +45,7 @@ import java.util.Set;
  * The first index in the variables list is equal to 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Element extends Constraint implements UsesQueueVariable {

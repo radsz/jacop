@@ -41,7 +41,7 @@ import org.jacop.core.IntVar;
  * will be used.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class IndomainList<T extends IntVar> implements Indomain<T> {

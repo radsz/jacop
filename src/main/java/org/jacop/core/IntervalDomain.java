@@ -43,7 +43,7 @@ import java.util.Random;
  * one or several intervals.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class IntervalDomain extends IntDomain implements Cloneable {

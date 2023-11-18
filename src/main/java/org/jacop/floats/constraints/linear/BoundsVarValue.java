@@ -36,7 +36,7 @@ import org.jacop.core.MutableVarValue;
  * Defines a current bounds for the Linear constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 class BoundsVarValue implements MutableVarValue, Cloneable {

@@ -38,7 +38,7 @@ import java.util.List;
  * Defines a current value of the Diff2Var and related operations on it.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 class Diff2VarValue implements MutableVarValue, Cloneable {

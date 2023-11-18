@@ -49,7 +49,7 @@ import static org.jacop.constraints.netflow.Assert.checkStructure;
  * data structures for removal and modification of arcs.
  *
  * @author Robin Steiger and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Network extends NetworkSimplex implements MutableNetwork {

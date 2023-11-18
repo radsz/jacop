@@ -44,7 +44,7 @@ import java.util.Collection;
  * to other shorter time category.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 @RunWith(Parameterized.class) public class MinizincBasedTestUpTo1Minutes extends MinizincBasedTestsHelper {
     protected static final String timeCategory = "upTo1min/";

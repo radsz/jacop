@@ -34,7 +34,7 @@ package org.jacop.floats.constraints.linear;
  * Binary Node of the tree representing linear constraint.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class BTree {

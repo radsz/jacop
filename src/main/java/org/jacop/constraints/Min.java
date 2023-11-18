@@ -46,7 +46,7 @@ import java.util.stream.Stream;
  * varable from all FD varaibles on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Min extends Constraint implements SatisfiedPresent {

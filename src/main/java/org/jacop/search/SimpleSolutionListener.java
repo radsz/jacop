@@ -44,7 +44,7 @@ import java.util.Map;
  *
  * @param <T> type of variable being used in search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {

@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * min(x1, x2) = min.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class MinSimple extends Constraint implements SatisfiedPresent {

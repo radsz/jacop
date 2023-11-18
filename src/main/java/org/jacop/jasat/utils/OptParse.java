@@ -37,7 +37,7 @@ import java.util.*;
  * util to parse command-line arguments
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public class OptParse<E> {
 

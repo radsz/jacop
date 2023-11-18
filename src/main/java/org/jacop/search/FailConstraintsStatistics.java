@@ -44,7 +44,7 @@ import java.util.Map.Entry;
  * individual constraint as well as a class of constraints.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class FailConstraintsStatistics implements ConsistencyListener {

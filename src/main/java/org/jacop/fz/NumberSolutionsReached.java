@@ -35,7 +35,7 @@ package org.jacop.fz;
  * solutions using option -n.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 @SuppressWarnings("serial")

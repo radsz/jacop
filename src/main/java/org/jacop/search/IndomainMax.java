@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class IndomainMax<T extends IntVar> implements Indomain<T> {

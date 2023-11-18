@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * onto a list of integer variables.
  *
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski, and Robert Åkemalm
- * @version 4.9
+ * @version 4.10
  */
 
 public class Match extends Constraint implements SatisfiedPresent {

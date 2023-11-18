@@ -43,7 +43,7 @@ import static org.junit.Assert.assertThat;
  * It is performing testing for performance comparisons.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 public class PerformanceTest extends TestHelper {
 

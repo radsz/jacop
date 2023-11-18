@@ -36,7 +36,7 @@ package org.jacop.floats.core;
  * one or several intervals.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public final class FloatInterval implements Cloneable {

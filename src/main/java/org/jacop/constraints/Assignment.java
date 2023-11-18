@@ -48,7 +48,7 @@ import java.util.stream.Stream;
  * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class Assignment extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

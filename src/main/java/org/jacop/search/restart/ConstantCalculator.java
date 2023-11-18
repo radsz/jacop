@@ -34,7 +34,7 @@ package org.jacop.search.restart;
  * Defines functionality for constant calculator for restart search.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class ConstantCalculator extends Calculator {

@@ -45,7 +45,7 @@ import java.util.*;
  * It is an abstract class to describe all necessary functions of any store.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class Store {

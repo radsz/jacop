@@ -70,7 +70,7 @@ import java.util.ArrayList;
  * """
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  *          <p>
  *          Compare with my MiniZinc model:
  *          http://www.hakank.org/minizinc/diet1.mzn

@@ -39,7 +39,7 @@ import java.io.PrintStream;
  * Implements ThetaTree and operations on this tree for Cumulative constraint
  *
  * @author Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 

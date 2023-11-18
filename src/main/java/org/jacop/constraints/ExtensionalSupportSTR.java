@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * available, which helped to create our own version of this algorithm.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 

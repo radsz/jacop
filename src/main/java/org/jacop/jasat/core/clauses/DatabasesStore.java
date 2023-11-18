@@ -43,7 +43,7 @@ import java.io.BufferedWriter;
  * access to it, so that they can translate unique clauses ids in both way.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public final class DatabasesStore implements SolverComponent, ClauseDatabaseInterface {
 

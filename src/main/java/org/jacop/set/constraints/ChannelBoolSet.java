@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 

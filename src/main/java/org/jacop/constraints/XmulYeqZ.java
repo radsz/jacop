@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class XmulYeqZ extends Constraint implements SatisfiedPresent {

@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Decreasing constraint assures that all variables are in decreasing order. 
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Decreasing extends Increasing {

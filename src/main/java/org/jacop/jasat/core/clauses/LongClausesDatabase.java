@@ -47,7 +47,7 @@ import java.util.Random;
  * to minimize cache misses.
  *
  * @author Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public final class LongClausesDatabase extends AbstractClausesDatabase {

@@ -42,7 +42,7 @@ import java.util.stream.Stream;
  * ChannelReif constraints "constraint" {@literal <=>} B.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class ChannelReif extends Constraint implements SatisfiedPresent {

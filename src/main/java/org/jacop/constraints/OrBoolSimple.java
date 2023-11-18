@@ -41,7 +41,7 @@ import org.jacop.core.Store;
  * It restricts the domain of a and b as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class OrBoolSimple extends PrimitiveConstraint {

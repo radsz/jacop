@@ -48,7 +48,7 @@ import java.util.Iterator;
  * one or several intervals.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.9
+ * @version 4.10
  */
 
 public class FloatIntervalDomain extends FloatDomain implements Cloneable {

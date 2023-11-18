@@ -35,7 +35,7 @@ package org.jacop.jasat.utils.structures;
  * A mix of a priority queue and a hashmap, specialized for ints
  *
  * @author Simon Cruanes and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 public final class IntPriorityQueue {
 

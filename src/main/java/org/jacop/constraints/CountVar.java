@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * specified by variable counter.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class CountVar extends PrimitiveConstraint {

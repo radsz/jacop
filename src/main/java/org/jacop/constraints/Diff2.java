@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Zero-width rectangles can be packed anywhere.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Diff2 extends Diff {

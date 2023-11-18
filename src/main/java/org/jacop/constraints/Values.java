@@ -43,7 +43,7 @@ import java.util.stream.Stream;
  * Constraint Values counts number of different values on a list of Variables.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.9
+ * @version 4.10
  */
 
 public class Values extends Constraint implements SatisfiedPresent {
