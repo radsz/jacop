@@ -13,7 +13,7 @@
     "needsStdlibDir": false,
     "supportsFzn": true,
     "supportsMzn": false,
-    "version": "4.9",
+    "version": "4.10",
     "tags": ["cp", "int", "float", "set", "restart"],
     "stdFlags": ["-a","-n","-s","-t","-v", "-f", "-r"],
     "extraFlags": [["-b", "use bounds consistency whenever possible; overrides annotation domain.", "bool", "false"],
