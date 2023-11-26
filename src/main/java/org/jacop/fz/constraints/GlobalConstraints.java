@@ -1607,13 +1607,19 @@ class GlobalConstraints implements ParserTreeConstants {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
         IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
-        support.pose(new Reified(new AllEqual(x), b));
+        if (x.length == 2)
+            support.pose(new Reified(new XeqY(x[0], x[1]), b));
+        else
+            support.pose(new Reified(new AllEqual(x), b));
     }
 
     void gen_jacop_all_equal_int(SimpleNode node) {
         IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
-        support.pose(new AllEqual(x));
+        if (x.length == 2)
+            support.pose(new XeqY(x[0], x[1]));
+        else
+            support.pose(new AllEqual(x));
     }
 
     // optional global constraints

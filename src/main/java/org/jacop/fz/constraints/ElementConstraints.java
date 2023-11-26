@@ -109,6 +109,12 @@ class ElementConstraints implements ParserTreeConstants {
         for (int i = 0; i < listLength; i++)
             newP2[i] = p2[p1.min() - 1 + i];
 
+        if (p2.length > 1 && allEqual(p2)) {
+            p3.domain.in(store.level, p3, p2[0], p2[0]);
+            p1.domain.in(store.level, p1, 1, p2.length);
+            return;
+        }
+
         if (p1.singleton(1) && newP2.length == 1)
             support.pose(new XeqC(p3, newP2[0]));
         else if (support.options.getBoundConsistency())
@@ -241,4 +247,13 @@ class ElementConstraints implements ParserTreeConstants {
         return true;
     }
 
+    boolean allEqual(int[] v) {
+
+        int e = v[0];
+        for (int i = 1; i < v.length; i++) {
+            if (e != v[i])
+                return false;
+        }
+        return true;
+    }
 }

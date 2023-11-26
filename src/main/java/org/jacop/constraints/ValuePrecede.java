@@ -179,6 +179,9 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
         } while (store.propagationHasOccurred);
 
+        if (satisfied())
+            removeConstraint();
+
         alpha.update(alphaValue);
         beta.update(betaValue);
         gamma.update(gammaValue);
@@ -267,19 +270,22 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
     @Override public boolean satisfied() {
 
-        int firstS = -1;
-        int firstT = -1;
-        for (int i = 0; i < x.length; i++) {
-            if (x[i].singleton()) {
-                if (firstS == -1 && x[i].singleton(s))
-                    firstS = i;
-                if (firstT == -1 && x[i].singleton(t))
-                    firstT = i;
-            } else
+        int i = 0;
+        for (; i < x.length; i++) {
+           if (!x[i].domain.contains(t)) {
+                if (x[i].singleton(s)) {
+                    break;
+                }
+            }
+            else
                 return false;
         }
-
-        return (firstT != -1 && firstS < firstT) || (firstS == -1 && firstT == -1);
+        for (; i < x.length; i++) {
+            if (x[i].singleton(t)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override public void queueVariable(int level, Var var) {
