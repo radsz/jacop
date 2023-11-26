@@ -179,8 +179,8 @@ public class ValuePrecede extends Constraint implements UsesQueueVariable, State
 
         } while (store.propagationHasOccurred);
 
-        if (satisfied())
-            removeConstraint();
+        // if (satisfied())
+        //     removeConstraint();
 
         alpha.update(alphaValue);
         beta.update(betaValue);
