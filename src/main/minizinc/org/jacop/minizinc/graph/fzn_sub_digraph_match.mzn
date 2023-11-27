@@ -1,8 +1,8 @@
-predicate jacop_sub_digraph_match(array[int,int] of int: target, array[int,int] of int: pattern,
+predicate jacop_sub_digraph_match(array[int] of int: target, array[int] of int: pattern,
 				  array[int] of int: target_node_type, array[int] of int: pattern_node_type, array[int] of var int: match, int: min_index);
 
 predicate fzn_sub_digraph_match(array[int,int] of int: target, array[int,int] of int: pattern,
                                 array[int] of int: target_node_type, array[int] of int: pattern_node_type, array[int] of var int: match, int: lm) =
-     jacop_sub_digraph_match(target, pattern, target_node_type, pattern_node_type, match, lm)
+     jacop_sub_digraph_match(array1d(target), array1d(pattern), target_node_type, pattern_node_type, match, lm)
 ;
 

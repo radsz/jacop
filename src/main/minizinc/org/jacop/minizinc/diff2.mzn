@@ -12,15 +12,15 @@ predicate diff2(array[int,int] of var int: r) =
         in
 	  assert( s2 = 4,
 	    "diff2: size of a rectangle must be 4",
-             jacop_diff2(r)
+                  jacop_diff2(array1d(r))
 	  );
 
 predicate diff2(array[int] of var int: x, array[int] of var int: y,
 	        array[int] of var int: lx, array[int] of var int: ly) =
-           jacop_list_diff2(x, y, lx, ly);
+        jacop_list_diff2(x, y, lx, ly);
 
 
-predicate jacop_diff2(array[int,int] of var int: r);
+predicate jacop_diff2(array[int] of var int: r);
 
 predicate jacop_list_diff2(array[int] of var int: x, array[int] of var int: y,
 	                   array[int] of var int: lx, array[int] of var int: ly);

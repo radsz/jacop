@@ -1,12 +1,12 @@
 predicate jacop_geost_bb(
-                      int        : k           ,
-    array[int,int] of int        : rect_size   ,
-    array[int,int] of int        : rect_offset ,
-    array[int    ] of set of int : shape       , 
-    array[int,int] of var int    : x           ,
-    array[int    ] of var int    : kind        ,
-    array[int    ] of int    : l               ,
-    array[int    ] of int    : u
+                      int        : k       ,
+    array[int] of int        : rect_size   ,
+    array[int] of int        : rect_offset ,
+    array[int] of set of int : shape       , 
+    array[int] of var int    : x           ,
+    array[int] of var int    : kind        ,
+    array[int] of int    : l               ,
+    array[int] of int    : u
 
 );
 
@@ -20,7 +20,7 @@ predicate fzn_geost_bb(
     array[int    ] of int    : l               ,
     array[int    ] of int    : u
 ) =
-        jacop_geost_bb(k, rect_size, rect_offset, shape, x, kind, l, u)
+        jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset), shape, array1d(x), kind, l, u)
     ;
 
 
