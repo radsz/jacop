@@ -245,10 +245,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 run_single_search(solveKind, kind, si);
             } else if (search_type.equals("warm_start")) {
                 run_single_search(solveKind, kind, si);
+            } else if (search_type.startsWith("restart_")) {
+                run_single_search(solveKind, kind, si);
             } else {
                 if (search_type.equals("$expr"))
                     search_type = ((ASTScalarFlatExpr)node.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0)).getIdent();
                 System.err.println("%% Warning: Not supported search annotation: \"" + search_type + "\"; ignored");
+
                 run_single_search(solveKind, kind, null);
             }
         } else if (count > 2) { // several annotations
@@ -411,6 +414,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 int to = options.getTimeOut();
                 if (to > 0)
                     label.setTimeOutMilliseconds(to);
+            } else if (si.type().startsWith("restart_")) {
+                ArrayList<SearchItem<T>> sa = new ArrayList<>();
+                sa.add(si);
+                ArrayList<SearchItem<T>> ns = parseSearchAnnotations(sa);
+                si = null;
             } else {
                 throw new IllegalArgumentException("Not recognized or supported search type \"" + si.type() + "\"; compilation aborted");
             }
