@@ -1514,7 +1514,12 @@ class GlobalConstraints implements ParserTreeConstants {
 
         int n = x.length;
         if (n == 2) {
-            if (b[0].singleton(1)) {
+            if (support.options.useSat() &&
+                x[0].min() >= 0 && x[0].max() <= 1 && x[1].min() >= 0 && x[1].max() <= 1
+                && y.singleton(1)) {
+                support.sat.generate_if_then_else_bool(b[0], x[0], x[1]);
+                return;
+            } else if (b[0].singleton(1)) {
                 support.pose(new XeqY(x[0], y));
                 return;
             } else if (b[0].singleton(0) && b[1].singleton(1)) {

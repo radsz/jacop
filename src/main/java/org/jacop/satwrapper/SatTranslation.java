@@ -332,6 +332,13 @@ public class SatTranslation {
         generate_clause(v, new IntVar[] {});
     }
 
+    public void generate_if_then_else_bool(IntVar c, IntVar a, IntVar b) {
+        // case for if c then a = true else b = true
+        // (-c \/ a) /\ (c \/ b)
+        generate_clause(new IntVar[] {a}, new IntVar[] {c});
+        generate_clause(new IntVar[] {c, b}, new IntVar[] {});
+    }
+
     /* 
     // Not efficient with SimpleCpVarDomain bridge implementation; needs LazyCpVarDomain (not yet implemented)
     public void generate_eqC_reif(IntVar x, int c, IntVar b) {
