@@ -225,7 +225,7 @@ public class ProfileOptional {
                         Event ce = utilizationProfile.get(profilePointer);
                         if (ce.date() == e.date()) {
                             ce.value += e.value();
-                            if (ce.date() > 0
+                            if (ce.date() > 0 && profilePointer > 0
                                 && ce.value == utilizationProfile.get(profilePointer - 1).value())
                                 utilizationProfile.remove(profilePointer--);
                         } else {
