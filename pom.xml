@@ -342,6 +342,7 @@ setup to run configuration. -->
                     </dependencies>
                     <configuration>
                         <configLocation>doc/checkstyle.xml</configLocation>
+                        <suppressionsLocation>../doc/suppression.xml</suppressionsLocation>
                     </configuration>
                 </plugin>
 
@@ -635,6 +636,7 @@ setup to run configuration. -->
                 </reportSets>
                 <configuration>
                     <configLocation>doc/checkstyle.xml</configLocation>
+                    <suppressionsLocation>../doc/suppression.xml</suppressionsLocation>
                 </configuration>
             </plugin>
             <plugin>

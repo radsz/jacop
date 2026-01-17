@@ -25,7 +25,7 @@
     </module>
 
     <module name="SuppressionFilter">
-        <property name="file" value="doc/suppression.xml"/>
+        <property name="file" value="${checkstyle.suppressions.file}"/>
     </module>
 
     <module name="LineLength">
