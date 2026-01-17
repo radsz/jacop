@@ -28,7 +28,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jacop.util;
+package org.jacop.floats.util;
 
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
@@ -36,9 +36,12 @@ import org.jacop.floats.core.FloatIntervalDomain;
 
 /**
  * Matrix and operations on matrices.
+ * <p>
+ * This class was moved from org.jacop.util to org.jacop.floats.util
+ * as it has float-specific dependencies and is only used in float constraints.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
+ * @version 4.11
  */
 
 public class Matrix {
