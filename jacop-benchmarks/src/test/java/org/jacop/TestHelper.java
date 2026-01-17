@@ -38,8 +38,6 @@ import java.util.Arrays;
 
 /**
  * It is helper class that allows perform quickly operation to setup tests.
- * <p>
- * Note: This is a local copy for jacop-core tests. The main TestHelper is in jacop-benchmarks module.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
@@ -101,5 +99,4 @@ public class TestHelper {
         return search.getSolutionListener().solutionsNo();
 
     }
-
 }

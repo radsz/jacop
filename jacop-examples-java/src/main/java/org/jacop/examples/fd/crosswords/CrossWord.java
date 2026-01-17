@@ -70,7 +70,7 @@ public class CrossWord extends ExampleFD {
     IntVar[][] x;      // the solution
     IntVar blank;
 
-    String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
+    public String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
 
     Map<Integer, MDD> mdds = new HashMap<Integer, MDD>();
 

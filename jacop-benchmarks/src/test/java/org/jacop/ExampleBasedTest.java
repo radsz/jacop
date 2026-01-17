@@ -71,6 +71,7 @@ public class ExampleBasedTest {
     @Test public void testCrossWord() {
 
         CrossWord crossWord = new CrossWord();
+        crossWord.defaultDictionary = "src/test/resources/words";
 
         crossWord.model();
 
@@ -82,6 +83,7 @@ public class ExampleBasedTest {
     @Test public void testMUCA() {
 
         MUCA problem = new MUCA();
+        problem.filename = "src/test/resources/testset3.auct";
         problem.model();
         problem.searchSpecial();
         assertEquals(
@@ -89,7 +91,7 @@ public class ExampleBasedTest {
             problem.store.toStringOrderedVars());
 
         problem = new MUCA();
-        problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset1.auct";
+        problem.filename = "src/test/resources/testset1.auct";
         problem.model();
         problem.searchSpecial();
         assertEquals(
@@ -98,7 +100,7 @@ public class ExampleBasedTest {
 
 
         problem = new MUCA();
-        problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset2.auct";
+        problem.filename = "src/test/resources/testset2.auct";
         problem.model();
         problem.searchSpecial();
         assertEquals(
@@ -136,7 +138,7 @@ public class ExampleBasedTest {
                 no = "0" + no;
 
             System.out.println("Problem file data" + no + ".nin");
-            example.readFromFile("src/main/java/org/jacop/examples/fd/nonogram/nonogramRepository/data" + no + ".nin");
+            example.readFromFile("src/test/resources/nonogramRepository/data" + no + ".nin");
             example.model();
 
             if (example.searchAll())
@@ -152,6 +154,7 @@ public class ExampleBasedTest {
 
         System.out.println("Solving QCP with restart search.");
         QCP example = new QCP();
+        example.filename = "src/test/resources/psqwh-25-235-0081.pls";
         example.model();
 
         if (example.searchWithRestarts())
