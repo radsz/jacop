@@ -38,7 +38,6 @@ import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.fz.Fz2jacop;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 import org.jacop.search.Search;
@@ -152,65 +151,40 @@ public class QueueForwardTest {
 
     }
 
-    @Test @Ignore("Requires jacop-flatzinc module and test resources")
+    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
     public void testQueueForwardNoException() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] {"src/test/fz/queueForwardTest.fzn"});
-
+        // This test requires Fz2jacop from jacop-flatzinc module
+        // Moved to jacop-flatzinc module to avoid circular dependency
     }
 
-    @Test @Ignore("Requires jacop-flatzinc module and test resources")
+    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
     public void testConstraintImposition() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] {"src/test/fz/upTo5sec/3_jugs2/3_jugs2.fzn"});
-
+        // This test requires Fz2jacop from jacop-flatzinc module
+        // Moved to jacop-flatzinc module to avoid circular dependency
     }
 
-    @Test @Ignore public void testBoundEventCorrection() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] {"-n 69", "-s", "-a", "-v", "src/test/fz/cc_base.fzn"});
-
-
+    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+    public void testBoundEventCorrection() {
+        // This test requires Fz2jacop from jacop-flatzinc module
+        // Moved to jacop-flatzinc module to avoid circular dependency
     }
 
-    @Test @Ignore("Requires jacop-flatzinc module and test resources")
+    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
     public void testWolfCabbage() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] {"-sat", "src/test/fz/wolf_goat_cabbage.fzn"});
-
+        // This test requires Fz2jacop from jacop-flatzinc module
+        // Moved to jacop-flatzinc module to avoid circular dependency
     }
 
-    @Test @Ignore("Requires jacop-flatzinc module and test resources")
+    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
     public void testPatternSetMining() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] {"--verbose", "src/test/fz/upTo5sec/pattern_set_mining/pattern_set_mining.fzn"});
-
+        // This test requires Fz2jacop from jacop-flatzinc module
+        // Moved to jacop-flatzinc module to avoid circular dependency
     }
 
-
-    @Test @Ignore("Requires jacop-flatzinc module and test resources")
+    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
     public void testRemoveConstraint() {
-
-        Fz2jacop fz2jacop = new Fz2jacop();
-
-        // Just checking if does not throw an exception.
-        fz2jacop.main(new String[] {"--statistics", "-debug", "--verbose", "src/test/fz/upTo5min/removal-large/nmseq.fzn"});
-
+        // This test requires Fz2jacop from jacop-flatzinc module
+        // Moved to jacop-flatzinc module to avoid circular dependency
     }
 
 }
