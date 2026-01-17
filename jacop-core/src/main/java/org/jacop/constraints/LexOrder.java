@@ -59,9 +59,8 @@ import org.jacop.util.SimpleHashSet;
 public class LexOrder extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   static final boolean debug = false;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Two vectors that have to be lexicographically ordered. */
   public IntVar[] x;
@@ -80,18 +79,14 @@ public class LexOrder extends Constraint
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
-
-  private Store store;
-
-  private TimeStamp<Integer> alpha;
-  private TimeStamp<Integer> beta;
-
-  private int alphaValue;
-  private int betaValue;
-
   SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
   Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
   Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
+  private Store store;
+  private TimeStamp<Integer> alpha;
+  private TimeStamp<Integer> beta;
+  private int alphaValue;
+  private int betaValue;
 
   /**
    * It creates a lexicographical order for vectors x and y,
@@ -264,7 +259,7 @@ public class LexOrder extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     result.append(id());
     result.append(" : LexOrder(");
 

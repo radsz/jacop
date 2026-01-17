@@ -55,18 +55,14 @@ public class NetworkSimplex {
   public final Node root;
   public final Node[] nodes;
   public final Arc[] lower;
-  public int numArcs;
-
-  // second 'return' value of augmentFlow method
-  public Arc blocking;
-
-  protected final PivotRule pivotRule;
-
   // the set of nodes with non-zero balance
   public final Set<Node> infeasibleNodes;
-
   // TODO convenience or overhead ?
   public final List<Arc> allArcs;
+  protected final PivotRule pivotRule;
+  public int numArcs;
+  // second 'return' value of augmentFlow method
+  public Arc blocking;
 
   public NetworkSimplex(List<Node> nodes, List<Arc> arcs) {
 
@@ -183,8 +179,6 @@ public class NetworkSimplex {
     }
   }
 
-  /** *************** */
-  /** Graph update * */
   /**
    * @param arc the network arc being added
    */
@@ -256,9 +250,6 @@ public class NetworkSimplex {
     decrementDegree(arc.tail());
     //		System.out.println(numArcs+"  Removed : " + arc);
   }
-
-  /** ************************* */
-  /** Primal Network Simplex * */
 
   /**
    * @param maxPivots max value of the pivot
@@ -403,9 +394,6 @@ public class NetworkSimplex {
       updateTree(leaving, entering);
     }
   }
-
-  /** ******************** */
-  /** Tree manipulation * */
 
   /**
    * Augments the flow between two nodes by the maximum amount along the unique tree path that
@@ -552,9 +540,6 @@ public class NetworkSimplex {
     b.parent = c;
   }
 
-  /** ************************************ */
-  /** Parametric (Dual) Network Simplex * */
-
   /**
    * Given an optimal flow that satisfies all feasibility constraints except mass balance on two
    * nodes, the parametric simplex algorithm tries to achieve feasibility while keeping the solution
@@ -674,7 +659,6 @@ public class NetworkSimplex {
     return cost;
   }
 
-  /** ******** */
   /** Debug */
 
   // displays the state of the spanning tree and the flow

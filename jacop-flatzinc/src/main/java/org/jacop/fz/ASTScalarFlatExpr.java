@@ -3,14 +3,6 @@
 package org.jacop.fz;
 
 public class ASTScalarFlatExpr extends SimpleNode {
-  public ASTScalarFlatExpr(int id) {
-    super(id);
-  }
-
-  public ASTScalarFlatExpr(Parser p, int id) {
-    super(p, id);
-  }
-
   // My part
   // type = 0-int; 1=bool; 2-ident 3=array acces; 4=string; 5=float;
   int type = -1;
@@ -19,12 +11,24 @@ public class ASTScalarFlatExpr extends SimpleNode {
   String ident;
   String st;
 
-  public void setType(int t) {
-    type = t;
+  public ASTScalarFlatExpr(int id) {
+    super(id);
+  }
+
+  public ASTScalarFlatExpr(Parser p, int id) {
+    super(p, id);
   }
 
   public int getType() {
     return type;
+  }
+
+  public void setType(int t) {
+    type = t;
+  }
+
+  public int getInt() {
+    return intValue;
   }
 
   public void setInt(int i) {
@@ -37,32 +41,28 @@ public class ASTScalarFlatExpr extends SimpleNode {
     //   	}
   }
 
-  public int getInt() {
-    return intValue;
+  public double getFloat() {
+    return doubleValue;
   }
 
   public void setFloat(double d) {
     doubleValue = d;
   }
 
-  public double getFloat() {
-    return doubleValue;
+  public String getIdent() {
+    return ident;
   }
 
   public void setIdent(String i) {
     ident = i;
   }
 
-  public String getIdent() {
-    return ident;
+  public String getString() {
+    return st;
   }
 
   public void setString(String i) {
     st = i;
-  }
-
-  public String getString() {
-    return st;
   }
 
   public String toString() {

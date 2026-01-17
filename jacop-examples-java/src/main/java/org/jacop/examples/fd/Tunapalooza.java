@@ -65,6 +65,20 @@ import org.jacop.core.Store;
  */
 public class Tunapalooza extends ExampleFD {
 
+  /**
+   * It executes the program to solve this simple logic puzzle.
+   *
+   * @param args no arguments are used.
+   */
+  public static void main(String args[]) {
+
+    Tunapalooza example = new Tunapalooza();
+
+    example.model();
+
+    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -146,19 +160,5 @@ public class Tunapalooza extends ExampleFD {
 
     store.impose(new XneqC(reggae, Korrupt));
     store.imposeWithConsistency(new XneqY(reggae, information));
-  }
-
-  /**
-   * It executes the program to solve this simple logic puzzle.
-   *
-   * @param args no arguments are used.
-   */
-  public static void main(String args[]) {
-
-    Tunapalooza example = new Tunapalooza();
-
-    example.model();
-
-    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
   }
 }

@@ -78,19 +78,6 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It computes the consistency of the constraint.
-     *
-     * <p>#A = B
-     *
-     * <p>Cardinality of set variable A is equal to int variable B.
-     *
-     * <p>B.in(#glbA, #lubA).
-     *
-     * <p>If #glbA is already equal to maximum allowed cardinality then set is specified by glbA. if
-     * (#glbA == B.max()) then A = glbA If #lubA is already equal to minimum allowed cardinality
-     * then set is specified by lubA. if (#lubA == B.min()) then A = lubA
-     */
     SetDomain aDom = a.domain;
     IntDomain card = cardinality.domain;
 

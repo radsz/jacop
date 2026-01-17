@@ -46,6 +46,7 @@ import org.jacop.util.QueueForward;
 public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
+  public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies constraint condC in the IfThen constraint. */
   public PrimitiveConstraint condC;
@@ -54,10 +55,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   public PrimitiveConstraint thenC;
 
   boolean imposed = false;
-
   Store store;
-
-  public final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
    * It constructs ifthen constraint.
@@ -262,7 +260,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : IfThen(").append(condC).append(", ").append(thenC).append(" )\n");
 

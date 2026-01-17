@@ -54,6 +54,11 @@ public final class IntQueue implements Iterable<Integer> {
   // pool of int[]
   public MemoryPool pool;
 
+  public IntQueue(MemoryPool pool) {
+    assert pool != null;
+    this.pool = pool;
+  }
+
   public void clear() {
     start = stop = 0;
   }
@@ -139,18 +144,13 @@ public final class IntQueue implements Iterable<Integer> {
 
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer("IntQueue [");
+    StringBuilder sb = new StringBuilder("IntQueue [");
     for (int i : this) sb.append(i).append(' ');
     return sb.append(']').toString();
   }
 
   public Iterator<Integer> iterator() {
     return new QueueIterator();
-  }
-
-  public IntQueue(MemoryPool pool) {
-    assert pool != null;
-    this.pool = pool;
   }
 
   private final class QueueIterator implements Iterator<Integer> {

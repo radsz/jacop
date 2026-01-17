@@ -53,12 +53,15 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
   private static final int SIZE_OF_CLAUSE_CACHE = 8;
 
+  /**
+   * Put it one place so there is only one Random generator for the whole SAT solver. TODO: Radek.
+   */
+  Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+
   // the index of the current empty slot.
   private int currentIndex = 0;
-
   // the pool of clauses
   private int[][] clauses = new int[DEFAULT_INITIAL_NUMBER_OF_CLAUSES][];
-
   // the small pool of literals of clauses that can be used for watching.
   private int[][] literalsCache = new int[DEFAULT_INITIAL_NUMBER_OF_CLAUSES][];
 
@@ -83,11 +86,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     int clauseId = indexToUniqueId(newIndex);
     return clauseId;
   }
-
-  /**
-   * Put it one place so there is only one Random generator for the whole SAT solver. TODO: Radek.
-   */
-  Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   public void assertLiteral(int literal) {
 

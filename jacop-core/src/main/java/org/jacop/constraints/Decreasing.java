@@ -77,7 +77,7 @@ public class Decreasing extends Increasing {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : Decreasing([");
 
     for (int i = n - 1; i >= 0; i--) {

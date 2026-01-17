@@ -66,11 +66,20 @@ public class ObstacleObjectFrame extends InternalConstraint {
   /** It specifies the geost objection which is the foundation of this obstacle constraint. */
   final GeostObject obstacle;
 
+  /** The selected dimensions are sorted, they were sorted by NonOverlapping external constraint. */
+  final int[] selectedDimensions;
+
+  /** It specifies if the time dimension is used within computation. */
+  final boolean useTime;
+
   /**
    * the frame is the area that is ensured to be covered by the obstacle, given the domain of its
    * origin variables
    */
   public LinkedList<DBox> frame;
+
+  int timeSizeOrigin = 0;
+  int timeSizeMax = 0;
 
   /** It specifies the bounding box of the frame. */
   private DBox frameBoundingBox;
@@ -83,15 +92,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
    * domain that can be covered for any feasible choice of the origin
    */
   private SimpleArrayList<DBox> extendedHoles;
-
-  /** The selected dimensions are sorted, they were sorted by NonOverlapping external constraint. */
-  final int[] selectedDimensions;
-
-  /** It specifies if the time dimension is used within computation. */
-  final boolean useTime;
-
-  int timeSizeOrigin = 0;
-  int timeSizeMax = 0;
 
   /**
    * It creates an internal constraint to enforce non-overlapping relation with this obstacle
@@ -479,10 +479,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
       }
 
       if (useTime) {
-        /**
-         * for the time dimension, we need the bounds of the frame in the time dimension, which are
-         * the extrema of the area in time that is for certain used by this object
-         */
         int up = obstacle.end.max();
         int low = obstacle.start.min();
         if (up - low < 0) outPoint[obstacle.dimension] = 0;

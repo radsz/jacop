@@ -47,14 +47,13 @@ import org.jacop.util.QueueForward;
 public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
+  public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies a list of constraints from which one constraint must be satisfied. */
   public PrimitiveConstraint listOfC[];
 
   /** It specifies if during the consistency execution a propagation has occurred. */
   private boolean propagation;
-
-  public final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
    * It constructs Or constraint.
@@ -148,7 +147,8 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
     do {
 
       propagation = false;
-      for (int i = 0; i < listOfC.length; i++) listOfC[i].notConsistency(store);
+      for (PrimitiveConstraint primitiveConstraint : listOfC)
+        primitiveConstraint.notConsistency(store);
 
     } while (propagation);
   }

@@ -41,12 +41,6 @@ public final class SwitchesPruningLogging {
   /** It is a general switch which can be turned off to switch off all printouts. */
   public static final boolean trace = false;
 
-  /** It turns on all trace printouts in variables. */
-  public static boolean traceVar = trace && true;
-
-  /** It turns on all trace printouts in constraints. */
-  public static boolean traceConstraint = trace && true;
-
   /** The switch which enables to switch on/off the switches concerning Store operation. */
   public static final boolean traceStore = trace && true;
 
@@ -70,15 +64,6 @@ public final class SwitchesPruningLogging {
   /** This switch enables to trace remove level operation. */
   public static boolean traceLevelRemoval = trace && traceStore && true;
 
-  /** It traces all constraints have failed. */
-  public static boolean traceConstraintFailure = trace && true;
-
-  /** This switch enables to trace removal of the store level. */
-  public static boolean traceStoreRemoveLevel = trace && true;
-
-  /** This switch enables to trace creation of the variable. */
-  public static boolean traceVariableCreation = trace && true;
-
   /** This switch enables to trace set the store level. */
   public static boolean traceOperationsOnLevel = trace && traceStore && true;
 
@@ -88,12 +73,27 @@ public final class SwitchesPruningLogging {
   /** It traces the decisions within search. */
   public static boolean traceSearchTree = trace && traceSearch && true;
 
+  /** It turns on all trace printouts in variables. */
+  public static boolean traceVar = trace && true;
+
+  /** It turns on all trace printouts in constraints. */
+  public static boolean traceConstraint = trace && true;
+
+  /** It traces all constraints have failed. */
+  public static boolean traceConstraintFailure = trace && true;
+
+  /** This switch enables to trace removal of the store level. */
+  public static boolean traceStoreRemoveLevel = trace && true;
+
+  /** This switch enables to trace creation of the variable. */
+  public static boolean traceVariableCreation = trace && true;
+
+  private SwitchesPruningLogging() {}
+
   public static final void log(boolean isEnabled, Class fromClass, String pattern, Object[] args) {}
 
   public static final void log(boolean isEnabled, Class fromClass, String pattern, Object arg1) {}
 
   public static final void log(
       boolean isEnabled, Class fromClass, String pattern, Object arg1, Object arg2) {}
-
-  private SwitchesPruningLogging() {}
 }

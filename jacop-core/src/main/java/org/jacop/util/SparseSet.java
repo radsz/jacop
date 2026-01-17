@@ -124,7 +124,7 @@ public class SparseSet {
 
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     for (int i = 0; i < members; i++) result.append(dense[i]).append(" ");
 
     return result.toString();

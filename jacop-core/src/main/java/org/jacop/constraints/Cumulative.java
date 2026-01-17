@@ -45,31 +45,8 @@ import org.jacop.core.*;
  */
 public class Cumulative extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   private static final boolean debug = false, debugNarr = false;
-
-  /** It contains information about maximal profile contributed by tasks. */
-  private Profile maxProfile = null;
-
-  /**
-   * It contains information about minimal profile contributed by regions for certain occupied by
-   * tasks.
-   */
-  private Profile minProfile = null;
-
-  private CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
-
-  private Task Ts[];
-
-  /** It specifies if the edge finding algorithm should be used. */
-  protected boolean doEdgeFinding = true;
-
-  /** It specifies if the profiles should be computed to propagate onto limit variable. */
-  protected boolean doProfile = true;
-
-  /** It specifies if the data from profiles should be used to propagate onto limit variable. */
-  protected boolean setLimit = true;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the limit of the profile of cumulative use of resources. */
   public IntVar limit;
@@ -83,6 +60,26 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   /** It specifies/stores resource variable for each corresponding task. */
   public IntVar[] resources;
 
+  /** It specifies if the edge finding algorithm should be used. */
+  protected boolean doEdgeFinding = true;
+
+  /** It specifies if the profiles should be computed to propagate onto limit variable. */
+  protected boolean doProfile = true;
+
+  /** It specifies if the data from profiles should be used to propagate onto limit variable. */
+  protected boolean setLimit = true;
+
+  /** It contains information about maximal profile contributed by tasks. */
+  private Profile maxProfile = null;
+
+  /**
+   * It contains information about minimal profile contributed by regions for certain occupied by
+   * tasks.
+   */
+  private Profile minProfile = null;
+
+  private CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
+  private Task Ts[];
   private Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
 
   private Comparator<IntDomain> domainMinComparator = (o1, o2) -> (o1.min() - o2.min());

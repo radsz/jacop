@@ -84,39 +84,15 @@ public class Match extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It specifies the consistency rules for constraint match(list, a) where list is a list of
-     * intVar and a is a setVar.
-     *
-     * <p>list is lexicographically ordered elements of a.
-     *
-     * <p>[a, b, c, e, f] = {a, b, c, e, f}
-     *
-     * <p>#A = list.length
-     *
-     * <p>each element el in A.glb must occurr in one of the intvar in list. elPos is
-     * lexicographical position of el in A.glb
-     *
-     * <p>element el can only occur within an interval of intvars list[elPos]..list[list.length -
-     * (#A.glb-elPos)]
-     *
-     * <p>every element elU in A.lub that is not in A.glb can if added to glb will end up at
-     * position posElU and for this element we can also say that it can only occur in
-     * list[posElU]..list[list.length - (1+#A.glb-posElU)]
-     *
-     * <p>for all l[i], D(l[i]) must be in A.lub
-     *
-     * <p>A.lub = A.lub /\ ( \/ D(i) ).
-     */
     a.domain.inCardinality(store.level, a, list.length, list.length);
 
     if (a.domain.glb().getSize() == list.length) {
 
       ValueEnumeration ve = a.domain.glb().valueEnumeration();
       int el;
-      for (int i = 0; i < list.length; i++) {
+      for (IntVar intVar : list) {
         el = ve.nextElement();
-        list[i].domain.in(store.level, list[i], el, el);
+        intVar.domain.in(store.level, intVar, el, el);
       }
       a.domain.inLUB(store.level, a, a.domain.glb());
 
@@ -124,9 +100,9 @@ public class Match extends Constraint implements SatisfiedPresent {
 
       ValueEnumeration ve = a.domain.lub().valueEnumeration();
       int el;
-      for (int i = 0; i < list.length; i++) {
+      for (IntVar intVar : list) {
         el = ve.nextElement();
-        list[i].domain.in(store.level, list[i], el, el);
+        intVar.domain.in(store.level, intVar, el, el);
       }
       a.domain.inGLB(store.level, a, a.domain.lub());
 
@@ -199,8 +175,8 @@ public class Match extends Constraint implements SatisfiedPresent {
 
       ValueEnumeration ve = a.domain.glb().valueEnumeration();
 
-      for (int i = 0; i < list.length; i++) {
-        if (ve.nextElement() != list[i].value()) return false;
+      for (IntVar intVar : list) {
+        if (ve.nextElement() != intVar.value()) return false;
       }
 
       return true;
@@ -213,7 +189,7 @@ public class Match extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer ret = new StringBuffer(id());
+    StringBuilder ret = new StringBuilder(id());
     ret.append(" : Match(" + a + ", [ ");
     for (Var fdv : list) ret.append(fdv + " ");
     ret.append("] )");

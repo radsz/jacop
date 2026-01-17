@@ -58,6 +58,8 @@ public class Sum extends Constraint implements SatisfiedPresent {
   /** It specifies variable sum to store the overall sum of the variables being summed up. */
   public IntVar sum;
 
+  int guideValue = 0;
+
   /** The sum of grounded variables. */
   private TimeStamp<Integer> sumGrounded;
 
@@ -189,17 +191,6 @@ public class Sum extends Constraint implements SatisfiedPresent {
     super.impose(store);
   }
 
-  @Override
-  public boolean satisfied() {
-
-    if (!grounded()) return false;
-
-    int sumAll = 0;
-    for (IntVar v : list) sumAll += v.min();
-
-    return sumAll == sum.min();
-  }
-
   // void checkForOverflow() {
 
   //     int sumMin = 0, sumMax = 0;
@@ -216,9 +207,20 @@ public class Sum extends Constraint implements SatisfiedPresent {
   // }
 
   @Override
+  public boolean satisfied() {
+
+    if (!grounded()) return false;
+
+    int sumAll = 0;
+    for (IntVar v : list) sumAll += v.min();
+
+    return sumAll == sum.min();
+  }
+
+  @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : sum( [");
 
     for (int i = 0; i < list.length; i++) {
@@ -242,8 +244,6 @@ public class Sum extends Constraint implements SatisfiedPresent {
   public int getGuideValue() {
     return guideValue;
   }
-
-  int guideValue = 0;
 
   @Override
   public Var getGuideVariable() {

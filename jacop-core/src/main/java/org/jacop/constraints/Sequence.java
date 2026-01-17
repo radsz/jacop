@@ -80,14 +80,6 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     this.q = q;
   }
 
-  @Override
-  public void imposeDecomposition(Store store) {
-
-    if (constraints == null) constraints = decompose(store);
-
-    for (Constraint c : constraints) store.impose(c, queueIndex);
-  }
-
   /**
    * Preferred and default option of decomposing Sequence constraint.
    *
@@ -163,6 +155,14 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     constraints.add(new Regular(fsm, sequence.list));
 
     return constraints;
+  }
+
+  @Override
+  public void imposeDecomposition(Store store) {
+
+    if (constraints == null) constraints = decompose(store);
+
+    for (Constraint c : constraints) store.impose(c, queueIndex);
   }
 
   @Override

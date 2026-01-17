@@ -50,22 +50,29 @@ import org.jacop.satwrapper.WrapperComponent;
  */
 public abstract class SatCPBridge implements WrapperComponent {
 
-  // the wrapper
-  protected SatWrapper wrapper;
-
   // the variable this object represents the range of
   public final IntVar variable;
-
   // the domain of the variable
   public final IntDomain initialDomain;
-
   // lower bound of the domain
   public int min;
-
   // upper bound of the domain
   public int max;
-
+  // the wrapper
+  protected SatWrapper wrapper;
   protected boolean hasSetDomain = false;
+
+  /**
+   * simple constructor with a variable
+   *
+   * @param variable the variable of which this is the range
+   */
+  public SatCPBridge(IntVar variable) {
+    this.variable = variable;
+    this.initialDomain = variable.domain;
+    // Note: satBridge registration is now done via SatWrapper.setSatBridge()
+    // This will be called by the wrapper after construction
+  }
 
   /**
    * the left limit of the range
@@ -150,18 +157,6 @@ public abstract class SatCPBridge implements WrapperComponent {
    * @return true if the variable should be handled by the DomainClausesDatabase
    */
   public abstract boolean isTranslated();
-
-  /**
-   * simple constructor with a variable
-   *
-   * @param variable the variable of which this is the range
-   */
-  public SatCPBridge(IntVar variable) {
-    this.variable = variable;
-    this.initialDomain = variable.domain;
-    // Note: satBridge registration is now done via SatWrapper.setSatBridge()
-    // This will be called by the wrapper after construction
-  }
 
   /**
    * Registers this bridge with the wrapper for the associated variable. This should be called after

@@ -50,17 +50,16 @@ public class CountBounds extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies a lower and upper bounds of occurences of the specified value in a list. */
-  final int lb;
-
-  final int ub;
-
   /** The list of variables which are checked and counted if equal to specified value. */
   public final IntVar[] list;
 
   /** The value to which is any variable is equal to makes the constraint count it. */
   public final int value;
 
+  /** It specifies a lower and upper bounds of occurences of the specified value in a list. */
+  final int lb;
+
+  final int ub;
   /*
    * Defines first position of the variable that are not considered;
    * either equal to value or missing the value in their domain.

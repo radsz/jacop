@@ -50,15 +50,14 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-
-  int firstConsistencyLevel;
-
   /** It contains variable p. */
   public FloatVar p;
 
   /** It contains variable q. */
   public FloatVar q;
+
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
 
   /**
    * It constructs |P| = Q constraints.
@@ -144,7 +143,7 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : absPeqR(").append(p).append(", ").append(q).append(" )");
 

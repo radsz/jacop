@@ -49,6 +49,12 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   // FIXME, implement all already implemented functions from IntDomain
   // so it is more efficient, for example public int lex(IntDomain s).
 
+  /** An empty domain, so no constant creation of empty domains is required. */
+  public static final IntervalDomain emptyDomain = new IntervalDomain(0);
+
+  private static final Random generator =
+      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+
   /** The values of the domain are encoded as a list of intervals. */
   public Interval[] intervals;
 
@@ -61,13 +67,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     this(0);
     // throw new RuntimeException("Do not use.");
   }
-
-  public IntDomain getPreviousDomain() {
-    return previousDomain;
-  }
-
-  /** An empty domain, so no constant creation of empty domains is required. */
-  public static final IntervalDomain emptyDomain = new IntervalDomain(0);
 
   /**
    * It creates an empty domain, with at least specified number of places in an array list for
@@ -101,6 +100,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     searchConstraintsCloned = false;
     intervals[0] = new Interval(min, max);
     this.size = 1;
+  }
+
+  public IntDomain getPreviousDomain() {
+    return previousDomain;
   }
 
   /**
@@ -2380,8 +2383,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       result.append("constraints: ");
 
-      for (Iterator<Constraint> e = domain.searchConstraints.iterator(); e.hasNext(); )
-        result.append(e.next());
+      for (Constraint searchConstraint : domain.searchConstraints) result.append(searchConstraint);
 
       if (domain.domainID() == IntervalDomainID) {
 
@@ -3329,6 +3331,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return intervals[position];
   }
 
+  // TODO check and test inComplement below.
+
   /**
    * It updates the domain to not contain the value complement. It informs the variable of a change
    * if it occurred.
@@ -3565,8 +3569,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
   }
-
-  // TODO check and test inComplement below.
 
   @Override
   public void inComplement(int storeLevel, Var var, int min, int max) {
@@ -5348,9 +5350,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     return intervals[counter].min + index;
   }
-
-  private static final Random generator =
-      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   @Override
   public int getRandomValue() {

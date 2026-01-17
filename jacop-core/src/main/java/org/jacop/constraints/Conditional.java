@@ -85,8 +85,8 @@ public class Conditional extends Constraint implements SatisfiedPresent {
 
     // collect variables of all constraints
     List<Var> vs = new ArrayList<>();
-    for (int i = 0; i < c.length; i++) {
-      Set<Var> cvs = c[i].arguments();
+    for (PrimitiveConstraint primitiveConstraint : c) {
+      Set<Var> cvs = primitiveConstraint.arguments();
       for (Var v : cvs) vs.add(v);
     }
 

@@ -56,49 +56,6 @@ import org.jacop.util.fsm.FSMTransition;
  */
 public class CarSequencing extends ExampleFD {
 
-  /**
-   * The format of the data files is as follows:
-   *
-   * <p>First line: number of cars; number of options; number of classes. Second line: for each
-   * option, the maximum number of cars with that option in a block. Third line: for each option,
-   * the block size to which the maximum number refers. Then for each class: index no.; no. of cars
-   * in this class; for each option, whether or not this class requires it (1 or 0).
-   *
-   * <p>This is the example given in (Dincbas et al., ECAI88):
-   */
-
-  /**
-   * A simple car sequencing problem.
-   *
-   * @return problem description.
-   */
-  public static String[] problem() {
-    return new String[] {
-      "10 5 6",
-      "1 2 1 2 1",
-      "2 3 3 5 5",
-      "0 1 1 0 1 1 0",
-      "1 1 0 0 0 1 0",
-      "2 2 0 1 0 0 1",
-      "3 2 0 1 0 1 0",
-      "4 2 1 0 1 0 0",
-      "5 2 1 1 0 0 0"
-    };
-  }
-
-  /**
-   * Not easy car sequencing problem. 100 5 22 1 2 1 2 1 2 3 3 5 5 0 6 1 0 0 1 0 1 10 1 1 1 0 0 2 2
-   * 1 1 0 0 1 3 2 0 1 1 0 0 4 8 0 0 0 1 0 5 15 0 1 0 0 0 6 1 0 1 1 1 0 7 5 0 0 1 1 0 8 2 1 0 1 1 0
-   * 9 3 0 0 1 0 0 10 2 1 0 1 0 0 11 1 1 1 1 0 1 12 8 0 1 0 1 0 13 3 1 0 0 1 1 14 10 1 0 0 0 0 15 4
-   * 0 1 0 0 1 16 4 0 0 0 0 1 17 2 1 0 0 0 1 18 4 1 1 0 0 0 19 6 1 1 0 1 0 20 1 1 0 1 0 1 21 1 1 1 1
-   * 1 1
-   */
-
-  /**
-   * A valid sequence for this set of cars is: Class Options req. 0 1 0 1 1 0 1 0 0 0 1 0 5 1 1 0 0
-   * 0 2 0 1 0 0 1 4 1 0 1 0 0 3 0 1 0 1 0 3 0 1 0 1 0 4 1 0 1 0 0 2 0 1 0 0 1 5 1 1 0 0 0
-   */
-
   /** It specifies number of cars. */
   public int noCar;
 
@@ -140,6 +97,25 @@ public class CarSequencing extends ExampleFD {
    * translation process works if FSM is deterministic.
    */
   public boolean extensionalMDD = false;
+
+  /**
+   * A simple car sequencing problem.
+   *
+   * @return problem description.
+   */
+  public static String[] problem() {
+    return new String[] {
+      "10 5 6",
+      "1 2 1 2 1",
+      "2 3 3 5 5",
+      "0 1 1 0 1 1 0",
+      "1 1 0 0 0 1 0",
+      "2 2 0 1 0 0 1",
+      "3 2 0 1 0 1 0",
+      "4 2 1 0 1 0 0",
+      "5 2 1 1 0 0 0"
+    };
+  }
 
   /**
    * It transforms string representation of the problem into an array of ints representation. It
@@ -200,7 +176,7 @@ public class CarSequencing extends ExampleFD {
 
     result[0] = example.noCar + " " + example.noOption + " " + example.noClass;
 
-    StringBuffer resultBuffer = new StringBuffer();
+    StringBuilder resultBuffer = new StringBuilder();
 
     for (int i = 0; i < example.noOption; i++) {
       resultBuffer.append(example.maxNoOfCarsPerOption[i]).append(" ");
@@ -208,7 +184,7 @@ public class CarSequencing extends ExampleFD {
 
     result[1] = resultBuffer.toString().trim();
 
-    resultBuffer = new StringBuffer();
+    resultBuffer = new StringBuilder();
 
     for (int i = 0; i < example.noOption; i++) {
       resultBuffer.append(example.blockSizePerOption[i]).append(" ");
@@ -218,7 +194,7 @@ public class CarSequencing extends ExampleFD {
 
     for (int i = 0; i < example.noClass; i++) {
 
-      resultBuffer = new StringBuffer();
+      resultBuffer = new StringBuilder();
 
       resultBuffer.append(i).append(" ");
       resultBuffer.append(example.noOfCarsPerClass[i]);
@@ -233,68 +209,42 @@ public class CarSequencing extends ExampleFD {
     return result;
   }
 
-  @Override
-  public void model() {
+  /**
+   * @param count The number of times a value from yes domain needs to be encountered.
+   * @param yes the values which are counted.
+   * @param no the values which are not counted.
+   * @return FSM for simple count constraint.
+   */
+  public static FSM createFSM(int count, IntervalDomain yes, IntervalDomain no) {
 
-    store = new Store();
-    vars = new ArrayList<IntVar>();
+    FSM result = new FSM();
 
-    IntVar[] cars = new IntVar[noCar];
+    result.initState = new FSMState();
+    FSMState currentState = result.initState;
 
-    for (int i = 0; i < noCar; i++) {
-      cars[i] = new IntVar(store, "car" + (i + 1), 0, noClass);
-      vars.add(cars[i]);
-    }
+    int current = 0;
+    while (current <= count) {
 
-    for (int i = 0; i < noOption; i++) {
+      FSMState nextStateYes = new FSMState();
 
-      IntervalDomain classesWithGivenOption = new IntervalDomain();
-      for (int j = 0; j < noClass; j++) if (required[j][i]) classesWithGivenOption.unionAdapt(j, j);
+      if (current < count) currentState.transitions.add(new FSMTransition(yes, nextStateYes));
 
-      // It uses Regular constraint.
-      if (regular)
-        store.imposeDecomposition(
-            new Sequence(
-                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]));
-
-      // It uses decomposition of Regular into ternary constraints.
-      if (slideDecomposition) {
-        DecomposedConstraint<Constraint> c =
-            new Sequence(
-                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-        List<Constraint> decomposition = c.decompose(store);
-
-        for (Constraint regular : decomposition) store.imposeDecomposition(regular);
+      for (ValueEnumeration enumer = no.valueEnumeration(); enumer.hasMoreElements(); ) {
+        int value = enumer.nextElement();
+        IntervalDomain transitionCondition = new IntervalDomain(value, value);
+        currentState.transitions.add(new FSMTransition(transitionCondition, currentState));
       }
 
-      // It uses replacement for Regular, namely one extensional support constraint
-      // based on MDDs.
-      if (extensionalMDD) {
-        DecomposedConstraint<Constraint> c =
-            new Sequence(
-                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-        List<Constraint> decomposition = c.decompose(store);
+      result.allStates.add(currentState);
 
-        for (Constraint constraint : decomposition) {
-          Regular regular = (Regular) constraint;
-          store.impose(
-              new ExtensionalSupportMDD(regular.fsm.transformDirectlyIntoMDD(regular.list)));
-        }
-      }
+      if (current == count) result.finalStates.add(currentState);
+
+      currentState = nextStateYes;
+
+      current++;
     }
 
-    for (int i = 0; i < noClass; i++) {
-
-      IntVar counter = new IntVar(store, "counter" + i, noOfCarsPerClass[i], noOfCarsPerClass[i]);
-
-      store.impose(new Count(cars, counter, i));
-
-      // Possible replacement for Count constraint.
-      // IntervalDomain dom = new IntervalDomain(i, i);
-      // store.impose(new Among(cars, dom, counter));
-      //
-
-    }
+    return result;
   }
 
   /*
@@ -414,44 +364,6 @@ public class CarSequencing extends ExampleFD {
    */
 
   /**
-   * @param count The number of times a value from yes domain needs to be encountered.
-   * @param yes the values which are counted.
-   * @param no the values which are not counted.
-   * @return FSM for simple count constraint.
-   */
-  public static FSM createFSM(int count, IntervalDomain yes, IntervalDomain no) {
-
-    FSM result = new FSM();
-
-    result.initState = new FSMState();
-    FSMState currentState = result.initState;
-
-    int current = 0;
-    while (current <= count) {
-
-      FSMState nextStateYes = new FSMState();
-
-      if (current < count) currentState.transitions.add(new FSMTransition(yes, nextStateYes));
-
-      for (ValueEnumeration enumer = no.valueEnumeration(); enumer.hasMoreElements(); ) {
-        int value = enumer.nextElement();
-        IntervalDomain transitionCondition = new IntervalDomain(value, value);
-        currentState.transitions.add(new FSMTransition(transitionCondition, currentState));
-      }
-
-      result.allStates.add(currentState);
-
-      if (current == count) result.finalStates.add(currentState);
-
-      currentState = nextStateYes;
-
-      current++;
-    }
-
-    return result;
-  }
-
-  /**
    * It reads the problem description from the file and returns string representation of the
    * problem.
    *
@@ -535,5 +447,69 @@ public class CarSequencing extends ExampleFD {
     example.model();
 
     example.searchLDS(3);
+  }
+
+  @Override
+  public void model() {
+
+    store = new Store();
+    vars = new ArrayList<IntVar>();
+
+    IntVar[] cars = new IntVar[noCar];
+
+    for (int i = 0; i < noCar; i++) {
+      cars[i] = new IntVar(store, "car" + (i + 1), 0, noClass);
+      vars.add(cars[i]);
+    }
+
+    for (int i = 0; i < noOption; i++) {
+
+      IntervalDomain classesWithGivenOption = new IntervalDomain();
+      for (int j = 0; j < noClass; j++) if (required[j][i]) classesWithGivenOption.unionAdapt(j, j);
+
+      // It uses Regular constraint.
+      if (regular)
+        store.imposeDecomposition(
+            new Sequence(
+                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]));
+
+      // It uses decomposition of Regular into ternary constraints.
+      if (slideDecomposition) {
+        DecomposedConstraint<Constraint> c =
+            new Sequence(
+                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+        List<Constraint> decomposition = c.decompose(store);
+
+        for (Constraint regular : decomposition) store.imposeDecomposition(regular);
+      }
+
+      // It uses replacement for Regular, namely one extensional support constraint
+      // based on MDDs.
+      if (extensionalMDD) {
+        DecomposedConstraint<Constraint> c =
+            new Sequence(
+                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+        List<Constraint> decomposition = c.decompose(store);
+
+        for (Constraint constraint : decomposition) {
+          Regular regular = (Regular) constraint;
+          store.impose(
+              new ExtensionalSupportMDD(regular.fsm.transformDirectlyIntoMDD(regular.list)));
+        }
+      }
+    }
+
+    for (int i = 0; i < noClass; i++) {
+
+      IntVar counter = new IntVar(store, "counter" + i, noOfCarsPerClass[i], noOfCarsPerClass[i]);
+
+      store.impose(new Count(cars, counter, i));
+
+      // Possible replacement for Count constraint.
+      // IntervalDomain dom = new IntervalDomain(i, i);
+      // store.impose(new Among(cars, dom, counter));
+      //
+
+    }
   }
 }

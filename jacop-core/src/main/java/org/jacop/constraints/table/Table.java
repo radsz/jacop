@@ -50,13 +50,16 @@ import org.jacop.core.*;
  */
 public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
-  Store store;
+  static final boolean debug = false;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Variables within the scope of table constraint */
   public IntVar[] x;
 
   /** Tuples specifying the allowed values */
   public int[][] tuple;
+
+  Store store;
 
   /** */
   Map<IntVar, Integer> varMap;
@@ -71,14 +74,8 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   Map<Integer, long[]>[] supports;
 
   Map<Integer, Integer>[] residues;
-
   Set<IntVar> variableQueue = new HashSet<IntVar>();
-
   int noNoGround;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  static final boolean debug = false;
 
   /**
    * It constructs a table constraint.
@@ -383,8 +380,8 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
         for (Map.Entry<Integer, long[]> e : supi.entrySet()) {
           s.append(" " + e.getKey() + "= [");
           long[] mask = e.getValue();
-          for (int j = 0; j < mask.length; j++) {
-            s.append(String.format("0x%08X", mask[j]) + " ");
+          for (long l : mask) {
+            s.append(String.format("0x%08X", l) + " ");
           }
           s.append("]");
         }

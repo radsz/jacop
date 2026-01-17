@@ -40,18 +40,6 @@ package org.jacop.jasat.utils.structures;
  */
 public final class IntSet extends IntTrie<IntTrie.SimpleNode> {
 
-  public void set(int i) {
-    add(i);
-  }
-
-  public boolean get(int i) {
-    return contains(i);
-  }
-
-  public void clear(int i) {
-    remove(i);
-  }
-
   /** simple initialization of a Set */
   public IntSet() {
     super(new IntTrie.SimpleNode());
@@ -65,5 +53,17 @@ public final class IntSet extends IntTrie<IntTrie.SimpleNode> {
   public IntSet(Iterable<Integer> toAdd) {
     this();
     for (int i : toAdd) add(i);
+  }
+
+  public void set(int i) {
+    add(i);
+  }
+
+  public boolean get(int i) {
+    return contains(i);
+  }
+
+  public void clear(int i) {
+    remove(i);
   }
 }

@@ -49,6 +49,10 @@ public final class GenericMemoryPool<E> {
   // factory used to create new instances if none is available
   private Factory<E> factory;
 
+  public GenericMemoryPool(Factory<E> factory) {
+    this.factory = factory;
+  }
+
   /**
    * get an instance of E
    *
@@ -66,9 +70,5 @@ public final class GenericMemoryPool<E> {
    */
   public void storeOld(E old) {
     set.addLast(old);
-  }
-
-  public GenericMemoryPool(Factory<E> factory) {
-    this.factory = factory;
   }
 }

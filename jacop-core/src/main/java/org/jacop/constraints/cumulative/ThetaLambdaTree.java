@@ -47,10 +47,10 @@ import org.jacop.core.IntVar;
  */
 class ThetaLambdaTree extends Tree {
 
-  // array that keeps all nodes of the balanced binary tree and organizes the tree structure
-  private ThetaLambdaNode[] tree;
   // capacity
   IntVar C;
+  // array that keeps all nodes of the balanced binary tree and organizes the tree structure
+  private ThetaLambdaNode[] tree;
   // list of ordered tasks
   private TaskView[] orderedTasks;
 
@@ -296,7 +296,7 @@ class ThetaLambdaTree extends Tree {
 
   public String toGraph(String name) {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("digraph ThetaLambdaTree").append(name);
     result.append(" {");
@@ -344,7 +344,7 @@ class ThetaLambdaTree extends Tree {
 
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("ThetaLambdaTree\n");
     for (int i = 0; i < treeSize; i++)

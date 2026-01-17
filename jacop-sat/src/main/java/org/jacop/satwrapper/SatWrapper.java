@@ -87,50 +87,38 @@ public final class SatWrapper extends Constraint
         Stateful,
         SatisfiedPresent {
 
-  // empty == true if no cluases has been added
-  boolean empty = true;
-
+  // registered CP variables
+  public final Set<IntVar> registeredVars = new HashSet<IntVar>();
+  // association from CP variables to their SAT bridge (replaces IntVar.satBridge field)
+  private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<IntVar, SatCPBridge>();
+  // model clauses waiting to be added to the SAT solver
+  private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<int[]>();
   // sat solver instance
   public Core core;
-
-  /*
-   * TODO : a way to add those only if needed
-   */
-  // keep track of literals activity, and give search advices (optional)
-  public ActivityModule activity = null;
-
-  // guide assertions
-  public HeuristicAssertionModule assertionModule = null;
 
   // association from CP variables to boolean variables
   // public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
   //	new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
   // TODO : find more efficient ? hard, because IntVar has no unique ID
-
-  // association from CP variables to their SAT bridge (replaces IntVar.satBridge field)
-  private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<IntVar, SatCPBridge>();
-
+  /*
+   * TODO : a way to add those only if needed
+   */
+  // keep track of literals activity, and give search advices (optional)
+  public ActivityModule activity = null;
+  // guide assertions
+  public HeuristicAssertionModule assertionModule = null;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
   public SatCPBridge[] boolVarToDomains = new SatCPBridge[50];
-
   // the change listene to plug in the SAT solver
   public SatChangesListener satChangesListener;
-
   // store this constraint belongs to
   public Store store;
-
   // pool of int[]
   public MemoryPool pool;
-
   // the DomainClausesDatabase, if any
   public DomainClausesDatabase domainDatabase;
-
   // the translator of domains
   public DomainTranslator domainTranslator;
-
-  // registered CP variables
-  public final Set<IntVar> registeredVars = new HashSet<IntVar>();
-
   // SAT level to backjump to if failure
   public int levelToBackjumpTo = 0;
 
@@ -140,18 +128,14 @@ public final class SatWrapper extends Constraint
 
   // level of verbosity (the higher, the more verbose)
   public int verbosity = 0;
-
+  // empty == true if no cluases has been added
+  boolean empty = true;
   // the trail of the solver
   private Trail trail;
 
+  // private final ArrayList<Var> registeredVarsArray = new ArrayList<Var>();
   // current level for SAT solver
   private int currentSatLevel = 0;
-
-  // private final ArrayList<Var> registeredVarsArray = new ArrayList<Var>();
-
-  // model clauses waiting to be added to the SAT solver
-  private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<int[]>();
-
   // next literals to assert during consistency()
   private IntQueue toAssertLiterals;
 
@@ -163,6 +147,33 @@ public final class SatWrapper extends Constraint
 
   // did the solver reach a solution?
   private boolean hasSolution = false;
+
+  /** creates everything in the right order */
+  public SatWrapper() {
+    queueIndex = 1;
+
+    // empty config
+    Config config = Config.defaultConfig();
+
+    // add itself as a component of the Core
+    config.mainComponents.add(this);
+
+    // be *SURE* the constraint db is at first position
+    domainDatabase = new DomainClausesDatabase();
+    domainDatabase.initialize(this);
+    config.clausesDatabases.add(0, domainDatabase);
+
+    // many detail
+    config.timeout = 0;
+    config.verbosity = this.verbosity;
+    config.debug = false;
+
+    // create solver with this config
+    core = new Core(config);
+
+    // setup everything
+    core.start();
+  }
 
   /**
    * Gets the SAT bridge for the given variable. Replaces direct access to IntVar.satBridge field.
@@ -767,33 +778,6 @@ public final class SatWrapper extends Constraint
   }
 
   public void onStop() {}
-
-  /** creates everything in the right order */
-  public SatWrapper() {
-    queueIndex = 1;
-
-    // empty config
-    Config config = Config.defaultConfig();
-
-    // add itself as a component of the Core
-    config.mainComponents.add(this);
-
-    // be *SURE* the constraint db is at first position
-    domainDatabase = new DomainClausesDatabase();
-    domainDatabase.initialize(this);
-    config.clausesDatabases.add(0, domainDatabase);
-
-    // many detail
-    config.timeout = 0;
-    config.verbosity = this.verbosity;
-    config.debug = false;
-
-    // create solver with this config
-    core = new Core(config);
-
-    // setup everything
-    core.start();
-  }
 
   public void initialize(Core core) {
 

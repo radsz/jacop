@@ -52,6 +52,84 @@ import org.jacop.jasat.utils.structures.IntVec;
 public final class RunSolver {
 
   private static String filename;
+  private static OptParse<Config> parser = new OptParse<Config>();
+  private static String helpString = "usage : RunSolver [option [option...]] <filename>";
+  // set the verbosity
+  private static OptHandler<Config> verboseHandler =
+      new OptHandler<Config>() {
+        {
+          shortOpt = 'v';
+          longOpt = "verbosity";
+          help = "sets the verbosity";
+        }
+
+        @Override
+        public Config handle(OptParse<Config> parser, Config e, String arg) {
+          try {
+            int i = Integer.parseInt(arg);
+            e.verbosity = i;
+          } catch (Exception ex) {
+            e.verbosity = 1;
+            return e;
+          }
+          return e;
+        }
+      };
+  // prints help
+  private static OptHandler<Config> helpHandler =
+      new OptHandler<Config>() {
+        {
+          shortOpt = 'h';
+          longOpt = "help";
+          help = "prints this help";
+        }
+
+        @Override
+        public Config handle(OptParse<Config> parser, Config e, String arg) {
+          parser.printHelp();
+          parser.exitParsing(); // no other options
+          return null;
+        }
+      };
+  private static OptHandler<Config> timeoutHandler =
+      new OptHandler<Config>() {
+        {
+          shortOpt = 't';
+          longOpt = "timeout";
+          help = "set the timeout (in seconds)";
+        }
+
+        @Override
+        public Config handle(OptParse<Config> parser, Config e, String arg) {
+          Long t = Long.parseLong(arg);
+          if (t != null) {
+            e.timeout = t * 1000;
+          }
+          return e;
+        }
+      };
+  private static OptHandler<Config> debugHandler =
+      new OptHandler<Config>() {
+        {
+          shortOpt = 'd';
+          longOpt = "debug";
+          help = "set the timeout (in seconds)";
+        }
+
+        @Override
+        public Config handle(OptParse<Config> parser, Config e, String arg) {
+          e.debug = true;
+          return e;
+        }
+      };
+
+  static {
+    parser.setHelp(helpString);
+    parser.addHandler(helpHandler);
+    parser.addHandler(verboseHandler);
+    parser.addHandler(timeoutHandler);
+    parser.addHandler(debugHandler);
+  }
 
   /**
    * launch the solver on a file, given by command line parameters
@@ -188,89 +266,5 @@ public final class RunSolver {
         };
     handler.setDaemon(true);
     Runtime.getRuntime().addShutdownHook(handler);
-  }
-
-  private static OptParse<Config> parser = new OptParse<Config>();
-
-  private static String helpString = "usage : RunSolver [option [option...]] <filename>";
-
-  // set the verbosity
-  private static OptHandler<Config> verboseHandler =
-      new OptHandler<Config>() {
-        {
-          shortOpt = 'v';
-          longOpt = "verbosity";
-          help = "sets the verbosity";
-        }
-
-        @Override
-        public Config handle(OptParse<Config> parser, Config e, String arg) {
-          try {
-            int i = Integer.parseInt(arg);
-            e.verbosity = i;
-          } catch (Exception ex) {
-            e.verbosity = 1;
-            return e;
-          }
-          return e;
-        }
-      };
-
-  // prints help
-  private static OptHandler<Config> helpHandler =
-      new OptHandler<Config>() {
-        {
-          shortOpt = 'h';
-          longOpt = "help";
-          help = "prints this help";
-        }
-
-        @Override
-        public Config handle(OptParse<Config> parser, Config e, String arg) {
-          parser.printHelp();
-          parser.exitParsing(); // no other options
-          return null;
-        }
-      };
-
-  private static OptHandler<Config> timeoutHandler =
-      new OptHandler<Config>() {
-        {
-          shortOpt = 't';
-          longOpt = "timeout";
-          help = "set the timeout (in seconds)";
-        }
-
-        @Override
-        public Config handle(OptParse<Config> parser, Config e, String arg) {
-          Long t = Long.parseLong(arg);
-          if (t != null) {
-            e.timeout = t * 1000;
-          }
-          return e;
-        }
-      };
-
-  private static OptHandler<Config> debugHandler =
-      new OptHandler<Config>() {
-        {
-          shortOpt = 'd';
-          longOpt = "debug";
-          help = "set the timeout (in seconds)";
-        }
-
-        @Override
-        public Config handle(OptParse<Config> parser, Config e, String arg) {
-          e.debug = true;
-          return e;
-        }
-      };
-
-  static {
-    parser.setHelp(helpString);
-    parser.addHandler(helpHandler);
-    parser.addHandler(verboseHandler);
-    parser.addHandler(timeoutHandler);
-    parser.addHandler(debugHandler);
   }
 }

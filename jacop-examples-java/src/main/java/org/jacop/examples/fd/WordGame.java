@@ -126,23 +126,6 @@ public class WordGame {
     }
   }
 
-  /** It is a simple print listener to print every tenth solution encountered. */
-  public static class PrintListener<T extends Var> extends SimpleSolutionListener<T> {
-
-    @Override
-    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
-
-      boolean returnCode = super.executeAfterSolution(search, select);
-
-      for (int i = 0; i < vars.length; i++) {
-        System.out.print((char) ((IntVar) vars[i]).dom().min());
-      }
-      System.out.println(" ");
-
-      return returnCode;
-    }
-  }
-
   /**
    * It reads a dictionary for 5-letter words and creates an MDD representation of it for use by an
    * extensional constraint.
@@ -202,5 +185,22 @@ public class WordGame {
     System.out.print("Enter your guess word: ");
     String input = scanner.nextLine();
     return input.toCharArray();
+  }
+
+  /** It is a simple print listener to print every tenth solution encountered. */
+  public static class PrintListener<T extends Var> extends SimpleSolutionListener<T> {
+
+    @Override
+    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+      boolean returnCode = super.executeAfterSolution(search, select);
+
+      for (T var : vars) {
+        System.out.print((char) ((IntVar) var).dom().min());
+      }
+      System.out.println(" ");
+
+      return returnCode;
+    }
   }
 } // end class

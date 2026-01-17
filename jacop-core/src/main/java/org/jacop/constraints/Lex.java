@@ -49,14 +49,14 @@ import org.jacop.util.fsm.FSMTransition;
  */
 public class Lex extends DecomposedConstraint<Constraint> {
 
+  /** Is the lex enforcing lower then relationship? */
+  public final boolean lexLT;
+
   /** A two dimensional array containing arrays which have to be lexicographically ordered. */
   public IntVar[][] x;
 
   /** It contains constraints of the lex constraint decomposition. */
   List<Constraint> constraints;
-
-  /** Is the lex enforcing lower then relationship? */
-  public final boolean lexLT;
 
   /**
    * It creates a lexicographical order for vectors x[i], i.e. forall i, exists j : x[i][k] =
@@ -175,8 +175,8 @@ public class Lex extends DecomposedConstraint<Constraint> {
         g.allStates.add(state[i][j][1]);
       }
     }
-    for (int i = 0; i < addState.length; i++)
-      for (int j = 0; j < addState[i].length; j++) g.allStates.add(addState[i][j]);
+    for (FSMState[] fsmStates : addState)
+      for (int j = 0; j < fsmStates.length; j++) g.allStates.add(fsmStates[j]);
 
     g.initState = state[0][0][0];
     FSMState terminate = new FSMState();
@@ -314,8 +314,8 @@ public class Lex extends DecomposedConstraint<Constraint> {
         if (j < eq[i].length) g.allStates.add(state[i][j][1]);
       }
     }
-    for (int i = 0; i < addState.length; i++)
-      for (int j = 0; j < addState[i].length; j++) g.allStates.add(addState[i][j]);
+    for (FSMState[] fsmStates : addState)
+      for (int j = 0; j < fsmStates.length; j++) g.allStates.add(fsmStates[j]);
 
     g.initState = state[0][0][0];
     FSMState terminate = new FSMState();

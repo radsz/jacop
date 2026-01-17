@@ -63,94 +63,91 @@ public final class Core implements SolverComponent {
 
   // used to compute throughput of the solver
   public long assignmentNum = 0;
-
-  // do we have to forget ?
-  private boolean mustForget = false;
-
-  // the maximum variable allowed
-  private int maxVariable = 0;
-
-  // a time counter
-  private Map<String, Long> timeMap = new HashMap<String, Long>();
-
   // is the solver stopped ?
   public boolean isStopped = false;
-
   // timer for scheduled events (daemon thread)
   public Timer timer = new Timer(true);
-
   // pool of int[] to avoir allocating too much
   public MemoryPool pool;
-
   // all current clauses
   public DatabasesStore dbStore;
-
   // the variable trail
   public Trail trail;
-
   // the search component
   public SearchModule search;
-
   // the configuration
   public Config config;
-
   // sets the verbosity of the solver. The bigger this value is, the more
   // debug messages will be printed.
   // 0 means no messages at all, 1 means only important messages
   public int verbosity;
-
   // stream to log messages to
   public PrintStream logStream = System.out;
-
   // the current level of research
   public int currentLevel = 0;
-
   // current state of the solver (indicates what to do next)
   public int currentState = SolverState.UNKNOWN;
-
   // the conflict learning module
   public ConflictLearning conflictLearning;
-
   // for modules.
   public AssertionListener[] assertionModules = new AssertionListener[5];
-
   public BackjumpListener[] backjumpModules = new BackjumpListener[5];
-
   public ConflictListener[] conflictModules = new ConflictListener[5];
-
   public PropagateListener[] propagateModules = new PropagateListener[5];
-
   public SolutionListener[] solutionModules = new SolutionListener[5];
-
   public ForgetListener[] forgetModules = new ForgetListener[5];
-
   public ClauseListener[] clauseModules = new ClauseListener[5];
-
   public ExplanationListener[] explanationModules = new ExplanationListener[5];
-
   public StartStopListener[] startStopModules = new StartStopListener[5];
-
   public BackjumpListener[] restartModules = new BackjumpListener[5];
-
   public int numAssertionModules = 0;
-
   public int numBackjumpModules = 0;
-
   public int numConflictModules = 0;
-
   public int numPropagateModules = 0;
-
   public int numSolutionModules = 0;
-
   public int numForgetModules = 0;
-
   public int numClauseModules = 0;
-
   public int numExplanationModules = 0;
-
   public int numStartStopModules = 0;
-
   public int numRestartModules = 0;
+  // do we have to forget ?
+  private boolean mustForget = false;
+  // the maximum variable allowed
+  private int maxVariable = 0;
+  // a time counter
+  private Map<String, Long> timeMap = new HashMap<String, Long>();
+
+  /**
+   * creates the solver, which in turn creates all inner components and connect them together.
+   *
+   * @param config configuration for the solver
+   */
+  public Core(Config config) {
+    // set the config
+    assert config.check();
+    this.config = config;
+
+    // set some parameters
+    verbosity = config.verbosity;
+
+    // create some components
+    addComponent(new MemoryPool());
+    addComponent(new DatabasesStore());
+    addComponent(new Trail());
+    addComponent(new ConflictLearning());
+    toPropagate = new IntQueue(pool);
+
+    // add instantiated components from configuration object
+    for (SolverComponent component : config.mainComponents) addComponent(component);
+    // and require the class of the other required components
+    for (AbstractClausesDatabase database : config.clausesDatabases) addComponent(database);
+  }
+
+  /** initializes the solver with a default configuration. */
+  public Core() {
+    this(Config.defaultConfig()); // use a default config
+    logc("solver initializes with default config");
+  }
 
   /**
    * adds a clause to the solver
@@ -323,6 +320,13 @@ public final class Core implements SolverComponent {
   }
 
   /**
+   * @return the current max variable
+   */
+  public int getMaxVariable() {
+    return maxVariable;
+  }
+
+  /**
    * Tells the solver what is the greatest variable in the problem
    *
    * @param maxVariable the new maximum variable. Must not be lower than solver.getMaxVariable().
@@ -336,13 +340,6 @@ public final class Core implements SolverComponent {
     } else {
       logc("tried to downgrade the max var from %d to %d", this.maxVariable, maxVariable);
     }
-  }
-
-  /**
-   * @return the current max variable
-   */
-  public int getMaxVariable() {
-    return maxVariable;
   }
 
   /**
@@ -520,11 +517,6 @@ public final class Core implements SolverComponent {
 
     // unset everything above level
     trail.backjump(level);
-    /**
-     * @TODO, Currently nothing is done in database on backjumping, this function should not be
-     * called and if any work is needed to be done it should be through registered backjump modules.
-     * The trail above should be a backjump module.
-     */
     dbStore.backjump(level);
 
     toPropagate.clear();
@@ -602,6 +594,10 @@ public final class Core implements SolverComponent {
     else return System.currentTimeMillis() - timeMap.get(s);
   }
 
+  /*
+   * in case the solver reached a solution
+   */
+
   /**
    * logs important messages in comments
    *
@@ -631,10 +627,6 @@ public final class Core implements SolverComponent {
     }
   }
 
-  /*
-   * in case the solver reached a solution
-   */
-
   /**
    * @return true if the solver reached a solution
    */
@@ -652,7 +644,7 @@ public final class Core implements SolverComponent {
     // for satisfiable instances, print certificate
     if (currentState == SolverState.SATISFIABLE) {
       int count = 0;
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       sb.append("v ");
       for (int i = 0; i < trail.size(); ++i) {
         int var = trail.assertionStack.array[i];
@@ -661,7 +653,7 @@ public final class Core implements SolverComponent {
         // if line is full, print it and begin another
         if (++count > 20) {
           System.out.println(sb.toString());
-          sb = new StringBuffer();
+          sb = new StringBuilder();
           sb.append("v ");
           count = 0;
         }
@@ -694,38 +686,6 @@ public final class Core implements SolverComponent {
     answer.append("vars=").append(maxVariable).append(",");
     answer.append("state=").append(currentState);
     return answer.append("]").toString();
-  }
-
-  /**
-   * creates the solver, which in turn creates all inner components and connect them together.
-   *
-   * @param config configuration for the solver
-   */
-  public Core(Config config) {
-    // set the config
-    assert config.check();
-    this.config = config;
-
-    // set some parameters
-    verbosity = config.verbosity;
-
-    // create some components
-    addComponent(new MemoryPool());
-    addComponent(new DatabasesStore());
-    addComponent(new Trail());
-    addComponent(new ConflictLearning());
-    toPropagate = new IntQueue(pool);
-
-    // add instantiated components from configuration object
-    for (SolverComponent component : config.mainComponents) addComponent(component);
-    // and require the class of the other required components
-    for (AbstractClausesDatabase database : config.clausesDatabases) addComponent(database);
-  }
-
-  /** initializes the solver with a default configuration. */
-  public Core() {
-    this(Config.defaultConfig()); // use a default config
-    logc("solver initializes with default config");
   }
 
   public void initialize(Core core) {

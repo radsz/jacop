@@ -65,6 +65,20 @@ import org.jacop.core.Store;
  */
 public class StonesOfHeaven extends ExampleFD {
 
+  /**
+   * It executes a simple program to solve this logic puzzle.
+   *
+   * @param args command arguments (none here)
+   */
+  public static void main(String args[]) {
+
+    StonesOfHeaven example = new StonesOfHeaven();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -140,19 +154,5 @@ public class StonesOfHeaven extends ExampleFD {
     store.impose(new XneqY(Country[iusa], Dynasty[iSung]));
 
     store.impose(new XneqY(Item[igrasshopper], Dynasty[iSung]));
-  }
-
-  /**
-   * It executes a simple program to solve this logic puzzle.
-   *
-   * @param args command arguments (none here)
-   */
-  public static void main(String args[]) {
-
-    StonesOfHeaven example = new StonesOfHeaven();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

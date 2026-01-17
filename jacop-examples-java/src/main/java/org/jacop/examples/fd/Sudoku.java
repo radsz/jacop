@@ -47,6 +47,46 @@ public class Sudoku extends ExampleFD {
 
   IntVar[][] elements;
 
+  /**
+   * It specifies the main executable function creating a model for a particular Sudoku.
+   *
+   * @param args not used.
+   */
+  public static void main(String args[]) {
+
+    Sudoku example = new Sudoku();
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+
+    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+  }
+
+  /**
+   * It specifies the testing function creating a model for a particular Sudoku.
+   *
+   * @param args not used.
+   */
+  public static void test(String args[]) {
+
+    Sudoku example = new Sudoku();
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+
+    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+
+    example = new Sudoku();
+
+    example.modelBasic();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+
+    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+  }
+
   @Override
   public void model() {
 
@@ -164,45 +204,5 @@ public class Sudoku extends ExampleFD {
           for (int m = k + 1; m < noColumns * noRows; m++)
             store.impose(new XneqY(block.get(k), block.get(m)));
       }
-  }
-
-  /**
-   * It specifies the main executable function creating a model for a particular Sudoku.
-   *
-   * @param args not used.
-   */
-  public static void main(String args[]) {
-
-    Sudoku example = new Sudoku();
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
-
-    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
-  }
-
-  /**
-   * It specifies the testing function creating a model for a particular Sudoku.
-   *
-   * @param args not used.
-   */
-  public static void test(String args[]) {
-
-    Sudoku example = new Sudoku();
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
-
-    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
-
-    example = new Sudoku();
-
-    example.modelBasic();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
-
-    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
 }

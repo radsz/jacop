@@ -86,8 +86,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         // maximum number of discrepancies reached, returning false
         // since we do not want to
         if (exitChildListeners != null) {
-          for (int i = 0; i < exitChildListeners.length; i++)
-            exitChildListeners[i].leftChild(var, value, status);
+          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+            exitChildListener.leftChild(var, value, status);
         }
 
         noDiscrepancies--;
@@ -97,8 +97,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 
         if (exitChildListeners != null) {
           boolean code = false;
-          for (int i = 0; i < exitChildListeners.length; i++)
-            code |= exitChildListeners[i].leftChild(var, value, status);
+          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+            code |= exitChildListener.leftChild(var, value, status);
 
           // the children listeners disallow entering the right child
           // so there will be no disrepancy as counted.
@@ -133,8 +133,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         // maximum number of discrepancies reached, returning false
         // since we do not want to
         if (exitChildListeners != null) {
-          for (int i = 0; i < exitChildListeners.length; i++)
-            exitChildListeners[i].leftChild(choice, status);
+          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+            exitChildListener.leftChild(choice, status);
         }
 
         noDiscrepancies--;
@@ -144,8 +144,8 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 
         if (exitChildListeners != null) {
           boolean code = false;
-          for (int i = 0; i < exitChildListeners.length; i++)
-            code |= exitChildListeners[i].leftChild(choice, status);
+          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+            code |= exitChildListener.leftChild(choice, status);
 
           // the children listeners disallow entering the right child
           // so there will be no disrepancy as counted.

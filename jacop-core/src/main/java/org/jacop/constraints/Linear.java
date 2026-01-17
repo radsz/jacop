@@ -40,26 +40,11 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
 /**
- * Linear constraint implements the weighted summation over several variables . It provides the
- * weighted sum from all variables on the list. The weights are integers.
- *
- * <p>This version works as argument for Reified and Xor constraints. For other constraints (And,
- * Or, Not, Eq, IfThen, IfThenElse) use LinearInt.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
-
-/**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
  */
 @Deprecated
 public class Linear extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
-
-  Store store;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Defines relations */
   static final byte eq = 0, lt = 1, le = 2, ne = 3, gt = 4, ge = 5;
@@ -74,6 +59,8 @@ public class Linear extends Constraint
     lt // ge=5;
   };
 
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
   /** It specifies what relations is used by this constraint */
   public byte relationType;
 
@@ -86,6 +73,7 @@ public class Linear extends Constraint
   /** It specifies variable for the overall sum. */
   public int sum;
 
+  Store store;
   int lMin;
 
   int lMax;
@@ -97,14 +85,13 @@ public class Linear extends Constraint
   Map<Var, Integer> positionMaping;
 
   boolean backtrackHasOccured = false;
+  boolean reified = true;
 
   /** The sum of grounded variables. */
   private TimeStamp<Integer> sumGrounded;
 
   /** The position for the next grounded variable. */
   private TimeStamp<Integer> nextGroundedPosition;
-
-  boolean reified = true;
 
   /**
    * It constructs the constraint Linear.
@@ -598,7 +585,7 @@ public class Linear extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : Linear( [ ");
 
     for (int i = 0; i < list.length; i++) {

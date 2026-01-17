@@ -43,14 +43,17 @@ import org.jacop.constraints.Constraint;
  */
 class BoundDomain extends IntDomain implements Cloneable {
 
+  /** It predefines empty domain so there is no need to constantly create it when needed. */
+  public static final BoundDomain emptyDomain = new BoundDomain();
+
+  private static final Random generator =
+      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+
   /** The minimal value of the domain. */
   public int min;
 
   /** The maximal value of the domain. */
   public int max;
-
-  /** It predefines empty domain so there is no need to constantly create it when needed. */
-  public static final BoundDomain emptyDomain = new BoundDomain();
 
   /**
    * It is a constructor which will create an empty Bound domain. An empty domain has minimum larger
@@ -803,8 +806,7 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       result.append("constraints: ");
 
-      for (Iterator<Constraint> e = domain.searchConstraints.iterator(); e.hasNext(); )
-        result.append(e.next());
+      for (Constraint searchConstraint : domain.searchConstraints) result.append(searchConstraint);
 
       if (domain.domainID() == IntervalDomainID) {
 
@@ -1003,9 +1005,6 @@ class BoundDomain extends IntDomain implements Cloneable {
     assert (result <= this.getSize()) : "Invariant violated. Check the code.";
     return result;
   }
-
-  private static final Random generator =
-      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   @Override
   public int getRandomValue() {

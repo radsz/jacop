@@ -240,24 +240,24 @@ class BoolConstraints implements ParserTreeConstants {
       } else sat.generate_clause(a1, a2);
     } else { // not SAT generation, use CP constraints
       ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
-      for (int i = 0; i < a1.length; i++)
-        if (a1[i].min() == 1)
+      for (IntVar var : a1)
+        if (var.min() == 1)
           if (reified || implied) {
             IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
             r.domain.inValue(store.level, r, 1);
             return;
           } else return; // already satisfied since a variable is both negated and not negated
-        else if (a1[i].max() != 0) a1reduced.add(a1[i]);
+        else if (var.max() != 0) a1reduced.add(var);
 
       ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
-      for (int i = 0; i < a2.length; i++)
-        if (a2[i].max() == 0)
+      for (IntVar intVar : a2)
+        if (intVar.max() == 0)
           if (reified || implied) {
             IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
             r.domain.inValue(store.level, r, 1);
             return;
           } else return; // already satisfied since a variable is both negated and not negated
-        else if (a2[i].min() != 1) a2reduced.add(a2[i]);
+        else if (intVar.min() != 1) a2reduced.add(intVar);
 
       if (a1reduced.size() == 0 && a2reduced.size() == 0)
         if (reified || implied) {
@@ -295,22 +295,22 @@ class BoolConstraints implements ParserTreeConstants {
   }
 
   boolean allVarOne(IntVar[] w) {
-    for (int i = 0; i < w.length; i++) if (w[i].min() != 1) return false;
+    for (IntVar intVar : w) if (intVar.min() != 1) return false;
     return true;
   }
 
   boolean allVarZero(IntVar[] w) {
-    for (int i = 0; i < w.length; i++) if (w[i].max() != 0) return false;
+    for (IntVar intVar : w) if (intVar.max() != 0) return false;
     return true;
   }
 
   boolean atLeastOneVarZero(IntVar[] w) {
-    for (int i = 0; i < w.length; i++) if (w[i].max() == 0) return true;
+    for (IntVar intVar : w) if (intVar.max() == 0) return true;
     return false;
   }
 
   boolean atLeastOneVarOne(IntVar[] w) {
-    for (int i = 0; i < w.length; i++) if (w[i].min() == 1) return true;
+    for (IntVar intVar : w) if (intVar.min() == 1) return true;
     return false;
   }
 }

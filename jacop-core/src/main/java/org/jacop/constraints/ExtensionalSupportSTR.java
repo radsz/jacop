@@ -50,20 +50,14 @@ import org.jacop.util.IndexDomainView;
  */
 public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable, Stateful {
 
-  // FIXME, remove the need for this attribute.
-  Store store;
+  static final boolean debugAll = false;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It stores variables within this extensional constraint, order does matter. */
   public IntVar[] list;
 
   /** */
   public int[][] tuples;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  static final boolean debugAll = false;
-
-  IndexDomainView[] views;
 
   /**
    * Gives the position of the first tuple (in the current list) or -1 if the current list is empty.
@@ -116,16 +110,34 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
    */
   public int[] supportsVariablePositions;
 
-  // for each variable computes the domain as given by all tuples.
-  IntervalDomain[] valuesInFocus;
-
-  int[] domainSizeAfterConsistency;
-
   /** It specifies the mapping of the variable into its index. */
   public Map<Var, Integer> varToIndex;
 
   /** */
   public int lastAssignedVariablePosition = -1;
+
+  /** It specifies if the tuples previously removed are re-inserted at the beginning. */
+  public boolean reinsertBefore;
+
+  /** It specifies if the residues are moved at the beginning of the list. */
+  public boolean residuesBefore;
+
+  /** It specifies if there was no first consistency check yet. */
+  public boolean firstConsistencyCheck = true;
+
+  /**
+   * It specifies if there was a backtrack and no yet consistency function execution after
+   * backtracking.
+   */
+  public boolean backtrackOccured;
+
+  // FIXME, remove the need for this attribute.
+  Store store;
+  IndexDomainView[] views;
+  // for each variable computes the domain as given by all tuples.
+  IntervalDomain[] valuesInFocus;
+  int[] domainSizeAfterConsistency;
+  int firstConsistencyLevel;
 
   /**
    * Partial constructor which stores variables involved in a constraint but does not get
@@ -182,23 +194,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   public ExtensionalSupportSTR(IntVar[] variables, int[][] tuples) {
     this(variables, tuples, true, true);
   }
-
-  /** It specifies if the tuples previously removed are re-inserted at the beginning. */
-  public boolean reinsertBefore;
-
-  /** It specifies if the residues are moved at the beginning of the list. */
-  public boolean residuesBefore;
-
-  /** It specifies if there was no first consistency check yet. */
-  public boolean firstConsistencyCheck = true;
-
-  int firstConsistencyLevel;
-
-  /**
-   * It specifies if there was a backtrack and no yet consistency function execution after
-   * backtracking.
-   */
-  public boolean backtrackOccured;
 
   /**
    * It removes the tuple which is no longer valid.
@@ -546,7 +541,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   @Override
   public String toString() {
 
-    StringBuffer tupleString = new StringBuffer();
+    StringBuilder tupleString = new StringBuilder();
 
     tupleString.append(id());
     tupleString.append("(");

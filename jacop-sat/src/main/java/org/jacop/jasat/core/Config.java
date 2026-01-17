@@ -89,6 +89,34 @@ public class Config extends Properties {
   /** the list of databases the solver must add */
   public List<AbstractClausesDatabase> clausesDatabases = new ArrayList<AbstractClausesDatabase>();
 
+  /**
+   * constructor for config, that adds some default components. If you want to choose all
+   * components, just components.clear() (if you know what you do)
+   */
+  public Config() {
+
+    // create default databases and add them to store
+    DefaultClausesDatabase stdDb = new DefaultClausesDatabase();
+    UnaryClausesDatabase unaryDb = new UnaryClausesDatabase();
+    BinaryClausesDatabase binDb = new BinaryClausesDatabase();
+    TernaryClausesDatabase triDb = new TernaryClausesDatabase();
+
+    // first, the most efficient databases (binary and ternary clauses)
+    clausesDatabases.add(binDb);
+    clausesDatabases.add(triDb);
+    clausesDatabases.add(stdDb);
+    clausesDatabases.add(unaryDb);
+  }
+
+  /**
+   * static access to the default config
+   *
+   * @return default config
+   */
+  public static Config defaultConfig() {
+    return new Config();
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -116,33 +144,5 @@ public class Config extends Properties {
     if (Integer.bitCount(MAX_NUMBER_OF_DATABASES) != 1) return false;
 
     return true;
-  }
-
-  /**
-   * constructor for config, that adds some default components. If you want to choose all
-   * components, just components.clear() (if you know what you do)
-   */
-  public Config() {
-
-    // create default databases and add them to store
-    DefaultClausesDatabase stdDb = new DefaultClausesDatabase();
-    UnaryClausesDatabase unaryDb = new UnaryClausesDatabase();
-    BinaryClausesDatabase binDb = new BinaryClausesDatabase();
-    TernaryClausesDatabase triDb = new TernaryClausesDatabase();
-
-    // first, the most efficient databases (binary and ternary clauses)
-    clausesDatabases.add(binDb);
-    clausesDatabases.add(triDb);
-    clausesDatabases.add(stdDb);
-    clausesDatabases.add(unaryDb);
-  }
-
-  /**
-   * static access to the default config
-   *
-   * @return default config
-   */
-  public static Config defaultConfig() {
-    return new Config();
   }
 }

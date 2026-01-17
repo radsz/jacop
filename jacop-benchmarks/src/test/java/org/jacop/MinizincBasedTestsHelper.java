@@ -57,13 +57,13 @@ import org.junit.BeforeClass;
  * @version 4.10
  */
 public class MinizincBasedTestsHelper {
-  protected String testFilename;
-  protected static Fz2jacop fz2jacop;
   protected static final String relativePath = "src/test/fz/";
-  String timeCategory;
   protected static final String listFileName = "list.txt";
   protected static final boolean printInfo = false;
+  protected static Fz2jacop fz2jacop;
   private static int counter = 0;
+  protected String testFilename;
+  String timeCategory;
 
   protected MinizincBasedTestsHelper(String timeCategory) {
     this.timeCategory = timeCategory;
@@ -72,6 +72,30 @@ public class MinizincBasedTestsHelper {
   @BeforeClass
   public static void initialize() {
     fz2jacop = new Fz2jacop();
+  }
+
+  protected static List<String> expected(String filename) throws IOException {
+
+    String filePath = new File(relativePath + filename).getAbsolutePath();
+    return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
+  }
+
+  protected static Collection<String> fileReader(String timeCategory) throws IOException {
+
+    System.out.println("timeCategory" + timeCategory);
+    try (FileReader file = new FileReader(relativePath + timeCategory + listFileName);
+        BufferedReader br = new BufferedReader(file)) {
+
+      String line = "";
+      List<String> list = new ArrayList<String>();
+      int i = 0;
+      while ((line = br.readLine()) != null) {
+        list.add(i, line);
+        i++;
+      }
+
+      return list;
+    }
   }
 
   @After
@@ -128,30 +152,6 @@ public class MinizincBasedTestsHelper {
     }
 
     return Arrays.asList(result.split("\n"));
-  }
-
-  protected static List<String> expected(String filename) throws IOException {
-
-    String filePath = new File(relativePath + filename).getAbsolutePath();
-    return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
-  }
-
-  protected static Collection<String> fileReader(String timeCategory) throws IOException {
-
-    System.out.println("timeCategory" + timeCategory);
-    try (FileReader file = new FileReader(relativePath + timeCategory + listFileName);
-        BufferedReader br = new BufferedReader(file)) {
-
-      String line = "";
-      List<String> list = new ArrayList<String>();
-      int i = 0;
-      while ((line = br.readLine()) != null) {
-        list.add(i, line);
-        i++;
-      }
-
-      return list;
-    }
   }
 
   protected void testExecution(String timeCategory) throws IOException {

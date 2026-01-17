@@ -61,7 +61,7 @@ public class PrintSchedule {
    */
   public PrintSchedule(String[] name, IntVar[] t, int[] d, IntVar[] r) {
     n = new ArrayList<String>();
-    for (int i = 0; i < name.length; i++) n.add(name[i]);
+    for (String s : name) n.add(s);
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -124,7 +124,7 @@ public class PrintSchedule {
   public PrintSchedule(
       List<String> name, List<? extends IntVar> t, int[] d, List<? extends IntVar> r) {
     n = new ArrayList<String>();
-    for (int i = 0; i < name.size(); i++) n.add(name.get(i));
+    for (String s : name) n.add(s);
 
     this.t = new IntVar[t.size()];
     for (int i = 0; i < t.size(); i++) this.t[i] = t.get(i);
@@ -144,7 +144,7 @@ public class PrintSchedule {
    */
   public PrintSchedule(List<String> name, IntVar[] t, int[] d, IntVar[] r) {
     n = new ArrayList<String>();
-    for (int i = 0; i < name.size(); i++) n.add(name.get(i));
+    for (String s : name) n.add(s);
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -164,7 +164,7 @@ public class PrintSchedule {
    */
   public PrintSchedule(List<String> name, IntVar[] t, IntVar[] d, IntVar[] r) {
     n = new ArrayList<String>();
-    for (int i = 0; i < name.size(); i++) n.add(name.get(i));
+    for (String s : name) n.add(s);
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -176,7 +176,7 @@ public class PrintSchedule {
 
   int findMaxR() {
     int m = 0;
-    for (int i = 0; i < r.length; i++) if (m < r[i].min()) m = r[i].min();
+    for (IntVar intVar : r) if (m < intVar.min()) m = intVar.min();
     return m;
   }
 
@@ -188,12 +188,12 @@ public class PrintSchedule {
 
   int findMinR() {
     int m = IntDomain.MaxInt;
-    for (int i = 0; i < r.length; i++) if (m > r[i].min()) m = r[i].min();
+    for (IntVar intVar : r) if (m > intVar.min()) m = intVar.min();
     return m;
   }
 
   String tab(int i) {
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
     for (int k = 0; k < i; k++) s.append(" ");
     return s.toString();
   }
@@ -201,7 +201,7 @@ public class PrintSchedule {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer("\n");
+    StringBuilder result = new StringBuilder("\n");
 
     List<?>[] TaskArr = new ArrayList[n.size()];
     for (int i = 0; i < n.size(); i++) {
@@ -260,12 +260,12 @@ public class PrintSchedule {
         j++;
       }
 
-      for (int r = 0; r < Line.size(); r++) {
+      for (List<Integer> integers : Line) {
         int sp = result.length();
-        for (int ri = 0; ri < Line.get(r).size(); ri++)
-          result.append("[").append(TaskArr[Line.get(r).get(ri)].get(0)).append("]");
+        for (int ri = 0; ri < integers.size(); ri++)
+          result.append("[").append(TaskArr[integers.get(ri)].get(0)).append("]");
 
-        if (Line.get(r).size() == 0) result.append("-");
+        if (integers.size() == 0) result.append("-");
         //		s = s + "-";
 
         result.append(tab(16 - result.length() + sp));

@@ -55,18 +55,11 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-
-  int firstConsistencyLevel;
-
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
   public final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   public final IntVar value;
-
-  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
-  protected final int indexOffset;
 
   /**
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
@@ -74,6 +67,11 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    */
   public final int[] list;
 
+  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
+  protected final int indexOffset;
+
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
   /*
    * Defines if the current list is order (ascending, descending), needs detection (detect)
    * or is not checked (none).

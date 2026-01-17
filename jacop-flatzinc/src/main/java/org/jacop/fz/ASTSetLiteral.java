@@ -3,6 +3,10 @@
 package org.jacop.fz;
 
 public class ASTSetLiteral extends SimpleNode {
+  // My additions
+  // 0 - interval, 1 - list, 2 - range set
+  int type;
+
   public ASTSetLiteral(int id) {
     super(id);
   }
@@ -11,16 +15,12 @@ public class ASTSetLiteral extends SimpleNode {
     super(p, id);
   }
 
-  // My additions
-  // 0 - interval, 1 - list, 2 - range set
-  int type;
+  public int getType() {
+    return type;
+  }
 
   public void setType(int t) {
     type = t;
-  }
-
-  public int getType() {
-    return type;
   }
 
   public String toString() {

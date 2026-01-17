@@ -61,6 +61,24 @@ public class CPvizSendMoreMoney {
    * This creates a standard model using simple basic constraints.
    */
 
+  public static void main(String args[]) {
+
+    // 		SendMoreMoney exampleBasic = new SendMoreMoney();
+
+    // 		exampleBasic.model();
+
+    // 		if (exampleBasic.search())
+    // 			System.out.println("Solution found");
+
+    CPvizSendMoreMoney exampleGlobal = new CPvizSendMoreMoney();
+
+    exampleGlobal.modelGlobal();
+
+    // 		if (exampleGlobal.search())
+    // 			System.out.println();
+
+  }
+
   public void model() {
 
     vars = new ArrayList<IntVar>();
@@ -158,24 +176,6 @@ public class CPvizSendMoreMoney {
     search.labeling(store, select);
 
     // 		return result;
-
-  }
-
-  public static void main(String args[]) {
-
-    // 		SendMoreMoney exampleBasic = new SendMoreMoney();
-
-    // 		exampleBasic.model();
-
-    // 		if (exampleBasic.search())
-    // 			System.out.println("Solution found");
-
-    CPvizSendMoreMoney exampleGlobal = new CPvizSendMoreMoney();
-
-    exampleGlobal.modelGlobal();
-
-    // 		if (exampleGlobal.search())
-    // 			System.out.println();
 
   }
 

@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -50,11 +49,10 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
   public T[] searchVariables;
 
-  Indomain<T> valueOrdering;
-
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public Map<T, Integer> position;
 
+  Indomain<T> valueOrdering;
   int currentIndex = 0;
 
   Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
@@ -71,14 +69,13 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     position = Var.createEmptyPositioning();
 
     int unique = 0;
-    for (int i = 0; i < variables.length; i++) {
-      if (position.get(variables[i]) == null) position.put(variables[i], unique++);
+    for (T variable : variables) {
+      if (position.get(variable) == null) position.put(variable, unique++);
     }
 
     this.searchVariables = (T[]) new Var[position.size()];
 
-    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-      Map.Entry<T, Integer> e = itr.next();
+    for (Map.Entry<T, Integer> e : position.entrySet()) {
       searchVariables[e.getValue()] = e.getKey();
     }
 
@@ -99,7 +96,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     if (debugAll) {
       System.out.println("index = " + index);
 
-      for (int i = 0; i < searchVariables.length; i++) System.out.print(searchVariables[i] + " ");
+      for (T searchVariable : searchVariables) System.out.print(searchVariable + " ");
       System.out.println();
     }
 

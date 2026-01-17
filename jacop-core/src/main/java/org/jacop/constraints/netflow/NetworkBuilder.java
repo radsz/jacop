@@ -50,15 +50,11 @@ import org.jacop.core.Store;
  */
 public class NetworkBuilder {
 
-  private int nextNodeName = 1;
-
-  public IntVar costVariable;
-
   public final List<Node> nodeList = new ArrayList<Node>();
-
   public final List<Arc> arcList = new ArrayList<Arc>();
-
   public final List<VarHandler> handlerList = new ArrayList<VarHandler>();
+  public IntVar costVariable;
+  private int nextNodeName = 1;
 
   public NetworkBuilder() {
     this.costVariable = null;

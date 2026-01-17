@@ -59,6 +59,56 @@ public class Golomb extends ExampleFD {
   /** It contains all differences between all possible pairs of marks. */
   public List<IntVar> subs = new ArrayList<IntVar>();
 
+  /**
+   * It executes the program which computes the optimal Golomb ruler.
+   *
+   * @param args the first argument specifies the number of marks, the second argument specifies the
+   *     upper bound of the optimal solution.
+   */
+  public static void main(String args[]) {
+
+    Golomb example = new Golomb();
+
+    if (args.length != 0) example.noMarks = Integer.parseInt(args[0]);
+
+    if (args.length > 1) example.bound = Integer.parseInt(args[1]);
+
+    example.model();
+
+    if (example.searchOptimalInfo()) System.out.println("Solution(s) found");
+  }
+
+  /**
+   * It executes the program which first computes the optimal Golomb ruler. Afterwards, it computes
+   * all the optimal solutions but it does not use previously established cost of the optimal
+   * solution.
+   *
+   * @param args the first argument specifies the number of marks, the second argument specifies the
+   *     upper bound of the optimal solution.
+   */
+  public static void test(String args[]) {
+
+    Golomb example = new Golomb();
+
+    if (args.length != 0) example.noMarks = Integer.parseInt(args[0]);
+
+    if (args.length > 1) example.bound = Integer.parseInt(args[1]);
+
+    example.model();
+
+    if (example.searchOptimalInfo()) System.out.println("Solution(s) found");
+
+    Golomb exampleAll = new Golomb();
+
+    if (args.length != 0) exampleAll.noMarks = Integer.parseInt(args[0]);
+
+    if (args.length > 1) exampleAll.bound = Integer.parseInt(args[1]);
+
+    exampleAll.model();
+
+    if (exampleAll.searchAllOptimal()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -154,55 +204,5 @@ public class Golomb extends ExampleFD {
     System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
-  }
-
-  /**
-   * It executes the program which computes the optimal Golomb ruler.
-   *
-   * @param args the first argument specifies the number of marks, the second argument specifies the
-   *     upper bound of the optimal solution.
-   */
-  public static void main(String args[]) {
-
-    Golomb example = new Golomb();
-
-    if (args.length != 0) example.noMarks = Integer.parseInt(args[0]);
-
-    if (args.length > 1) example.bound = Integer.parseInt(args[1]);
-
-    example.model();
-
-    if (example.searchOptimalInfo()) System.out.println("Solution(s) found");
-  }
-
-  /**
-   * It executes the program which first computes the optimal Golomb ruler. Afterwards, it computes
-   * all the optimal solutions but it does not use previously established cost of the optimal
-   * solution.
-   *
-   * @param args the first argument specifies the number of marks, the second argument specifies the
-   *     upper bound of the optimal solution.
-   */
-  public static void test(String args[]) {
-
-    Golomb example = new Golomb();
-
-    if (args.length != 0) example.noMarks = Integer.parseInt(args[0]);
-
-    if (args.length > 1) example.bound = Integer.parseInt(args[1]);
-
-    example.model();
-
-    if (example.searchOptimalInfo()) System.out.println("Solution(s) found");
-
-    Golomb exampleAll = new Golomb();
-
-    if (args.length != 0) exampleAll.noMarks = Integer.parseInt(args[0]);
-
-    if (args.length > 1) exampleAll.bound = Integer.parseInt(args[1]);
-
-    exampleAll.model();
-
-    if (exampleAll.searchAllOptimal()) System.out.println("Solution(s) found");
   }
 }

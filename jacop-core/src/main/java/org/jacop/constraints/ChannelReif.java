@@ -57,9 +57,8 @@ public class ChannelReif extends Constraint implements SatisfiedPresent {
   /** It specifies variables b and related values for variable x. */
   final Item[] item;
 
-  private TimeStamp<Integer> position;
-
   Map<Integer, IntVar> valueMap = new HashMap<>();
+  private TimeStamp<Integer> position;
 
   /**
    * It creates ChannelReif constraint.

@@ -51,6 +51,10 @@ public final class HeuristicAssertionModule implements SolverComponent {
   // the activity count
   private ActivityModule activity;
 
+  public HeuristicAssertionModule(ActivityModule activity) {
+    this.activity = activity;
+  }
+
   /**
    * this is the main heuristic function, which tries to guess which literal is the most interesting
    * to set now. Can trigger SAT if no unset variable is found.
@@ -84,9 +88,5 @@ public final class HeuristicAssertionModule implements SolverComponent {
   public void initialize(Core core) {
     this.core = core;
     this.trail = core.trail;
-  }
-
-  public HeuristicAssertionModule(ActivityModule activity) {
-    this.activity = activity;
   }
 }

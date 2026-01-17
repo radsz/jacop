@@ -54,8 +54,10 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   /** It specifies the id of the constraint. */
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
+  /** It stores variables within this extensional constraint, order does matter. */
+  public IntVar[] list;
 
+  boolean firstConsistencyCheck = true;
   int levelOfFirstConsistencyCheck;
 
   /**
@@ -64,15 +66,11 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   int[][][][] tuples;
 
-  private int[][] tuplesFromConstructor;
-
   /** It represents values which are supported for a variable. */
   int[][] values;
 
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
-
-  /** It stores variables within this extensional constraint, order does matter. */
-  public IntVar[] list;
+  private int[][] tuplesFromConstructor;
 
   /**
    * Partial constructor which stores variables involved in a constraint but does not get
@@ -407,7 +405,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   @Override
   public String toString() {
 
-    StringBuffer tupleString = new StringBuffer();
+    StringBuilder tupleString = new StringBuilder();
 
     tupleString.append(id());
     tupleString.append("(");

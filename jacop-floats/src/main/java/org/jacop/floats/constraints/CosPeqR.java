@@ -51,15 +51,14 @@ public class CosPeqR extends Constraint
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-
-  int firstConsistencyLevel;
-
   /** It contains variable p. */
   public FloatVar p;
 
   /** It contains variable q. */
   public FloatVar q;
+
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
 
   /**
    * It constructs cos(P) = Q constraints.
@@ -308,7 +307,7 @@ public class CosPeqR extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : CosPeqR(").append(p).append(", ").append(q).append(" )");
 

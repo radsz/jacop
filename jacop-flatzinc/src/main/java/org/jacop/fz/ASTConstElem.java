@@ -3,6 +3,8 @@
 package org.jacop.fz;
 
 public class ASTConstElem extends SimpleNode {
+  String name;
+
   public ASTConstElem(int id) {
     super(id);
   }
@@ -11,14 +13,12 @@ public class ASTConstElem extends SimpleNode {
     super(p, id);
   }
 
-  String name;
+  public String getName() {
+    return name;
+  }
 
   public void setName(String n) {
     name = n;
-  }
-
-  public String getName() {
-    return name;
   }
 
   public String toString() {

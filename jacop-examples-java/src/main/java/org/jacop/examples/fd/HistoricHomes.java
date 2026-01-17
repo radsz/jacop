@@ -55,6 +55,20 @@ import org.jacop.core.Store;
  */
 public class HistoricHomes extends ExampleFD {
 
+  /**
+   * It executes the program to solve this simple logic puzzle.
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String args[]) {
+
+    HistoricHomes example = new HistoricHomes();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -168,19 +182,5 @@ public class HistoricHomes extends ExampleFD {
     vars.add(index2);
     vars.add(index3);
     vars.add(index4);
-  }
-
-  /**
-   * It executes the program to solve this simple logic puzzle.
-   *
-   * @param args parameters (none)
-   */
-  public static void main(String args[]) {
-
-    HistoricHomes example = new HistoricHomes();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

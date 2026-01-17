@@ -40,17 +40,17 @@ import java.util.List;
  */
 public abstract class Filter {
 
-  /** It denotes the delay of the addition. */
-  public int addDel = 1;
-
-  /** It denotes the delay of the multiplication. */
-  public int mulDel = 2;
-
   /** It denotes the identifier of the addition. */
   public static final int addId = 1;
 
   /** It specifies the identifier of the multiplication. */
   public static final int mulId = 2;
+
+  /** It denotes the delay of the addition. */
+  public int addDel = 1;
+
+  /** It denotes the delay of the multiplication. */
+  public int mulDel = 2;
 
   /** It specifies the name of the filter. */
   public String name;
@@ -134,7 +134,7 @@ public abstract class Filter {
    */
   public int noAdd() {
     int plusOp = 0;
-    for (int i = 0; i < ids.length; i++) if (ids[i] == addId) plusOp++;
+    for (int id : ids) if (id == addId) plusOp++;
     return plusOp;
   }
 
@@ -145,7 +145,7 @@ public abstract class Filter {
    */
   public int noMul() {
     int mulOp = 0;
-    for (int i = 0; i < ids.length; i++) if (ids[i] == mulId) mulOp++;
+    for (int id : ids) if (id == mulId) mulOp++;
     return mulOp;
   }
 

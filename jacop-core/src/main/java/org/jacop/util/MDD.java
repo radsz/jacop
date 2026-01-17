@@ -57,6 +57,9 @@ public class MDD {
    */
   public static final int NOEDGE = 0;
 
+  /** The initial size of the array representing an MDD. */
+  public static final int START_SIZE = 1000;
+
   private static final boolean debugAll = false;
 
   /** The ordered list of variables participating in MDD. */
@@ -82,8 +85,18 @@ public class MDD {
   /** It specifies the first position in the array which is available for use. */
   public int freePosition;
 
-  /** The initial size of the array representing an MDD. */
-  public static final int START_SIZE = 1000;
+  List<int[]>[][] same;
+  List<Integer>[][] id;
+  TreeMap<Integer, Integer> reducedNodes;
+  int memorySavings;
+
+  /**
+   * It creates and MDD representation given the list of variables. Tuples must be added manually
+   * (addTuple function). After all tuples are added reduce function can be called to reduce MDD.
+   * After reducing MDD adding tuples is not allowed to maintain cannonic and minimal
+   * representation.
+   */
+  private boolean extendable = false;
 
   /**
    * It creates an MDD. Please note that diagram argument which is potentially a very large array
@@ -204,45 +217,11 @@ public class MDD {
     reduce();
   }
 
-  /**
-   * If possible it will return an MDD which reuse an array representation of the current MDD. It
-   * returns null if one of the variables supplied has a larger domain then assumed by respective
-   * variable from this MDD. In order to make reuse possible first create MDD for largest size
-   * variables.
+  /*
+   * This function encodes table constraint in the form of a table
+   * into an mtree represented using a table
    *
-   * @param vars array of new variables for which this MDD is being reused for.
-   * @return an MDD with parts of it reused for new variables.
    */
-  public MDD reuse(IntVar[] vars) {
-
-    MDD result = new MDD();
-
-    result.vars = new IntVar[vars.length];
-    System.arraycopy(vars, 0, result.vars, 0, vars.length);
-
-    result.domainLimits = new int[vars.length];
-
-    result.views = new IndexDomainView[vars.length];
-
-    for (int i = 0; i < vars.length; i++) {
-      result.views[i] = new IndexDomainView(vars[i], true);
-      if (domainLimits[i] < vars[i].domain.getSize()) return null;
-      result.domainLimits[i] = domainLimits[i];
-    }
-
-    result.freePosition = freePosition;
-    result.diagram = diagram;
-
-    return result;
-  }
-
-  /**
-   * It creates and MDD representation given the list of variables. Tuples must be added manually
-   * (addTuple function). After all tuples are added reduce function can be called to reduce MDD.
-   * After reducing MDD adding tuples is not allowed to maintain cannonic and minimal
-   * representation.
-   */
-  private boolean extendable = false;
 
   /**
    * It creates and MDD representation given the list of variables. The domain limits are set to be
@@ -279,6 +258,42 @@ public class MDD {
 
     // Adding tuples and MDD reduction must be performed separetely.
 
+  }
+
+  protected MDD() {
+    // Empty constructor to allowed MDD be read from external sources.
+  }
+
+  /**
+   * If possible it will return an MDD which reuse an array representation of the current MDD. It
+   * returns null if one of the variables supplied has a larger domain then assumed by respective
+   * variable from this MDD. In order to make reuse possible first create MDD for largest size
+   * variables.
+   *
+   * @param vars array of new variables for which this MDD is being reused for.
+   * @return an MDD with parts of it reused for new variables.
+   */
+  public MDD reuse(IntVar[] vars) {
+
+    MDD result = new MDD();
+
+    result.vars = new IntVar[vars.length];
+    System.arraycopy(vars, 0, result.vars, 0, vars.length);
+
+    result.domainLimits = new int[vars.length];
+
+    result.views = new IndexDomainView[vars.length];
+
+    for (int i = 0; i < vars.length; i++) {
+      result.views[i] = new IndexDomainView(vars[i], true);
+      if (domainLimits[i] < vars[i].domain.getSize()) return null;
+      result.domainLimits[i] = domainLimits[i];
+    }
+
+    result.freePosition = freePosition;
+    result.diagram = diagram;
+
+    return result;
   }
 
   /**
@@ -333,12 +348,6 @@ public class MDD {
       diagram = newDiagram;
     }
   }
-
-  /*
-   * This function encodes table constraint in the form of a table
-   * into an mtree represented using a table
-   *
-   */
 
   private void shrink() {
 
@@ -524,17 +533,6 @@ public class MDD {
     else return left;
   }
 
-  protected MDD() {
-    // Empty constructor to allowed MDD be read from external sources.
-  }
-
-  List<int[]>[][] same;
-  List<Integer>[][] id;
-
-  TreeMap<Integer, Integer> reducedNodes;
-
-  int memorySavings;
-
   /** It reduces MDD to minimal size. */
   @SuppressWarnings("unchecked")
   public void reduce() {
@@ -579,7 +577,6 @@ public class MDD {
 
     // The second ingredient is to remove dead nodes from the middle of an array.
 
-    /** Pseudo-code reduce if T is terminal (value 0) then return Terminal. */
     int[] nodeChildren = new int[domainLimits[level]];
 
     int numberOfChildren = -1;
@@ -616,16 +613,6 @@ public class MDD {
     same[level][numberOfChildren].add(nodeChildren);
 
     return node;
-
-    /**
-     * int [domainLimits[level]] nodeChildren; for k = 0 to domainLimits[level] if (diagram[node+k]
-     * != null) { nodeChildren[k] = reduce(node+k, level + 1); children++; }
-     *
-     * <p>traverse same[level][c] and compare nodes in this list with current node.
-     *
-     * <p>if there is a node X equal then reuse it by returning its integer id. Record position of
-     * discarded node and its length.
-     */
   }
 
   /**

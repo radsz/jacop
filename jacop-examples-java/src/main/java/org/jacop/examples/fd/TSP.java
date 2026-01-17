@@ -47,6 +47,20 @@ public class TSP extends ExampleFD {
 
   IntVar[][] varsMatrix;
 
+  /**
+   * It executes the program to solve this Travelling Salesman Problem.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    TSP example = new TSP();
+
+    example.model();
+
+    if (example.searchMaxRegretForMatrixOptimal()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -133,19 +147,5 @@ public class TSP extends ExampleFD {
     System.out.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
-  }
-
-  /**
-   * It executes the program to solve this Travelling Salesman Problem.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    TSP example = new TSP();
-
-    example.model();
-
-    if (example.searchMaxRegretForMatrixOptimal()) System.out.println("Solution(s) found");
   }
 }

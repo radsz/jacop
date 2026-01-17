@@ -45,11 +45,10 @@ public class IndexDomainView {
 
   private static final boolean debugAll = false;
 
-  IntVar var;
-
   /** It specifies mapping of the index value onto value in the domain of the variable. */
   public int[] indexToValue;
 
+  IntVar var;
   boolean[] forRemoval;
 
   boolean viewOfSparseDomain;
@@ -195,7 +194,7 @@ public class IndexDomainView {
 
     if (viewOfSparseDomain) {
 
-      for (int i = 0; i < forRemoval.length; i++) if (forRemoval[i]) return false;
+      for (boolean b : forRemoval) if (b) return false;
       return true;
     } else {
 

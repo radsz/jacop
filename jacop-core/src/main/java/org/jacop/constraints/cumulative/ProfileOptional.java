@@ -51,26 +51,27 @@ import org.jacop.core.*;
 
 public class ProfileOptional {
 
-  boolean debugNarr = false;
-  boolean debug = false;
-
-  private Comparator<Event> eventComparator =
-      (Event o1, Event o2) -> {
-        int dateDiff = o1.date() - o2.date();
-        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-      };
+  // event type
+  private static final int profile = 0;
+  private static final int pruneStart = 1;
+  private static final int pruneEnd = 2;
 
   /*
    * All tasks of the constraint
    */
   // final TaskView[] taskNormal;
-
   /** It specifies the limit of the profile of cumulative use of resources. */
   private final IntVar limit;
 
+  boolean debugNarr = false;
+  boolean debug = false;
   List<Event> utilizationProfile;
-
   boolean existsOpt = true;
+  private Comparator<Event> eventComparator =
+      (Event o1, Event o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+      };
 
   /**
    * It creates a profile for optional tasks.
@@ -425,11 +426,6 @@ public class ProfileOptional {
       }
     }
   }
-
-  // event type
-  private static final int profile = 0;
-  private static final int pruneStart = 1;
-  private static final int pruneEnd = 2;
 
   private static class Event {
     int type;

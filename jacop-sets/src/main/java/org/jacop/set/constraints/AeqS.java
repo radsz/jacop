@@ -78,14 +78,6 @@ public class AeqS extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It computes the consistency of the constraint.
-     *
-     * <p>If a set variables is to be equal to the set then it is enough to perform the following
-     * once.
-     *
-     * <p>glbA = s; lubA = s;
-     */
     a.domain.inValue(store.level, a, set);
   }
 

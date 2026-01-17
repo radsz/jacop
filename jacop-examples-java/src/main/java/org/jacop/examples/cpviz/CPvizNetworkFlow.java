@@ -49,14 +49,14 @@ public class CPvizNetworkFlow {
   IntVar[] vars;
   IntVar COST;
 
+  CPvizNetworkFlow() {}
+
   public static void main(String args[]) {
 
     CPvizNetworkFlow run = new CPvizNetworkFlow();
 
     run.transportationProblem();
   }
-
-  CPvizNetworkFlow() {}
 
   void transportationProblem() {
     long T1, T2, T;

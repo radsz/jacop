@@ -46,6 +46,12 @@ public final class TreeLeaf extends TreeNode {
   /** It specifies the efficiency of the item in the leaf. */
   public final double efficiency;
 
+  /** It stores the weight of one instance of the item stored in this leaf. */
+  public final int weightOfOne;
+
+  /** It store the profit of one instance of the item stored in this leaf. */
+  public final int profitOfOne;
+
   /**
    * It specifies the maximal value of quantity variable after the last consistency check. It is
    * used to determine if the maximal value of the quantity variable has changed since the last
@@ -59,12 +65,6 @@ public final class TreeLeaf extends TreeNode {
    * execution of the consistency function.
    */
   public int previousMinQ;
-
-  /** It stores the weight of one instance of the item stored in this leaf. */
-  public final int weightOfOne;
-
-  /** It store the profit of one instance of the item stored in this leaf. */
-  public final int profitOfOne;
 
   /**
    * It represents the offset from the minimal value. Slice of value 1 means that 1 item has been

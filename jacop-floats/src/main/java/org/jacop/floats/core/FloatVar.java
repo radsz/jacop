@@ -69,21 +69,6 @@ public class FloatVar extends Var {
     commonInitialization(store, name, dom);
   }
 
-  private void commonInitialization(Store store, String name, FloatDomain dom) {
-
-    dom.searchConstraints = new ArrayList<Constraint>();
-    dom.modelConstraints = new Constraint[FloatDomain.eventsInclusion.length][];
-    dom.modelConstraintsToEvaluate = new int[FloatDomain.eventsInclusion.length];
-
-    assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
-
-    id = name;
-    domain = dom;
-    domain.stamp = 0;
-    index = store.putVariable(this);
-    this.store = store;
-  }
-
   /**
    * It creates a variable in a given store, with a given name and a given domain.
    *
@@ -145,6 +130,21 @@ public class FloatVar extends Var {
   public FloatVar(Store store, String name, double min, double max) {
 
     commonInitialization(store, name, new FloatIntervalDomain(min, max));
+  }
+
+  private void commonInitialization(Store store, String name, FloatDomain dom) {
+
+    dom.searchConstraints = new ArrayList<Constraint>();
+    dom.modelConstraints = new Constraint[FloatDomain.eventsInclusion.length][];
+    dom.modelConstraintsToEvaluate = new int[FloatDomain.eventsInclusion.length];
+
+    assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
+
+    id = name;
+    domain = dom;
+    domain.stamp = 0;
+    index = store.putVariable(this);
+    this.store = store;
   }
 
   /**
@@ -404,7 +404,7 @@ public class FloatVar extends Var {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id);
+    StringBuilder result = new StringBuilder(id);
 
     if (domain.singleton()) result.append(" = ");
     else result.append("::");
@@ -421,7 +421,7 @@ public class FloatVar extends Var {
    */
   public String toStringFull() {
 
-    StringBuffer result = new StringBuffer(id);
+    StringBuilder result = new StringBuilder(id);
     result.append(domain.toStringFull());
     return result.toString();
   }

@@ -56,6 +56,7 @@ public class Binpacking extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
+  static long LBnumber = 0;
 
   /** It keeps together a list of variables which define bin for item i and their weigts. */
   public final BinItem[] item;
@@ -63,21 +64,15 @@ public class Binpacking extends Constraint
   /** It specifies a list of variables which define bin load. */
   public final IntVar[] load;
 
-  private boolean firstConsistencyCheck = true;
-
-  private int minBinNumber = 0;
-
-  private int sizeAllItems = 0;
-
-  private int alphaP = 0, betaP = 0;
-
   private final SimpleHashSet<IntVar> itemQueue = new SimpleHashSet<>();
   private final SimpleHashSet<IntVar> binQueue = new SimpleHashSet<>();
-
   private final Map<IntVar, Integer> itemMap;
   private final Map<IntVar, Integer> binMap;
-
   boolean LBpruning = true;
+  private boolean firstConsistencyCheck = true;
+  private int minBinNumber = 0;
+  private int sizeAllItems = 0;
+  private int alphaP = 0, betaP = 0;
   private TimeStamp<Boolean> LBpruningStamp;
 
   /**
@@ -322,8 +317,6 @@ public class Binpacking extends Constraint
       // when the constraint is fix-point check expensive LB computation
       lbNumberBins();
   }
-
-  static long LBnumber = 0;
 
   void lbNumberBins() {
     // Lower bound of number of bins pruning

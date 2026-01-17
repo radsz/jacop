@@ -47,8 +47,6 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-
   /** It specifies a list of variables among which a maximum value is being searched for. */
   public final IntVar list[];
 
@@ -57,6 +55,8 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
   public int indexOffset;
+
+  boolean firstConsistencyCheck = true;
 
   /**
    * It constructs max constraint.

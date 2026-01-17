@@ -63,6 +63,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   int[] temporaryArray;
 
   int removeCount = 0;
+  boolean addingToIntervals;
+  Boolean valueFalse = Boolean.valueOf(false);
+  Boolean valueTrue = Boolean.valueOf(true);
 
   /**
    * It creates a interval based backtrackable manager. At some point, instead of storing a list of
@@ -89,12 +92,6 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     this.addingToIntervals = false;
     this.intervalBasedTrail = new ArrayList<Boolean>();
   }
-
-  boolean addingToIntervals;
-
-  Boolean valueFalse = Boolean.valueOf(false);
-
-  Boolean valueTrue = Boolean.valueOf(true);
 
   @Override
   public void addChanged(int index) {

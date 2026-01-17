@@ -58,34 +58,8 @@ public class CreditCalculator<T extends Var>
   int[] creditsRight;
 
   boolean leftChild = true;
-
-  @Override
-  public String toString() {
-
-    StringBuffer desc = new StringBuffer();
-
-    desc.append("credit-right\n");
-    for (int i = 0; i < creditsRight.length; i++)
-      desc.append(String.valueOf(creditsRight[i])).append(" ");
-
-    desc.append("\n");
-
-    desc.append("credit-left\n");
-    for (int i = 0; i < creditsLeft.length; i++)
-      desc.append(String.valueOf(creditsLeft[i])).append(" ");
-
-    desc.append("\n");
-
-    desc.append("currentLevel ").append(String.valueOf(currentLevel)).append("\n");
-    desc.append("currentBacktracks ").append(String.valueOf(currentBacktracks)).append("\n");
-    desc.append("leftChild? ").append(String.valueOf(leftChild));
-    return desc.toString();
-  }
-
   ConsistencyListener[] consistencyListeners;
-
   ExitChildListener<T>[] exitChildListeners;
-
   TimeOutListener[] timeOutListeners;
 
   /**
@@ -143,6 +117,27 @@ public class CreditCalculator<T extends Var>
 
     creditsRight[0] = credit / 2;
     creditsLeft[0] = credit - creditsRight[0];
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer desc = new StringBuffer();
+
+    desc.append("credit-right\n");
+    for (int k : creditsRight) desc.append(String.valueOf(k)).append(" ");
+
+    desc.append("\n");
+
+    desc.append("credit-left\n");
+    for (int j : creditsLeft) desc.append(String.valueOf(j)).append(" ");
+
+    desc.append("\n");
+
+    desc.append("currentLevel ").append(String.valueOf(currentLevel)).append("\n");
+    desc.append("currentBacktracks ").append(String.valueOf(currentBacktracks)).append("\n");
+    desc.append("leftChild? ").append(String.valueOf(leftChild));
+    return desc.toString();
   }
 
   /**
@@ -205,8 +200,8 @@ public class CreditCalculator<T extends Var>
 
     if (consistencyListeners != null) {
       boolean code = false;
-      for (int i = 0; i < consistencyListeners.length; i++)
-        code |= consistencyListeners[i].executeAfterConsistency(consistent);
+      for (ConsistencyListener consistencyListener : consistencyListeners)
+        code |= consistencyListener.executeAfterConsistency(consistent);
       if (code) leftChild = true;
 
       return code && true;
@@ -224,8 +219,8 @@ public class CreditCalculator<T extends Var>
     }
 
     if (timeOutListeners != null)
-      for (int i = 0; i < timeOutListeners.length; i++)
-        timeOutListeners[i].executedAtTimeOut(noSolutions);
+      for (TimeOutListener timeOutListener : timeOutListeners)
+        timeOutListener.executedAtTimeOut(noSolutions);
   }
 
   /**
@@ -249,8 +244,8 @@ public class CreditCalculator<T extends Var>
           && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
 
         if (exitChildListeners != null) {
-          for (int i = 0; i < exitChildListeners.length; i++)
-            exitChildListeners[i].leftChild(var, value, status);
+          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+            exitChildListener.leftChild(var, value, status);
         }
 
         currentLevel--;
@@ -261,8 +256,8 @@ public class CreditCalculator<T extends Var>
     if (status) {
       if (exitChildListeners != null) {
         boolean code = false;
-        for (int i = 0; i < exitChildListeners.length; i++)
-          code |= exitChildListeners[i].leftChild(var, value, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          code |= exitChildListener.leftChild(var, value, status);
 
         if (!code) currentLevel--;
         return code;
@@ -273,8 +268,8 @@ public class CreditCalculator<T extends Var>
     // !status since, status if clause is earlier and must cause exit.
     if (timeOut) {
       if (exitChildListeners != null) {
-        for (int i = 0; i < exitChildListeners.length; i++)
-          exitChildListeners[i].leftChild(var, value, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          exitChildListener.leftChild(var, value, status);
         // return code is an and relationship with a parent
       }
 
@@ -286,8 +281,8 @@ public class CreditCalculator<T extends Var>
 
       if (exitChildListeners != null) {
         boolean code = false;
-        for (int i = 0; i < exitChildListeners.length; i++)
-          code |= exitChildListeners[i].leftChild(var, value, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          code |= exitChildListener.leftChild(var, value, status);
         if (!code) {
           currentLevel--;
           return false;
@@ -319,8 +314,8 @@ public class CreditCalculator<T extends Var>
           && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
 
         if (exitChildListeners != null) {
-          for (int i = 0; i < exitChildListeners.length; i++)
-            exitChildListeners[i].leftChild(choice, status);
+          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+            exitChildListener.leftChild(choice, status);
         }
 
         currentLevel--;
@@ -331,8 +326,8 @@ public class CreditCalculator<T extends Var>
     if (status) {
       if (exitChildListeners != null) {
         boolean code = false;
-        for (int i = 0; i < exitChildListeners.length; i++)
-          code |= exitChildListeners[i].leftChild(choice, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          code |= exitChildListener.leftChild(choice, status);
         return code;
       }
       return true;
@@ -340,8 +335,8 @@ public class CreditCalculator<T extends Var>
 
     if (timeOut) {
       if (exitChildListeners != null) {
-        for (int i = 0; i < exitChildListeners.length; i++)
-          exitChildListeners[i].leftChild(choice, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          exitChildListener.leftChild(choice, status);
       }
 
       currentLevel--;
@@ -352,8 +347,8 @@ public class CreditCalculator<T extends Var>
 
       if (exitChildListeners != null) {
         boolean code = false;
-        for (int i = 0; i < exitChildListeners.length; i++)
-          code |= exitChildListeners[i].leftChild(choice, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          code |= exitChildListener.leftChild(choice, status);
         if (!code) {
           currentLevel--;
           return false;
@@ -385,8 +380,8 @@ public class CreditCalculator<T extends Var>
     }
 
     if (exitChildListeners != null)
-      for (int i = 0; i < exitChildListeners.length; i++)
-        exitChildListeners[i].rightChild(var, value, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        exitChildListener.rightChild(var, value, status);
   }
 
   public void rightChild(PrimitiveConstraint choice, boolean status) {
@@ -406,8 +401,8 @@ public class CreditCalculator<T extends Var>
     }
 
     if (exitChildListeners != null)
-      for (int i = 0; i < exitChildListeners.length; i++)
-        exitChildListeners[i].rightChild(choice, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        exitChildListener.rightChild(choice, status);
   }
 
   public void setChildrenListeners(ConsistencyListener[] children) {

@@ -47,6 +47,7 @@ import org.jacop.util.BipartiteGraphMatching;
 public class Values extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+  private static final boolean debug = false;
 
   /** It specifies a list of variables which are counted. */
   protected final IntVar[] list;
@@ -55,8 +56,6 @@ public class Values extends Constraint implements SatisfiedPresent {
   protected final IntVar count;
 
   Comparator<IntVar> minFDV = (o1, o2) -> (o1.min() - o2.min());
-
-  private static final boolean debug = false;
 
   /**
    * It constructs Values constraint.
@@ -173,7 +172,7 @@ public class Values extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : Values([");
     for (int i = 0; i < list.length; i++) {
       if (i < list.length - 1) result.append(list[i]).append(", ");

@@ -56,6 +56,7 @@ import org.jacop.core.Var;
  */
 public class NoGood extends Constraint {
 
+  private static final boolean debug = false;
   static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables in no-good constraint. */
@@ -65,14 +66,9 @@ public class NoGood extends Constraint {
   protected int listOfValues[];
 
   private IntVar firstWatch;
-
   private int firstValue;
-
   private IntVar secondWatch;
-
   private int secondValue;
-
-  private static final boolean debug = false;
 
   /**
    * It creates a no-good constraint.
@@ -84,22 +80,6 @@ public class NoGood extends Constraint {
   public NoGood(IntVar[] listOfVars, int[] listOfValues) {
 
     commonInitialization(listOfVars, listOfValues);
-  }
-
-  private void commonInitialization(IntVar[] listOfVars, int[] listOfValues) {
-
-    checkInputForNullness("listOfVars", listOfVars);
-    checkInputForNullness("listOfValues", listOfValues);
-
-    if (listOfVars.length != listOfValues.length)
-      throw new IllegalArgumentException("Length of listOfVars is different from listOfValues");
-
-    this.queueIndex = 0;
-    this.numberId = idNumber.incrementAndGet();
-    this.listOfVars = Arrays.copyOf(listOfVars, listOfVars.length);
-    this.listOfValues = Arrays.copyOf(listOfValues, listOfValues.length);
-
-    setScope(listOfVars);
   }
 
   /**
@@ -116,6 +96,22 @@ public class NoGood extends Constraint {
     commonInitialization(
         listOfVars.toArray(new IntVar[listOfVars.size()]),
         listOfValues.stream().mapToInt(i -> i).toArray());
+  }
+
+  private void commonInitialization(IntVar[] listOfVars, int[] listOfValues) {
+
+    checkInputForNullness("listOfVars", listOfVars);
+    checkInputForNullness("listOfValues", listOfValues);
+
+    if (listOfVars.length != listOfValues.length)
+      throw new IllegalArgumentException("Length of listOfVars is different from listOfValues");
+
+    this.queueIndex = 0;
+    this.numberId = idNumber.incrementAndGet();
+    this.listOfVars = Arrays.copyOf(listOfVars, listOfVars.length);
+    this.listOfValues = Arrays.copyOf(listOfValues, listOfValues.length);
+
+    setScope(listOfVars);
   }
 
   @Override

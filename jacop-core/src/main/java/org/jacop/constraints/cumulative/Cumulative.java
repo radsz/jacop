@@ -62,19 +62,15 @@ import org.jacop.core.Store;
 
 public class Cumulative extends CumulativeBasic {
 
-  TaskView[] taskReversed;
-
-  boolean doEdgeFind = true;
-  boolean doQuadraticEdgeFind = false;
-
-  private Set<Integer> preComputedCapacities = null;
-  private int[] preComputedCapMap;
-
   protected Comparator<TaskView> taskIncEstComparator =
       (o1, o2) -> (o1.est() == o2.est()) ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
-
   protected Comparator<TaskView> taskDecLctComparator =
       (o1, o2) -> (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
+  TaskView[] taskReversed;
+  boolean doEdgeFind = true;
+  boolean doQuadraticEdgeFind = false;
+  private Set<Integer> preComputedCapacities = null;
+  private int[] preComputedCapMap;
 
   /**
    * It creates a cumulative constraint.

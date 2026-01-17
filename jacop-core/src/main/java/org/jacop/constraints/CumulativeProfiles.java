@@ -55,8 +55,8 @@ class CumulativeProfiles {
 
     minProfile = new Profile();
     maxProfile = new Profile();
-    for (int i = 0; i < Ts.length; i++) {
-      t = Ts[i];
+    for (Task task : Ts) {
+      t = task;
 
       tDurMin = t.dur.min();
       tResMin = t.res.min();

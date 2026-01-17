@@ -53,17 +53,11 @@ import org.jacop.core.Store;
 
 public class SumBool extends PrimitiveConstraint {
 
-  Store store;
-
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  boolean reified = true;
-
   /*
    * Defines relations
    */
   static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
-
   /*
    * Defines negated relations
    */
@@ -75,12 +69,12 @@ public class SumBool extends PrimitiveConstraint {
     le, // gt=4,
     lt // ge=5;
   };
-
   /*
    * It specifies what relations is used by this constraint
    */
   public byte relationType;
-
+  Store store;
+  boolean reified = true;
   /*
    * It specifies a list of variables being summed.
    */
@@ -364,14 +358,14 @@ public class SumBool extends PrimitiveConstraint {
 
     int sMin = 0;
     int sMax = 0;
-    for (int i = 0; i < x.length; i++) {
-      int n1 = x[i].min();
-      int n2 = x[i].max();
+    for (IntVar intVar : x) {
+      int n1 = intVar.min();
+      int n2 = intVar.max();
 
       sMin = Math.addExact(sMin, n1);
       sMax = Math.addExact(sMax, n2);
 
-      if (x[i].max() != 0) ls.add(x[i]);
+      if (intVar.max() != 0) ls.add(intVar);
     }
 
     return ls.toArray(new IntVar[ls.size()]);

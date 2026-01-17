@@ -416,7 +416,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    */
   @Override
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     buf.append("[");
 
     for (int i = 0; i < elementData.length; i++) {

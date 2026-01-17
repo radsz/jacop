@@ -48,17 +48,15 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
   static final boolean debugAll = false;
 
-  boolean firstConsistencyCheck = true;
-
-  boolean domainConsistent = false;
-
-  int firstConsistencyLevel;
-
   /** It contains variable x. */
   public final IntVar x;
 
   /** It contains variable y. */
   public final IntVar y;
+
+  boolean firstConsistencyCheck = true;
+  boolean domainConsistent = false;
+  int firstConsistencyLevel;
 
   /**
    * It constructs |X| = Y constraints.

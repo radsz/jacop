@@ -62,6 +62,28 @@ public final class IntHashMap<E> {
   // number of elements
   private int cardinal = 0;
 
+  /**
+   * builds a new map with given size
+   *
+   * @param size the size
+   */
+  @SuppressWarnings("unchecked")
+  private IntHashMap(int size) {
+    tableKey = new int[size][];
+    tableValue = (E[][]) new Object[size][];
+
+    for (int i = 0; i < size; ++i) {
+      tableKey[i] = new int[MAX_BUCKET_SIZE + 2];
+      tableKey[i][0] = 0;
+      tableValue[i] = (E[]) new Object[MAX_BUCKET_SIZE + 2];
+    }
+  }
+
+  /** public constructor */
+  public IntHashMap() {
+    this(INITIAL_SIZE);
+  }
+
   /** clear the table, removing all elements */
   public void clear() {
     cardinal = 0;
@@ -243,28 +265,6 @@ public final class IntHashMap<E> {
   private int hash(int key, int length) {
     int hashed = Math.abs(key) * HASH_PRIME;
     return hashed % length;
-  }
-
-  /**
-   * builds a new map with given size
-   *
-   * @param size the size
-   */
-  @SuppressWarnings("unchecked")
-  private IntHashMap(int size) {
-    tableKey = new int[size][];
-    tableValue = (E[][]) new Object[size][];
-
-    for (int i = 0; i < size; ++i) {
-      tableKey[i] = new int[MAX_BUCKET_SIZE + 2];
-      tableKey[i][0] = 0;
-      tableValue[i] = (E[]) new Object[MAX_BUCKET_SIZE + 2];
-    }
-  }
-
-  /** public constructor */
-  public IntHashMap() {
-    this(INITIAL_SIZE);
   }
 
   /**

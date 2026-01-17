@@ -86,6 +86,63 @@ public class Diet extends ExampleFD {
     {2, 4, 1, 5}
   }; // fat
 
+  public static void printLastSolution(Diet diet) {
+
+    System.out.println("Cost: " + diet.cost.value());
+    for (int i = 0; i < diet.m; i++) {
+      System.out.println(diet.food[i] + ": " + diet.x[i].value());
+    }
+  }
+
+  /**
+   * It executes the program optimizing the diet.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    Diet diet = new Diet();
+    diet.model();
+
+    System.out.println("Searching for optimal using sum weight constraints");
+    if (diet.searchOptimal()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+
+    diet = new Diet();
+    diet.modelKnapsack();
+
+    System.out.println("Searching for optimal using knapsack constraints");
+    if (diet.searchOptimal()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+
+    diet = new Diet();
+    diet.model();
+
+    System.out.println("Searching for all solutions using sum weight constraints");
+
+    if (diet.searchAllAtOnce()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+
+    diet = new Diet();
+    diet.modelKnapsack();
+
+    System.out.println("Searching for all solutions using knapsack constraints");
+    if (diet.searchAllAtOnce()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+  }
+
   /** Imposes the model of the problem. */
   @Override
   public void model() {
@@ -144,62 +201,5 @@ public class Diet extends ExampleFD {
 
     vars = new ArrayList<IntVar>();
     for (IntVar v : x) vars.add(v);
-  }
-
-  public static void printLastSolution(Diet diet) {
-
-    System.out.println("Cost: " + diet.cost.value());
-    for (int i = 0; i < diet.m; i++) {
-      System.out.println(diet.food[i] + ": " + diet.x[i].value());
-    }
-  }
-
-  /**
-   * It executes the program optimizing the diet.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    Diet diet = new Diet();
-    diet.model();
-
-    System.out.println("Searching for optimal using sum weight constraints");
-    if (diet.searchOptimal()) {
-      printLastSolution(diet);
-    } else {
-      System.out.println("No solution.");
-    }
-
-    diet = new Diet();
-    diet.modelKnapsack();
-
-    System.out.println("Searching for optimal using knapsack constraints");
-    if (diet.searchOptimal()) {
-      printLastSolution(diet);
-    } else {
-      System.out.println("No solution.");
-    }
-
-    diet = new Diet();
-    diet.model();
-
-    System.out.println("Searching for all solutions using sum weight constraints");
-
-    if (diet.searchAllAtOnce()) {
-      printLastSolution(diet);
-    } else {
-      System.out.println("No solution.");
-    }
-
-    diet = new Diet();
-    diet.modelKnapsack();
-
-    System.out.println("Searching for all solutions using knapsack constraints");
-    if (diet.searchAllAtOnce()) {
-      printLastSolution(diet);
-    } else {
-      System.out.println("No solution.");
-    }
   }
 }

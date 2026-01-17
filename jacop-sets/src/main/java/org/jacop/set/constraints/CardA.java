@@ -106,13 +106,6 @@ public class CardA extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It computes the consistency of the constraint.
-     *
-     * <p>#A in (min, max)
-     *
-     * <p>Cardinality of set variable A is within interval (min, max).
-     */
     SetDomain aDom = a.domain;
 
     int min = Math.max(aDom.glb().getSize(), cardinality.min());
@@ -120,11 +113,6 @@ public class CardA extends Constraint implements SatisfiedPresent {
 
     if (min > max) throw Store.failException;
 
-    /**
-     * If #glbA is already equal to maximum allowed cardinality then set is specified by glbA. if
-     * (#glbA == max) then A = glbA If #lubA is already equal to minimum allowed cardinality then
-     * set is specified by lubA. if (#lubA == min) then A = lubA
-     */
     a.domain.inCardinality(store.level, a, min, max);
   }
 

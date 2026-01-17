@@ -185,7 +185,7 @@ public class Max extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : max(  [ ");
     for (int i = 0; i < list.length; i++) {

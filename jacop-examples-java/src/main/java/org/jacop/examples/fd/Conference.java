@@ -49,6 +49,20 @@ import org.jacop.core.Store;
  */
 public class Conference extends ExampleFD {
 
+  /**
+   * It executes the program which solves this simple problem.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    Conference example = new Conference();
+
+    example.model();
+
+    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -152,19 +166,5 @@ public class Conference extends ExampleFD {
 
     // last parameter true enforces edge finding propagation algorithm
     store.impose(new Cumulative(sessions, durations, resources, three));
-  }
-
-  /**
-   * It executes the program which solves this simple problem.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    Conference example = new Conference();
-
-    example.model();
-
-    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
   }
 }

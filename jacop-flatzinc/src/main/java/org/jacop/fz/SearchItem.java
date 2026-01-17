@@ -370,8 +370,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             ? new IndomainDefaultValue<IntVar>(preferedValues, new IndomainMin<IntVar>())
             : new IndomainDefaultValue<IntVar>(preferedValues, new IndomainMax<IntVar>());
     ArrayList<IntVar> sv = new ArrayList<>();
-    for (int i = 0; i < search_variables.length; i++)
-      if (preferedValues.containsKey(search_variables[i])) sv.add((IntVar) search_variables[i]);
+    for (Var searchVariable : search_variables)
+      if (preferedValues.containsKey(searchVariable)) sv.add((IntVar) searchVariable);
     IntVar[] searchVars;
     if (sv.size() == 0) {
       searchVars = new IntVar[1];
@@ -965,7 +965,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   public String toString() {
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
 
     if (search_type == null) s.append("defult_search\n");
     else if (search_seq.size() == 0) {

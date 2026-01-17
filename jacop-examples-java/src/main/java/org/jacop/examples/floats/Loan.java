@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models tan(x) = -x for floating solver.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusQeqR;
@@ -46,6 +40,26 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
 public class Loan {
+
+  /**
+   * It executes the program which computes values for tan(x) = -x.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    Loan example = new Loan();
+
+    if (args.length != 4) System.out.println("Wring number of parameters");
+    else {
+      double i = Double.parseDouble(args[0]);
+      double p = Double.parseDouble(args[1]);
+      double r = Double.parseDouble(args[2]);
+      double b4 = Double.parseDouble(args[3]);
+
+      example.loan(i, p, r, b4);
+    }
+  }
 
   public void loan(double i, double p, double r, double b4) {
 
@@ -147,25 +161,5 @@ public class Loan {
     System.out.println(B4 + "\n" + P + "\n" + R);
 
     System.out.println("Precision = " + FloatDomain.precision());
-  }
-
-  /**
-   * It executes the program which computes values for tan(x) = -x.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    Loan example = new Loan();
-
-    if (args.length != 4) System.out.println("Wring number of parameters");
-    else {
-      double i = Double.parseDouble(args[0]);
-      double p = Double.parseDouble(args[1]);
-      double r = Double.parseDouble(args[2]);
-      double b4 = Double.parseDouble(args[3]);
-
-      example.loan(i, p, r, b4);
-    }
   }
 }

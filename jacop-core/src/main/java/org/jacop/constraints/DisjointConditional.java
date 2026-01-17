@@ -47,16 +47,14 @@ import org.jacop.core.*;
  */
 public class DisjointConditional extends Diff {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   static final boolean trace = false, traceNarr = false;
-
-  List<? extends IntVar>[] condVariables;
-
-  DisjointCondVar evalRects[];
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what rectangles can conditionally overlap. */
   public ExclusiveList exclusionList = new ExclusiveList();
+
+  List<? extends IntVar>[] condVariables;
+  DisjointCondVar evalRects[];
 
   /**
    * It specifies a diff constraint.

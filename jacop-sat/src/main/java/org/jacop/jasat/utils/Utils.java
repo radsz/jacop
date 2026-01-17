@@ -42,6 +42,9 @@ import java.util.Set;
  */
 public final class Utils {
 
+  // mask for the leftmost bit
+  private static final int MASK = ~Integer.MIN_VALUE;
+
   /**
    * Resize the array to newSize, using the given memory pool
    *
@@ -120,6 +123,11 @@ public final class Utils {
     } else return array;
   }
 
+  /*
+   * TODO: try to replace arithmetic negation by this var(), not() methods
+   * (which should be faster) about representation of signed literals
+   */
+
   /**
    * facility to print a clause to a string
    *
@@ -136,14 +144,6 @@ public final class Utils {
     sb.append(clause[clause.length - 1]);
     return sb.toString();
   }
-
-  /*
-   * TODO: try to replace arithmetic negation by this var(), not() methods
-   * (which should be faster) about representation of signed literals
-   */
-
-  // mask for the leftmost bit
-  private static final int MASK = ~Integer.MIN_VALUE;
 
   /**
    * get the "absolute value" of the int (the variable that corresponds to the literal) literal

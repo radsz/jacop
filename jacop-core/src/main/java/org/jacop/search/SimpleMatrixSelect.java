@@ -64,26 +64,21 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public boolean inputOrderTieBreaking = true;
 
-  ComparatorVariable<T> mainComparator = null;
-
   /** It specifies the pivot position (first element has index 0). */
   public int pivotPosition;
-
-  //	int subListSize;
-
-  ComparatorVariable<T> tieBreakingComparator = null;
-
-  int primaryIndex = 0;
-
-  int secondaryIndex = 0;
-
-  Indomain<T> valueOrdering;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public Map<T, Integer> position = Var.createEmptyPositioning();
 
+  //	int subListSize;
   /** It stores variables which need to be labelled. */
   public List<List<T>> searchVariables = new ArrayList<List<T>>();
+
+  ComparatorVariable<T> mainComparator = null;
+  ComparatorVariable<T> tieBreakingComparator = null;
+  int primaryIndex = 0;
+  int secondaryIndex = 0;
+  Indomain<T> valueOrdering;
 
   /**
    * This constructor uses default values for all parameters. The size of the sublist is equal to
@@ -153,15 +148,15 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int no = 0;
 
-    for (int i = 0; i < vars.length; i++) {
+    for (T[] var : vars) {
 
       List<T> current = new ArrayList<T>();
 
-      assert (vars[i].length > pivotPosition);
+      assert (var.length > pivotPosition);
 
-      for (int j = 0; j < vars[i].length; j++) {
-        current.add(vars[i][j]);
-        if (!position.containsKey(vars[i][j])) position.put(vars[i][j], no++);
+      for (int j = 0; j < var.length; j++) {
+        current.add(var[j]);
+        if (!position.containsKey(var[j])) position.put(var[j], no++);
       }
 
       searchVariables.add(current);
@@ -184,7 +179,6 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int finalIndex = searchVariables.size();
 
-    /// Input order if no main comparator.
     if (mainComparator == null) {
 
       while (firstVariable < finalIndex) {

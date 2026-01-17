@@ -53,8 +53,8 @@ public class SimpleTimeOut implements TimeOutListener {
     this.timeOutOccurred = true;
 
     if (timeOutListeners != null) {
-      for (int i = 0; i < timeOutListeners.length; i++)
-        timeOutListeners[i].executedAtTimeOut(solutionsNo);
+      for (TimeOutListener timeOutListener : timeOutListeners)
+        timeOutListener.executedAtTimeOut(solutionsNo);
     }
   }
 

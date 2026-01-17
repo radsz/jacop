@@ -55,10 +55,6 @@ import org.jacop.util.SimpleHashSet;
 @SuppressWarnings("serial")
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
-  Store store;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   /** Defines relations */
   public static final byte eq = 0, lt = 1, le = 2, ne = 3, gt = 4, ge = 5;
 
@@ -72,6 +68,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     lt // ge=5;
   };
 
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
   /** It specifies what relations is used by this constraint */
   public byte relationType;
 
@@ -84,6 +82,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   /** It specifies variable for the overall sum. */
   public double sum;
 
+  Store store;
   Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
 
   // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
@@ -127,6 +126,33 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         DoubleStream.concat(Arrays.stream(weights), DoubleStream.of(-1)).toArray(),
         rel,
         0);
+  }
+
+  /**
+   * It constructs the constraint Linear.
+   *
+   * @param store current store
+   * @param variables variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}"
+   * @param sum variable containing the sum of weighted variables.
+   */
+  public Linear(
+      Store store,
+      List<? extends FloatVar> variables,
+      List<Double> weights,
+      String rel,
+      double sum) {
+
+    checkInputForNullness(
+        new String[] {"variables", "weights", "rel"}, new Object[] {variables, weights, rel});
+    commonInitialization(
+        store,
+        variables.toArray(new FloatVar[variables.size()]),
+        weights.stream().mapToDouble(i -> i).toArray(),
+        rel,
+        sum);
   }
 
   private void commonInitialization(
@@ -261,33 +287,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
       return (RootBNode) nodes[0];
     }
-  }
-
-  /**
-   * It constructs the constraint Linear.
-   *
-   * @param store current store
-   * @param variables variables which are being multiplied by weights.
-   * @param weights weight for each variable.
-   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
-   *     "{@literal >=}"
-   * @param sum variable containing the sum of weighted variables.
-   */
-  public Linear(
-      Store store,
-      List<? extends FloatVar> variables,
-      List<Double> weights,
-      String rel,
-      double sum) {
-
-    checkInputForNullness(
-        new String[] {"variables", "weights", "rel"}, new Object[] {variables, weights, rel});
-    commonInitialization(
-        store,
-        variables.toArray(new FloatVar[variables.size()]),
-        weights.stream().mapToDouble(i -> i).toArray(),
-        rel,
-        sum);
   }
 
   @Override
@@ -499,7 +498,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : Linear( [ ");
 
     for (int i = 0; i < list.length; i++) {

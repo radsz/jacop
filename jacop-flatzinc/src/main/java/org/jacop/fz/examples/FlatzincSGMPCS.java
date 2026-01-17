@@ -43,14 +43,14 @@ import org.jacop.search.sgmpcs.SGMPCSearch;
  */
 public class FlatzincSGMPCS {
 
+  FlatzincSGMPCS() {}
+
   public static void main(String args[]) {
 
     FlatzincSGMPCS run = new FlatzincSGMPCS();
 
     run.ex(args);
   }
-
-  FlatzincSGMPCS() {}
 
   void ex(String[] args) {
 
@@ -110,8 +110,8 @@ public class FlatzincSGMPCS {
       int[] sol = label.lastSolution();
       if (sol != null) {
         System.out.println("\n%%% Last found solution with cost " + label.lastCost());
-        for (int i = 0; i < sol.length; i++) {
-          System.out.print(sol[i] + " ");
+        for (int j : sol) {
+          System.out.print(j + " ");
         }
       } else System.out.println("\n%%% No solution found with this method");
     }

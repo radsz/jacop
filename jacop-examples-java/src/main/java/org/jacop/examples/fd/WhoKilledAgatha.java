@@ -67,6 +67,19 @@ import org.jacop.search.*;
  */
 public class WhoKilledAgatha extends ExampleFD {
 
+  /**
+   * It runs the program which solves the logic puzzle "Who killed Agatha".
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String args[]) {
+
+    WhoKilledAgatha example = new WhoKilledAgatha();
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  } // end main
+
   public void model() {
 
     int n = 3;
@@ -198,8 +211,8 @@ public class WhoKilledAgatha extends ExampleFD {
         System.out.println("the_killer: " + res[0]);
 
         // print the result
-        for (int i = 0; i < len; i++) {
-          System.out.print(res[i] + " ");
+        for (Domain re : res) {
+          System.out.print(re + " ");
         }
         System.out.println();
       }
@@ -211,17 +224,4 @@ public class WhoKilledAgatha extends ExampleFD {
 
     return result;
   }
-
-  /**
-   * It runs the program which solves the logic puzzle "Who killed Agatha".
-   *
-   * @param args parameters (none)
-   */
-  public static void main(String args[]) {
-
-    WhoKilledAgatha example = new WhoKilledAgatha();
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
-  } // end main
 } // end class

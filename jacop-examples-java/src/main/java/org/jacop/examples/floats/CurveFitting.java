@@ -30,15 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models curve fitting flow for floating solver.
- *
- * <p>Curve fitting problem by Least Squares based on minizinc model curve_fitting3.mzn by Håkan
- * Kjellerstrand
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -53,6 +44,18 @@ public class CurveFitting {
 
   double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    CurveFitting example = new CurveFitting();
+
+    example.curve_fitting3();
+  }
 
   void curve_fitting3() {
 
@@ -155,17 +158,5 @@ public class CurveFitting {
     System.out.println(X + "\n" + Y + "\n" + b1);
 
     System.out.println("\nPrecision = " + FloatDomain.precision());
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    CurveFitting example = new CurveFitting();
-
-    example.curve_fitting3();
   }
 }

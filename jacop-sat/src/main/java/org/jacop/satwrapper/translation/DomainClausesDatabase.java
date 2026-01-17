@@ -154,7 +154,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
       } else {
         // nothing to do, literal is already set to the right value
-        //// ignoreCache.set(Math.abs(literal));
         // wrapper.log(this, "  does not propagate literal "+literal
         //		+" meaning "+wrapper.showLiteralMeaning(literal));
       }
@@ -172,7 +171,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       core.triggerPropagateEvent(literal, clauseId);
 
       // ignore this literal, now
-      //// ignoreCache.set(Math.abs(literal));
 
       // remember which asserted literal is cause for this propagation
       if (propagationCauses.length <= var)

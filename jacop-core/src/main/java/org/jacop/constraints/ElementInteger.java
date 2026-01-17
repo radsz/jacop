@@ -55,11 +55,6 @@ import org.jacop.core.*;
 public class ElementInteger extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
-
   /**
    * It specifies the maximal size of index domain when the constraint will apply domain consistency
    * for value. Otherwise bound consistency is applied. This limit applies to both duplicates and
@@ -73,11 +68,7 @@ public class ElementInteger extends Constraint
    */
   static final int minDuplicatesSize = 10;
 
-  /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  public IntVar index;
-
-  /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  public IntVar value;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
   public final int indexOffset;
@@ -88,11 +79,20 @@ public class ElementInteger extends Constraint
    */
   public final boolean checkDuplicates;
 
+  /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
+  public IntVar index;
+
+  /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
+  public IntVar value;
+
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
   public int list[];
+
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
 
   /**
    * It specifies for each value what are the possible values of the index variable (it takes into
@@ -407,7 +407,7 @@ public class ElementInteger extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : elementInteger").append("( ").append(index).append(", [");
 

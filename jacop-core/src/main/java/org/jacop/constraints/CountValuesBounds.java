@@ -55,26 +55,23 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
   /** It counts the number of occurences of the specified value in a list. */
   public final Bounds[] counter;
 
-  /*
-   * lower and upper bounds on values occurence
-   */
-  int[] lb;
-  int[] ub;
-
   public final Bounds counterRest;
   public final Bounds[] extendedCounter;
 
   /** The list of variables which are checked and counted if equal to specified value. */
   public final IntVar[] list;
 
-  private final int n; // length of the list
-
   /** The value to which is any variable is equal to makes the constraint count it. */
   public final int[] values;
 
   final IntDomain valuesDomain;
   final IntDomain valuesDomainComplement;
-
+  private final int n; // length of the list
+  /*
+   * lower and upper bounds on values occurence
+   */
+  int[] lb;
+  int[] ub;
   /*
    * Defines first position of the variable that are not considered;
    * either equal to value or missing the value in their domain.
@@ -214,13 +211,12 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
       int min = 0;
       int max = 0;
-      for (int i = 0; i < extendedCounter.length; i++) {
-        min += extendedCounter[i].min();
-        max += extendedCounter[i].max();
+      for (Bounds value : extendedCounter) {
+        min += value.min();
+        max += value.max();
       }
-      for (int i = 0; i < extendedCounter.length; i++) { // sum(extendedCounter) == n (list length)
-        extendedCounter[i].in(
-            n - max + extendedCounter[i].max(), n - min + extendedCounter[i].min());
+      for (Bounds bounds : extendedCounter) { // sum(extendedCounter) == n (list length)
+        bounds.in(n - max + bounds.max(), n - min + bounds.min());
       }
 
       for (int i = 0; i < values.length; i++) {
@@ -307,10 +303,10 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
   private static class Bounds {
 
-    int min;
-    int max;
     final int lb;
     final int ub;
+    int min;
+    int max;
 
     Bounds(int min, int max) {
       this.min = min;

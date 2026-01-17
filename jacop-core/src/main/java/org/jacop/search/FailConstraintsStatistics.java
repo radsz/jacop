@@ -55,6 +55,15 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     store = s;
   }
 
+  private static List<Entry<String, Integer>> sortByValues(Map<String, Integer> map) {
+    List<Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
+
+    // Sorting
+    Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
+
+    return list;
+  }
+
   /*
    * Listener for failers
    */
@@ -93,7 +102,7 @@ public class FailConstraintsStatistics implements ConsistencyListener {
 
   public String toString() {
 
-    StringBuffer c = new StringBuffer();
+    StringBuilder c = new StringBuilder();
 
     c.append("*** Failed classes of constraints ***\n");
     for (Entry<String, Integer> cls : sortByValues(failConstraintsStatistics))
@@ -104,14 +113,5 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     c.append("*** Fails not caused by constraints " + otherFails + "\n");
 
     return c.toString();
-  }
-
-  private static List<Entry<String, Integer>> sortByValues(Map<String, Integer> map) {
-    List<Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
-
-    // Sorting
-    Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
-
-    return list;
   }
 }

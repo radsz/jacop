@@ -90,7 +90,7 @@ public class Gardner extends ExampleSet {
       for (int j = i + 1; j < days.length; j++) store.impose(new Not(new AeqB(days[i], days[j])));
 
     // card(days[i]) = num_persons_per_meeting
-    for (int i = 0; i < days.length; i++) store.impose(new CardA(days[i], num_persons_per_meeting));
+    for (SetVar day : days) store.impose(new CardA(day, num_persons_per_meeting));
 
     for (int i = 0; i < days.length - 1; i++)
       for (int j = i + 1; j < days.length; j++) {
@@ -133,8 +133,8 @@ public class Gardner extends ExampleSet {
 
     if (result) {
       System.out.println("*** Yes");
-      for (int i = 0; i < vars.size(); i++) {
-        System.out.println(vars.get(i));
+      for (SetVar var : vars) {
+        System.out.println(var);
       }
     } else System.out.println("*** No");
 

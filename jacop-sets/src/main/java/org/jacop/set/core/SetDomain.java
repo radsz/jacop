@@ -71,6 +71,9 @@ public abstract class SetDomain extends Domain {
   /** It specifies event that has changed the cardinality of the set. */
   public static final int CARDINALITY = 5;
 
+  /** It predefines empty domain so there is no need to constantly create it when needed. */
+  public static final SetDomain emptyDomain = new BoundSetDomain();
+
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
    * this by bit flags in int.
@@ -85,6 +88,12 @@ public abstract class SetDomain extends Domain {
   }; // CARDINALITY event
 
   /**
+   * It specifies the previous domain which was used by this domain. The old domain is stored here
+   * and can be easily restored if necessary.
+   */
+  public SetDomain previousDomain;
+
+  /**
    * It helps to specify what events should be executed if a given event occurs.
    *
    * @param pruningEvent the pruning event for which we want to know what events it encompasses.
@@ -93,15 +102,6 @@ public abstract class SetDomain extends Domain {
   public int[] getEventsInclusion(int pruningEvent) {
     return eventsInclusion[pruningEvent];
   }
-
-  /**
-   * It specifies the previous domain which was used by this domain. The old domain is stored here
-   * and can be easily restored if necessary.
-   */
-  public SetDomain previousDomain;
-
-  /** It predefines empty domain so there is no need to constantly create it when needed. */
-  public static final SetDomain emptyDomain = new BoundSetDomain();
 
   /**
    * Adds an interval to the lub.
@@ -731,7 +731,7 @@ public abstract class SetDomain extends Domain {
   @Override
   public String toStringConstraints() {
 
-    StringBuffer S = new StringBuffer("");
+    StringBuilder S = new StringBuilder("");
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       S.append(e.next().id());

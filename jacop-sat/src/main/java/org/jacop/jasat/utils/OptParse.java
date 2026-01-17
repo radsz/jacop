@@ -75,17 +75,17 @@ public class OptParse<E> {
     // the object
     E current = e;
     // iterate on arguments
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].startsWith("-") || args[i].startsWith("--")) {
-        if (args[i].equals("-")) {
+    for (String arg : args) {
+      if (arg.startsWith("-") || arg.startsWith("--")) {
+        if (arg.equals("-")) {
           // exception: this is not an option
-          realArgs[realIndex++] = args[i];
+          realArgs[realIndex++] = arg;
           continue;
         }
         // parse this as an option
-        int loc = args[i].indexOf("=");
-        String key = (loc > 0) ? args[i].substring(0, loc) : args[i];
-        String value = (loc > 0) ? args[i].substring(loc + 1) : "";
+        int loc = arg.indexOf("=");
+        String key = (loc > 0) ? arg.substring(0, loc) : arg;
+        String value = (loc > 0) ? arg.substring(loc + 1) : "";
         if (!handlers.containsKey(key)) {
           // this option is not registered
           System.out.println("unknown option: " + key);
@@ -95,7 +95,7 @@ public class OptParse<E> {
           current = handlers.get(key).handle(this, current, value);
         }
       } else {
-        realArgs[realIndex++] = args[i];
+        realArgs[realIndex++] = arg;
       }
     }
     // truncate the "real args" array and return the E value

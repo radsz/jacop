@@ -46,16 +46,6 @@ public abstract class InternalConstraint {
   /** The ordering of constraints requires to maintain a reverse mapping. */
   int constraintListIndex;
 
-  /**
-   * In order to avoid the cost of repeated calls to isInternalConstraintApplicable, we need 3
-   * different states.
-   */
-  enum Applicability {
-    UNDEFINED, // no check done yet
-    APPLICABLE, // check done, constraint applicable
-    NOT_APPLICABLE, // check done, constraint not applicable
-  }
-
   /** the current applicability of the constraint. */
   Applicability applicability;
 
@@ -158,4 +148,14 @@ public abstract class InternalConstraint {
    * @return the collection containing variables that define that constraint.
    */
   public abstract Collection<Var> definingVariables();
+
+  /**
+   * In order to avoid the cost of repeated calls to isInternalConstraintApplicable, we need 3
+   * different states.
+   */
+  enum Applicability {
+    UNDEFINED, // no check done yet
+    APPLICABLE, // check done, constraint applicable
+    NOT_APPLICABLE, // check done, constraint not applicable
+  }
 }

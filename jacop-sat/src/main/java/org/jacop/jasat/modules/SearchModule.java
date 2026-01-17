@@ -76,6 +76,9 @@ public final class SearchModule
   // next clause to learn
   private MapClause clauseToLearn = null;
 
+  /** search implementation, without timeout (search until solution is found) */
+  public SearchModule() {}
+
   public void onExplain(MapClause explanation) {
     clauseToLearn = explanation;
   }
@@ -188,9 +191,6 @@ public final class SearchModule
     long realTimeout = timeout - TIME_MARGIN;
     core.timer.schedule(task, realTimeout);
   }
-
-  /** search implementation, without timeout (search until solution is found) */
-  public SearchModule() {}
 
   @Override
   public String toString() {

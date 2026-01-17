@@ -91,13 +91,6 @@ public class SinA extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * This consistency enforces the following rules.
-     *
-     * <p>if (s not in lubA) then fail.
-     *
-     * <p>glbA = glbA \/ S
-     */
     a.domain.inGLB(store.level, a, set);
 
     if (strict) a.domain.inCardinality(store.level, a, set.getSize() + 1, Integer.MAX_VALUE);

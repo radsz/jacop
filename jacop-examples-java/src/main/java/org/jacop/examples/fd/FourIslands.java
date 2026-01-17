@@ -62,6 +62,20 @@ import org.jacop.core.Store;
  */
 public class FourIslands extends ExampleFD {
 
+  /**
+   * It executes a program to solve this simple logic puzzle.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    FourIslands example = new FourIslands();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -183,19 +197,5 @@ public class FourIslands extends ExampleFD {
 
     store.impose(Element.choose(iI, aIceIsland, attraction[iIceSkating]));
     store.impose(Element.choose(iI, aStadionIsland, attraction[iJaiAlai]));
-  }
-
-  /**
-   * It executes a program to solve this simple logic puzzle.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    FourIslands example = new FourIslands();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

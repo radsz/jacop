@@ -70,26 +70,6 @@ public abstract class IntDomain extends Domain {
   /** It specifies the constant for ANY event. */
   public static final int ANY = 2;
 
-  /**
-   * It specifies for each event what other events are subsumed by this event. Possibly implement
-   * this by bit flags in int.
-   */
-  static final int[][] eventsInclusion = {
-    {GROUND, BOUND, ANY}, // GROUND event
-    {BOUND, ANY}, // BOUND event
-    {ANY}
-  }; // ANY event
-
-  /**
-   * It helps to specify what events should be executed if a given event occurs.
-   *
-   * @param pruningEvent the pruning event for which we want to know what events it encompasses.
-   * @return an array specifying what events should be included given this event.
-   */
-  public int[] getEventsInclusion(int pruningEvent) {
-    return eventsInclusion[pruningEvent];
-  }
-
   /** Unique identifier for an interval domain type. */
   public static final int IntervalDomainID = 0;
 
@@ -101,6 +81,252 @@ public abstract class IntDomain extends Domain {
 
   /** It specifies an empty integer domain. */
   public static final IntDomain emptyIntDomain = new IntervalDomain(0);
+
+  /**
+   * It specifies for each event what other events are subsumed by this event. Possibly implement
+   * this by bit flags in int.
+   */
+  static final int[][] eventsInclusion = {
+    {GROUND, BOUND, ANY}, // GROUND event
+    {BOUND, ANY}, // BOUND event
+    {ANY}
+  }; // ANY event
+
+  private static final Random generator =
+      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+
+  /**
+   * It specifies the previous domain which was used by this domain. The old domain is stored here
+   * and can be easily restored if necessary.
+   */
+  public IntDomain previousDomain;
+
+  /*
+   * Finds result interval for multiplication of {a..b} * {c..d}
+   */
+  public static final Interval mulBounds(int a, int b, int c, int d) {
+
+    int ac = multiplyInt(a, c);
+    int ad = multiplyInt(a, d);
+    int bc = multiplyInt(b, c);
+    int bd = multiplyInt(b, d);
+    int min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+    int max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+
+    return new Interval(min, max);
+  }
+
+  /*
+   * Finds result interval by constant for multiplication of {a..b} * c
+   */
+  public static final Interval mulBounds(int a, int b, int c) {
+
+    int min;
+    int max;
+    if (c >= 0) {
+      min = multiplyInt(a, c);
+      max = multiplyInt(b, c);
+    } else {
+      max = multiplyInt(a, c);
+      min = multiplyInt(b, c);
+    }
+
+    return new Interval(min, max);
+  }
+
+  /*
+   * Finds result interval for {a..b}^2
+   */
+  public static final Interval squareBounds(int a, int b) {
+
+    int aa = multiplyInt(a, a);
+    int bb = multiplyInt(b, b);
+    int min = (aa < bb) ? aa : bb; // Math.min(aa, bb);
+    int max = (aa > bb) ? aa : bb; // Math.max(aa, bb);
+
+    if (a < 0 && b > 0) min = 0;
+
+    return new Interval(min, max);
+  }
+
+  /*
+   * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
+   */
+  public static final Interval divBounds(int a, int b, int c, int d) {
+
+    int min;
+    int max;
+
+    Interval result;
+
+    if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
+      min = IntDomain.MinInt;
+      max = IntDomain.MaxInt;
+      result = new Interval(min, max);
+    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
+    throw Store.failException;
+    else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
+      max = Math.max(Math.abs(a), Math.abs(b));
+      min = -max;
+      result = new Interval(min, max);
+    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
+    result = divBounds(a, b, 1, d);
+    else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
+    result = divBounds(a, b, c, -1);
+    else if ((c > 0 || d < 0) && c <= d) { // case 5
+      int ac = a / c;
+      int ad = a / d;
+      int bc = b / c;
+      int bd = b / d;
+      min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+      max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+      result = new Interval(min, max);
+    } else throw Store.failException; // can happen if a..b or c..d are not proper intervals
+
+    return result;
+  }
+
+  /*
+   * Finds result interval for division of {a..b} / {c..d} for mul constraints
+   */
+  public static final Interval divIntBounds(int a, int b, int c, int d) {
+    int min;
+    int max;
+
+    Interval result;
+
+    if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
+      min = IntDomain.MinInt;
+      max = IntDomain.MaxInt;
+      result = new Interval(min, max);
+    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
+    throw Store.failException;
+    else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
+      max = Math.max(Math.abs(a), Math.abs(b));
+      min = -max;
+      result = new Interval(min, max);
+    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
+    result = divIntBounds(a, b, 1, d);
+    else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
+    result = divIntBounds(a, b, c, -1);
+    else if ((c > 0 || d < 0) && c <= d) { // case 5
+      double ac = (double) a / c;
+      double ad = (double) a / d;
+      double bc = (double) b / c;
+      double bd = (double) b / d;
+      double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+      double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+      min = (int) Math.round(Math.ceil(low));
+      max = (int) Math.round(Math.floor(high));
+      if (min > max) throw Store.failException;
+      result = new Interval(min, max);
+    } else throw Store.failException; // can happen if a..b or c..d are not proper intervals
+
+    return result;
+  }
+
+  /*
+   * Finds result interval by constnat division of {a..b} / c for div and mod constraints
+   */
+  public static final Interval divIntBounds(int a, int b, int c) {
+
+    int min;
+    int max;
+
+    if (c == 0) // case 1
+    throw Store.failException;
+    else if (c > 0) {
+      min = divRoundUp(a, c);
+      max = divRoundDown(b, c);
+      if (min > max) throw Store.failException;
+
+      return new Interval(min, max);
+    } else { // c < 0
+      min = divRoundUp(b, c);
+      max = divRoundDown(a, c);
+      if (min > max) throw Store.failException;
+
+      return new Interval(min, max);
+    }
+  }
+
+  public static long divRoundDown(long a, long b) {
+    return Math.floorDiv(a, b);
+  }
+
+  public static long divRoundUp(long a, long b) {
+    return -Math.floorDiv(-a, b);
+  }
+
+  public static int divRoundDown(int a, int b) {
+    return Math.floorDiv(a, b);
+  }
+
+  public static int divRoundUp(int a, int b) {
+    return -Math.floorDiv(-a, b);
+  }
+
+  /**
+   * Returns the product of the arguments, if the result overflows MaxInt or MinInt is returned.
+   *
+   * @param x the first value
+   * @param y the second value
+   * @return the result or MaxInt/MinInt if result causes overflow
+   */
+  public static int multiplyInt(int x, int y) {
+    long r = (long) x * (long) y;
+    if ((int) r != r) {
+      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
+    }
+    return (int) r;
+  }
+
+  /**
+   * Returns the sum of its arguments, if the result overflows MaxInt or MinInt is returned.
+   *
+   * @param x the first value
+   * @param y the second value
+   * @return the result or MaxInt/MinInt if result causes overflow
+   */
+  public static int addInt(int x, int y) {
+    int r = x + y;
+    // HD 2-12 Overflow iff both arguments have the opposite sign of the result
+    if (((x ^ r) & (y ^ r)) < 0) {
+      return (long) x + (long) y > 0
+          ? Integer.MAX_VALUE
+          : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
+    }
+    return r;
+  }
+
+  /**
+   * Returns the difference of the arguments, if the result overflows MaxInt or MinInt is returned.
+   *
+   * @param x the first value
+   * @param y the second value to subtract from the first
+   * @return the result or MaxInt/MinInt if result causes overflow
+   */
+  public static int subtractInt(int x, int y) {
+    int r = x - y;
+    // HD 2-12 Overflow iff the arguments have different signs and
+    // the sign of the result is different than the sign of x
+    if (((x ^ y) & (x ^ r)) < 0) {
+      return (long) x - (long) y > 0
+          ? Integer.MAX_VALUE
+          : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
+    }
+    return r;
+  }
+
+  /**
+   * It helps to specify what events should be executed if a given event occurs.
+   *
+   * @param pruningEvent the pruning event for which we want to know what events it encompasses.
+   * @return an array specifying what events should be included given this event.
+   */
+  public int[] getEventsInclusion(int pruningEvent) {
+    return eventsInclusion[pruningEvent];
+  }
 
   /**
    * It adds interval of values to the domain.
@@ -241,12 +467,6 @@ public abstract class IntDomain extends Domain {
    * @return it returns the value before the one specified as a parameter.
    */
   public abstract int previousValue(int value);
-
-  /**
-   * It specifies the previous domain which was used by this domain. The old domain is stored here
-   * and can be easily restored if necessary.
-   */
-  public IntDomain previousDomain;
 
   /**
    * It returns value enumeration of the domain values.
@@ -482,6 +702,12 @@ public abstract class IntDomain extends Domain {
    */
   public abstract void in(int storeLevel, Var var, int min, int max);
 
+  /*
+   * It returns the number of constraints
+   *
+   * @return the number of constraints attached to this domain.
+   */
+
   /**
    * It reduces domain to a single value.
    *
@@ -642,12 +868,6 @@ public abstract class IntDomain extends Domain {
 
     return eq(domain);
   }
-
-  /*
-   * It returns the number of constraints
-   *
-   * @return the number of constraints attached to this domain.
-   */
 
   public int noConstraints() {
     return searchConstraintsToEvaluate
@@ -1173,9 +1393,6 @@ public abstract class IntDomain extends Domain {
     return min();
   }
 
-  private static final Random generator =
-      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-
   /**
    * It returns a random value from the domain.
    *
@@ -1183,222 +1400,5 @@ public abstract class IntDomain extends Domain {
    */
   public int getRandomValue() {
     return getElementAt(generator.nextInt(getSize()));
-  }
-
-  /*
-   * Finds result interval for multiplication of {a..b} * {c..d}
-   */
-  public static final Interval mulBounds(int a, int b, int c, int d) {
-
-    int ac = multiplyInt(a, c);
-    int ad = multiplyInt(a, d);
-    int bc = multiplyInt(b, c);
-    int bd = multiplyInt(b, d);
-    int min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-    int max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-
-    return new Interval(min, max);
-  }
-
-  /*
-   * Finds result interval by constant for multiplication of {a..b} * c
-   */
-  public static final Interval mulBounds(int a, int b, int c) {
-
-    int min;
-    int max;
-    if (c >= 0) {
-      min = multiplyInt(a, c);
-      max = multiplyInt(b, c);
-    } else {
-      max = multiplyInt(a, c);
-      min = multiplyInt(b, c);
-    }
-
-    return new Interval(min, max);
-  }
-
-  /*
-   * Finds result interval for {a..b}^2
-   */
-  public static final Interval squareBounds(int a, int b) {
-
-    int aa = multiplyInt(a, a);
-    int bb = multiplyInt(b, b);
-    int min = (aa < bb) ? aa : bb; // Math.min(aa, bb);
-    int max = (aa > bb) ? aa : bb; // Math.max(aa, bb);
-
-    if (a < 0 && b > 0) min = 0;
-
-    return new Interval(min, max);
-  }
-
-  /*
-   * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
-   */
-  public static final Interval divBounds(int a, int b, int c, int d) {
-
-    int min;
-    int max;
-
-    Interval result;
-
-    if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-      min = IntDomain.MinInt;
-      max = IntDomain.MaxInt;
-      result = new Interval(min, max);
-    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
-    throw Store.failException;
-    else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
-      max = Math.max(Math.abs(a), Math.abs(b));
-      min = -max;
-      result = new Interval(min, max);
-    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
-    result = divBounds(a, b, 1, d);
-    else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
-    result = divBounds(a, b, c, -1);
-    else if ((c > 0 || d < 0) && c <= d) { // case 5
-      int ac = a / c;
-      int ad = a / d;
-      int bc = b / c;
-      int bd = b / d;
-      min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-      max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-      result = new Interval(min, max);
-    } else throw Store.failException; // can happen if a..b or c..d are not proper intervals
-
-    return result;
-  }
-
-  /*
-   * Finds result interval for division of {a..b} / {c..d} for mul constraints
-   */
-  public static final Interval divIntBounds(int a, int b, int c, int d) {
-    int min;
-    int max;
-
-    Interval result;
-
-    if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-      min = IntDomain.MinInt;
-      max = IntDomain.MaxInt;
-      result = new Interval(min, max);
-    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
-    throw Store.failException;
-    else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
-      max = Math.max(Math.abs(a), Math.abs(b));
-      min = -max;
-      result = new Interval(min, max);
-    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
-    result = divIntBounds(a, b, 1, d);
-    else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
-    result = divIntBounds(a, b, c, -1);
-    else if ((c > 0 || d < 0) && c <= d) { // case 5
-      double ac = (double) a / c;
-      double ad = (double) a / d;
-      double bc = (double) b / c;
-      double bd = (double) b / d;
-      double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
-      double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
-      min = (int) Math.round(Math.ceil(low));
-      max = (int) Math.round(Math.floor(high));
-      if (min > max) throw Store.failException;
-      result = new Interval(min, max);
-    } else throw Store.failException; // can happen if a..b or c..d are not proper intervals
-
-    return result;
-  }
-
-  /*
-   * Finds result interval by constnat division of {a..b} / c for div and mod constraints
-   */
-  public static final Interval divIntBounds(int a, int b, int c) {
-
-    int min;
-    int max;
-
-    if (c == 0) // case 1
-    throw Store.failException;
-    else if (c > 0) {
-      min = divRoundUp(a, c);
-      max = divRoundDown(b, c);
-      if (min > max) throw Store.failException;
-
-      return new Interval(min, max);
-    } else { // c < 0
-      min = divRoundUp(b, c);
-      max = divRoundDown(a, c);
-      if (min > max) throw Store.failException;
-
-      return new Interval(min, max);
-    }
-  }
-
-  public static long divRoundDown(long a, long b) {
-    return Math.floorDiv(a, b);
-  }
-
-  public static long divRoundUp(long a, long b) {
-    return -Math.floorDiv(-a, b);
-  }
-
-  public static int divRoundDown(int a, int b) {
-    return Math.floorDiv(a, b);
-  }
-
-  public static int divRoundUp(int a, int b) {
-    return -Math.floorDiv(-a, b);
-  }
-
-  /**
-   * Returns the product of the arguments, if the result overflows MaxInt or MinInt is returned.
-   *
-   * @param x the first value
-   * @param y the second value
-   * @return the result or MaxInt/MinInt if result causes overflow
-   */
-  public static int multiplyInt(int x, int y) {
-    long r = (long) x * (long) y;
-    if ((int) r != r) {
-      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
-    }
-    return (int) r;
-  }
-
-  /**
-   * Returns the sum of its arguments, if the result overflows MaxInt or MinInt is returned.
-   *
-   * @param x the first value
-   * @param y the second value
-   * @return the result or MaxInt/MinInt if result causes overflow
-   */
-  public static int addInt(int x, int y) {
-    int r = x + y;
-    // HD 2-12 Overflow iff both arguments have the opposite sign of the result
-    if (((x ^ r) & (y ^ r)) < 0) {
-      return (long) x + (long) y > 0
-          ? Integer.MAX_VALUE
-          : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
-    }
-    return r;
-  }
-
-  /**
-   * Returns the difference of the arguments, if the result overflows MaxInt or MinInt is returned.
-   *
-   * @param x the first value
-   * @param y the second value to subtract from the first
-   * @return the result or MaxInt/MinInt if result causes overflow
-   */
-  public static int subtractInt(int x, int y) {
-    int r = x - y;
-    // HD 2-12 Overflow iff the arguments have different signs and
-    // the sign of the result is different than the sign of x
-    if (((x ^ y) & (x ^ r)) < 0) {
-      return (long) x - (long) y > 0
-          ? Integer.MAX_VALUE
-          : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
-    }
-    return r;
   }
 }

@@ -62,6 +62,20 @@ import org.jacop.core.Store;
  */
 public class LectureSeries extends ExampleFD {
 
+  /**
+   * It executes the program which solves this simple logic puzzle.
+   *
+   * @param args no arguments is used.
+   */
+  public static void main(String args[]) {
+
+    LectureSeries example = new LectureSeries();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -179,19 +193,5 @@ public class LectureSeries extends ExampleFD {
     // Duane can not lecture on modern art.
     store.impose(new XneqY(first[iDuane], subjects[iArt]));
     store.impose(new XneqY(last[iItakura], first[iDuane]));
-  }
-
-  /**
-   * It executes the program which solves this simple logic puzzle.
-   *
-   * @param args no arguments is used.
-   */
-  public static void main(String args[]) {
-
-    LectureSeries example = new LectureSeries();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

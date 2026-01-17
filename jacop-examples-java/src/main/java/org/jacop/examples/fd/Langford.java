@@ -46,6 +46,58 @@ public class Langford extends ExampleFD {
   public int n = 3;
   public int m = 17;
 
+  /**
+   * It executes the program to solve the Langford problem. It is possible to specify two
+   * parameters. If no parameter is used then default values for n and m are used.
+   *
+   * @param args the first parameter denotes n, the second parameter denotes m.
+   */
+  public static void test(String args[]) {
+
+    Langford example = new Langford();
+    if (args.length > 1) {
+      example.n = Integer.parseInt(args[0]);
+      example.m = Integer.parseInt(args[1]);
+    }
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+
+    Langford exampleBound = new Langford();
+    if (args.length > 1) {
+      exampleBound.n = Integer.parseInt(args[0]);
+      exampleBound.m = Integer.parseInt(args[1]);
+    }
+
+    Langford exampleDual = new Langford();
+    if (args.length > 1) {
+      exampleDual.n = Integer.parseInt(args[0]);
+      exampleDual.m = Integer.parseInt(args[1]);
+    }
+    exampleDual.modelDual();
+
+    if (exampleDual.search()) System.out.println("Solution(s) found");
+  }
+
+  /**
+   * It executes the program to solve the Langford problem. It is possible to specify two
+   * parameters. If no parameter is used then default values for n and m are used.
+   *
+   * @param args the first parameter denotes n, the second parameter denotes m.
+   */
+  public static void main(String args[]) {
+
+    Langford exampleDual = new Langford();
+    if (args.length > 1) {
+      exampleDual.n = Integer.parseInt(args[0]);
+      exampleDual.m = Integer.parseInt(args[1]);
+    }
+    exampleDual.modelDual();
+
+    if (exampleDual.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -102,57 +154,5 @@ public class Langford extends ExampleFD {
     }
 
     store.impose(new Assignment(x, d));
-  }
-
-  /**
-   * It executes the program to solve the Langford problem. It is possible to specify two
-   * parameters. If no parameter is used then default values for n and m are used.
-   *
-   * @param args the first parameter denotes n, the second parameter denotes m.
-   */
-  public static void test(String args[]) {
-
-    Langford example = new Langford();
-    if (args.length > 1) {
-      example.n = Integer.parseInt(args[0]);
-      example.m = Integer.parseInt(args[1]);
-    }
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
-
-    Langford exampleBound = new Langford();
-    if (args.length > 1) {
-      exampleBound.n = Integer.parseInt(args[0]);
-      exampleBound.m = Integer.parseInt(args[1]);
-    }
-
-    Langford exampleDual = new Langford();
-    if (args.length > 1) {
-      exampleDual.n = Integer.parseInt(args[0]);
-      exampleDual.m = Integer.parseInt(args[1]);
-    }
-    exampleDual.modelDual();
-
-    if (exampleDual.search()) System.out.println("Solution(s) found");
-  }
-
-  /**
-   * It executes the program to solve the Langford problem. It is possible to specify two
-   * parameters. If no parameter is used then default values for n and m are used.
-   *
-   * @param args the first parameter denotes n, the second parameter denotes m.
-   */
-  public static void main(String args[]) {
-
-    Langford exampleDual = new Langford();
-    if (args.length > 1) {
-      exampleDual.n = Integer.parseInt(args[0]);
-      exampleDual.m = Integer.parseInt(args[1]);
-    }
-    exampleDual.modelDual();
-
-    if (exampleDual.search()) System.out.println("Solution(s) found");
   }
 }

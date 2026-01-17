@@ -57,6 +57,8 @@ import org.mockito.Mock;
 public class IntDomainTest {
 
   private Method prepareMethod;
+  private @Mock IntVar var;
+  private IntDomain intDomain;
 
   public IntDomainTest(String prepareMethodName) throws NoSuchMethodException {
     prepareMethod = this.getClass().getMethod(prepareMethodName, int[].class);
@@ -286,10 +288,6 @@ public class IntDomainTest {
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertEquals(1, goldenResultDomain.previousValue(2));
   }
-
-  private @Mock IntVar var;
-
-  private IntDomain intDomain;
 
   @Before
   public void setUp() throws InvocationTargetException, IllegalAccessException {

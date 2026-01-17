@@ -74,6 +74,20 @@ import org.jacop.core.Store;
  */
 public class Exodus extends ExampleFD {
 
+  /**
+   * It executes the program to solve this simple puzzle.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    Exodus example = new Exodus();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -170,19 +184,5 @@ public class Exodus extends ExampleFD {
     wiekburning[1] = new XplusCeqZ(country[ika], 3, story[iburn]);
 
     store.impose(new Or(wiekburning));
-  }
-
-  /**
-   * It executes the program to solve this simple puzzle.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    Exodus example = new Exodus();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

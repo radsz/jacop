@@ -30,14 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * From Hamdy Taha "Operations Research" (8th edition), page 649ff. Fertilizer example.
- *
- * <p>Based on minizinc model by Håkan Kjellerstrand.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
@@ -46,6 +38,18 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 public class Markov {
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    Markov example = new Markov();
+
+    example.markov_chains_taha();
+  }
 
   void markov_chains_taha() {
 
@@ -129,17 +133,5 @@ public class Markov {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    Markov example = new Markov();
-
-    example.markov_chains_taha();
   }
 }

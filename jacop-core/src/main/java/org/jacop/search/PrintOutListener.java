@@ -51,7 +51,7 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
 
     boolean parent = super.executeAfterSolution(search, select);
 
-    StringBuffer buf = new StringBuffer("\n");
+    StringBuilder buf = new StringBuilder("\n");
 
     if (search.getCostVariable() != null)
       buf.append("Solution cost " + search.getCostVariable() + "\n");

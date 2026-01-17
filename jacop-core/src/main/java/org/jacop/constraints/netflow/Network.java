@@ -59,30 +59,27 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   /** List of deleted arcs (contains no duplicates) */
   public final List<Arc> deletedArcs;
 
+  /** List of modified arcs (may contain duplicates) */
+  public final List<ArcCompanion> modifiedArcs;
+
+  /** Set of arcs modified at current level */
+  public final LinkedHashSet<ArcCompanion> lastModifiedArcs;
+
+  // Data structure for arc modification
+  // (similar to geost constraint)
   /** Number of deleted arcs at each level */
   public TimeStamp<Integer> deletedSize;
 
   /** Cost due to deleted arcs */
   public long costOffset;
 
-  // Data structure for arc modification
-  // (similar to geost constraint)
-
-  /** List of modified arcs (may contain duplicates) */
-  public final List<ArcCompanion> modifiedArcs;
-
   /** Number of modified arcs at each level */
   public TimeStamp<Integer> modifiedSize;
-
-  /** Set of arcs modified at current level */
-  public final LinkedHashSet<ArcCompanion> lastModifiedArcs;
 
   // Data structure for pruning
   //	private final Pruning pruning;
 
-  /** Whether the network is a minimum-cost or a maximum-gain problem */
   // public final boolean isMinimizing;
-
   /** The store */
   public Store store;
 

@@ -54,6 +54,20 @@ import org.jacop.core.Store;
  */
 public class DollarAndTicket extends ExampleFD {
 
+  /**
+   * It executes the program to solve this simple puzzle.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    DollarAndTicket example = new DollarAndTicket();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -158,19 +172,5 @@ public class DollarAndTicket extends ExampleFD {
 
     // 7. Kevin isn't on the Bobcats.
     store.impose(new XneqY(firstname[ikevin], team[ibobcats]));
-  }
-
-  /**
-   * It executes the program to solve this simple puzzle.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    DollarAndTicket example = new DollarAndTicket();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

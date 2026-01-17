@@ -139,7 +139,7 @@ public class PartitionSet extends Constraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     result.append(id() + " : PartitionSet(");
     result.append(Arrays.asList(s)).append(", ").append(u);
     result.append(")");

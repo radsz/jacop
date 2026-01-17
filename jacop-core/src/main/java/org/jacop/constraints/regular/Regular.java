@@ -49,65 +49,6 @@ import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
 
 /**
- * Store all edges removed because of the value removal in one big array. Edges removed due to
- * states being removed restore in the old fashion way.
- *
- * <p>Split pruneArc and reachability analysis so there is only one forward sweep and one backward
- * sweep. To make it work we need to store number of states for each layer before pruneArc(s)
- * execution.
- *
- * <p>Implement predecessors array to simplify UnreachBackwardLoop, update this array and inDegree
- * as successors array upon removeLevel. Compare two versions. PruneArc will get expensive because
- * predecessor array has to be updated to upon edges removal due to pruning.
- *
- * <p>DONE. Write decomposition of Regular into Table constraints as Slide decomposition of Regular
- * has proposed.
- *
- * <p>DONE. Write a translator of Regular (FSM) constraint into one large MDD.
- *
- * <p>DONE. Fix the problem if regular is being executed with other constraints (external removal of
- * values mixing with the removals inferred by a regular).
- *
- * <p>DONE. Improve the efficiency of queueVariable().
- *
- * <p>DONE. Move initializeArray from constructor to impose (takes advantage of the fact if
- * imposition is done much later than creation).
- *
- * <p>DONE. Clean initialize array, do not use Stack but HashSet.
- *
- * <p>DONE. todo store range, (min, max) per search level in two timestamps so the backtracking can
- * be done only for layers in between min..max. If not much change happen then backtracking will be
- * significantly restricted.
- *
- * <p>DONE. todo check if possible to remove level attribute from the state.
- *
- * <p>todo DONE. CLEAN code (variables, loops, finishing conditions, etc)
- *
- * @todo Create toXML() and fromXML() functions.
- *     <p>todo DONE. Make levelHadChanged a global variable which is allocated only once and is only
- *     filled with false values at the beginning of consistency function.
- *     <p>DONE. fix a null pointer exception bug after reshuffling impose and consistency.
- *     <p>DONE. changed indexing in for loop (++ to --) and remove redundant variables after
- *     changing indexing
- *     <p>DONE. clean consistency function from stuff which can be done at impose function once.
- *     <p>DONE. efficiency improvements - sweepgraph() only once in consistency function not
- *     multiple times in pruneArc function.
- *     <p>DONE. If supports are switched off, it seams that constraint does not achieve GAC, 1% of
- *     nodes are wrong decisions. Addded line in pruneArc function.
- *     <p>DONE. import tests of Regular constraint into Test package.
- *     <p>DONE. Make the choice of object assigned to an edge within a RegState object an
- *     encapsulated decision so both implementations based on int and domain can easily coexist.
- *     <p>DONE. implement one support which does not create new objects and does not replace RegEdge
- *     when new support is found. It only replaces internal data structure of RegEdge object.
- *     <p>DONE. use inComplement(a) instead of in(currentdomain.subtract(a).
- *     <p>DONE. remove store dependent operations from constructor and put in impose. e.g.
- *     initializeArray.
- *     <p>DONE. remove zeroNode check from consistency and change it to firstTimeConsistencyCalled
- *     as zero node check does not have to be correct (level does not have to be equal to 0).
- *     <p>DONE. check if union domain function can be changed to addDomain(); (no copying).
- */
-
-/**
  * Regular constraint accepts only the assignment to variables which is accepted by an automaton.
  * This constraint implements a polynomial algorithm to establish GAC. There are number of
  * improvements (iterative execution, optimization of computational load upon backtracking) to
@@ -124,6 +65,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** It specifies if constraint description should be saved to latex for later viewing. */
   public static final boolean saveAllToLatex = false;
 
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
   /**
    * It specifies if the translation of FSM into optimized MDD should take place so minimal layered
    * graph can be obtained. This option most of the time causes out of memory exception as it
@@ -138,15 +81,56 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    */
   public String latexFile = "/home/radek/";
 
-  /** This is the counter of save-to-latex calls. */
-  private int calls = 0;
-
   /**
    * dNames contain a "name" for each value from the union of all variabl's domains. If Hashmap -
    * dNames - is not null then upon saving the latex graph the values on the edges will be replaced
    * with their "names".
    */
   public Map<Integer, String> dNames;
+
+  /** It keeps for each variable value pair a current support. */
+  public Map<Integer, RegEdge>[] supports;
+
+  /** It specifies if the edges should have a list of values associated with them. */
+  public boolean listRepresentation = true;
+
+  /** It specifies if the support functionality should be used. */
+  public boolean oneSupport = true;
+
+  /** It specifies finite state machine used by this regular. */
+  public FSM fsm;
+
+  /** Array of the variables of the graph levels. */
+  public IntVar[] list;
+
+  /** Number of states in the graph used only during the printing to latex function. */
+  int stateNumber;
+
+  /**
+   * Queue of changed variables. TODO try to use PriorityQueue based on the number of states for a
+   * given variable or a domain size to pickup first variables which may result in failure faster.
+   * It does not have to be fully correct ordering.
+   */
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+
+  Map<IntVar, Integer> mapping;
+
+  /**
+   * Consistency function call the prune arc function for every pruned variable and collect
+   * information about the levels that had some changes in "levelHadChaged" array Then it collect
+   * the values of the edges that are still active on the levels that had chages and update the
+   * domains of the variables.
+   */
+  boolean firstConsistencyCheck = true;
+
+  boolean[] levelHadChanged;
+  int firstConsistencyLevel;
+  List<Constraint> constraints;
+  RegState[] touchedStates;
+  int[] lastNumberOfActiveStates;
+
+  /** This is the counter of save-to-latex calls. */
+  private int calls = 0;
 
   /** The ith smallest level of Layered Graph which have changed. */
   private TimeStamp<Integer> leftChange;
@@ -164,57 +148,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   private TimeStamp<Integer>[] activeLevels;
 
   private int[] activeLevelsTemp;
-
-  /** Number of states in the graph used only during the printing to latex function. */
-  int stateNumber;
-
-  /**
-   * Queue of changed variables. TODO try to use PriorityQueue based on the number of states for a
-   * given variable or a domain size to pickup first variables which may result in failure faster.
-   * It does not have to be fully correct ordering.
-   */
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
-
-  Map<IntVar, Integer> mapping;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It keeps for each variable value pair a current support. */
-  public Map<Integer, RegEdge>[] supports;
-
-  /** It specifies if the edges should have a list of values associated with them. */
-  public boolean listRepresentation = true;
-
-  /** It specifies if the support functionality should be used. */
-  public boolean oneSupport = true;
-
   private Integer leftPosition;
-
   private Integer rightPosition;
-
-  /**
-   * Consistency function call the prune arc function for every pruned variable and collect
-   * information about the levels that had some changes in "levelHadChaged" array Then it collect
-   * the values of the edges that are still active on the levels that had chages and update the
-   * domains of the variables.
-   */
-  boolean firstConsistencyCheck = true;
-
-  boolean[] levelHadChanged;
-
-  int firstConsistencyLevel;
-
-  List<Constraint> constraints;
-
-  RegState[] touchedStates;
-
   private int currentTouchedIndex = 0;
-
-  /** It specifies finite state machine used by this regular. */
-  public FSM fsm;
-
-  /** Array of the variables of the graph levels. */
-  public IntVar[] list;
 
   /**
    * Constructor need Store to initialize the time-stamps.
@@ -498,11 +434,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             alreadyTouched = true;
           }
 
-          /**
-           * @todo if number of edges at a given layer is relatively close to the domain size, so
-           *     the edges are not so often removed it may be beneficial to check if the removed
-           *     edge caused loosing the support and removal of the value from the domain.
-           */
           if (debugAll) {
             System.out.println(
                 "--  state q_"
@@ -709,8 +640,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     activeLevels[level].update(lim);
   }
 
-  int[] lastNumberOfActiveStates;
-
   @Override
   public void removeLevel(int level) {
 
@@ -911,11 +840,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         }
     }
 
-    /**
-     * @todo implement oneSupport per variable, some variables may be using supports another one
-     *     just a sweep. If for example number of states within level is smaller than the domain
-     *     size then oneSupport is not worth using.
-     */
     if (oneSupport) {
 
       for (int level = this.list.length - 1; level >= 0; level--)
@@ -948,13 +872,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         }
     } else {
       IntDomain varDom;
-      /**
-       * @todo implement possible improvement by checking when varDom.getSize() is equal to
-       *     vars[level].getSize() (no change to the domain of variable discovered early). In
-       *     addition if there is some state which does not cause extension of varDom then move it
-       *     to the first position of the active states. It will group state contributing different
-       *     supports at the end of the array (beginning of the scan).
-       */
       for (int level = list.length - 1; level >= 0; level--)
         if (levelHadChanged[level]) {
           varDom = new IntervalDomain();
@@ -1049,7 +966,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     StringBuffer result = new StringBuffer(id());
     result.append("( [ ");
-    for (int i = 0; i < list.length; i++) result.append(list[i].id()).append(" ");
+    for (IntVar intVar : list) result.append(intVar.id()).append(" ");
     result.append(" ], FSM \n");
     result.append(fsm.toString());
     result.append(")");

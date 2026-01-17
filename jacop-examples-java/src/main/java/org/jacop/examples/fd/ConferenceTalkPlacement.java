@@ -54,13 +54,67 @@ public class ConferenceTalkPlacement {
   IntVar[][] varsMatrix;
   DepthFirstSearch<IntVar> search;
 
+  /**
+   * It executes the program to solve this Travelling Salesman Problem.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    int noOfParallelTracks = 6;
+    int noOfTimeSlots = 6;
+    int noOfTalks = noOfParallelTracks * noOfTimeSlots;
+    int maxSingleCost = 50;
+    int randomSeed = 55;
+
+    ConferenceTalkPlacement example = new ConferenceTalkPlacement();
+
+    // The first key in the main hashmap denotes the first (lower id value) talk in any pair.
+    // The second key in the secondary hashmap denotes the second (higher id value) talk in any
+    // pair.
+    // The value in the nested hashmap specify the cost if pair of talks (first key, second key) are
+    // scheduled
+    // in the same time slot.
+    // The goal is to minimize the sum of costs.
+    Map<Integer, Map<Integer, Integer>> costMap =
+        example.randomCosts(noOfTalks, randomSeed, maxSingleCost);
+
+    example.model(noOfParallelTracks, noOfTalks, noOfTimeSlots, maxSingleCost, costMap);
+
+    // example.store.print(); // Useful for small examples.
+
+    // If you get the first time out then it means that the problem gets too difficult or you have
+    // setup the
+    // maximum cost too low.
+    int timeOutSeconds = 180;
+
+    // Unlikely to finish anytime soon for random examples of size more than noOfParallelTracks=3,
+    // and noOfTimeSlots=3.
+    // Real life examples maybe solvable to optimality for much larger sizes.
+
+    if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
+      System.out.println("Solution(s) found");
+      return;
+    }
+
+    // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).
+    /*
+            int maximumCost = 1700;
+            if ( example.search(maximumCost, timeOutSeconds)) {
+                System.out.println("Solution found with cost " + example.cost);
+            }
+    */
+
+    // example.store.print(); // Useful for small examples.
+  }
+
   private Map<Integer, Map<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
 
     Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
 
     for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<Integer, Integer>());
 
-    for (int i = 0; i < costs.length; i++) result.get(costs[i][0]).put(costs[i][1], costs[i][2]);
+    for (int[] ints : costs) result.get(ints[0]).put(ints[1], ints[2]);
 
     System.out.println(result);
 
@@ -163,7 +217,7 @@ public class ConferenceTalkPlacement {
     store.impose(new SumInt(pairCosts, "==", cost));
 
     vars = new ArrayList<>();
-    for (int i = 0; i < talkPlacement.length; i++) vars.add(talkPlacement[i]);
+    for (IntVar intVar : talkPlacement) vars.add(intVar);
 
     // store.print();
   }
@@ -236,59 +290,5 @@ public class ConferenceTalkPlacement {
     System.out.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
-  }
-
-  /**
-   * It executes the program to solve this Travelling Salesman Problem.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    int noOfParallelTracks = 6;
-    int noOfTimeSlots = 6;
-    int noOfTalks = noOfParallelTracks * noOfTimeSlots;
-    int maxSingleCost = 50;
-    int randomSeed = 55;
-
-    ConferenceTalkPlacement example = new ConferenceTalkPlacement();
-
-    // The first key in the main hashmap denotes the first (lower id value) talk in any pair.
-    // The second key in the secondary hashmap denotes the second (higher id value) talk in any
-    // pair.
-    // The value in the nested hashmap specify the cost if pair of talks (first key, second key) are
-    // scheduled
-    // in the same time slot.
-    // The goal is to minimize the sum of costs.
-    Map<Integer, Map<Integer, Integer>> costMap =
-        example.randomCosts(noOfTalks, randomSeed, maxSingleCost);
-
-    example.model(noOfParallelTracks, noOfTalks, noOfTimeSlots, maxSingleCost, costMap);
-
-    // example.store.print(); // Useful for small examples.
-
-    // If you get the first time out then it means that the problem gets too difficult or you have
-    // setup the
-    // maximum cost too low.
-    int timeOutSeconds = 180;
-
-    // Unlikely to finish anytime soon for random examples of size more than noOfParallelTracks=3,
-    // and noOfTimeSlots=3.
-    // Real life examples maybe solvable to optimality for much larger sizes.
-
-    if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
-      System.out.println("Solution(s) found");
-      return;
-    }
-
-    // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).
-    /*
-            int maximumCost = 1700;
-            if ( example.search(maximumCost, timeOutSeconds)) {
-                System.out.println("Solution found with cost " + example.cost);
-            }
-    */
-
-    // example.store.print(); // Useful for small examples.
   }
 }

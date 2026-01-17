@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models wilkinson problem for floating solver based on minizinc model by Håkan Kjellerstrand
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -51,6 +45,18 @@ public class Wilkinson {
 
   double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    Wilkinson example = new Wilkinson();
+
+    example.wilkinson();
+  }
 
   void wilkinson() {
 
@@ -121,17 +127,5 @@ public class Wilkinson {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    Wilkinson example = new Wilkinson();
-
-    example.wilkinson();
   }
 }

@@ -51,9 +51,8 @@ import org.jacop.core.*;
  */
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  private static final boolean debugAll = false;
-
   static final AtomicInteger idNumber = new AtomicInteger(0);
+  private static final boolean debugAll = false;
 
   /** It specifies the list of variables whose values are checked. */
   public final IntVar[] list;
@@ -67,18 +66,15 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   /** It is a idNumber variable. */
   public final IntVar n;
 
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
   // number if x that belongs to K (Kset)
   // As search progress this time stamp can only increase
   // because if X was in between lbS and ubS than
   // it can have the between (x intersects S <> empty and x doesn't belong to
   // S) values being shrinked.
   private TimeStamp<Integer> lowerBorder;
-
   // number of x who may still intersect K (Kset)
   private TimeStamp<Integer> upperBorder;
-
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
-
   private Map<IntVar, Integer> position;
 
   /**

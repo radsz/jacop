@@ -51,13 +51,13 @@ import org.jacop.set.search.IndomainSetMin;
 public class CPvizGardner {
   Store store;
 
+  CPvizGardner() {}
+
   public static void main(String args[]) {
 
     CPvizGardner run = new CPvizGardner();
     run.examples();
   }
-
-  CPvizGardner() {}
 
   void examples() {
 
@@ -90,7 +90,7 @@ public class CPvizGardner {
       for (int j = i + 1; j < days.length; j++) store.impose(new Not(new AeqB(days[i], days[j])));
 
     // card(days[i]) = num_persons_per_meeting
-    for (int i = 0; i < days.length; i++) store.impose(new CardA(days[i], num_persons_per_meeting));
+    for (SetVar setVar : days) store.impose(new CardA(setVar, num_persons_per_meeting));
 
     for (int i = 0; i < days.length - 1; i++)
       for (int j = i + 1; j < days.length; j++) {
@@ -129,8 +129,8 @@ public class CPvizGardner {
 
     if (Result) {
       System.out.println("*** Yes");
-      for (int i = 0; i < days.length; i++) {
-        System.out.println(days[i]);
+      for (SetVar day : days) {
+        System.out.println(day);
       }
     } else System.out.println("*** No");
 

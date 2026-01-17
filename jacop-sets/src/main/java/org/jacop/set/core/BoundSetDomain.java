@@ -623,7 +623,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       else return glb.toString();
     else {
 
-      StringBuffer result = new StringBuffer("{");
+      StringBuilder result = new StringBuilder("{");
 
       if (glb.singleton()) result.append("{").append(glb.toString()).append("}");
       else result.append(glb.toString());

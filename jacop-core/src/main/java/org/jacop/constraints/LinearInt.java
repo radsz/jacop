@@ -57,17 +57,10 @@ import org.jacop.core.Store;
 
 public class LinearInt extends PrimitiveConstraint {
 
-  Store store;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  boolean reified = true;
-
   /*
    * Defines relations
    */
   static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
-
   /*
    * Defines negated relations
    */
@@ -79,12 +72,14 @@ public class LinearInt extends PrimitiveConstraint {
     le, // gt=4,
     lt // ge=5;
   };
+  static AtomicInteger idNumber = new AtomicInteger(0);
+  public byte relationType;
+  Store store;
 
   /*
    * It specifies what relations is used by this constraint
    */
-
-  public byte relationType;
+  boolean reified = true;
 
   /** It specifies a list of variables being summed. */
   IntVar[] x;
@@ -699,7 +694,7 @@ public class LinearInt extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : LinearInt( [ ");
 
     for (int i = 0; i < x.length; i++) {

@@ -210,7 +210,7 @@ public class AllowedArea extends InternalConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("AllowedArea(").append(Arrays.toString(origin));
     result.append(", ").append(Arrays.toString(length)).append(")");

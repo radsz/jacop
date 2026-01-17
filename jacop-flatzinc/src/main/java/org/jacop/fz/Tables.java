@@ -52,57 +52,34 @@ import org.jacop.set.core.SetVar;
  */
 public class Tables {
 
-  Store store;
+  public Map<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
   // IntVar zero, one;
-
+  Store store;
   HashMap<Integer, IntVar> constantTable = new HashMap<Integer, IntVar>();
   HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<Integer, BooleanVar>();
   HashMap<Double, FloatVar> constantFloatTable = new HashMap<Double, FloatVar>();
-
   // intTable keeps both int & bool (0=false, 1=true) parameters
   HashMap<String, Integer> intTable = new HashMap<String, Integer>();
-
   HashMap<String, Double> floatTable = new HashMap<String, Double>();
-
   HashMap<String, int[]> intArrayTable =
       new HashMap<String, int[]>(); // boolean are also stored here as 0/1 values
-
   HashMap<String, double[]> floatArrayTable = new HashMap<String, double[]>();
-
   HashMap<String, IntDomain> setTable = new HashMap<String, IntDomain>();
-
   HashMap<String, IntDomain[]> setArrayTable = new HashMap<String, IntDomain[]>();
-
   HashMap<String, IntVar> variableTable = new HashMap<String, IntVar>();
-
   HashMap<String, IntVar[]> variableArrayTable = new HashMap<String, IntVar[]>();
-
   HashMap<String, FloatVar> variableFloatTable = new HashMap<String, FloatVar>();
-
   HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<String, FloatVar[]>();
-
   HashMap<String, SetVar> setVariableTable = new HashMap<String, SetVar>();
-
   HashMap<String, SetVar[]> setVariableArrayTable = new HashMap<String, SetVar[]>();
-
   ArrayList<Var> outputVariables = new ArrayList<Var>();
-
   ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<OutputArrayAnnotation>();
-
   ArrayList<Var> defaultSearchVariables = new ArrayList<Var>();
-
   ArrayList<Var> defaultSearchFloatVariables = new ArrayList<Var>();
-
   ArrayList<Var[]> defaultSearchArrays = new ArrayList<Var[]>();
-
   ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<Var[]>();
-
   ArrayList<Var> defaultSearchSetVariables = new ArrayList<Var>();
-
   ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<Var[]>();
-
-  public Map<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
-
   int numberBoolVariables = 0;
   int numberFloatVariables = 0;
   int numberSetVariables = 0;
@@ -563,28 +540,28 @@ public class Tables {
     numberFloatVariables = nf;
   }
 
-  public void setNumberBoolVariables(int n) {
-    numberBoolVariables = n;
-  }
-
   public int getNumberBoolVariables() {
     return numberBoolVariables;
   }
 
-  public void setNumberFloatVariables(int n) {
-    numberFloatVariables = n;
+  public void setNumberBoolVariables(int n) {
+    numberBoolVariables = n;
   }
 
   public int getNumberFloatVariables() {
     return numberFloatVariables;
   }
 
-  public void setNumberSetVariables(int n) {
-    numberSetVariables = n;
+  public void setNumberFloatVariables(int n) {
+    numberFloatVariables = n;
   }
 
   public int getNumberSetVariables() {
     return numberSetVariables;
+  }
+
+  public void setNumberSetVariables(int n) {
+    numberSetVariables = n;
   }
 
   // StringBuilder to be used instead of normal string additions.
@@ -636,7 +613,7 @@ public class Tables {
       "Alias table" // 13
     };
 
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
     for (int i = 0; i < dictionary.length; i++) {
 
       // int array || float array
@@ -716,32 +693,28 @@ public class Tables {
 
     s.append("Output variables = " + outputVariables + "\n");
     s.append("Output arrays = [");
-    for (int i = 0; i < outputArray.size(); i++) {
-      OutputArrayAnnotation a = outputArray.get(i);
+    for (OutputArrayAnnotation a : outputArray) {
       s.append(a);
       s.append(", ");
     }
     s.append("]\n");
     s.append("Search int variables = " + defaultSearchVariables + "\n");
     s.append("Search int variable arrays = [");
-    for (int i = 0; i < defaultSearchArrays.size(); i++) {
-      Var[] a = defaultSearchArrays.get(i);
+    for (Var[] a : defaultSearchArrays) {
       s.append(Arrays.asList(a));
       s.append(", ");
     }
     s.append("]\n");
     s.append("Search float variables = " + defaultSearchFloatVariables + "\n");
     s.append("Search float variables arrays = [");
-    for (int i = 0; i < defaultSearchFloatArrays.size(); i++) {
-      Var[] a = defaultSearchFloatArrays.get(i);
+    for (Var[] a : defaultSearchFloatArrays) {
       s.append(Arrays.asList(a));
       s.append(", ");
     }
     s.append("]\n");
     s.append("Search set variables = " + defaultSearchSetVariables + "\n");
     s.append("Search set arrays = [");
-    for (int i = 0; i < defaultSearchSetArrays.size(); i++) {
-      Var[] a = defaultSearchSetArrays.get(i);
+    for (Var[] a : defaultSearchSetArrays) {
       s.append(Arrays.asList(a));
       s.append(", ");
     }

@@ -92,13 +92,6 @@ public class AinS extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * Consistency of the constraint A in B.
-     *
-     * <p>B can not be an empty set.
-     *
-     * <p>T1. glbA = glbA lubA = lubA /\ S
-     */
     a.domain.inLUB(store.level, a, set);
 
     if (strict && set.getSize() - 1 == a.domain.glb().getSize())

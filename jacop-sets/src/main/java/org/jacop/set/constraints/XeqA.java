@@ -80,16 +80,6 @@ public class XeqA extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It specifies rule for X eq A.
-     *
-     * <p>lubA = lubA /\ dom(X).
-     *
-     * <p>dom(X) = dom(X) /\ lubA
-     *
-     * <p>#A = 1.
-     */
-
     // if (aHasChanged)
     x.domain.in(store.level, x, a.domain.lub());
     // if (xHasChanged)

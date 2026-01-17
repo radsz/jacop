@@ -53,6 +53,15 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   private int size = 0;
 
   /**
+   * initializes the Trie with a root node
+   *
+   * @param root the root node.
+   */
+  public IntTrie(N root) {
+    this.root = root;
+  }
+
+  /**
    * add i to the Trie
    *
    * @param i the int to add to the Trie
@@ -248,15 +257,6 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   @SuppressWarnings("unused")
   public Set<Integer> values() {
     throw new UnsupportedOperationException();
-  }
-
-  /**
-   * initializes the Trie with a root node
-   *
-   * @param root the root node.
-   */
-  public IntTrie(N root) {
-    this.root = root;
   }
 
   /**

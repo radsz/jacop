@@ -479,7 +479,7 @@ public class Disjoint extends Diff {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : disjoint( ");
 

@@ -63,14 +63,14 @@ public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
     }
   }
 
-  public void setFailLimit(int limit) {
-
-    failLimit = limit;
-  }
-
   public int getFailLimit() {
 
     return failLimit;
+  }
+
+  public void setFailLimit(int limit) {
+
+    failLimit = limit;
   }
 
   public int getNumberFails() {

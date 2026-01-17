@@ -40,11 +40,11 @@ import org.jacop.util.SimpleArrayList;
  */
 public class Shape {
 
-  /** The collection of DBoxes that constitute the shape. */
-  public Collection<DBox> boxes;
-
   /** It specifies the smallest bounding box which encapsulates all boxes constituting the shape. */
   public final DBox boundingBox;
+
+  /** The collection of DBoxes that constitute the shape. */
+  public Collection<DBox> boxes;
 
   /** It defines unique shape id which is used by geost objects to define their shapes. */
   public int no;

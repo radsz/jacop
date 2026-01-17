@@ -47,17 +47,18 @@ public class AndBoolVector extends PrimitiveConstraint {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies a list of variables which all must be equal to 1 to set result variable to 1. */
-  public IntVar[] list;
-
   /** It specifies the length of the list. */
   final int l;
+
+  /** It specifies a list of variables which all must be equal to 1 to set result variable to 1. */
+  public IntVar[] list;
 
   /**
    * It specifies variable result, storing the result of and function performed a list of variables.
    */
   public IntVar result;
 
+  List<Constraint> constraints;
   /*
    * Defines first position of the variable that is not ground to 1
    */
@@ -293,8 +294,6 @@ public class AndBoolVector extends PrimitiveConstraint {
     resultString.append(")");
     return resultString.toString();
   }
-
-  List<Constraint> constraints;
 
   @Override
   public List<Constraint> decompose(Store store) {

@@ -44,13 +44,6 @@ public interface BacktrackableManager {
   void addChanged(int index);
 
   /**
-   * It specifies the level which should become the active one in the manager.
-   *
-   * @param level the active level at which the changes will be recorded.
-   */
-  void setLevel(int level);
-
-  /**
    * It allows to inform all objects which have changed at removedLevel that the backtracking from
    * that level has occurred.
    *
@@ -81,6 +74,13 @@ public interface BacktrackableManager {
    * @return the active level for which the changes are being registered.
    */
   int getLevel();
+
+  /**
+   * It specifies the level which should become the active one in the manager.
+   *
+   * @param level the active level at which the changes will be recorded.
+   */
+  void setLevel(int level);
 
   /**
    * It updates the manager with new array of objects to manage and new number of them. This

@@ -51,6 +51,33 @@ public class WolfGoatCabbage extends ExampleFD {
   /** It specifies number of moves allowed (one move is from one river bank to the other) */
   public int numberInnerMoves = 1;
 
+  /**
+   * It executes a program which finds the optimal trip and load of the boat between the river banks
+   * so all parties survive.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    WolfGoatCabbage example;
+    int numberInnerMoves = 1;
+    boolean result = false;
+
+    while (numberInnerMoves < 20 && !result) {
+
+      example = new WolfGoatCabbage();
+      example.numberInnerMoves = numberInnerMoves;
+
+      example.model();
+
+      if (!example.searchMostConstrainedStatic())
+        System.out.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
+      else result = true;
+
+      numberInnerMoves++;
+    }
+  }
+
   @Override
   public void model() {
 
@@ -128,33 +155,6 @@ public class WolfGoatCabbage extends ExampleFD {
 
       store.impose(new XneqY(wolf[i], goat[i]));
       store.impose(new XneqY(goat[i], cabbage[i]));
-    }
-  }
-
-  /**
-   * It executes a program which finds the optimal trip and load of the boat between the river banks
-   * so all parties survive.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    WolfGoatCabbage example;
-    int numberInnerMoves = 1;
-    boolean result = false;
-
-    while (numberInnerMoves < 20 && !result) {
-
-      example = new WolfGoatCabbage();
-      example.numberInnerMoves = numberInnerMoves;
-
-      example.model();
-
-      if (!example.searchMostConstrainedStatic())
-        System.out.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
-      else result = true;
-
-      numberInnerMoves++;
     }
   }
 }

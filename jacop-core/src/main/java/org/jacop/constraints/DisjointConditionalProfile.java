@@ -42,9 +42,8 @@ import org.jacop.core.IntDomain;
  */
 class DisjointConditionalProfile extends ProfileConditional {
 
-  private static final long serialVersionUID = 8683452581100000008L;
-
   static final boolean trace = false;
+  private static final long serialVersionUID = 8683452581100000008L;
 
   DisjointConditionalProfile() {}
 

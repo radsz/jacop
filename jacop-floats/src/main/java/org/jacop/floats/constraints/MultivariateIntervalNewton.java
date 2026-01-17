@@ -106,11 +106,11 @@ public class MultivariateIntervalNewton {
 
     if (debug) {
       System.out.println("Middle values for x");
-      for (int i = 0; i < xInit.length; i++) System.out.print(xInit[i] + " ");
+      for (double value : xInit) System.out.print(value + " ");
       System.out.println();
 
       System.out.println("Middle values for f");
-      for (int i = 0; i < b.length; i++) System.out.print(b[i] + ", ");
+      for (double v : b) System.out.print(v + ", ");
       System.out.println();
     }
 
@@ -309,7 +309,7 @@ public class MultivariateIntervalNewton {
   }
 
   public String toString() {
-    StringBuffer s = new StringBuffer("MultivariateIntervalNewton:\n");
+    StringBuilder s = new StringBuilder("MultivariateIntervalNewton:\n");
 
     s.append(Arrays.asList(f) + "\n");
     s.append(Arrays.asList(x) + "\n");

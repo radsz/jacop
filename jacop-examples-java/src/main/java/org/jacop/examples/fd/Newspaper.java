@@ -56,6 +56,20 @@ import org.jacop.core.Store;
  */
 public class Newspaper extends ExampleFD {
 
+  /**
+   * It executes the program which solves this newspaper problem.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    Newspaper example = new Newspaper();
+
+    example.model();
+
+    if (example.searchSmallestMin()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -225,19 +239,5 @@ public class Newspaper extends ExampleFD {
 
     cost = makespan;
     vars.add(makespan);
-  }
-
-  /**
-   * It executes the program which solves this newspaper problem.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    Newspaper example = new Newspaper();
-
-    example.model();
-
-    if (example.searchSmallestMin()) System.out.println("Solution(s) found");
   }
 }

@@ -57,6 +57,20 @@ import org.jacop.core.Store;
  */
 public class BreakingNews extends ExampleFD {
 
+  /**
+   * It executes the program to solve this logic puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    BreakingNews example = new BreakingNews();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -147,19 +161,5 @@ public class BreakingNews extends ExampleFD {
             new XeqY(reporter[iCorey], (location[iBayonne])));
 
     store.impose(new Or(orConstraint));
-  }
-
-  /**
-   * It executes the program to solve this logic puzzle.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    BreakingNews example = new BreakingNews();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

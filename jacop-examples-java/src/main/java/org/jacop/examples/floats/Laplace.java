@@ -30,17 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * From the CLP(R) laplace example:
- *
- * <p>Solves the Dirichlet problem for Laplace's equation using Leibman's five-point
- * finite-difference approximation.
- *
- * <p>Based on minizinc program written by Håkan Kjellerstrand
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
@@ -49,6 +38,18 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 public class Laplace {
+
+  /**
+   * It executes the program which computes warm distribution.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    Laplace example = new Laplace();
+
+    example.laplace();
+  }
 
   void laplace() {
 
@@ -105,17 +106,5 @@ public class Laplace {
 
     System.out.println();
     System.out.println("Precision = " + FloatDomain.precision());
-  }
-
-  /**
-   * It executes the program which computes warm distribution.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    Laplace example = new Laplace();
-
-    example.laplace();
   }
 }

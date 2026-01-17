@@ -61,22 +61,17 @@ public class NetworkFlow extends Constraint
   private static final boolean DO_INSTRUMENTATION = false;
   private static final boolean SHOW_LEVEL = false;
 
-  Statistics statistics = new Statistics();
+  /** Instance counter */
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   static {
     // fails if asserts are disabled
     // asserts.Assert.forceAsserts();
   }
 
-  /** Instance counter */
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   /** The network */
   //	public final Network network;
   public final Pruning network;
-
-  /** The cost variable */
-  public IntVar costVariable;
 
   /** The variables and their handlers */
   public final Map<IntVar, VarHandler> map;
@@ -84,12 +79,15 @@ public class NetworkFlow extends Constraint
   /** The set of queued variables */
   public final Set<IntVar> queue;
 
+  /** The cost variable */
+  public IntVar costVariable;
+
   /** Disables the queue variable function during consistency */
   public boolean disableQueueVariable;
 
   public int previousLevel = -1;
+  Statistics statistics = new Statistics();
 
-  /** ***************** */
   /** Initialization */
 
   // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
@@ -177,7 +175,6 @@ public class NetworkFlow extends Constraint
     super.impose(store);
   }
 
-  /** ************************ */
   /** Search {@literal &} Backtracking */
   @Override
   public void queueVariable(int level, Var variable) {
@@ -315,7 +312,6 @@ public class NetworkFlow extends Constraint
     network.backtrack();
   }
 
-  /** ************** */
   /** Identifiers */
   @Override
   public String toString() {

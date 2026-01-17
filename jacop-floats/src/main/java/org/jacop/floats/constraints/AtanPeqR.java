@@ -55,7 +55,7 @@ public class AtanPeqR extends TanPeqR {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : AtanPeqR(").append(p).append(", ").append(q).append(" )");
 

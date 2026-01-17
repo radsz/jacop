@@ -132,7 +132,7 @@ public final class HeuristicForgetModule
    */
   private int numberOfLearntClauses() {
     int answer = 0;
-    for (int i = 0; i < learntClauses.length; ++i) answer += learntClauses[i].size();
+    for (LinkedList<Integer> learntClause : learntClauses) answer += learntClause.size();
     return answer;
   }
 

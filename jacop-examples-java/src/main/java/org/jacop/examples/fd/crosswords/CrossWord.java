@@ -57,19 +57,16 @@ import org.jacop.util.MDD;
  */
 public class CrossWord extends ExampleFD {
 
+  public String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
   int r = 5; // number of rows
   int c = 5; // number of column
   int[] wordSizesPrimitive = {4, 5};
-  List<Integer> wordSizes = new ArrayList<Integer>();
   // * - black wall
   // letter - letter which must be in crossword
   // _ - unknown letter, any letter is accepted.
-
+  List<Integer> wordSizes = new ArrayList<Integer>();
   IntVar[][] x; // the solution
   IntVar blank;
-
-  public String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
-
   Map<Integer, MDD> mdds = new HashMap<Integer, MDD>();
 
   char[][] crosswordTemplate = {
@@ -79,6 +76,33 @@ public class CrossWord extends ExampleFD {
     {'_', 'e', '_', '_', '_'},
     {'_', '_', 'm', '_', '_'}
   };
+
+  /**
+   * It executes the program to create a model and solve crossword problem.
+   *
+   * @param args no arguments used.
+   */
+  public static void main(String args[]) {
+
+    String filename = "";
+    if (args.length == 1) {
+      filename = args[0];
+      System.out.println("Using file " + filename);
+    }
+
+    CrossWord m = new CrossWord();
+
+    m.model();
+
+    long T1, T2;
+    T1 = System.currentTimeMillis();
+
+    m.searchAllAtOnceNoRecord();
+
+    T2 = System.currentTimeMillis();
+
+    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+  } // end main
 
   /** model() */
   @Override
@@ -277,33 +301,6 @@ public class CrossWord extends ExampleFD {
 
     return result;
   }
-
-  /**
-   * It executes the program to create a model and solve crossword problem.
-   *
-   * @param args no arguments used.
-   */
-  public static void main(String args[]) {
-
-    String filename = "";
-    if (args.length == 1) {
-      filename = args[0];
-      System.out.println("Using file " + filename);
-    }
-
-    CrossWord m = new CrossWord();
-
-    m.model();
-
-    long T1, T2;
-    T1 = System.currentTimeMillis();
-
-    m.searchAllAtOnceNoRecord();
-
-    T2 = System.currentTimeMillis();
-
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-  } // end main
 
   /** It is a simple print listener to print every tenth solution encountered. */
   public class PrintListener<T extends Var> extends SimpleSolutionListener<T> {

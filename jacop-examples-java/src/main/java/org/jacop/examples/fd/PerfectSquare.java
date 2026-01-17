@@ -1866,7 +1866,7 @@ public class PerfectSquare extends ExampleFD {
    */
   public String printLaTex(long runtime, int problemNo) {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append(
         "Solution to PerfectSquare problem of master size equal to "

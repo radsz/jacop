@@ -62,6 +62,24 @@ public class Kakro extends ExampleFD {
 
   int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
 
+  /**
+   * It executes the program to solve simple Kakro puzzle.
+   *
+   * @param args no parameters
+   */
+  public static void main(String args[]) {
+
+    Kakro example = new Kakro();
+
+    example.model();
+
+    if (example.search()) {
+      System.out.println("Solution(s) found");
+
+      ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
+    }
+  }
+
   @Override
   public void model() {
 
@@ -117,23 +135,5 @@ public class Kakro extends ExampleFD {
           store.impose(new SumInt(column, "==", sum));
           store.impose(new Alldiff(column));
         }
-  }
-
-  /**
-   * It executes the program to solve simple Kakro puzzle.
-   *
-   * @param args no parameters
-   */
-  public static void main(String args[]) {
-
-    Kakro example = new Kakro();
-
-    example.model();
-
-    if (example.search()) {
-      System.out.println("Solution(s) found");
-
-      ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
-    }
   }
 }

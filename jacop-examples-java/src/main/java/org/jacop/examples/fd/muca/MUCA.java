@@ -115,6 +115,41 @@ public class MUCA extends ExampleFD {
   /** It reads auction problem description from the file. */
   public String filename = "src/main/java/org/jacop/examples/fd/muca/testset3.auct";
 
+  /**
+   * It executes the program which solve the supplied auction problem or solves three problems
+   * available within the files.
+   *
+   * @param args the first argument specifies the name of the file containing the problem
+   *     description.
+   */
+  public static void main(String[] args) {
+
+    MUCA problem = new MUCA();
+
+    if (args.length > 0) {
+      problem.filename = args[0];
+
+      problem.model();
+
+      problem.searchSpecial();
+
+      return;
+    }
+
+    problem.model();
+    problem.searchSpecial();
+
+    problem = new MUCA();
+    problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset1.auct";
+    problem.model();
+    problem.searchSpecial();
+
+    problem = new MUCA();
+    problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset2.auct";
+    problem.model();
+    problem.searchSpecial();
+  }
+
   /** It creates an instance of the auction problem. */
   public void setupProblem1() {
 
@@ -825,41 +860,6 @@ public class MUCA extends ExampleFD {
     costs.add(cost_bid_2);
   }
 
-  /**
-   * It executes the program which solve the supplied auction problem or solves three problems
-   * available within the files.
-   *
-   * @param args the first argument specifies the name of the file containing the problem
-   *     description.
-   */
-  public static void main(String[] args) {
-
-    MUCA problem = new MUCA();
-
-    if (args.length > 0) {
-      problem.filename = args[0];
-
-      problem.model();
-
-      problem.searchSpecial();
-
-      return;
-    }
-
-    problem.model();
-    problem.searchSpecial();
-
-    problem = new MUCA();
-    problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset1.auct";
-    problem.model();
-    problem.searchSpecial();
-
-    problem = new MUCA();
-    problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset2.auct";
-    problem.model();
-    problem.searchSpecial();
-  }
-
   @Override
   public void model() {
 
@@ -1094,64 +1094,6 @@ public class MUCA extends ExampleFD {
     return result;
   }
 
-  static class Delta {
-
-    // Both must be positive, even if input means consuming.
-
-    public int input;
-    public int output;
-
-    public Delta(int input, int output) {
-
-      this.input = input;
-      this.output = output;
-    }
-
-    // negative means consumption, positive means production.
-    public Delta(int delta) {
-
-      if (delta > 0) {
-
-        input = 0;
-        output = delta;
-      } else {
-        input = -delta;
-        output = 0;
-      }
-    }
-  }
-
-  static class Transformation {
-
-    public List<Integer> goodsIds;
-    public List<Delta> delta;
-    public int id;
-
-    public int getDelta(int goodId) {
-
-      for (int i = 0; i < goodsIds.size(); i++)
-        if (goodsIds.get(i) == goodId) return delta.get(i).output - delta.get(i).input;
-
-      return 0;
-    }
-
-    public int getDeltaInput(int goodId) {
-
-      for (int i = 0; i < goodsIds.size(); i++)
-        if (goodsIds.get(i) == goodId) return delta.get(i).input;
-
-      return 0;
-    }
-
-    public int getDeltaOutput(int goodId) {
-
-      for (int i = 0; i < goodsIds.size(); i++)
-        if (goodsIds.get(i) == goodId) return delta.get(i).output;
-
-      return 0;
-    }
-  }
-
   /**
    * It reads the auction problem from the file.
    *
@@ -1331,5 +1273,63 @@ public class MUCA extends ExampleFD {
     System.out.println(this.maxCost);
     System.out.println(this.maxDelta);
     System.out.println(this.minDelta);
+  }
+
+  static class Delta {
+
+    // Both must be positive, even if input means consuming.
+
+    public int input;
+    public int output;
+
+    public Delta(int input, int output) {
+
+      this.input = input;
+      this.output = output;
+    }
+
+    // negative means consumption, positive means production.
+    public Delta(int delta) {
+
+      if (delta > 0) {
+
+        input = 0;
+        output = delta;
+      } else {
+        input = -delta;
+        output = 0;
+      }
+    }
+  }
+
+  static class Transformation {
+
+    public List<Integer> goodsIds;
+    public List<Delta> delta;
+    public int id;
+
+    public int getDelta(int goodId) {
+
+      for (int i = 0; i < goodsIds.size(); i++)
+        if (goodsIds.get(i) == goodId) return delta.get(i).output - delta.get(i).input;
+
+      return 0;
+    }
+
+    public int getDeltaInput(int goodId) {
+
+      for (int i = 0; i < goodsIds.size(); i++)
+        if (goodsIds.get(i) == goodId) return delta.get(i).input;
+
+      return 0;
+    }
+
+    public int getDeltaOutput(int goodId) {
+
+      for (int i = 0; i < goodsIds.size(); i++)
+        if (goodsIds.get(i) == goodId) return delta.get(i).output;
+
+      return 0;
+    }
   }
 }

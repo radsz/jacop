@@ -30,18 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models circle intersection for floating solver.
- *
- * <p>The following equations are solved
- *
- * <p>4 = X^2 + Y^2, 4 = (X-1)^2 + (Y-1)^2,
- *
- * <p>Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusCeqR;
@@ -57,6 +45,18 @@ public class CircleIntersection {
 
   double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    CircleIntersection example = new CircleIntersection();
+
+    example.circle_intersection();
+  }
 
   void circle_intersection() {
 
@@ -116,17 +116,5 @@ public class CircleIntersection {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    CircleIntersection example = new CircleIntersection();
-
-    example.circle_intersection();
   }
 }

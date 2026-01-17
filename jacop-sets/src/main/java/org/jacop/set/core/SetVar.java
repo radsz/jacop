@@ -361,7 +361,7 @@ public class SetVar extends Var {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id);
+    StringBuilder result = new StringBuilder(id);
 
     if (domain.singleton()) result.append(" = ");
     else result.append("::");
@@ -378,7 +378,7 @@ public class SetVar extends Var {
    */
   public String toStringFull() {
 
-    StringBuffer result = new StringBuffer(id);
+    StringBuilder result = new StringBuilder(id);
     result.append(domain.toStringFull());
     return result.toString();
   }

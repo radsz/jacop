@@ -62,6 +62,22 @@ public class CPvizNewspaper {
   Store store;
   IntVar cost;
 
+  /**
+   * It executes the program which solves this newspaper problem.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    CPvizNewspaper example = new CPvizNewspaper();
+
+    example.model();
+
+    // 		if ( label() )
+    // 		    System.out.println("Solution(s) found");
+
+  }
+
   public void model() {
 
     // Creating constraint store
@@ -258,21 +274,5 @@ public class CPvizNewspaper {
     // <---
 
     search.labeling(store, select, cost);
-  }
-
-  /**
-   * It executes the program which solves this newspaper problem.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    CPvizNewspaper example = new CPvizNewspaper();
-
-    example.model();
-
-    // 		if ( label() )
-    // 		    System.out.println("Solution(s) found");
-
   }
 }

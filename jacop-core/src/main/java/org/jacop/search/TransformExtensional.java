@@ -47,7 +47,7 @@ import org.jacop.core.*;
  */
 public class TransformExtensional implements InitializeListener {
 
-  InitializeListener[] initializeChildListeners;
+  static final boolean debug = false;
 
   /**
    * It contains all the information which will become variables in the scope of the extensional
@@ -61,7 +61,7 @@ public class TransformExtensional implements InitializeListener {
    */
   public int solutionLimit = 10000;
 
-  static final boolean debug = false;
+  InitializeListener[] initializeChildListeners;
 
   public void executedAtInitialize(Store store) {
 

@@ -58,14 +58,8 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
   public T[] vars = null;
 
-  boolean alwaysUpdateToMostRecentSolution = true;
-
   /** It specifies the number of solutions we want to find. */
   public int solutionLimit = -1;
-
-  protected int noSolutions = 0;
-
-  boolean recordSolutions = false;
 
   public Domain[][] solutions;
 
@@ -86,12 +80,22 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   /** It contains children of the solution listener. */
   public SolutionListener<T>[] childrenSolutionListeners;
 
+  protected int noSolutions = 0;
+  boolean alwaysUpdateToMostRecentSolution = true;
+  boolean recordSolutions = false;
+
   /**
    * It returns null if no solution was recorded, or the variables for which the solution(s) was
    * recorded.
    */
   public T[] getVariables() {
     return vars;
+  }
+
+  public void setVariables(T[] vs) {
+    vars = vs;
+    solutions = new Domain[1][vars.length];
+    parentSolutionNo = new int[1];
   }
 
   public boolean solutionLimitReached() {
@@ -243,8 +247,8 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     if (childrenSolutionListeners != null) {
       boolean code = false;
-      for (int i = 0; i < childrenSolutionListeners.length; i++)
-        code |= childrenSolutionListeners[i].executeAfterSolution(search, select);
+      for (SolutionListener<T> childrenSolutionListener : childrenSolutionListeners)
+        code |= childrenSolutionListener.executeAfterSolution(search, select);
       return code && (solutionLimit <= noSolutions);
     }
 
@@ -285,12 +289,6 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
       return result;
     } else return false;
-  }
-
-  public void setVariables(T[] vs) {
-    vars = vs;
-    solutions = new Domain[1][vars.length];
-    parentSolutionNo = new int[1];
   }
 
   @Override

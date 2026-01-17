@@ -61,6 +61,20 @@ import org.jacop.core.Store;
  */
 public class ProAndCon extends ExampleFD {
 
+  /**
+   * It executes the program which solves this logic puzzle.
+   *
+   * @param args command arguments (none here)
+   */
+  public static void main(String args[]) {
+
+    ProAndCon example = new ProAndCon();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -206,19 +220,5 @@ public class ProAndCon extends ExampleFD {
 
     // 8. Motion 3 received twice as many yes votes as motion 4 did.
     store.impose(new XmulCeqZ(sum4Group[iMotion4], 2, sum4Group[iMotion3]));
-  }
-
-  /**
-   * It executes the program which solves this logic puzzle.
-   *
-   * @param args command arguments (none here)
-   */
-  public static void main(String args[]) {
-
-    ProAndCon example = new ProAndCon();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

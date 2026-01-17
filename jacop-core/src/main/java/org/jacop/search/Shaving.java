@@ -69,6 +69,31 @@ import org.jacop.core.Var;
 @SuppressWarnings("unchecked")
 public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener {
 
+  /** It specifies if only the last failed constraint is allowed to suggest shaving values. */
+  public boolean onlyFailedConstraint = false;
+
+  /**
+   * It specifies if only variables in the scope of the last failed constraint are allowed to be
+   * used in shaving attempts.
+   */
+  public boolean onlyIntVarsOfFailedConstraint = false;
+
+  /** It stores the variables of the last failed constraints. */
+  public HashSet<IntVar> varsOfFailedConstraint = new HashSet<IntVar>();
+
+  /**
+   * It specifies if the quickShave approach should be also used. Quickshave uses variable-value
+   * pairs which lead to wrong decisions as shaving values higher in the search tree (until the
+   * first time shaving attempt for this value fails).
+   */
+  public boolean quickShave = false;
+
+  /** It stores number of successful shaving attempts. */
+  public int successes = 0;
+
+  /** It stores number of failed shaving attempts. */
+  public int failures = 0;
+
   /** It contains list of constraints which suggest shaving explorations. */
   List<Constraint> shavingConstraints = new ArrayList<Constraint>();
 
@@ -81,49 +106,15 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   Store store;
 
   Constraint recentlyFailedConstraint = null;
-
   boolean leftChildShaving = true;
-
-  /** It specifies if only the last failed constraint is allowed to suggest shaving values. */
-  public boolean onlyFailedConstraint = false;
-
   boolean rightChild = false;
-
-  /**
-   * It specifies if only variables in the scope of the last failed constraint are allowed to be
-   * used in shaving attempts.
-   */
-  public boolean onlyIntVarsOfFailedConstraint = false;
-
-  /** It stores the variables of the last failed constraints. */
-  public HashSet<IntVar> varsOfFailedConstraint = new HashSet<IntVar>();
-
   boolean wrongDecisionEncountered;
-
-  private ExitChildListener<T>[] exitChildListeners;
-
-  private ConsistencyListener[] consistencyListeners;
-
-  /**
-   * It specifies if the quickShave approach should be also used. Quickshave uses variable-value
-   * pairs which lead to wrong decisions as shaving values higher in the search tree (until the
-   * first time shaving attempt for this value fails).
-   */
-  public boolean quickShave = false;
-
-  private boolean leftChildWrongDecision = false;
-
-  private int depth = 0;
-
   List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
-
   Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
-
-  /** It stores number of successful shaving attempts. */
-  public int successes = 0;
-
-  /** It stores number of failed shaving attempts. */
-  public int failures = 0;
+  private ExitChildListener<T>[] exitChildListeners;
+  private ConsistencyListener[] consistencyListeners;
+  private boolean leftChildWrongDecision = false;
+  private int depth = 0;
 
   public boolean leftChild(IntVar var, int value, boolean status) {
 

@@ -57,6 +57,22 @@ public final class MapClause implements Iterable<Integer> {
   /** the level at which backjumping should go due to the explanation clause. */
   public int backjumpLevel;
 
+  /** creates an empty clause */
+  public MapClause() {}
+
+  /**
+   * initializes the SetClause with given int[] clause
+   *
+   * @param clause the clause
+   */
+  public MapClause(int[] clause) {
+    addAll(clause);
+  }
+
+  public MapClause(Iterable<Integer> clause) {
+    addAll(clause);
+  }
+
   /**
    * Add a literal to the clause, with resolution. If the opposite literal (same variable, opposite
    * sign) is in the clause, it returns true.
@@ -267,14 +283,6 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
-   * @TODO, FIXME
-   *
-   * <p>addAll functions are used to add many literals to empty clause, better is to simplify adding
-   * by using function initializeWith(Iterable<Integer> clause) that assumes that clause is
-   * correctly formulated (no negative literals exist).
-   */
-
-  /**
    * adds all elements of clause to the SetClause, performing resolution.
    *
    * @param clause the literals to add
@@ -296,22 +304,6 @@ public final class MapClause implements Iterable<Integer> {
     boolean answer = false;
     for (int literal : clause) answer |= addLiteral(literal);
     return answer;
-  }
-
-  /** creates an empty clause */
-  public MapClause() {}
-
-  /**
-   * initializes the SetClause with given int[] clause
-   *
-   * @param clause the clause
-   */
-  public MapClause(int[] clause) {
-    addAll(clause);
-  }
-
-  public MapClause(Iterable<Integer> clause) {
-    addAll(clause);
   }
 
   /** (slow) iterate over literals of the clause */

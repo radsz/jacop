@@ -24,6 +24,8 @@ import org.mockito.Mockito;
 @RunWith(Parameterized.class)
 public class SmallDenseDomainTest {
 
+  @Mock IntVar var;
+  IntDomain intervalDomain;
   private Method prepareMethod;
 
   @SuppressWarnings("unchecked")
@@ -271,10 +273,6 @@ public class SmallDenseDomainTest {
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertEquals(1, goldenResultDomain.previousValue(2));
   }
-
-  @Mock IntVar var;
-
-  IntDomain intervalDomain;
 
   @Before
   public void setUp() throws InvocationTargetException, IllegalAccessException {

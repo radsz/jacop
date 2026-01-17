@@ -62,11 +62,6 @@ public abstract class Calculator implements ConsistencyListener {
     return consistent;
   }
 
-  public void setFailLimit(int limit) {
-
-    failLimit = limit;
-  }
-
   public boolean pointsExhausted() {
     return numberFails >= failLimit;
   }
@@ -74,6 +69,11 @@ public abstract class Calculator implements ConsistencyListener {
   public long getFailLimit() {
 
     return failLimit;
+  }
+
+  public void setFailLimit(int limit) {
+
+    failLimit = limit;
   }
 
   public long getNumberFails() {

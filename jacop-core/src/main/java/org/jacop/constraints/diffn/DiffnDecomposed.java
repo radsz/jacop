@@ -51,14 +51,12 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
   // private int numberArgs;
 
-  protected List<Constraint> constraints = null;
-
-  protected List<Var> auxVar = new ArrayList<>();
-
   final IntVar[] x;
   final IntVar[] y;
   final IntVar[] lx;
   final IntVar[] ly;
+  protected List<Constraint> constraints = null;
+  protected List<Var> auxVar = new ArrayList<>();
 
   /**
    * It specifies a diffn constraint.
@@ -249,7 +247,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("DiffnDecomposed(");
 

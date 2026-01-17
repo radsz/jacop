@@ -49,25 +49,19 @@ import org.jacop.util.SophisticatedLengauerTarjan;
  */
 public class Circuit extends Alldiff implements Stateful {
 
-  int chainLength = 0;
-
-  boolean firstConsistencyCheck = true;
-
-  MutableVar graph[];
-
-  int idd = 0;
-
-  int sccLength = 0;
-
-  int[] val;
-
   static AtomicInteger idNumber = new AtomicInteger(0);
-
+  int chainLength = 0;
+  boolean firstConsistencyCheck = true;
+  MutableVar graph[];
+  int idd = 0;
+  int sccLength = 0;
+  int[] val;
   Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
 
   int firstConsistencyLevel;
 
   SophisticatedLengauerTarjan graphDominance;
+  Random random = new Random(0);
 
   /**
    * It constructs a circuit constraint.
@@ -129,7 +123,6 @@ public class Circuit extends Alldiff implements Stateful {
 
     sccs(store); // strongly connected components
 
-    /** dominance-based filtering improves pruning but it is rather expensive in execution time */
     // dominanceFilter(); // filter based on dominance of nodes
 
     // if (store.propagationHasOccurred)
@@ -232,6 +225,14 @@ public class Circuit extends Alldiff implements Stateful {
     return sat;
   }
 
+  // --- Strongly Connected Conmponents
+
+  // Uses Trajan's algorithm to find strongly connected components
+  // if found strongly connected component is shorter than the
+  // Hamiltonian circuit length fail is enforced (one is unable to
+  // to build a circuit. Based on the algorithm from the book
+  // Robert Sedgewick, Algorithms, 1988, p. 482.
+
   void sccs(Store store) {
 
     for (int i = 0; i < val.length; i++) val[i] = 0;
@@ -240,14 +241,6 @@ public class Circuit extends Alldiff implements Stateful {
     sccLength = 0;
     visit(0);
   }
-
-  // --- Strongly Connected Conmponents
-
-  // Uses Trajan's algorithm to find strongly connected components
-  // if found strongly connected component is shorter than the
-  // Hamiltonian circuit length fail is enforced (one is unable to
-  // to build a circuit. Based on the algorithm from the book
-  // Robert Sedgewick, Algorithms, 1988, p. 482.
 
   @Override
   public String toString() {
@@ -264,12 +257,12 @@ public class Circuit extends Alldiff implements Stateful {
     return result.toString();
   }
 
+  // --- Strongly Connected Conmponents
+
   @Override
   public void removeLevel(int level) {
     if (firstConsistencyLevel == level) firstConsistencyCheck = true;
   }
-
-  // --- Strongly Connected Conmponents
 
   void updateChains(IntVar v) {
 
@@ -304,8 +297,6 @@ public class Circuit extends Alldiff implements Stateful {
     }
     return min;
   }
-
-  Random random = new Random(0);
 
   private void dominanceFilter() {
     int n = list.length;

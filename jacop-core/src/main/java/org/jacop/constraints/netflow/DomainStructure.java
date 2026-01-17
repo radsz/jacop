@@ -51,21 +51,11 @@ import org.jacop.core.Var;
  */
 public class DomainStructure implements VarHandler {
 
-  public enum Behavior {
-    PRUNE_ACTIVE,
-    PRUNE_INACTIVE,
-    PRUNE_BOTH
-  }
-
   public final IntVar variable;
-
   public final Arc[] arcs;
-
   public final IntDomain[] domains;
-
   // public final int[] supports;
   public final Behavior behavior;
-
   public int notGrounded;
 
   /**
@@ -240,5 +230,11 @@ public class DomainStructure implements VarHandler {
 
   public int getPruningEvent(Var var) {
     return IntDomain.ANY; // for S-variables
+  }
+
+  public enum Behavior {
+    PRUNE_ACTIVE,
+    PRUNE_INACTIVE,
+    PRUNE_BOTH
   }
 }

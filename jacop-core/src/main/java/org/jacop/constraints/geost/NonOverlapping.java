@@ -41,6 +41,12 @@ public class NonOverlapping implements ExternalConstraint {
   /** It specifies the objects which are being in the scope of this external constraint. */
   public final GeostObject[] objects;
 
+  /**
+   * the dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
+   * include dimension in the array
+   */
+  public final int[] selectedDimensions;
+
   /** It maps object (through object.id) to the internal constraint connected to this object. */
   public ObstacleObjectFrame[] objectConstraintMap;
 
@@ -48,12 +54,6 @@ public class NonOverlapping implements ExternalConstraint {
   // isInternalConstraintApplicableTo
   // is removed then this attribute can be removed too.
   Set<ObstacleObjectFrame> constraints;
-
-  /**
-   * the dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
-   * include dimension in the array
-   */
-  public final int[] selectedDimensions;
 
   /**
    * It creates an external constraint to make sure that specified set of objects does not overlap

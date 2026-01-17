@@ -44,14 +44,14 @@ import org.jacop.search.SelectChoicePoint;
  */
 public class FlatzincSolver {
 
+  FlatzincSolver() {}
+
   public static void main(String args[]) {
 
     FlatzincSolver run = new FlatzincSolver();
 
     run.ex(args);
   }
-
-  FlatzincSolver() {}
 
   void ex(String[] args) {
 

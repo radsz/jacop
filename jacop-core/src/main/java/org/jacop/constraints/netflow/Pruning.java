@@ -61,17 +61,8 @@ public class Pruning extends Network {
 
   // Decrease in score upon successful pruning
   private static final int FAIL_SCORE = 2;
-
+  public int numActiveArcs;
   private Statistics statistics;
-
-  interface PruningStrategy {
-
-    void init();
-
-    ArcCompanion next();
-
-    void close();
-  }
 
   // int z;
   //
@@ -87,57 +78,8 @@ public class Pruning extends Network {
   // assert (count == numActiveArcs) : count + " != " + numActiveArcs
   // + "  (" + z + ")";
   // }
-
-  public class PercentStrategy implements PruningStrategy {
-
-    List<ArcCompanion> seen = new ArrayList<ArcCompanion>();
-
-    int i;
-    final double percentage;
-    int limit;
-    final int minimum;
-
-    PercentStrategy(double percentage, int minimum) {
-      this.percentage = percentage;
-      this.minimum = minimum;
-    }
-
-    public void init() {
-      int numActiveArcs = 0;
-      for (ArcCompanion c : queue) {
-        if (c.arc.index != DELETED_ARC) numActiveArcs++;
-      }
-
-      i = 0;
-      limit =
-          Math.max(Math.min(minimum, numActiveArcs), (int) Math.round(numActiveArcs * percentage));
-
-      // checkCount();
-    }
-
-    public ArcCompanion next() {
-      if (i < limit) {
-        ArcCompanion companion = queue.poll();
-        seen.add(companion);
-        while (companion.arc.index == DELETED_ARC) {
-          return next();
-        }
-        i++;
-        return companion;
-      }
-      // assert (queue.peek().arc.index == DELETED_ARC);
-      return null;
-    }
-
-    public void close() {
-      queue.addAll(seen);
-      seen.clear();
-    }
-  }
-
   private PriorityQueue<ArcCompanion> queue;
   private PruningStrategy strategy;
-  public int numActiveArcs;
 
   public Pruning(List<Node> nodes, List<Arc> arcs, Statistics statistics) {
 
@@ -569,6 +511,61 @@ public class Pruning extends Network {
           sVarInDom(companion, arcDomain);
         }
       }
+    }
+  }
+
+  interface PruningStrategy {
+
+    void init();
+
+    ArcCompanion next();
+
+    void close();
+  }
+
+  public class PercentStrategy implements PruningStrategy {
+
+    final double percentage;
+    final int minimum;
+    List<ArcCompanion> seen = new ArrayList<ArcCompanion>();
+    int i;
+    int limit;
+
+    PercentStrategy(double percentage, int minimum) {
+      this.percentage = percentage;
+      this.minimum = minimum;
+    }
+
+    public void init() {
+      int numActiveArcs = 0;
+      for (ArcCompanion c : queue) {
+        if (c.arc.index != DELETED_ARC) numActiveArcs++;
+      }
+
+      i = 0;
+      limit =
+          Math.max(Math.min(minimum, numActiveArcs), (int) Math.round(numActiveArcs * percentage));
+
+      // checkCount();
+    }
+
+    public ArcCompanion next() {
+      if (i < limit) {
+        ArcCompanion companion = queue.poll();
+        seen.add(companion);
+        while (companion.arc.index == DELETED_ARC) {
+          return next();
+        }
+        i++;
+        return companion;
+      }
+      // assert (queue.peek().arc.index == DELETED_ARC);
+      return null;
+    }
+
+    public void close() {
+      queue.addAll(seen);
+      seen.clear();
     }
   }
 }

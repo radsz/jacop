@@ -42,9 +42,8 @@ import org.jacop.core.IntDomain;
  */
 class DiffnProfile extends Profile {
 
-  private static final long serialVersionUID = 8683452581100000011L;
-
   static final boolean trace = false;
+  private static final long serialVersionUID = 8683452581100000011L;
 
   DiffnProfile() {}
 

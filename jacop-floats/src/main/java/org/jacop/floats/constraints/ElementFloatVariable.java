@@ -58,24 +58,23 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-
-  int firstConsistencyLevel;
-
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
   public final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   public final FloatVar value;
 
-  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
-  private final int indexOffset;
-
   /**
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
   public final FloatVar list[];
+
+  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
+  private final int indexOffset;
+
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
 
   /**
    * It constructs an element constraint.

@@ -61,13 +61,11 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  TimeStamp<Integer> G_no_size;
-
-  SparseSet G_no;
-
   /** It specifies a multiple value decision diagram used by this constraint. */
   public MDD mdd;
 
+  TimeStamp<Integer> G_no_size;
+  SparseSet G_no;
   SparseSet G_yes;
 
   IndexDomainView[] views;
@@ -130,11 +128,11 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
     G_no.setSize(G_no_size.value());
 
     // TODO initialize notSupportedIndexesYes to 0..domainLimits
-    for (int i = 0; i < views.length; i++) views[i].intializeSupportSweep();
+    for (IndexDomainView indexDomainView : views) indexDomainView.intializeSupportSweep();
 
     seekSupport(0, 0);
 
-    for (int i = 0; i < views.length; i++) views[i].removeUnSupportedValues(s);
+    for (IndexDomainView view : views) view.removeUnSupportedValues(s);
 
     G_no_size.update(G_no.members);
   }
@@ -209,7 +207,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     IntVar[] vars = mdd.vars;
 
-    for (int i = 0; i < vars.length; i++) result.append(vars[i]).append(" ");
+    for (IntVar var : vars) result.append(var).append(" ");
 
     if (mdd.vars != null) result.append(")").append("size = ").append(mdd.freePosition);
 

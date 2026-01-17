@@ -3,6 +3,11 @@
 package org.jacop.fz;
 
 public class ASTVarDeclItem extends SimpleNode {
+  // My additions
+  String id;
+  int kind; // 0=var, 1=non-var; 2=array-var, 3=array-non-var
+  int index1, index2; // array indexs: low & high
+
   public ASTVarDeclItem(int id) {
     super(id);
   }
@@ -10,11 +15,6 @@ public class ASTVarDeclItem extends SimpleNode {
   public ASTVarDeclItem(Parser p, int id) {
     super(p, id);
   }
-
-  // My additions
-  String id;
-  int kind; // 0=var, 1=non-var; 2=array-var, 3=array-non-var
-  int index1, index2; // array indexs: low & high
 
   void setId(String ID) {
     id = ID;
@@ -37,12 +37,12 @@ public class ASTVarDeclItem extends SimpleNode {
     return index2;
   }
 
-  void setKind(int t) {
-    kind = t;
-  }
-
   int getKind() {
     return kind;
+  }
+
+  void setKind(int t) {
+    kind = t;
   }
 
   public String toString() {

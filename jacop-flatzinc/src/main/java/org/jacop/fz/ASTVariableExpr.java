@@ -3,6 +3,9 @@
 package org.jacop.fz;
 
 public class ASTVariableExpr extends SimpleNode {
+  String ident = null;
+  ArrayAccess arrAccess = null;
+
   public ASTVariableExpr(int id) {
     super(id);
   }
@@ -11,23 +14,20 @@ public class ASTVariableExpr extends SimpleNode {
     super(p, id);
   }
 
-  String ident = null;
-  ArrayAccess arrAccess = null;
+  String getIdent() {
+    return ident;
+  }
 
   void setIdent(String ID) {
     ident = ID;
   }
 
-  String getIdent() {
-    return ident;
+  ArrayAccess getArrayAccess() {
+    return arrAccess;
   }
 
   void setArrayAccess(ArrayAccess a) {
     arrAccess = a;
-  }
-
-  ArrayAccess getArrayAccess() {
-    return arrAccess;
   }
 
   public String toString() {

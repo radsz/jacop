@@ -43,51 +43,6 @@ import java.util.Arrays;
  */
 public class SimpleHashSet<E> {
 
-  @SuppressWarnings("hiding")
-  class Entry<E> {
-
-    @SuppressWarnings("unchecked")
-    public Entry chain;
-
-    public final E element;
-
-    @SuppressWarnings("unchecked")
-    public Entry next;
-
-    /** Create new entry. */
-    Entry(E el) {
-      element = el;
-      next = null;
-    }
-
-    /** Create new entry. */
-    Entry(E el, Entry<E> n) {
-      element = el;
-      next = n;
-    }
-
-    @SuppressWarnings("unchecked")
-    public boolean add(E addedElement) {
-      if (element == addedElement) return false;
-      if (next != null) return next.add(addedElement);
-      else {
-        next = new Entry(addedElement);
-        lastEntry.chain = next;
-        lastEntry = next;
-        return true;
-      }
-    }
-
-    @SuppressWarnings("unchecked")
-    public boolean contains(E checkedElement) {
-      if (element == checkedElement) return true;
-      if (next != null) return next.contains(checkedElement);
-      else {
-        return false;
-      }
-    }
-  }
-
   /** The default initial capacity - MUST be a power of two. */
   static final int DEFAULT_INITIAL_CAPACITY = 16;
 
@@ -100,32 +55,8 @@ public class SimpleHashSet<E> {
    */
   static final int MAXIMUM_CAPACITY = 1 << 30;
 
-  /**
-   * Returns a hash value for the specified object. In addition to the object's own hashCode, this
-   * method applies a "supplemental hash function," which defends against poor quality hash
-   * functions. This is critical because SimpleHashSet uses power-of two length hash tables.
-   *
-   * <p>
-   *
-   * <p>The shift distances in this function were chosen as the result of an automated search over
-   * the entire four-dimensional search space.
-   *
-   * <p>This hash code function implementation is original Sun function proposed in util package.
-   */
-  static int hash(Object x) {
-    int h = x.hashCode();
-
-    h += ~(h << 9);
-    h ^= (h >>> 14);
-    h += (h << 4);
-    h ^= (h >>> 10);
-    return h;
-  }
-
-  /** Returns index for hash code h. */
-  static int indexFor(int h, int length) {
-    return h & (length - 1);
-  }
+  /** The load factor for the hash set. */
+  final float loadFactor;
 
   /** It points to the first Entry to be removed. */
   transient Entry<E> firstEntry = null;
@@ -136,18 +67,15 @@ public class SimpleHashSet<E> {
   /** It points to the last Entry being add. */
   transient Entry<E> lastEntry = null;
 
-  /** The load factor for the hash set. */
-  final float loadFactor;
-
   /** The number of elements contained in this set. */
   transient int size;
+
+  /** The next size value at which to resize (capacity * load factor). */
+  int threshold;
 
   /** The set, resized as necessary. Length MUST Always be a power of two. */
   @SuppressWarnings("unchecked")
   private transient Entry[] table;
-
-  /** The next size value at which to resize (capacity * load factor). */
-  int threshold;
 
   /**
    * Constructs an empty {@code HashSet} with the default initial capacity (16) and the default load
@@ -194,6 +122,33 @@ public class SimpleHashSet<E> {
     this.threshold = (int) (capacity * loadFactor);
     this.table = new Entry[capacity];
     this.initialCapacity = table.length;
+  }
+
+  /**
+   * Returns a hash value for the specified object. In addition to the object's own hashCode, this
+   * method applies a "supplemental hash function," which defends against poor quality hash
+   * functions. This is critical because SimpleHashSet uses power-of two length hash tables.
+   *
+   * <p>
+   *
+   * <p>The shift distances in this function were chosen as the result of an automated search over
+   * the entire four-dimensional search space.
+   *
+   * <p>This hash code function implementation is original Sun function proposed in util package.
+   */
+  static int hash(Object x) {
+    int h = x.hashCode();
+
+    h += ~(h << 9);
+    h ^= (h >>> 14);
+    h += (h << 4);
+    h ^= (h >>> 10);
+    return h;
+  }
+
+  /** Returns index for hash code h. */
+  static int indexFor(int h, int length) {
+    return h & (length - 1);
   }
 
   /**
@@ -373,9 +328,9 @@ public class SimpleHashSet<E> {
 
     boolean empty = true;
 
-    for (int i = 0; i < tab.length; i++) {
+    for (Entry<E> entry : tab) {
 
-      Entry<E> e = tab[i];
+      Entry<E> e = entry;
 
       if (!empty && e != null) s.append(",");
 
@@ -404,6 +359,51 @@ public class SimpleHashSet<E> {
     while (temp != null) {
       add(temp.element);
       temp = temp.chain;
+    }
+  }
+
+  @SuppressWarnings("hiding")
+  class Entry<E> {
+
+    public final E element;
+
+    @SuppressWarnings("unchecked")
+    public Entry chain;
+
+    @SuppressWarnings("unchecked")
+    public Entry next;
+
+    /** Create new entry. */
+    Entry(E el) {
+      element = el;
+      next = null;
+    }
+
+    /** Create new entry. */
+    Entry(E el, Entry<E> n) {
+      element = el;
+      next = n;
+    }
+
+    @SuppressWarnings("unchecked")
+    public boolean add(E addedElement) {
+      if (element == addedElement) return false;
+      if (next != null) return next.add(addedElement);
+      else {
+        next = new Entry(addedElement);
+        lastEntry.chain = next;
+        lastEntry = next;
+        return true;
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    public boolean contains(E checkedElement) {
+      if (element == checkedElement) return true;
+      if (next != null) return next.contains(checkedElement);
+      else {
+        return false;
+      }
     }
   }
 }

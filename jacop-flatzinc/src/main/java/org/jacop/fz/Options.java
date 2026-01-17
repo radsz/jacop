@@ -43,55 +43,27 @@ import org.jacop.floats.core.FloatDomain;
  */
 public class Options {
 
+  public RestartType restartType = RestartType.none;
   FileInputStream file;
-
   String fileName;
-
   boolean all = false;
-
   boolean verbose = false;
-
   boolean statistics = false;
-
   boolean freeSearch = false;
-
   int time_out = 0;
-
   int number_solutions = -1;
-
   boolean interval = false;
-
   boolean precisionDefined = false;
   double precision;
-
   double format;
-
   boolean boundConsistency = false;
-
   boolean runSearch = true;
-
   boolean use_sat = false;
-
   boolean complementary_search = false;
-
   float decay = 0.99f;
-
   double step = 0.0d;
-
   boolean debug = false;
-
   String outputFilename = "";
-
-  public enum RestartType {
-    none,
-    constant,
-    linear,
-    luby,
-    geometric
-  }
-
-  public RestartType restartType = RestartType.none;
-
   int restartLimit = 0;
   int scale = 250;
   double base = 1.5;
@@ -460,5 +432,13 @@ public class Options {
 
   public int getRestartLimit() {
     return restartLimit;
+  }
+
+  public enum RestartType {
+    none,
+    constant,
+    linear,
+    luby,
+    geometric
   }
 }

@@ -46,11 +46,10 @@ import org.jacop.satwrapper.WrapperComponent;
  */
 public final class DomainTranslator implements WrapperComponent {
 
-  // wrapper
-  private SatWrapper wrapper;
-
   // variables that have already been translated to clauses
   public Set<IntVar> translatedVars = new HashSet<IntVar>();
+  // wrapper
+  private SatWrapper wrapper;
 
   /**
    * translates the variable to clauses, if not already done, and add those clauses to the wrapper

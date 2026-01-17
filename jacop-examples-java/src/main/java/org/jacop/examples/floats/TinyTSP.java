@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models traveling slaesperson problem for floating solver.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.constraints.Circuit;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -49,6 +43,18 @@ public class TinyTSP {
 
   // double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    TinyTSP example = new TinyTSP();
+
+    example.tiny_tsp();
+  }
 
   void tiny_tsp() {
 
@@ -117,17 +123,5 @@ public class TinyTSP {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    TinyTSP example = new TinyTSP();
-
-    example.tiny_tsp();
   }
 }

@@ -53,6 +53,20 @@ import org.jacop.core.Store;
  */
 public class LeastDiff extends ExampleFD {
 
+  /**
+   * It executes the program which solves this simple optimization problem.
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String args[]) {
+
+    LeastDiff example = new LeastDiff();
+
+    example.model();
+
+    example.searchSmallestDomain(true);
+  }
+
   @Override
   public void model() {
 
@@ -108,19 +122,5 @@ public class LeastDiff extends ExampleFD {
 
     vars = new ArrayList<IntVar>();
     for (IntVar v : digits) vars.add(v);
-  }
-
-  /**
-   * It executes the program which solves this simple optimization problem.
-   *
-   * @param args parameters (none)
-   */
-  public static void main(String args[]) {
-
-    LeastDiff example = new LeastDiff();
-
-    example.model();
-
-    example.searchSmallestDomain(true);
   }
 }

@@ -49,6 +49,35 @@ import org.jacop.search.*;
  */
 public class Gates extends ExampleFD {
 
+  /**
+   * It executes a program to solve gates problems.
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String args[]) {
+
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
+
+    Gates example = new Gates();
+    example.model();
+
+    if (example.searchSpecific()) System.out.println("Solution found.");
+
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
+
+  public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
+    return new SimpleTable(vars, tuples);
+  }
+
+  public static Constraint tableConstraintProviderUsingExtensionalSTR(
+      IntVar[] vars, int[][] tuples) {
+    return new ExtensionalSupportSTR(vars, tuples);
+  }
+
   @Override
   public void model() {
     model(Gates::tableConstraintProviderUsingSimpleTable);
@@ -174,26 +203,6 @@ public class Gates extends ExampleFD {
   }
 
   /**
-   * It executes a program to solve gates problems.
-   *
-   * @param args parameters (none)
-   */
-  public static void main(String args[]) {
-
-    long T1, T2, T;
-    T1 = System.currentTimeMillis();
-
-    Gates example = new Gates();
-    example.model();
-
-    if (example.searchSpecific()) System.out.println("Solution found.");
-
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
    * It provides a specific search with extensive printout of the result.
    *
    * @return true if there is a solution, false otherwise.
@@ -221,21 +230,12 @@ public class Gates extends ExampleFD {
       System.out.println("\nAll solutions:\n");
       for (IntVar v : vars) System.out.print(v.id() + "\t");
       System.out.println("\n-------------------------------------");
-      for (int j = 0; j < solutions.length; j++) {
-        for (int i = 0; i < solutions[0].length; i++) System.out.print(solutions[j][i] + "\t");
+      for (Domain[] solution : solutions) {
+        for (int i = 0; i < solutions[0].length; i++) System.out.print(solution[i] + "\t");
         System.out.println();
       }
     } else System.out.println("\nNo");
 
     return searchResult;
-  }
-
-  public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
-    return new SimpleTable(vars, tuples);
-  }
-
-  public static Constraint tableConstraintProviderUsingExtensionalSTR(
-      IntVar[] vars, int[][] tuples) {
-    return new ExtensionalSupportSTR(vars, tuples);
   }
 }

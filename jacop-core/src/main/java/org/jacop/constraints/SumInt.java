@@ -54,12 +54,6 @@ import org.jacop.core.Var;
  */
 public class SumInt extends PrimitiveConstraint {
 
-  Store store;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  boolean reified = true;
-
   /** Defines relations */
   static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
 
@@ -73,8 +67,13 @@ public class SumInt extends PrimitiveConstraint {
     lt // ge=5;
   };
 
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
   /** It specifies what relations is used by this constraint */
   public byte relationType;
+
+  Store store;
+  boolean reified = true;
 
   /** It specifies a list of variables being summed. */
   IntVar x[];
@@ -90,6 +89,8 @@ public class SumInt extends PrimitiveConstraint {
 
   /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values) */
   long sumXmin, sumXmax;
+
+  int guideValue = 0;
 
   /**
    * @param store current store
@@ -454,6 +455,15 @@ public class SumInt extends PrimitiveConstraint {
     }
   }
 
+  // void checkForOverflow() {
+
+  //     long sMin = -(long)sum.max(), sMax = -(long)sum.min();
+  //     for (int i = 0; i < x.length; i++) {
+  //         sMin = Math.addExact(sMin, (long)x[i].min());
+  //         sMax = Math.addExact(sMax, (long)x[i].max());
+  //     }
+  // }
+
   public String rel2String() {
     switch (relationType) {
       case eq:
@@ -473,19 +483,10 @@ public class SumInt extends PrimitiveConstraint {
     return "?";
   }
 
-  // void checkForOverflow() {
-
-  //     long sMin = -(long)sum.max(), sMax = -(long)sum.min();
-  //     for (int i = 0; i < x.length; i++) {
-  //         sMin = Math.addExact(sMin, (long)x[i].min());
-  //         sMax = Math.addExact(sMax, (long)x[i].max());
-  //     }
-  // }
-
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : SumInt( [ ");
 
     for (int i = 0; i < l; i++) {
@@ -511,8 +512,6 @@ public class SumInt extends PrimitiveConstraint {
   public int getGuideValue() {
     return guideValue;
   }
-
-  int guideValue = 0;
 
   @Override
   public Var getGuideVariable() {

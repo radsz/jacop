@@ -93,7 +93,7 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer("[");
+    StringBuilder result = new StringBuilder("[");
 
     for (int i = 0; i < this.size(); i++) {
 

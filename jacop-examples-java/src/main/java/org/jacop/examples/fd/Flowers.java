@@ -71,6 +71,20 @@ import org.jacop.core.Store;
  */
 public class Flowers extends ExampleFD {
 
+  /**
+   * It executes the program which solves this logic puzzle.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    Flowers example = new Flowers();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -273,19 +287,5 @@ public class Flowers extends ExampleFD {
     for (IntVar v : occasionD) vars.add(v);
     for (IntVar v : flowerT) vars.add(v);
     for (IntVar v : flowerD) vars.add(v);
-  }
-
-  /**
-   * It executes the program which solves this logic puzzle.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    Flowers example = new Flowers();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

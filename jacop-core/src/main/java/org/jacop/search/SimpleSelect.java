@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
@@ -56,11 +55,10 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
   public ComparatorVariable<T> tieBreakingComparator = null;
 
-  Indomain<T> valueOrdering;
-
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public Map<T, Integer> position;
 
+  Indomain<T> valueOrdering;
   int currentIndex = 0;
 
   /**
@@ -75,14 +73,13 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
     position = Var.createEmptyPositioning();
 
     int unique = 0;
-    for (int i = 0; i < variables.length; i++) {
-      if (position.get(variables[i]) == null) position.put(variables[i], unique++);
+    for (T variable : variables) {
+      if (position.get(variable) == null) position.put(variable, unique++);
     }
 
     this.searchVariables = (T[]) new Var[position.size()];
 
-    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-      Map.Entry<T, Integer> e = itr.next();
+    for (Map.Entry<T, Integer> e : position.entrySet()) {
       searchVariables[e.getValue()] = e.getKey();
     }
 
@@ -108,14 +105,13 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
     position = Var.createEmptyPositioning();
 
     int unique = 0;
-    for (int i = 0; i < variables.length; i++) {
-      if (position.get(variables[i]) == null) position.put(variables[i], unique++);
+    for (T variable : variables) {
+      if (position.get(variable) == null) position.put(variable, unique++);
     }
 
     this.searchVariables = (T[]) new Var[position.size()];
 
-    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-      Map.Entry<T, Integer> e = itr.next();
+    for (Map.Entry<T, Integer> e : position.entrySet()) {
       searchVariables[e.getValue()] = e.getKey();
     }
 

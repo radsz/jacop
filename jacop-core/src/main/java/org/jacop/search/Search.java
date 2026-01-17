@@ -252,46 +252,18 @@ public interface Search<T extends Var> {
   public SolutionListener<T> getSolutionListener();
 
   /**
-   * It returns the root of the Consistency Listener.
-   *
-   * @return the root Consistency Listener.
-   */
-  public ConsistencyListener getConsistencyListener();
-
-  /**
-   * It returns the root of the ExitChildListener.
-   *
-   * @return the root of ExitChildListener.
-   */
-  public ExitChildListener<T> getExitChildListener();
-
-  /**
-   * It returns the root of the ExitListener.
-   *
-   * @return the root of ExitListener.
-   */
-  public ExitListener getExitListener();
-
-  /**
-   * It returns the root of the TimeOutListener.
-   *
-   * @return the root of the TimeOutListener.
-   */
-  public TimeOutListener getTimeOutListener();
-
-  /**
-   * It returns the root of the InitializationListener.
-   *
-   * @return the root of the InitializeListener.
-   */
-  public InitializeListener getInitializeListener();
-
-  /**
    * It returns the root of the SolutionListener.
    *
    * @param listener the root of the SolutionListener.
    */
   public void setSolutionListener(SolutionListener<T> listener);
+
+  /**
+   * It returns the root of the Consistency Listener.
+   *
+   * @return the root Consistency Listener.
+   */
+  public ConsistencyListener getConsistencyListener();
 
   /**
    * It sets the root of the Consistency Listener.
@@ -301,11 +273,25 @@ public interface Search<T extends Var> {
   public void setConsistencyListener(ConsistencyListener listener);
 
   /**
+   * It returns the root of the ExitChildListener.
+   *
+   * @return the root of ExitChildListener.
+   */
+  public ExitChildListener<T> getExitChildListener();
+
+  /**
    * It sets the root of the ExitChild listener.
    *
    * @param listener the new root.
    */
   public void setExitChildListener(ExitChildListener<T> listener);
+
+  /**
+   * It returns the root of the ExitListener.
+   *
+   * @return the root of ExitListener.
+   */
+  public ExitListener getExitListener();
 
   /**
    * It sets the root of the Exit Listener.
@@ -315,11 +301,25 @@ public interface Search<T extends Var> {
   public void setExitListener(ExitListener listener);
 
   /**
+   * It returns the root of the TimeOutListener.
+   *
+   * @return the root of the TimeOutListener.
+   */
+  public TimeOutListener getTimeOutListener();
+
+  /**
    * It sets the root of the TimeOutListener.
    *
    * @param listener the new root.
    */
   public void setTimeOutListener(TimeOutListener listener);
+
+  /**
+   * It returns the root of the InitializationListener.
+   *
+   * @return the root of the InitializeListener.
+   */
+  public InitializeListener getInitializeListener();
 
   /**
    * It sets the root of the InitializeListener.

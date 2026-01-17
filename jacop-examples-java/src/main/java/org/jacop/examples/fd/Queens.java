@@ -64,6 +64,62 @@ public class Queens extends ExampleFD {
   /** It specifies the size of chessboard to be used in the model. */
   public int numberQ = 550;
 
+  /**
+   * It executes different models and search methods to solve Queens problem.
+   *
+   * @param args first argument specifies the size of the chessboard.
+   */
+  public static void main(String args[]) {
+
+    Queens example = new Queens();
+
+    // It is possible to supply the program
+    // with the chessboard size
+    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
+  }
+
+  /**
+   * It executes different models and search methods to solve Queens problem.
+   *
+   * @param args first argument specifies the size of the chessboard.
+   */
+  public static void test(String args[]) {
+
+    Queens example = new Queens();
+
+    // It is possible to supply the program
+    // with the chessboard size
+    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
+
+    example = new Queens();
+
+    // It is possible to supply the program
+    // with the chessboard size
+    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+
+    example.modelBasic();
+
+    if (example.searchLDS(3)) System.out.println("Solution(s) found");
+
+    example = new Queens();
+
+    // It is possible to supply the program
+    // with the chessboard size
+    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+
+    example.modelChanneling();
+
+    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
+  }
+
   /** This model uses only primitive constraints. */
   public void modelBasic() {
 
@@ -215,61 +271,5 @@ public class Queens extends ExampleFD {
     // diagonals.
     store.impose(new Alldiff(diagonalUp));
     store.impose(new Alldiff(diagonalDown));
-  }
-
-  /**
-   * It executes different models and search methods to solve Queens problem.
-   *
-   * @param args first argument specifies the size of the chessboard.
-   */
-  public static void main(String args[]) {
-
-    Queens example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
-
-    example.model();
-
-    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
-  }
-
-  /**
-   * It executes different models and search methods to solve Queens problem.
-   *
-   * @param args first argument specifies the size of the chessboard.
-   */
-  public static void test(String args[]) {
-
-    Queens example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
-
-    example.model();
-
-    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
-
-    example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
-
-    example.modelBasic();
-
-    if (example.searchLDS(3)) System.out.println("Solution(s) found");
-
-    example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
-
-    example.modelChanneling();
-
-    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
   }
 }

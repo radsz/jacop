@@ -54,8 +54,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  int numberTuples = 0;
+  /** It specifies the tuples given in the constructor. */
+  public int[][] tuplesFromConstructor;
 
+  /** It stores variables within this extensional constraint, order does matter. */
+  public IntVar[] list;
+
+  int numberTuples = 0;
   Store store;
 
   /**
@@ -64,17 +69,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    */
   int[][][][] tuples;
 
-  /** It specifies the tuples given in the constructor. */
-  public int[][] tuplesFromConstructor;
-
   /** It represents values which are supported for a variable. */
   int[][] values;
 
   LinkedHashSet<Var> variableQueue = new LinkedHashSet<Var>();
-
-  /** It stores variables within this extensional constraint, order does matter. */
-  public IntVar[] list;
-
+  int[] tuple;
+  int[][][] lastofsequence;
+  int[][][] supports;
   private boolean satisfiedAlreadyAtImposition = false;
 
   /**
@@ -128,8 +129,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   public ExtensionalConflictVA(List<? extends IntVar> variables, int[][] tuples) {
     this(variables.toArray(new IntVar[variables.size()]), tuples);
   }
-
-  int[] tuple;
 
   /**
    * It seeks support tuple for a given variable and its value.
@@ -209,10 +208,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       }
     }
   }
-
-  int[][][] lastofsequence;
-
-  int[][][] supports;
 
   private void recordSupport(int varPosition, int value, int[] t) {
 

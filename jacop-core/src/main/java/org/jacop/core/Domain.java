@@ -275,14 +275,6 @@ public abstract class Domain {
    */
   public abstract void putSearchConstraint(int storeLevel, Var var, Constraint C);
 
-  /**
-   * It returns the values which have been removed at current store level.
-   *
-   * @param currentStoreLevel the current store level.
-   * @return emptyDomain if domain did not change at current level, or the set of values which have
-   *     been removed at current level.
-   */
-
   // public abstract Domain recentDomainPruning(int currentStoreLevel);
 
   /**
@@ -337,29 +329,9 @@ public abstract class Domain {
    */
   public abstract void in(int level, Var var, Domain domain);
 
-  /**
-   * It assigns a variable to a value represented by a domain.
-   *
-   * @param level store level at which this assignment occurs.
-   * @param var variable which is being assigned.
-   * @param singleton the value being used in the assignment.
-   */
   // public abstract void inValue(int level, Var var, Domain singleton);
 
-  /**
-   * It checks if the domain is equal to the supplied domain.
-   *
-   * @param domain against which the equivalence test is performed.
-   * @return true if suppled domain has the same elements as this domain.
-   */
-
   // public abstract boolean eq(Domain domain);
-
-  /**
-   * It adds values as specified by the parameter to the domain.
-   *
-   * @param domain Domain which needs to be added to the domain.
-   */
 
   // public abstract void addDom(Domain domain);
 

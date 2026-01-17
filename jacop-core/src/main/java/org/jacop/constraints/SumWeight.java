@@ -65,13 +65,20 @@ public class SumWeight extends Constraint
   /** It specifies value to which SumWeight is equal to. */
   protected final long equalTo;
 
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+
   /** The sum of grounded variables. */
   private TimeStamp<Long> sumGrounded;
 
   /** The position for the next grounded variable. */
   private TimeStamp<Integer> nextGroundedPosition;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+  private long lMin;
+  private long lMax;
+  private long[] lMinArray;
+  private long[] lMaxArray;
+  private Map<Var, Integer> positionMaping;
+  private boolean backtrackHasOccured = false;
 
   /**
    * SumWeight constraint implements the weighted summation over several variables.
@@ -264,18 +271,6 @@ public class SumWeight extends Constraint
 
     super.impose(store);
   }
-
-  private long lMin;
-
-  private long lMax;
-
-  private long[] lMinArray;
-
-  private long[] lMaxArray;
-
-  private Map<Var, Integer> positionMaping;
-
-  private boolean backtrackHasOccured = false;
 
   @Override
   public void queueVariable(int level, Var var) {

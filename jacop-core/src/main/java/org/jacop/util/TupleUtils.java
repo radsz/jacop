@@ -43,6 +43,50 @@ public class TupleUtils {
   int[][] tuples;
 
   /**
+   * It sorts tuples.
+   *
+   * @param ts tuples to be sorted.
+   */
+  public static void sortTuplesWithin(int[][] ts) {
+
+    for (int i = 0; i < ts.length; i++) {
+
+      boolean change = false;
+
+      for (int j = ts.length - 1; j > i; j--)
+        if (!smallerEqualTuple(ts[j - 1], ts[j])) {
+          change = true;
+          int[] tmp = ts[j - 1];
+          ts[j - 1] = ts[j];
+          ts[j] = tmp;
+        }
+
+      if (!change) break;
+    }
+  }
+
+  /**
+   * It compares tuples.
+   *
+   * @param left tuple to be compared to.
+   * @param right tuple to compar with.
+   * @return true if the left tuple is larger than right tuple.
+   */
+  public static boolean smallerEqualTuple(int[] left, int[] right) {
+
+    if (right.length < left.length) return false;
+
+    if (right.length > left.length) return true;
+
+    for (int i = 0; i < left.length; i++) {
+      if (left[i] < right[i]) return true;
+      if (left[i] > right[i]) return false;
+    }
+
+    return true;
+  }
+
+  /**
    * It recordTuples to store so tuples can be reused across multiple extensional constraints. It
    * can potentially save memory.
    *
@@ -198,49 +242,5 @@ public class TupleUtils {
     }
 
     return result;
-  }
-
-  /**
-   * It sorts tuples.
-   *
-   * @param ts tuples to be sorted.
-   */
-  public static void sortTuplesWithin(int[][] ts) {
-
-    for (int i = 0; i < ts.length; i++) {
-
-      boolean change = false;
-
-      for (int j = ts.length - 1; j > i; j--)
-        if (!smallerEqualTuple(ts[j - 1], ts[j])) {
-          change = true;
-          int[] tmp = ts[j - 1];
-          ts[j - 1] = ts[j];
-          ts[j] = tmp;
-        }
-
-      if (!change) break;
-    }
-  }
-
-  /**
-   * It compares tuples.
-   *
-   * @param left tuple to be compared to.
-   * @param right tuple to compar with.
-   * @return true if the left tuple is larger than right tuple.
-   */
-  public static boolean smallerEqualTuple(int[] left, int[] right) {
-
-    if (right.length < left.length) return false;
-
-    if (right.length > left.length) return true;
-
-    for (int i = 0; i < left.length; i++) {
-      if (left[i] < right[i]) return true;
-      if (left[i] > right[i]) return false;
-    }
-
-    return true;
   }
 }

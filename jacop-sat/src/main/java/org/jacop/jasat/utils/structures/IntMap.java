@@ -36,6 +36,11 @@ public final class IntMap<E> {
   // the inner trie
   private final IntTrie<MapNode> map;
 
+  /** initializes the map */
+  public IntMap() {
+    map = new IntTrie<MapNode>(new MapNode());
+  }
+
   /**
    * predicate to check if the key is associated to any value
    *
@@ -112,11 +117,6 @@ public final class IntMap<E> {
   /** clear the map (removes everything inside) */
   public void clear() {
     map.clear();
-  }
-
-  /** initializes the map */
-  public IntMap() {
-    map = new IntTrie<MapNode>(new MapNode());
   }
 
   /**

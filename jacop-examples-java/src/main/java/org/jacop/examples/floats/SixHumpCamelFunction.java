@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * SixHumpCamelFunction function (a nonlinear standard problem).
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import java.util.HashSet;
 import java.util.Set;
 import org.jacop.constraints.Constraint;
@@ -54,6 +48,18 @@ public class SixHumpCamelFunction {
 
   double MIN_FLOAT = -1e+20;
   double MAX_FLOAT = 1e+20;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    SixHumpCamelFunction example = new SixHumpCamelFunction();
+
+    example.six_hump_camel_function();
+  }
 
   void six_hump_camel_function() {
 
@@ -144,17 +150,5 @@ public class SixHumpCamelFunction {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    SixHumpCamelFunction example = new SixHumpCamelFunction();
-
-    example.six_hump_camel_function();
   }
 }

@@ -106,7 +106,7 @@ class BoundsVar implements MutableVar {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     result.append("BoundsVar[").append(index).append("] = [");
     result.append(value).append("]");
     return result.toString();

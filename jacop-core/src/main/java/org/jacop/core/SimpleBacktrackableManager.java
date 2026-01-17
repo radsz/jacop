@@ -42,8 +42,34 @@ import org.jacop.util.SparseSet;
  */
 public class SimpleBacktrackableManager implements BacktrackableManager {
 
+  /** It is a fake variable to distinguish between empty levels and full levels. */
+  final int[] emptyLevel;
+
+  /** It is a fake variable to disinguish between full levels and empty ones. */
+  final int[] fullLevel;
+
+  /** It specifies if the debugging information should be displayed. */
+  final boolean debug = false;
+
   /** It specifies the current level which is active in the manager. */
   public int currentLevel;
+
+  /**
+   * It stores objects which change has to be restored upon backtracking. The positions of objects
+   * will be stored by the manager and all changed objects will have their function removeLevel() be
+   * called.
+   */
+  public Backtrackable[] objects;
+
+  /**
+   * It specifies if for the current level the all changes are already stored in the trail. This
+   * situation occurs after each backtrack. If new changes are added then this flag indicates that
+   * trail has to be used.
+   */
+  public boolean trailContainsAllChanges;
+
+  /** It specifies if for the current level we have reached the cutoff value. */
+  public boolean currentLevelMax;
 
   /** It specifies the actual number of objects in the objects array. */
   int noOfObjects;
@@ -68,32 +94,6 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
    * state is done by informing all the variables about the backtracking.
    */
   int cutOffValue;
-
-  /**
-   * It stores objects which change has to be restored upon backtracking. The positions of objects
-   * will be stored by the manager and all changed objects will have their function removeLevel() be
-   * called.
-   */
-  public Backtrackable[] objects;
-
-  /**
-   * It specifies if for the current level the all changes are already stored in the trail. This
-   * situation occurs after each backtrack. If new changes are added then this flag indicates that
-   * trail has to be used.
-   */
-  public boolean trailContainsAllChanges;
-
-  /** It specifies if for the current level we have reached the cutoff value. */
-  public boolean currentLevelMax;
-
-  /** It is a fake variable to distinguish between empty levels and full levels. */
-  final int[] emptyLevel;
-
-  /** It is a fake variable to disinguish between full levels and empty ones. */
-  final int[] fullLevel;
-
-  /** It specifies if the debugging information should be displayed. */
-  final boolean debug = false;
 
   /**
    * It constructs a trail manager.
@@ -151,44 +151,6 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     currentlyChanged.addMember(index);
 
     if (currentlyChanged.members > cutOffValue) currentLevelMax = true;
-  }
-
-  /**
-   * It specifies the level which should become the active one in the manager.
-   *
-   * @param level the active level at which the changes will be recorded.
-   */
-  public void setLevel(int level) {
-
-    if (currentLevel == level) return;
-
-    if (debug) System.out.println(">" + this + "Add level " + level);
-
-    assert (level > currentLevel) : "It is possible only to add higher levels";
-
-    if (level > currentLevel && !trailContainsAllChanges) {
-      // store old level
-      if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
-        // remember the trail.
-        int[] trailLevel = new int[currentlyChanged.members];
-        System.arraycopy(currentlyChanged.dense, 0, trailLevel, 0, currentlyChanged.members);
-        trail.add(trailLevel);
-      } else {
-        // do remove level by checking all variables.
-        // @TODO, later implement intervals functionality.
-        if (!currentlyChanged.isEmpty()) trail.add(fullLevel);
-        else trail.add(emptyLevel);
-      }
-
-      levelInfo.add(currentLevel);
-    }
-
-    currentlyChanged.clear();
-    trailContainsAllChanges = false;
-    currentLevelMax = false;
-    currentLevel = level;
-
-    if (debug) System.out.println("<" + this + "Add level " + level + "\n");
   }
 
   /**
@@ -263,7 +225,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
   }
 
   public String toString() {
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("Level ").append(currentLevel).append("\n");
     result.append("Levels ").append(levelInfo).append("\n");
@@ -311,6 +273,44 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
   public int getLevel() {
     return currentLevel;
+  }
+
+  /**
+   * It specifies the level which should become the active one in the manager.
+   *
+   * @param level the active level at which the changes will be recorded.
+   */
+  public void setLevel(int level) {
+
+    if (currentLevel == level) return;
+
+    if (debug) System.out.println(">" + this + "Add level " + level);
+
+    assert (level > currentLevel) : "It is possible only to add higher levels";
+
+    if (level > currentLevel && !trailContainsAllChanges) {
+      // store old level
+      if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
+        // remember the trail.
+        int[] trailLevel = new int[currentlyChanged.members];
+        System.arraycopy(currentlyChanged.dense, 0, trailLevel, 0, currentlyChanged.members);
+        trail.add(trailLevel);
+      } else {
+        // do remove level by checking all variables.
+        // @TODO, later implement intervals functionality.
+        if (!currentlyChanged.isEmpty()) trail.add(fullLevel);
+        else trail.add(emptyLevel);
+      }
+
+      levelInfo.add(currentLevel);
+    }
+
+    currentlyChanged.clear();
+    trailContainsAllChanges = false;
+    currentLevelMax = false;
+    currentLevel = level;
+
+    if (debug) System.out.println("<" + this + "Add level " + level + "\n");
   }
 
   public void update(Backtrackable[] objects, int noOfObjects) {

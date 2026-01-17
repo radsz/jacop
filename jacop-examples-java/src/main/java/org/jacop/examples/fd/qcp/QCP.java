@@ -60,6 +60,77 @@ public class QCP extends ExampleFD {
   /** It contains the order of the QCP being solved. */
   public int n = 0;
 
+  /**
+   * It executes the program which solves the QCP in multiple different ways.
+   *
+   * @param args the first argument is the name of the file containing the problem.
+   */
+  public static void test(String[] args) {
+
+    QCP example = new QCP();
+
+    if (args.length > 0) example.filename = args[0];
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.print(" Solution(s) found ");
+
+    example = new QCP();
+
+    if (args.length > 0) example.filename = args[0];
+
+    example.model();
+
+    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
+
+    example = new QCP();
+
+    if (args.length > 0) example.filename = args[0];
+
+    example.model();
+
+    if (example.searchWithShaving()) System.out.print(" Solution(s) found ");
+
+    /*
+    // TODO, Why it is no longer efficient? It takes too long now.
+    example = new QCP();
+
+    if (args.length > 0)
+    	example.filename = args[0];
+
+    example.model();
+
+    if (example.searchAllTransform())
+    	System.out.print(" Solution(s) found ");
+    */
+
+    example = new QCP();
+
+    if (args.length > 0) example.filename = args[0];
+
+    example.model();
+    example.store.variableWeightManagement = true;
+
+    if (example.searchWeightedDegree()) System.out.print(" Solution(s) found ");
+  }
+
+  /**
+   * It executes the program which solves the QCP in multiple different ways.
+   *
+   * @param args the first argument is the name of the file containing the problem.
+   */
+  public static void main(String[] args) {
+
+    QCP example = new QCP();
+
+    if (args.length > 0) example.filename = args[0];
+
+    System.out.println("Solving QCP with restart search.");
+    example.model();
+
+    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
+  }
+
   @Override
   public void model() {
 
@@ -98,9 +169,9 @@ public class QCP extends ExampleFD {
       String[] result = pat.split(lines[i]);
 
       int current = 0;
-      for (int j = 0; j < result.length; j++)
+      for (String s : result)
         try {
-          int currentNo = Integer.parseInt(result[j]);
+          int currentNo = Integer.parseInt(s);
           numbers[i - 1][current++] = currentNo;
         } catch (Exception ex) {
 
@@ -215,76 +286,5 @@ public class QCP extends ExampleFD {
     System.out.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
-  }
-
-  /**
-   * It executes the program which solves the QCP in multiple different ways.
-   *
-   * @param args the first argument is the name of the file containing the problem.
-   */
-  public static void test(String[] args) {
-
-    QCP example = new QCP();
-
-    if (args.length > 0) example.filename = args[0];
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.print(" Solution(s) found ");
-
-    example = new QCP();
-
-    if (args.length > 0) example.filename = args[0];
-
-    example.model();
-
-    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
-
-    example = new QCP();
-
-    if (args.length > 0) example.filename = args[0];
-
-    example.model();
-
-    if (example.searchWithShaving()) System.out.print(" Solution(s) found ");
-
-    /*
-    // TODO, Why it is no longer efficient? It takes too long now.
-    example = new QCP();
-
-    if (args.length > 0)
-    	example.filename = args[0];
-
-    example.model();
-
-    if (example.searchAllTransform())
-    	System.out.print(" Solution(s) found ");
-    */
-
-    example = new QCP();
-
-    if (args.length > 0) example.filename = args[0];
-
-    example.model();
-    example.store.variableWeightManagement = true;
-
-    if (example.searchWeightedDegree()) System.out.print(" Solution(s) found ");
-  }
-
-  /**
-   * It executes the program which solves the QCP in multiple different ways.
-   *
-   * @param args the first argument is the name of the file containing the problem.
-   */
-  public static void main(String[] args) {
-
-    QCP example = new QCP();
-
-    if (args.length > 0) example.filename = args[0];
-
-    System.out.println("Solving QCP with restart search.");
-    example.model();
-
-    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
   }
 }

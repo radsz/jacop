@@ -64,66 +64,52 @@ import org.jacop.set.search.IndomainSetMin;
  */
 public class Solve<T extends Var> implements ParserTreeConstants {
 
+  static final String p = System.getProperty("fz_system_timer");
+  public StringBuffer lastSolution = null;
   Tables dictionary;
   Options options;
   Store store;
   int initNumberConstraints;
-
   Timer timer;
   long startCPU;
   long initTime = 0;
   long searchTime = 0;
-
   // ComparatorVariable tieBreaking=null;
   SelectChoicePoint<T> variable_selection;
   ArrayList<Search<T>> list_seq_searches = null;
-
   boolean debug = false;
   boolean print_search_info = false;
   boolean heuristicSeqSearch = false;
-
   Var costVariable;
-
   // restart search
   Calculator restartCalculator;
   RestartSearch<T> rs;
-
   // -------- for print-out of statistics
   boolean singleSearch;
   boolean result;
   boolean optimization;
   boolean minimize = false;
   SearchItem<T> si;
-
   // single search
   boolean defaultSearch;
   DepthFirstSearch<T> label;
+  // --------
   DepthFirstSearch<T>[] final_search;
-
   // sequence search
   Search<T> final_search_seq;
-  // --------
-
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDFS;
   SelectChoicePoint<T> flatzincVariableSelection;
   Var flatzincCost;
-
   int solveKind = -1;
-
   SatTranslation sat;
-
-  public StringBuffer lastSolution = null;
-
   FailConstraintsStatistics failStatistics;
-
   NumberFormat nf = NumberFormat.getInstance(new Locale("en"));
-
   int numberSolutions;
-
   // relax and reconstruct
   IntVar[] relaxVars;
   int probability;
+  int finalNumberSolutions = 0;
 
   /**
    * It creates a parser for the solve part of the flatzinc file.
@@ -1822,28 +1808,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  FloatVar getCostFloat(ASTSolveExpr node) {
-    if (node.getType() == 0) { // ident
-      FloatVar cost = dictionary.getFloatVariable(node.getIdent());
-      if (cost != null) return cost;
-      else { // cost is constant ?
-        Double costFloat = dictionary.checkFloat(node.getIdent());
-        if (costFloat != null) return new FloatVar(store, costFloat, costFloat);
-        else return null;
-      }
-    } else if (node.getType() == 1) { // array access
-      FloatVar[] a = dictionary.getVariableFloatArray(node.getIdent());
-      return a[node.getIndex()];
-    } else {
-      throw new IllegalArgumentException("Wrong cost function specification " + node);
-    }
-  }
-
-  void pose(Constraint c) {
-    store.impose(c);
-    if (debug) System.out.println(c);
-  }
-
   /*
   boolean restart_search(Search<Var> masterLabel, SelectChoicePoint<Var> masterSelect,
                          IntVar cost, boolean minimize) {
@@ -1877,6 +1841,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return result;
   }
   */
+
+  FloatVar getCostFloat(ASTSolveExpr node) {
+    if (node.getType() == 0) { // ident
+      FloatVar cost = dictionary.getFloatVariable(node.getIdent());
+      if (cost != null) return cost;
+      else { // cost is constant ?
+        Double costFloat = dictionary.checkFloat(node.getIdent());
+        if (costFloat != null) return new FloatVar(store, costFloat, costFloat);
+        else return null;
+      }
+    } else if (node.getType() == 1) { // array access
+      FloatVar[] a = dictionary.getVariableFloatArray(node.getIdent());
+      return a[node.getIndex()];
+    } else {
+      throw new IllegalArgumentException("Wrong cost function specification " + node);
+    }
+  }
+
+  void pose(Constraint c) {
+    store.impose(c);
+    if (debug) System.out.println(c);
+  }
 
   void lds_search(DepthFirstSearch<T> label, int lds_value) {
     //      System.out.println("LDS("+lds_value+")");
@@ -1916,7 +1902,85 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     System.out.println();
   }
 
-  int finalNumberSolutions = 0;
+  public SearchItem<T> getSearch() {
+    return si;
+  }
+
+  public int getSolveKind() {
+    return solveKind;
+  }
+
+  void helperSolutionPrinter(String lastSolution) {
+
+    System.out.print(lastSolution);
+
+    if (!options.getOutputFilename().equals("") && !lastSolution.isEmpty()) {
+      try {
+        System.out.println("%%Output filename " + options.getOutputFilename());
+        Files.write(
+            Paths.get(options.getOutputFilename()),
+            lastSolution.getBytes(Charset.forName("UTF-8")),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.TRUNCATE_EXISTING);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  // public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
+
+  //  Var[] var;
+
+  //  public ResultListener(Var[] v) {
+  //      var = v;
+  //  }
+
+  //  public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+  //      boolean returnCode = super.executeAfterSolution(search, select);
+
+  //      finalNumberSolutions++;
+
+  //      printSolution();
+  //      System.out.println("----------");
+
+  //      return returnCode;
+  //  }
+  // }
+
+  void startTimer() {
+
+    if (p != null && p.equals("true")) timer = new SystemTimer();
+    else timer = new ThreadTimer();
+
+    startCPU = timer.getCPUTime();
+  }
+
+  public static class PrecisionSetting implements InitializeListener {
+
+    InitializeListener[] initializeChildListeners;
+
+    double precision;
+
+    PrecisionSetting(double p) {
+      precision = p;
+    }
+
+    public void executedAtInitialize(Store store) {
+      FloatDomain.setPrecision(precision);
+    }
+
+    public void setChildrenListeners(InitializeListener[] children) {
+      initializeChildListeners = new InitializeListener[children.length];
+      System.arraycopy(children, 0, initializeChildListeners, 0, children.length);
+    }
+
+    public void setChildrenListeners(InitializeListener child) {
+      initializeChildListeners = new InitializeListener[1];
+      initializeChildListeners[0] = child;
+    }
+  }
 
   /*
    * @author Krzysztof Kuchcinski
@@ -1948,87 +2012,5 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       return returnCode;
     }
-  }
-
-  public static class PrecisionSetting implements InitializeListener {
-
-    InitializeListener[] initializeChildListeners;
-
-    double precision;
-
-    PrecisionSetting(double p) {
-      precision = p;
-    }
-
-    public void executedAtInitialize(Store store) {
-      FloatDomain.setPrecision(precision);
-    }
-
-    public void setChildrenListeners(InitializeListener[] children) {
-      initializeChildListeners = new InitializeListener[children.length];
-      System.arraycopy(children, 0, initializeChildListeners, 0, children.length);
-    }
-
-    public void setChildrenListeners(InitializeListener child) {
-      initializeChildListeners = new InitializeListener[1];
-      initializeChildListeners[0] = child;
-    }
-  }
-
-  public SearchItem<T> getSearch() {
-    return si;
-  }
-
-  public int getSolveKind() {
-    return solveKind;
-  }
-
-  // public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
-
-  //  Var[] var;
-
-  //  public ResultListener(Var[] v) {
-  //      var = v;
-  //  }
-
-  //  public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
-
-  //      boolean returnCode = super.executeAfterSolution(search, select);
-
-  //      finalNumberSolutions++;
-
-  //      printSolution();
-  //      System.out.println("----------");
-
-  //      return returnCode;
-  //  }
-  // }
-
-  void helperSolutionPrinter(String lastSolution) {
-
-    System.out.print(lastSolution);
-
-    if (!options.getOutputFilename().equals("") && !lastSolution.isEmpty()) {
-      try {
-        System.out.println("%%Output filename " + options.getOutputFilename());
-        Files.write(
-            Paths.get(options.getOutputFilename()),
-            lastSolution.getBytes(Charset.forName("UTF-8")),
-            StandardOpenOption.CREATE,
-            StandardOpenOption.TRUNCATE_EXISTING);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
-  static final String p = System.getProperty("fz_system_timer");
-
-  void startTimer() {
-
-    if (p != null && p.equals("true")) timer = new SystemTimer();
-    else timer = new ThreadTimer();
-
-    startCPU = timer.getCPUTime();
   }
 }

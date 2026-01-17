@@ -38,6 +38,24 @@ package org.jacop.constraints.knapsack;
  */
 public class TreeNode {
 
+  /** It specifies the left child. It can not be equal to null. */
+  public final TreeNode left;
+
+  /** It specifies the right child. It can not be equal to null. */
+  public final TreeNode right;
+
+  /**
+   * It specifies the parent of this node. If it is equal to null then this node is the root of the
+   * whole item tree.
+   */
+  public TreeNode parent;
+
+  /** It specifies the left neighbor. */
+  public TreeNode leftNeighbor;
+
+  /** It specifies the right neighbor. */
+  public TreeNode rightNeighbor;
+
   /**
    * It specifies the maximal weight of an item in the subtree rooted at this node. The consistency
    * algorithm will know that it can skip the entire subtree if the weight is not sufficiently
@@ -50,24 +68,6 @@ public class TreeNode {
 
   /** It specifies the sum of the profit of all items in the subtree rooted at this node. */
   private int pSum;
-
-  /**
-   * It specifies the parent of this node. If it is equal to null then this node is the root of the
-   * whole item tree.
-   */
-  public TreeNode parent;
-
-  /** It specifies the left child. It can not be equal to null. */
-  public final TreeNode left;
-
-  /** It specifies the right child. It can not be equal to null. */
-  public final TreeNode right;
-
-  /** It specifies the left neighbor. */
-  public TreeNode leftNeighbor;
-
-  /** It specifies the right neighbor. */
-  public TreeNode rightNeighbor;
 
   /** The constructor used by tree leaves. */
   public TreeNode() {

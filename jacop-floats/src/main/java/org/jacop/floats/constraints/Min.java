@@ -108,8 +108,8 @@ public class Min extends Constraint implements SatisfiedPresent {
       double maxValue = FloatDomain.MaxFloat;
 
       double minMin = min.min();
-      for (int i = 0; i < list.length; i++) {
-        var = list[i];
+      for (FloatVar floatVar : list) {
+        var = floatVar;
 
         var.domain.inMin(store.level, var, minMin);
 
@@ -162,7 +162,7 @@ public class Min extends Constraint implements SatisfiedPresent {
 
   @Override
   public String toString() {
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : min( [ ");
     for (int i = 0; i < list.length; i++) {

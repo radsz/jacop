@@ -55,6 +55,36 @@ public class KnapsackExample extends ExampleFD {
   /** It stores the parameters of the main function to be used by the model functions. */
   public String[] args = new String[0];
 
+  /**
+   * It executes the two different models to find a solution to a knapsack problem. It is possible
+   * to supply the knapsack problem through the parameters. The parameters are order as follows :
+   * string denoting the capacity of the knapsack 4 strings denoting the item (weight, profit,
+   * maximumQuantity, name) the number of strings total must be equal to 1+4*noOfItems.
+   *
+   * <p>If no arguments is provided or improper number of them the program will use internal
+   * instance of the knapsack problem.
+   *
+   * @param args the capacity of the knapsack, 4 strings denoting the item (weight, profit,
+   *     maximumQuantity, name), the number of strings total must be equal to 1+4*noOfItems.
+   */
+  public static void main(String args[]) {
+
+    KnapsackExample example = new KnapsackExample();
+
+    example.args = args;
+
+    example.model();
+
+    if (example.searchOptimal()) System.out.println("Solution(s) found");
+
+    example = new KnapsackExample();
+
+    example.args = args;
+    example.modelBasic();
+
+    if (example.searchOptimal()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -329,35 +359,5 @@ public class KnapsackExample extends ExampleFD {
     store.impose(new XplusYeqC(profit, profitNegation, 0));
 
     cost = profitNegation;
-  }
-
-  /**
-   * It executes the two different models to find a solution to a knapsack problem. It is possible
-   * to supply the knapsack problem through the parameters. The parameters are order as follows :
-   * string denoting the capacity of the knapsack 4 strings denoting the item (weight, profit,
-   * maximumQuantity, name) the number of strings total must be equal to 1+4*noOfItems.
-   *
-   * <p>If no arguments is provided or improper number of them the program will use internal
-   * instance of the knapsack problem.
-   *
-   * @param args the capacity of the knapsack, 4 strings denoting the item (weight, profit,
-   *     maximumQuantity, name), the number of strings total must be equal to 1+4*noOfItems.
-   */
-  public static void main(String args[]) {
-
-    KnapsackExample example = new KnapsackExample();
-
-    example.args = args;
-
-    example.model();
-
-    if (example.searchOptimal()) System.out.println("Solution(s) found");
-
-    example = new KnapsackExample();
-
-    example.args = args;
-    example.modelBasic();
-
-    if (example.searchOptimal()) System.out.println("Solution(s) found");
   }
 }

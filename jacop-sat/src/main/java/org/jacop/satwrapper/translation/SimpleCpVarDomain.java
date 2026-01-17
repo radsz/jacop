@@ -45,16 +45,13 @@ import org.jacop.satwrapper.SatWrapper;
  */
 public class SimpleCpVarDomain extends SatCPBridge {
 
+  public boolean isTranslated = true;
   // first boolean variable representing this
   private int firstVar;
-
   // width of the domain (number of different values)
   private int width;
-
   // the special clauses database of the wrapper
   private DomainClausesDatabase clauseDatabase;
-
-  public boolean isTranslated = true;
 
   // basic constructor
   public SimpleCpVarDomain(SatWrapper wrapper, IntVar variable) {

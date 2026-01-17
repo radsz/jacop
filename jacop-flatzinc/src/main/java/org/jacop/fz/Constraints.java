@@ -43,25 +43,20 @@ import org.jacop.satwrapper.SatTranslation;
  */
 public class Constraints implements ParserTreeConstants {
 
+  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+  final org.jacop.fz.constraints.ConstraintFncs
+      cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
   Tables dictionary;
   Store store;
   String p;
-
   boolean debug;
-
-  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
-
   // ============ SAT solver interface ==============
   float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
   long boolClauses = 0;
   long noConstraints = 0;
   long bool2Int = 0;
   SatTranslation sat;
-
   Support support;
-
-  final org.jacop.fz.constraints.ConstraintFncs
-      cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
 
   /**
    * It creates an object to parse the constraint part of the flatzinc file.

@@ -45,14 +45,11 @@ import org.jacop.core.*;
 public class Increasing extends Constraint {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
-
-  IntVar[] x;
-  int n;
-
-  byte strict = 0;
-
   // List of decomposed constraints
   protected List<Constraint> constraints = null;
+  IntVar[] x;
+  int n;
+  byte strict = 0;
 
   /*
    * It constructs an increasing constraint.
@@ -134,7 +131,7 @@ public class Increasing extends Constraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : Increasing([");
 
     for (int i = 0; i < n; i++) {

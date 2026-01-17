@@ -130,56 +130,6 @@ public class Element extends Constraint implements UsesQueueVariable {
     c = new ElementVariable(index, variables, value, shift);
   }
 
-  @Override
-  public Set<Var> arguments() {
-    return c.arguments();
-  }
-
-  @Override
-  public void consistency(Store store) {
-    c.consistency(store);
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var var) {
-    return c.getConsistencyPruningEvent(var);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise method exists..");
-  }
-
-  @Override
-  public String id() {
-    return c.id();
-  }
-
-  @Override
-  public void impose(Store store) {
-    c.impose(store);
-  }
-
-  @Override
-  public void queueVariable(int level, Var V) {
-    c.queueVariable(level, V);
-  }
-
-  @Override
-  public void removeConstraint() {
-    c.removeConstraint();
-  }
-
-  @Override
-  public String toString() {
-    return c.toString();
-  }
-
-  @Override
-  public void increaseWeight() {
-    c.increaseWeight();
-  }
-
   /**
    * It constructs element constraint based on variables. The default shift value is equal 0.
    *
@@ -254,5 +204,55 @@ public class Element extends Constraint implements UsesQueueVariable {
    */
   public static Constraint choose(IntVar index, IntVar[] variables, IntVar value, int shift) {
     return new ElementVariableFast(index, variables, value, shift);
+  }
+
+  @Override
+  public Set<Var> arguments() {
+    return c.arguments();
+  }
+
+  @Override
+  public void consistency(Store store) {
+    c.consistency(store);
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+    return c.getConsistencyPruningEvent(var);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise method exists..");
+  }
+
+  @Override
+  public String id() {
+    return c.id();
+  }
+
+  @Override
+  public void impose(Store store) {
+    c.impose(store);
+  }
+
+  @Override
+  public void queueVariable(int level, Var V) {
+    c.queueVariable(level, V);
+  }
+
+  @Override
+  public void removeConstraint() {
+    c.removeConstraint();
+  }
+
+  @Override
+  public String toString() {
+    return c.toString();
+  }
+
+  @Override
+  public void increaseWeight() {
+    c.increaseWeight();
   }
 }

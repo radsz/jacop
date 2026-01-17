@@ -44,7 +44,6 @@ public class IntVar extends Var {
   /** It stores pointer to a current domain, which has stamp equal to store stamp. */
   public IntDomain domain;
 
-  /** It stores information about the variable in SAT domain. */
   /*
   public SatCPBridge satBridge;
   */
@@ -59,21 +58,6 @@ public class IntVar extends Var {
   public IntVar(Store store, String name, IntDomain dom) {
 
     commonInitialization(store, name, dom);
-  }
-
-  private void commonInitialization(Store store, String name, IntDomain dom) {
-
-    dom.searchConstraints = new ArrayList<Constraint>();
-    dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
-    dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
-
-    assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
-
-    id = name;
-    domain = dom;
-    domain.stamp = 0;
-    index = store.putVariable(this);
-    this.store = store;
   }
 
   /**
@@ -136,6 +120,21 @@ public class IntVar extends Var {
     if ((long) max - (long) min > 63L)
       commonInitialization(store, name, new IntervalDomain(min, max));
     else commonInitialization(store, name, new SmallDenseDomain(min, max));
+  }
+
+  private void commonInitialization(Store store, String name, IntDomain dom) {
+
+    dom.searchConstraints = new ArrayList<Constraint>();
+    dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
+    dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
+
+    assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
+
+    id = name;
+    domain = dom;
+    domain.stamp = 0;
+    index = store.putVariable(this);
+    this.store = store;
   }
 
   /**
@@ -400,7 +399,7 @@ public class IntVar extends Var {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id);
+    StringBuilder result = new StringBuilder(id);
 
     if (domain.singleton()) result.append(" = ");
     else result.append("::");

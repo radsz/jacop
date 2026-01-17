@@ -52,13 +52,16 @@ import org.jacop.core.*;
 public class SimpleTable extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  Store store;
+  static final boolean debug = false;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Variables within the scope of table constraint */
   public IntVar[] x;
 
   /** Tuples specifying the allowed values */
   public int[][] tuple;
+
+  Store store;
 
   /** Main data structure for the constraint */
   TimeStamp<Long> words;
@@ -75,12 +78,7 @@ public class SimpleTable extends Constraint
   Map<Integer, Long>[] supports;
 
   Set<IntVar> variableQueue = new LinkedHashSet<IntVar>();
-
   int noNoGround;
-
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
-  static final boolean debug = false;
 
   /**
    * It constructs a table constraint.
@@ -350,7 +348,7 @@ public class SimpleTable extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer s = new StringBuffer(id());
+    StringBuilder s = new StringBuilder(id());
 
     s.append(" : simpleTable(");
     s.append(java.util.Arrays.asList(x));

@@ -51,6 +51,20 @@ import org.jacop.core.Store;
  */
 public class BuildingBlocks extends ExampleFD {
 
+  /**
+   * It executes the program to solve this logic puzzle.
+   *
+   * @param args args for the program (none)
+   */
+  public static void main(String args[]) {
+
+    BuildingBlocks example = new BuildingBlocks();
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -141,19 +155,5 @@ public class BuildingBlocks extends ExampleFD {
     // Resource, each letter takes only one space (usage 1).
     // Limit, all blocks can accommodate 6 letters.
 
-  }
-
-  /**
-   * It executes the program to solve this logic puzzle.
-   *
-   * @param args args for the program (none)
-   */
-  public static void main(String args[]) {
-
-    BuildingBlocks example = new BuildingBlocks();
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
   }
 }

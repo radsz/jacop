@@ -169,10 +169,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         /*
          * iterate until two watches are found or the whole clause is explored
          */
-        /**
-         * @TODO, Searching for new watches always starts from the beginning, potentially very
-         * inefficient, should start from the last position or at least random position.
-         */
         for (int j = 2; j < clause.length && countWatches < 2; ++j) {
 
           int lit = clause[j];
@@ -214,9 +210,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             assert conflictClause.isUnsatisfiableIn(trail);
             core.triggerConflictEvent(conflictClause);
             // copy remaining elements of watchList to the newWatchList
-            /**
-             * @TODO: What System.arraycopy for efficiency of copying the remaining elements?
-             */
             for (int j = i + 1; j < watchList[0]; ++j) {
               newWatchList[newWatchNum++] = watchList[j];
             }
@@ -252,13 +245,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             swap(clause, 0, watch1pos);
             swap(clause, 1, watch2pos);
             // update the watch lists
-            /**
-             * @TODO, Analysis.
-             *
-             * <p>Removing watch in this manner takes linear time to go through the list of watches,
-             * maybe this literal which is no longer capable of watching is soon to be computed for
-             * assertion and operation check watch will be performed anyway?
-             */
             removeWatch(otherWatch, clauseIndex); // we must remove the old watch
             addWatch(clause[0], clauseIndex);
             addWatch(clause[1], clauseIndex);
@@ -464,13 +450,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
   public MapClause resolutionWith(int clauseId, MapClause explanation) {
 
-    /**
-     * TODO, clauseId is it already not unique general id, and just clause id within the database.
-     */
     int[] clause = clauses[uniqueIdToIndex(clauseId)];
 
-    for (int i = 0; i < clause.length; ++i) {
-      int literal = clause[i];
+    for (int literal : clause) {
       // resolution !
       // try to remove -literal. If it fails, add literal
       // if (! explanation.removeLiteral(-literal))
@@ -521,8 +503,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
   /**
    * (used for debug) checks if the 2 first literals of the clauses are exactly the set of literals
    * that watch this clause
-   *
-   * @param clauseIndex the index of the clause
    */
   @SuppressWarnings("unused")
   private String checkWatches4var(int var) {
@@ -635,8 +615,8 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
       if (clause != null) {
 
-        for (int j = 0; j < clause.length; j++) {
-          output.write(Integer.toString(clause[j]));
+        for (int k : clause) {
+          output.write(Integer.toString(k));
           output.write(" ");
         }
         output.write("0\n");

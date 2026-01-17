@@ -98,6 +98,38 @@ public class Tree {
   public int alreadyUsedCapacity;
 
   /**
+   * It specifies if the mandatory check has run out of right items to complement mandatory items.
+   */
+  public boolean exhaustedRightItems = false;
+
+  /**
+   * It specifies that computeForbidden part of the consistency function has run out of left
+   * mandatory items.
+   */
+  public boolean exhaustedLeftItems = false;
+
+  /**
+   * It specifies the current right item of the tree which have been yet included in computation of
+   * replaceable weight.
+   */
+  TreeNode currentNode;
+
+  /**
+   * It specifies the currentWeight from which searching for next mandatory item starts from. Only
+   * items with weight greater or equal to currentWeight can be (partially) mandatory.
+   */
+  int currentWeight;
+
+  /** It specifies the current profit obtained by all already traversed right items. */
+  int currentProfit;
+
+  /** It specifies the profit obtained from the remaining part of the critical item. */
+  double profitFromCriticalLeft;
+
+  /** It specifies the profit obtained from the remaining part of the critical item. */
+  double profitFromCriticalTaken;
+
+  /**
    * Create a single node tree.
    *
    * @param node a root of this one-node tree.
@@ -115,21 +147,6 @@ public class Tree {
     this.root = tree.root;
     this.first = tree.first;
     this.last = tree.last;
-  }
-
-  /**
-   * A merge method for trees, it added a new root from the ancients
-   *
-   * @param that A tree that is being merged with this tree.
-   * @return The tree resulting of the merge of <i>this</i> and <i>that</i>
-   */
-  public Tree merge(Tree that) {
-    TreeNode resultRoot;
-    resultRoot = new TreeNode(this.root, that.root);
-    Tree result = new Tree(resultRoot);
-    result.first = this.first;
-    result.last = that.last;
-    return result;
   }
 
   /**
@@ -227,6 +244,21 @@ public class Tree {
     root = currentLevel[0];
 
     root.recomputeDown(this);
+  }
+
+  /**
+   * A merge method for trees, it added a new root from the ancients
+   *
+   * @param that A tree that is being merged with this tree.
+   * @return The tree resulting of the merge of <i>this</i> and <i>that</i>
+   */
+  public Tree merge(Tree that) {
+    TreeNode resultRoot;
+    resultRoot = new TreeNode(this.root, that.root);
+    Tree result = new Tree(resultRoot);
+    result.first = this.first;
+    result.last = that.last;
+    return result;
   }
 
   /**
@@ -384,27 +416,6 @@ public class Tree {
   }
 
   /**
-   * It specifies the current right item of the tree which have been yet included in computation of
-   * replaceable weight.
-   */
-  TreeNode currentNode;
-
-  /**
-   * It specifies the currentWeight from which searching for next mandatory item starts from. Only
-   * items with weight greater or equal to currentWeight can be (partially) mandatory.
-   */
-  int currentWeight;
-
-  /** It specifies the current profit obtained by all already traversed right items. */
-  int currentProfit;
-
-  /** It specifies the profit obtained from the remaining part of the critical item. */
-  double profitFromCriticalLeft;
-
-  /** It specifies the profit obtained from the remaining part of the critical item. */
-  double profitFromCriticalTaken;
-
-  /**
    * It initializes the private variables required by computation of how much weight we can replace
    * for any Left item.
    */
@@ -418,11 +429,6 @@ public class Tree {
     currentNode = criticalLeaf;
     exhaustedRightItems = false;
   }
-
-  /**
-   * It specifies if the mandatory check has run out of right items to complement mandatory items.
-   */
-  public boolean exhaustedRightItems = false;
 
   /**
    * It returns the amount of weight of a given item being checked which can be replaced by Right
@@ -633,12 +639,6 @@ public class Tree {
 
     return (TreeLeaf) currentNode;
   }
-
-  /**
-   * It specifies that computeForbidden part of the consistency function has run out of left
-   * mandatory items.
-   */
-  public boolean exhaustedLeftItems = false;
 
   /**
    * It initializes the private variables required by computation of how much weight we can replace

@@ -133,7 +133,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : variableTrace([");
 

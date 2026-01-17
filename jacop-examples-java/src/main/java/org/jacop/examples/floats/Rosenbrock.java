@@ -30,20 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models rosenbrock for floating solver based on minizinc model by Håkan Kjellerstrand
- *
- * <p>Rosenbrock function (a nonlinear standard problem).
- *
- * <p>This is problem 3.1 from http://www.cs.cas.cz/ics/reports/v798-00.ps
- *
- * <p>Also see: http://mathworld.wolfram.com/RosenbrockFunction.html
- * http://en.wikipedia.org/wiki/Rosenbrock_function """ It is also known as Rosenbrock's valley or
- * Rosenbrock's banana function. It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -58,6 +44,18 @@ public class Rosenbrock {
 
   double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    Rosenbrock example = new Rosenbrock();
+
+    example.rosenbrock();
+  }
 
   void rosenbrock() {
 
@@ -122,17 +120,5 @@ public class Rosenbrock {
 
       System.out.println("\n\t*** Execution time = " + T + " ms");
     }
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    Rosenbrock example = new Rosenbrock();
-
-    example.rosenbrock();
   }
 }

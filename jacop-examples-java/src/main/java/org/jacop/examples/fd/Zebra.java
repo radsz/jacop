@@ -54,6 +54,20 @@ import org.jacop.core.Store;
  */
 public class Zebra extends ExampleFD {
 
+  /**
+   * It executes the program to solve this simple logic puzzle.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    Zebra example = new Zebra();
+
+    example.model();
+
+    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -161,19 +175,5 @@ public class Zebra extends ExampleFD {
     store.impose(new XplusYeqZ(distance3, pet[ihorse], profession[idiplomat]));
 
     vars.add(distance3);
-  }
-
-  /**
-   * It executes the program to solve this simple logic puzzle.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    Zebra example = new Zebra();
-
-    example.model();
-
-    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
   }
 }

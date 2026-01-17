@@ -81,6 +81,88 @@ public class NonTransitiveDice extends ExampleFD {
   /** If true then faces on non consequtive faces can be the same. */
   public boolean reuseOfNumbers = false;
 
+  /**
+   * It executes the program solving non transitive dice problem using two different methods. The
+   * second method employs constraint guided shaving.
+   *
+   * @param args the first argument specifies number of dices, the second argument specifies the
+   *     number of sides of each dice.
+   */
+  public static void main(String args[]) {
+
+    //		int sols = 0;
+
+    boolean firstSolutionFound = false;
+
+    int noDices = 4;
+    if (args.length > 0) noDices = Integer.parseInt(args[0]);
+
+    int noSides = 7;
+    if (args.length > 1) noSides = Integer.parseInt(args[1]);
+
+    int currentBest;
+
+    if (noSides * noSides % 2 == 0) currentBest = noSides * noSides / 2 - 1;
+    else currentBest = noSides * noSides / 2;
+
+    while (true) {
+
+      NonTransitiveDice example = new NonTransitiveDice();
+
+      example.noDices = noDices;
+      example.noSides = noSides;
+      example.currentBest = currentBest;
+
+      example.model();
+
+      boolean result = example.searchSpecial();
+
+      currentBest--;
+
+      if (result) {
+        firstSolutionFound = true;
+        //				sols++;
+      }
+
+      if (!result && firstSolutionFound) break;
+    }
+
+    firstSolutionFound = false;
+    currentBest = noSides * noSides / 2;
+
+    while (true) {
+
+      NonTransitiveDice example = new NonTransitiveDice();
+
+      example.noDices = noDices;
+      example.noSides = noSides;
+      example.currentBest = currentBest;
+
+      example.model();
+
+      boolean result = example.shavingSearch(example.shavingConstraints, false);
+
+      System.out.print(noDices + "\t");
+      System.out.print(noSides + "\t");
+      System.out.print(currentBest + "\t");
+      System.out.print(result + "\t");
+      System.out.print(example.search.getNodes() + "\t");
+      System.out.print(example.search.getDecisions() + "\t");
+      System.out.print(example.search.getWrongDecisions() + "\t");
+      System.out.print(example.search.getBacktracks() + "\t");
+      System.out.println(example.search.getMaximumDepth() + "\t");
+
+      currentBest--;
+
+      if (result) {
+        firstSolutionFound = true;
+        //				sols++;
+      }
+
+      if (!result && firstSolutionFound) break;
+    }
+  }
+
   @Override
   public void model() {
 
@@ -257,87 +339,5 @@ public class NonTransitiveDice extends ExampleFD {
     System.out.println(search.getMaximumDepth() + "\t");
 
     return result;
-  }
-
-  /**
-   * It executes the program solving non transitive dice problem using two different methods. The
-   * second method employs constraint guided shaving.
-   *
-   * @param args the first argument specifies number of dices, the second argument specifies the
-   *     number of sides of each dice.
-   */
-  public static void main(String args[]) {
-
-    //		int sols = 0;
-
-    boolean firstSolutionFound = false;
-
-    int noDices = 4;
-    if (args.length > 0) noDices = Integer.parseInt(args[0]);
-
-    int noSides = 7;
-    if (args.length > 1) noSides = Integer.parseInt(args[1]);
-
-    int currentBest;
-
-    if (noSides * noSides % 2 == 0) currentBest = noSides * noSides / 2 - 1;
-    else currentBest = noSides * noSides / 2;
-
-    while (true) {
-
-      NonTransitiveDice example = new NonTransitiveDice();
-
-      example.noDices = noDices;
-      example.noSides = noSides;
-      example.currentBest = currentBest;
-
-      example.model();
-
-      boolean result = example.searchSpecial();
-
-      currentBest--;
-
-      if (result) {
-        firstSolutionFound = true;
-        //				sols++;
-      }
-
-      if (!result && firstSolutionFound) break;
-    }
-
-    firstSolutionFound = false;
-    currentBest = noSides * noSides / 2;
-
-    while (true) {
-
-      NonTransitiveDice example = new NonTransitiveDice();
-
-      example.noDices = noDices;
-      example.noSides = noSides;
-      example.currentBest = currentBest;
-
-      example.model();
-
-      boolean result = example.shavingSearch(example.shavingConstraints, false);
-
-      System.out.print(noDices + "\t");
-      System.out.print(noSides + "\t");
-      System.out.print(currentBest + "\t");
-      System.out.print(result + "\t");
-      System.out.print(example.search.getNodes() + "\t");
-      System.out.print(example.search.getDecisions() + "\t");
-      System.out.print(example.search.getWrongDecisions() + "\t");
-      System.out.print(example.search.getBacktracks() + "\t");
-      System.out.println(example.search.getMaximumDepth() + "\t");
-
-      currentBest--;
-
-      if (result) {
-        firstSolutionFound = true;
-        //				sols++;
-      }
-
-      if (!result && firstSolutionFound) break;
-    }
   }
 }

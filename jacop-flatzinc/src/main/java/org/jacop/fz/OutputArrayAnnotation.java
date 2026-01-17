@@ -65,12 +65,12 @@ public class OutputArrayAnnotation {
     return id;
   }
 
-  void setArray(Var[] a) {
-    array = a;
-  }
-
   Var[] getArray() {
     return array;
+  }
+
+  void setArray(Var[] a) {
+    array = a;
   }
 
   int getNumberIndexes() {
@@ -91,11 +91,11 @@ public class OutputArrayAnnotation {
 
     StringBuilder s = new StringBuilder(id + " = array" + indexes.size() + "d(");
 
-    for (int i = 0; i < indexes.size(); i++)
-      if (indexes.get(i).getSize() == 0)
+    for (IntDomain index : indexes)
+      if (index.getSize() == 0)
         // s.append(indexes.get(i)).append(",");
         s.append("{}, ");
-      else s.append(indexes.get(i).min()).append("..").append(indexes.get(i).max()).append(", ");
+      else s.append(index.min()).append("..").append(index.max()).append(", ");
 
     s.append("[");
     for (int i = 0; i < array.length; i++) {

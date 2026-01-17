@@ -53,30 +53,27 @@ import org.jacop.set.core.SetVar;
  */
 public class Support implements ParserTreeConstants {
 
-  Store store;
-  Tables dictionary;
-
-  // ============ SAT solver interface ==============
-  SatTranslation sat;
-
+  // comparison operators
+  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+  static final AtomicInteger n1 = new AtomicInteger(0);
+  static final AtomicInteger n2 = new AtomicInteger(0);
+  static final AtomicInteger n3 = new AtomicInteger(0);
+  static final AtomicInteger n4 = new AtomicInteger(0);
   public Options options;
-
   // =========== Annotations ===========
   public boolean boundsConsistency = true;
   public boolean domainConsistency = false;
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar = null;
-
-  // comparison operators
-  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
-
+  Store store;
+  Tables dictionary;
+  // ============ SAT solver interface ==============
+  SatTranslation sat;
   boolean intPresent = true;
   boolean floatPresent = true;
-
   ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
   ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
-
   ReificationConstraints reif = new ReificationConstraints(this);
   ImplicationConstraints imply = new ImplicationConstraints(this);
 
@@ -354,7 +351,7 @@ public class Support implements ParserTreeConstants {
         if (s == null) { // there is still a chance that the var_array has constant sets ;)
           SetVar[] sVar = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
           int numberSingleton = 0;
-          for (int i = 0; i < sVar.length; i++) if (sVar[i].singleton()) numberSingleton++;
+          for (SetVar setVar : sVar) if (setVar.singleton()) numberSingleton++;
           if (sVar.length == numberSingleton) {
             s = new IntDomain[sVar.length];
             for (int i = 0; i < sVar.length; i++) s[i] = sVar[i].dom().glb();
@@ -591,6 +588,8 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  // =========== Specialized constraints ===================
+
   public void addReified(IntVar x, int v, IntVar b) {
     reif.add(x, v, b);
   }
@@ -606,10 +605,6 @@ public class Support implements ParserTreeConstants {
   public void poseImplied(Support s) {
     imply.pose();
   }
-
-  // =========== Specialized constraints ===================
-
-  static final AtomicInteger n1 = new AtomicInteger(0);
 
   Constraint fzXeqCReified(IntVar x, int c, IntVar b) {
 
@@ -648,8 +643,6 @@ public class Support implements ParserTreeConstants {
     };
   }
 
-  static final AtomicInteger n2 = new AtomicInteger(0);
-
   Constraint fzXeqCImplied(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
@@ -686,8 +679,6 @@ public class Support implements ParserTreeConstants {
       }
     };
   }
-
-  static final AtomicInteger n3 = new AtomicInteger(0);
 
   Constraint fzXneqCReified(IntVar x, int c, IntVar b) {
 
@@ -727,8 +718,6 @@ public class Support implements ParserTreeConstants {
       }
     };
   }
-
-  static final AtomicInteger n4 = new AtomicInteger(0);
 
   Constraint fzXneqCImplied(IntVar x, int c, IntVar b) {
 

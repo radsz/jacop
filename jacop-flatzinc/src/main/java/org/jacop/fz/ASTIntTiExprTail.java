@@ -3,6 +3,10 @@
 package org.jacop.fz;
 
 public class ASTIntTiExprTail extends SimpleNode {
+  // type 0=int; 1=interval; 2=list; 3=range set
+  int type = -1;
+  int low, high;
+
   public ASTIntTiExprTail(int id) {
     super(id);
   }
@@ -11,16 +15,12 @@ public class ASTIntTiExprTail extends SimpleNode {
     super(p, id);
   }
 
-  // type 0=int; 1=interval; 2=list; 3=range set
-  int type = -1;
-  int low, high;
+  public int getType() {
+    return type;
+  }
 
   public void setType(int t) {
     type = t;
-  }
-
-  public int getType() {
-    return type;
   }
 
   public void setLowHigh(int l, int h) {

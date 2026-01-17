@@ -56,6 +56,33 @@ public class Matrix {
     }
   }
 
+  public static FloatIntervalDomain[][] mult(
+      FloatInterval[][] F, double[][] b) { // F[m][n] * b[n][p]
+
+    if (F.length == 0) return new FloatIntervalDomain[0][0];
+    if (F[0].length != b.length) return null; // incorrect sizes
+
+    int n = F[0].length;
+    int m = F.length;
+    int p = b[0].length;
+
+    FloatIntervalDomain[][] result = new FloatIntervalDomain[m][p];
+    for (int i = 0; i < result.length; i++)
+      for (int j = 0; j < result[i].length; j++) result[i][j] = new FloatIntervalDomain(0.0, 0.0);
+
+    for (int i = 0; i < m; i++)
+      for (int j = 0; j < p; j++)
+        for (int k = 0; k < n; k++) {
+          FloatIntervalDomain mBound =
+              FloatDomain.mulBounds(F[i][k].min(), F[i][k].max(), b[k][j], b[k][j]);
+          result[i][j] =
+              FloatDomain.addBounds(
+                  result[i][j].min(), result[i][j].max(), mBound.min(), mBound.max());
+        }
+
+    return result;
+  }
+
   public double determinant() {
     return determinant(A);
   }
@@ -150,33 +177,6 @@ public class Matrix {
     return result;
   }
 
-  public static FloatIntervalDomain[][] mult(
-      FloatInterval[][] F, double[][] b) { // F[m][n] * b[n][p]
-
-    if (F.length == 0) return new FloatIntervalDomain[0][0];
-    if (F[0].length != b.length) return null; // incorrect sizes
-
-    int n = F[0].length;
-    int m = F.length;
-    int p = b[0].length;
-
-    FloatIntervalDomain[][] result = new FloatIntervalDomain[m][p];
-    for (int i = 0; i < result.length; i++)
-      for (int j = 0; j < result[i].length; j++) result[i][j] = new FloatIntervalDomain(0.0, 0.0);
-
-    for (int i = 0; i < m; i++)
-      for (int j = 0; j < p; j++)
-        for (int k = 0; k < n; k++) {
-          FloatIntervalDomain mBound =
-              FloatDomain.mulBounds(F[i][k].min(), F[i][k].max(), b[k][j], b[k][j]);
-          result[i][j] =
-              FloatDomain.addBounds(
-                  result[i][j].min(), result[i][j].max(), mBound.min(), mBound.max());
-        }
-
-    return result;
-  }
-
   double[][] multiplyByConstant(double[][] m, double c) {
 
     double[][] t = new double[m[0].length][m.length];
@@ -213,14 +213,14 @@ public class Matrix {
     boolean square = true;
 
     int n = M.length;
-    for (int i = 0; i < M.length; i++) if (M[i].length != n) square = false;
+    for (double[] doubles : M) if (doubles.length != n) square = false;
 
     return square;
   }
 
   void print(double[][] M) {
-    for (int i = 0; i < M.length; i++) {
-      for (int j = 0; j < M[i].length; j++) System.out.print(M[i][j] + " ");
+    for (double[] doubles : M) {
+      for (int j = 0; j < doubles.length; j++) System.out.print(doubles[j] + " ");
       System.out.println();
     }
   }

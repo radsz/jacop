@@ -53,6 +53,14 @@ public class Store {
   /** It specifies if some debugging information is printed. */
   public static final boolean debug = true;
 
+  /** It specifies the seed for random number generators. */
+  static long seed;
+
+  static boolean seedPresent = false;
+
+  /** It switches on/off debuging of remove level facilities. */
+  final boolean removeDebug = false;
+
   /**
    * It stores constraints scheduled for reevaluation. It does not register constraints which are
    * already scheduled for reevaluation.
@@ -111,21 +119,11 @@ public class Store {
   public int level = 0;
 
   /**
-   * A mutable variable is a special variable which can change value during the search. In the event
-   * of backtracks the old value must be restored, therefore the store keeps information about all
-   * mutable variables.
-   */
-  protected List<MutableVar> mutableVariables = new ArrayList<>(100);
-
-  /**
    * This variable specifies if there was a new propagation. Any change to any variable will setup
    * this variable to true. Usefull variable to discover the idempodence of the consistency
    * propagator.
    */
   public boolean propagationHasOccurred = false;
-
-  /** It stores the number of constraints which were imposed to the store. */
-  protected int numberOfConstraints = 0;
 
   /**
    * It specifies the current pointer to put next changed boolean variable. It has to be maintained
@@ -156,12 +154,6 @@ public class Store {
    */
   public boolean variableWeightManagement = false;
 
-  /** It switches on/off debuging of remove level facilities. */
-  final boolean removeDebug = false;
-
-  /** Number of variables stored within a store. */
-  protected int size = 0;
-
   /** Number of calls to consistency methods of constraints. */
   public long numberConsistencyCalls = 0;
 
@@ -175,14 +167,6 @@ public class Store {
   public boolean isLastConsistencyFailure = false;
 
   /**
-   * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
-   * search items are push onto the stack. If the search backtracks then the old values can be
-   * simply restored. Simple and efficient way for getting mutable variable functionality for simple
-   * data types.
-   */
-  protected List<Stateful> timeStamps = new ArrayList<>(100);
-
-  /**
    * This keeps information about watched constraints by given variable. Watched constraints are
    * active all the time. Use this with care and do not be surprised if some constraints stay longer
    * than you expect. It can be directly manipulated in any way (including setting to null if no
@@ -190,12 +174,51 @@ public class Store {
    */
   public Map<Var, Set<Constraint>> watchedConstraints;
 
+  /** It stores integer variables created within a store. */
+  public Var[] vars;
+
   /**
-   * It stores all the active replacements of constraints that are being applied upon constraint
-   * imposition. It makes it possible to replace constraints into other constraints. It can be very
-   * useful for efficiency or testing purposes.
+   * It allows to manage information about changed variables in efficient/specialized/tailored
+   * manner.
    */
-  private Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
+  public BacktrackableManager trailManager;
+
+  /**
+   * It may be used for faster retrieval of variables given their id. However, by default this
+   * variable is not created to reduce memory consumption. If it exists then it will be used by
+   * functions looking for a variable given the name.
+   */
+  public Map<String, Var> variablesHashMap = new HashMap<String, Var>();
+
+  /** It is used by Extensional MDD constraints. It is to represent G_yes. */
+  public SparseSet sparseSet;
+
+  /** It is used by Extensional MDD constraints. It is to represent the size of G_yes. */
+  public int sparseSetSize = 0;
+
+  /**
+   * A mutable variable is a special variable which can change value during the search. In the event
+   * of backtracks the old value must be restored, therefore the store keeps information about all
+   * mutable variables.
+   */
+  protected List<MutableVar> mutableVariables = new ArrayList<>(100);
+
+  /** It stores the number of constraints which were imposed to the store. */
+  protected int numberOfConstraints = 0;
+
+  /** Number of variables stored within a store. */
+  protected int size = 0;
+
+  /**
+   * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
+   * search items are push onto the stack. If the search backtracks then the old values can be
+   * simply restored. Simple and efficient way for getting mutable variable functionality for simple
+   * data types.
+   */
+  protected List<Stateful> timeStamps = new ArrayList<>(100);
+
+  /** The prefix of any variable which was noname. */
+  protected String variableIdPrefix = "_";
 
   /**
    * Variables for accumulated failure count (AFC) for constraints. constraintAFCManagement- opens
@@ -204,7 +227,6 @@ public class Store {
   boolean constraintAFCManagement = false;
 
   Set<Constraint> allConstraints;
-
   double decay = 0.99d;
 
   /**
@@ -215,10 +237,56 @@ public class Store {
 
   Set<Var> variablesPrunned;
 
-  /** It specifies the seed for random number generators. */
-  static long seed;
+  /**
+   * It stores all the active replacements of constraints that are being applied upon constraint
+   * imposition. It makes it possible to replace constraints into other constraints. It can be very
+   * useful for efficiency or testing purposes.
+   */
+  private Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
 
-  static boolean seedPresent = false;
+  /** It specifies the default constructor of the store. */
+  public Store() {
+
+    this(100);
+  }
+
+  /**
+   * It specifies the constructor of the store, which allows to decide what is the initial size of
+   * the Variable list.
+   *
+   * @param size specifies the initial number of variables.
+   */
+  @SuppressWarnings("unchecked")
+  public Store(int size) {
+
+    vars = new Var[size];
+
+    changed = new SimpleHashSet[queueNo];
+
+    for (int i = 0; i < queueNo; i++) changed[i] = new SimpleHashSet<>(100);
+
+    trailManager =
+        new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
+  }
+
+  public static long getSeed() {
+    if (seedPresent) return seed;
+
+    throw new IllegalArgumentException("Not defined seed for random generator");
+  }
+
+  public static void setSeed(long s) {
+    seed = s;
+    seedPresent = true;
+  }
+
+  public static boolean seedPresent() {
+    return seedPresent;
+  }
+
+  public static void resetSeed() {
+    seedPresent = false;
+  }
 
   /**
    * Variable given as a parameter no longer watches constraint given as parameter. This function
@@ -287,43 +355,6 @@ public class Store {
   public void clearWatchedConstraint() {
 
     watchedConstraints.clear();
-  }
-
-  /** The prefix of any variable which was noname. */
-  protected String variableIdPrefix = "_";
-
-  /** It stores integer variables created within a store. */
-  public Var[] vars;
-
-  /**
-   * It allows to manage information about changed variables in efficient/specialized/tailored
-   * manner.
-   */
-  public BacktrackableManager trailManager;
-
-  /** It specifies the default constructor of the store. */
-  public Store() {
-
-    this(100);
-  }
-
-  /**
-   * It specifies the constructor of the store, which allows to decide what is the initial size of
-   * the Variable list.
-   *
-   * @param size specifies the initial number of variables.
-   */
-  @SuppressWarnings("unchecked")
-  public Store(int size) {
-
-    vars = new Var[size];
-
-    changed = new SimpleHashSet[queueNo];
-
-    for (int i = 0; i < queueNo; i++) changed[i] = new SimpleHashSet<>(100);
-
-    trailManager =
-        new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
   }
 
   /**
@@ -512,13 +543,6 @@ public class Store {
   }
 
   /**
-   * It may be used for faster retrieval of variables given their id. However, by default this
-   * variable is not created to reduce memory consumption. If it exists then it will be used by
-   * functions looking for a variable given the name.
-   */
-  public Map<String, Var> variablesHashMap = new HashMap<String, Var>();
-
-  /**
    * This function looks for a variable with given id. It will first check the existence of a
    * hashmap variablesHashMap to get the variable from the hashmap in constant time. Only if the
    * variable was not found or hashmap object was not created a linear algorithm scanning through
@@ -542,13 +566,6 @@ public class Store {
   }
 
   /**
-   * It loads CSP from XML file, which uses an extended version of XCSP 2.0.
-   *
-   * @param path path pointing at a file
-   * @param filename
-   */
-
-  /**
    * This function returns the constraint which is currently reevaluated. It is an easy way to
    * discover which constraint caused a failure right after the inconsistency is signaled.
    *
@@ -565,6 +582,15 @@ public class Store {
    */
   public String getDescription() {
     return description;
+  }
+
+  /**
+   * This function sets the long description of the store.
+   *
+   * @param description description of the store
+   */
+  public void setDescription(String description) {
+    this.description = description;
   }
 
   /**
@@ -597,6 +623,15 @@ public class Store {
    */
   public String getVariableIdPrefix() {
     return variableIdPrefix;
+  }
+
+  /**
+   * This function sets the prefix of the automatically generated names for noname variables.
+   *
+   * @param idPrefix prefix of all variables with automatically generated names.
+   */
+  public void setVariableIdPrefix(String idPrefix) {
+    variableIdPrefix = idPrefix;
   }
 
   /**
@@ -993,15 +1028,6 @@ public class Store {
   }
 
   /**
-   * This function sets the long description of the store.
-   *
-   * @param description description of the store
-   */
-  public void setDescription(String description) {
-    this.description = description;
-  }
-
-  /**
    * This function sets the id of the store. This id is used when saving to XML file.
    *
    * @param id store id.
@@ -1041,15 +1067,6 @@ public class Store {
     if (removeDebug) System.out.println("Store level changes from " + level + " to " + levelSetTo);
 
     level = levelSetTo;
-  }
-
-  /**
-   * This function sets the prefix of the automatically generated names for noname variables.
-   *
-   * @param idPrefix prefix of all variables with automatically generated names.
-   */
-  public void setVariableIdPrefix(String idPrefix) {
-    variableIdPrefix = idPrefix;
   }
 
   /**
@@ -1128,12 +1145,12 @@ public class Store {
     allConstraints = getConstraints();
   }
 
-  public void setDecay(double d) {
-    decay = d;
-  }
-
   public double getDecay() {
     return decay;
+  }
+
+  public void setDecay(double d) {
+    decay = d;
   }
 
   public void afcManagement(boolean m) {
@@ -1165,12 +1182,6 @@ public class Store {
 
     return c.toString();
   }
-
-  /** It is used by Extensional MDD constraints. It is to represent G_yes. */
-  public SparseSet sparseSet;
-
-  /** It is used by Extensional MDD constraints. It is to represent the size of G_yes. */
-  public int sparseSetSize = 0;
 
   /**
    * It checks invariants to see if the execution went smoothly.
@@ -1216,24 +1227,5 @@ public class Store {
 
     result.replace(result.length() - 1, result.length(), "]");
     return result.toString();
-  }
-
-  public static void setSeed(long s) {
-    seed = s;
-    seedPresent = true;
-  }
-
-  public static long getSeed() {
-    if (seedPresent) return seed;
-
-    throw new IllegalArgumentException("Not defined seed for random generator");
-  }
-
-  public static boolean seedPresent() {
-    return seedPresent;
-  }
-
-  public static void resetSeed() {
-    seedPresent = false;
   }
 }

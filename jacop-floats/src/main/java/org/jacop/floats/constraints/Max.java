@@ -106,9 +106,9 @@ public class Max extends Constraint implements SatisfiedPresent {
       double maxValue = FloatDomain.MinFloat;
 
       double maxMax = max.max();
-      for (int i = 0; i < list.length; i++) {
+      for (FloatVar floatVar : list) {
 
-        var = list[i];
+        var = floatVar;
 
         var.domain.inMax(store.level, var, maxMax);
 
@@ -157,7 +157,7 @@ public class Max extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : max(  [ ");
     for (int i = 0; i < list.length; i++) {

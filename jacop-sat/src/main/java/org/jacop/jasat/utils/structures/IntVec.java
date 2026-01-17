@@ -56,6 +56,28 @@ public final class IntVec implements Iterable<Integer> {
   public MemoryPool pool;
 
   /**
+   * initializes the array with a memory pool
+   *
+   * @param pool the pool to use for memory allocation
+   */
+  public IntVec(MemoryPool pool) {
+    this.pool = pool;
+    this.array = pool.getNew(5);
+  }
+
+  /**
+   * initialize from pool and some integers
+   *
+   * @param pool the pool to use
+   * @param clause the elements to add
+   */
+  public IntVec(MemoryPool pool, Iterable<Integer> clause) {
+    this(pool);
+
+    for (int i : clause) add(i);
+  }
+
+  /**
    * add an element at the end of the array
    *
    * @param i the element to add
@@ -163,27 +185,5 @@ public final class IntVec implements Iterable<Integer> {
     List<Integer> list = new ArrayList<Integer>();
     for (int i = 0; i < numElem; ++i) list.add(array[i]);
     return list.iterator();
-  }
-
-  /**
-   * initializes the array with a memory pool
-   *
-   * @param pool the pool to use for memory allocation
-   */
-  public IntVec(MemoryPool pool) {
-    this.pool = pool;
-    this.array = pool.getNew(5);
-  }
-
-  /**
-   * initialize from pool and some integers
-   *
-   * @param pool the pool to use
-   * @param clause the elements to add
-   */
-  public IntVec(MemoryPool pool, Iterable<Integer> clause) {
-    this(pool);
-
-    for (int i : clause) add(i);
   }
 }

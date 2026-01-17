@@ -3,6 +3,9 @@
 package org.jacop.fz;
 
 public class ASTSolveKind extends SimpleNode {
+  // My additions
+  String kind;
+
   public ASTSolveKind(int id) {
     super(id);
   }
@@ -11,15 +14,12 @@ public class ASTSolveKind extends SimpleNode {
     super(p, id);
   }
 
-  // My additions
-  String kind;
+  public String getKind() {
+    return kind;
+  }
 
   public void setKind(String k) {
     kind = k;
-  }
-
-  public String getKind() {
-    return kind;
   }
 
   public String toString() {

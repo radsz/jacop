@@ -59,6 +59,20 @@ import org.jacop.core.Store;
  */
 public class BlueberryMuffins extends ExampleFD {
 
+  /**
+   * It executes the program solving this puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    BlueberryMuffins example = new BlueberryMuffins();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -178,19 +192,5 @@ public class BlueberryMuffins extends ExampleFD {
 
     // 6. Calla's last name isn't Ingham.
     store.impose(new XneqY(person[icalla], last[iingham]));
-  }
-
-  /**
-   * It executes the program solving this puzzle.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    BlueberryMuffins example = new BlueberryMuffins();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

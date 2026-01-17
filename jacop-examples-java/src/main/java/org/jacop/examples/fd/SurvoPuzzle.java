@@ -71,6 +71,59 @@ public class SurvoPuzzle extends ExampleFD {
   IntVar[][] x; // the solution
   IntVar[] x_arr; // x as an array, for alldifferent
 
+  /**
+   * It prints a matrix of variables. All variables must be grounded.
+   *
+   * @param matrix matrix containing the grounded variables.
+   * @param rows number of elements in the first dimension.
+   * @param cols number of elements in the second dimension.
+   */
+  public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
+
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        System.out.print(matrix[i][j].value() + " ");
+      }
+      System.out.println();
+    }
+  }
+
+  /**
+   * It executes the program to solve the specified SurvoPuzzle.
+   *
+   * @param args the first argument specifies the filename containing the puzzle to be solved.
+   */
+  public static void main(String args[]) {
+
+    String filename = "";
+    if (args.length == 1) {
+      filename = args[0];
+      System.out.println("Using file " + filename);
+    }
+
+    SurvoPuzzle m = new SurvoPuzzle();
+    if (filename.length() > 0) {
+      m.readFile(filename);
+    }
+
+    m.model();
+
+    long T1, T2;
+    T1 = System.currentTimeMillis();
+
+    boolean result = m.searchWithMaxRegret();
+
+    if (result) {
+      int numSolutions = m.search.getSolutionListener().solutionsNo();
+      System.out.println("Number of solutions: " + numSolutions);
+      printMatrix(m.x, m.r, m.c);
+    }
+
+    T2 = System.currentTimeMillis();
+
+    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+  } // end main
+
   /** model() */
   @Override
   public void model() {
@@ -146,23 +199,6 @@ public class SurvoPuzzle extends ExampleFD {
   }
 
   /**
-   * It prints a matrix of variables. All variables must be grounded.
-   *
-   * @param matrix matrix containing the grounded variables.
-   * @param rows number of elements in the first dimension.
-   * @param cols number of elements in the second dimension.
-   */
-  public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
-
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
-        System.out.print(matrix[i][j].value() + " ");
-      }
-      System.out.println();
-    }
-  }
-
-  /**
    * readFile()
    *
    * <p>Reads a Survo puzzle in the following format
@@ -214,8 +250,7 @@ public class SurvoPuzzle extends ExampleFD {
             // The problem matrix: index 1 .. row.length-1
             // The row sums: index row.length
             List<Integer> this_row = new ArrayList<Integer>();
-            for (int j = 0; j < row.length; j++) {
-              String s = row[j];
+            for (String s : row) {
               if (s.equals("*")) {
                 this_row.add(0);
               } else {
@@ -250,40 +285,4 @@ public class SurvoPuzzle extends ExampleFD {
       System.out.println(e);
     }
   } // end readFile
-
-  /**
-   * It executes the program to solve the specified SurvoPuzzle.
-   *
-   * @param args the first argument specifies the filename containing the puzzle to be solved.
-   */
-  public static void main(String args[]) {
-
-    String filename = "";
-    if (args.length == 1) {
-      filename = args[0];
-      System.out.println("Using file " + filename);
-    }
-
-    SurvoPuzzle m = new SurvoPuzzle();
-    if (filename.length() > 0) {
-      m.readFile(filename);
-    }
-
-    m.model();
-
-    long T1, T2;
-    T1 = System.currentTimeMillis();
-
-    boolean result = m.searchWithMaxRegret();
-
-    if (result) {
-      int numSolutions = m.search.getSolutionListener().solutionsNo();
-      System.out.println("Number of solutions: " + numSolutions);
-      printMatrix(m.x, m.r, m.c);
-    }
-
-    T2 = System.currentTimeMillis();
-
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-  } // end main
 } // end class

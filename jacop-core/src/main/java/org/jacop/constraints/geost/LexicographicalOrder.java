@@ -64,18 +64,18 @@ public interface LexicographicalOrder {
   int dimensionAt(int precedenceLevel);
 
   /**
-   * It shifts the lexicographical order so that the most significant dimension is set to d.
-   *
-   * @param d the dimension to be considered most significant
-   */
-  void setMostSignificantDimension(int d);
-
-  /**
    * This is equivalent to the call precedenceOf(0).
    *
    * @return the most significant dimension
    */
   int getMostSignificantDimension();
+
+  /**
+   * It shifts the lexicographical order so that the most significant dimension is set to d.
+   *
+   * @param d the dimension to be considered most significant
+   */
+  void setMostSignificantDimension(int d);
 
   /**
    * It returns the ordering of dimensions used when no shift is applied (i.e. when the most

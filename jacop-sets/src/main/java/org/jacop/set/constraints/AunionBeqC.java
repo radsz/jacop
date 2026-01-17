@@ -110,19 +110,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
       SetDomain bDom = b.dom();
       SetDomain cDom = c.dom();
 
-      /**
-       * It computes the consistency of the constraint.
-       *
-       * <p>A \/ B = C
-       *
-       * <p>The list of rules to use.
-       *
-       * <p>T5.
-       *
-       * <p>glbA = glbA \/ ( glbC \ lubB ) lubA = lubA /\ lubC
-       *
-       * <p>glbB = glbB \/ ( glbC \ lubA ) lubB = lubB /\ lubC
-       */
       if (cHasChanged || bHasChanged)
         if (cDom.lub().getSize() > 0) {
           IntDomain glbA = cDom.glb().subtract(bDom.lub());
@@ -139,41 +126,11 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
 
       if (cHasChanged) b.domain.inLUB(store.level, b, cDom.lub());
 
-      /**
-       * T6.
-       *
-       * <p>glbC = glbC \/ glbA \/ glbB lubC = lubC /\ ( lubA \/ lubB )
-       */
       if (aHasChanged) c.domain.inGLB(store.level, c, aDom.glb());
       if (bHasChanged) c.domain.inGLB(store.level, c, bDom.glb());
       if (aHasChanged || bHasChanged) c.domain.inLUB(store.level, c, aDom.lub().union(bDom.lub()));
 
-      /**
-       * For all sets, A, B, C apply the rules as specified for A below.
-       *
-       * <p>#A.in(#glbA, #lubA).
-       *
-       * <p>If #glb is already equal to maximum allowed cardinality then set is specified by glb. if
-       * (#glbA == #A.max()) then A = glbA If #lub is already equal to minimum allowed cardinality
-       * then set is specified by lub. if (#lubA == #A.min()) then A = lubA
-       */
       if (performCardinalityReasoning) {
-        /**
-         * Cardinality reasoning
-         *
-         * <p>For C)
-         *
-         * <p>(4) + (8) - elements already in union
-         *
-         * <p>max ( #A.min - (4), #B.min() - (8) ) - the minimum number of elements which have to be
-         * added to A or B which will end up in the union. #A.min - (4) + #B.min() - (8) - (2+5+6+7)
-         * - the elements which have to be added minus what can be added at the same time to both
-         * sets. (4+5+6) + (6+7+8) - 6 - this is already taken care of as it does not contain other
-         * cardinalities only set operations.
-         *
-         * <p>#C.inMin( max ( #A.min - (4), #B.min() - (8) ) ) #C.inMin( #A.min - (4) + #B.min() -
-         * (8) - (2+5+6+7) )
-         */
         int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
         int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
         int maxLeft = a.domain.card().min() - sizeOf_4;
@@ -186,18 +143,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
         c.domain.inCardinality(
             store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
 
-        /**
-         * Cardinality reasoning for A)
-         *
-         * <p>#C.min() - (2, 3, 7, 8) - elements required by C which can not be contributed by B
-         * without contributing to A.
-         *
-         * <p>#A.inMin( #C.min() - (2, 3, 7, 8) )
-         *
-         * <p>#C.max() - (8)
-         *
-         * <p>#A.inMax( #C.max() - (8) );
-         */
         int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
 
         a.domain.inCardinality(
@@ -206,18 +151,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
             c.domain.card().min() - sizeOf_2_3_7_8,
             c.domain.card().max() - sizeOf_8);
 
-        /**
-         * Cardinality reasoning for B)
-         *
-         * <p>#C.min() - (4) - (1) - elements required by C which can not be contributed by A
-         * without contributing to B.
-         *
-         * <p>#B.inMin( #C.min() - (4) - (1) )
-         *
-         * <p>#C.max() - (4)
-         *
-         * <p>#B.inMax( #C.max() - (4) );
-         */
         int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
 
         b.domain.inCardinality(

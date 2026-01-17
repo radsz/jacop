@@ -50,16 +50,6 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
 /**
- * It is a wrapper over Select methods that makes it possible to trace search and variables'
- * changes.
- *
- * <p>It generates xml format accepted by CPViz tool developed by Helmut Simonis.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
-
-/**
  * TODO TraceGenerator should accept as input to constructor a Search object. It should get all the
  * previous listeners and establish itself as the parent of those listeners and substitute them for
  * itself in the search provided. It should ask them to get the proper return value for listener
@@ -88,10 +78,18 @@ import org.xml.sax.helpers.AttributesImpl;
 public class TraceGenerator<T extends Var>
     implements SelectChoicePoint<T>, ConsistencyListener, ExitChildListener<T>, ExitListener {
 
+  /** The file containing information about tree for CPviz format. */
+  public final String treeFilename;
+
+  /** The file containing visualisation information. */
+  public final String visFilename;
+
+  /** It specifies the list of variables that are being traced. */
+  public List<Var> tracedVar = new ArrayList<Var>();
+
+  public Map<Var, Integer> varIndex = Var.createEmptyPositioning();
   ConsistencyListener[] consistencyListeners;
-
   ExitChildListener<T>[] exitChildListeners;
-
   ExitListener[] exitListeners;
 
   /** It stores the original select choice point method that is used by this trace wrapper. */
@@ -103,12 +101,6 @@ public class TraceGenerator<T extends Var>
   /** It specifies information about value being selected by internal select choice point. */
   int selectedValue;
 
-  /** The file containing information about tree for CPviz format. */
-  public final String treeFilename;
-
-  /** The file containing visualisation information. */
-  public final String visFilename;
-
   /** An xml handler for tree file. */
   TransformerHandler hdTree;
 
@@ -119,11 +111,6 @@ public class TraceGenerator<T extends Var>
   SearchNode currentSearchNode;
   int searchNodeId = 1;
   int visualisationNodeId = 1;
-
-  /** It specifies the list of variables that are being traced. */
-  public List<Var> tracedVar = new ArrayList<Var>();
-
-  public Map<Var, Integer> varIndex = Var.createEmptyPositioning();
 
   /**
    * It creates a CPviz trace generator around proper select choice point object.
@@ -312,8 +299,8 @@ public class TraceGenerator<T extends Var>
 
     if (consistencyListeners != null) {
       boolean code = false;
-      for (int i = 0; i < consistencyListeners.length; i++)
-        code |= consistencyListeners[i].executeAfterConsistency(consistent);
+      for (ConsistencyListener consistencyListener : consistencyListeners)
+        code |= consistencyListener.executeAfterConsistency(consistent);
       consistent = code;
     }
 
@@ -377,8 +364,8 @@ public class TraceGenerator<T extends Var>
 
     if (exitChildListeners != null) {
       boolean code = false;
-      for (int i = 0; i < exitChildListeners.length; i++)
-        code |= exitChildListeners[i].leftChild(var, value, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        code |= exitChildListener.leftChild(var, value, status);
       returnCode = code;
     }
 
@@ -424,8 +411,8 @@ public class TraceGenerator<T extends Var>
 
     if (exitChildListeners != null) {
       boolean code = false;
-      for (int i = 0; i < exitChildListeners.length; i++)
-        code |= exitChildListeners[i].leftChild(choice, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        code |= exitChildListener.leftChild(choice, status);
       returnCode = code;
     }
 

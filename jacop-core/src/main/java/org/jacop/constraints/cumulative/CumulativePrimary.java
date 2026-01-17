@@ -53,35 +53,33 @@ import org.jacop.core.TimeStamp;
 
 class CumulativePrimary extends Constraint {
 
-  private static AtomicInteger idNumber = new AtomicInteger(0);
-
   private static final boolean debug = false;
   private static final boolean debugNarr = false;
-
-  private Comparator<Event> eventComparator =
-      (o1, o2) -> {
-        int dateDiff = o1.date() - o2.date();
-        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-      };
-
+  // event type
+  private static final int profile = 0;
+  private static final int pruneStart = 1;
+  private static final int pruneEnd = 2;
+  private static AtomicInteger idNumber = new AtomicInteger(0);
+  /*
+   * It specifies the limit of the profile of cumulative use of resources.
+   */
+  public final IntVar limit;
   /*
    * start times of tasks
    */
   private final IntVar[] start;
-
   /*
    * All durations and resources of the constraint
    */
   private final int[] dur;
   private final int[] res;
-
+  private Comparator<Event> eventComparator =
+      (o1, o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+      };
   private int[] activeMap;
   private TimeStamp<Integer> activePnt;
-
-  /*
-   * It specifies the limit of the profile of cumulative use of resources.
-   */
-  public final IntVar limit;
 
   /*
    * It creates a cumulative constraint.
@@ -389,11 +387,6 @@ class CumulativePrimary extends Constraint {
       activeMap[j] = tmp;
     }
   }
-
-  // event type
-  private static final int profile = 0;
-  private static final int pruneStart = 1;
-  private static final int pruneEnd = 2;
 
   private static class Event {
     int type;

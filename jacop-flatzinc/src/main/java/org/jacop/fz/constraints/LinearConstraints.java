@@ -795,12 +795,12 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   boolean allWeightsOne(int[] w) {
-    for (int i = 0; i < w.length; i++) if (w[i] != 1) return false;
+    for (int j : w) if (j != 1) return false;
     return true;
   }
 
   boolean allWeightsMinusOne(int[] w) {
-    for (int i = 0; i < w.length; i++) if (w[i] != -1) return false;
+    for (int j : w) if (j != -1) return false;
     return true;
   }
 

@@ -183,7 +183,7 @@ public class DefaultSearchVars {
 
   public String toString() {
 
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
 
     buf.append("%% default int search variables = array1d(1..");
     buf.append(int_search_variables.length + ", ");

@@ -264,7 +264,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : TanPeqR(").append(p).append(", ").append(q).append(" )");
 

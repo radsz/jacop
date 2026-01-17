@@ -40,12 +40,9 @@ import java.io.StringReader;
  */
 class LexicalAnalyzer {
 
-  private StreamTokenizer input;
-
   // constants to identify the type of the last recognized token.
   static final int INVALID_CHAR = -1; // unexpected character found.
   static final int NO_TOKEN = 0; // No tokens recognized yet.
-
   static final int PLUS = 3;
   static final int DOT = 4;
   static final int WORD = 5;
@@ -53,9 +50,9 @@ class LexicalAnalyzer {
   static final int RIGHT_PAREN = 7;
   static final int STAR = 8;
   static final int EOF = 9;
-
   static final int Operator = 10;
   static final int Beginning = 11;
+  private StreamTokenizer input;
 
   /**
    * Constructor creating a Lexical Analyzer.

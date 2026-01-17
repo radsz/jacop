@@ -47,13 +47,13 @@ import org.jacop.core.Store;
  */
 public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
 
+  private final Random generator;
+
   /**
    * It specifies if the left branch (values smaller or equal to the value selected) are first
    * considered.
    */
   public boolean leftFirst = true;
-
-  private final Random generator;
 
   /**
    * The constructor to create a simple choice select mechanism.

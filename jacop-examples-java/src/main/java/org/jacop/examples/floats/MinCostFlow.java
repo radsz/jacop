@@ -30,20 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models min-cost flow for floating solver.
- *
- * <p>Minimum Cost Flow problem. One of the most classic OR problems known: Find the minimum cost
- * flow in a network, while satisfying the demands in the nodes, and not violating the capacities of
- * the arcs.
- *
- * <p>Testdata available at: http://elib.zib.de/pub/Packages/mp-testdata/mincost/
- *
- * <p>Based on minizinc model min_cost_flow.mzn Jakob Puchinger <jakobp@cs.mu.oz.au> Wed Jun 14
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.core.Store;
@@ -59,6 +45,18 @@ public class MinCostFlow {
 
   double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    MinCostFlow example = new MinCostFlow();
+
+    example.min_cost_flow();
+  }
 
   void min_cost_flow() {
 
@@ -153,7 +151,7 @@ public class MinCostFlow {
     System.out.println(cost);
     // System.out.printf ("cost = %.2f\n", cost.value());
 
-    for (int i = 0; i < X.length; i++) System.out.printf("%.2f, ", X[i].value());
+    for (FloatVar x : X) System.out.printf("%.2f, ", x.value());
     System.out.println();
     // for (int i = 0; i < X.length; i++) {
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
@@ -163,17 +161,5 @@ public class MinCostFlow {
     // }
 
     System.out.println("\nPrecision = " + FloatDomain.precision());
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    MinCostFlow example = new MinCostFlow();
-
-    example.min_cost_flow();
   }
 }

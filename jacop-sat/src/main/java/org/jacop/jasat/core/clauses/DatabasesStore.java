@@ -46,6 +46,23 @@ import org.jacop.jasat.core.SolverState;
  */
 public final class DatabasesStore implements SolverComponent, ClauseDatabaseInterface {
 
+  // the databases
+  public AbstractClausesDatabase[] databases;
+  // the index of the first databases[] empty slot
+  public int currentIndex = 0;
+  // solver instance
+  public Core core;
+  // how many clausesDatabases can we have ? must be a power of 2
+  private int MAX_NUMBER_OF_DATABASES = 8;
+  // the mask to get the database index part
+  private int DATABASES_MASK;
+  // the mask to get the clause index part
+  private int INDEX_MASK;
+  // the number of bits to shift right a DATABASE_MASK to get a normal int
+  private int INDEX_MASK_NUM_BITS;
+  // log_2 of the number of databases
+  private int LOG_OF_NUM_DATABASES = 0;
+
   // compute values and check things
   private void initializeMasks() {
     int i = MAX_NUMBER_OF_DATABASES >>> 1;
@@ -63,30 +80,6 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     assert Integer.bitCount(INDEX_MASK) == Integer.SIZE - LOG_OF_NUM_DATABASES - 1;
     assert Integer.bitCount(DATABASES_MASK ^ INDEX_MASK) == Integer.SIZE - 1;
   }
-
-  // how many clausesDatabases can we have ? must be a power of 2
-  private int MAX_NUMBER_OF_DATABASES = 8;
-
-  // the mask to get the database index part
-  private int DATABASES_MASK;
-
-  // the mask to get the clause index part
-  private int INDEX_MASK;
-
-  // the number of bits to shift right a DATABASE_MASK to get a normal int
-  private int INDEX_MASK_NUM_BITS;
-
-  // log_2 of the number of databases
-  private int LOG_OF_NUM_DATABASES = 0;
-
-  // the databases
-  public AbstractClausesDatabase[] databases;
-
-  // the index of the first databases[] empty slot
-  public int currentIndex = 0;
-
-  // solver instance
-  public Core core;
 
   public int addClause(int[] clause, boolean isModelClause) {
 
@@ -269,8 +262,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     int noOfVariables = core.getMaxVariable();
     int noOfClauses = 0;
 
-    for (int i = 0; i < databases.length; i++) {
-      if (databases[i] != null) noOfClauses += databases[i].size();
+    for (AbstractClausesDatabase abstractClausesDatabase : databases) {
+      if (abstractClausesDatabase != null) noOfClauses += abstractClausesDatabase.size();
     }
 
     output.write("p cnf ");
@@ -279,8 +272,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     output.write(Integer.toString(noOfClauses));
     output.write("\n");
 
-    for (int i = 0; i < databases.length; i++) {
-      if (databases[i] != null) databases[i].toCNF(output);
+    for (AbstractClausesDatabase database : databases) {
+      if (database != null) database.toCNF(output);
     }
   }
 }

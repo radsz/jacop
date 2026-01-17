@@ -53,6 +53,64 @@ public class MagicSquares extends ExampleFD {
   /** It specifies the list of constraints which can be used for guiding shaving. */
   public List<Constraint> guidingShaving;
 
+  /**
+   * It executes the program which solves the MagicSquare problem using many different model and
+   * searches.
+   *
+   * @param args the first argument allows to specify the size of magic square.
+   */
+  public static void test(String args[]) {
+
+    MagicSquares example = new MagicSquares();
+
+    if (args.length != 0) example.number = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchMiddle()) System.out.println("Solution(s) found");
+
+    MagicSquares exampleDual = new MagicSquares();
+
+    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
+
+    exampleDual.modelDual();
+
+    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
+
+    MagicSquares exampleShave = new MagicSquares();
+
+    if (args.length != 0) exampleShave.number = Integer.parseInt(args[0]);
+
+    exampleShave.model4Shaving();
+
+    if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
+      System.out.println("Solution(s) found");
+  }
+
+  /**
+   * It executes the program which solves the MagicSquare problem.
+   *
+   * @param args the first argument allows to specify the size of magic square.
+   */
+  public static void main(String args[]) {
+
+    MagicSquares example = new MagicSquares();
+
+    if (args.length != 0) example.number = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchMiddle()) System.out.println("Solution(s) found");
+
+    MagicSquares exampleDual = new MagicSquares();
+
+    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
+
+    exampleDual.modelDual();
+
+    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -235,63 +293,5 @@ public class MagicSquares extends ExampleFD {
     // Imposing inequalities constraints between squares
     Constraint cx = new Alldistinct(squares);
     store.impose(cx);
-  }
-
-  /**
-   * It executes the program which solves the MagicSquare problem using many different model and
-   * searches.
-   *
-   * @param args the first argument allows to specify the size of magic square.
-   */
-  public static void test(String args[]) {
-
-    MagicSquares example = new MagicSquares();
-
-    if (args.length != 0) example.number = Integer.parseInt(args[0]);
-
-    example.model();
-
-    if (example.searchMiddle()) System.out.println("Solution(s) found");
-
-    MagicSquares exampleDual = new MagicSquares();
-
-    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
-
-    exampleDual.modelDual();
-
-    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
-
-    MagicSquares exampleShave = new MagicSquares();
-
-    if (args.length != 0) exampleShave.number = Integer.parseInt(args[0]);
-
-    exampleShave.model4Shaving();
-
-    if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
-      System.out.println("Solution(s) found");
-  }
-
-  /**
-   * It executes the program which solves the MagicSquare problem.
-   *
-   * @param args the first argument allows to specify the size of magic square.
-   */
-  public static void main(String args[]) {
-
-    MagicSquares example = new MagicSquares();
-
-    if (args.length != 0) example.number = Integer.parseInt(args[0]);
-
-    example.model();
-
-    if (example.searchMiddle()) System.out.println("Solution(s) found");
-
-    MagicSquares exampleDual = new MagicSquares();
-
-    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
-
-    exampleDual.modelDual();
-
-    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
   }
 }

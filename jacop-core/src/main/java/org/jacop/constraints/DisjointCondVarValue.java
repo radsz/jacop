@@ -90,7 +90,7 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     for (int i = 0; i < Rects.length; i++)
       if (i == Rects.length - 1) result.append(Rects[i]);

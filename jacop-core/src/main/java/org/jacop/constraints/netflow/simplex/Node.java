@@ -62,14 +62,14 @@ public final class Node {
   public Node thread;
   public int depth;
 
-  /** marks the cut (S,T) for dual pivot */
-  boolean marked;
-
   /** number of connected arcs */
   public int degree;
 
   /** adjacency list (recorded when degree reaches 2) */
   public Arc[] adjacencyList;
+
+  /** marks the cut (S,T) for dual pivot */
+  boolean marked;
 
   public Node(String name, int balance) {
     this.name = name;

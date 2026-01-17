@@ -95,15 +95,6 @@ public class AinB extends PrimitiveConstraint {
 
     // FIXME, take into account strict relation.
 
-    /**
-     * Consistency of the constraint A in B.
-     *
-     * <p>B can not be an empty set.
-     *
-     * <p>T1. glbA = glbA lubA = lubA /\ lubB
-     *
-     * <p>T2 glbB = glbB \/ glbA lubB = lubB
-     */
     if (strict) if (b.domain.isEmpty()) throw Store.failException;
 
     // if (bHasChanged)

@@ -43,6 +43,8 @@ import org.jacop.core.TimeStamp;
  */
 public abstract class RegState {
 
+  static final boolean debugAll = false;
+
   /** It specifies the list of successor states for this state. */
   public RegState[] successors;
 
@@ -60,8 +62,6 @@ public abstract class RegState {
 
   /** The position of the state within a level. */
   public int pos;
-
-  static final boolean debugAll = false;
 
   /**
    * It specifies that for a given values from an interval an automata will move from the current

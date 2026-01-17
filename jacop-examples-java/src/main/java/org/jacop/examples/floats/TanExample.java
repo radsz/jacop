@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models tan(x) = -x for floating solver.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.TanPeqR;
@@ -45,6 +39,18 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 public class TanExample {
+
+  /**
+   * It executes the program which computes values for tan(x) = -x.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    TanExample example = new TanExample();
+
+    example.model();
+  }
 
   public void model() {
 
@@ -91,17 +97,5 @@ public class TanExample {
     T2 = System.currentTimeMillis();
 
     System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-  }
-
-  /**
-   * It executes the program which computes values for tan(x) = -x.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    TanExample example = new TanExample();
-
-    example.model();
   }
 }

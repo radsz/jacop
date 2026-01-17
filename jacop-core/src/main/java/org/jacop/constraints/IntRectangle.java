@@ -131,7 +131,7 @@ class IntRectangle {
 
   @Override
   public String toString() {
-    StringBuffer s = new StringBuffer("[");
+    StringBuilder s = new StringBuilder("[");
     for (int i = 0; i < dim; i++) {
       s.append(origin[i] + ", ");
     }

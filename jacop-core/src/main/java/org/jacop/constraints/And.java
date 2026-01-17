@@ -54,6 +54,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
   protected final PrimitiveConstraint listOfC[];
 
   private final QueueForward<PrimitiveConstraint> queueForward;
+  private boolean propagation;
 
   /**
    * It constructs an And constraint based on primitive constraints. The constraint is satisfied if
@@ -96,8 +97,6 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
     // b.queueIndex)).map(a -> a.queueIndex).orElse(0);
 
   }
-
-  private boolean propagation;
 
   @Override
   public void consistency(Store store) {

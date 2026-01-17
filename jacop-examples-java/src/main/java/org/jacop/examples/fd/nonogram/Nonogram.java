@@ -81,6 +81,107 @@ public class Nonogram extends ExampleFD {
    */
   public boolean extensionalMDD = false;
 
+  /** It specifies a rule for each row. */
+  public int[][] row_rules = {
+    {0, 0, 0, 0, 2, 2, 3},
+    {0, 0, 4, 1, 1, 1, 4},
+    {0, 0, 4, 1, 2, 1, 1},
+    {4, 1, 1, 1, 1, 1, 1},
+    {0, 2, 1, 1, 2, 3, 5},
+    {0, 1, 1, 1, 1, 2, 1},
+    {0, 0, 3, 1, 5, 1, 2},
+    {0, 3, 2, 2, 1, 2, 2},
+    {2, 1, 4, 1, 1, 1, 1},
+    {0, 2, 2, 1, 2, 1, 2},
+    {0, 1, 1, 1, 3, 2, 3},
+    {0, 0, 1, 1, 2, 7, 3},
+    {0, 0, 1, 2, 2, 1, 5},
+    {0, 0, 3, 2, 2, 1, 2},
+    {0, 0, 0, 3, 2, 1, 2},
+    {0, 0, 0, 0, 5, 1, 2},
+    {0, 0, 0, 2, 2, 1, 2},
+    {0, 0, 0, 4, 2, 1, 2},
+    {0, 0, 0, 6, 2, 3, 2},
+    {0, 0, 0, 7, 4, 3, 2},
+    {0, 0, 0, 0, 7, 4, 4},
+    {0, 0, 0, 0, 7, 1, 4},
+    {0, 0, 0, 0, 6, 1, 4},
+    {0, 0, 0, 0, 4, 2, 2},
+    {0, 0, 0, 0, 0, 2, 1}
+  };
+
+  /** It specifies a rule for each column. */
+  public int[][] col_rules = {
+    {0, 0, 1, 1, 2, 2},
+    {0, 0, 0, 5, 5, 7},
+    {0, 0, 5, 2, 2, 9},
+    {0, 0, 3, 2, 3, 9},
+    {0, 1, 1, 3, 2, 7},
+    {0, 0, 0, 3, 1, 5},
+    {0, 7, 1, 1, 1, 3},
+    {1, 2, 1, 1, 2, 1},
+    {0, 0, 0, 4, 2, 4},
+    {0, 0, 1, 2, 2, 2},
+    {0, 0, 0, 4, 6, 2},
+    {0, 0, 1, 2, 2, 1},
+    {0, 0, 3, 3, 2, 1},
+    {0, 0, 0, 4, 1, 15},
+    {1, 1, 1, 3, 1, 1},
+    {2, 1, 1, 2, 2, 3},
+    {0, 0, 1, 4, 4, 1},
+    {0, 0, 1, 4, 3, 2},
+    {0, 0, 1, 1, 2, 2},
+    {0, 7, 2, 3, 1, 1},
+    {0, 2, 1, 1, 1, 5},
+    {0, 0, 0, 1, 2, 5},
+    {0, 0, 1, 1, 1, 3},
+    {0, 0, 0, 4, 2, 1},
+    {0, 0, 0, 0, 0, 3}
+  };
+
+  /**
+   * It executes the program which solves this simple problem.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    Nonogram example = new Nonogram();
+
+    example.model();
+    if (example.searchAll()) System.out.println("Solution(s) found");
+
+    example.printMatrix(example.board);
+  }
+
+  /**
+   * It executes the program which solves this simple problem.
+   *
+   * @param args no arguments are read.
+   */
+  public static void test(String args[]) {
+
+    Nonogram example = new Nonogram();
+
+    example.model();
+    if (example.searchAll()) System.out.println("Solution(s) found");
+    example.printMatrix(example.board);
+
+    for (int i = 0; i <= 150; i++) {
+
+      String no = String.valueOf(i);
+      while (no.length() < 3) no = "0" + no;
+
+      System.out.println("Problem file data" + no + ".nin");
+      example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
+      example.model();
+
+      if (example.searchAll()) System.out.println("Solution(s) found");
+
+      example.printMatrix(example.board);
+    }
+  }
+
   public void readFromFile(String filename) {
 
     String lines[] = new String[100];
@@ -99,9 +200,9 @@ public class Nonogram extends ExampleFD {
       String[] result = pat.split(str);
 
       int current = 0;
-      for (int j = 0; j < result.length; j++)
+      for (String s : result)
         try {
-          int currentNo = Integer.parseInt(result[j]);
+          int currentNo = Integer.parseInt(s);
           dimensions[current++] = currentNo;
         } catch (Exception ex) {
 
@@ -134,9 +235,9 @@ public class Nonogram extends ExampleFD {
       int[] sequence = new int[result.length];
 
       int current = 0;
-      for (int j = 0; j < result.length; j++)
+      for (String s : result)
         try {
-          sequence[current++] = Integer.parseInt(result[j]);
+          sequence[current++] = Integer.parseInt(s);
         } catch (Exception ex) {
         }
 
@@ -302,115 +403,14 @@ public class Nonogram extends ExampleFD {
    */
   public void printMatrix(IntVar[][] matrix) {
 
-    for (int i = 0; i < matrix.length; i++) {
-      for (int j = 0; j < matrix[i].length; j++) {
-        if (matrix[i][j].value() == black) System.out.print("0");
+    for (IntVar[] intVars : matrix) {
+      for (int j = 0; j < intVars.length; j++) {
+        if (intVars[j].value() == black) System.out.print("0");
         else System.out.print(" ");
       }
       System.out.println();
     }
   }
-
-  /**
-   * It executes the program which solves this simple problem.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    Nonogram example = new Nonogram();
-
-    example.model();
-    if (example.searchAll()) System.out.println("Solution(s) found");
-
-    example.printMatrix(example.board);
-  }
-
-  /**
-   * It executes the program which solves this simple problem.
-   *
-   * @param args no arguments are read.
-   */
-  public static void test(String args[]) {
-
-    Nonogram example = new Nonogram();
-
-    example.model();
-    if (example.searchAll()) System.out.println("Solution(s) found");
-    example.printMatrix(example.board);
-
-    for (int i = 0; i <= 150; i++) {
-
-      String no = String.valueOf(i);
-      while (no.length() < 3) no = "0" + no;
-
-      System.out.println("Problem file data" + no + ".nin");
-      example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
-      example.model();
-
-      if (example.searchAll()) System.out.println("Solution(s) found");
-
-      example.printMatrix(example.board);
-    }
-  }
-
-  /** It specifies a rule for each row. */
-  public int[][] row_rules = {
-    {0, 0, 0, 0, 2, 2, 3},
-    {0, 0, 4, 1, 1, 1, 4},
-    {0, 0, 4, 1, 2, 1, 1},
-    {4, 1, 1, 1, 1, 1, 1},
-    {0, 2, 1, 1, 2, 3, 5},
-    {0, 1, 1, 1, 1, 2, 1},
-    {0, 0, 3, 1, 5, 1, 2},
-    {0, 3, 2, 2, 1, 2, 2},
-    {2, 1, 4, 1, 1, 1, 1},
-    {0, 2, 2, 1, 2, 1, 2},
-    {0, 1, 1, 1, 3, 2, 3},
-    {0, 0, 1, 1, 2, 7, 3},
-    {0, 0, 1, 2, 2, 1, 5},
-    {0, 0, 3, 2, 2, 1, 2},
-    {0, 0, 0, 3, 2, 1, 2},
-    {0, 0, 0, 0, 5, 1, 2},
-    {0, 0, 0, 2, 2, 1, 2},
-    {0, 0, 0, 4, 2, 1, 2},
-    {0, 0, 0, 6, 2, 3, 2},
-    {0, 0, 0, 7, 4, 3, 2},
-    {0, 0, 0, 0, 7, 4, 4},
-    {0, 0, 0, 0, 7, 1, 4},
-    {0, 0, 0, 0, 6, 1, 4},
-    {0, 0, 0, 0, 4, 2, 2},
-    {0, 0, 0, 0, 0, 2, 1}
-  };
-
-  /** It specifies a rule for each column. */
-  public int[][] col_rules = {
-    {0, 0, 1, 1, 2, 2},
-    {0, 0, 0, 5, 5, 7},
-    {0, 0, 5, 2, 2, 9},
-    {0, 0, 3, 2, 3, 9},
-    {0, 1, 1, 3, 2, 7},
-    {0, 0, 0, 3, 1, 5},
-    {0, 7, 1, 1, 1, 3},
-    {1, 2, 1, 1, 2, 1},
-    {0, 0, 0, 4, 2, 4},
-    {0, 0, 1, 2, 2, 2},
-    {0, 0, 0, 4, 6, 2},
-    {0, 0, 1, 2, 2, 1},
-    {0, 0, 3, 3, 2, 1},
-    {0, 0, 0, 4, 1, 15},
-    {1, 1, 1, 3, 1, 1},
-    {2, 1, 1, 2, 2, 3},
-    {0, 0, 1, 4, 4, 1},
-    {0, 0, 1, 4, 3, 2},
-    {0, 0, 1, 1, 2, 2},
-    {0, 7, 2, 3, 1, 1},
-    {0, 2, 1, 1, 1, 5},
-    {0, 0, 0, 1, 2, 5},
-    {0, 0, 1, 1, 1, 3},
-    {0, 0, 0, 4, 2, 1},
-    {0, 0, 0, 0, 0, 3}
-  };
 
   /*
    public int[][]	row_rules = {

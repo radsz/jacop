@@ -53,6 +53,40 @@ import org.jacop.core.Store;
  */
 public class CalendarMen extends ExampleFD {
 
+  /**
+   * It executes the program solving this puzzle using two different models.
+   *
+   * @param args no arguments read.
+   */
+  public static void test(String args[]) {
+
+    CalendarMen example = new CalendarMen();
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+
+    CalendarMen exampleBasic = new CalendarMen();
+
+    exampleBasic.modelBasic();
+
+    if (exampleBasic.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
+
+  /**
+   * It executes the program solving this puzzle using the best approach.
+   *
+   * @param args no arguments read.
+   */
+  public static void main(String args[]) {
+
+    CalendarMen example = new CalendarMen();
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -821,39 +855,5 @@ public class CalendarMen extends ExampleFD {
     // 16. The pole vaulter appeared sometime after the golfer.
 
     store.impose(new XltY(sport[igolf], sport[ip_vauliting])); // X < Y
-  }
-
-  /**
-   * It executes the program solving this puzzle using two different models.
-   *
-   * @param args no arguments read.
-   */
-  public static void test(String args[]) {
-
-    CalendarMen example = new CalendarMen();
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
-
-    CalendarMen exampleBasic = new CalendarMen();
-
-    exampleBasic.modelBasic();
-
-    if (exampleBasic.searchSmallestDomain(false)) System.out.println("Solution(s) found");
-  }
-
-  /**
-   * It executes the program solving this puzzle using the best approach.
-   *
-   * @param args no arguments read.
-   */
-  public static void main(String args[]) {
-
-    CalendarMen example = new CalendarMen();
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
   }
 }

@@ -106,65 +106,20 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
       this.bHasChanged = false;
       this.cHasChanged = false;
 
-      /**
-       * It computes the consistency of the constraint.
-       *
-       * <p>A \ B = C
-       *
-       * <p>The list of rules to use.
-       */
-
-      /**
-       * T9 rule.
-       *
-       * <p>glbA = glbA \/ glbC lubA = lubA \ [ lubA \ [ lubC \/ lubB ] ]
-       */
       if (cHasChanged) a.domain.inGLB(store.level, a, c.domain.glb());
 
       if (bHasChanged || cHasChanged)
         a.domain.inLUB(store.level, a, b.domain.lub().union(c.domain.lub()));
 
-      /**
-       * T10 rule.
-       *
-       * <p>glbB = glbB lubB = lubB \ glbC
-       */
       if (cHasChanged) b.domain.inLUB(store.level, b, b.domain.lub().subtract(c.domain.glb()));
 
-      /** T11 glbC = glbC \/ [ glbA \ lubB ] lubC = lubC /\ [ lubA \ glbB ] */
       if (aHasChanged || bHasChanged) {
         c.domain.inGLB(store.level, c, a.domain.glb().subtract(b.domain.lub()));
         c.domain.inLUB(store.level, c, a.domain.lub().subtract(b.domain.glb()));
       }
 
       // FIXME, TODO, implement cardinality based reasoning.
-      /**
-       * For all sets, A, B, C apply the rules as specified for A below.
-       *
-       * <p>lA = min(#glbA, #A.min()) rA = max(#lubA, #A.max())
-       *
-       * <p>#A.in(#glbA, #lubA).
-       *
-       * <p>If #glb is already equal to maximum allowed cardinality then set is specified by glb. if
-       * (#glbA == #A.max()) then A = glbA If #lub is already equal to minimum allowed cardinality
-       * then set is specified by lub. if (#lubA == #A.min()) then A = lubA
-       */
       if (performCardinalityReasoning) {
-
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>For C)
-         *
-         * <p>(2+5+6+7) - lubA /\ lubB - how many elements can be removed by B (4) - glbA \ lubB -
-         * how many elements have to be in C.
-         *
-         * <p>#C.inMin( (4) + max( #A.min() - (4) - min( (2+5+6+7), #B.max() - (8) ) , 0) );
-         *
-         * <p>A.min - (4) - How many must be added. min( (2+7), B.max-8) how many can be added to B
-         * so they can cause removals from A. C.inMin( (4) + max(0, (A.min - (4)) - min ( 2+7, B.max
-         * - (8)))
-         */
 
         // TODO, check the code below, so that is can fire and propagate properly.
 
@@ -188,17 +143,6 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
           }
         }
 
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>For C)
-         *
-         * <p>(1+2+4+5) - lubA \ glbB - how many elements can be placed in C. (6) - glbA /\ glbB -
-         * how many elements used in A are not placed in C. max( #B.min()-(8+3+7), 0) - how many
-         * elements in B are also in (1+2+4+5).
-         *
-         * <p>#C.inMax( min ( #A.max() - (6), (1+2+4+5) - max( #B.min()-(3+6+7+8), 0) , ) );
-         */
         int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
         int minLeft = a.domain.card().max() - sizeOf6;
         int sizeOf1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
@@ -219,18 +163,6 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
         if (minLeft < minRight) c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minLeft);
         else c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minRight);
 
-        /**
-         * Cardinality reasoning. For B)
-         *
-         * <p>(1+2+4+5) - how many elements can be placed in C. (4+5) - minimum required
-         * contribution of A into C. max( 0, (4+5)-#C.max()) - how many elements in required
-         * contribution are more than what is allowed by #C. #A.min()-(6+7) - minimum number of
-         * elements that must be put in A and are not taken care of by glbB. max( 0, #A.min() -
-         * (6-7) - #C.max() ) - how many elements needs still to be taken out by B.
-         *
-         * <p>#B.inMin( max ( (6+7+8)+max(0, (4+5)-#C.max()), (6+7+8) + max( 0, #A.min() - (6-7) -
-         * #C.max() ) ); #B.inMin( (6+7+8) + max(0, 5-(#C.max()-4), #A.min() - (6-7) - #C.max() )
-         */
         int sizeOf_4_5 = a.domain.glb().subtract(b.domain.glb()).getSize();
         minLeft = b.domain.glb().getSize() + Math.max(0, sizeOf_4_5 - c.domain.card().max());
         minRight = a.domain.card().max() - c.domain.card().max();
@@ -239,30 +171,12 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
         b.domain.inCardinality(
             store.level, c, b.domain.glb().getSize() + minLeft, Integer.MAX_VALUE);
 
-        /**
-         * Cardinality reasoning. #C.min()-(1+4) - number of elements required from lubB to get
-         * minimum size C. lubB - (#C.min() - (1+4)) - remaining elements after removing those
-         * required for C.
-         *
-         * <p>#B.inMax( lubB - ( C.min()-(1+4) ) );
-         */
         int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
         int min = c.domain.card().min() - sizeOf1_4;
 
         if (min > 0)
           b.domain.inCardinality(store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - min);
 
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>For A)
-         *
-         * <p>#C.min() - requirement from C. (6) - elements from A not contributing to C but
-         * contributing to #A #B.min() - (2+3+7+8) - number of elements that B must eventually put
-         * in area (5) thus reducing current contribution of A.
-         *
-         * <p>#A.inMin( max( #C.min() + (6) + max(0, B.min()-(2+3+7+8)) , ?? ) );
-         */
         min = c.domain.card().min() + b.domain.glb().intersect(a.domain.glb()).getSize();
         if (b.domain.lub().getSize() - a.domain.lub().getSize() < b.domain.card().min()) {
           min =
@@ -272,15 +186,6 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
         }
 
         a.domain.inCardinality(store.level, a, min, Integer.MAX_VALUE);
-
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>#A.inMax ( #C.max() + min (#B.max()-(8), (2+5+6+7) ) ) ; Triggering conditions : glbA,
-         * lubA, glbB, lubB, glbC, lubC
-         *
-         * <p>#A.BOUND, #B.BOUND, #C.BOUND.
-         */
       }
 
     } while (store.propagationHasOccurred);

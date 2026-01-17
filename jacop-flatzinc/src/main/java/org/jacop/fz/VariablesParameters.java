@@ -52,19 +52,16 @@ import org.jacop.set.core.SetVar;
  */
 public class VariablesParameters implements ParserTreeConstants {
 
-  static final boolean interval = false; // selection of interval or dense, if possible, domain
+  public static final double MIN_FLOAT = -1e150;
   // for variables
-
-  static final boolean checkBounds = false; // whether to check bounds of IntVar before creation;
+  public static final double MAX_FLOAT = 1e150;
   // if they are not in interval
   // IntDomain.MinInt..IntDomainMaxInt raise Arithmetic
   // exception
-
-  public static final double MIN_FLOAT = -1e150;
-  public static final double MAX_FLOAT = 1e150;
   public static final int MIN_INT = IntDomain.MinInt;
   public static final int MAX_INT = IntDomain.MaxInt;
-
+  static final boolean interval = false; // selection of interval or dense, if possible, domain
+  static final boolean checkBounds = false; // whether to check bounds of IntVar before creation;
   Tables dictionary;
   int lowInterval;
   int highInterval;

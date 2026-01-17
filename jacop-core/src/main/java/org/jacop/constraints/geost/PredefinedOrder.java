@@ -39,9 +39,6 @@ import java.util.Arrays;
  */
 public class PredefinedOrder implements LexicographicalOrder {
 
-  /** It stores currently the most significant dimension. */
-  int mostSignificantDimension;
-
   /**
    * It stores the ordering of dimensions without taking most significant dimension into account.
    */
@@ -58,6 +55,9 @@ public class PredefinedOrder implements LexicographicalOrder {
    * to the least significant one.
    */
   final int[] actualDimensionOrder;
+
+  /** It stores currently the most significant dimension. */
+  int mostSignificantDimension;
 
   /**
    * It specifies the comparison of k-dimensional point comparator based on the dimension ordering
@@ -149,14 +149,14 @@ public class PredefinedOrder implements LexicographicalOrder {
     return 0;
   }
 
+  public int getMostSignificantDimension() {
+    return mostSignificantDimension;
+  }
+
   public void setMostSignificantDimension(int d) {
     this.mostSignificantDimension = d;
     recomputeActualDimensionOrder();
     assert checkInvariants() == null : checkInvariants();
-  }
-
-  public int getMostSignificantDimension() {
-    return mostSignificantDimension;
   }
 
   public String toString() {

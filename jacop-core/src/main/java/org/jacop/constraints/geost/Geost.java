@@ -102,6 +102,137 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
   static final boolean DEBUG_REORDER = false;
 
+  /** It specifies the unique number used to differentiate geost constraints. */
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /**
+   * It specifies the order between dimensions which is used by the pruning algorithm. The order may
+   * have influence on the algorithm efficiency. The geost constraint chooses the order based on
+   * average length of objects in the particular dimension. The dimension with higher average length
+   * in this dimension will have the preference.
+   */
+  public final LexicographicalOrder order;
+
+  /**
+   * It specifies that filtering of useless internal constraint takes place before an object is
+   * being pruned. It may be costly for small instances.
+   */
+  public final boolean filterUseless = true;
+
+  /**
+   * It stores the reference to the collection of objects provided to the constructor. It does not
+   * perform cloning so the collection can not change after geost constraint was imposed.
+   */
+  public final GeostObject[] objects;
+
+  /**
+   * It stores the reference to the collection of external constraints which must be satisfied
+   * within this constraint. This is a reference to the collection provided within the constructor.
+   * No copying is employed therefore the collection can not change even after the constraint is
+   * imposed.
+   */
+  public final ExternalConstraint[] externalConstraints;
+
+  /**
+   * It stores information about shapes used by objects within this geost constraint. It is based on
+   * shapes information provided in the constructor.
+   */
+  public final Shape[] shapeRegister;
+
+  /**
+   * It specifies for each object if consistency function should be run if this object becomes
+   * grounded. It is set to true if the object was grounded outside consistency function call or
+   * after a shape variable has been changed. It is set to false only after exactly one consistency
+   * check during which the object was grounded.
+   */
+  final boolean[] pruneIfGrounded;
+
+  /** It maps any variable in the scope of the geost constraint to the object it belongs to. */
+  final Map<Var, GeostObject> variableObjectMap;
+
+  /**
+   * It is a locally used array which stores the enumeration of values for the current shape
+   * variable. The enumeration is lexicographical with one exception the previously found best shape
+   * is put on the first position.
+   */
+  final int[] shapeIdsToPrune;
+
+  /**
+   * It stores the special constraints responsible for the handling of holes in the domain. It is
+   * indexed by object id.
+   */
+  final DomainHoles[] domainHolesConstraints;
+
+  /** A preallocated array of ints used extensively within sweeping algorithm. */
+  final int[] c;
+
+  /** A preallocated array of ints used extensively within sweeping algorithm. */
+  final int[] n;
+
+  /**
+   * It stores all variables which have been grounded. It is used to upon backtracking to update
+   * objects to their previous state.
+   */
+  final SimpleArrayList<Var> groundedVars;
+
+  /**
+   * If running a complete sweep for each shape is costly, because some shapes may require a
+   * significant sweep, even though a weaker bound has already been found. However, to be able to
+   * prune shapes, such a costly sweep needs to be done. A tradeoff solution consists in running a
+   * complete sweep for each shape once per node, and optimize the following runs. This implies
+   * remembering which object have already been fully pruned.
+   */
+  final boolean[] fullyPruned;
+
+  /**
+   * It stores temporarily objects for which pruning is suggested by external constraints. The geost
+   * constraint checks every object from this set to see if that is actually necessary to invoke the
+   * pruning for that object.
+   */
+  final SimpleHashSet<GeostObject> temporaryObjectSet;
+
+  /**
+   * A temporary list to collect bounding boxes for each shape of the given object to compute one
+   * bounding box whatever the shape of the object. It is made as a member of the geost constraint
+   * to avoid multiple memory allocations.
+   */
+  final SimpleArrayList<DBox> workingList;
+
+  /** It specifies the number of dimensions of each object given to the geost constraint. */
+  final int dimension;
+
+  /** if set to true, a variable will never be skipped, even if grounded and not in queue */
+  public boolean enforceNoSkip =
+      true; // setting to false is causing a bug that allows incorrect solution to be accepted.
+
+  /** set to false to disable relaxed shape pruning */
+  public boolean partialShapeSweep = true;
+
+  /**
+   * It stores all generated internal constraints for all objects/constraints. It is used to speed
+   * up some visualization functions. If not for that reason it could have been a local variable
+   * within a function generating internal constraints.
+   */
+  public Collection<InternalConstraint> internalConstraints;
+
+  /**
+   * It defines whether outbox generation should always rely on overlapping frames. For problems
+   * that contain objects that have small domains compared to their size, then using only frames may
+   * provide a better performance (up to 50% faster). It can only be changed before impose()
+   * function, changing it afterwards will lead to improper behavior.
+   */
+  public boolean alwaysUseFrames = false;
+
+  // int lowerBound;
+  /**
+   * It is a flag set to true during remove level late function execution so objects which are being
+   * updated upon backtracking can be handled properly.
+   */
+  public boolean backtracking;
+
+  /** It keeps a reference to the store. */
+  protected Store store;
+
   /**
    * It counts how many constraints we discounted in outbox generation procedure as not useful ones.
    */
@@ -135,9 +266,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   /** It counts how many times the object has been queued. */
   long queuedObjectCount = 0;
 
-  /** It specifies the unique number used to differentiate geost constraints. */
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   /** It indicates whether we are currently running the consistency function or not. */
   boolean inConsistency;
 
@@ -154,10 +282,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   boolean changedShapeID = false;
 
-  /** if set to true, a variable will never be skipped, even if grounded and not in queue */
-  public boolean enforceNoSkip =
-      true; // setting to false is causing a bug that allows incorrect solution to be accepted.
-
   /**
    * It remembers if it is the first time the consistency check is being performed. If not, then the
    * initial consistency checks which have to be done only once will be done during the first
@@ -171,17 +295,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * that level is being removed then the initial consistency function must be executed again.
    */
   int firstConsistencyLevel;
-
-  /**
-   * It specifies for each object if consistency function should be run if this object becomes
-   * grounded. It is set to true if the object was grounded outside consistency function call or
-   * after a shape variable has been changed. It is set to false only after exactly one consistency
-   * check during which the object was grounded.
-   */
-  final boolean[] pruneIfGrounded;
-
-  /** It maps any variable in the scope of the geost constraint to the object it belongs to. */
-  final Map<Var, GeostObject> variableObjectMap;
 
   /**
    * It stores all variables which have changed outside the consistency function of this constraint.
@@ -208,32 +321,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   TimeStamp<Integer> setStart;
 
-  /**
-   * It stores the information about left bound of the interval of objects which are updated by
-   * backtracking. It is set by removeLevel function and it is used by removeLevelLate function. It
-   * simply denotes the stopping condition.
-   */
-  // int lowerBound;
-
   /** It contains objects that need to be checked in the next sweep. */
   SimpleHashSet<GeostObject> objectQueue;
-
-  /**
-   * It is a locally used array which stores the enumeration of values for the current shape
-   * variable. The enumeration is lexicographical with one exception the previously found best shape
-   * is put on the first position.
-   */
-  final int[] shapeIdsToPrune;
-
-  /** set to false to disable relaxed shape pruning */
-  public boolean partialShapeSweep = true;
-
-  /**
-   * It stores all generated internal constraints for all objects/constraints. It is used to speed
-   * up some visualization functions. If not for that reason it could have been a local variable
-   * within a function generating internal constraints.
-   */
-  public Collection<InternalConstraint> internalConstraints;
 
   /**
    * For each object, the set of constraint that apply to it we use object ids as keys, and can thus
@@ -241,35 +330,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * any object.
    */
   Set<InternalConstraint>[] objectConstraints;
-
-  /**
-   * It stores the special constraints responsible for the handling of holes in the domain. It is
-   * indexed by object id.
-   */
-  final DomainHoles[] domainHolesConstraints;
-
-  /**
-   * It specifies the order between dimensions which is used by the pruning algorithm. The order may
-   * have influence on the algorithm efficiency. The geost constraint chooses the order based on
-   * average length of objects in the particular dimension. The dimension with higher average length
-   * in this dimension will have the preference.
-   */
-  public final LexicographicalOrder order;
-
-  /** A preallocated array of ints used extensively within sweeping algorithm. */
-  final int[] c;
-
-  /** A preallocated array of ints used extensively within sweeping algorithm. */
-  final int[] n;
-
-  /** It keeps a reference to the store. */
-  protected Store store;
-
-  /**
-   * It stores all variables which have been grounded. It is used to upon backtracking to update
-   * objects to their previous state.
-   */
-  final SimpleArrayList<Var> groundedVars;
 
   /**
    * It contains all not filtered out, useful internal constraints which should be used to generate
@@ -282,50 +342,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   int lastConstraintToCheck = 0;
 
   /**
-   * It specifies that filtering of useless internal constraint takes place before an object is
-   * being pruned. It may be costly for small instances.
+   * It is used inside flushQueue function to separate timeconsistency execution from object update
+   * (potentially expensive if for example object frame is recomputed).
    */
-  public final boolean filterUseless = true;
-
-  /**
-   * It defines whether outbox generation should always rely on overlapping frames. For problems
-   * that contain objects that have small domains compared to their size, then using only frames may
-   * provide a better performance (up to 50% faster). It can only be changed before impose()
-   * function, changing it afterwards will lead to improper behavior.
-   */
-  public boolean alwaysUseFrames = false;
-
-  /**
-   * It is a flag set to true during remove level late function execution so objects which are being
-   * updated upon backtracking can be handled properly.
-   */
-  public boolean backtracking;
-
-  /**
-   * If running a complete sweep for each shape is costly, because some shapes may require a
-   * significant sweep, even though a weaker bound has already been found. However, to be able to
-   * prune shapes, such a costly sweep needs to be done. A tradeoff solution consists in running a
-   * complete sweep for each shape once per node, and optimize the following runs. This implies
-   * remembering which object have already been fully pruned.
-   */
-  final boolean[] fullyPruned;
-
-  /**
-   * It stores temporarily objects for which pruning is suggested by external constraints. The geost
-   * constraint checks every object from this set to see if that is actually necessary to invoke the
-   * pruning for that object.
-   */
-  final SimpleHashSet<GeostObject> temporaryObjectSet;
-
-  /**
-   * A temporary list to collect bounding boxes for each shape of the given object to compute one
-   * bounding box whatever the shape of the object. It is made as a member of the geost constraint
-   * to avoid multiple memory allocations.
-   */
-  final SimpleArrayList<DBox> workingList;
-
-  /** It specifies the number of dimensions of each object given to the geost constraint. */
-  final int dimension;
+  SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<GeostObject>();
 
   /**
    * It is set by queueVariable after a time variable has been changed. It indicates that we should
@@ -333,31 +353,16 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   private boolean oneTimeVarChanged;
 
-  /**
-   * It is used inside flushQueue function to separate timeconsistency execution from object update
-   * (potentially expensive if for example object frame is recomputed).
-   */
-  SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<GeostObject>();
+  private int currentLevel;
 
   /**
-   * It stores the reference to the collection of objects provided to the constructor. It does not
-   * perform cloning so the collection can not change after geost constraint was imposed.
+   * It specifies the first position of the variables being removed from grounded list upon
+   * backtracking.
+   *
+   * <p>If there is no change in lastLevelVar.value between removeLevel ( stored in removeLimit) and
+   * removeLevelLate then this indicates that no variable was grounded at removed level.
    */
-  public final GeostObject[] objects;
-
-  /**
-   * It stores the reference to the collection of external constraints which must be satisfied
-   * within this constraint. This is a reference to the collection provided within the constructor.
-   * No copying is employed therefore the collection can not change even after the constraint is
-   * imposed.
-   */
-  public final ExternalConstraint[] externalConstraints;
-
-  /**
-   * It stores information about shapes used by objects within this geost constraint. It is based on
-   * shapes information provided in the constructor.
-   */
-  public final Shape[] shapeRegister;
+  private int removeLimit;
 
   @SuppressWarnings("all")
   public Geost(
@@ -1432,11 +1437,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     if (DEBUG_MAIN) System.out.println("adding objects to the queue");
 
-    /**
-     * for now, all constraints are applied to all objects, so the set of objects connected by an
-     * external constraint to o is the whole set of objects (see technical report, page 12, last
-     * phrase in the algorithm caption)
-     */
     for (ExternalConstraint ec : externalConstraints) ec.onObjectUpdate(o);
 
     // no need to queue objects if backtracking
@@ -1515,17 +1515,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     if (increaseWeight) for (GeostObject o : objects) for (Var v : o.getVariables()) v.weight++;
   }
-
-  private int currentLevel;
-
-  /**
-   * It specifies the first position of the variables being removed from grounded list upon
-   * backtracking.
-   *
-   * <p>If there is no change in lastLevelVar.value between removeLevel ( stored in removeLimit) and
-   * removeLevelLate then this indicates that no variable was grounded at removed level.
-   */
-  private int removeLimit;
 
   @Override
   @SuppressWarnings("all")
@@ -1652,7 +1641,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       if (DEBUG_BACKTRACK) System.out.println("restored object " + o);
     }
 
-    /** It is cleared out as the objects changed at the level being removed are no longer needed. */
     // updatedObjectSet.clear();
 
     backtracking = false;

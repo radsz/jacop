@@ -96,18 +96,6 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
 
     // FIXME, TODO, implement cardinality reasoning as specified in the comments.
 
-    /**
-     * It computes the consistency of the constraint.
-     *
-     * <p>A /\ B = C
-     *
-     * <p>The list of rules to use.
-     *
-     * <p>T7
-     *
-     * <p>glbA = glbA /\ glbC lubA = lubA \ ( ( lubA /\ glbB) \ lubC ) glbB = glbB /\ glbC lubB =
-     * lubB \ ( ( lubB /\ glbA) \ lubC )
-     */
     do {
 
       store.propagationHasOccurred = false;
@@ -134,11 +122,6 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
         if (!temp.isEmpty()) b.domain.inLUB(store.level, b, b.domain.lub().subtract(temp));
       }
 
-      /**
-       * T8
-       *
-       * <p>glbC = glbC \/ ( glbA /\ glbB ) lubC = lubC /\ lubA /\ lubB
-       */
       if (bHasChanged || aHasChanged)
         c.domain.inGLB(store.level, c, a.domain.glb().intersect(b.domain.glb()));
 
@@ -146,36 +129,10 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
         c.domain.inLUB(store.level, c, a.domain.lub().intersect(b.domain.lub()));
 
       if (performCardinalityReasoning) {
-        /**
-         * For all sets, A, B, C apply the rules as specified for A below.
-         *
-         * <p>#A.in(#glbA, #lubA).
-         *
-         * <p>If #glb is already equal to maximum allowed cardinality then set is specified by glb.
-         * if (#glbA == #A.max()) then A = glbA If #lub is already equal to minimum allowed
-         * cardinality then set is specified by lub. if (#lubA == #A.min()) then A = lubA
-         */
 
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>for A)
-         *
-         * <p>(4) - elements in A which can not be in B, therefore not in C.
-         *
-         * <p>#A.inMin( (4) + #C.min() );
-         */
         int sizeOf4 = a.domain.glb().subtract(b.domain.lub()).getSize();
         a.domain.inCardinality(store.level, a, sizeOf4 + c.domain.card().min(), Integer.MAX_VALUE);
 
-        /**
-         * Cardinality reasoning. (2+5+6+7) - maximum size intersection #B.max() - (8) - maximum
-         * number of elements from B which can still end up in the intersection.
-         *
-         * <p>#(7+6)-#C.max() - no of elements which can not be used by A.
-         *
-         * <p>#A.inMax( #A.lub() - ( #(7+6) - #C.max() ) );
-         */
         int sizeOf_6_7 = a.domain.lub().intersect(b.domain.glb()).getSize();
         if (sizeOf_6_7 > c.domain.card().max()) {
           int reserved = sizeOf_6_7 - c.domain.card().max();
@@ -183,24 +140,9 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
               store.level, a, Integer.MIN_VALUE, a.domain.lub().getSize() - reserved);
         }
 
-        /**
-         * Cardinality reasoning. for B)
-         *
-         * <p>(8) - elements in B which can not be in A, therefore not in C.
-         *
-         * <p>#B.inMin( (8) + #C.min() );
-         */
         int sizeOf8 = b.domain.glb().subtract(a.domain.lub()).getSize();
         b.domain.inCardinality(store.level, b, sizeOf8 + c.domain.card().min(), Integer.MAX_VALUE);
 
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>(2+5+6+7) - maximum size intersection #A.max() - (4) - maximum number of elements from
-         * A which can still end up in the intersection.
-         *
-         * <p>#B.inMax( (3+8) + min ( (2+5+6+7), #C.max() ) ); #B.inMax( #A.max() - (4) )
-         */
         int sizeOf_5_6 = b.domain.lub().intersect(a.domain.glb()).getSize();
         if (sizeOf_5_6 > c.domain.card().max()) {
           int reserved = sizeOf_5_6 - c.domain.card().max();
@@ -208,17 +150,6 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
               store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - reserved);
         }
 
-        /**
-         * Cardinality reasoning.
-         *
-         * <p>for C)
-         *
-         * <p>(6) + max( 0, max(0, #A.min() - (1+4)) + max(0, #B.min() - (3+8)) + (6) - (2+5+7+6)) -
-         * number of elements that must be in 6
-         *
-         * <p>#C.inMin( (6) + max( 0, max(0, #A.min() - (1+4)) + max(0, #B.min() - (3+8)) - (2+5+7))
-         * );
-         */
         int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
         int sizeOf3_8 = b.domain.lub().subtract(a.domain.lub()).getSize();
         int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
@@ -231,12 +162,6 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
         max -= sizeOf6 + sizeOf2_5_6_7;
         if (max > 0) c.domain.inCardinality(store.level, c, sizeOf6 + max, Integer.MAX_VALUE);
 
-        /**
-         * Cardinality reasoning. #A.max() - (4) - all elements of A which may end up in the
-         * intersection. #B.max() - (8) - all elements of B which may end up in the intersection.
-         *
-         * <p>#C.inMax( min( #A.max() - (4), #B.max() - (8) )).
-         */
         c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, a.domain.card().max() - sizeOf4);
         c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, b.domain.card().max() - sizeOf8);
       }

@@ -48,14 +48,14 @@ import org.jacop.search.DepthFirstSearch;
  */
 public class FloatMinimize {
 
+  FloatMinimize() {}
+
   public static void main(String args[]) {
 
     FloatMinimize run = new FloatMinimize();
 
     run.ex(args);
   }
-
-  FloatMinimize() {}
 
   void ex(String[] args) {
 

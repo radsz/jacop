@@ -76,6 +76,20 @@ public class Cryptogram extends ExampleFD {
     return weights;
   }
 
+  /**
+   * It executes the program to solve any cryptographic puzzle.
+   *
+   * @param args no arguments read.
+   */
+  public static void main(String args[]) {
+
+    Cryptogram example = new Cryptogram();
+
+    example.model();
+
+    if (example.searchMostConstrainedStatic()) System.out.println("\nSolution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -147,7 +161,7 @@ public class Cryptogram extends ExampleFD {
       Pattern pat = Pattern.compile("[=+]");
       String[] result = pat.split(lines[i]);
 
-      for (int j = 0; j < result.length; j++) words.get(i).add(result[j]);
+      for (String s : result) words.get(i).add(s);
     }
 
     vars = new ArrayList<IntVar>();
@@ -212,19 +226,5 @@ public class Cryptogram extends ExampleFD {
 
       store.impose(new SumInt(terms, "==", fdv4words[noWords - 1]));
     }
-  }
-
-  /**
-   * It executes the program to solve any cryptographic puzzle.
-   *
-   * @param args no arguments read.
-   */
-  public static void main(String args[]) {
-
-    Cryptogram example = new Cryptogram();
-
-    example.model();
-
-    if (example.searchMostConstrainedStatic()) System.out.println("\nSolution(s) found");
   }
 }

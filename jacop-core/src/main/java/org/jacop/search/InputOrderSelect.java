@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.Iterator;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
@@ -48,14 +47,12 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
   static final boolean debugAll = false;
 
-  T[] searchVariables;
-
-  Indomain<T> valueOrdering;
-
-  TimeStamp<Integer> currentIndex;
-
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public Map<T, Integer> position;
+
+  T[] searchVariables;
+  Indomain<T> valueOrdering;
+  TimeStamp<Integer> currentIndex;
 
   /**
    * It constructs an input order selection procedure.
@@ -70,17 +67,16 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
     position = Var.createEmptyPositioning();
 
     int unique = 0;
-    for (int i = 0; i < variables.length; i++) {
-      if (variables[i] != null && !position.containsKey(variables[i])) {
-        position.put(variables[i], unique);
+    for (T variable : variables) {
+      if (variable != null && !position.containsKey(variable)) {
+        position.put(variable, unique);
         unique++;
       }
     }
 
     this.searchVariables = (T[]) new Var[unique];
 
-    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-      Map.Entry<T, Integer> e = itr.next();
+    for (Map.Entry<T, Integer> e : position.entrySet()) {
       searchVariables[e.getValue()] = e.getKey();
     }
 

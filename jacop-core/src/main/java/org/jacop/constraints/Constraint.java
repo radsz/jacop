@@ -51,6 +51,49 @@ import org.jacop.core.Var;
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
+  public boolean trace = SwitchesPruningLogging.traceConstraint;
+
+  /**
+   * It specifies the number id for a given constraint. All constraints within the same type have
+   * unique number ids.
+   */
+  public int numberId;
+
+  public Set<PrimitiveConstraint> constraintScope;
+
+  /**
+   * It specifies if upon the failure of the constraint, all variables in the constraint scope
+   * should have their weight increased.
+   */
+  public boolean increaseWeight = true;
+
+  /** It specifies the event which must occur in order for the consistency function to be called. */
+  public Hashtable<Var, Integer> consistencyPruningEvents;
+
+  /**
+   * It specifies if the constraint consistency function can be prematurely terminated through other
+   * than FailureException exception.
+   */
+  public boolean earlyTerminationOK = false;
+
+  /**
+   * It specifies if the constraint consistency function requires consistency function executed in
+   * one atomic step. A constraint can specify that if any other pruning events are initiated by
+   * outside entity then the constraint may not work correctly if the execution is continued, but it
+   * will work well if consistency() function is restarted.
+   */
+  public boolean atomicExecution = true;
+
+  /** It specifies a set of variables that in the scope of this constraint. */
+  protected Set<Var> scope;
+
+  Var watchedVariableGrounded;
+  /*
+   * Handling of AFC (accumulated failure count) for constraints
+   *
+   */
+  double afcWeight = 1.0d;
+
   protected Constraint() {}
 
   protected Constraint(Var[]... vars) {
@@ -69,13 +112,31 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     setScope(set);
   }
 
-  public boolean trace = SwitchesPruningLogging.traceConstraint;
+  public static String intArrayToString(int[] array) {
+    return Arrays.stream(array).mapToObj(i -> Integer.toString(i)).collect(joining(", ", "[", "]"));
+  }
 
-  /**
-   * It specifies the number id for a given constraint. All constraints within the same type have
-   * unique number ids.
-   */
-  public int numberId;
+  static int toInt(final float f) {
+    if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
+      return (int) f;
+    } else {
+      throw new ArithmeticException("Overflow occurred " + f);
+    }
+  }
+
+  static int toInt(final double f) {
+    if (f >= (double) Integer.MIN_VALUE && f <= (double) Integer.MAX_VALUE) {
+      return (int) f;
+    } else {
+      throw new ArithmeticException("Overflow occurred " + f);
+    }
+  }
+
+  public static int long2int(long value) {
+    if (value > (long) Integer.MAX_VALUE) return Integer.MAX_VALUE;
+    else if (value < (long) Integer.MIN_VALUE) return Integer.MIN_VALUE;
+    else return (int) value;
+  }
 
   /**
    * It returns the variables in a scope of the constraint.
@@ -85,9 +146,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   public Set<Var> arguments() {
     return scope;
   }
-
-  /** It specifies a set of variables that in the scope of this constraint. */
-  protected Set<Var> scope;
 
   protected void setScope(Var... variables) {
     this.scope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(variables)));
@@ -108,8 +166,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   protected void setScope(Set<? extends Var> set) {
     setScope(set.toArray(new Var[set.size()]));
   }
-
-  public Set<PrimitiveConstraint> constraintScope;
 
   protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
     this.constraintScope =
@@ -234,8 +290,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     for (Var v : arguments()) if (!v.singleton()) v.removeConstraint(this);
   }
 
-  Var watchedVariableGrounded;
-
   public void setWatchedVariableGrounded(Var var) {
     watchedVariableGrounded = var;
   }
@@ -281,10 +335,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   @Override
   public String toString() {
     return arguments().stream().map(i -> i.toString()).collect(joining(", ", id() + "(", ")"));
-  }
-
-  public static String intArrayToString(int[] array) {
-    return Arrays.stream(array).mapToObj(i -> Integer.toString(i)).collect(joining(", ", "[", "]"));
   }
 
   /**
@@ -364,29 +414,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
-   * It specifies if upon the failure of the constraint, all variables in the constraint scope
-   * should have their weight increased.
-   */
-  public boolean increaseWeight = true;
-
-  /** It specifies the event which must occur in order for the consistency function to be called. */
-  public Hashtable<Var, Integer> consistencyPruningEvents;
-
-  /**
-   * It specifies if the constraint consistency function can be prematurely terminated through other
-   * than FailureException exception.
-   */
-  public boolean earlyTerminationOK = false;
-
-  /**
-   * It specifies if the constraint consistency function requires consistency function executed in
-   * one atomic step. A constraint can specify that if any other pruning events are initiated by
-   * outside entity then the constraint may not work correctly if the execution is continued, but it
-   * will work well if consistency() function is restarted.
-   */
-  public boolean atomicExecution = true;
-
-  /**
    * It imposes the decomposition of the given constraint in a given store.
    *
    * @param store the constraint store to which the constraint is imposed to.
@@ -409,12 +436,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     throw new UnsupportedOperationException();
   }
 
-  /*
-   * Handling of AFC (accumulated failure count) for constraints
-   *
-   */
-  double afcWeight = 1.0d;
-
   public double afc() {
     return afcWeight;
   }
@@ -430,26 +451,4 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
   /** It is executed after the constraint has failed. It allows to clean some data structures. */
   public void cleanAfterFailure() {}
-
-  static int toInt(final float f) {
-    if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
-      return (int) f;
-    } else {
-      throw new ArithmeticException("Overflow occurred " + f);
-    }
-  }
-
-  static int toInt(final double f) {
-    if (f >= (double) Integer.MIN_VALUE && f <= (double) Integer.MAX_VALUE) {
-      return (int) f;
-    } else {
-      throw new ArithmeticException("Overflow occurred " + f);
-    }
-  }
-
-  public static int long2int(long value) {
-    if (value > (long) Integer.MAX_VALUE) return Integer.MAX_VALUE;
-    else if (value < (long) Integer.MIN_VALUE) return Integer.MIN_VALUE;
-    else return (int) value;
-  }
 }

@@ -50,6 +50,31 @@ public class PigeonHole extends ExampleFD {
   /** */
   public int noPigeons = 5;
 
+  /**
+   * It executes the program to solve PigeonHole problem in two different ways. The first approach
+   * uses global constraint, the second approach uses only primitive constraints.
+   *
+   * @param args the number of pigeons.
+   */
+  public static void main(String args[]) {
+
+    PigeonHole example = new PigeonHole();
+
+    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+
+    example = new PigeonHole();
+
+    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
+
+    example.modelBasic();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -81,30 +106,5 @@ public class PigeonHole extends ExampleFD {
       for (int j = i + 1; j < noPigeons; j++) store.impose(new XneqY(numbers[i], numbers[j]));
 
     for (IntVar v : numbers) vars.add(v);
-  }
-
-  /**
-   * It executes the program to solve PigeonHole problem in two different ways. The first approach
-   * uses global constraint, the second approach uses only primitive constraints.
-   *
-   * @param args the number of pigeons.
-   */
-  public static void main(String args[]) {
-
-    PigeonHole example = new PigeonHole();
-
-    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
-
-    example = new PigeonHole();
-
-    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
-
-    example.modelBasic();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

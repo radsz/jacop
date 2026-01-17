@@ -54,6 +54,10 @@ public class BasicPreprocessor {
   // local clause
   private MapClause localClause = new MapClause();
 
+  public BasicPreprocessor(Core core) {
+    this.core = core;
+  }
+
   /**
    * add a clause (just parsed from a file, e.g.) to the solver, after processing
    *
@@ -97,9 +101,5 @@ public class BasicPreprocessor {
 
     // clause is not trivial
     return state;
-  }
-
-  public BasicPreprocessor(Core core) {
-    this.core = core;
   }
 }

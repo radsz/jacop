@@ -37,13 +37,10 @@ package org.jacop.constraints.geost;
  */
 public class ShiftOrder implements LexicographicalOrder {
 
-  int mostSignificant;
-
   final int noOfDimensions;
-
   final int[] masterOrdering;
-
   final int[] orderingWithShiftConsidered; // stores precomputed results
+  int mostSignificant;
 
   /**
    * It creates a lexicographical order with the possibility to shift the order according to the
@@ -118,16 +115,16 @@ public class ShiftOrder implements LexicographicalOrder {
     return (dimension - mostSignificant) % noOfDimensions;
   }
 
+  public int getMostSignificantDimension() {
+    return mostSignificant;
+  }
+
   public void setMostSignificantDimension(int dimension) {
 
     this.mostSignificant = dimension;
     adjustOrderingToShift();
 
     assert checkInvariants() == null : checkInvariants();
-  }
-
-  public int getMostSignificantDimension() {
-    return mostSignificant;
   }
 
   public int[] masterOrdering() {

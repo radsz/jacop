@@ -52,6 +52,20 @@ import org.jacop.core.Store;
  *     of shoes, and where she bought each?
  */
 public class ArchFriends extends ExampleFD {
+  /**
+   * It executes the program to solve the logic puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    ArchFriends example = new ArchFriends();
+
+    example.model();
+
+    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -108,19 +122,5 @@ public class ArchFriends extends ExampleFD {
     // 4. Two stops after leaving The Shoe Place, Harriet
     // bought her suede sandals.
     store.impose(new XplusCeqZ(shop[iTheShoePalace], 2, shoe[iSuedeSandals]));
-  }
-
-  /**
-   * It executes the program to solve the logic puzzle.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    ArchFriends example = new ArchFriends();
-
-    example.model();
-
-    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
   }
 }

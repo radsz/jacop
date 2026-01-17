@@ -45,6 +45,83 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
    */
   public static final SmallDenseDomain emptyDomain = new SmallDenseDomain(1, 0L);
 
+  private static final long[] TWO_N_ARRAY =
+      new long[] {
+        0x1L,
+        0x2L,
+        0x4L,
+        0x8L,
+        0x10L,
+        0x20L,
+        0x40L,
+        0x80L,
+        0x100L,
+        0x200L,
+        0x400L,
+        0x800L,
+        0x1000L,
+        0x2000L,
+        0x4000L,
+        0x8000L,
+        0x10000L,
+        0x20000L,
+        0x40000L,
+        0x80000L,
+        0x100000L,
+        0x200000L,
+        0x400000L,
+        0x800000L,
+        0x1000000L,
+        0x2000000L,
+        0x4000000L,
+        0x8000000L,
+        0x10000000L,
+        0x20000000L,
+        0x40000000L,
+        0x80000000L,
+        0x100000000L,
+        0x200000000L,
+        0x400000000L,
+        0x800000000L,
+        0x1000000000L,
+        0x2000000000L,
+        0x4000000000L,
+        0x8000000000L,
+        0x10000000000L,
+        0x20000000000L,
+        0x40000000000L,
+        0x80000000000L,
+        0x100000000000L,
+        0x200000000000L,
+        0x400000000000L,
+        0x800000000000L,
+        0x1000000000000L,
+        0x2000000000000L,
+        0x4000000000000L,
+        0x8000000000000L,
+        0x10000000000000L,
+        0x20000000000000L,
+        0x40000000000000L,
+        0x80000000000000L,
+        0x100000000000000L,
+        0x200000000000000L,
+        0x400000000000000L,
+        0x800000000000000L,
+        0x1000000000000000L,
+        0x2000000000000000L,
+        0x4000000000000000L,
+        0x8000000000000000L
+      };
+  private static final long[] SEQ_ARRAY = new long[64];
+  private static final Random generator =
+      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+
+  static {
+    SEQ_ARRAY[0] = 1L;
+
+    for (int i = 1; i < 64; i++) SEQ_ARRAY[i] = (SEQ_ARRAY[i - 1] << 1) + 1;
+  }
+
   /**
    * The minimal value present in this domain encoding. The domain can only encode small domains
    * within a range [min .. min + 63].
@@ -58,10 +135,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
    */
   public long bits;
 
+  long first8 = 255L << 56;
   private boolean singleton;
-
   private int size;
-
   private int max;
 
   /** It creates an empty domain. */
@@ -1455,8 +1531,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     return min;
   }
 
-  long first8 = 255L << 56;
-
   @Override
   public int nextValue(int value) {
 
@@ -2099,82 +2173,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     else return domain.sizeConstraintsOriginal();
   }
 
-  private static final long[] TWO_N_ARRAY =
-      new long[] {
-        0x1L,
-        0x2L,
-        0x4L,
-        0x8L,
-        0x10L,
-        0x20L,
-        0x40L,
-        0x80L,
-        0x100L,
-        0x200L,
-        0x400L,
-        0x800L,
-        0x1000L,
-        0x2000L,
-        0x4000L,
-        0x8000L,
-        0x10000L,
-        0x20000L,
-        0x40000L,
-        0x80000L,
-        0x100000L,
-        0x200000L,
-        0x400000L,
-        0x800000L,
-        0x1000000L,
-        0x2000000L,
-        0x4000000L,
-        0x8000000L,
-        0x10000000L,
-        0x20000000L,
-        0x40000000L,
-        0x80000000L,
-        0x100000000L,
-        0x200000000L,
-        0x400000000L,
-        0x800000000L,
-        0x1000000000L,
-        0x2000000000L,
-        0x4000000000L,
-        0x8000000000L,
-        0x10000000000L,
-        0x20000000000L,
-        0x40000000000L,
-        0x80000000000L,
-        0x100000000000L,
-        0x200000000000L,
-        0x400000000000L,
-        0x800000000000L,
-        0x1000000000000L,
-        0x2000000000000L,
-        0x4000000000000L,
-        0x8000000000000L,
-        0x10000000000000L,
-        0x20000000000000L,
-        0x40000000000000L,
-        0x80000000000000L,
-        0x100000000000000L,
-        0x200000000000000L,
-        0x400000000000000L,
-        0x800000000000000L,
-        0x1000000000000000L,
-        0x2000000000000000L,
-        0x4000000000000000L,
-        0x8000000000000000L
-      };
-
-  private static final long[] SEQ_ARRAY = new long[64];
-
-  static {
-    SEQ_ARRAY[0] = 1L;
-
-    for (int i = 1; i < 64; i++) SEQ_ARRAY[i] = (SEQ_ARRAY[i - 1] << 1) + 1;
-  }
-
   @Override
   public String toString() {
 
@@ -2224,9 +2222,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     // TODO, implement properly.
     return toString();
   }
-
-  private static final Random generator =
-      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   @Override
   public int getRandomValue() {

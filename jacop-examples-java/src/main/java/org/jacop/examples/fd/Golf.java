@@ -58,6 +58,20 @@ import org.jacop.core.Store;
  */
 public class Golf extends ExampleFD {
 
+  /**
+   * It executes a simple program to solve this logic puzzle.
+   *
+   * @param args no arguments is used.
+   */
+  public static void main(String args[]) {
+
+    Golf example = new Golf();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -168,19 +182,5 @@ public class Golf extends ExampleFD {
       store.impose(Element.choose(el1, LN, FN[i]));
       store.impose(Element.choose(el2, Jobs, FN[i]));
     }
-  }
-
-  /**
-   * It executes a simple program to solve this logic puzzle.
-   *
-   * @param args no arguments is used.
-   */
-  public static void main(String args[]) {
-
-    Golf example = new Golf();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

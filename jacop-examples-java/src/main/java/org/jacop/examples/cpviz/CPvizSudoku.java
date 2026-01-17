@@ -49,6 +49,18 @@ public class CPvizSudoku {
 
   IntVar[][] elements;
 
+  /**
+   * It specifies the main executable function creating a model for a particular Sudoku.
+   *
+   * @param args not used.
+   */
+  public static void main(String args[]) {
+
+    CPvizSudoku example = new CPvizSudoku();
+
+    example.modelBasic();
+  }
+
   public void model() {
 
     // >0 - known element
@@ -116,8 +128,8 @@ public class CPvizSudoku {
     // Trace --->
     IntVar[] el = new IntVar[elements.length * elements[0].length];
     int k = 0;
-    for (int i = 0; i < elements.length; i++)
-      for (int j = 0; j < elements[0].length; j++) el[k++] = elements[i][j];
+    for (IntVar[] element : elements)
+      for (int j = 0; j < elements[0].length; j++) el[k++] = element[j];
 
     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(search, varSelect, el);
 
@@ -194,8 +206,8 @@ public class CPvizSudoku {
 
     IntVar[] el = new IntVar[elements.length * elements[0].length];
     int k = 0;
-    for (int i = 0; i < elements.length; i++)
-      for (int j = 0; j < elements[0].length; j++) el[k++] = elements[i][j];
+    for (IntVar[] element : elements)
+      for (int j = 0; j < elements[0].length; j++) el[k++] = element[j];
 
     SelectChoicePoint<IntVar> varSelect =
         new SimpleSelect<IntVar>(
@@ -215,17 +227,5 @@ public class CPvizSudoku {
     // <---
 
     search.labeling(store, select);
-  }
-
-  /**
-   * It specifies the main executable function creating a model for a particular Sudoku.
-   *
-   * @param args not used.
-   */
-  public static void main(String args[]) {
-
-    CPvizSudoku example = new CPvizSudoku();
-
-    example.modelBasic();
   }
 }

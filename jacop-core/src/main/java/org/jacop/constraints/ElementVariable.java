@@ -55,8 +55,8 @@ public class ElementVariable extends Constraint
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
+  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
+  public final int indexOffset;
 
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
   public IntVar index;
@@ -64,15 +64,14 @@ public class ElementVariable extends Constraint
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   public IntVar value;
 
-  /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
-  public final int indexOffset;
-
   /**
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
   public IntVar list[];
 
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
   boolean indexHasChanged = false;
 
   IntDomain indexRange;
@@ -82,6 +81,10 @@ public class ElementVariable extends Constraint
   Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
 
   Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
+  // For each variable from the list it specifies the values it supports
+  IntDomain[] supports;
+  Random generator = new Random(2);
+  private boolean valueHasChanged;
 
   /**
    * It constructs an element constraint.
@@ -149,13 +152,6 @@ public class ElementVariable extends Constraint
     valueHasChanged = false;
     variableQueue.clear();
   }
-
-  // For each variable from the list it specifies the values it supports
-  IntDomain[] supports;
-
-  private boolean valueHasChanged;
-
-  Random generator = new Random(2);
 
   @Override
   public void consistency(Store store) {
@@ -372,7 +368,7 @@ public class ElementVariable extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : elementVariable").append("( ").append(index).append(", [");
 

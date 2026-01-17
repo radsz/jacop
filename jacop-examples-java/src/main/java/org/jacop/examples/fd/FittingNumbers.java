@@ -51,32 +51,6 @@ public class FittingNumbers extends ExampleFD {
 
   int[] sum = {13000};
 
-  @Override
-  public void model() {
-
-    store = new Store();
-    vars = new ArrayList<IntVar>();
-
-    IntVar[] counters = new IntVar[elements.length];
-
-    IntervalDomain sumDomain = new IntervalDomain();
-    for (int i = 0; i < sum.length; i++) sumDomain.unionAdapt(sum[i]);
-    IntVar sum = new IntVar(store, "sum", sumDomain);
-
-    vars.add(sum);
-
-    // Creating variables.
-    for (int i = 0; i < elements.length; i++) {
-      counters[i] = new IntVar(store, "counter" + i, 0, sum.max() / elements[i]);
-      vars.add(counters[i]);
-    }
-
-    store.impose(new LinearInt(counters, elements, "==", sum));
-    // store.impose(new SumWeight(counters, elements, sum));
-
-    System.out.println(store);
-  }
-
   /**
    * It executes the program to solve simple Kakro puzzle.
    *
@@ -91,5 +65,31 @@ public class FittingNumbers extends ExampleFD {
     if (example.searchAllAtOnce()) {
       System.out.println("Solution(s) found");
     }
+  }
+
+  @Override
+  public void model() {
+
+    store = new Store();
+    vars = new ArrayList<IntVar>();
+
+    IntVar[] counters = new IntVar[elements.length];
+
+    IntervalDomain sumDomain = new IntervalDomain();
+    for (int j : sum) sumDomain.unionAdapt(j);
+    IntVar sum = new IntVar(store, "sum", sumDomain);
+
+    vars.add(sum);
+
+    // Creating variables.
+    for (int i = 0; i < elements.length; i++) {
+      counters[i] = new IntVar(store, "counter" + i, 0, sum.max() / elements[i]);
+      vars.add(counters[i]);
+    }
+
+    store.impose(new LinearInt(counters, elements, "==", sum));
+    // store.impose(new SumWeight(counters, elements, sum));
+
+    System.out.println(store);
   }
 }

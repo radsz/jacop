@@ -48,27 +48,12 @@ import org.jacop.core.*;
  */
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   protected static final boolean trace = false;
-
   private static final boolean traceNarr = false;
-
-  Store currentStore = null;
-
-  private int minPosition = 0;
-  int stamp = 0;
-
-  // use to collect information on possible length of rectangles for pruning
-  private List<Integer> durMax;
-
-  Set<IntVar> variableQueue = new HashSet<>();
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the list of rectangles which are of interest for this diff constraint. */
   public Rectangle rectangles[];
-
-  /** It specifies if the constraint should compute and use the profile. */
-  boolean doProfile = true;
 
   protected Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
       (dim ->
@@ -77,6 +62,16 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             int v2 = o2.origin[dim];
             return v1 - v2;
           });
+  Store currentStore = null;
+  int stamp = 0;
+  Set<IntVar> variableQueue = new HashSet<>();
+
+  /** It specifies if the constraint should compute and use the profile. */
+  boolean doProfile = true;
+
+  private int minPosition = 0;
+  // use to collect information on possible length of rectangles for pruning
+  private List<Integer> durMax;
 
   protected Diff() {}
 

@@ -49,6 +49,18 @@ import org.jacop.core.*;
  */
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
+  private static final boolean debug = false;
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies variables x whose values are counted. */
+  public IntVar[] x;
+
+  /**
+   * It species variables counters for counting occurences of each possible value from the intial
+   * domain of x variables.
+   */
+  protected IntVar[] counters;
+
   /**
    * TODO An improvement to increase the incrementality even further.
    *
@@ -71,7 +83,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    */
   boolean firstConsistencyCheck = true;
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  TimeStamp<Integer> stamp;
+  int firstConsistencyLevel;
 
   /**
    * The array which stores the first computed matching, which may not take into account the lower
@@ -94,41 +107,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private int[] match1XOrder;
   private int[] match2XOrder;
   private int[] nbOfMatchPerY;
-
   private int[] compOfY;
-
   private XDomain[] xDomain;
   private int[][] yDomain;
-
   private int xSize;
   private int ySize;
-
   private ArrayDeque<Integer> S1;
   private ArrayDeque<Component> S2;
   private PriorityQueue<XDomain> pFirst, pSecond;
   private PriorityQueue<Integer> pCount;
-
-  private static final boolean debug = false;
-
   private int[] domainHash;
-
   private Map<IntVar, Integer> xNodesHash;
   private Set<IntVar> xVariableToChange;
-
-  TimeStamp<Integer> stamp;
-
   private int stampValue;
-  int firstConsistencyLevel;
-
-  /** It specifies variables x whose values are counted. */
-  public IntVar[] x;
-
-  /**
-   * It species variables counters for counting occurences of each possible value from the intial
-   * domain of x variables.
-   */
-  protected IntVar[] counters;
-
   private Comparator<XDomain> compareLowerBound =
       (o1, o2) -> {
         if (o1.min() < o2.min()) return -1;
@@ -145,6 +136,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       };
 
   private Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
+  private Set<IntVar> zeroCounters;
+
+  /**
+   * Fix suggested by Radek: a set that keeps track of the variables that have changed and need to
+   * be revisited in the consistency method
+   */
+  private Set<Var> changedVariables = new HashSet<>();
 
   /**
    * It constructs global cardinality constraint.
@@ -196,13 +194,16 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
   }
 
-  private Set<IntVar> zeroCounters;
-
   /**
-   * Fix suggested by Radek: a set that keeps track of the variables that have changed and need to
-   * be revisited in the consistency method
+   * It constructs global cardinality constraint.
+   *
+   * @param x variables which values are counted.
+   * @param counters variables which count the values.
    */
-  private Set<Var> changedVariables = new HashSet<>();
+  public GCC(List<? extends IntVar> x, List<? extends IntVar> counters) {
+
+    this(x.toArray(new IntVar[x.size()]), counters.toArray(new IntVar[counters.size()]));
+  }
 
   private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
 
@@ -236,17 +237,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       else zeroCounters.add(counters[k - d.min()]);
 
     return result;
-  }
-
-  /**
-   * It constructs global cardinality constraint.
-   *
-   * @param x variables which values are counted.
-   * @param counters variables which count the values.
-   */
-  public GCC(List<? extends IntVar> x, List<? extends IntVar> counters) {
-
-    this(x.toArray(new IntVar[x.size()]), counters.toArray(new IntVar[counters.size()]));
   }
 
   @Override
@@ -1151,30 +1141,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     Arrays.sort(xDomain, 0, stampValue, compareLowerBound);
   }
 
-  // -----------------------INNER CLASSES-----------------------------------//
-  private static class Component {
-
-    int root;
-    int rightmostY;
-    int maxX;
-
-    public Component(int root, int rightmostY, int maxX) {
-      this.root = root;
-      this.rightmostY = rightmostY;
-      this.maxX = maxX;
-    }
-  }
-
-  private static class XDomain extends IntervalDomain {
-    Var twin;
-    int index;
-
-    XDomain(Var twin, int min, int max) {
-      super(min, max);
-      this.twin = twin;
-    }
-  }
-
   private int findPosition(int value, int[] values) {
 
     int left = 0;
@@ -1206,5 +1172,29 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     if (values[right] == value) return right;
 
     return -1;
+  }
+
+  // -----------------------INNER CLASSES-----------------------------------//
+  private static class Component {
+
+    int root;
+    int rightmostY;
+    int maxX;
+
+    public Component(int root, int rightmostY, int maxX) {
+      this.root = root;
+      this.rightmostY = rightmostY;
+      this.maxX = maxX;
+    }
+  }
+
+  private static class XDomain extends IntervalDomain {
+    Var twin;
+    int index;
+
+    XDomain(Var twin, int min, int max) {
+      super(min, max);
+      this.twin = twin;
+    }
   }
 }

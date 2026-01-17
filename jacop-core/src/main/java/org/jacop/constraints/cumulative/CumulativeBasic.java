@@ -53,20 +53,18 @@ public class CumulativeBasic extends Constraint {
 
   private static final boolean debug = false;
   private static final boolean debugNarr = false;
+  // event type
+  private static final int profile = 0;
+  private static final int pruneStart = 1;
+  private static final int pruneEnd = 2;
 
-  private Comparator<Event> eventComparator =
-      (Event o1, Event o2) -> {
-        int dateDiff = o1.date() - o2.date();
-        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
-      };
+  /** It specifies the limit of the profile of cumulative use of resources. */
+  public final IntVar limit;
 
   /*
    * All tasks of the constraint
    */
   final TaskView[] taskNormal;
-
-  /** It specifies the limit of the profile of cumulative use of resources. */
-  public final IntVar limit;
 
   /**
    * It specifies whether there possibly exist tasks that have duration or resource variable min
@@ -75,6 +73,11 @@ public class CumulativeBasic extends Constraint {
   boolean possibleZeroTasks = false;
 
   CumulativePrimary cumulativeForConstants = null;
+  private Comparator<Event> eventComparator =
+      (Event o1, Event o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+      };
 
   /**
    * It creates a cumulative constraint.
@@ -426,11 +429,6 @@ public class CumulativeBasic extends Constraint {
       }
     }
   }
-
-  // event type
-  private static final int profile = 0;
-  private static final int pruneStart = 1;
-  private static final int pruneEnd = 2;
 
   private static class Event {
     int type;

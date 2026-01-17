@@ -62,6 +62,20 @@ import org.jacop.core.Store;
  */
 public class MasterClass extends ExampleFD {
 
+  /**
+   * It executes the program to solve this simple logic puzzle.
+   *
+   * @param args no arguments is used.
+   */
+  public static void main(String args[]) {
+
+    MasterClass example = new MasterClass();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -181,19 +195,5 @@ public class MasterClass extends ExampleFD {
 
     store.impose(new XneqY(zglos[ibas], znazwisko[iRobinson1]));
     store.impose(new XneqY(zglos[ibas], znazwisko[iRobinson2]));
-  }
-
-  /**
-   * It executes the program to solve this simple logic puzzle.
-   *
-   * @param args no arguments is used.
-   */
-  public static void main(String args[]) {
-
-    MasterClass example = new MasterClass();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

@@ -45,15 +45,15 @@ import org.jacop.core.*;
  */
 public class Diffn extends Nooverlap {
 
+  // event type
+  static final int profileSubtract = 0, profileAdd = 1, pruneStart = 2, pruneEnd = 3;
   private static final boolean debug = false, debugNarr = false;
-
-  Comparator<Event> eventComparator =
-      (o1, o2) -> (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
-
   // for decomposed diffn
   protected List<Constraint> constraints = null;
 
   protected List<Var> auxVar = new ArrayList<>();
+  Comparator<Event> eventComparator =
+      (o1, o2) -> (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
 
   /**
    * It specifies a diff constraint.
@@ -644,8 +644,21 @@ public class Diffn extends Nooverlap {
     return auxVar;
   }
 
-  // event type
-  static final int profileSubtract = 0, profileAdd = 1, pruneStart = 2, pruneEnd = 3;
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : diffn([");
+
+    int i = 0;
+    for (Rectangle r : rectangle) {
+      result.append(r);
+      if (i < rectangle.length - 1) result.append(", ");
+      i++;
+    }
+    return result.append("], ").append(strict).append(")").toString();
+  }
 
   private static class Event {
     int type;
@@ -704,21 +717,5 @@ public class Diffn extends Nooverlap {
       result += r + ", " + date + ", " + value + ", " + block + ")\n";
       return result;
     }
-  }
-
-  @Override
-  public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : diffn([");
-
-    int i = 0;
-    for (Rectangle r : rectangle) {
-      result.append(r);
-      if (i < rectangle.length - 1) result.append(", ");
-      i++;
-    }
-    return result.append("], ").append(strict).append(")").toString();
   }
 }

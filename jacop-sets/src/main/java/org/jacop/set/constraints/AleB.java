@@ -198,7 +198,7 @@ public class AleB extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     result.append(id() + " : AleB(");
     result.append(a).append(", ").append(b);
     result.append(")");

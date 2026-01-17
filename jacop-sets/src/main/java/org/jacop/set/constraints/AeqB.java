@@ -75,17 +75,6 @@ public class AeqB extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It computes the consistency of the constraint.
-     *
-     * <p>If two set variables are to be equal then they are always reduced to the intersection of
-     * their domains.
-     *
-     * <p>glbA = glbA \/ glbB glbB = glbA \/ glbB
-     *
-     * <p>lubA = lubA /\ lubB lubB = lubA /\ lubB
-     */
-
     // if (bHasChanged)
     a.domain.in(store.level, a, b.dom());
 

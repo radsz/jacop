@@ -45,6 +45,20 @@ import org.jacop.core.Store;
  */
 public class Parcel extends ExampleFD {
 
+  /**
+   * It executes the program to solve the parcel shipment problem.
+   *
+   * @param args no parameters
+   */
+  public static void main(String args[]) {
+
+    Parcel example = new Parcel();
+
+    example.model();
+
+    if (example.searchMaxRegretOptimal()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -130,19 +144,5 @@ public class Parcel extends ExampleFD {
     store.impose(new SumInt(costs, "==", cost));
 
     vars.add(cost);
-  }
-
-  /**
-   * It executes the program to solve the parcel shipment problem.
-   *
-   * @param args no parameters
-   */
-  public static void main(String args[]) {
-
-    Parcel example = new Parcel();
-
-    example.model();
-
-    if (example.searchMaxRegretOptimal()) System.out.println("Solution(s) found");
   }
 }

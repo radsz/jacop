@@ -60,6 +60,23 @@ public abstract class ExampleFD {
   /** It specifies the search procedure used by a given example. */
   public Search<IntVar> search;
 
+  /**
+   * It prints a matrix of variables. All variables must be grounded.
+   *
+   * @param matrix matrix containing the grounded variables.
+   * @param rows number of elements in the first dimension.
+   * @param cols number of elements in the second dimension.
+   */
+  public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
+
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        System.out.print(matrix[i][j].value() + " ");
+      }
+      System.out.println();
+    }
+  }
+
   /** It specifies a standard way of modeling the problem. */
   public abstract void model();
 
@@ -684,22 +701,5 @@ public abstract class ExampleFD {
    */
   public List<IntVar> getSearchVariables() {
     return vars;
-  }
-
-  /**
-   * It prints a matrix of variables. All variables must be grounded.
-   *
-   * @param matrix matrix containing the grounded variables.
-   * @param rows number of elements in the first dimension.
-   * @param cols number of elements in the second dimension.
-   */
-  public static void printMatrix(IntVar[][] matrix, int rows, int cols) {
-
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
-        System.out.print(matrix[i][j].value() + " ");
-      }
-      System.out.println();
-    }
   }
 }

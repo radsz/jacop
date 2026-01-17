@@ -56,8 +56,6 @@ import org.jacop.search.SimpleSelect;
  */
 public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
-  /** Select parameters are kept here sicne we use floats ansd Simple select uses int */
-
   /**
    * It specifies if the left branch (values smaller or equal to the value selected) are first
    * considered.

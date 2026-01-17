@@ -54,6 +54,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   // FIXME, implement all already implemented functions from IntDomain
   // so it is more efficient, for example public int lex(IntDomain s).
 
+  /** An empty domain, so no constant creation of empty domains is required. */
+  public static final FloatIntervalDomain emptyDomain = new FloatIntervalDomain(0);
+
   /** The values of the domain are encoded as a list of intervals. */
   public FloatInterval[] intervals;
 
@@ -66,19 +69,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     this(0);
     // throw new RuntimeException("Do not use.");
   }
-
-  /** It returns an unique identifier of the domain. */
-  @Override
-  public int domainID() {
-    return FloatIntervalDomainID;
-  }
-
-  public FloatDomain previousDomain() {
-    return previousDomain;
-  }
-
-  /** An empty domain, so no constant creation of empty domains is required. */
-  public static final FloatIntervalDomain emptyDomain = new FloatIntervalDomain(0);
 
   /**
    * It creates an empty domain, with at least specified number of places in an array list for
@@ -115,6 +105,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     searchConstraintsCloned = false;
     intervals[0] = new FloatInterval(min, max);
     this.size = 1;
+  }
+
+  /** It returns an unique identifier of the domain. */
+  @Override
+  public int domainID() {
+    return FloatIntervalDomainID;
+  }
+
+  public FloatDomain previousDomain() {
+    return previousDomain;
   }
 
   /**
@@ -814,12 +814,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return intervals[0].min;
   }
 
-  /**
-   * {1..4} * 6 = {6, 12, 18, 24}
-   *
-   * @param mul the multiplier constant.
-   * @return the domain after multiplication.
-   */
   /*
     public FloatDomain multiply(double mul) {
 
@@ -1433,7 +1427,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   @Override
   public String toString() {
 
-    StringBuffer s = new StringBuffer("");
+    StringBuilder s = new StringBuilder("");
 
     if (!singleton()) {
       s.append("{");
@@ -1451,7 +1445,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   @Override
   public String toStringConstraints() {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuilder result = new StringBuilder("");
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       result.append(e.next().id());
@@ -1465,7 +1459,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   @Override
   public String toStringFull() {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuilder result = new StringBuilder("");
 
     FloatDomain domain = this;
 
@@ -1484,8 +1478,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       result.append("constraints: ");
 
-      for (Iterator<Constraint> e = domain.searchConstraints.iterator(); e.hasNext(); )
-        result.append(e.next());
+      for (Constraint searchConstraint : domain.searchConstraints) result.append(searchConstraint);
 
       // if (domain.domainID() == FloatIntervalDomainID) {
 
@@ -2623,7 +2616,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     var.domainHasChanged(returnedEvent);
   }
 
-  /** It returns an unique identifier of the domain. */
   // @Override
   // public int domainID() {
   //  return FloatIntervalDomainID;

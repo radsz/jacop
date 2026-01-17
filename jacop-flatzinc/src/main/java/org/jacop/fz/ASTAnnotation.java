@@ -3,6 +3,8 @@
 package org.jacop.fz;
 
 public class ASTAnnotation extends SimpleNode {
+  String ID;
+
   public ASTAnnotation(int id) {
     super(id);
   }
@@ -10,8 +12,6 @@ public class ASTAnnotation extends SimpleNode {
   public ASTAnnotation(Parser p, int id) {
     super(p, id);
   }
-
-  String ID;
 
   void setId(String id) {
     ID = id;

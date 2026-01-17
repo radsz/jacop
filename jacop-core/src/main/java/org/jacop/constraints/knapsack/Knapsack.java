@@ -59,10 +59,31 @@ import org.jacop.core.*;
 public class Knapsack extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
-  private static final AtomicInteger idNumber = new AtomicInteger(0);
-
   /** It specifies if any debugging information should be printed. */
   public static final boolean debugAll = false;
+
+  private static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /**
+   * It specifies the current level of the constraint store at which the consistency function of
+   * this constraint is being executed.
+   */
+  public int currentLevel;
+
+  /**
+   * The tree for the storing information about the maximalWeight, sum of weights and sum of
+   * profits.
+   */
+  public Tree tree;
+
+  /** The array of items present in the knapsack constraint. */
+  public KnapsackItem[] items;
+
+  /** This is a finite domain variable to specify the knapsack capacity. */
+  protected IntVar knapsackCapacity;
+
+  /** This is a finite domain variable to specify the knapsack profit. */
+  protected IntVar knapsackProfit;
 
   /** It specifies mapping from variables into the leaf of the knapsack tree. */
   private Map<IntVar, TreeLeaf> variableLeafMapping;
@@ -96,18 +117,6 @@ public class Knapsack extends Constraint
    */
   private boolean impositionFailure = false;
 
-  /** This is a finite domain variable to specify the knapsack capacity. */
-  protected IntVar knapsackCapacity;
-
-  /** This is a finite domain variable to specify the knapsack profit. */
-  protected IntVar knapsackProfit;
-
-  /**
-   * It specifies the current level of the constraint store at which the consistency function of
-   * this constraint is being executed.
-   */
-  public int currentLevel;
-
   /**
    * It specifies the position of the last changed item which has been already been recomputed. It
    * helps to avoid recomputation of the same parts of the tree if consistency function of the
@@ -132,15 +141,6 @@ public class Knapsack extends Constraint
 
   /** It specifies if the constraint is executing the consistency function. */
   private boolean inConsistency = false;
-
-  /**
-   * The tree for the storing information about the maximalWeight, sum of weights and sum of
-   * profits.
-   */
-  public Tree tree;
-
-  /** The array of items present in the knapsack constraint. */
-  public KnapsackItem[] items;
 
   /** It counts the number of time the consistency function has been executed. */
   private int countConsistency = 0;

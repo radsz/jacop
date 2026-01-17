@@ -46,14 +46,14 @@ public final class Arc {
    */
   public final Node head;
 
+  /** The flow of an arc is the residual capacity of its sister arc. */
+  public final Arc sister;
+
   /** The cost of the Arc cost */
   public int cost;
 
   /** The unused (i.e. residual) capacity of the arc */
   public int capacity;
-
-  /** The flow of an arc is the residual capacity of its sister arc. */
-  public final Arc sister;
 
   /** Index in lower arcs array */
   public int index;

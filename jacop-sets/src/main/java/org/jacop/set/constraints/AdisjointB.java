@@ -85,26 +85,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
   @Override
   public void consistency(Store store) {
 
-    /**
-     * Consistency of the constraint A disjoint with B.
-     *
-     * <p>lubA = lubA \ glbB
-     *
-     * <p>lubB = lubB \ glbA
-     */
-
-    /**
-     * For all sets, A, B apply the rules as specified for A below.
-     *
-     * <p>inLUB() functions update cardinalities too if lub has changed. #A.in(#glbA, #lubA).
-     *
-     * <p>If #glb is already equal to maximum allowed cardinality then set is specified by glb. if
-     * (#glbA == #A.max()) then A = glbA
-     *
-     * <p>If #lub is already equal to minimum allowed cardinality then set is specified by lub. if
-     * (#lubA == #A.min()) then A = lubA
-     */
-
     // A.lub = 1+2+4+5, A.glb = 4+5
     if (bHasChanged) a.domain.inLUB(store.level, a, a.domain.lub().subtract(b.domain.glb()));
 
@@ -113,19 +93,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
 
     if (performCardinalityReasoning) {
       // TODO implement cardinality reasoning.
-      /**
-       * Cardinality reasoning.
-       *
-       * <p>Note : that rules above ensure that (6) is empty. Only 1, 2, 3, 4, and 8 are not empty.
-       *
-       * <p>For B)
-       *
-       * <p>B.min() - (7+8+3 =(here) #glbB + (3) ) - how many elements from B restricts what can be
-       * used by A.
-       *
-       * <p>(1+4) + (2+5) - max (0, B.min() - (7+8+3) ) #A.inMax( (1+4) + (2+5) - max (0, B.min() -
-       * (7+8+3) ) )
-       */
       int maxSizeOfIntersection = -1;
 
       int elementsReservedForB = b.domain.card().min();
@@ -152,12 +119,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
         }
       }
 
-      /**
-       * For A)
-       *
-       * <p>(8+3) + (2+7) - max(0, A.min() - (1+4+5)) #B.inMax( (8+3) + (2+7) - max(0, A.min() -
-       * (1+4+5)) )
-       */
       int elementsReservedForA = a.domain.card().min();
 
       if (elementsReservedForA > 0) {

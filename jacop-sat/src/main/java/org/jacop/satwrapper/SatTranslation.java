@@ -63,13 +63,13 @@ public class SatTranslation {
   public void generate_clause(IntVar[] a1, IntVar[] a2) {
 
     List<IntVar> a1reduced = new ArrayList<IntVar>();
-    for (int i = 0; i < a1.length; i++)
-      if (a1[i].min() == 1) return;
-      else if (a1[i].max() != 0) a1reduced.add(a1[i]);
+    for (IntVar var : a1)
+      if (var.min() == 1) return;
+      else if (var.max() != 0) a1reduced.add(var);
     List<IntVar> a2reduced = new ArrayList<IntVar>();
-    for (int i = 0; i < a2.length; i++)
-      if (a2[i].max() == 0) return;
-      else if (a2[i].min() != 1) a2reduced.add(a2[i]);
+    for (IntVar intVar : a2)
+      if (intVar.max() == 0) return;
+      else if (intVar.min() != 1) a2reduced.add(intVar);
     if (a1reduced.size() == 0 && a2reduced.size() == 0) throw Store.failException;
     if (debug)
       System.out.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
@@ -104,8 +104,8 @@ public class SatTranslation {
     for (int i = 0; i < b.length; i++) bs[i] = b[i];
     bs[b.length] = r;
     generate_clause(a, bs);
-    for (int i = 0; i < a.length; i++) generate_clause(new IntVar[] {r}, new IntVar[] {a[i]});
-    for (int i = 0; i < b.length; i++) generate_clause(new IntVar[] {b[i], r}, new IntVar[] {});
+    for (IntVar var : a) generate_clause(new IntVar[] {r}, new IntVar[] {var});
+    for (IntVar intVar : b) generate_clause(new IntVar[] {intVar, r}, new IntVar[] {});
   }
 
   public void generate_or(IntVar[] a, IntVar c) {
@@ -113,14 +113,14 @@ public class SatTranslation {
     // (a1 \/ a2 \/ ... \/ an \/ -c)
     // /\
     // for all i: (-ai \/ c)
-    for (int i = 0; i < a.length; i++)
-      if (a[i].min() == 1) {
+    for (IntVar var : a)
+      if (var.min() == 1) {
         c.domain.in(store.level, c, 1, 1);
         return;
       }
 
     generate_clause(a, new IntVar[] {c});
-    for (int i = 0; i < a.length; i++) generate_clause(new IntVar[] {c}, new IntVar[] {a[i]});
+    for (IntVar intVar : a) generate_clause(new IntVar[] {c}, new IntVar[] {intVar});
   }
 
   public void generate_and(IntVar[] a, IntVar c) {
@@ -128,14 +128,14 @@ public class SatTranslation {
     // -a1 \/ -a2 \/ ... \/ c
     // /\
     // for all i: ai \/ -c
-    for (int i = 0; i < a.length; i++)
-      if (a[i].max() == 0) {
+    for (IntVar var : a)
+      if (var.max() == 0) {
         c.domain.in(store.level, c, 0, 0);
         return;
       }
 
     generate_clause(new IntVar[] {c}, a);
-    for (int i = 0; i < a.length; i++) generate_clause(new IntVar[] {a[i]}, new IntVar[] {c});
+    for (IntVar intVar : a) generate_clause(new IntVar[] {intVar}, new IntVar[] {c});
   }
 
   /**
@@ -296,8 +296,8 @@ public class SatTranslation {
     // /\_i (-a[i] \/ -c) /\ (a[0] \/ .. a[n] \/ c)
 
     // if any as[i] == 1 => c == 0
-    for (int i = 0; i < as.length; i++)
-      if (as[i].min() == 1) {
+    for (IntVar a : as)
+      if (a.min() == 1) {
         c.domain.in(store.level, c, 0, 0);
         return;
       }
@@ -454,9 +454,9 @@ public class SatTranslation {
 
   String clauseToString(int[] clause) {
 
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
 
-    for (int i = 0; i < clause.length; i++) buffer.append(clause[i] + " ");
+    for (int j : clause) buffer.append(j + " ");
 
     buffer.append("\n");
     return buffer.toString();

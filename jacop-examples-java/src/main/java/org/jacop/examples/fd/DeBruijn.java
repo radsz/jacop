@@ -74,6 +74,66 @@ public class DeBruijn extends ExampleFD {
   // the model
   //
 
+  /**
+   * Running the program java DeBruijn base n java DeBruijn base n m
+   *
+   * @param args between 2 and 3 arguments are used.
+   */
+  public static void main(String args[]) {
+
+    int base = 2;
+    int n = 4;
+    int m = 9;
+
+    if (args.length == 3) {
+      m = Integer.parseInt(args[2]);
+    }
+    if (args.length >= 2) {
+      base = Integer.parseInt(args[0]);
+      n = Integer.parseInt(args[1]);
+    }
+
+    DeBruijn debruijn = new DeBruijn();
+    debruijn.base = base;
+    debruijn.n = n;
+    debruijn.m = m;
+
+    debruijn.model();
+
+    boolean result = debruijn.searchAllAtOnce();
+
+    if (result) {
+
+      // prints then de Bruijn sequences
+      System.out.print("de Bruijn sequence:");
+
+      System.out.print("decimal values: ");
+      for (int i = 0; i < m; i++) {
+        System.out.print(debruijn.x[i].value() + " ");
+      }
+      System.out.println();
+
+      System.out.println("\nbinary:");
+
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+          System.out.print(debruijn.binary[i][j].value() + " ");
+        }
+        System.out.println(" : " + debruijn.x[i].value());
+      }
+
+    } else {
+      System.out.println("No solutions.");
+    } // end if result
+  } // end main
+
+  // integer power method
+  static int pow(int x, int y) {
+    int z = x;
+    for (int i = 1; i < y; i++) z *= x;
+    return z;
+  } // end pow
+
   @Override
   public void model() {
 
@@ -147,64 +207,4 @@ public class DeBruijn extends ExampleFD {
     // first element.
     store.impose(new Min(x, x[0]));
   } // end model
-
-  /**
-   * Running the program java DeBruijn base n java DeBruijn base n m
-   *
-   * @param args between 2 and 3 arguments are used.
-   */
-  public static void main(String args[]) {
-
-    int base = 2;
-    int n = 4;
-    int m = 9;
-
-    if (args.length == 3) {
-      m = Integer.parseInt(args[2]);
-    }
-    if (args.length >= 2) {
-      base = Integer.parseInt(args[0]);
-      n = Integer.parseInt(args[1]);
-    }
-
-    DeBruijn debruijn = new DeBruijn();
-    debruijn.base = base;
-    debruijn.n = n;
-    debruijn.m = m;
-
-    debruijn.model();
-
-    boolean result = debruijn.searchAllAtOnce();
-
-    if (result) {
-
-      // prints then de Bruijn sequences
-      System.out.print("de Bruijn sequence:");
-
-      System.out.print("decimal values: ");
-      for (int i = 0; i < m; i++) {
-        System.out.print(debruijn.x[i].value() + " ");
-      }
-      System.out.println();
-
-      System.out.println("\nbinary:");
-
-      for (int i = 0; i < m; i++) {
-        for (int j = 0; j < n; j++) {
-          System.out.print(debruijn.binary[i][j].value() + " ");
-        }
-        System.out.println(" : " + debruijn.x[i].value());
-      }
-
-    } else {
-      System.out.println("No solutions.");
-    } // end if result
-  } // end main
-
-  // integer power method
-  static int pow(int x, int y) {
-    int z = x;
-    for (int i = 1; i < y; i++) z *= x;
-    return z;
-  } // end pow
 } // end class

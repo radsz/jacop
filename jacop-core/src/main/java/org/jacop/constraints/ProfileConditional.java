@@ -41,10 +41,8 @@ import java.util.Iterator;
  */
 class ProfileConditional extends ArrayList<ProfileItemCondition> {
 
-  private static final long serialVersionUID = 8683452581100000010L;
-
   static final boolean trace = false;
-
+  private static final long serialVersionUID = 8683452581100000010L;
   int MaxProfile = 0;
 
   ProfileConditional() {}
@@ -245,7 +243,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer("[");
+    StringBuilder result = new StringBuilder("[");
 
     for (Iterator<ProfileItemCondition> e = iterator(); e.hasNext(); ) {
 

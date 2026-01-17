@@ -91,6 +91,7 @@ class GlobalConstraints implements ParserTreeConstants {
           return 0; // all equal
         }
       };
+  ArrayList<Pair> duplicates;
 
   public GlobalConstraints(Support support) {
     this.store = support.store;
@@ -129,7 +130,7 @@ class GlobalConstraints implements ParserTreeConstants {
      */
 
     int resSum = 0;
-    for (int i = 0; i < r.length; i++) resSum += r[i].max();
+    for (IntVar var : r) resSum += var.max();
     if (resSum <= b.min()) return;
 
     if (s.length == 0) return;
@@ -153,7 +154,7 @@ class GlobalConstraints implements ParserTreeConstants {
       if (unaryPossible) {
         if (allVarOne(d)) {
           support.pose(new Alldiff(s));
-          if (!b.singleton()) for (int i = 0; i < r.length; i++) support.pose(new XlteqY(r[i], b));
+          if (!b.singleton()) for (IntVar intVar : r) support.pose(new XlteqY(intVar, b));
         } else // possible to use CumulativeUnary (it is used with profile propagator; option true)
         support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
         // these constraints are not needed if we run with profile-based propagator
@@ -281,9 +282,9 @@ class GlobalConstraints implements ParserTreeConstants {
       // instead of alldiff (heuristic)
       float q = 0;
       int n = 0;
-      for (int i = 0; i < v.length; i++)
-        if (!v[i].singleton()) {
-          q += (float) v[i].getSize() / (float) (v[i].max() - v[i].min() + 1);
+      for (IntVar intVar : v)
+        if (!intVar.singleton()) {
+          q += (float) intVar.getSize() / (float) (intVar.max() - intVar.min() + 1);
           n++;
         }
       q = q / (float) n;
@@ -403,14 +404,14 @@ class GlobalConstraints implements ParserTreeConstants {
     int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     int index_max = index_min + c.length - 1;
 
-    for (int i = 0; i < x.length; i++) {
-      if (index_min > x[i].max() || index_max < x[i].min()) {
-        throw new IllegalArgumentException("%% ERROR: gcc domain error in variable " + x[i]);
+    for (IntVar intVar : x) {
+      if (index_min > intVar.max() || index_max < intVar.min()) {
+        throw new IllegalArgumentException("%% ERROR: gcc domain error in variable " + intVar);
       }
-      if (index_min > x[i].min() && index_min < x[i].max())
-        x[i].domain.inMin(store.level, x[i], index_min);
-      if (index_max < x[i].max() && index_max > x[i].min())
-        x[i].domain.inMax(store.level, x[i], index_max);
+      if (index_min > intVar.min() && index_min < intVar.max())
+        intVar.domain.inMin(store.level, intVar, index_min);
+      if (index_max < intVar.max() && index_max > intVar.min())
+        intVar.domain.inMax(store.level, intVar, index_max);
     }
     //                  System.out.println("c = " + Arrays.asList(x));
 
@@ -713,10 +714,10 @@ class GlobalConstraints implements ParserTreeConstants {
 
     int ground = 0;
     IntDomain d = new IntervalDomain();
-    for (int i = 0; i < x.length; i++) {
-      if (x[i].singleton()) {
+    for (IntVar intVar : x) {
+      if (intVar.singleton()) {
         ground++;
-        d.unionAdapt(x[i].domain);
+        d.unionAdapt(intVar.domain);
       }
     }
     if (ground == x.length) {
@@ -836,7 +837,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
       if (nv.length == 1) {
         IntervalDomain d = new IntervalDomain();
-        for (int i = 0; i < tt.length; i++) d.addDom(new IntervalDomain(tt[i][0], tt[i][0]));
+        for (int[] ints : tt) d.addDom(new IntervalDomain(ints[0], ints[0]));
         nv[0].domain.in(store.level, nv[0], d);
         if (support.options.debug()) System.out.println("% " + nv[0] + " in " + d);
 
@@ -878,16 +879,16 @@ class GlobalConstraints implements ParserTreeConstants {
 
       if (c != null && c.length <= 3) {
         if (v.length == 1) {
-          for (int i = 0; i < c.length; i++) {
+          for (int[] ints : c) {
             // support.pose(new XneqC(v[0], c[i][0]));
-            v[0].domain.inComplement(store.level, v[0], c[i][0]);
-            if (support.options.debug()) System.out.println("% " + v[0] + " \\ " + c[i][0]);
+            v[0].domain.inComplement(store.level, v[0], ints[0]);
+            if (support.options.debug()) System.out.println("% " + v[0] + " \\ " + ints[0]);
           }
         } else {
-          for (int i = 0; i < c.length; i++) {
-            XneqC[] x = new XneqC[c[i].length];
-            for (int j = 0; j < c[i].length; j++) {
-              x[j] = new XneqC(v[j], c[i][j]);
+          for (int[] ints : c) {
+            XneqC[] x = new XneqC[ints.length];
+            for (int j = 0; j < ints.length; j++) {
+              x[j] = new XneqC(v[j], ints[j]);
             }
             support.pose(new Or(x));
           }
@@ -901,15 +902,15 @@ class GlobalConstraints implements ParserTreeConstants {
     int[][] r = product(v, t);
 
     ArrayList<int[]> c = new ArrayList<>();
-    for (int i = 0; i < r.length; i++) {
+    for (int[] value : r) {
       boolean exists = false;
-      for (int j = 0; j < t.length; j++) {
-        if (eqTuples(r[i], t[j])) {
+      for (int[] ints : t) {
+        if (eqTuples(value, ints)) {
           exists = true;
           break;
         }
       }
-      if (!exists) c.add(r[i]);
+      if (!exists) c.add(value);
     }
 
     int[][] ca = c.toArray(new int[c.size()][2]);
@@ -1175,10 +1176,10 @@ class GlobalConstraints implements ParserTreeConstants {
     // keep only **unique** variables in the original order
     ArrayList<IntVar> xx = new ArrayList<>();
     HashSet<IntVar> varSet = new HashSet<IntVar>();
-    for (int i = 0; i < x.length; i++) {
-      if (!varSet.contains(x[i])) {
-        xx.add(x[i]);
-        varSet.add(x[i]);
+    for (IntVar intVar : x) {
+      if (!varSet.contains(intVar)) {
+        xx.add(intVar);
+        varSet.add(intVar);
       }
     }
     IntVar[] xs = xx.toArray(new IntVar[xx.size()]);
@@ -1538,14 +1539,14 @@ class GlobalConstraints implements ParserTreeConstants {
     else support.pose(new Reified(new AllEqual(x), b));
   }
 
+  // optional global constraints
+
   void gen_jacop_all_equal_int(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
     if (x.length == 2) support.pose(new XeqY(x[0], x[1]));
     else support.pose(new AllEqual(x));
   }
-
-  // optional global constraints
 
   void gen_jacop_cumulative_optional(SimpleNode node) {
     IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
@@ -1593,16 +1594,14 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   boolean allVarOne(IntVar[] w) {
-    for (int i = 0; i < w.length; i++) if (!w[i].singleton(1)) return false;
+    for (IntVar intVar : w) if (!intVar.singleton(1)) return false;
     return true;
   }
 
   boolean allVarGround(IntVar[] w) {
-    for (int i = 0; i < w.length; i++) if (!w[i].singleton()) return false;
+    for (IntVar intVar : w) if (!intVar.singleton()) return false;
     return true;
   }
-
-  ArrayList<Pair> duplicates;
 
   int[] uniqueIndex(IntVar[] vs) {
 
@@ -1628,15 +1627,15 @@ class GlobalConstraints implements ParserTreeConstants {
     int[][] nt = new int[n][t[0].length];
 
     int k = 0;
-    for (int i = 0; i < n; i++) {
+    for (int[] ints : t) {
       int correct = 0;
       for (Pair d : duplicates) {
-        if (t[i][d.first()] == t[i][d.second()]) {
+        if (ints[d.first()] == ints[d.second()]) {
           correct++;
         }
       }
       if (correct == duplicates.size()) {
-        System.arraycopy(t[i], 0, nt[k], 0, t[i].length);
+        System.arraycopy(ints, 0, nt[k], 0, ints.length);
         k++;
       }
     }

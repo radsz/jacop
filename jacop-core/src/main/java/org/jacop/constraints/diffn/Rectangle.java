@@ -44,12 +44,11 @@ import org.jacop.core.Var;
  */
 public class Rectangle {
 
-  int index;
-
   /** It specifies the the rectangle. */
   public final IntVar[] origin;
 
   public final IntVar[] length;
+  int index;
 
   /**
    * It constructs a rectangle.
@@ -91,6 +90,12 @@ public class Rectangle {
    */
   public Rectangle(List<? extends IntVar> list) {
     this(list.toArray(new IntVar[list.size()]));
+  }
+
+  public static Stream<Var> getStream(Rectangle[] scope) {
+    return Arrays.stream(scope)
+        .map(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)))
+        .flatMap(i -> i);
   }
 
   IntVar origin(int dim) {
@@ -194,11 +199,5 @@ public class Rectangle {
     }
     result.append("]");
     return result.toString();
-  }
-
-  public static Stream<Var> getStream(Rectangle[] scope) {
-    return Arrays.stream(scope)
-        .map(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)))
-        .flatMap(i -> i);
   }
 }

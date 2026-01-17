@@ -52,12 +52,11 @@ public class Diff2 extends Diff {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  Diff2Var EvalRects[];
-
-  boolean exceptionListPresent = false;
-
   /** It specifies a list of pairs of rectangles which can overlap. */
   public int[] exclusiveList = new int[0];
+
+  Diff2Var EvalRects[];
+  boolean exceptionListPresent = false;
 
   /**
    * Conditional Diff2. The rectangles that are specified on the list Exclusive list is specified
@@ -557,7 +556,7 @@ public class Diff2 extends Diff {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : diff2( ");
 

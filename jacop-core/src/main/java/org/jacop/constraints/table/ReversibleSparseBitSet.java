@@ -172,7 +172,7 @@ public class ReversibleSparseBitSet {
   }
 
   public String toString() {
-    StringBuffer s = new StringBuffer("words: ");
+    StringBuilder s = new StringBuilder("words: ");
 
     long[] wrds = words.value();
     int n = limit.value() + 1;

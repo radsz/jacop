@@ -40,16 +40,6 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
 
 /**
- * SumWeightDom constraint implements the weighted summation over several variables . It provides
- * the weighted sum from all variables on the list. The weights are integers.
- *
- * <p>The complexity of domain consistency is exponential in worst case. Use it carefully!
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
-
-/**
  * @deprecated As of release 4.3.1 replaced by LinearIntDom constraint.
  */
 @Deprecated
@@ -83,6 +73,12 @@ public class SumWeightDom extends Constraint
 
   boolean backtrackHasOccured = false;
 
+  /** The sum of grounded variables. */
+  private TimeStamp<Integer> sumGrounded;
+
+  /** The position for the next grounded variable. */
+  private TimeStamp<Integer> nextGroundedPosition;
+
   /**
    * @param list array of variables to be summed up
    * @param weights variables' weights
@@ -90,43 +86,6 @@ public class SumWeightDom extends Constraint
    */
   public SumWeightDom(IntVar[] list, int[] weights, int sum) {
     commonInitialization(list, weights, sum);
-  }
-
-  public void commonInitialization(IntVar[] list, int[] weights, int sum) {
-
-    checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
-
-    if (list.length != weights.length)
-      throw new IllegalArgumentException(
-          "SumWeightDom constraint has list and weights of different lengths.");
-
-    queueIndex = 4;
-
-    numberId = idNumber.incrementAndGet();
-
-    this.sum = sum;
-
-    Map<IntVar, Integer> parameters = Var.createEmptyPositioning();
-
-    for (int i = 0; i < list.length; i++) {
-      if (weights[i] == 0) continue;
-      Integer coeff = parameters.getOrDefault(list[i], 0);
-      parameters.put(list[i], coeff + weights[i]);
-    }
-
-    this.list = new IntVar[parameters.size()];
-    this.weights = new int[parameters.size()];
-
-    int i = 0;
-    for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
-      this.list[i] = e.getKey();
-      this.weights[i] = e.getValue();
-      i++;
-    }
-
-    checkForOverflow();
-
-    setScope(list);
   }
 
   /**
@@ -171,6 +130,43 @@ public class SumWeightDom extends Constraint
         0);
   }
 
+  public void commonInitialization(IntVar[] list, int[] weights, int sum) {
+
+    checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
+
+    if (list.length != weights.length)
+      throw new IllegalArgumentException(
+          "SumWeightDom constraint has list and weights of different lengths.");
+
+    queueIndex = 4;
+
+    numberId = idNumber.incrementAndGet();
+
+    this.sum = sum;
+
+    Map<IntVar, Integer> parameters = Var.createEmptyPositioning();
+
+    for (int i = 0; i < list.length; i++) {
+      if (weights[i] == 0) continue;
+      Integer coeff = parameters.getOrDefault(list[i], 0);
+      parameters.put(list[i], coeff + weights[i]);
+    }
+
+    this.list = new IntVar[parameters.size()];
+    this.weights = new int[parameters.size()];
+
+    int i = 0;
+    for (Map.Entry<IntVar, Integer> e : parameters.entrySet()) {
+      this.list[i] = e.getKey();
+      this.weights[i] = e.getValue();
+      i++;
+    }
+
+    checkForOverflow();
+
+    setScope(list);
+  }
+
   @Override
   public void removeLevelLate(int level) {
 
@@ -178,12 +174,6 @@ public class SumWeightDom extends Constraint
 
     variableQueue.clear();
   }
-
-  /** The sum of grounded variables. */
-  private TimeStamp<Integer> sumGrounded;
-
-  /** The position for the next grounded variable. */
-  private TimeStamp<Integer> nextGroundedPosition;
 
   @Override
   public void consistency(Store store) {

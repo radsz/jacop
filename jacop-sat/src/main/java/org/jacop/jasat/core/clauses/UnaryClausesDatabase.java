@@ -136,12 +136,6 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
   public void assertLiteral(int literal) {
     // nothing to do
 
-    /**
-     * TODO: Radek, Really nothing to do? What about checking that there is no conflict with
-     * asserted literal?
-     *
-     * <p>=> literals are already asserted (all clauses here are unit clauses)
-     */
   }
 
   @Override

@@ -208,7 +208,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
   public String toGraph(String name) {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("digraph ThetaLambdaUnaryTree" + name);
     result.append(" {");
@@ -251,7 +251,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("ThetaLambdaUnaryTree\n");
     for (int i = 0; i < treeSize; i++)

@@ -64,6 +64,31 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   private boolean hasGivenIterator = false;
 
   /**
+   * creates an instance of the parser for some input stream
+   *
+   * @param pool the memory pool to use
+   * @param stream the stream from which to read clauses
+   * @throws ParseException excpetion when parsing fails
+   */
+  public CnfParser(MemoryPool pool, InputStream stream) throws ParseException {
+    this.pool = pool;
+    this.stream = stream;
+
+    // begin parsing the problem
+    try {
+      c = stream.read();
+      skipComments();
+      readProblemDef();
+
+      // prepare the first clause
+      parseNextClause();
+    } catch (IOException e) {
+      System.err.println("error while reading: unable to parse problem");
+      throw new ParseException("unable to parse problem");
+    }
+  }
+
+  /**
    * reads an int from the stream
    *
    * @return the parsed int
@@ -196,31 +221,6 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     if (hasGivenIterator) throw new AssertionError("should only iterate once on Parser");
     hasGivenIterator = true;
     return this;
-  }
-
-  /**
-   * creates an instance of the parser for some input stream
-   *
-   * @param pool the memory pool to use
-   * @param stream the stream from which to read clauses
-   * @throws ParseException excpetion when parsing fails
-   */
-  public CnfParser(MemoryPool pool, InputStream stream) throws ParseException {
-    this.pool = pool;
-    this.stream = stream;
-
-    // begin parsing the problem
-    try {
-      c = stream.read();
-      skipComments();
-      readProblemDef();
-
-      // prepare the first clause
-      parseNextClause();
-    } catch (IOException e) {
-      System.err.println("error while reading: unable to parse problem");
-      throw new ParseException("unable to parse problem");
-    }
   }
 
   /**

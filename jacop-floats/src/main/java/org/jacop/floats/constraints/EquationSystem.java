@@ -116,7 +116,7 @@ public class EquationSystem extends Constraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : EquationSystem( [ ");
 
     for (int i = 0; i < f.length; i++) {

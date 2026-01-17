@@ -583,13 +583,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           vs = getVariables((PrioritySearch<T>) ps.search[2 * j]);
         }
 
-        for (int k = 0; k < vs.length; k++) vars.add(vs[k]);
+        for (T v : vs) vars.add(v);
 
       } else {
         java.util.Map<T, Integer> position = heuristic.getVariablesMapping();
 
-        for (java.util.Iterator<T> itr = position.keySet().iterator(); itr.hasNext(); ) {
-          T current = itr.next();
+        for (T current : position.keySet()) {
           vars.add(current);
         }
       }
@@ -645,6 +644,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     b.append("])");
 
     return b.toString();
+  }
+
+  public int noSolutions() {
+    return noSolutions;
+  }
+
+  static final class SolutionsLimitReached extends RuntimeException {
+
+    SolutionsLimitReached() {}
   }
 
   class LinkingSearch<T extends Var> extends DepthFirstSearch<T> {
@@ -838,14 +846,5 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         }
       }
     }
-  }
-
-  public int noSolutions() {
-    return noSolutions;
-  }
-
-  static final class SolutionsLimitReached extends RuntimeException {
-
-    SolutionsLimitReached() {}
   }
 }

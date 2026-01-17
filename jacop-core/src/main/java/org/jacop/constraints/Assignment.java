@@ -60,19 +60,20 @@ public class Assignment extends Constraint
   /** It specifies a shift applied to variables d. */
   public int shiftD = 0;
 
-  Map<IntVar, Integer> ds;
-
   /** It specifies a list of variables x. */
   public IntVar x[];
 
   /** It specifies a shift applied to variables x. */
   public int shiftX = 0;
 
+  Map<IntVar, Integer> ds;
   Map<IntVar, Integer> xs;
 
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
+  IntervalDomain rangeX;
+  IntervalDomain rangeD;
 
   /**
    * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
@@ -166,9 +167,6 @@ public class Assignment extends Constraint
     variableQueue.clear();
     if (level == firstConsistencyLevel) firstConsistencyCheck = true;
   }
-
-  IntervalDomain rangeX;
-  IntervalDomain rangeD;
 
   @Override
   public void consistency(Store store) {
@@ -327,7 +325,7 @@ public class Assignment extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : assignment([");
 

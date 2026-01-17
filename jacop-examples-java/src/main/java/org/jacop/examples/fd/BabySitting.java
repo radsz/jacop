@@ -57,6 +57,20 @@ import org.jacop.core.Store;
  */
 public class BabySitting extends ExampleFD {
 
+  /**
+   * It runs the program solving this puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    BabySitting example = new BabySitting();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -104,19 +118,5 @@ public class BabySitting extends ExampleFD {
 
     // 4. Otto is twice as many years old as the Hall child.
     store.impose(new XmulCeqZ(surname[ihall], 2, name[iotto]));
-  }
-
-  /**
-   * It runs the program solving this puzzle.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    BabySitting example = new BabySitting();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

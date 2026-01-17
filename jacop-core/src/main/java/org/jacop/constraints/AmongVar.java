@@ -60,25 +60,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   /** Number of Among constraints created. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  // All variables attributes
-  private Map<IntVar, Integer> xIndex;
-  private Map<IntVar, Integer> yIndex;
-
-  // Derived variables
-
-  // FIXME, check if timestamp over IntervalDomain is not better/cleaner.
-  private MutableVar lbS;
-  private MutableVar futureLbS;
-
-  private LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<Integer>();
-
-  // Time stamps
-  private TimeStamp<Integer> lb0TS;
-  private TimeStamp<Integer> ub0TS;
-
-  private TimeStamp<Integer> yGrounded;
-  private TimeStamp<Integer> xGrounded;
-
   /**
    * List of variables x which values are checked against values of variables y. Each x is counted
    * only once as equal to one of the elements of list y.
@@ -88,10 +69,24 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   /** It specifies what values we are counting in the list of x's. */
   public IntVar[] listOfY;
 
+  // Derived variables
   /**
    * It specifies the number of x variables equal to at least one value present in the list of y.
    */
   public IntVar n;
+
+  // All variables attributes
+  private Map<IntVar, Integer> xIndex;
+  private Map<IntVar, Integer> yIndex;
+  // FIXME, check if timestamp over IntervalDomain is not better/cleaner.
+  private MutableVar lbS;
+  private MutableVar futureLbS;
+  private LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<Integer>();
+  // Time stamps
+  private TimeStamp<Integer> lb0TS;
+  private TimeStamp<Integer> ub0TS;
+  private TimeStamp<Integer> yGrounded;
+  private TimeStamp<Integer> xGrounded;
 
   /**
    * It constructs an AmongVar constraint.
@@ -1084,7 +1079,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id()).append("\n");
+    StringBuilder result = new StringBuilder(id()).append("\n");
 
     for (IntVar var : this.listOfX) {
       result.append("X variable ").append(var.id).append(" : ").append(var.domain);

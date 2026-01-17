@@ -3,6 +3,10 @@
 package org.jacop.fz;
 
 public class ASTSolveExpr extends SimpleNode {
+  int type = -1; // 0 - ident, 1 - array access
+  int index; // keeps index
+  String ident;
+
   public ASTSolveExpr(int id) {
     super(id);
   }
@@ -11,32 +15,28 @@ public class ASTSolveExpr extends SimpleNode {
     super(p, id);
   }
 
-  int type = -1; // 0 - ident, 1 - array access
-  int index; // keeps index
-  String ident;
-
-  public void setType(int t) {
-    type = t;
-  }
-
   public int getType() {
     return type;
   }
 
-  public void setIndex(int i) {
-    index = i;
+  public void setType(int t) {
+    type = t;
   }
 
   public int getIndex() {
     return index;
   }
 
-  public void setIdent(String i) {
-    ident = i;
+  public void setIndex(int i) {
+    index = i;
   }
 
   public String getIdent() {
     return ident;
+  }
+
+  public void setIdent(String i) {
+    ident = i;
   }
 
   public String toString() {

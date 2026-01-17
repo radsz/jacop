@@ -50,12 +50,58 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   // @todo make debugAll be used in printing statements.
   static final boolean debugAll = true;
+  static AtomicInteger no = new AtomicInteger(0);
 
   /**
    * If it is set to true then the optimizing search will quit the search if this action is
    * indicated by the solution listener.
    */
   public boolean respectSolutionListenerAdvice = false;
+
+  /** It represents the cost value of currently best solution for IntVar cost. */
+  public int costValue = Integer.MAX_VALUE;
+
+  /** It represents the cost value of currently best solution for FloatVar cost. */
+  public double costValueFloat = Double.MAX_VALUE;
+
+  /** It represents the cost variable. */
+  public Var costVariable = null;
+
+  /** It is invoked when returning from left or right child. */
+  public ExitChildListener<T> exitChildListener;
+
+  /** It is invoked when consistency function has been executed. */
+  public ConsistencyListener consistencyListener;
+
+  /** It is executed when a solution is found. */
+  public SolutionListener<T> solutionListener = new SimpleSolutionListener<T>();
+
+  /** It is executed when search is started, before entering the search. */
+  public InitializeListener initializeListener;
+
+  /** It stores searches which will be executed when this one has assign all its variables. */
+  public Search<? extends Var>[] childSearches;
+
+  /**
+   * If this search is a sub-search then this pointer will point out to the master search (i.e. the
+   * search which have invoked this search).
+   */
+  public Search<? extends Var> masterSearch;
+
+  /** It represents store within which a search is performed. */
+  public Store store = null;
+
+  /** It specifies that the time-out has occured */
+  public boolean timeOutOccured;
+
+  /** It specifies the id of the search. */
+  public String id;
+
+  /** It specifies if for setVar based search the left branch should impose EinA constraint. */
+  public boolean einAinleftTree = true;
+
+  /** It remembers what child search has been already examined. */
+  public int currentChildSearch = -1;
 
   /**
    * It decides if the found solution is immediately assigned to the store.* If the solution is not
@@ -84,15 +130,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    */
   Constraint cost = null;
 
-  /** It represents the cost value of currently best solution for IntVar cost. */
-  public int costValue = Integer.MAX_VALUE;
-
-  /** It represents the cost value of currently best solution for FloatVar cost. */
-  public double costValueFloat = Double.MAX_VALUE;
-
-  /** It represents the cost variable. */
-  public Var costVariable = null;
-
   boolean optimize = false;
 
   /** It stores number of nodes with decisions during search. */
@@ -112,18 +149,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It represents the choice point selection heuristic. */
   SelectChoicePoint<T> heuristic = null;
-
-  /** It is invoked when returning from left or right child. */
-  public ExitChildListener<T> exitChildListener;
-
-  /** It is invoked when consistency function has been executed. */
-  public ConsistencyListener consistencyListener;
-
-  /** It is executed when a solution is found. */
-  public SolutionListener<T> solutionListener = new SimpleSolutionListener<T>();
-
-  /** It is executed when search is started, before entering the search. */
-  public InitializeListener initializeListener;
 
   /** It stores the maximum depth reached during search. */
   int maxDepth = 0;
@@ -149,18 +174,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It decides if information about search is printed. */
   boolean printInfo = true;
 
-  /** It stores searches which will be executed when this one has assign all its variables. */
-  public Search<? extends Var>[] childSearches;
-
-  /**
-   * If this search is a sub-search then this pointer will point out to the master search (i.e. the
-   * search which have invoked this search).
-   */
-  public Search<? extends Var> masterSearch;
-
-  /** It represents store within which a search is performed. */
-  public Store store = null;
-
   /** The object informed about the determination of the timeout. */
   TimeOutListener timeOutListener = null;
 
@@ -172,9 +185,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It specifies if the timeout is on. */
   boolean timeOutCheck = false;
-
-  /** It specifies that the time-out has occured */
-  public boolean timeOutOccured;
 
   /** It specifies the number of seconds after which the search will timeout. */
   long tOut = -1;
@@ -191,13 +201,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It specifies if the wrong decisions out is on. */
   boolean wrongDecisionsOutCheck = false;
 
-  static AtomicInteger no = new AtomicInteger(0);
-
-  /** It specifies the id of the search. */
-  public String id;
-
-  /** It specifies if for setVar based search the left branch should impose EinA constraint. */
-  public boolean einAinleftTree = true;
+  /** It specifies current child search. */
+  public DepthFirstSearch() {
+    id = "DFS" + no.incrementAndGet();
+  }
 
   /**
    * It sets the id of the store.
@@ -210,11 +217,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   public String id() {
     return id;
-  }
-
-  /** It specifies current child search. */
-  public DepthFirstSearch() {
-    id = "DFS" + no.incrementAndGet();
   }
 
   public void setChildSearch(Search<? extends Var>[] child) {
@@ -250,9 +252,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     child.setMasterSearch(this);
   }
-
-  /** It remembers what child search has been already examined. */
-  public int currentChildSearch = -1;
 
   public void setSelectChoicePoint(SelectChoicePoint<T> select) {
     heuristic = select;
@@ -320,6 +319,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public SolutionListener<T> getSolutionListener() {
 
     return solutionListener;
+  }
+
+  public void setSolutionListener(SolutionListener<T> listener) {
+    solutionListener = listener;
   }
 
   /** This function is called recursively to assign variables one by one. */
@@ -449,12 +452,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         //		maybe a boolean flag, if search should work
         //		C, not(C) versus not(C), C;
 
-        /**
-         * Possible changes to Search. Indomain returns int. for intVar it is an assignment.
-         * inValue(). for serVar this is EinA() constraint, inGLB(value) add boolean flag
-         * reversedOrder = false; Only accepted for SetVar search. Double check that firstVariable
-         * is ok with this non grounding of values even in case of var,value pair.
-         */
         DomainOperationHandler domainHandler =
             SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
         if (domainHandler != null) {
@@ -1255,32 +1252,28 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return consistencyListener;
   }
 
-  public ExitChildListener<T> getExitChildListener() {
-    return exitChildListener;
-  }
-
-  public ExitListener getExitListener() {
-    return exitListener;
-  }
-
-  public TimeOutListener getTimeOutListener() {
-    return timeOutListener;
-  }
-
-  public void setSolutionListener(SolutionListener<T> listener) {
-    solutionListener = listener;
-  }
-
   public void setConsistencyListener(ConsistencyListener listener) {
     consistencyListener = listener;
+  }
+
+  public ExitChildListener<T> getExitChildListener() {
+    return exitChildListener;
   }
 
   public void setExitChildListener(ExitChildListener<T> listener) {
     exitChildListener = listener;
   }
 
+  public ExitListener getExitListener() {
+    return exitListener;
+  }
+
   public void setExitListener(ExitListener listener) {
     exitListener = listener;
+  }
+
+  public TimeOutListener getTimeOutListener() {
+    return timeOutListener;
   }
 
   public void setTimeOutListener(TimeOutListener listener) {

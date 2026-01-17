@@ -57,6 +57,26 @@ public class FurnitureMoving extends ExampleFD {
   IntVar[] starts;
   IntVar[] endTimes;
 
+  /**
+   * It executes the program which solves this logic puzzle.
+   *
+   * @param args command arguments (none)
+   */
+  public static void main(String args[]) {
+
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
+
+    FurnitureMoving example = new FurnitureMoving();
+    example.model();
+
+    example.searchSpecific();
+
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
+
   @Override
   public void model() {
 
@@ -114,26 +134,6 @@ public class FurnitureMoving extends ExampleFD {
     vars.add(numPersons);
 
     cost = numPersons;
-  }
-
-  /**
-   * It executes the program which solves this logic puzzle.
-   *
-   * @param args command arguments (none)
-   */
-  public static void main(String args[]) {
-
-    long T1, T2, T;
-    T1 = System.currentTimeMillis();
-
-    FurnitureMoving example = new FurnitureMoving();
-    example.model();
-
-    example.searchSpecific();
-
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
   }
 
   /**

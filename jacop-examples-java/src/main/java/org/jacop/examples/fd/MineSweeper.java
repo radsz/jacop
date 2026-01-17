@@ -63,123 +63,14 @@ import org.jacop.search.*;
  */
 public class MineSweeper extends ExampleFD {
 
-  int r; // number of rows
-  int c; // number of cols
-
   /** It represents the unknown value in the problem matrix. */
   public static final int X = -1;
 
+  public int[][] problem = null;
+  int r; // number of rows
+  int c; // number of cols
   IntVar[][] game; // The FDV version of the problem matrix.
   IntVar[][] mines; // solution matrix: 0..1 where 1 means mine.
-
-  public int[][] problem = null;
-
-  @Override
-  public void model() {
-
-    store = new Store();
-
-    if (problem == null) problem = readFromArray(problem2());
-
-    r = problem.length;
-    c = problem[0].length;
-
-    //
-    // Initialize the constraint variables.
-    //
-    mines = new IntVar[r][c];
-    game = new IntVar[r][c];
-    for (int i = 0; i < r; i++) {
-      for (int j = 0; j < c; j++) {
-
-        // 0: no mine, 1: mine
-        mines[i][j] = new BooleanVar(store, "m_" + i + "_" + j);
-
-        // mirrors the problem matrix
-        game[i][j] = new IntVar(store, "g_" + i + "_" + j, -1, 8);
-      }
-    }
-
-    // Add the constraints
-    for (int i = 0; i < r; i++) {
-      for (int j = 0; j < c; j++) {
-
-        // This is a known value of neighbours
-        if (problem[i][j] > X) {
-
-          // mirroring the problem matrix.
-          store.impose(new XeqC(game[i][j], problem[i][j]));
-
-          // This could not be a mine.
-          store.impose(new XeqC(mines[i][j], 0));
-
-          // Sum the number of neighbours: same as game[i][j].
-          //
-          // Note: Maybe this could be modelled more elegant
-          // instead of using an ArrayList.
-          List<IntVar> lst = new ArrayList<IntVar>();
-          for (int a = -1; a <= 1; a++) {
-            for (int b = -1; b <= 1; b++) {
-              if (i + a >= 0 && j + b >= 0 && i + a < r && j + b < c) {
-                lst.add(mines[i + a][j + b]);
-              }
-            }
-          }
-          store.impose(new SumInt(lst, "==", game[i][j]));
-        } // end if problem[i][j] > X
-      } // end for j
-    } // end for i
-
-    // HakankUtil.toXML(store, -1, ".", "minesweeper.xml");
-
-  } // end model
-
-  /**
-   * It executes special search with solution printing to present the solutions.
-   *
-   * @param recordSolutions specifies if the solutions should be recorded.
-   */
-  public void searchSpecific(boolean recordSolutions) {
-
-    // Note: This uses the SimpleMatrixSelect since
-    // mines is a matrix.
-    SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            mines, new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
-
-    search = new DepthFirstSearch<IntVar>();
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(recordSolutions);
-
-    boolean result = search.labeling(store, select);
-
-    int numSolutions = search.getSolutionListener().solutionsNo();
-
-    if (result) {
-
-      if (numSolutions <= 100) {
-        search.printAllSolutions();
-      } else {
-        System.out.println("Too many solutions to print...");
-      }
-
-      if (numSolutions > 1) System.out.println("\nThe last solution:");
-      else System.out.println("\nThe solution:");
-
-      for (int i = 0; i < r; i++) {
-        for (int j = 0; j < c; j++) {
-          System.out.print(mines[i][j].value() + " ");
-        }
-        System.out.println();
-      }
-
-      System.out.println("numSolutions: " + numSolutions);
-
-    } else {
-
-      System.out.println("No solutions.");
-    } // end if result
-  } // end search
 
   /**
    * It transforms string representation of the problem into an array of ints representation.
@@ -531,4 +422,111 @@ public class MineSweeper extends ExampleFD {
     T = T2 - T1;
     System.out.println("\n\t*** Execution time = " + T + " ms");
   } // end main
+
+  @Override
+  public void model() {
+
+    store = new Store();
+
+    if (problem == null) problem = readFromArray(problem2());
+
+    r = problem.length;
+    c = problem[0].length;
+
+    //
+    // Initialize the constraint variables.
+    //
+    mines = new IntVar[r][c];
+    game = new IntVar[r][c];
+    for (int i = 0; i < r; i++) {
+      for (int j = 0; j < c; j++) {
+
+        // 0: no mine, 1: mine
+        mines[i][j] = new BooleanVar(store, "m_" + i + "_" + j);
+
+        // mirrors the problem matrix
+        game[i][j] = new IntVar(store, "g_" + i + "_" + j, -1, 8);
+      }
+    }
+
+    // Add the constraints
+    for (int i = 0; i < r; i++) {
+      for (int j = 0; j < c; j++) {
+
+        // This is a known value of neighbours
+        if (problem[i][j] > X) {
+
+          // mirroring the problem matrix.
+          store.impose(new XeqC(game[i][j], problem[i][j]));
+
+          // This could not be a mine.
+          store.impose(new XeqC(mines[i][j], 0));
+
+          // Sum the number of neighbours: same as game[i][j].
+          //
+          // Note: Maybe this could be modelled more elegant
+          // instead of using an ArrayList.
+          List<IntVar> lst = new ArrayList<IntVar>();
+          for (int a = -1; a <= 1; a++) {
+            for (int b = -1; b <= 1; b++) {
+              if (i + a >= 0 && j + b >= 0 && i + a < r && j + b < c) {
+                lst.add(mines[i + a][j + b]);
+              }
+            }
+          }
+          store.impose(new SumInt(lst, "==", game[i][j]));
+        } // end if problem[i][j] > X
+      } // end for j
+    } // end for i
+
+    // HakankUtil.toXML(store, -1, ".", "minesweeper.xml");
+
+  } // end model
+
+  /**
+   * It executes special search with solution printing to present the solutions.
+   *
+   * @param recordSolutions specifies if the solutions should be recorded.
+   */
+  public void searchSpecific(boolean recordSolutions) {
+
+    // Note: This uses the SimpleMatrixSelect since
+    // mines is a matrix.
+    SelectChoicePoint<IntVar> select =
+        new SimpleMatrixSelect<IntVar>(
+            mines, new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+
+    search = new DepthFirstSearch<IntVar>();
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(recordSolutions);
+
+    boolean result = search.labeling(store, select);
+
+    int numSolutions = search.getSolutionListener().solutionsNo();
+
+    if (result) {
+
+      if (numSolutions <= 100) {
+        search.printAllSolutions();
+      } else {
+        System.out.println("Too many solutions to print...");
+      }
+
+      if (numSolutions > 1) System.out.println("\nThe last solution:");
+      else System.out.println("\nThe solution:");
+
+      for (int i = 0; i < r; i++) {
+        for (int j = 0; j < c; j++) {
+          System.out.print(mines[i][j].value() + " ");
+        }
+        System.out.println();
+      }
+
+      System.out.println("numSolutions: " + numSolutions);
+
+    } else {
+
+      System.out.println("No solutions.");
+    } // end if result
+  } // end search
 } // end class

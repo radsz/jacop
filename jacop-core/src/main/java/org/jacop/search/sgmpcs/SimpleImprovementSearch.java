@@ -45,34 +45,27 @@ import org.jacop.search.*;
  */
 public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {
 
-  boolean printInfo = true;
-
   /*
    * current store
    */
   public Store store;
-
   /*
    * search variable
    */
   public IntVar[] vars;
-
-  /*
-   * cost variable
-   */ IntVar cost;
-
   /*
    * The solution produced by last search
    */
   public int[] solution;
-
+  public SGMPCSCalculator<Var> failCalculator;
+  boolean printInfo = true;
+  /*
+   * cost variable
+   */ IntVar cost;
   /*
    * The cost produced by last search
    */ int searchCost;
-
   long timeOut;
-
-  public SGMPCSCalculator<Var> failCalculator;
 
   public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
     this.store = store;

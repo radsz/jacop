@@ -48,10 +48,8 @@ import org.jacop.core.TimeStamp;
  */
 public class Member extends PrimitiveConstraint {
 
-  Store store;
-
   static AtomicInteger idNumber = new AtomicInteger(0);
-
+  Store store;
   boolean reified = true;
 
   /** It specifies a list of variables being summed. */
@@ -238,7 +236,7 @@ public class Member extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : Member([");
 
     for (int i = 0; i < l; i++) {

@@ -42,13 +42,10 @@ import java.util.Iterator;
  */
 public class Profile extends ArrayList<ProfileItem> {
 
-  private static final long serialVersionUID = 8683452581100000012L;
-
   static final boolean trace = false;
-
   static final int cumul = 0;
   static final int diffn = 1;
-
+  private static final long serialVersionUID = 8683452581100000012L;
   protected int maxProfileItemHeight = 0;
 
   short type = cumul;
@@ -256,7 +253,7 @@ public class Profile extends ArrayList<ProfileItem> {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer("[");
+    StringBuilder result = new StringBuilder("[");
 
     for (Iterator<ProfileItem> e = iterator(); e.hasNext(); ) {
       result.append(e.next().toString());

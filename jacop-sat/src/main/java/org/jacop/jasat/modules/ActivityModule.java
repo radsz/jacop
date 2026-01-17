@@ -53,41 +53,51 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
  */
 public final class ActivityModule implements ClauseListener, BackjumpListener, ConflictListener {
 
-  // number by which activity bump rate is multiplied
-  private int BUMP_INCREASE_FACTOR = 2;
-
   // number of conflicts needed to increase bump rate (ie, it is increased
   // every 20 learnt clauses)
   private final int LEARNT_COUNT_TO_INCREASE = 20;
   // how often do we sort again the priority queue
   private final int CONFLICT_COUNT_TO_SORT = 100;
-
+  // solver instance
+  public Core core;
+  // number by which activity bump rate is multiplied
+  private int BUMP_INCREASE_FACTOR = 2;
   // the rates, for each variable and polarity.
   private int[] posActivities;
   private int[] negActivities;
-  private int activitiesIndex = 0;
 
+  /**
+   * compares literals according to their activity. This stands for i > j and not i < j, because we
+   * want activities to be sorted in decreasing order
+   *
+   * @author simon
+   */
+  private final Comparator<Integer> comparator =
+      (i, j) -> {
+        assert Math.abs(i) <= posActivities.length + 1;
+        assert Math.abs(j) <= posActivities.length + 1;
+        assert posActivities.length == negActivities.length;
+
+        int activity_i = getLiteralActivity(Math.abs(i), i > 0);
+        int activity_j = getLiteralActivity(Math.abs(j), j > 0);
+
+        return activity_j - activity_i;
+      };
+
+  private int activitiesIndex = 0;
   // the bump rate
   private int currentBumpRate;
-
   // above which value do we rebase values ?
   private int rebaseThreshold;
-
   // the number of learnt clauses since last bump rate increase
   private int learntCount = 0;
-
   // hand-managed priority queue for literals (always sorted by activity)
   private Integer[] priorities = new Integer[50];
   private int prioritiesIndex = 0;
-
   // set of literals that are in priorities
   private BitSet prioritizedVars = new BitSet();
-
   // used to update sorting of priorities sometimes
   private int conflictCount = 0;
-
-  // solver instance
-  public Core core;
 
   public void onBackjump(int oldLevel, int newLevel) {}
 
@@ -122,8 +132,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     }
 
     // bump all literals in the explanation clause
-    for (int i = 0; i < clause.length; ++i) {
-      int literal = clause[i];
+    for (int literal : clause) {
       // bump the variable
       bumpVar(literal);
 
@@ -169,7 +178,6 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   /**
    * gives activity of a (signed) literal
    *
-   * @param literal the literal
    * @return the activity of this (variable, polarity)
    */
   private final int getLiteralActivity(int var, boolean polarity) {
@@ -182,7 +190,6 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   /**
    * code that really performs variable and polarity activity bumping.
    *
-   * @param var the variable
    * @return the new activity of the variable
    */
   private final int bumpVar(int literal) {
@@ -240,24 +247,6 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
       negActivities[curVar] = negActivities[curVar] * rebaseFactor;
     }
   }
-
-  /**
-   * compares literals according to their activity. This stands for i > j and not i < j, because we
-   * want activities to be sorted in decreasing order
-   *
-   * @author simon
-   */
-  private final Comparator<Integer> comparator =
-      (i, j) -> {
-        assert Math.abs(i) <= posActivities.length + 1;
-        assert Math.abs(j) <= posActivities.length + 1;
-        assert posActivities.length == negActivities.length;
-
-        int activity_i = getLiteralActivity(Math.abs(i), i > 0);
-        int activity_j = getLiteralActivity(Math.abs(j), j > 0);
-
-        return activity_j - activity_i;
-      };
 
   @Override
   public String toString() {

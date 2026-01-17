@@ -51,11 +51,9 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   /** It specifies a list of variables which must take different values. */
   public IntVar[] list;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
-
   protected Map<IntVar, Integer> positionMapping;
-
   protected TimeStamp<Integer> grounded;
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
 
   protected Alldifferent() {}
 

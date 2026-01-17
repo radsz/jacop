@@ -49,13 +49,11 @@ import org.jacop.core.Store;
 public class NoGoodsCollector<T extends IntVar>
     implements ExitChildListener<T>, TimeOutListener, ExitListener {
 
-  List<List<T>> noGoodsVariables;
-
-  List<List<Integer>> noGoodsValues;
-
   /** It specifies if the timeout has occurred and search is being terminated. */
   public boolean timeOut = false;
 
+  List<List<T>> noGoodsVariables;
+  List<List<Integer>> noGoodsValues;
   ExitChildListener<T>[] exitChildListeners;
 
   TimeOutListener[] timeOutListeners;
@@ -72,8 +70,8 @@ public class NoGoodsCollector<T extends IntVar>
     }
 
     if (timeOutListeners != null)
-      for (int i = 0; i < timeOutListeners.length; i++)
-        timeOutListeners[i].executedAtTimeOut(noSolutions);
+      for (TimeOutListener timeOutListener : timeOutListeners)
+        timeOutListener.executedAtTimeOut(noSolutions);
   }
 
   /**
@@ -89,16 +87,16 @@ public class NoGoodsCollector<T extends IntVar>
       for (List<Integer> noGood : noGoodsValues) noGood.add(value);
 
       if (exitChildListeners != null)
-        for (int i = 0; i < exitChildListeners.length; i++)
-          exitChildListeners[i].leftChild(var, value, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          exitChildListener.leftChild(var, value, status);
 
       return false;
     } else {
       if (exitChildListeners == null) return true;
       else {
         boolean code = false;
-        for (int i = 0; i < exitChildListeners.length; i++)
-          code |= exitChildListeners[i].leftChild(var, value, status);
+        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          code |= exitChildListener.leftChild(var, value, status);
         return code;
       }
     }
@@ -108,8 +106,8 @@ public class NoGoodsCollector<T extends IntVar>
     if (exitChildListeners == null) return true;
     else {
       boolean code = false;
-      for (int i = 0; i < exitChildListeners.length; i++)
-        code |= exitChildListeners[i].leftChild(choice, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        code |= exitChildListener.leftChild(choice, status);
       return code;
     }
   }
@@ -127,14 +125,14 @@ public class NoGoodsCollector<T extends IntVar>
     }
 
     if (exitChildListeners != null)
-      for (int i = 0; i < exitChildListeners.length; i++)
-        exitChildListeners[i].rightChild(var, value, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        exitChildListener.rightChild(var, value, status);
   }
 
   public void rightChild(PrimitiveConstraint choice, boolean status) {
     if (exitChildListeners != null)
-      for (int i = 0; i < exitChildListeners.length; i++)
-        exitChildListeners[i].rightChild(choice, status);
+      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        exitChildListener.rightChild(choice, status);
     return;
   }
 

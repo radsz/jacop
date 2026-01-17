@@ -3,6 +3,9 @@
 package org.jacop.fz;
 
 public class ASTIntFlatExpr extends SimpleNode {
+  // My additions
+  int value;
+
   public ASTIntFlatExpr(int id) {
     super(id);
   }
@@ -11,8 +14,9 @@ public class ASTIntFlatExpr extends SimpleNode {
     super(p, id);
   }
 
-  // My additions
-  int value;
+  public int getInt() {
+    return value;
+  }
 
   public void setInt(int i) {
     //   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
@@ -22,10 +26,6 @@ public class ASTIntFlatExpr extends SimpleNode {
     //   			       "; execution aborted");
     //  	    System.exit(0);
     //   	}
-  }
-
-  public int getInt() {
-    return value;
   }
 
   public String toString() {

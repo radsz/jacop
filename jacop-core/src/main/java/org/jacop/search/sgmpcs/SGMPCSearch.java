@@ -57,13 +57,11 @@ import org.jacop.search.SimpleSelect;
  */
 public class SGMPCSearch {
 
+  // strategy to get limit l on fails
+  public static final int luby = 1;
+  public static final int poly = 2;
+  static final double precision = 1e-12;
   public Store store;
-
-  boolean trace = false;
-  boolean printInfo = true;
-
-  // Start time of the search to compute termination criteria
-  long searchStartTime;
 
   /** Variables for search. */
   public IntVar[] vars;
@@ -71,6 +69,18 @@ public class SGMPCSearch {
   /** Cost variable. */
   public IntVar cost;
 
+  // e- number of elite solutions
+  public int e = 4;
+  // eInit- number of solution for selecting the best e elite solutions
+  public int eInit = 20;
+  // elite solutions
+  // at position 0 is cost and values of variables start at positions 1
+  public int[][] elite;
+  public int costPosition;
+  boolean trace = false;
+  boolean printInfo = true;
+  // Start time of the search to compute termination criteria
+  long searchStartTime;
   /*
    * The cost produced by last search
    */ int searchCost;
@@ -81,41 +91,18 @@ public class SGMPCSearch {
   // solution or from empty solution
   double p = 0.25;
 
-  // e- number of elite solutions
-  public int e = 4;
-
-  // eInit- number of solution for selecting the best e elite solutions
-  public int eInit = 20;
-
   // l- current fail limit
   int l;
-
-  // strategy to get limit l on fails
-  public static final int luby = 1;
-  public static final int poly = 2;
   int strategy = poly;
-  static final double precision = 1e-12;
-
-  // elite solutions
-  // at position 0 is cost and values of variables start at positions 1
-  public int[][] elite;
-
   // number of consequtive fails when searching for a solution
   int numberConsecutiveFails = 0;
-
   // index fro computing Luby number
   int lubyIndex = 1;
-
   // last found solution
   int[] solution;
-
   // time-out value in miliseconds (default 10 second)
   long timeOut = 10000;
-
   ImproveSolution<IntVar> search;
-
-  public int costPosition;
-
   Function<Integer, Comparator<int[]>> solutionComparator =
       (p) -> (int[] o1, int[] o2) -> (o1[p] - o2[p]);
 
@@ -463,8 +450,8 @@ public class SGMPCSearch {
 
   public void printSolution(int[] solution) {
 
-    for (int i = 0; i < solution.length; i++) {
-      System.out.print(solution[i] + " ");
+    for (int j : solution) {
+      System.out.print(j + " ");
     }
     System.out.println();
   }

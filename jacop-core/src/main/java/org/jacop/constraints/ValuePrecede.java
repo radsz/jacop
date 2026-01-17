@@ -60,34 +60,27 @@ public class ValuePrecede extends Constraint
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  Store store;
-
   /** It specifies lists of variables for the constraint. */
   public final IntVar[] x;
-
-  private int n;
 
   /** It specifies values s and t for the constraint. */
   protected final int s;
 
   protected final int t;
-
+  private final Map<IntVar, Integer> varMap;
+  Store store;
+  private int n;
   /*
    * Defines variables alpha, beta, gamma for the algorithm
    */
   private TimeStamp<Integer> alpha;
   private TimeStamp<Integer> beta;
   private TimeStamp<Integer> gamma;
-
   private int alphaValue;
   private int betaValue;
   private int gammaValue;
-
   private boolean firstConsistencyCheck = true;
-
   private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
-
-  private final Map<IntVar, Integer> varMap;
 
   /**
    * It constructs ValuePrecede.

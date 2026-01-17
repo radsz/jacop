@@ -50,15 +50,13 @@ import org.jacop.core.Store;
 
 public class CumulativeUnary extends Cumulative {
 
-  boolean doProfile = false;
-  boolean doEdgeFind = true;
-
   /*
    * Local copies of tasks in normal and reserved views
    */
   final TaskView[] tvn;
   final TaskView[] tvr;
-
+  boolean doProfile = false;
+  boolean doEdgeFind = true;
   private Comparator<TaskView> taskIncLctComparator =
       (o1, o2) -> (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
 

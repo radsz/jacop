@@ -50,6 +50,10 @@ public final class IntStack {
   // pool of int[]
   public MemoryPool pool;
 
+  public IntStack(MemoryPool pool) {
+    this.pool = pool;
+  }
+
   public void clear() {
     currentIndex = 0;
   }
@@ -128,9 +132,5 @@ public final class IntStack {
     StringBuilder sb = new StringBuilder("IntStack [");
     for (int i = 0; i < currentIndex; ++i) sb.append(array[i]).append(' ');
     return sb.append(']').toString();
-  }
-
-  public IntStack(MemoryPool pool) {
-    this.pool = pool;
   }
 }

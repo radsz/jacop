@@ -66,15 +66,13 @@ public class CountValues extends Constraint implements SatisfiedPresent {
    * The list of variables which are checked and counted if equal to specified value.
    */
   public final IntVar[] list;
-  private final int n; // length of the list
-
   /*
    * The value to which is any variable is equal to makes the constraint count it.
    */
   public final int[] values;
   final IntDomain valuesDomain;
   final IntDomain valuesDomainComplement;
-
+  private final int n; // length of the list
   /*
    * Defines first position of the variable that are not considered;
    * either equal to value or missing the value in their domain.
@@ -205,16 +203,12 @@ public class CountValues extends Constraint implements SatisfiedPresent {
 
       int min = 0;
       int max = 0;
-      for (int i = 0; i < extendedCounter.length; i++) {
-        min += extendedCounter[i].min();
-        max += extendedCounter[i].max();
+      for (IntVar var : extendedCounter) {
+        min += var.min();
+        max += var.max();
       }
-      for (int i = 0; i < extendedCounter.length; i++) { // sum(extendedCounter) == n (list length)
-        extendedCounter[i].domain.in(
-            store.level,
-            extendedCounter[i],
-            n - max + extendedCounter[i].max(),
-            n - min + extendedCounter[i].min());
+      for (IntVar intVar : extendedCounter) { // sum(extendedCounter) == n (list length)
+        intVar.domain.in(store.level, intVar, n - max + intVar.max(), n - min + intVar.min());
       }
 
       for (int i = 0; i < values.length; i++) {

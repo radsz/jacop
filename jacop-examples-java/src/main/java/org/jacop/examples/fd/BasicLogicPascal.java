@@ -49,6 +49,20 @@ import org.jacop.core.Store;
  */
 public class BasicLogicPascal extends ExampleFD {
 
+  /**
+   * It executes the program to solve this puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    BasicLogicPascal example = new BasicLogicPascal();
+
+    example.model();
+
+    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -105,19 +119,5 @@ public class BasicLogicPascal extends ExampleFD {
     store.impose(new XneqC(basic[0], 0));
     store.impose(new XneqC(logic[0], 0));
     store.impose(new XneqC(pascal[0], 0));
-  }
-
-  /**
-   * It executes the program to solve this puzzle.
-   *
-   * @param args no arguments are read.
-   */
-  public static void main(String args[]) {
-
-    BasicLogicPascal example = new BasicLogicPascal();
-
-    example.model();
-
-    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
   }
 }

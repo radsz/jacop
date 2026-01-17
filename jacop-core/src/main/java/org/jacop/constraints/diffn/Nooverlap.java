@@ -43,10 +43,9 @@ import org.jacop.core.TimeStamp;
  */
 public class Nooverlap extends Constraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   static final boolean trace = false, traceNarr = false;
   static final int x = 0, y = 1;
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * defines how to treat rectangles with width zero strict = true means they still need to be
@@ -64,6 +63,8 @@ public class Nooverlap extends Constraint {
 
   /** current stamp */
   int stamp = 0;
+
+  boolean doAreaCheck = true;
 
   /**
    * It specifies a diff constraint.
@@ -320,8 +321,6 @@ public class Nooverlap extends Constraint {
     }
   }
 
-  boolean doAreaCheck = true;
-
   void energyCheck(Rectangle r, BitSet rects) {
 
     int xMin = r.est(x);
@@ -398,7 +397,7 @@ public class Nooverlap extends Constraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : nooverlap([");
 

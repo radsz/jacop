@@ -65,6 +65,11 @@ public class Subcircuit extends Alldiff {
   int firstConsistencyLevel;
 
   SophisticatedLengauerTarjan graphDominance;
+  int sccCounter = 0;
+  int[] stack; // stack for strongly connected compoents algorithm
+  int stack_pointer;
+  BitSet cycleVar;
+  Random random = new Random(0);
 
   /**
    * It constructs a circuit constraint.
@@ -109,13 +114,11 @@ public class Subcircuit extends Alldiff {
     this(list.toArray(new IntVar[list.size()]));
   }
 
-  int sccCounter = 0;
-
   @Override
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      for (int i = 0; i < list.length; i++) list[i].domain.in(store.level, list[i], 1, list.length);
+      for (IntVar intVar : list) intVar.domain.in(store.level, intVar, 1, list.length);
 
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
@@ -169,6 +172,12 @@ public class Subcircuit extends Alldiff {
     return IntDomain.ANY;
   }
 
+  // --- Strongly Connected Conmponents
+
+  // Uses Trajan's algorithm to find strongly connected components
+  // Based on the algorithm from the book
+  // Robert Sedgewick, Algorithms, 1988, p. 482.
+
   boolean needsListPruning() {
 
     for (IntVar el : list) {
@@ -216,17 +225,6 @@ public class Subcircuit extends Alldiff {
 
     return result.toString();
   }
-
-  // --- Strongly Connected Conmponents
-
-  // Uses Trajan's algorithm to find strongly connected components
-  // Based on the algorithm from the book
-  // Robert Sedgewick, Algorithms, 1988, p. 482.
-
-  int[] stack; // stack for strongly connected compoents algorithm
-  int stack_pointer;
-
-  BitSet cycleVar;
 
   private void sccsBasedPruning(Store store) {
 
@@ -327,8 +325,6 @@ public class Subcircuit extends Alldiff {
 
     return min;
   }
-
-  Random random = new Random(0);
 
   private void dominanceFilter() {
     int n = list.length;

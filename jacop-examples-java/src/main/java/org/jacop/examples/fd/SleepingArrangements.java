@@ -58,6 +58,20 @@ import org.jacop.core.Store;
  */
 public class SleepingArrangements extends ExampleFD {
 
+  /**
+   * It executes a program to solve this simple logic puzzle.
+   *
+   * @param args no arguments are used.
+   */
+  public static void main(String args[]) {
+
+    SleepingArrangements example = new SleepingArrangements();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -156,19 +170,5 @@ public class SleepingArrangements extends ExampleFD {
 
     store.impose(new XgtY(name[iRollie], name[iOllie]));
     store.impose(new XltY(name[iRollie], room[iGreen]));
-  }
-
-  /**
-   * It executes a program to solve this simple logic puzzle.
-   *
-   * @param args no arguments are used.
-   */
-  public static void main(String args[]) {
-
-    SleepingArrangements example = new SleepingArrangements();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

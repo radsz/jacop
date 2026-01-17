@@ -51,6 +51,20 @@ import org.jacop.core.Store;
  */
 public class DonaldGeraldRobert extends ExampleFD {
 
+  /**
+   * It executes the program to solve cryptogram puzzle DONALD+GERALD=ROBERT.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    DonaldGeraldRobert example = new DonaldGeraldRobert();
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -111,19 +125,5 @@ public class DonaldGeraldRobert extends ExampleFD {
     store.impose(new XneqC(donald[0], 0));
     store.impose(new XneqC(gerald[0], 0));
     store.impose(new XneqC(robert[0], 0));
-  }
-
-  /**
-   * It executes the program to solve cryptogram puzzle DONALD+GERALD=ROBERT.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    DonaldGeraldRobert example = new DonaldGeraldRobert();
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
   }
 }

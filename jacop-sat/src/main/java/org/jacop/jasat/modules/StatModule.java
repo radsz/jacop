@@ -52,31 +52,29 @@ public final class StatModule
         PropagateListener,
         StartStopListener {
 
-  private Core core;
-
-  private long numRestarts = 0;
-
-  private long numConflicts = 0;
-
-  private long numBackjumps = 0;
-
-  private long numAssertions = 0;
-
-  private long numForget = 0;
-
-  private long numClauseAdd = 0;
-
-  private long numLearntClauses = 0;
-
-  private long numClauseRemoved = 0;
-
-  private long numPropagate = 0;
-
   // indicates whether a thread should be run to print stats regularly
   private final boolean threaded;
-
+  private Core core;
+  private long numRestarts = 0;
+  private long numConflicts = 0;
+  private long numBackjumps = 0;
+  private long numAssertions = 0;
+  private long numForget = 0;
+  private long numClauseAdd = 0;
+  private long numLearntClauses = 0;
+  private long numClauseRemoved = 0;
+  private long numPropagate = 0;
   // task to print regularly stats
   private TimerTask task = null;
+
+  /**
+   * Create a StatModule. It can schedule
+   *
+   * @param threaded true if threaded
+   */
+  public StatModule(boolean threaded) {
+    this.threaded = threaded;
+  }
 
   public void onRestart(int oldLevel) {
     numRestarts++;
@@ -179,15 +177,6 @@ public final class StatModule
 
   private void printBlank() {
     core.logc(2, "");
-  }
-
-  /**
-   * Create a StatModule. It can schedule
-   *
-   * @param threaded true if threaded
-   */
-  public StatModule(boolean threaded) {
-    this.threaded = threaded;
   }
 
   public void initialize(Core core) {

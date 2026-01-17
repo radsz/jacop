@@ -125,7 +125,7 @@ public class OrBoolSimple extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer resultString = new StringBuffer(id());
+    StringBuilder resultString = new StringBuilder(id());
 
     resultString.append(" : orBoolSimple([ ");
     resultString.append(a + ", " + b);

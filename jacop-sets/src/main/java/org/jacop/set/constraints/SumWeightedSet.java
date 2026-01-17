@@ -53,12 +53,8 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   /** A set variable a whose elements contribute with their weight to the sum. */
   public SetVar a;
 
-  /** It specifies the list of allowed elements and helps to connect the weight to the element. */
   // public int[] elements;
 
-  /**
-   * It specifies a weight for every element of the allowed element in the domain of set variable a.
-   */
   // public int[] weights;
 
   /** Integer variable containing the total weight of all elements within a set variable a. */
@@ -143,24 +139,6 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It specifies the consistency rules for this constraint.
-     *
-     * <p>totalWeight.inMin( glb.weight ) totalWeight.inMax( lub.weight )
-     *
-     * <p>if any element el in lub \ glb has weight such that glb.weight + el.weight >
-     * totalweight.max() then el is removed from lub
-     *
-     * <p>if any element el in lub \ glb has weight such that lub.weight - el.weight <
-     * totalweight.min() then el is included in glb.
-     *
-     * <p>If cardinality specifies that some additional elements must be in glb then take the
-     * smallest weights from potential elements and add to minimalWeight.
-     *
-     * <p>Similarly, if cardinality specifies that some elements from lub can not be taken then
-     * reduce the maximal potential weight by the smallest weight of elements from potential
-     * elements.
-     */
     while (true) {
 
       int glbSum = 0;
@@ -281,7 +259,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuffer ret = new StringBuffer(id());
+    StringBuilder ret = new StringBuilder(id());
 
     ret.append(" : SumWeightedSet(" + a + ", < ");
     for (Map.Entry<Integer, Integer> entries : elementWeights.entrySet()) {

@@ -86,48 +86,48 @@ public class FilterBenchmark {
   public static void schedule() {
 
     int dfqEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
-    for (int i = 0; i < dfqEx.length; i++) {
-      int a = dfqEx[i][0], m = dfqEx[i][1];
+    for (int[] dfqEx1 : dfqEx) {
+      int a = dfqEx1[0], m = dfqEx1[1];
       Store store = new Store();
       DFQ dfq = new DFQ();
       experiment1(store, dfq, a, m);
     }
 
     int firEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
-    for (int i = 0; i < firEx.length; i++) {
-      int a = firEx[i][0], m = firEx[i][1];
+    for (int[] element : firEx) {
+      int a = element[0], m = element[1];
       FIR fir = new FIR();
       Store store = new Store();
       experiment1(store, fir, a, m);
     }
 
     int arEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 3}, {2, 4}};
-    for (int i = 0; i < arEx.length; i++) {
-      int a = arEx[i][0], m = arEx[i][1];
+    for (int[] item : arEx) {
+      int a = item[0], m = item[1];
       AR ar = new AR(1, 1);
       Store store = new Store();
       experiment2(store, ar, a, m);
     }
 
     int ewfEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
-    for (int i = 0; i < ewfEx.length; i++) {
-      int a = ewfEx[i][0], m = ewfEx[i][1];
+    for (int[] value : ewfEx) {
+      int a = value[0], m = value[1];
       EWF ewf = new EWF();
       Store store = new Store();
       experiment1(store, ewf, a, m);
     }
 
     int ewfEx2[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
-    for (int i = 0; i < ewfEx2.length; i++) {
-      int a = ewfEx2[i][0], m = ewfEx2[i][1];
+    for (int[] ints : ewfEx2) {
+      int a = ints[0], m = ints[1];
       EWF ewf = new EWF(1, 1);
       Store store = new Store();
       experiment1(store, ewf, a, m);
     }
 
     int dctEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {4, 4}};
-    for (int i = 0; i < dctEx.length; i++) {
-      int a = dctEx[i][0], m = dctEx[i][1];
+    for (int[] ex : dctEx) {
+      int a = ex[0], m = ex[1];
       DCT dct = new DCT();
       Store store = new Store();
       experiment1(store, dct, a, m);
@@ -141,40 +141,40 @@ public class FilterBenchmark {
   public static void pipeMulSchedule() {
 
     int dfqEx[][] = {{1, 1}, {1, 2}};
-    for (int i = 0; i < dfqEx.length; i++) {
-      int a = dfqEx[i][0], m = dfqEx[i][1];
+    for (int[] element : dfqEx) {
+      int a = element[0], m = element[1];
       Store store = new Store();
       DFQ dfq = new DFQ();
       experiment1PM(store, dfq, a, m);
     }
 
     int firEx[][] = {{1, 1}, {2, 1}, {2, 2}};
-    for (int i = 0; i < firEx.length; i++) {
-      int a = firEx[i][0], m = firEx[i][1];
+    for (int[] item : firEx) {
+      int a = item[0], m = item[1];
       FIR fir = new FIR();
       Store store = new Store();
       experiment1PM(store, fir, a, m);
     }
 
     int arEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
-    for (int i = 0; i < arEx.length; i++) {
-      int a = arEx[i][0], m = arEx[i][1];
+    for (int[] value : arEx) {
+      int a = value[0], m = value[1];
       AR ar = new AR();
       Store store = new Store();
       experiment2PM(store, ar, a, m);
     }
 
     int ewfEx[][] = {{2, 1}, {3, 1}, {3, 2}};
-    for (int i = 0; i < ewfEx.length; i++) {
-      int a = ewfEx[i][0], m = ewfEx[i][1];
+    for (int[] ints : ewfEx) {
+      int a = ints[0], m = ints[1];
       EWF ewf = new EWF();
       Store store = new Store();
       experiment1PM(store, ewf, a, m);
     }
 
     int dctEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
-    for (int i = 0; i < dctEx.length; i++) {
-      int a = dctEx[i][0], m = dctEx[i][1];
+    for (int[] ex : dctEx) {
+      int a = ex[0], m = ex[1];
       DCT dct = new DCT();
       Store store = new Store();
       experiment1PM(store, dct, a, m);
@@ -188,16 +188,16 @@ public class FilterBenchmark {
   public static void chainingSchedule() {
 
     int dfqEx[][] = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
-    for (int i = 0; i < dfqEx.length; i++) {
-      int a = dfqEx[i][0], m = dfqEx[i][1], s = dfqEx[i][2];
+    for (int[] element : dfqEx) {
+      int a = element[0], m = element[1], s = element[2];
       Store store = new Store();
       DFQ dfq = new DFQ();
       experiment1C(store, dfq, a, m, s);
     }
 
     int firEx[][] = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
-    for (int i = 0; i < firEx.length; i++) {
-      int a = firEx[i][0], m = firEx[i][1], s = firEx[i][2];
+    for (int[] item : firEx) {
+      int a = item[0], m = item[1], s = item[2];
       FIR fir = new FIR();
       Store store = new Store();
       experiment1C(store, fir, a, m, s);
@@ -207,8 +207,8 @@ public class FilterBenchmark {
       {2, 2, 2}, {2, 3, 2}, {4, 4, 2}, {1, 1, 3}, {1, 2, 3}, {2, 2, 3}, {2, 3, 3}, {2, 4, 3},
       {3, 4, 3}, {2, 2, 4}, {2, 3, 4}, {3, 4, 4}
     };
-    for (int i = 0; i < arEx.length; i++) {
-      int a = arEx[i][0], m = arEx[i][1], s = arEx[i][2];
+    for (int[] value : arEx) {
+      int a = value[0], m = value[1], s = value[2];
       AR ar = new AR();
       Store store = new Store();
       experiment1C(store, ar, a, m, s);
@@ -217,8 +217,8 @@ public class FilterBenchmark {
     int ewfEx[][] = {
       {2, 1, 2}, {3, 1, 2}, {1, 1, 3}, {2, 1, 3}, {3, 1, 3}, {1, 1, 4}, {2, 1, 4}, {3, 1, 4}
     };
-    for (int i = 0; i < ewfEx.length; i++) {
-      int a = ewfEx[i][0], m = ewfEx[i][1], s = ewfEx[i][2];
+    for (int[] ints : ewfEx) {
+      int a = ints[0], m = ints[1], s = ints[2];
       EWF ewf = new EWF();
       Store store = new Store();
       experiment1C(store, ewf, a, m, s);
@@ -228,8 +228,8 @@ public class FilterBenchmark {
       {2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {4, 2, 2}, {4, 3, 2}, {5, 4, 2}, {1, 1, 3}, {2, 1, 3},
       {3, 2, 3}, {4, 2, 3}, {5, 3, 3}
     };
-    for (int i = 0; i < dctEx.length; i++) {
-      int a = dctEx[i][0], m = dctEx[i][1], s = dctEx[i][2];
+    for (int[] ex : dctEx) {
+      int a = ex[0], m = ex[1], s = ex[2];
       DCT dct = new DCT();
       Store store = new Store();
       experiment1C(store, dct, a, m, s);
@@ -245,48 +245,48 @@ public class FilterBenchmark {
     // **************** Pipeline schedules
 
     int dfqEx[][] = {{1, 3}, {2, 3}};
-    for (int i = 0; i < dfqEx.length; i++) {
-      int a = dfqEx[i][0], m = dfqEx[i][1];
+    for (int[] dfqEx1 : dfqEx) {
+      int a = dfqEx1[0], m = dfqEx1[1];
       Store store = new Store();
       DFQ dfqP = new DFQ();
       experiment1P(store, dfqP, a, m);
     }
 
     int firEx[][] = {{2, 2}, {3, 3}, {3, 4}};
-    for (int i = 0; i < firEx.length; i++) {
-      int a = firEx[i][0], m = firEx[i][1];
+    for (int[] element : firEx) {
+      int a = element[0], m = element[1];
       FIR firP = new FIR();
       Store store = new Store();
       experiment1P(store, firP, a, m);
     }
 
     int arEx[][] = {{2, 4}, {2, 6}, {3, 8}};
-    for (int i = 0; i < arEx.length; i++) {
-      int a = arEx[i][0], m = arEx[i][1];
+    for (int[] item : arEx) {
+      int a = item[0], m = item[1];
       AR arP = new AR();
       Store store = new Store();
       experiment1P(store, arP, a, m);
     }
 
     int ewfEx[][] = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
-    for (int i = 0; i < ewfEx.length; i++) {
-      int a = ewfEx[i][0], m = ewfEx[i][1];
+    for (int[] value : ewfEx) {
+      int a = value[0], m = value[1];
       EWF ewfP = new EWF();
       Store store = new Store();
       experiment1P(store, ewfP, a, m);
     }
 
     int dctEx[][] = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
-    for (int i = 0; i < dctEx.length; i++) {
-      int a = dctEx[i][0], m = dctEx[i][1];
+    for (int[] ints : dctEx) {
+      int a = ints[0], m = ints[1];
       DCT dctP = new DCT();
       Store store = new Store();
       experiment1P(store, dctP, a, m);
     }
 
     int fftEx[][] = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
-    for (int i = 0; i < fftEx.length; i++) {
-      int a = fftEx[i][0], m = fftEx[i][1];
+    for (int[] ex : fftEx) {
+      int a = ex[0], m = ex[1];
       FFT fftP = new FFT();
       Store store = new Store();
       experiment1P(store, fftP, a, m);
@@ -983,16 +983,14 @@ public class FilterBenchmark {
       }
     }
 
-    for (int i = 0; i < dependencies.length; i++) {
-      store.impose(
-          new XplusClteqZ(
-              T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
+    for (int[] dependency : dependencies) {
+      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
     List<IntVar> endOp = new ArrayList<IntVar>();
-    for (int i = 0; i < lastOp.length; i++) {
+    for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
-      store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
+      store.impose(new XplusCeqZ(T[value], D[value], end));
       endOp.add(end);
     }
 
@@ -1091,16 +1089,14 @@ public class FilterBenchmark {
       }
     }
 
-    for (int i = 0; i < dependencies.length; i++) {
-      store.impose(
-          new XplusClteqZ(
-              T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
+    for (int[] dependency : dependencies) {
+      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
     List<IntVar> endOp = new ArrayList<IntVar>();
-    for (int i = 0; i < lastOp.length; i++) {
+    for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
-      store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
+      store.impose(new XplusCeqZ(T[value], D[value], end));
       endOp.add(end);
     }
 
@@ -1215,16 +1211,14 @@ public class FilterBenchmark {
       store.impose(new XplusYeqZ(temp, Tstep[i], T[i]));
     }
 
-    for (int i = 0; i < dependencies.length; i++) {
-      store.impose(
-          new XplusClteqZ(
-              T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
+    for (int[] dependency : dependencies) {
+      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
     List<IntVar> endOp = new ArrayList<IntVar>();
-    for (int i = 0; i < lastOp.length; i++) {
+    for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 1000);
-      store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
+      store.impose(new XplusCeqZ(T[value], D[value], end));
       endOp.add(end);
     }
 
@@ -1363,16 +1357,14 @@ public class FilterBenchmark {
       }
     }
 
-    for (int i = 0; i < dependencies.length; i++) {
-      store.impose(
-          new XplusClteqZ(
-              T[dependencies[i][0]], delays[dependencies[i][0]], T[dependencies[i][1]]));
+    for (int[] dependency : dependencies) {
+      store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
     List<IntVar> endOp = new ArrayList<IntVar>();
-    for (int i = 0; i < lastOp.length; i++) {
+    for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
-      store.impose(new XplusCeqZ(T[lastOp[i]], D[lastOp[i]], end));
+      store.impose(new XplusCeqZ(T[value], D[value], end));
       endOp.add(end);
     }
     IntVar cost = new IntVar(store, 0, 100);

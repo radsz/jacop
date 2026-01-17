@@ -50,17 +50,14 @@ import org.jacop.api.Stateful;
 public class TimeStamp<T> implements Stateful {
 
   static final boolean debug = false;
-
-  int index;
-
   public int pointer4Last = -1;
-
   public transient int[] stamps = new int[10];
-
-  Store store;
 
   @SuppressWarnings("unchecked")
   public transient T[] values = (T[]) new Object[10];
+
+  int index;
+  Store store;
 
   /**
    * The constructor.
@@ -149,7 +146,7 @@ public class TimeStamp<T> implements Stateful {
 
   @Override
   public String toString() {
-    StringBuffer S = new StringBuffer();
+    StringBuilder S = new StringBuilder();
 
     S.append("TimeStamp<").append(index).append("> = ");
 

@@ -54,28 +54,7 @@ public class DBox {
   /** It specifies for each dimension the length of dbox in that dimension. */
   public final int[] length;
 
-  /**
-   * a static collection to use for some operations. Use it instead of creating a new list when only
-   * a temporary list is needed.
-   */
   // private static final SimpleArrayList<DBox> workingList = new SimpleArrayList<DBox>();
-
-  /**
-   * It makes sure that there is a slot of the given dimension in the slot.
-   *
-   * <p>It has to be called at least once before using newBox() and dispatchBox().
-   *
-   * @param dimension the number of dimensions
-   */
-  public static final synchronized void supportDimension(int dimension) {
-
-    int size = freeBoxes.size();
-
-    if (size <= dimension)
-      for (int i = size; i <= dimension; i++) {
-        freeBoxes.add(new SimpleArrayList<DBox>());
-      }
-  }
 
   /**
    * constructs a new Box. The parameter arrays are not copied.
@@ -103,20 +82,20 @@ public class DBox {
   }
 
   /**
-   * It checks whether the DBox is consistent.
+   * It makes sure that there is a slot of the given dimension in the slot.
    *
-   * @return It returns the string description of the problem, or null if no problem with data
-   *     structure consistency encountered.
+   * <p>It has to be called at least once before using newBox() and dispatchBox().
+   *
+   * @param dimension the number of dimensions
    */
-  public String checkInvariants() {
+  public static final synchronized void supportDimension(int dimension) {
 
-    if (this.origin.length != this.length.length)
-      return "The dimension mismatch between origin and length arrays";
+    int size = freeBoxes.size();
 
-    for (int i = 0; i < length.length; i++)
-      if (length[i] < 0) return "negative length on dimension " + i + "encounterred.";
-
-    return null;
+    if (size <= dimension)
+      for (int i = size; i <= dimension; i++) {
+        freeBoxes.add(new SimpleArrayList<DBox>());
+      }
   }
 
   /**
@@ -167,9 +146,135 @@ public class DBox {
 
     StringBuilder builder = new StringBuilder();
 
-    for (int i = 0; i < freeBoxes.size(); i++) builder.append(freeBoxes.get(i)).append("\n");
+    for (SimpleArrayList<DBox> freeBox : freeBoxes) builder.append(freeBox).append("\n");
 
     return builder.toString();
+  }
+
+  /**
+   * computes the bounding box of the given collection of boxes
+   *
+   * @param boxes collection of boxes
+   * @return a temporary DBox that represents the bounding box of the given boxes. clone it if you
+   *     need to reuse it.
+   */
+  public static DBox boundingBox(Collection<DBox> boxes) {
+
+    if (boxes.isEmpty())
+      throw new IllegalArgumentException("Boxes parameter can not be an empty collection");
+
+    DBox boundingBox = null;
+    int[] mins = null;
+    int[] maxes = null;
+    int dim = 0;
+
+    for (DBox b : boxes)
+      if (mins == null) {
+        // initialization of the values
+        dim = b.origin.length;
+        boundingBox = getAllocatedInstance(dim);
+        b.copyInto(boundingBox);
+
+        mins = boundingBox.origin;
+        maxes = boundingBox.length;
+
+        for (int i = dim - 1; i >= 0; i--) maxes[i] += mins[i];
+
+      } else {
+        for (int i = dim - 1; i >= 0; i--) {
+          mins[i] = Math.min(mins[i], b.origin[i]);
+          maxes[i] = Math.max(maxes[i], b.origin[i] + b.length[i]);
+        }
+      }
+
+    // replace the maxes by the actual sizes
+    for (int i = dim - 1; i >= 0; i--) maxes[i] = maxes[i] - mins[i];
+
+    return boundingBox;
+  }
+
+  /**
+   * It computes the result of a subtraction from the given collection of boxes of all the boxes
+   * given in the subtracting collection. The collection used to store the result is given to avoid
+   * allocating a new set of boxes each time the function is called. However, for ease of use, it is
+   * also returned (after the call, the result argument is equal to the returned value).
+   *
+   * @param source the collection of boxes to subtract from
+   * @param holes the boxes to subtract from the source boxes
+   * @param result the collection to store the resulting boxes into
+   * @return the result argument, for ease of use
+   */
+  public static Collection<DBox> subtractAll(
+      Collection<DBox> source, Collection<DBox> holes, Collection<DBox> result) {
+
+    if (result != source) {
+      assert result.isEmpty() : "the collection must be emptied before the call";
+
+      result.addAll(source);
+    }
+    Collection<DBox> resultWork = result;
+
+    Collection<DBox> resultStep = new SimpleArrayList<DBox>();
+
+    /*
+     * proceed hole by hole: for each hole, subtract it to each remaining piece.
+     *
+     * We need two lists, one to store the current pieces not yet subtracted with the
+     * current hole, and one to store the ones that were subtracted already.
+     */
+
+    for (DBox hole : holes) {
+
+      for (DBox piece : resultWork) {
+        piece.subtract(hole, resultStep);
+      }
+      // the DBoxes contained in result can be reused
+      for (DBox piece : resultWork) {
+        dispatchBox(piece);
+      }
+      resultWork.clear();
+      // switch lists
+      Collection<DBox> resTmp = resultWork;
+      resultWork = resultStep;
+      resultStep = resTmp;
+
+      // if there is nothing left, no need to continue
+      if (resultWork.isEmpty()) {
+        break;
+      }
+    }
+
+    // now we need to make sure that the correct list contains the boxes
+    assert (resultStep.isEmpty() && !resultWork.isEmpty())
+            || resultStep.isEmpty() && resultWork.isEmpty()
+        : // without this the assertion would fail when subtracting leaves nothing
+        "bad cleaning of the lists";
+
+    if (result == resultStep) {
+      // in that case we need to transfer the elements to the right list
+      result.addAll(resultWork);
+      // and clear the ones in the working list
+      resultWork.clear();
+    }
+
+    return result;
+  }
+
+  /**
+   * It checks whether the DBox is consistent.
+   *
+   * @return It returns the string description of the problem, or null if no problem with data
+   *     structure consistency encountered.
+   */
+  public String checkInvariants() {
+
+    if (this.origin.length != this.length.length)
+      return "The dimension mismatch between origin and length arrays";
+
+    for (int i = 0; i < length.length; i++)
+      if (length[i] < 0) return "negative length on dimension " + i + "encounterred.";
+
+    return null;
   }
 
   /**
@@ -419,115 +524,6 @@ public class DBox {
     }
 
     return difference;
-  }
-
-  /**
-   * computes the bounding box of the given collection of boxes
-   *
-   * @param boxes collection of boxes
-   * @return a temporary DBox that represents the bounding box of the given boxes. clone it if you
-   *     need to reuse it.
-   */
-  public static DBox boundingBox(Collection<DBox> boxes) {
-
-    if (boxes.isEmpty())
-      throw new IllegalArgumentException("Boxes parameter can not be an empty collection");
-
-    DBox boundingBox = null;
-    int[] mins = null;
-    int[] maxes = null;
-    int dim = 0;
-
-    for (DBox b : boxes)
-      if (mins == null) {
-        // initialization of the values
-        dim = b.origin.length;
-        boundingBox = getAllocatedInstance(dim);
-        b.copyInto(boundingBox);
-
-        mins = boundingBox.origin;
-        maxes = boundingBox.length;
-
-        for (int i = dim - 1; i >= 0; i--) maxes[i] += mins[i];
-
-      } else {
-        for (int i = dim - 1; i >= 0; i--) {
-          mins[i] = Math.min(mins[i], b.origin[i]);
-          maxes[i] = Math.max(maxes[i], b.origin[i] + b.length[i]);
-        }
-      }
-
-    // replace the maxes by the actual sizes
-    for (int i = dim - 1; i >= 0; i--) maxes[i] = maxes[i] - mins[i];
-
-    return boundingBox;
-  }
-
-  /**
-   * It computes the result of a subtraction from the given collection of boxes of all the boxes
-   * given in the subtracting collection. The collection used to store the result is given to avoid
-   * allocating a new set of boxes each time the function is called. However, for ease of use, it is
-   * also returned (after the call, the result argument is equal to the returned value).
-   *
-   * @param source the collection of boxes to subtract from
-   * @param holes the boxes to subtract from the source boxes
-   * @param result the collection to store the resulting boxes into
-   * @return the result argument, for ease of use
-   */
-  public static Collection<DBox> subtractAll(
-      Collection<DBox> source, Collection<DBox> holes, Collection<DBox> result) {
-
-    if (result != source) {
-      assert result.isEmpty() : "the collection must be emptied before the call";
-
-      result.addAll(source);
-    }
-    Collection<DBox> resultWork = result;
-
-    Collection<DBox> resultStep = new SimpleArrayList<DBox>();
-
-    /*
-     * proceed hole by hole: for each hole, subtract it to each remaining piece.
-     *
-     * We need two lists, one to store the current pieces not yet subtracted with the
-     * current hole, and one to store the ones that were subtracted already.
-     */
-
-    for (DBox hole : holes) {
-
-      for (DBox piece : resultWork) {
-        piece.subtract(hole, resultStep);
-      }
-      // the DBoxes contained in result can be reused
-      for (DBox piece : resultWork) {
-        dispatchBox(piece);
-      }
-      resultWork.clear();
-      // switch lists
-      Collection<DBox> resTmp = resultWork;
-      resultWork = resultStep;
-      resultStep = resTmp;
-
-      // if there is nothing left, no need to continue
-      if (resultWork.isEmpty()) {
-        break;
-      }
-    }
-
-    // now we need to make sure that the correct list contains the boxes
-    assert (resultStep.isEmpty() && !resultWork.isEmpty())
-            || resultStep.isEmpty() && resultWork.isEmpty()
-        : // without this the assertion would fail when subtracting leaves nothing
-        "bad cleaning of the lists";
-
-    if (result == resultStep) {
-      // in that case we need to transfer the elements to the right list
-      result.addAll(resultWork);
-      // and clear the ones in the working list
-      resultWork.clear();
-    }
-
-    return result;
   }
 
   /**

@@ -45,8 +45,22 @@ import org.jacop.core.IntervalDomain;
  */
 public class RegularExpressionParser {
 
-  private LexicalAnalyzer lexer; // lexical analyzer that parser uses
+  /** Constant denoting an expression. */
+  public static final int Expression = 0;
 
+  /** The constant denoting simple literal. */
+  public static final int Literal = 1;
+
+  /** The constant denoting concatenation expression. */
+  public static final int Concatenation = 2;
+
+  /** The constant denoting star expression. */
+  public static final int Star = 3;
+
+  /** The constant denoting sum expression. */
+  public static final int Sum = 4;
+
+  private LexicalAnalyzer lexer; // lexical analyzer that parser uses
   private int token;
 
   /**
@@ -199,21 +213,6 @@ public class RegularExpressionParser {
     }
   }
 
-  /** Constant denoting an expression. */
-  public static final int Expression = 0;
-
-  /** The constant denoting simple literal. */
-  public static final int Literal = 1;
-
-  /** The constant denoting concatenation expression. */
-  public static final int Concatenation = 2;
-
-  /** The constant denoting star expression. */
-  public static final int Star = 3;
-
-  /** The constant denoting sum expression. */
-  public static final int Sum = 4;
-
   /** SyntaxException raised if not regular expression is being parsed. */
   public static class SyntaxException extends Exception {
 
@@ -235,14 +234,6 @@ public class RegularExpressionParser {
 
   /** It creates an abstract class expression which specifies basic methods of the expression. */
   public abstract class Expression {
-
-    /**
-     * If the given string contains the words that this Expression object requires, this method
-     * returns an array of ints. In most cases, the array contains the offsets of the words in the
-     * string that are required by this combination. However, if the array is empty, then all the
-     * words in the string satisfy the Expression. If the given string does not contain the words
-     * that this Expression object requires, then this method returns null.
-     */
 
     /**
      * @return type

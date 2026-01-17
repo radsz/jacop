@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * It models tan(x) = -x for floating solver.
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.CosPeqR;
 import org.jacop.floats.constraints.SinPeqR;
@@ -45,6 +39,18 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
 public class SinCosExample {
+
+  /**
+   * It executes the program which computes values for sin(x) = cos(x).
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    SinCosExample example = new SinCosExample();
+
+    example.model();
+  }
 
   void model() {
 
@@ -92,17 +98,5 @@ public class SinCosExample {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program which computes values for sin(x) = cos(x).
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    SinCosExample example = new SinCosExample();
-
-    example.model();
   }
 }

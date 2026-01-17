@@ -5,6 +5,9 @@ package org.jacop.fz;
 import java.util.ArrayList;
 
 public class ASTIntLiterals extends SimpleNode {
+  // My additions
+  ArrayList<Integer> list = new ArrayList<Integer>();
+
   public ASTIntLiterals(int id) {
     super(id);
   }
@@ -13,15 +16,12 @@ public class ASTIntLiterals extends SimpleNode {
     super(p, id);
   }
 
-  // My additions
-  ArrayList<Integer> list = new ArrayList<Integer>();
+  public ArrayList<Integer> getList() {
+    return list;
+  }
 
   public void setList(ArrayList<Integer> l) {
     list = l;
-  }
-
-  public ArrayList<Integer> getList() {
-    return list;
   }
 
   public String toString() {

@@ -100,7 +100,7 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
   @Override
   public String toString() {
 
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
 
     for (int i = 0; i < Rects.length; i++)
       if (i == Rects.length - 1) s.append(Rects[i]);

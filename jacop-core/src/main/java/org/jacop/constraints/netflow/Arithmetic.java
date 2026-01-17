@@ -71,6 +71,22 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     map.put(NULL_VAR, 0);
   }
 
+  private static int weight(int[] array) {
+    int weight = 0;
+    for (int i : array) weight += Math.abs(i);
+    return weight;
+  }
+
+  private static int[] transform(int[] sum, int[] eqn) {
+    int[] result = Arrays.copyOf(sum, sum.length);
+    for (int i = 0; i < eqn.length; i++) result[i] -= 2 * eqn[i];
+    return result;
+  }
+
+  private static void flip(int[] eqn) {
+    for (int i = 0; i < eqn.length; i++) eqn[i] = -eqn[i];
+  }
+
   private int lookup(IntVar var) {
     Integer id = map.get(var);
     if (id == null) {
@@ -88,8 +104,8 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     if (vars.length == 0 || vars.length != coeffs.length) throw new IllegalArgumentException();
 
     int max = 1;
-    for (int i = 0; i < vars.length; i++) {
-      int id = lookup(vars[i]);
+    for (IntVar var : vars) {
+      int id = lookup(var);
       if (max <= id) max = id + 1;
     }
 
@@ -190,20 +206,30 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     return change;
   }
 
-  private static int weight(int[] array) {
-    int weight = 0;
-    for (int i : array) weight += Math.abs(i);
-    return weight;
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    if (decomposition == null || decomposition.size() > 1) {
+
+      decomposition = new ArrayList<Constraint>();
+      int[] sum = new int[vars.size()];
+      for (int[] eqn : eqns) for (int i = 0; i < eqn.length; i++) sum[i] += eqn[i];
+
+      for (int it = 0; optimize(sum); it++)
+        if (it > 2 * eqns.size()) throw new AssertionError(it + " iterations");
+
+      decomposition.add(new ArithmeticBuilder(store, sum).build());
+    }
+
+    return decomposition;
   }
 
-  private static int[] transform(int[] sum, int[] eqn) {
-    int[] result = Arrays.copyOf(sum, sum.length);
-    for (int i = 0; i < eqn.length; i++) result[i] -= 2 * eqn[i];
-    return result;
-  }
+  @Override
+  public void imposeDecomposition(Store store) {
 
-  private static void flip(int[] eqn) {
-    for (int i = 0; i < eqn.length; i++) eqn[i] = -eqn[i];
+    if (decomposition == null) decomposition = decompose(store);
+
+    for (Constraint c : decomposition) store.impose(c);
   }
 
   private class ArithmeticBuilder extends NetworkBuilder {
@@ -274,31 +300,5 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
       for (int i = 1; i < sum.length; i++)
         if (sum[i] != 0) throw new AssertionError(Arrays.toString(sum));
     }
-  }
-
-  @Override
-  public List<Constraint> decompose(Store store) {
-
-    if (decomposition == null || decomposition.size() > 1) {
-
-      decomposition = new ArrayList<Constraint>();
-      int[] sum = new int[vars.size()];
-      for (int[] eqn : eqns) for (int i = 0; i < eqn.length; i++) sum[i] += eqn[i];
-
-      for (int it = 0; optimize(sum); it++)
-        if (it > 2 * eqns.size()) throw new AssertionError(it + " iterations");
-
-      decomposition.add(new ArithmeticBuilder(store, sum).build());
-    }
-
-    return decomposition;
-  }
-
-  @Override
-  public void imposeDecomposition(Store store) {
-
-    if (decomposition == null) decomposition = decompose(store);
-
-    for (Constraint c : decomposition) store.impose(c);
   }
 }

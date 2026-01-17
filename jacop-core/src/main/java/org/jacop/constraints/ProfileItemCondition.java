@@ -68,9 +68,7 @@ class ProfileItemCondition extends ProfileItem {
     // rectHight += el[1];
     // }
 
-    for (int i = 0; i < exList.size(); i++) {
-      ExclusiveItem exI = exList.get(i);
-
+    for (ExclusiveItem exI : exList) {
       for (Iterator<int[]> e = rectangles.listIterator(0); e.hasNext(); ) {
         int[] el = e.next();
 

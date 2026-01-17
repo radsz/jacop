@@ -55,7 +55,7 @@ public class AsinPeqR extends SinPeqR {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : AsinPeqR(").append(q).append(", ").append(p).append(" )");
 

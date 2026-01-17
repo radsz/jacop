@@ -47,6 +47,9 @@ public class OrBoolVector extends PrimitiveConstraint {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
+  /** It specifies the length of the list of variables. */
+  final int l;
+
   /**
    * It specifies a list of variables among which one must be equal to 1 to set result variable to
    * 1.
@@ -58,9 +61,7 @@ public class OrBoolVector extends PrimitiveConstraint {
    */
   public IntVar result;
 
-  /** It specifies the length of the list of variables. */
-  final int l;
-
+  List<Constraint> constraints;
   /*
    * Defines first position of the variable that is not ground to 0
    */
@@ -273,7 +274,7 @@ public class OrBoolVector extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer resultString = new StringBuffer(id());
+    StringBuilder resultString = new StringBuilder(id());
 
     resultString.append(" : orBool([ ");
     for (int i = 0; i < l; i++) {
@@ -285,8 +286,6 @@ public class OrBoolVector extends PrimitiveConstraint {
     resultString.append(")");
     return resultString.toString();
   }
-
-  List<Constraint> constraints;
 
   @Override
   public List<Constraint> decompose(Store store) {

@@ -55,7 +55,7 @@ public class AcosPeqR extends CosPeqR {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : AcosPeqR(").append(q).append(", ").append(p).append(" )");
 

@@ -148,11 +148,11 @@ public class IntervalGaussSeidel {
 
     if (debug) {
       System.out.println("dominant = " + dominant + " ===================================");
-      for (int i = 0; i < A.length; i++) {
-        for (int j = 0; j < A[i].length; j++) {
-          if (A[i][j].min <= 0 && A[i][j].max() >= 0) System.out.print("0 ");
-          else if (A[i][j].min() > 0) System.out.print("+ ");
-          else if (A[i][j].min() < 0) System.out.print("- ");
+      for (FloatInterval[] floatIntervals : A) {
+        for (int j = 0; j < floatIntervals.length; j++) {
+          if (floatIntervals[j].min <= 0 && floatIntervals[j].max() >= 0) System.out.print("0 ");
+          else if (floatIntervals[j].min() > 0) System.out.print("+ ");
+          else if (floatIntervals[j].min() < 0) System.out.print("- ");
           else System.out.print("? ");
         }
         System.out.println();
@@ -240,7 +240,7 @@ public class IntervalGaussSeidel {
 
   public String toString() {
 
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
 
     for (int i = 0; i < A.length; i++) {
       for (int j = 0; j < A[i].length; j++) s.append(A[i][j] + " ");

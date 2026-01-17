@@ -50,6 +50,7 @@ import org.jacop.util.QueueForward;
 public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
+  private final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies variable b in the Implies constraint. */
   public IntVar b;
@@ -58,10 +59,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   public PrimitiveConstraint c;
 
   boolean imposed = false;
-
   Store store;
-
-  private final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
    * It constructs ifthen constraint.
@@ -205,7 +203,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : Implies(").append(b).append(", ").append(c).append(" )");
 

@@ -38,17 +38,6 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * It creates a lex constraint on a list of set variables. Each consecutive pair of set variables is
- * being constrained to be lexicographically ordered.
- *
- * <p>For example, {}{@literal <}lex {1} {1, 2}{@literal <}lex {1, 2, 3} {1, 3}{@literal <}lex {2}
- * {1}{@literal <} {2}
- *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
- * @version 4.10
- */
-
-/**
  * @deprecated As of release 4.5.1 replaced by AltB and AleB constraints.
  */
 @Deprecated
@@ -514,7 +503,7 @@ public class Lex extends Constraint implements Stateful {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     result.append("Lex(");
     result.append(a).append(", ").append(b);
     result.append(")");

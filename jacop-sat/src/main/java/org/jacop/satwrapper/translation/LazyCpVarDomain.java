@@ -59,6 +59,15 @@ public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
   @SuppressWarnings("unused")
   private DomainClausesDatabase database;
 
+  /**
+   * creates the var list
+   *
+   * @param variable the variable this list represents
+   */
+  public LazyCpVarDomain(IntVar variable) {
+    super(variable);
+  }
+
   @Override
   public int cpValueToBoolVar(int value, boolean isEquality) {
     assert value >= minNode.value;
@@ -112,15 +121,6 @@ public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
   @Override
   public boolean isTranslated() {
     return false;
-  }
-
-  /**
-   * creates the var list
-   *
-   * @param variable the variable this list represents
-   */
-  public LazyCpVarDomain(IntVar variable) {
-    super(variable);
   }
 
   @Override

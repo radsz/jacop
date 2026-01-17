@@ -82,6 +82,20 @@ import org.jacop.core.Store;
  */
 public class SiblingUproar extends ExampleFD {
 
+  /**
+   * It executes the program to solve this logic puzzle.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    SiblingUproar example = new SiblingUproar();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -320,19 +334,5 @@ public class SiblingUproar extends ExampleFD {
     store.impose(new XeqY(angryat[jNina], reason[ifinished_cereal]));
     store.impose(new XeqY(children[iStuart], way[ihung_up_on_friend]));
     vars.add(kto);
-  }
-
-  /**
-   * It executes the program to solve this logic puzzle.
-   *
-   * @param args no argument is used.
-   */
-  public static void main(String args[]) {
-
-    SiblingUproar example = new SiblingUproar();
-
-    example.model();
-
-    if (example.search()) System.out.println("Solution(s) found");
   }
 }

@@ -52,6 +52,22 @@ public class LatinSquare extends ExampleFD {
   /** The size of the latin square. */
   public int n = 20;
 
+  /**
+   * It executes the program to solve the LatinSquare problem.
+   *
+   * @param args size of the problem
+   */
+  public static void main(String args[]) {
+
+    LatinSquare example = new LatinSquare();
+
+    if (args.length > 0) example.n = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
+
   @Override
   public void model() {
 
@@ -77,21 +93,5 @@ public class LatinSquare extends ExampleFD {
       for (int j = 0; j < n; j++) y[j] = x[j][i];
       store.impose(new Alldifferent(y));
     }
-  }
-
-  /**
-   * It executes the program to solve the LatinSquare problem.
-   *
-   * @param args size of the problem
-   */
-  public static void main(String args[]) {
-
-    LatinSquare example = new LatinSquare();
-
-    if (args.length > 0) example.n = Integer.parseInt(args[0]);
-
-    example.model();
-
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
   }
 }

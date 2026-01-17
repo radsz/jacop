@@ -63,6 +63,37 @@ public class BIBD extends ExampleFD {
 
   IntVar[][] x;
 
+  /**
+   * It executes the program to solve the Langford problem. It is possible to specify two
+   * parameters. If no parameter is used then default values for n and m are used.
+   *
+   * @param args the first parameter denotes n, the second parameter denotes m.
+   */
+  public static void main(String args[]) {
+
+    BIBD example = new BIBD();
+
+    if (args.length > 1) {
+      try {
+        example.v = Integer.parseInt(args[0]);
+        example.b = Integer.parseInt(args[1]);
+        example.r = Integer.parseInt(args[2]);
+        example.k = Integer.parseInt(args[3]);
+        example.lambda = Integer.parseInt(args[4]);
+      } catch (Exception ex) {
+        System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
+      }
+    }
+
+    example.model();
+
+    if (example.searchAllAtOnce()) {
+      System.out.println("Solution(s) found");
+
+      ExampleFD.printMatrix(example.x, example.v, example.b);
+    }
+  }
+
   @Override
   public void model() {
 
@@ -106,36 +137,5 @@ public class BIBD extends ExampleFD {
 
         store.impose(new SumInt(result, "==", lambdaVar), 1);
       }
-  }
-
-  /**
-   * It executes the program to solve the Langford problem. It is possible to specify two
-   * parameters. If no parameter is used then default values for n and m are used.
-   *
-   * @param args the first parameter denotes n, the second parameter denotes m.
-   */
-  public static void main(String args[]) {
-
-    BIBD example = new BIBD();
-
-    if (args.length > 1) {
-      try {
-        example.v = Integer.parseInt(args[0]);
-        example.b = Integer.parseInt(args[1]);
-        example.r = Integer.parseInt(args[2]);
-        example.k = Integer.parseInt(args[3]);
-        example.lambda = Integer.parseInt(args[4]);
-      } catch (Exception ex) {
-        System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
-      }
-    }
-
-    example.model();
-
-    if (example.searchAllAtOnce()) {
-      System.out.println("Solution(s) found");
-
-      ExampleFD.printMatrix(example.x, example.v, example.b);
-    }
   }
 }

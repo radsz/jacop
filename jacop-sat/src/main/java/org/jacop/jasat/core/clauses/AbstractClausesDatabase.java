@@ -60,12 +60,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   protected static final int CLAUSE_RATE_AVERAGE = 5;
 
   protected static final int CLAUSE_RATE_WELL_SUPPORTED = 8;
-
-  protected static int CLAUSE_RATE_I_WANT_THIS_CLAUSE = 20;
-
   // the minimal size of (var => clauses) watches
   protected static final int MINIMUM_VAR_WATCH_SIZE = 10;
-
+  protected static int CLAUSE_RATE_I_WANT_THIS_CLAUSE = 20;
   // memory pool for fast int[] allocation/deallocation
   public MemoryPool pool;
 
@@ -82,13 +79,6 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   public int databaseIndex;
 
   /**
-   * @TODO efficiency.
-   *
-   * <p>Do we really need fix one way of expensive watchLists for all databases ?!?
-   * BinaryClausesDatabase should have its own way of doing watched literals.
-   */
-
-  /**
    * The first dimension corresponds to the index of the variable for which the watches are stored.
    * The second index at position equal to 0 then it specifies the first free position to put index
    * of next watched clause. The second index at position equal to n then it specifies the clause
@@ -96,10 +86,6 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected int[][] watchLists = new int[10][];
 
-  /**
-   * TODO: try with hashmap (and associate watches with signed literals and not only vars, to
-   * examinate first clauses that may trigger a conflict
-   */
   // the other way to have watches
   // protected IntHashMap<int[]> watches = new IntHashMap<int[]>();
 
@@ -113,19 +99,19 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   public abstract int rateThisClause(int[] clause);
 
   /**
+   * @return the index of this database in the DatabasesStore
+   */
+  public final int getDatabaseIndex() {
+    return databaseIndex;
+  }
+
+  /**
    * Called by the databaseStore, to inform the DatabasesStore of which index it has.
    *
    * @param index the index of the database
    */
   public final void setDatabaseIndex(int index) {
     this.databaseIndex = index;
-  }
-
-  /**
-   * @return the index of this database in the DatabasesStore
-   */
-  public final int getDatabaseIndex() {
-    return databaseIndex;
   }
 
   /**
@@ -233,13 +219,6 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void removeWatch(int literal, int clauseIndex) {
 
-    /**
-     * @TODO Efficiency check, improvement.
-     *
-     * <p>removeWatch potentially expensive (linear), if it is called one by one to remove all
-     * watches then it will be potentially quadratic ;( instead of constant function to remove all
-     * watches.
-     */
     assert doesWatch(literal, clauseIndex);
 
     int var = Math.abs(literal);

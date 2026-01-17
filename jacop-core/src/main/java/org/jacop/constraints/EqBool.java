@@ -57,6 +57,8 @@ public class EqBool extends PrimitiveConstraint {
   /** It specifies variable result in the constraint. */
   public IntVar result;
 
+  List<Constraint> constraints;
+
   /**
    * It constructs eqBool.
    *
@@ -286,8 +288,6 @@ public class EqBool extends PrimitiveConstraint {
     resultString.append(")");
     return resultString.toString();
   }
-
-  List<Constraint> constraints;
 
   @Override
   public List<Constraint> decompose(Store store) {

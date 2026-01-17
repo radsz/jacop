@@ -262,7 +262,7 @@ class ThetaTree extends Tree {
 
   public String toGraph(String name) {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("digraph ThetaTree").append(name);
     result.append(" {");
@@ -310,7 +310,7 @@ class ThetaTree extends Tree {
 
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("ThetaTree\n");
     for (int i = 0; i < treeSize; i++)

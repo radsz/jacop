@@ -81,6 +81,27 @@ public class BoxDisplay extends JFrame {
   }
 
   /**
+   * It constructs a window given the parameters like pixels per unit shape, and name of the window.
+   *
+   * @param pixelsPerUnit number of pixels per unit length.
+   * @param name window name.
+   */
+  public BoxDisplay(int pixelsPerUnit, String name) {
+    super(name);
+    this.pixelsPerUnit = pixelsPerUnit;
+    this.setSize(new Dimension(800, 600));
+
+    this.setResizable(false);
+    setVisible(true);
+    int width = getWidth();
+    int height = getHeight();
+    bufferImage = createImage(width, height);
+    displayImgae = createImage(width, height);
+
+    setDefaultCloseOperation(EXIT_ON_CLOSE);
+  }
+
+  /**
    * It creates a display to visualize 2D geost constraint.
    *
    * @param pixelsPerUnit number of pixels per unit of object length.
@@ -99,6 +120,19 @@ public class BoxDisplay extends JFrame {
 
     display.flip();
   }
+
+  /*
+   public static final void displayPool(BoxDisplay display, Color color){
+
+  	for(int i = 0; i<DBox.freeBoxes.size(); i++){
+  		SimpleArrayList<DBox> boxes = DBox.freeBoxes.get(i);
+  		for(int j = 0; j<boxes.size(); j++){
+  			display.display2DBox(boxes.get(j), color);
+  		}
+  	}
+
+  }
+  */
 
   /**
    * It displays the state of the geost constraint.
@@ -143,40 +177,6 @@ public class BoxDisplay extends JFrame {
         }
       }
     }
-  }
-
-  /*
-   public static final void displayPool(BoxDisplay display, Color color){
-
-  	for(int i = 0; i<DBox.freeBoxes.size(); i++){
-  		SimpleArrayList<DBox> boxes = DBox.freeBoxes.get(i);
-  		for(int j = 0; j<boxes.size(); j++){
-  			display.display2DBox(boxes.get(j), color);
-  		}
-  	}
-
-  }
-  */
-
-  /**
-   * It constructs a window given the parameters like pixels per unit shape, and name of the window.
-   *
-   * @param pixelsPerUnit number of pixels per unit length.
-   * @param name window name.
-   */
-  public BoxDisplay(int pixelsPerUnit, String name) {
-    super(name);
-    this.pixelsPerUnit = pixelsPerUnit;
-    this.setSize(new Dimension(800, 600));
-
-    this.setResizable(false);
-    setVisible(true);
-    int width = getWidth();
-    int height = getHeight();
-    bufferImage = createImage(width, height);
-    displayImgae = createImage(width, height);
-
-    setDefaultCloseOperation(EXIT_ON_CLOSE);
   }
 
   /**

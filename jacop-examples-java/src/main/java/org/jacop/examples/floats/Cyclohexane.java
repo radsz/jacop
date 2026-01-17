@@ -30,12 +30,6 @@
 
 package org.jacop.examples.floats;
 
-/**
- * This model is based on minizinc model cyclohexane.mzn by Håkan Kjellerstrand
- *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
- */
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -50,6 +44,18 @@ public class Cyclohexane {
 
   double MIN_FLOAT = -1e+150;
   double MAX_FLOAT = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    Cyclohexane example = new Cyclohexane();
+
+    example.cyclohexane();
+  }
 
   void cyclohexane() {
 
@@ -92,13 +98,10 @@ public class Cyclohexane {
     FloatVar t3 = new FloatVar(store, "t3", MIN_FLOAT, MAX_FLOAT);
     store.impose(new PplusCeqR(zz, 1.0, t3));
 
-    /// y*y*(1.0+z*z))
     FloatVar t4 = new FloatVar(store, "t4", MIN_FLOAT, MAX_FLOAT);
     store.impose(new PmulQeqR(yy, t3, t4));
-    /// z*z*(1.0+x*x))
     FloatVar t5 = new FloatVar(store, "t5", MIN_FLOAT, MAX_FLOAT);
     store.impose(new PmulQeqR(zz, t1, t5));
-    /// x*x*(1.0+y*y))
     FloatVar t6 = new FloatVar(store, "t6", MIN_FLOAT, MAX_FLOAT);
     store.impose(new PmulQeqR(xx, t2, t6));
 
@@ -160,17 +163,5 @@ public class Cyclohexane {
     T = T2 - T1;
 
     System.out.println("\n\t*** Execution time = " + T + " ms");
-  }
-
-  /**
-   * It executes the program.
-   *
-   * @param args no arguments
-   */
-  public static void main(String args[]) {
-
-    Cyclohexane example = new Cyclohexane();
-
-    example.cyclohexane();
   }
 }

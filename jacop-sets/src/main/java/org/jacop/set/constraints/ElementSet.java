@@ -112,17 +112,6 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It specifies the consistency rules of the constraint
-     *
-     * <p>L[I] = V, where I is intVar and L is a list of sets, and V is a setVar.
-     *
-     * <p>glbV - elements which must be in V.
-     *
-     * <p>glbV = glbV \/ ( for all i in I /\ L[i] ) lubV = lubV /\ ( for all i in I \/ L[i] )
-     *
-     * <p>domI = all i in dom(I) such that L[i] in V and glbV in L[i]
-     */
     SetDomain valueDom = value.domain;
     IntDomain indexDom = index.domain;
     IntDomain newIndex = new IntervalDomain();

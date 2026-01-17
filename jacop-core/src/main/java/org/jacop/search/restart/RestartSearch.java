@@ -55,28 +55,22 @@ import org.jacop.search.SolutionListener;
  */
 public class RestartSearch<T extends Var> {
 
+  // relax and reconstruct
+  private final Random generator;
   Store store;
   DepthFirstSearch<T> search;
   SelectChoicePoint<T> select;
   Calculator calculator;
   SolutionListener<T> lastSolutionListener;
   CustomReport reportSolution = null;
-
   Search<T> lastNotNullSearch;
-
   Var cost;
   int intCostValue = Integer.MAX_VALUE;
   double floatCostValue = Double.MAX_VALUE;
-
   int numberRestarts = 0;
-
   boolean atLeastOneSolution = false;
-
   boolean timeOutCheck = false;
   long timeOut;
-
-  // relax and reconstruct
-  private final Random generator;
   IntVar[] rarVars;
   int probability;
   int[] values;

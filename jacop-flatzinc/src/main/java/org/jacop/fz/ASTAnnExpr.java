@@ -3,6 +3,10 @@
 package org.jacop.fz;
 
 public class ASTAnnExpr extends SimpleNode {
+  // My additions
+  String id = "";
+  boolean ident_present = false;
+
   public ASTAnnExpr(int id) {
     super(id);
   }
@@ -11,17 +15,13 @@ public class ASTAnnExpr extends SimpleNode {
     super(p, id);
   }
 
-  // My additions
-  String id = "";
-  boolean ident_present = false;
+  String getIdent() {
+    return id;
+  }
 
   void setIdent(String ID) {
     ident_present = true;
     id = ID;
-  }
-
-  String getIdent() {
-    return id;
   }
 
   boolean idPresent() {
