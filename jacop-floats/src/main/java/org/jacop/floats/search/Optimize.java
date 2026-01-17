@@ -37,7 +37,6 @@ import org.jacop.core.Var;
 import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
@@ -52,7 +51,7 @@ import org.jacop.search.SimpleSolutionListener;
 public class Optimize<T extends Var> {
 
     Store store;
-    DepthFirstSearch<T> search;
+    Search<T> search;
     FloatVar cost;
     SplitSelectFloat<FloatVar> split;
     SelectChoicePoint<T> select;
@@ -64,7 +63,7 @@ public class Optimize<T extends Var> {
     FloatInterval lastCost;
     FloatInterval[] lastVarValues;
 
-    public Optimize(Store store, DepthFirstSearch<T> search, SelectChoicePoint<T> select, FloatVar cost) {
+    public Optimize(Store store, Search<T> search, SelectChoicePoint<T> select, FloatVar cost) {
 
         this.store = store;
         this.search = search;
@@ -74,12 +73,12 @@ public class Optimize<T extends Var> {
         search.setAssignSolution(false);
         search.setPrintInfo(false);
 
-        Var[] sVar = ((SplitSelectFloat) select).searchVariables;
+        Var[] sVar = ((SplitSelectFloat<?>) select).searchVariables;
         variables = new Var[sVar.length];
         for (int i = 0; i < sVar.length; i++)
             variables[i] = sVar[i];
 
-        search.setSolutionListener(new ResultListener<T>(variables));
+        search.setSolutionListener(new ResultListener(variables));
 
         split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
 
@@ -180,7 +179,7 @@ public class Optimize<T extends Var> {
         return lastVarValues;
     }
 
-    public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
+    public class ResultListener extends SimpleSolutionListener<T> {
 
         Var[] var;
 

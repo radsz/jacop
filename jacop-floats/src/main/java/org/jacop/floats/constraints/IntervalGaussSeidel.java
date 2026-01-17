@@ -33,7 +33,7 @@ package org.jacop.floats.constraints;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
-import org.jacop.util.Matrix;
+import org.jacop.floats.util.Matrix;
 
 import java.util.Arrays;
 
