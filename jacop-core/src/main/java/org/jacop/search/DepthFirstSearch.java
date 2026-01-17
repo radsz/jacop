@@ -340,16 +340,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     @SuppressWarnings("unchecked") public void addChildSearch(Search<? extends Var> child) {
 
         if (childSearches == null) {
-            childSearches = (Search<? extends Var>[]) Array.newInstance(child.getClass(), 1);
-            // FIXME, check and removed.
-            //		childSearches = new Search[1];
+            // Always use Search.class (the interface) as the component type since all children implement Search
+            // This ensures compatibility when different Search implementations are added
+            childSearches = (Search<? extends Var>[]) Array.newInstance(Search.class, 1);
             childSearches[0] = child;
         } else {
 
             Search<? extends Var>[] old = childSearches;
-            childSearches = (Search<? extends Var>[]) Array.newInstance(child.getClass(), childSearches.length + 1);
-            // FIXME, check and remove.
-            //	childSearches = new Search[childSearches.length + 1];
+            // Always use Search.class (the interface) as the component type
+            childSearches = (Search<? extends Var>[]) Array.newInstance(Search.class, childSearches.length + 1);
             System.arraycopy(old, 0, childSearches, 0, old.length);
             childSearches[old.length] = child;
         }

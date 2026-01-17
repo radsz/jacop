@@ -245,18 +245,22 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
             Map<T, Integer> position = select.getVariablesMapping();
 
-            for (Map.Entry<T, Integer> entry : position.entrySet()) {
-                T current = entry.getKey();
-                Integer value = entry.getValue();
-                // Use the key and the value
-                if (vars == null) {
-                    // Create array of the same type as the first variable using reflection
-                    // This avoids needing to import FloatVar or SetVar
-                    @SuppressWarnings("unchecked")
-                    T[] array = (T[]) Array.newInstance(current.getClass(), position.size());
-                    vars = array;
+            if (position.isEmpty()) {
+                vars = null;
+            } else {
+                // Always use Var.class as the component type since all T extend Var
+                // This ensures compatibility with all variable types (IntVar, FloatVar, SetVar, etc.)
+                // and avoids ArrayStoreException when variables of different concrete types are present
+                @SuppressWarnings("unchecked")
+                T[] array = (T[]) Array.newInstance(Var.class, position.size());
+                vars = array;
+
+                // Populate the array
+                for (Map.Entry<T, Integer> entry : position.entrySet()) {
+                    T current = entry.getKey();
+                    Integer value = entry.getValue();
+                    vars[value] = current;
                 }
-                vars[value] = current;
             }
 
             if (vars != null) {
