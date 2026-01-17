@@ -5,9 +5,21 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.jacop</groupId>
-    <artifactId>jacop</artifactId>
+    <artifactId>jacop-parent</artifactId>
     <version>4.11.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>jacop-core</module>
+        <module>jacop-floats</module>
+        <module>jacop-sets</module>
+        <module>jacop-sat</module>
+        <module>jacop-flatzinc</module>
+        <module>jacop-scala</module>
+        <module>jacop-examples-java</module>
+        <module>jacop-examples-scala</module>
+        <module>jacop-benchmarks</module>
+    </modules>
 
     <name>JaCoP</name>
     <url>http://jacop.osolpro.com</url>
@@ -357,6 +369,30 @@ setup to run configuration. -->
                     <version>4.0.0-M5</version>
                 </plugin>
 
+                <plugin>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <version>4.8.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>javacc-maven-plugin</artifactId>
+                    <version>2.6</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.0.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.0.2</version>
+                </plugin>
+
             </plugins>
         </pluginManagement>
 
@@ -376,69 +412,6 @@ setup to run configuration. -->
                 </configuration>
             </plugin>
 
-            <!-- Scala plugin -->
-            <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <version>4.8.1</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <args>
-                                <arg>-deprecation</arg>
-                                <arg>-feature</arg>
-                            </args>
-                            <sendJavaToScalac>false</sendJavaToScalac>
-                            <sourceDir>src/main/scala</sourceDir>
-                            <includes>
-                                <include>**/*.scala</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- JJTree and javacc plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>javacc-maven-plugin</artifactId>
-                <version>2.6</version>
-                <executions>
-                    <execution>
-                        <id>javacc</id>
-                        <goals>
-                            <goal>jjtree-javacc</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Defines sources -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <!-- <source>src/main/java</source> -->
-                                <source>src/main/scala</source>
-                                <source>src/main/jjtree</source>
-                                <source>src/main/minizinc</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
 
             <!-- Plugin for creation of jar file with sources -->
             <plugin>
@@ -458,24 +431,6 @@ setup to run configuration. -->
                 </configuration>
             </plugin>
 
-            <!-- Plugin for creation of jar with executables -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.0.2</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.jacop.examples.RunExample</mainClass>
-                            <packageName>org.jacop</packageName>
-                        </manifest>
-                        <manifestEntries>
-                            <mode>development</mode>
-                            <url>${project.url}</url>
-                        </manifestEntries>
-                    </archive>
-                </configuration>
-            </plugin>
 
             <!-- Plugin for generating javadoc jar -->
             <plugin>
@@ -488,10 +443,6 @@ setup to run configuration. -->
                     <!--- Possible solution to not print any warrnings
                         for Java 1.8 -->
                     <sourceFileExcludes>
-                        <sourcepath>
-                            ${basedir}/src/main/java:${basedir}/target/generated-sources/jjtree:${basedir}/target/generated-sources/javacc
-                        </sourcepath>
-
                         <exclude>**/Node.java</exclude>
                         <exclude>**/SimpleNode.java</exclude>
                         <exclude>**/ParseException.java</exclude>
@@ -557,8 +508,8 @@ setup to run configuration. -->
                 <version>0.8.8</version>
                 <configuration>
                     <excludes>
-                        <exclude>org/jacop/examples/scala/**/*.class</exclude>
-                        <exclude>org/jacop/scala/**/*.class</exclude>
+                        <exclude>**/org/jacop/examples/scala/**/*.class</exclude>
+                        <exclude>**/org/jacop/scala/**/*.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -713,23 +664,6 @@ setup to run configuration. -->
             <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-compiler</artifactId>
-            <version>${scala.version}</version>
-        </dependency>
-	<!--
-	<dependency>
-	  <groupId>org.scala-lang.modules</groupId>
-	  <artifactId>scala-xml_2.13</artifactId>
-	  <version>1.2.0</version>
-	  </dependency>
-	 -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
