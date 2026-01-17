@@ -51,7 +51,7 @@ import java.util.List;
  * @version 4.10
  */
 
-public class LinearFloat extends Linear implements UsesQueueVariable {
+public class LinearFloat extends Linear implements UsesQueueVariable, FloatDerivableConstraint {
 
     /**
      * @param store   current store

@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.10
  */
 
-public class PmulCeqR extends Constraint implements SatisfiedPresent {
+public class PmulCeqR extends Constraint implements SatisfiedPresent, FloatDerivableConstraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

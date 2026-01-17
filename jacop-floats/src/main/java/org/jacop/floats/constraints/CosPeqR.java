@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @version 4.10
  */
 
-public class CosPeqR extends Constraint implements Stateful, SatisfiedPresent {
+public class CosPeqR extends Constraint implements Stateful, SatisfiedPresent, FloatDerivableConstraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

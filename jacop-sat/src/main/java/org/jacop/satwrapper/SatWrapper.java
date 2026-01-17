@@ -57,7 +57,9 @@ import org.jacop.satwrapper.translation.SimpleCpVarDomain;
 import java.io.BufferedWriter;
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /*
@@ -102,6 +104,9 @@ public final class SatWrapper extends Constraint
     //public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
     //	new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
     // TODO : find more efficient ? hard, because IntVar has no unique ID
+
+    // association from CP variables to their SAT bridge (replaces IntVar.satBridge field)
+    private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<IntVar, SatCPBridge>();
 
     // association (boolean variable) -> LiteralRange (and so, IntVar)
     public SatCPBridge[] boolVarToDomains = new SatCPBridge[50];
@@ -157,6 +162,28 @@ public final class SatWrapper extends Constraint
     // did the solver reach a solution?
     private boolean hasSolution = false;
 
+    /**
+     * Gets the SAT bridge for the given variable.
+     * Replaces direct access to IntVar.satBridge field.
+     *
+     * @param variable the IntVar
+     * @return the SatCPBridge associated with the variable, or null if not set
+     */
+    public SatCPBridge getSatBridge(IntVar variable) {
+        return varToSatBridge.get(variable);
+    }
+
+    /**
+     * Sets the SAT bridge for the given variable.
+     * Replaces direct assignment to IntVar.satBridge field.
+     *
+     * @param variable the IntVar
+     * @param bridge   the SatCPBridge to associate with the variable
+     */
+    public void setSatBridge(IntVar variable, SatCPBridge bridge) {
+        varToSatBridge.put(variable, bridge);
+    }
+
     public void register(IntVar result) {
         register(result, true);
     }
@@ -180,8 +207,9 @@ public final class SatWrapper extends Constraint
             // tell the store we watch this variable
             variable.putModelConstraint(this, IntDomain.BOUND);
 
-            variable.satBridge = new SimpleCpVarDomain(this, variable, translate);
-            assert log(this, "create default domain", variable.satBridge);
+            SatCPBridge bridge = new SimpleCpVarDomain(this, variable, translate);
+            setSatBridge(variable, bridge);
+            assert log(this, "create default domain", bridge);
 
         }
 
@@ -651,7 +679,7 @@ public final class SatWrapper extends Constraint
      */
     public final int cpVarToBoolVar(IntVar variable, int value, boolean isEquality) {
 
-        SatCPBridge range = variable.satBridge;
+        SatCPBridge range = getSatBridge(variable);
 
         assert range != null;
 
@@ -715,7 +743,7 @@ public final class SatWrapper extends Constraint
         assert isVarLiteral(literal);
         int var = Math.abs(literal);
         IntVar variable = boolVarToCpVar(literal);
-        SatCPBridge range = variable.satBridge;
+        SatCPBridge range = getSatBridge(variable);
         return range.isEqualityBoolVar(var);
     }
 

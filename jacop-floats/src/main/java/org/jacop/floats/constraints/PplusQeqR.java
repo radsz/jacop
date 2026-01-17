@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class PplusQeqR extends PrimitiveConstraint {
+public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableConstraint {
 
     static AtomicInteger idNumber = new AtomicInteger(0);
 

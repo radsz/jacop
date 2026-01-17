@@ -109,8 +109,12 @@ public class Derivative {
 
             // System.out.println ("Evaluate " + currentConstraint);
 
+            if (!(currentConstraint instanceof FloatDerivableConstraint)) {
+                throw new UnsupportedOperationException("Constraint " + currentConstraint + " does not support derivatives");
+            }
+
             eval.push(currentConstraint);
-            FloatVar v = currentConstraint.derivative(store, f, vars, x);
+            FloatVar v = ((FloatDerivableConstraint) currentConstraint).derivative(store, f, vars, x);
             eval.pop();
 
             return v;
@@ -120,8 +124,11 @@ public class Derivative {
 
             Constraint c = resolveConstraint(f, constraints);
             if (c != null) {
+                if (!(c instanceof FloatDerivableConstraint)) {
+                    throw new UnsupportedOperationException("Constraint " + c + " does not support derivatives");
+                }
                 eval.push(c);
-                FloatVar v = c.derivative(store, f, vars, x);
+                FloatVar v = ((FloatDerivableConstraint) c).derivative(store, f, vars, x);
                 eval.pop();
 
                 return v;
