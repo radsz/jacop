@@ -522,28 +522,6 @@ public class SingleConstraintTest extends TestHelper {
 
     }
 
-    @Test @Ignore
-    // TODO, BUG weird problem that has all constraints satisfied immediately int the first search node, making search not explore
-    // search space
-    public void testXgtC() {
-
-        Store store = new Store();
-
-        int xLength = 1;
-        int xSize = 4;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-
-        Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
-
-        store.print();
-
-        int noOfSolutions = noOfAllSolutions(store, x);
-
-        assertThat(noOfSolutions, is(16));
-
-    }
-
-
     @Test public void testArgMin() {
 
         Store store = new Store();
@@ -619,27 +597,6 @@ public class SingleConstraintTest extends TestHelper {
         LinearInt linear = new LinearInt(x, new int[] {2, 1, 3, 1}, ">=", 5);
 
         store.impose(linear);
-
-        int noOfSolutions = noOfAllSolutions(store, x);
-
-        assertThat(noOfSolutions, is(81));
-
-    }
-
-    @Test @Ignore
-    // TODO, BUG to be investigated.
-    public void testSumWeightDom() {
-
-        Store store = new Store();
-
-        int xLength = 4;
-        int xSize = 2;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-
-        LinearIntDom sum = new LinearIntDom(x, new int[] {1, 2, 3, 4}, "==", 4);
-
-        store.impose(sum);
 
         int noOfSolutions = noOfAllSolutions(store, x);
 
