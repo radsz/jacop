@@ -99,7 +99,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-checkstyle-plugin</artifactId>
-                        <version>3.1.1</version>
+                        <version>3.6.0</version>
                         <executions>
                             <execution>
                                 <id>checkstyle-check</id>
@@ -332,12 +332,12 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>3.1.1</version>
+                    <version>3.6.0</version>
                     <dependencies>
                         <dependency>
                             <groupId>com.puppycrawl.tools</groupId>
                             <artifactId>checkstyle</artifactId>
-                            <version>8.38</version>
+                            <version>13.0.0</version>
                         </dependency>
                     </dependencies>
                     <configuration>
@@ -592,7 +592,14 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.6.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                            <version>13.0.0</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <consoleOutput>true</consoleOutput>
@@ -670,7 +677,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.6.0</version>
                 <reportSets>
                     <reportSet>
                         <reports>
