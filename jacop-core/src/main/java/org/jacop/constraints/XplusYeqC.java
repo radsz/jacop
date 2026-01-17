@@ -30,9 +30,8 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
-
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
 /**
  * Constraint X + Y #= C
@@ -40,133 +39,129 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class XplusYeqC extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x+y=c.
-     */
-    final public IntVar x;
+  /** It specifies variable x in constraint x+y=c. */
+  public final IntVar x;
 
-    /**
-     * It specifies variable y in constraint x+y=c.
-     */
-    final public IntVar y;
+  /** It specifies variable y in constraint x+y=c. */
+  public final IntVar y;
 
-    /**
-     * It specifies constant c in constraint x+y=c.
-     */
-    final int c;
+  /** It specifies constant c in constraint x+y=c. */
+  final int c;
 
-    /**
-     * It constructs the constraint X+Y=C.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     * @param c constant c.
-     */
-    public XplusYeqC(IntVar x, IntVar y, int c) {
+  /**
+   * It constructs the constraint X+Y=C.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param c constant c.
+   */
+  public XplusYeqC(IntVar x, IntVar y, int c) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
-        this.c = c;
+    this.x = x;
+    this.y = y;
+    this.c = c;
 
-	checkForOverflow();
-	
-        setScope(x, y);
-    }
+    checkForOverflow();
 
-    void checkForOverflow() {
+    setScope(x, y);
+  }
 
-        int sumMin = 0, sumMax = 0;
+  void checkForOverflow() {
 
-        sumMin = Math.addExact(sumMin, x.min());
-        sumMax = Math.addExact(sumMax, x.max());
+    int sumMin = 0, sumMax = 0;
 
-        sumMin = Math.addExact(sumMin, y.min());
-        sumMax = Math.addExact(sumMax, y.max());
+    sumMin = Math.addExact(sumMin, x.min());
+    sumMax = Math.addExact(sumMax, x.max());
 
-        Math.subtractExact(sumMin, c);
-        Math.subtractExact(sumMax, c);
-    }
+    sumMin = Math.addExact(sumMin, y.min());
+    sumMax = Math.addExact(sumMax, y.max());
 
-    @Override public void consistency(final Store store) {
+    Math.subtractExact(sumMin, c);
+    Math.subtractExact(sumMax, c);
+  }
 
-        do {
+  @Override
+  public void consistency(final Store store) {
 
-            store.propagationHasOccurred = false;
+    do {
 
-            // FIXME, make propagation without object creation, scan x ->, and y <-, at the same time.
-            IntDomain xDom = x.dom();
-            IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
-            for (int i = xDom.noIntervals() - 1; i >= 0; i--)
-                yDomIn.unionAdapt(new Interval(c - xDom.rightElement(i), c - xDom.leftElement(i)));
+      store.propagationHasOccurred = false;
 
-            y.domain.in(store.level, y, yDomIn);
+      // FIXME, make propagation without object creation, scan x ->, and y <-, at the same time.
+      IntDomain xDom = x.dom();
+      IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
+      for (int i = xDom.noIntervals() - 1; i >= 0; i--)
+        yDomIn.unionAdapt(new Interval(c - xDom.rightElement(i), c - xDom.leftElement(i)));
 
-            IntDomain yDom = y.domain;
-            IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
-            for (int i = yDom.noIntervals() - 1; i >= 0; i--)
-                xDomIn.unionAdapt(new Interval(c - yDom.rightElement(i), c - yDom.leftElement(i)));
+      y.domain.in(store.level, y, yDomIn);
 
-            x.domain.in(store.level, x, xDomIn);
+      IntDomain yDom = y.domain;
+      IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
+      for (int i = yDom.noIntervals() - 1; i >= 0; i--)
+        xDomIn.unionAdapt(new Interval(c - yDom.rightElement(i), c - yDom.leftElement(i)));
 
-        } while (store.propagationHasOccurred);
+      x.domain.in(store.level, x, xDomIn);
 
-    }
+    } while (store.propagationHasOccurred);
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public void notConsistency(final Store store) {
 
-        do {
+    do {
 
-            store.propagationHasOccurred = false;
+      store.propagationHasOccurred = false;
 
-            if (x.singleton())
-                y.domain.inComplement(store.level, y, c - x.value());
-            else if (y.singleton())
-                x.domain.inComplement(store.level, x, c - y.value());
+      if (x.singleton()) y.domain.inComplement(store.level, y, c - x.value());
+      else if (y.singleton()) x.domain.inComplement(store.level, x, c - y.value());
 
+    } while (store.propagationHasOccurred);
+  }
 
-        } while (store.propagationHasOccurred);
+  @Override
+  public boolean notSatisfied() {
+    IntDomain Xdom = x.dom(), Ydom = y.dom();
+    return (Xdom.max() + Ydom.max() < c || Xdom.min() + Ydom.min() > c);
+  }
 
-    }
+  @Override
+  public boolean satisfied() {
+    // return (grounded() && (x.min() + y.min() == c));
+    int xMin = x.min(), yMin = y.min();
+    return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
+  }
 
-    @Override public boolean notSatisfied() {
-        IntDomain Xdom = x.dom(), Ydom = y.dom();
-        return (Xdom.max() + Ydom.max() < c || Xdom.min() + Ydom.min() > c);
-    }
+  @Override
+  public String toString() {
 
-    @Override public boolean satisfied() {
-        // return (grounded() && (x.min() + y.min() == c));
-        int xMin = x.min(), yMin = y.min();
-        return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XplusYeqC(" + x + ", " + y + ", " + c + " )";
-    }
-
+    return id() + " : XplusYeqC(" + x + ", " + y + ", " + c + " )";
+  }
 }

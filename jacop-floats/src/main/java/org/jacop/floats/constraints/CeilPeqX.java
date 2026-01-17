@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -37,74 +38,70 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints ceil(P) #= X for integer variable X and float variable P.
+ *
  * <p>
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class CeilPeqX extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a left hand variable in equality constraint.
-     */
-    public IntVar x;
+  /** It specifies a left hand variable in equality constraint. */
+  public IntVar x;
 
-    /**
-     * It specifies a right hand variable in equality constraint.
-     */
-    public FloatVar p;
+  /** It specifies a right hand variable in equality constraint. */
+  public FloatVar p;
 
-    /**
-     * It constructs constraint X = P.
-     *
-     * @param x variable x.
-     * @param p variable p.
-     */
-    public CeilPeqX(FloatVar p, IntVar x) {
+  /**
+   * It constructs constraint X = P.
+   *
+   * @param x variable x.
+   * @param p variable p.
+   */
+  public CeilPeqX(FloatVar p, IntVar x) {
 
-        checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
+    checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
 
-        double q = Double.max(p.min(), p.max());
-        if (q >  (double)Integer.MAX_VALUE || q < (double)Integer.MIN_VALUE)
-            throw new RuntimeException("Error: JaCoP cannor handle "+p+" in rounding to integer.");
-        numberId = idNumber.incrementAndGet();
+    double q = Double.max(p.min(), p.max());
+    if (q > (double) Integer.MAX_VALUE || q < (double) Integer.MIN_VALUE)
+      throw new RuntimeException("Error: JaCoP cannor handle " + p + " in rounding to integer.");
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.p = p;
+    this.x = x;
+    this.p = p;
 
-        setScope(x, p);
-    }
+    setScope(x, p);
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public void consistency(Store store) {
 
-        do {
-            // ceil(p) = x, n - 1 < x <= n
-            p.domain.in(store.level, p, Math.nextUp((double)x.min() - 1), (double)(x.max()));
+    do {
+      // ceil(p) = x, n - 1 < x <= n
+      p.domain.in(store.level, p, Math.nextUp((double) x.min() - 1), (double) (x.max()));
 
-            store.propagationHasOccurred = false;
+      store.propagationHasOccurred = false;
 
-            x.domain.in(store.level, x, (int)Math.ceil(p.min()), (int)Math.ceil(p.max()));
-        } while (store.propagationHasOccurred);
-    }
+      x.domain.in(store.level, x, (int) Math.ceil(p.min()), (int) Math.ceil(p.max()));
+    } while (store.propagationHasOccurred);
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public boolean satisfied() {
-        return x.singleton() &&
-            p.min() > (double)x.value() - 1.0 &&
-            p.max() <= (double)x.value();
-    }
+  @Override
+  public boolean satisfied() {
+    return x.singleton() && p.min() > (double) x.value() - 1.0 && p.max() <= (double) x.value();
+  }
 
-    @Override public String toString() {
-        return id() + " : CeilPeqX(" + p + ", " + x + " )";
-    }
+  @Override
+  public String toString() {
+    return id() + " : CeilPeqX(" + p + ", " + x + " )";
+  }
 }

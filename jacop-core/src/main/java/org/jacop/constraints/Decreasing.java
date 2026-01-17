@@ -30,67 +30,62 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.jacop.core.*;
 
 /**
- * Decreasing constraint assures that all variables are in decreasing order. 
+ * Decreasing constraint assures that all variables are in decreasing order.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Decreasing extends Increasing {
 
-    /*
-     * It constructs an decreasing constraint.
-     *
-     * @param x variables which must be in decreasing order.
-     */
-    public Decreasing(IntVar[] x) {
-        super(x);
+  /*
+   * It constructs an decreasing constraint.
+   *
+   * @param x variables which must be in decreasing order.
+   */
+  public Decreasing(IntVar[] x) {
+    super(x);
 
-        int j = 0;
-        for (int i = n - 1; i >= 0; i--) {
-            this.x[i] = x[j++];
-        }
+    int j = 0;
+    for (int i = n - 1; i >= 0; i--) {
+      this.x[i] = x[j++];
     }
+  }
 
-    public Decreasing(IntVar[] x, boolean strict) {
-        this(x);
+  public Decreasing(IntVar[] x, boolean strict) {
+    this(x);
 
-        if (strict)
-            this.strict = 1;
+    if (strict) this.strict = 1;
+  }
+
+  /**
+   * It constructs an decreasing constraint.
+   *
+   * @param x variables which must be in decreasing order.
+   */
+  public Decreasing(List<? extends IntVar> x) {
+    this(x.toArray(new IntVar[x.size()]));
+  }
+
+  public Decreasing(List<? extends IntVar> x, boolean strict) {
+    this(x.toArray(new IntVar[x.size()]), strict);
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+    result.append(" : Decreasing([");
+
+    for (int i = n - 1; i >= 0; i--) {
+      result.append(x[i]);
+      if (i > 0) result.append(", ");
     }
+    result.append("], " + (strict == 1 ? "strict" : "non-strict") + ")");
 
-    /**
-     * It constructs an decreasing constraint.
-     *
-     * @param x variables which must be in decreasing order.
-     */
-    public Decreasing(List<? extends IntVar> x) {
-        this(x.toArray(new IntVar[x.size()]));
-    }
-
-    public Decreasing(List<? extends IntVar> x, boolean strict) {
-        this(x.toArray(new IntVar[x.size()]), strict);
-    }
-
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : Decreasing([");
-
-        for (int i = n - 1; i >= 0; i--) {
-            result.append(x[i]);
-            if (i > 0)
-                result.append(", ");
-        }
-        result.append("], " + (strict == 1 ? "strict" : "non-strict") + ")");
-
-        return result.toString();
-    }
+    return result.toString();
+  }
 }

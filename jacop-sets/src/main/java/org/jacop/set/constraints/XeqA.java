@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -38,170 +39,154 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates a constraint that makes sure that the value assigned to the integer variable x
- * is the only element of the set assigned to a set variable a.
+ * It creates a constraint that makes sure that the value assigned to the integer variable x is the
+ * only element of the set assigned to a set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class XeqA extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies variable a. */
+  public IntVar x;
+
+  /** It specifies variable b. */
+  public SetVar a;
+
+  /**
+   * It constructs an XeqA constraint to restrict the domain of the integer variables x and set
+   * variable a.
+   *
+   * @param x variable x that is restricted to be the only element of a set assigned to set variable
+   *     a.
+   * @param a set variable that must be equal to a set containing only one element as specified by
+   *     integer variable x.
+   */
+  public XeqA(IntVar x, SetVar a) {
+
+    checkInputForNullness(new String[] {"x", "a"}, new Object[] {x, a});
+
+    this.numberId = idNumber.incrementAndGet();
+
+    this.x = x;
+    this.a = a;
+
+    setScope(x, a);
+  }
+
+  @Override
+  public void consistency(Store store) {
 
     /**
-     * It specifies variable a.
-     */
-    public IntVar x;
-
-    /**
-     * It specifies variable b.
-     */
-    public SetVar a;
-
-    /**
-     * It constructs an XeqA constraint to restrict the domain of the integer variables x and set variable a.
+     * It specifies rule for X eq A.
      *
-     * @param x variable x that is restricted to be the only element of a set assigned to set variable a.
-     * @param a set variable that must be equal to a set containing only one element as specified by integer variable x.
+     * <p>lubA = lubA /\ dom(X).
+     *
+     * <p>dom(X) = dom(X) /\ lubA
+     *
+     * <p>#A = 1.
      */
-    public XeqA(IntVar x, SetVar a) {
 
-        checkInputForNullness(new String[] {"x", "a"}, new Object[] {x, a});
+    // if (aHasChanged)
+    x.domain.in(store.level, x, a.domain.lub());
+    // if (xHasChanged)
+    a.domain.inLUB(store.level, a, x.domain);
 
-        this.numberId = idNumber.incrementAndGet();
+    a.domain.inCardinality(store.level, a, 1, 1);
 
-        this.x = x;
-        this.a = a;
+    // aHasChanged = false;
+    // xHasChanged = false;
 
-        setScope(x, a);
+  }
 
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public void consistency(Store store) {
+    if (var == a) return SetDomain.ANY;
+    else return IntDomain.ANY;
+  }
 
-        /**
-         *
-         * It specifies rule for X eq A.
-         *
-         * lubA = lubA /\ dom(X).
-         *
-         * dom(X) = dom(X) /\ lubA
-         *
-         * #A = 1.
-         *
-         */
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise method exists.");
+  }
 
-        // if (aHasChanged)
-        x.domain.in(store.level, x, a.domain.lub());
-        // if (xHasChanged)
-        a.domain.inLUB(store.level, a, x.domain);
+  @Override
+  public int getNotConsistencyPruningEvent(Var var) {
 
-        a.domain.inCardinality(store.level, a, 1, 1);
-
-        // aHasChanged = false;
-        // xHasChanged = false;
-
+    // If notConsistency function mode
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+    if (var == a) return SetDomain.ANY;
+    else return IntDomain.ANY;
+  }
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+  @Override
+  public void notConsistency(Store store) {
 
-        if (var == a)
-            return SetDomain.ANY;
-        else
-            return IntDomain.ANY;
+    if (a.domain.card().min() == 1 && a.domain.card().max() == 1) {
 
+      if (x.singleton()) a.domain.inLUBComplement(store.level, a, x.value());
+
+      if (a.domain.singleton()) x.domain.inComplement(store.level, x, a.domain.glb().min());
     }
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise method exists.");
+  @Override
+  public boolean notSatisfied() {
+
+    if (!a.domain.card().contains(1)) return true;
+
+    if (!a.domain.lub().isIntersecting(x.domain)) return true;
+
+    return false;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return grounded() && a.domain.card().max() == 1 && a.domain.glb().min() == x.value();
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
+
+    // If consistency function mode
+    if (mode) {
+      if (consistencyPruningEvents != null) {
+        Integer possibleEvent = consistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
+      return getConsistencyPruningEvent(var);
     }
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        if (var == a)
-            return SetDomain.ANY;
-        else
-            return IntDomain.ANY;
-
+    // If notConsistency function mode
+    else {
+      if (notConsistencyPruningEvents != null) {
+        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
+      return getNotConsistencyPruningEvent(var);
     }
+  }
 
-    @Override public void notConsistency(Store store) {
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise method exists.");
+  }
 
-        if (a.domain.card().min() == 1 && a.domain.card().max() == 1) {
-
-            if (x.singleton())
-                a.domain.inLUBComplement(store.level, a, x.value());
-
-            if (a.domain.singleton())
-                x.domain.inComplement(store.level, x, a.domain.glb().min());
-
-        }
-
-
-    }
-
-    @Override public boolean notSatisfied() {
-
-        if (!a.domain.card().contains(1))
-            return true;
-
-        if (!a.domain.lub().isIntersecting(x.domain))
-            return true;
-
-        return false;
-
-    }
-
-    @Override public boolean satisfied() {
-        return grounded() && a.domain.card().max() == 1 && a.domain.glb().min() == x.value();
-    }
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return getConsistencyPruningEvent(var);
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return getNotConsistencyPruningEvent(var);
-        }
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise method exists.");
-    }
-
-    @Override public String toString() {
-        return id() + " : XeqA(" + x + ", " + a + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XeqA(" + x + ", " + a + " )";
+  }
 }

@@ -30,119 +30,116 @@
 
 package org.jacop.constraints;
 
+import java.util.List;
 import org.jacop.core.IntDomain;
 
-import java.util.List;
-
 /**
- * Defines a rectangle with integer origine and length used in the diffn
- * constraint.
+ * Defines a rectangle with integer origine and length used in the diffn constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class IntRectangle {
 
-    int dim = 0;
+  int dim = 0;
 
-    int[] length;
+  int[] length;
 
-    int[] origin;
+  int[] origin;
 
-    public IntRectangle(List<Integer> R) {
-        dim = R.size() / 2;
-        origin = new int[dim];
-        length = new int[dim];
-        for (int i = 0; i < dim; i++) {
-            origin[i] = R.get(i);
-            length[i] = R.get(i + dim);
-        }
+  public IntRectangle(List<Integer> R) {
+    dim = R.size() / 2;
+    origin = new int[dim];
+    length = new int[dim];
+    for (int i = 0; i < dim; i++) {
+      origin[i] = R.get(i);
+      length[i] = R.get(i + dim);
     }
+  }
 
-    public IntRectangle(int size) {
-        origin = new int[size];
-        length = new int[size];
-    }
+  public IntRectangle(int size) {
+    origin = new int[size];
+    length = new int[size];
+  }
 
-    public IntRectangle(int[] R) {
-        dim = R.length / 2;
-        origin = new int[dim];
-        length = new int[dim];
-        for (int i = 0; i < dim; i++) {
-            origin[i] = R[i];
-            length[i] = R[i + dim];
-        }
+  public IntRectangle(int[] R) {
+    dim = R.length / 2;
+    origin = new int[dim];
+    length = new int[dim];
+    for (int i = 0; i < dim; i++) {
+      origin[i] = R[i];
+      length[i] = R[i + dim];
     }
+  }
 
-    void add(int o, int l) {
-        origin[dim] = o;
-        length[dim] = l;
-        dim++;
-    }
+  void add(int o, int l) {
+    origin[dim] = o;
+    length[dim] = l;
+    dim++;
+  }
 
-    int dim() {
-        return dim;
-    }
+  int dim() {
+    return dim;
+  }
 
-    public boolean domOverlap(Rectangle R) {
-        boolean overlap = true;
-        int min1, max1, min2, max2;
-        int i = 0;
-        while (overlap && i < dim) {
-            min1 = origin[i];
-            max1 = origin[i] + length[i];
-            IntDomain RoriginIDom = R.origin[i].dom();
-            min2 = RoriginIDom.min();
-            max2 = RoriginIDom.max() + R.length[i].max();
-            overlap = overlap && intervalOverlap(min1, max1, min2, max2);
-            i++;
-        }
-        return overlap;
+  public boolean domOverlap(Rectangle R) {
+    boolean overlap = true;
+    int min1, max1, min2, max2;
+    int i = 0;
+    while (overlap && i < dim) {
+      min1 = origin[i];
+      max1 = origin[i] + length[i];
+      IntDomain RoriginIDom = R.origin[i].dom();
+      min2 = RoriginIDom.min();
+      max2 = RoriginIDom.max() + R.length[i].max();
+      overlap = overlap && intervalOverlap(min1, max1, min2, max2);
+      i++;
     }
+    return overlap;
+  }
 
-    boolean intervalOverlap(int min1, int max1, int min2, int max2) {
-        return !(min1 >= max2 || max1 <= min2);
-    }
+  boolean intervalOverlap(int min1, int max1, int min2, int max2) {
+    return !(min1 >= max2 || max1 <= min2);
+  }
 
-    int length(int i) {
-        return length[i];
-    }
+  int length(int i) {
+    return length[i];
+  }
 
-    int origin(int i) {
-        return origin[i];
-    }
+  int origin(int i) {
+    return origin[i];
+  }
 
-    public boolean overlap(IntRectangle R) {
-        boolean overlap = true;
-        int min1, max1, min2, max2;
-        int i = 0;
-        while (overlap && i < dim) {
-            min1 = origin[i];
-            max1 = min1 + length[i];
-            min2 = R.origin[i];
-            max2 = min2 + R.length[i];
-            overlap = overlap && intervalOverlap(min1, max1, min2, max2);
-            i++;
-        }
-        return overlap;
+  public boolean overlap(IntRectangle R) {
+    boolean overlap = true;
+    int min1, max1, min2, max2;
+    int i = 0;
+    while (overlap && i < dim) {
+      min1 = origin[i];
+      max1 = min1 + length[i];
+      min2 = R.origin[i];
+      max2 = min2 + R.length[i];
+      overlap = overlap && intervalOverlap(min1, max1, min2, max2);
+      i++;
     }
+    return overlap;
+  }
 
-    void setDim(int i) {
-        dim = i;
-    }
+  void setDim(int i) {
+    dim = i;
+  }
 
-    @Override public String toString() {
-        StringBuffer s = new StringBuffer("[");
-        for (int i = 0; i < dim; i++) {
-            s.append(origin[i] + ", ");
-        }
-        for (int i = 0; i < dim; i++) {
-            s.append(length[i]);
-            if (i < dim - 1)
-                s.append(", ");
-        }
-        s.append("]");
-        return s.toString();
+  @Override
+  public String toString() {
+    StringBuffer s = new StringBuffer("[");
+    for (int i = 0; i < dim; i++) {
+      s.append(origin[i] + ", ");
     }
+    for (int i = 0; i < dim; i++) {
+      s.append(length[i]);
+      if (i < dim - 1) s.append(", ");
+    }
+    s.append("]");
+    return s.toString();
+  }
 }

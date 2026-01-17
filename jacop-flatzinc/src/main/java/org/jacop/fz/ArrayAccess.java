@@ -29,7 +29,6 @@
  */
 package org.jacop.fz;
 
-
 /**
  * It stores information about a single array access encountered during parsing flatzinc file.
  *
@@ -38,34 +37,31 @@ package org.jacop.fz;
  */
 public class ArrayAccess {
 
-    String id;
+  String id;
 
-    int index;
+  int index;
 
-    /**
-     * It creates an array access storage object.
-     *
-     * @param id    the string describing identity of the array being accessed.
-     * @param index the index of the element being accessed.
-     */
-    public ArrayAccess(String id, int index) {
+  /**
+   * It creates an array access storage object.
+   *
+   * @param id the string describing identity of the array being accessed.
+   * @param index the index of the element being accessed.
+   */
+  public ArrayAccess(String id, int index) {
 
-        this.id = id;
-        this.index = index;
+    this.id = id;
+    this.index = index;
+  }
 
-    }
+  String getIdent() {
+    return id;
+  }
 
-    String getIdent() {
-        return id;
-    }
+  int getIndex() {
+    return index;
+  }
 
-    int getIndex() {
-        return index;
-    }
-
-    public String toString() {
-        return id + "[" + index + "]";
-    }
-
+  public String toString() {
+    return id + "[" + index + "]";
+  }
 }
-

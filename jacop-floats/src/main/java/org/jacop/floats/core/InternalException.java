@@ -36,20 +36,18 @@ package org.jacop.floats.core;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class InternalException extends RuntimeException {
 
-    private static final long serialVersionUID = 8683452581100000009L;
+  private static final long serialVersionUID = 8683452581100000009L;
 
-    public InternalException() {
-    }
+  public InternalException() {}
 
-    public InternalException(String message) {
-        super(message);
-    }
+  public InternalException(String message) {
+    super(message);
+  }
 
-    @Override public Throwable fillInStackTrace() {
-        return this;
-    }
-
+  @Override
+  public Throwable fillInStackTrace() {
+    return this;
+  }
 }

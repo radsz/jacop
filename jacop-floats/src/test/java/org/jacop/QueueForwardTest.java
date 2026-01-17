@@ -30,6 +30,8 @@
 
 package org.jacop;
 
+import static org.junit.Assert.assertEquals;
+
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.core.IntVar;
@@ -44,147 +46,146 @@ import org.jacop.search.Search;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
 /**
- * It is performing testing for QueueForward functionality that makes it possible to
- * forward queueVariable events to nested constraints in a generic fashion no matter
- * in what constraint it is being used in.
+ * It is performing testing for QueueForward functionality that makes it possible to forward
+ * queueVariable events to nested constraints in a generic fashion no matter in what constraint it
+ * is being used in.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
 public class QueueForwardTest {
 
-    //   String nl = System.lineSeparator();
-    String nl = "\n";
+  //   String nl = System.lineSeparator();
+  String nl = "\n";
 
-    @Test public void testQueueForwardNot() {
+  @Test
+  public void testQueueForwardNot() {
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatVar x = new FloatVar(store, "x", 0.1, 0.1);
-        FloatVar y = new FloatVar(store, "y", 0.5, 0.5);
+    FloatVar x = new FloatVar(store, "x", 0.1, 0.1);
+    FloatVar y = new FloatVar(store, "y", 0.5, 0.5);
 
-        FloatVar[] v = {x, y};
+    FloatVar[] v = {x, y};
 
-        store.impose(new Not(new LinearFloat(v, new double[] {1, -1}, "==", 0)));
+    store.impose(new Not(new LinearFloat(v, new double[] {1, -1}, "==", 0)));
 
-        System.out.println("Precision = " + FloatDomain.precision());
+    System.out.println("Precision = " + FloatDomain.precision());
 
-        // search for solutions and print results
-        Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-        label.setSolutionListener(new PrintOutListener<FloatVar>());
+    // search for solutions and print results
+    Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
+    label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-        boolean result = label.labeling(store, select);
+    boolean result = label.labeling(store, select);
 
-        if (result) {
-            System.out.println("Solutions: ");
-            label.printAllSolutions();
-        } else
-            System.out.println("*** No");
+    if (result) {
+      System.out.println("Solutions: ");
+      label.printAllSolutions();
+    } else System.out.println("*** No");
 
-        assertEquals(true, result);
+    assertEquals(true, result);
+  }
 
-    }
+  @Test
+  public void testQueueForwardReified() {
 
+    Store store = new Store();
 
-    @Test public void testQueueForwardReified() {
+    FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
+    FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
 
-        Store store = new Store();
+    FloatVar[] v = {x, y};
 
-        FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
-        FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    store.impose(new Reified(new LinearFloat(v, new double[] {1, -1}, "==", 0), one));
 
-        FloatVar[] v = {x, y};
+    System.out.println("Precision = " + FloatDomain.precision());
 
-        IntVar one = new IntVar(store, "one", 1, 1);
-        store.impose(new Reified(new LinearFloat(v, new double[] {1, -1}, "==", 0), one));
+    // search for solutions and print results
+    Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
+    label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-        System.out.println("Precision = " + FloatDomain.precision());
+    boolean result = label.labeling(store, select);
 
-        // search for solutions and print results
-        Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-        label.setSolutionListener(new PrintOutListener<FloatVar>());
+    if (result) {
+      System.out.println("Solutions: ");
+      label.printAllSolutions();
+    } else System.out.println("*** No");
 
-        boolean result = label.labeling(store, select);
+    assertEquals(false, result);
+  }
 
-        if (result) {
-            System.out.println("Solutions: ");
-            label.printAllSolutions();
-        } else
-            System.out.println("*** No");
+  @Test
+  public void testQueueForwardNestedReifiedNot() {
 
-        assertEquals(false, result);
+    Store store = new Store();
 
-    }
+    FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
+    FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
 
-    @Test public void testQueueForwardNestedReifiedNot() {
+    FloatVar[] v = {x, y};
 
-        Store store = new Store();
+    IntVar one = new IntVar(store, "one", 1, 1);
 
-        FloatVar x = new FloatVar(store, "x", 0.1, 0.4);
-        FloatVar y = new FloatVar(store, "y", 0.5, 1.0);
+    store.impose(new Reified(new Not(new LinearFloat(v, new double[] {1, -1}, "!=", 0)), one));
 
-        FloatVar[] v = {x, y};
+    // search for solutions and print results
+    Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
+    label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-        IntVar one = new IntVar(store, "one", 1, 1);
+    boolean result = label.labeling(store, select);
 
-        store.impose(new Reified(new Not(new LinearFloat(v, new double[] {1, -1}, "!=", 0)), one));
+    if (result) {
+      System.out.println("Solutions: ");
+      label.printAllSolutions();
+    } else System.out.println("*** No");
 
-        // search for solutions and print results
-        Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-        label.setSolutionListener(new PrintOutListener<FloatVar>());
+    assertEquals(false, result);
+  }
 
-        boolean result = label.labeling(store, select);
+  @Test
+  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+  public void testQueueForwardNoException() {
+    // This test requires Fz2jacop from jacop-flatzinc module
+    // Moved to jacop-flatzinc module to avoid circular dependency
+  }
 
-        if (result) {
-            System.out.println("Solutions: ");
-            label.printAllSolutions();
-        } else
-            System.out.println("*** No");
+  @Test
+  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+  public void testConstraintImposition() {
+    // This test requires Fz2jacop from jacop-flatzinc module
+    // Moved to jacop-flatzinc module to avoid circular dependency
+  }
 
-        assertEquals(false, result);
+  @Test
+  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+  public void testBoundEventCorrection() {
+    // This test requires Fz2jacop from jacop-flatzinc module
+    // Moved to jacop-flatzinc module to avoid circular dependency
+  }
 
-    }
+  @Test
+  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+  public void testWolfCabbage() {
+    // This test requires Fz2jacop from jacop-flatzinc module
+    // Moved to jacop-flatzinc module to avoid circular dependency
+  }
 
-    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-    public void testQueueForwardNoException() {
-        // This test requires Fz2jacop from jacop-flatzinc module
-        // Moved to jacop-flatzinc module to avoid circular dependency
-    }
+  @Test
+  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+  public void testPatternSetMining() {
+    // This test requires Fz2jacop from jacop-flatzinc module
+    // Moved to jacop-flatzinc module to avoid circular dependency
+  }
 
-    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-    public void testConstraintImposition() {
-        // This test requires Fz2jacop from jacop-flatzinc module
-        // Moved to jacop-flatzinc module to avoid circular dependency
-    }
-
-    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-    public void testBoundEventCorrection() {
-        // This test requires Fz2jacop from jacop-flatzinc module
-        // Moved to jacop-flatzinc module to avoid circular dependency
-    }
-
-    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-    public void testWolfCabbage() {
-        // This test requires Fz2jacop from jacop-flatzinc module
-        // Moved to jacop-flatzinc module to avoid circular dependency
-    }
-
-    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-    public void testPatternSetMining() {
-        // This test requires Fz2jacop from jacop-flatzinc module
-        // Moved to jacop-flatzinc module to avoid circular dependency
-    }
-
-    @Test @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-    public void testRemoveConstraint() {
-        // This test requires Fz2jacop from jacop-flatzinc module
-        // Moved to jacop-flatzinc module to avoid circular dependency
-    }
-
+  @Test
+  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
+  public void testRemoveConstraint() {
+    // This test requires Fz2jacop from jacop-flatzinc module
+    // Moved to jacop-flatzinc module to avoid circular dependency
+  }
 }

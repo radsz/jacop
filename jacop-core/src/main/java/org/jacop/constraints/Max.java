@@ -30,184 +30,172 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 /**
- * Max constraint implements the Maximum/2 constraint. It provides the maximum
- * variable from all variables on the list.
- * <p>
- * max(list) = max.
+ * Max constraint implements the Maximum/2 constraint. It provides the maximum variable from all
+ * variables on the list.
+ *
+ * <p>max(list) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Max extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a list of variables among which a maximum value is being searched for.
-     */
-    final public IntVar list[];
+  /** It specifies a list of variables among which a maximum value is being searched for. */
+  public final IntVar list[];
 
-    /**
-     * It specifies variable max which stores the maximum value present in the list.
-     */
-    final public IntVar max;
+  /** It specifies variable max which stores the maximum value present in the list. */
+  public final IntVar max;
 
-    /**
-     * It specifies length of the list.
-     */
-    final int l;
+  /** It specifies length of the list. */
+  final int l;
 
-    /**
-     * Defines first position of the variable that needs to be considered
-     */
-    private TimeStamp<Integer> position;
+  /** Defines first position of the variable that needs to be considered */
+  private TimeStamp<Integer> position;
 
-    /**
-     * It constructs max constraint.
-     *
-     * @param max  variable denoting the maximum value
-     * @param list the array of variables for which the maximum value is imposed.
-     */
-    public Max(IntVar[] list, IntVar max) {
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param list the array of variables for which the maximum value is imposed.
+   */
+  public Max(IntVar[] list, IntVar max) {
 
-        checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
+    checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
 
-        this.l = list.length;
-        this.max = max;
-        this.list = Arrays.copyOf(list, list.length);
+    this.l = list.length;
+    this.max = max;
+    this.list = Arrays.copyOf(list, list.length);
 
-        if (list.length > 1000)  // rule of thumb
-            this.queueIndex = 2;
-        else
-            this.queueIndex = 1;
+    if (list.length > 1000) // rule of thumb
+    this.queueIndex = 2;
+    else this.queueIndex = 1;
 
-        this.numberId = idNumber.incrementAndGet();
+    this.numberId = idNumber.incrementAndGet();
 
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(max)));
+    setScope(Stream.concat(Arrays.stream(list), Stream.of(max)));
+  }
 
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param variables the array of variables for which the maximum value is imposed.
+   */
+  public Max(List<? extends IntVar> variables, IntVar max) {
+    this(variables.toArray(new IntVar[variables.size()]), max);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    int start = position.value();
+
+    do {
+
+      store.propagationHasOccurred = false;
+      IntVar var;
+      IntDomain vDom;
+
+      int minValue = IntDomain.MinInt;
+      int maxValue = IntDomain.MinInt;
+
+      int maxMax = max.max();
+      int minMax = max.min();
+      for (int i = start; i < l; i++) {
+
+        var = list[i];
+
+        vDom = var.dom();
+        int varMin = vDom.min(), varMax = vDom.max();
+
+        if (varMax < minMax) {
+          swap(start, i);
+          start++;
+        } else if (varMax > maxMax) var.domain.inMax(store.level, var, maxMax);
+
+        minValue = (minValue > varMin) ? minValue : varMin;
+        maxValue = (maxValue > varMax) ? maxValue : varMax;
+      }
+
+      max.domain.in(store.level, max, minValue, maxValue);
+
+      if (start == l) // all variables have their max value lower than min value of max variable
+      throw Store.failException;
+
+      if (start
+          == list.length
+              - 1) { // one variable on the list is maximal; its is min > max of all other variables
+        list[start].domain.in(store.level, list[start], max.dom());
+
+        if (max.singleton()) removeConstraint();
+      }
+    } while (store.propagationHasOccurred);
+
+    position.update(start);
+  }
+
+  private void swap(int i, int j) {
+    if (i != j) {
+      IntVar tmp = list[i];
+      list[i] = list[j];
+      list[j] = tmp;
+    }
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    position = new TimeStamp<>(store, 0);
+
+    super.impose(store);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    boolean sat = max.singleton();
+    int MAX = max.min();
+    int i = 0, eq = 0;
+    while (sat && i < list.length) {
+      if (list[i].singleton() && list[i].value() == MAX) eq++;
+      sat = list[i].max() <= MAX;
+      i++;
+    }
+    return sat && eq > 0;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+
+    result.append(" : max(  [ ");
+    for (int i = 0; i < list.length; i++) {
+      result.append(list[i]);
+      if (i < list.length - 1) result.append(", ");
     }
 
-    /**
-     * It constructs max constraint.
-     *
-     * @param max       variable denoting the maximum value
-     * @param variables the array of variables for which the maximum value is imposed.
-     */
-    public Max(List<? extends IntVar> variables, IntVar max) {
-        this(variables.toArray(new IntVar[variables.size()]), max);
-    }
+    result.append("], ").append(this.max);
+    result.append(")");
 
-    @Override public void consistency(Store store) {
-
-        int start = position.value();
-
-        do {
-
-            store.propagationHasOccurred = false;
-            IntVar var;
-            IntDomain vDom;
-
-            int minValue = IntDomain.MinInt;
-            int maxValue = IntDomain.MinInt;
-
-            int maxMax = max.max();
-            int minMax = max.min();
-            for (int i = start; i < l; i++) {
-
-                var = list[i];
-
-                vDom = var.dom();
-                int varMin = vDom.min(), varMax = vDom.max();
-
-                if (varMax < minMax) {
-                    swap(start, i);
-                    start++;
-                } else if (varMax > maxMax)
-                    var.domain.inMax(store.level, var, maxMax);
-
-                minValue = (minValue > varMin) ? minValue : varMin;
-                maxValue = (maxValue > varMax) ? maxValue : varMax;
-            }
-
-            max.domain.in(store.level, max, minValue, maxValue);
-
-            if (start == l) // all variables have their max value lower than min value of max variable
-                throw Store.failException;
-
-            if (start == list.length - 1) { // one variable on the list is maximal; its is min > max of all other variables
-                list[start].domain.in(store.level, list[start], max.dom());
-
-                if (max.singleton())
-                    removeConstraint();
-
-            }
-        } while (store.propagationHasOccurred);
-
-        position.update(start);
-    }
-
-    private void swap(int i, int j) {
-        if (i != j) {
-            IntVar tmp = list[i];
-            list[i] = list[j];
-            list[j] = tmp;
-        }
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-
-        position = new TimeStamp<>(store, 0);
-
-        super.impose(store);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        boolean sat = max.singleton();
-        int MAX = max.min();
-        int i = 0, eq = 0;
-        while (sat && i < list.length) {
-            if (list[i].singleton() && list[i].value() == MAX)
-                eq++;
-            sat = list[i].max() <= MAX;
-            i++;
-        }
-        return sat && eq > 0;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : max(  [ ");
-        for (int i = 0; i < list.length; i++) {
-            result.append(list[i]);
-            if (i < list.length - 1)
-                result.append(", ");
-        }
-
-        result.append("], ").append(this.max);
-        result.append(")");
-
-        return result.toString();
-    }
-
+    return result.toString();
+  }
 }

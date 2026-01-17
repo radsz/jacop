@@ -36,63 +36,57 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 public class VarNode extends VariableNode {
 
-    public VarNode(Store store, FloatVar v) {
+  public VarNode(Store store, FloatVar v) {
 
-        id = n.incrementAndGet();
-        this.store = store;
+    id = n.incrementAndGet();
+    this.store = store;
 
-        var = v;
+    var = v;
+  }
 
-    }
+  void propagateAndPrune() {
 
+    parent.propagateAndPrune();
+  }
 
-    void propagateAndPrune() {
+  void prune() {
 
-        parent.propagateAndPrune();
+    // Pruning for variable is done in updateBounds since there is not weight
 
-    }
+  }
 
-    void prune() {
+  void propagate() {
 
-        // Pruning for variable is done in updateBounds since there is not weight
+    parent.propagate();
+  }
 
-    }
+  double min() {
+    return var.min();
+  }
 
-    void propagate() {
+  double max() {
+    return var.max();
+  }
 
-        parent.propagate();
+  double lb() {
+    return var.min();
+  }
 
-    }
+  double ub() {
+    return var.max();
+  }
 
-    double min() {
-        return var.min();
-    }
+  void updateBounds(double min, double max, double lb, double ub) {
 
-    double max() {
-        return var.max();
-    }
+    var.domain.in(store.level, var, min, max);
+  }
 
-    double lb() {
-        return var.min();
-    }
-
-    double ub() {
-        return var.max();
-    }
-
-    void updateBounds(double min, double max, double lb, double ub) {
-
-        var.domain.in(store.level, var, min, max);
-
-    }
-
-    public String toString() {
-        return super.toString() + " (rel = " + rel + ", " + var + ")";
-    }
+  public String toString() {
+    return super.toString() + " (rel = " + rel + ", " + var + ")";
+  }
 }

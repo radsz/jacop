@@ -30,31 +30,29 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.Set;
-
 /**
  * Marker interface for float constraints that support derivative computation.
- * <p>
- * This interface allows Derivative.java to safely call derivative() method
- * without requiring it to be defined in the base Constraint class from jacop-core.
- * Only float constraints that implement this interface can be used with
- * the Derivative utility class.
+ *
+ * <p>This interface allows Derivative.java to safely call derivative() method without requiring it
+ * to be defined in the base Constraint class from jacop-core. Only float constraints that implement
+ * this interface can be used with the Derivative utility class.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public interface FloatDerivableConstraint {
-    /**
-     * Computes the derivative of this constraint with respect to variable x.
-     *
-     * @param store the constraint store
-     * @param f     the function variable
-     * @param vars  set of variables
-     * @param x     the variable to differentiate with respect to
-     * @return the derivative as a FloatVar
-     */
-    FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x);
+  /**
+   * Computes the derivative of this constraint with respect to variable x.
+   *
+   * @param store the constraint store
+   * @param f the function variable
+   * @param vars set of variables
+   * @param x the variable to differentiate with respect to
+   * @return the derivative as a FloatVar
+   */
+  FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x);
 }

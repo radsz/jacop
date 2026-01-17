@@ -33,31 +33,26 @@ package org.jacop.constraints.binpacking;
 import org.jacop.core.IntVar;
 
 /**
- * BinItem is used in bin-packing constraint to keep bin variable for an item
- * and its weight.
+ * BinItem is used in bin-packing constraint to keep bin variable for an item and its weight.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class BinItem {
 
-    final public IntVar bin;
+  public final IntVar bin;
 
-    final public int weight;
+  public final int weight;
 
-    BinItem(IntVar bin, int weight) {
+  BinItem(IntVar bin, int weight) {
 
-        if (bin == null)
-            throw new IllegalArgumentException("Bin variable is null");
+    if (bin == null) throw new IllegalArgumentException("Bin variable is null");
 
-        this.bin = bin;
-        this.weight = weight;
+    this.bin = bin;
+    this.weight = weight;
+  }
 
-    }
-
-    public String toString() {
-        return "(" + bin + ", " + weight + ")";
-    }
-
+  public String toString() {
+    return "(" + bin + ", " + weight + ")";
+  }
 }

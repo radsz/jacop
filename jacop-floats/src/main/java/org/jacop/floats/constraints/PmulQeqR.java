@@ -28,9 +28,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -39,199 +39,189 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraint P * Q = R for floats
- * <p>
- * Boundary consistency is used.
+ *
+ * <p>Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDerivableConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable p in constraint p * q = r.
-     */
-    public FloatVar p;
+  /** It specifies variable p in constraint p * q = r. */
+  public FloatVar p;
 
-    /**
-     * It specifies variable q in constraint p * q = r.
-     */
-    public FloatVar q;
+  /** It specifies variable q in constraint p * q = r. */
+  public FloatVar q;
 
-    /**
-     * It specifies variable r in constraint p * q = r.
-     */
-    public FloatVar r;
+  /** It specifies variable r in constraint p * q = r. */
+  public FloatVar r;
 
-    boolean xSquare = false;
+  boolean xSquare = false;
 
-    /**
-     * It constructs a constraint P * Q = R.
-     *
-     * @param p variable p.
-     * @param q variable q.
-     * @param r variable r.
-     */
-    public PmulQeqR(FloatVar p, FloatVar q, FloatVar r) {
+  /**
+   * It constructs a constraint P * Q = R.
+   *
+   * @param p variable p.
+   * @param q variable q.
+   * @param r variable r.
+   */
+  public PmulQeqR(FloatVar p, FloatVar q, FloatVar r) {
 
-        checkInputForNullness(new String[] {"p", "q", "r"}, new Object[] {p, q, r});
+    checkInputForNullness(new String[] {"p", "q", "r"}, new Object[] {p, q, r});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        xSquare = (p == q);
+    xSquare = (p == q);
 
-        this.p = p;
-        this.q = q;
-        this.r = r;
+    this.p = p;
+    this.q = q;
+    this.r = r;
 
-        setScope(p, q, r);
+    setScope(p, q, r);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    // identity elements
+    if (p.equals(r)) {
+      q.domain.in(store.level, q, 1.0, 1.0);
+      return;
+    } else if (q.equals(r)) {
+      p.domain.in(store.level, p, 1.0, 1.0);
+      return;
     }
 
-    @Override public void consistency(Store store) {
+    if (xSquare) // P^2 = R
+    do {
 
-        // identity elements
-        if (p.equals(r)) {
-            q.domain.in(store.level, q, 1.0, 1.0);
-            return;
-        } else if (q.equals(r)) {
-            p.domain.in(store.level, p, 1.0, 1.0);
-            return;
+        if (r.max() < 0) throw Store.failException;
+
+        store.propagationHasOccurred = false;
+
+        // Bounds for R
+        // FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), p.min(), p.max());
+        // r.domain.in(store.level, r, rBounds);
+
+        double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
+        double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
+        double min = (p1 <= p2) ? p1 : p2;
+        double max = (p1 >= p2) ? p1 : p2;
+        if (p.min() <= 0.0 && p.max() >= 0.0) {
+          min = 0.0;
+          max = FloatDomain.up(max);
+        } else {
+          min = FloatDomain.down(min);
+          max = FloatDomain.up(max);
         }
+        r.domain.in(store.level, r, min, max);
 
-        if (xSquare)  // P^2 = R
-            do {
+        // Bounds for P
+        double pMin;
+        if (r.min() <= 0.0) pMin = 0.0;
+        else pMin = Math.sqrt(r.min());
 
-                if (r.max() < 0)
-                    throw Store.failException;
+        double pMax;
+        if (r.max() < 0.0) throw Store.failException;
+        else pMax = Math.sqrt(r.max());
 
-                store.propagationHasOccurred = false;
+        if (pMin > pMax) throw Store.failException;
 
-                // Bounds for R
-                // FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), p.min(), p.max());
-                // r.domain.in(store.level, r, rBounds);
+        FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
+        dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
 
-                double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
-                double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
-                double min = (p1 <= p2) ? p1 : p2;
-                double max = (p1 >= p2) ? p1 : p2;
-                if (p.min() <= 0.0 && p.max() >= 0.0) {
-                    min = 0.0;
-                    max = FloatDomain.up(max);
-                } else {
-                    min = FloatDomain.down(min);
-                    max = FloatDomain.up(max);
-                }
-                r.domain.in(store.level, r, min, max);
+        p.domain.in(store.level, p, dom);
 
-                // Bounds for P
-                double pMin;
-                if (r.min() <= 0.0)
-                    pMin = 0.0;
-                else
-                    pMin = Math.sqrt(r.min());
+      } while (store.propagationHasOccurred);
+    else // P*Q = R
+    do {
 
-                double pMax;
-                if (r.max() < 0.0)
-                    throw Store.failException;
-                else
-                    pMax = Math.sqrt(r.max());
+        store.propagationHasOccurred = false;
 
-                if (pMin > pMax)
-                    throw Store.failException;
+        // Bounds for P
+        FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), q.min(), q.max());
 
-                FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
-                dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
+        p.domain.in(store.level, p, pBounds); // .min(), pBounds.max());
 
-                p.domain.in(store.level, p, dom);
+        // Bounds for Q
+        FloatIntervalDomain qBounds = FloatDomain.divBounds(r.min(), r.max(), p.min(), p.max());
 
-            } while (store.propagationHasOccurred);
-        else    // P*Q = R
+        q.domain.in(store.level, q, qBounds); // .min(), qBounds.max());
 
-            do {
+        // Bounds for R
+        FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max());
 
-                store.propagationHasOccurred = false;
+        r.domain.in(store.level, r, rBounds); // .min(), rBounds.max());
 
-                // Bounds for P
-                FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), q.min(), q.max());
+      } while (store.propagationHasOccurred);
+  }
 
-                p.domain.in(store.level, p, pBounds); //.min(), pBounds.max());
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-                // Bounds for Q
-                FloatIntervalDomain qBounds = FloatDomain.divBounds(r.min(), r.max(), p.min(), p.max());
+  @Override
+  public boolean satisfied() {
+    FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
+    return grounded()
+        && rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
+  }
 
-                q.domain.in(store.level, q, qBounds); //.min(), qBounds.max());
+  @Override
+  public String toString() {
+    return id() + " : PmulQeqR(" + p + ", " + q + ", " + r + " )";
+  }
 
-                // Bounds for R
-                FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max());
+  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
 
-                r.domain.in(store.level, r, rBounds); //.min(), rBounds.max());
+    if (f.equals(r)) {
+      // f = p * q
+      // f' = p*d(q) + d(p)*q
+      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      Derivative.poseDerivativeConstraint(
+          new PmulQeqR(Derivative.getDerivative(store, p, vars, x), q, v1));
+      Derivative.poseDerivativeConstraint(
+          new PmulQeqR(Derivative.getDerivative(store, q, vars, x), p, v2));
+      Derivative.poseDerivativeConstraint(new PplusQeqR(v1, v2, v));
+      return v;
 
-            } while (store.propagationHasOccurred);
-
+    } else if (f.equals(p)) {
+      // f = r / q
+      // f' = (d(r) - (r/q)*d(q))/q
+      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      Derivative.poseDerivativeConstraint(new PdivQeqR(r, q, v1));
+      Derivative.poseDerivativeConstraint(
+          new PmulQeqR(v1, Derivative.getDerivative(store, q, vars, x), v2));
+      Derivative.poseDerivativeConstraint(
+          new PminusQeqR(Derivative.getDerivative(store, r, vars, x), v2, v3));
+      Derivative.poseDerivativeConstraint(new PdivQeqR(v3, q, v));
+      return v;
+    } else if (f.equals(q)) {
+      // f = r / p
+      // f' = (d(r) - (r/p)*d(p))/p
+      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      Derivative.poseDerivativeConstraint(new PdivQeqR(r, p, v1));
+      Derivative.poseDerivativeConstraint(
+          new PmulQeqR(v1, Derivative.getDerivative(store, p, vars, x), v2));
+      Derivative.poseDerivativeConstraint(
+          new PminusQeqR(Derivative.getDerivative(store, r, vars, x), v2, v3));
+      Derivative.poseDerivativeConstraint(new PdivQeqR(v3, p, v));
+      return v;
     }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public boolean satisfied() {
-        FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
-        return grounded() && rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
-
-    }
-
-    @Override public String toString() {
-        return id() + " : PmulQeqR(" + p + ", " + q + ", " + r + " )";
-    }
-
-    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
-
-        if (f.equals(r)) {
-            // f = p * q
-            // f' = p*d(q) + d(p)*q
-            FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, p, vars, x), q, v1));
-            Derivative.poseDerivativeConstraint(new PmulQeqR(Derivative.getDerivative(store, q, vars, x), p, v2));
-            Derivative.poseDerivativeConstraint(new PplusQeqR(v1, v2, v));
-            return v;
-
-        } else if (f.equals(p)) {
-            // f = r / q
-            // f' = (d(r) - (r/q)*d(q))/q
-            FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            Derivative.poseDerivativeConstraint(new PdivQeqR(r, q, v1));
-            Derivative.poseDerivativeConstraint(new PmulQeqR(v1, Derivative.getDerivative(store, q, vars, x), v2));
-            Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, r, vars, x), v2, v3));
-            Derivative.poseDerivativeConstraint(new PdivQeqR(v3, q, v));
-            return v;
-        } else if (f.equals(q)) {
-            // f = r / p
-            // f' = (d(r) - (r/p)*d(p))/p
-            FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-            Derivative.poseDerivativeConstraint(new PdivQeqR(r, p, v1));
-            Derivative.poseDerivativeConstraint(new PmulQeqR(v1, Derivative.getDerivative(store, p, vars, x), v2));
-            Derivative.poseDerivativeConstraint(new PminusQeqR(Derivative.getDerivative(store, r, vars, x), v2, v3));
-            Derivative.poseDerivativeConstraint(new PdivQeqR(v3, p, v));
-            return v;
-
-        }
-
-        return null;
-
-    }
-
+    return null;
+  }
 }

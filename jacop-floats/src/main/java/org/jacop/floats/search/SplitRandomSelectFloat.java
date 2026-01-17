@@ -28,9 +28,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.floats.search;
 
+import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
@@ -42,137 +42,130 @@ import org.jacop.floats.constraints.PlteqC;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.SimpleSelect;
-import java.util.Random;
 
 // import org.jacop.search.Indomain;
 
-
 /**
- * It is simple and customizable selector of decisions (constraints) which will
- * be enforced by search. However, it does not use P=c as a search decision
- * but rather P {@literal <=} c (potentially splitting the domain), unless c is equal to
- * the maximal value in the domain of P then the constraint P {@literal <} c is used.
+ * It is simple and customizable selector of decisions (constraints) which will be enforced by
+ * search. However, it does not use P=c as a search decision but rather P {@literal <=} c
+ * (potentially splitting the domain), unless c is equal to the maximal value in the domain of P
+ * then the constraint P {@literal <} c is used.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
+  /** Select parameters are kept here sicne we use floats ansd Simple select uses int */
 
-    /**
-     * Select parameters are kept here sicne we use floats ansd Simple select uses int
-     */
+  /**
+   * It specifies if the left branch (values smaller or equal to the value selected) are first
+   * considered.
+   */
+  public boolean leftFirst = true;
 
-    /**
-     * It specifies if the left branch (values smaller or equal to the value selected)
-     * are first considered.
-     */
-    public boolean leftFirst = true;
+  public boolean roundRobin = true;
 
-    public boolean roundRobin = true;
+  TimeStamp<Integer> currentIndex;
 
-    TimeStamp<Integer> currentIndex;
+  private final Random generator;
 
-    private final Random generator;
+  /**
+   * The constructor to create a simple choice select mechanism.
+   *
+   * @param store current store
+   * @param variables variables upon which the choice points are created.
+   * @param varSelect the variable comparator to choose the variable.
+   */
+  public SplitRandomSelectFloat(Store store, T[] variables, ComparatorVariable<T> varSelect) {
 
-    /**
-     * The constructor to create a simple choice select mechanism.
-     *
-     * @param store     current store
-     * @param variables variables upon which the choice points are created.
-     * @param varSelect the variable comparator to choose the variable.
-     */
-    public SplitRandomSelectFloat(Store store, T[] variables, ComparatorVariable<T> varSelect) {
+    super(variables, varSelect, null);
 
-        super(variables, varSelect, null);
+    currentIndex = new TimeStamp<Integer>(store, 0);
 
-        currentIndex = new TimeStamp<Integer>(store, 0);
+    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  }
 
-        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-    }
+  /**
+   * It constructs a simple selection mechanism for choice points.
+   *
+   * @param store current store
+   * @param variables variables used as basis of the choice point.
+   * @param varSelect the main variable comparator.
+   * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the
+   *     same metric.
+   */
+  public SplitRandomSelectFloat(
+      Store store,
+      T[] variables,
+      ComparatorVariable<T> varSelect,
+      ComparatorVariable<T> tieBreakerVarSelect) {
+    // ,
+    //         Indomain<T> indomain) {
 
-    /**
-     * It constructs a simple selection mechanism for choice points.
-     *
-     * @param store               current store
-     * @param variables           variables used as basis of the choice point.
-     * @param varSelect           the main variable comparator.
-     * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.
-     */
-    public SplitRandomSelectFloat(Store store, T[] variables, ComparatorVariable<T> varSelect, ComparatorVariable<T> tieBreakerVarSelect) {
-        // ,
-        //         Indomain<T> indomain) {
+    super(variables, varSelect, tieBreakerVarSelect, null);
 
-        super(variables, varSelect, tieBreakerVarSelect, null);
+    currentIndex = new TimeStamp<Integer>(store, 0);
 
-        currentIndex = new TimeStamp<Integer>(store, 0);
+    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  }
 
-        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-    }
+  @Override
+  public T getChoiceVariable(int index) {
+    return null;
+  }
 
-    @Override public T getChoiceVariable(int index) {
-        return null;
-    }
+  @Override
+  public PrimitiveConstraint getChoiceConstraint(int index) {
 
-    @Override public PrimitiveConstraint getChoiceConstraint(int index) {
+    T var = super.getChoiceVariable(index);
 
-        T var = super.getChoiceVariable(index);
+    if (variableOrdering == null && roundRobin) var = roundRobinVarSelection(index);
+    else var = super.getChoiceVariable(index);
 
-        if (variableOrdering == null && roundRobin)
-            var = roundRobinVarSelection(index);
-        else
-            var = super.getChoiceVariable(index);
+    if (var == null) return null;
 
-        if (var == null)
-            return null;
+    assert (index >= 0);
+    // assert (index < searchVar.length);
+    // assert (searchVar[index].dom() != null);
 
-        assert (index >= 0);
-        // assert (index < searchVar.length);
-        // assert (searchVar[index].dom() != null);
+    double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
 
-        double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
+    // System.out.println (var + ", value = " + value);
 
-        // System.out.println (var + ", value = " + value);
+    leftFirst = generator.nextBoolean();
 
-        leftFirst = generator.nextBoolean();
-        
-        if (leftFirst)
-            if (((FloatVar) var).max() > value)
-                return new PlteqC((FloatVar) var, value);
-            else
-                return new PltC((FloatVar) var, value);
-        else if (((FloatVar) var).max() > value)
-            return new PgtC((FloatVar) var, value);
-        else
-            return new PeqC((FloatVar) var, value);
-    }
+    if (leftFirst)
+      if (((FloatVar) var).max() > value) return new PlteqC((FloatVar) var, value);
+      else return new PltC((FloatVar) var, value);
+    else if (((FloatVar) var).max() > value) return new PgtC((FloatVar) var, value);
+    else return new PeqC((FloatVar) var, value);
+  }
 
+  T roundRobinVarSelection(int index) {
 
-    T roundRobinVarSelection(int index) {
+    assert (index < searchVariables.length);
 
-        assert (index < searchVariables.length);
+    int N = searchVariables.length;
 
-        int N = searchVariables.length;
+    int n = 0;
+    int i = currentIndex.value();
+    int ii = i;
+    do {
 
-        int n = 0;
-        int i = currentIndex.value();
-        int ii = i;
-        do {
+      if (!searchVariables[i].singleton()) {
+        currentIndex.update((i + 1) % N);
 
-            if (!searchVariables[i].singleton()) {
-                currentIndex.update((i + 1) % N);
+        return searchVariables[i];
+      }
 
-                return searchVariables[i];
-            }
+      ii = i;
+      i = (i + 1) % N;
+      n++;
 
-            ii = i;
-            i = (i + 1) % N;
-            n++;
+    } while (searchVariables[ii].singleton() && n < N);
 
-        } while (searchVariables[ii].singleton() && n < N);
-
-        return null;
-    }
+    return null;
+  }
 }

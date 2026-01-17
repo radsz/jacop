@@ -30,6 +30,7 @@
 
 package org.jacop.examples.set;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
@@ -47,119 +48,110 @@ import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.MaxCardDiff;
 
-import java.util.ArrayList;
-
 /**
  * It models and solves Steiner problem.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Steiner extends ExampleSet {
 
-    /**
-     * It specifies the length of the problem.
-     */
-    public int n = 3;
+  /** It specifies the length of the problem. */
+  public int n = 3;
 
-    /**
-     * It executes the program which solves this Steiner problem.
-     *
-     * @param args prameters (none)
-     */
-    public static void main(String args[]) {
+  /**
+   * It executes the program which solves this Steiner problem.
+   *
+   * @param args prameters (none)
+   */
+  public static void main(String args[]) {
 
-        Steiner example = new Steiner();
-        example.n = 7;
-        example.model();
+    Steiner example = new Steiner();
+    example.n = 7;
+    example.model();
 
-        example.search();
+    example.search();
+  }
 
-    }
+  public void model() {
 
-    public void model() {
+    int t = n * (n - 1) / 6;
 
-        int t = n * (n - 1) / 6;
+    System.out.println("Steiner problem with n = " + n + " and T = " + t);
 
-        System.out.println("Steiner problem with n = " + n + " and T = " + t);
+    int r = n % 6;
 
-        int r = n % 6;
+    if (r == 1 || r == 3) {
 
-        if (r == 1 || r == 3) {
+      store = new Store();
 
-            store = new Store();
+      vars = new ArrayList<SetVar>();
+      SetVar[] s = new SetVar[t];
 
-            vars = new ArrayList<SetVar>();
-            SetVar[] s = new SetVar[t];
+      for (int i = 0; i < t; i++) {
+        s[i] = new SetVar(store, "s" + i, new BoundSetDomain(1, n));
+        vars.add(s[i]);
+        store.impose(new CardA(s[i], 3));
+      }
 
-            for (int i = 0; i < t; i++) {
-                s[i] = new SetVar(store, "s" + i, new BoundSetDomain(1, n));
-                vars.add(s[i]);
-                store.impose(new CardA(s[i], 3));
-            }
-
-            for (int i = 0; i < t; i++)
-                for (int j = i + 1; j < t; j++) {
-                    SetVar temp = new SetVar(store, "temp" + i + "," + j, new BoundSetDomain(1, n));
-                    store.impose(new AintersectBeqC(s[i], s[j], temp));
-                    store.impose(new CardA(temp, 0, 1));
-                }
-
-            for (int i = 0; i < s.length - 1; i++)
-                store.impose(new AltB(s[i], s[i + 1]));
-
-            // implied constraints to get better pruning
-            for (int i = 1; i <= n; i++) {
-                IntVar[] b = new IntVar[t];
-                for (int j = 0; j < t; j++) {
-                    b[j] = new IntVar(store, "b" + i + "," + j, 0, 1);
-                    store.impose(new Reified(new EinA(i, s[j]), b[j]));
-                }
-                IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
-                store.impose(new SumInt(b, "==", sum));
-            }
-
+      for (int i = 0; i < t; i++)
+        for (int j = i + 1; j < t; j++) {
+          SetVar temp = new SetVar(store, "temp" + i + "," + j, new BoundSetDomain(1, n));
+          store.impose(new AintersectBeqC(s[i], s[j], temp));
+          store.impose(new CardA(temp, 0, 1));
         }
 
-    }
+      for (int i = 0; i < s.length - 1; i++) store.impose(new AltB(s[i], s[i + 1]));
 
-    public boolean search() {
-
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
-
-        int r = n % 6;
-
-        if (r == 1 || r == 3) {
-
-            boolean result = store.consistency();
-
-            Search<SetVar> label = new DepthFirstSearch<SetVar>();
-
-            SelectChoicePoint<SetVar> select =
-                new SimpleSelect<SetVar>(vars.toArray(new SetVar[vars.size()]), new MaxCardDiff<SetVar>(), new IndomainSetMax<SetVar>());
-
-            label.getSolutionListener().searchAll(true);
-            label.getSolutionListener().recordSolutions(true);
-
-            result = label.labeling(store, select);
-
-            if (result) {
-                System.out.println("*** Yes");
-                label.getSolutionListener().printAllSolutions();
-            } else
-                System.out.println("*** No");
-
-            T2 = System.currentTimeMillis();
-            T = T2 - T1;
-            System.out.println("\n\t*** Execution time = " + T + " ms");
-            return result;
-        } else {
-            System.out.println("Problem has no solution");
-            return false;
+      // implied constraints to get better pruning
+      for (int i = 1; i <= n; i++) {
+        IntVar[] b = new IntVar[t];
+        for (int j = 0; j < t; j++) {
+          b[j] = new IntVar(store, "b" + i + "," + j, 0, 1);
+          store.impose(new Reified(new EinA(i, s[j]), b[j]));
         }
-
+        IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
+        store.impose(new SumInt(b, "==", sum));
+      }
     }
+  }
 
+  public boolean search() {
+
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
+
+    int r = n % 6;
+
+    if (r == 1 || r == 3) {
+
+      boolean result = store.consistency();
+
+      Search<SetVar> label = new DepthFirstSearch<SetVar>();
+
+      SelectChoicePoint<SetVar> select =
+          new SimpleSelect<SetVar>(
+              vars.toArray(new SetVar[vars.size()]),
+              new MaxCardDiff<SetVar>(),
+              new IndomainSetMax<SetVar>());
+
+      label.getSolutionListener().searchAll(true);
+      label.getSolutionListener().recordSolutions(true);
+
+      result = label.labeling(store, select);
+
+      if (result) {
+        System.out.println("*** Yes");
+        label.getSolutionListener().printAllSolutions();
+      } else System.out.println("*** No");
+
+      T2 = System.currentTimeMillis();
+      T = T2 - T1;
+      System.out.println("\n\t*** Execution time = " + T + " ms");
+      return result;
+    } else {
+      System.out.println("Problem has no solution");
+      return false;
+    }
+  }
 }

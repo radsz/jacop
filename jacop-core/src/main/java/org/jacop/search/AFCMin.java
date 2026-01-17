@@ -30,79 +30,66 @@
 
 package org.jacop.search;
 
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.constraints.Constraint;
 
 /**
- * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time a
- * constraint failure is encountered the constraint afc_weight is increased by
- * one. All other constraints afc weight value is recalculated as afc_weight * decay.
- * The comparator will choose the variable with the lowest afc_weight.
+ * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time a constraint failure
+ * is encountered the constraint afc_weight is increased by one. All other constraints afc weight
+ * value is recalculated as afc_weight * decay. The comparator will choose the variable with the
+ * lowest afc_weight.
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AFCMin<T extends Var> implements ComparatorVariable<T> {
 
-    private AFCMin() {}
+  private AFCMin() {}
 
-    public AFCMin(Store store) {
-	this(store, store.getDecay());
-    }
-    
-    public AFCMin(Store store, double decay) {
-	store.setAllConstraints();
-	store.afcManagement(true);
-	store.setDecay(decay);
-    }
-    
-    public int compare(double left, T var) {
+  public AFCMin(Store store) {
+    this(store, store.getDecay());
+  }
 
-        double right = afcValue(var);
+  public AFCMin(Store store, double decay) {
+    store.setAllConstraints();
+    store.afcManagement(true);
+    store.setDecay(decay);
+  }
 
-        if (left < right)
+  public int compare(double left, T var) {
 
-            return 1;
+    double right = afcValue(var);
 
-        if (left > right)
+    if (left < right) return 1;
 
-            return -1;
+    if (left > right) return -1;
 
-        return 0;
+    return 0;
+  }
 
-    }
+  public int compare(T leftVar, T rightVar) {
 
-    public int compare(T leftVar, T rightVar) {
-    
-        double left = afcValue(leftVar);
+    double left = afcValue(leftVar);
 
-        double right = afcValue(rightVar);
+    double right = afcValue(rightVar);
 
-        if (left < right)
+    if (left < right) return 1;
 
-            return 1;
+    if (left > right) return -1;
 
-        if (left > right)
+    return 0;
+  }
 
-            return -1;
+  public double metric(T var) {
 
-        return 0;
+    return afcValue(var);
+  }
 
-    }
-
-    public double metric(T var) {
-
-        return afcValue(var);
-
-    }
-
-    double afcValue(Var v) {
-	double value = 0.0f;
-	for (Constraint c : v.dom().constraints())
-	    value += c.afc();
-	return value;
-    }
+  double afcValue(Var v) {
+    double value = 0.0f;
+    for (Constraint c : v.dom().constraints()) value += c.afc();
+    return value;
+  }
 }

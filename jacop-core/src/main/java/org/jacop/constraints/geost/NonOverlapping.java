@@ -29,9 +29,8 @@
  */
 package org.jacop.constraints.geost;
 
-import org.jacop.util.SimpleHashSet;
-
 import java.util.*;
+import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -39,167 +38,157 @@ import java.util.*;
  */
 public class NonOverlapping implements ExternalConstraint {
 
+  /** It specifies the objects which are being in the scope of this external constraint. */
+  public final GeostObject[] objects;
 
-    /**
-     * It specifies the objects which are being in the scope of this external constraint.
-     */
-    public final GeostObject[] objects;
+  /** It maps object (through object.id) to the internal constraint connected to this object. */
+  public ObstacleObjectFrame[] objectConstraintMap;
 
+  // For a moment not really needed, if the dead code inside function
+  // isInternalConstraintApplicableTo
+  // is removed then this attribute can be removed too.
+  Set<ObstacleObjectFrame> constraints;
 
-    /**
-     * It maps object (through object.id) to the internal constraint connected to this object.
-     */
-    public ObstacleObjectFrame[] objectConstraintMap;
+  /**
+   * the dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
+   * include dimension in the array
+   */
+  public final int[] selectedDimensions;
 
-    // For a moment not really needed, if the dead code inside function isInternalConstraintApplicableTo
-    // is removed then this attribute can be removed too.
-    Set<ObstacleObjectFrame> constraints;
+  /**
+   * It creates an external constraint to make sure that specified set of objects does not overlap
+   * in k-dimensional space on the given number of selected dimensions within this k-dimensional
+   * space.
+   *
+   * @param objects the set of objects which can not overlap
+   * @param selectedDimensions the dimensions among which there must be at least one for which the
+   *     objects do not overlap.
+   */
+  public NonOverlapping(GeostObject[] objects, int[] selectedDimensions) {
 
-    /**
-     * the dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
-     * include dimension in the array
-     */
-    public final int[] selectedDimensions;
+    this.objects = objects;
 
-    /**
-     * It creates an external constraint to make sure that specified set of objects does not overlap
-     * in k-dimensional space on the given number of selected dimensions within this k-dimensional space.
-     *
-     * @param objects            the set of objects which can not overlap
-     * @param selectedDimensions the dimensions among which there must be at least one for which the objects do not overlap.
-     */
-    public NonOverlapping(GeostObject[] objects, int[] selectedDimensions) {
+    // use a copy for safety, and sort it for easier use
+    this.selectedDimensions = new int[selectedDimensions.length];
+    System.arraycopy(selectedDimensions, 0, this.selectedDimensions, 0, selectedDimensions.length);
+    Arrays.sort(this.selectedDimensions);
 
-        this.objects = objects;
+    objectConstraintMap = null; // TODO replace by an array/SimpleArrayList
+    constraints = null;
+  }
 
-        //use a copy for safety, and sort it for easier use
-        this.selectedDimensions = new int[selectedDimensions.length];
-        System.arraycopy(selectedDimensions, 0, this.selectedDimensions, 0, selectedDimensions.length);
-        Arrays.sort(this.selectedDimensions);
+  /**
+   * It creates an external constraint to make sure that specified set of objects does not overlap
+   * in k-dimensional space on the given number of selected dimensions within this k-dimensional
+   * space.
+   *
+   * @param objects the set of objects which can not overlap
+   * @param selectedDimensions the dimensions among which there must be at least one for which the
+   *     objects do not overlap.
+   */
+  public NonOverlapping(Collection<GeostObject> objects, int[] selectedDimensions) {
 
-        objectConstraintMap = null; //TODO replace by an array/SimpleArrayList
-        constraints = null;
+    this(objects.toArray(new GeostObject[objects.size()]), selectedDimensions);
+  }
 
+  public boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator) {
+
+    boolean changed = false;
+
+    for (GeostObject oc : objects)
+      if (oc != o) {
+        changed = true;
+        accumulator.add(oc);
+      }
+
+    return changed;
+  }
+
+  public Collection<ObstacleObjectFrame> genInternalConstraints(Geost geost) {
+
+    if (objectConstraintMap == null) {
+
+      // find largest object ID
+      int largestID = 0;
+      for (GeostObject o : objects) largestID = Math.max(largestID, o.no);
+
+      objectConstraintMap = new ObstacleObjectFrame[largestID + 1];
+      Arrays.fill(objectConstraintMap, null);
+
+      constraints = new HashSet<ObstacleObjectFrame>();
+
+      for (GeostObject o : objects) {
+
+        ObstacleObjectFrame c;
+
+        if (geost.alwaysUseFrames || !o.shapeID.singleton())
+          c = new ObstacleObjectFrame(geost, o, selectedDimensions);
+        else c = new ObstacleObject(geost, o, selectedDimensions);
+
+        objectConstraintMap[o.no] = c;
+        constraints.add(c);
+      }
     }
 
-    /**
-     * It creates an external constraint to make sure that specified set of objects does not overlap
-     * in k-dimensional space on the given number of selected dimensions within this k-dimensional space.
-     *
-     * @param objects            the set of objects which can not overlap
-     * @param selectedDimensions the dimensions among which there must be at least one for which the objects do not overlap.
-     */
-    public NonOverlapping(Collection<GeostObject> objects, int[] selectedDimensions) {
+    return constraints;
+  }
 
-        this(objects.toArray(new GeostObject[objects.size()]), selectedDimensions);
-    }
+  public void onObjectUpdate(GeostObject o) {
 
-
-    public boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator) {
-
-        boolean changed = false;
-
-        for (GeostObject oc : objects)
-            if (oc != o) {
-                changed = true;
-                accumulator.add(oc);
-            }
-
-        return changed;
-
-    }
-
-
-    public Collection<ObstacleObjectFrame> genInternalConstraints(Geost geost) {
-
-        if (objectConstraintMap == null) {
-
-            //find largest object ID
-            int largestID = 0;
-            for (GeostObject o : objects)
-                largestID = Math.max(largestID, o.no);
-
-            objectConstraintMap = new ObstacleObjectFrame[largestID + 1];
-            Arrays.fill(objectConstraintMap, null);
-
-            constraints = new HashSet<ObstacleObjectFrame>();
-
-            for (GeostObject o : objects) {
-
-                ObstacleObjectFrame c;
-
-                if (geost.alwaysUseFrames || !o.shapeID.singleton())
-                    c = new ObstacleObjectFrame(geost, o, selectedDimensions);
-                else
-                    c = new ObstacleObject(geost, o, selectedDimensions);
-
-                objectConstraintMap[o.no] = c;
-                constraints.add(c);
-            }
-        }
-
-        return constraints;
-    }
-
-
-    public void onObjectUpdate(GeostObject o) {
-
-		/*
+    /*
      * This is where we update the object's constraint
-		 */
-        if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null)
-            objectConstraintMap[o.no].updateFrame();
+     */
+    if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null)
+      objectConstraintMap[o.no].updateFrame();
+  }
 
+  public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
+
+    Collection<InternalConstraint> relatedConstraints = new ArrayList<InternalConstraint>();
+
+    if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null) {
+
+      // if the object is not concerned by this constraint, no constraints should be added
+      // using an array causes this lookup to be a bit more costly, due to holes, but method is used
+      // only once
+      for (int i = objectConstraintMap.length - 1; i >= 0; i--) {
+        ObstacleObjectFrame c = objectConstraintMap[i];
+        if (c != null) relatedConstraints.add(c);
+      }
     }
 
+    return relatedConstraints;
+  }
 
-    public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
+  public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
 
-        Collection<InternalConstraint> relatedConstraints = new ArrayList<InternalConstraint>();
+    final boolean inefficient = true;
 
-        if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null) {
+    // TODO, do we keep inefficient version? If so, attribute constraints is no longer needed.
+    if (inefficient) return getObjectConstraints(o).contains(ic);
+    else {
 
-            //if the object is not concerned by this constraint, no constraints should be added
-            //using an array causes this lookup to be a bit more costly, due to holes, but method is used only once
-            for (int i = objectConstraintMap.length - 1; i >= 0; i--) {
-                ObstacleObjectFrame c = objectConstraintMap[i];
-                if (c != null)
-                    relatedConstraints.add(c);
-            }
-
-        }
-
-        return relatedConstraints;
+      // TODO, Potentially a bug after introducing inheritance between ObstacleObject and
+      // ObstacleObjectFrame.
+      if (ic.getClass() != ObstacleObjectFrame.class) return false;
+      else {
+        InternalConstraint oc = objectConstraintMap[o.no];
+        return oc != null && ic != oc && constraints.contains(ic);
+      }
     }
+  }
 
+  public GeostObject[] getObjectScope() {
+    return objects;
+  }
 
-    public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
+  public String toString() {
 
-        final boolean inefficient = true;
-
-        // TODO, do we keep inefficient version? If so, attribute constraints is no longer needed.
-        if (inefficient)
-            return getObjectConstraints(o).contains(ic);
-        else {
-
-            // TODO, Potentially a bug after introducing inheritance between ObstacleObject and ObstacleObjectFrame.
-            if (ic.getClass() != ObstacleObjectFrame.class)
-                return false;
-            else {
-                InternalConstraint oc = objectConstraintMap[o.no];
-                return oc != null && ic != oc && constraints.contains(ic);
-            }
-
-        }
-    }
-
-    public GeostObject[] getObjectScope() {
-        return objects;
-    }
-
-    public String toString() {
-
-        return "(non_overlapping: " + Arrays.asList(objects) + ", " + "selected_dimensions: "
-            + Arrays.toString(selectedDimensions) + ")";
-    }
+    return "(non_overlapping: "
+        + Arrays.asList(objects)
+        + ", "
+        + "selected_dimensions: "
+        + Arrays.toString(selectedDimensions)
+        + ")";
+  }
 }

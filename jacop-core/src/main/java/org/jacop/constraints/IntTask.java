@@ -31,34 +31,32 @@
 package org.jacop.constraints;
 
 /**
- * Represents tasks with integer start, duration and resource valurs for
- * cumulative constraint
+ * Represents tasks with integer start, duration and resource valurs for cumulative constraint
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class IntTask {
 
-    int start = 0, stop = 0;
+  int start = 0, stop = 0;
 
-    IntTask() {
-    }
+  IntTask() {}
 
-    IntTask(int Start, int Stop) {
-        start = Start;
-        stop = Stop;
-    }
+  IntTask(int Start, int Stop) {
+    start = Start;
+    stop = Stop;
+  }
 
-    int start() {
-        return start;
-    }
+  int start() {
+    return start;
+  }
 
-    int stop() {
-        return stop;
-    }
+  int stop() {
+    return stop;
+  }
 
-    @Override public String toString() {
-        return "[" + start + ", " + stop + "]";
-    }
+  @Override
+  public String toString() {
+    return "[" + start + ", " + stop + "]";
+  }
 }

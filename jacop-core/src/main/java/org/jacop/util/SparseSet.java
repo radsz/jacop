@@ -36,117 +36,97 @@ package org.jacop.util;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class SparseSet {
 
-    //@todo Is it possible to change the functions slightly so dense[0] = -1; is
-    // not really required to make it possible to add 0 at the first position.
+  // @todo Is it possible to change the functions slightly so dense[0] = -1; is
+  // not really required to make it possible to add 0 at the first position.
 
-    /**
-     * Sparse array used within SparseSet functionality.
-     */
-    public int[] sparse;
+  /** Sparse array used within SparseSet functionality. */
+  public int[] sparse;
 
-    /**
-     * Dense array used within SparseSet functionality.
-     */
-    public int[] dense;
+  /** Dense array used within SparseSet functionality. */
+  public int[] dense;
 
-    /**
-     * It specifies number of elements in the SparseSet.
-     */
-    public int members;
+  /** It specifies number of elements in the SparseSet. */
+  public int members;
 
-    /**
-     * It creates a SparseSet with given upper limit on the value
-     * of the biggest element in the set.
-     *
-     * @param size the upper limit for the SparseSet
-     */
-    public SparseSet(int size) {
+  /**
+   * It creates a SparseSet with given upper limit on the value of the biggest element in the set.
+   *
+   * @param size the upper limit for the SparseSet
+   */
+  public SparseSet(int size) {
 
-        sparse = new int[size];
-        dense = new int[size];
-        members = 0;
+    sparse = new int[size];
+    dense = new int[size];
+    members = 0;
 
-        // Added so value 0 can be added first.
-        // TODO, test if that is still necessary after fixing a rare bug with addition.
-        dense[0] = -1;
-    }
+    // Added so value 0 can be added first.
+    // TODO, test if that is still necessary after fixing a rare bug with addition.
+    dense[0] = -1;
+  }
 
-    /**
-     * It checks if the specified element belongs to the set.
-     *
-     * @param k element for which the membership in the given set is checked.
-     * @return true if k belongs to the sparse set, false otherwise.
-     */
-    public boolean isMember(int k) {
+  /**
+   * It checks if the specified element belongs to the set.
+   *
+   * @param k element for which the membership in the given set is checked.
+   * @return true if k belongs to the sparse set, false otherwise.
+   */
+  public boolean isMember(int k) {
 
-        int a = sparse[k];
+    int a = sparse[k];
 
-        if (a < members && dense[a] == k)
-            return true;
-        else
-            return false;
+    if (a < members && dense[a] == k) return true;
+    else return false;
+  }
 
-    }
+  /**
+   * It adds an element to the set.
+   *
+   * @param value value being added.
+   * @return true if the value was not present before and was added to the set, false otherwise.
+   */
+  public boolean addMember(int value) {
 
-    /**
-     * It adds an element to the set.
-     *
-     * @param value value being added.
-     * @return true if the value was not present before and was added to the set, false otherwise.
-     */
-    public boolean addMember(int value) {
+    int a = sparse[value];
 
-        int a = sparse[value];
+    if (a >= members || dense[a] != value) {
+      sparse[value] = members;
+      dense[members] = value;
+      members++;
+      return true;
+    } else return false;
+  }
 
-        if (a >= members || dense[a] != value) {
-            sparse[value] = members;
-            dense[members] = value;
-            members++;
-            return true;
-        } else
-            return false;
+  /**
+   * It sets the size of the SparseSet.
+   *
+   * @param size the assigned size of the set.
+   */
+  public void setSize(int size) {
+    members = size;
+  }
 
-    }
+  /**
+   * It returns true if the set is empty.
+   *
+   * @return true if the set is empty, false otherwise.
+   */
+  public boolean isEmpty() {
+    return members == 0;
+  }
 
-    /**
-     * It sets the size of the SparseSet.
-     *
-     * @param size the assigned size of the set.
-     */
-    public void setSize(int size) {
-        members = size;
-    }
+  /** It removes all the elements by setting the number of members to zero. */
+  public void clear() {
+    members = 0;
+    dense[0] = -1;
+  }
 
-    /**
-     * It returns true if the set is empty.
-     *
-     * @return true if the set is empty, false otherwise.
-     */
-    public boolean isEmpty() {
-        return members == 0;
-    }
+  public String toString() {
 
-    /**
-     * It removes all the elements by setting the number of members to zero.
-     */
-    public void clear() {
-        members = 0;
-        dense[0] = -1;
-    }
+    StringBuffer result = new StringBuffer();
+    for (int i = 0; i < members; i++) result.append(dense[i]).append(" ");
 
-
-    public String toString() {
-
-        StringBuffer result = new StringBuffer();
-        for (int i = 0; i < members; i++)
-            result.append(dense[i]).append(" ");
-
-        return result.toString();
-
-    }
-
-
+    return result.toString();
+  }
 }

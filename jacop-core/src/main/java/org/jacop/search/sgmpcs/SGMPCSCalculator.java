@@ -39,54 +39,46 @@ import org.jacop.search.ConsistencyListener;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
 
-    int numberFails = 0;
+  int numberFails = 0;
 
-    int failLimit;
+  int failLimit;
 
-    public SGMPCSCalculator(int limit) {
-        failLimit = limit;
+  public SGMPCSCalculator(int limit) {
+    failLimit = limit;
+  }
+
+  /**
+   * It is executed right after consistency of the current search node. The return code specifies if
+   * the search should continue with or exit the current search node.
+   */
+  public boolean executeAfterConsistency(boolean consistent) {
+
+    if (numberFails >= failLimit) return false;
+    else {
+      if (!consistent) numberFails++;
+
+      return consistent;
     }
+  }
 
-    /**
-     * It is executed right after consistency of the current search node. The
-     * return code specifies if the search should continue with or exit the
-     * current search node.
-     */
+  public void setFailLimit(int limit) {
 
-    public boolean executeAfterConsistency(boolean consistent) {
+    failLimit = limit;
+  }
 
-        if (numberFails >= failLimit)
-            return false;
-        else {
-            if (!consistent)
-                numberFails++;
+  public int getFailLimit() {
 
-            return consistent;
-        }
-    }
+    return failLimit;
+  }
 
-    public void setFailLimit(int limit) {
+  public int getNumberFails() {
 
-        failLimit = limit;
-    }
+    return numberFails;
+  }
 
-    public int getFailLimit() {
+  public void setChildrenListeners(ConsistencyListener[] children) {}
 
-        return failLimit;
-    }
-
-    public int getNumberFails() {
-
-        return numberFails;
-    }
-
-    public void setChildrenListeners(ConsistencyListener[] children) {
-    }
-
-    public void setChildrenListeners(ConsistencyListener child) {
-    }
-
+  public void setChildrenListeners(ConsistencyListener child) {}
 }

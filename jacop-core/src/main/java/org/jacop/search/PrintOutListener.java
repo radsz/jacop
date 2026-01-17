@@ -33,53 +33,48 @@ package org.jacop.search;
 import org.jacop.core.Var;
 
 /**
- * It is a simple example how it is possible to extend existing listeners to
- * add your own functionality.
+ * It is a simple example how it is possible to extend existing listeners to add your own
+ * functionality.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T> implements SolutionListener<T> {
+public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
+    implements SolutionListener<T> {
 
-    /**
-     * It is executed right after consistency of the current search node. The
-     * return code specifies if the search should continue or exit.
-     */
+  /**
+   * It is executed right after consistency of the current search node. The return code specifies if
+   * the search should continue or exit.
+   */
+  @Override
+  public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
-    @Override public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+    boolean parent = super.executeAfterSolution(search, select);
 
-        boolean parent = super.executeAfterSolution(search, select);
+    StringBuffer buf = new StringBuffer("\n");
 
-        StringBuffer buf = new StringBuffer("\n");
+    if (search.getCostVariable() != null)
+      buf.append("Solution cost " + search.getCostVariable() + "\n");
 
-        if (search.getCostVariable() != null)
-            buf.append("Solution cost " + search.getCostVariable() + "\n");
+    if (noSolutions > 1) {
+      buf.append("No of solutions : " + noSolutions);
+      buf.append("\nLast Solution : [");
+    } else buf.append("\nSolution : [");
 
-        if (noSolutions > 1) {
-            buf.append("No of solutions : " + noSolutions);
-            buf.append("\nLast Solution : [");
-        } else
-            buf.append("\nSolution : [");
+    int solutionIndex = 0;
 
-        int solutionIndex = 0;
+    if (recordSolutions) solutionIndex = noSolutions - 1;
 
-        if (recordSolutions)
-            solutionIndex = noSolutions - 1;
+    if (vars != null)
+      for (int i = 0; i < vars.length; i++) {
+        buf.append(vars[i].id()).append("=").append(solutions[solutionIndex][i]);
+        if (i < vars.length - 1) buf.append(", ");
+      }
 
-        if (vars != null)
-            for (int i = 0; i < vars.length; i++) {
-                buf.append(vars[i].id()).append("=").append(solutions[solutionIndex][i]);
-                if (i < vars.length - 1)
-                    buf.append(", ");
-            }
+    buf.append("]\n");
 
-        buf.append("]\n");
+    System.out.println(buf.toString());
 
-        System.out.println(buf.toString());
-
-        return parent;
-
-    }
-
-
+    return parent;
+  }
 }

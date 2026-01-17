@@ -36,36 +36,34 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class BTree {
 
-    // tree structure
-    RootBNode root = null;
+  // tree structure
+  RootBNode root = null;
 
-    public BTree(RootBNode root) {
-        this.root = root;
+  public BTree(RootBNode root) {
+    this.root = root;
+  }
+
+  public String toString() {
+
+    String output = printNode(root);
+    return output;
+  }
+
+  String printNode(BinaryNode node) {
+
+    String output = "";
+    if (node.left != null) {
+      output += node + " -> ";
+      output += node.left + "\n";
+      output += printNode(node.left);
     }
-
-    public String toString() {
-
-        String output = printNode(root);
-        return output;
+    if (node.right != null) {
+      output += node + " -> ";
+      output += node.right + "\n";
+      output += printNode(node.right);
     }
-
-    String printNode(BinaryNode node) {
-
-        String output = "";
-        if (node.left != null) {
-            output += node + " -> ";
-            output += node.left + "\n";
-            output += printNode(node.left);
-        }
-        if (node.right != null) {
-            output += node + " -> ";
-            output += node.right + "\n";
-            output += printNode(node.right);
-        }
-        return output;
-    }
-
+    return output;
+  }
 }

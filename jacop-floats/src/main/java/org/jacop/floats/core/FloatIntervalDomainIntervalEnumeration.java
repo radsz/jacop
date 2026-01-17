@@ -30,48 +30,47 @@
 
 package org.jacop.floats.core;
 
-
 /**
- * Defines a methods for enumerating values contain in the intersal domain. It
- * implements the interface Enumeration.
+ * Defines a methods for enumerating values contain in the intersal domain. It implements the
+ * interface Enumeration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumeration {
 
-    FloatIntervalDomain domain;
+  FloatIntervalDomain domain;
 
-    FloatInterval i = null;
+  FloatInterval i = null;
 
-    int intervalNo = -1;
+  int intervalNo = -1;
 
-    int maxIntervalNo;
+  int maxIntervalNo;
 
-    /**
-     * It creates an enumeration for a given interval domain.
-     *
-     * @param dom interval domain for which an enumeration is created.
-     */
-    public FloatIntervalDomainIntervalEnumeration(FloatIntervalDomain dom) {
-        domain = dom;
-        maxIntervalNo = domain.size - 1;
+  /**
+   * It creates an enumeration for a given interval domain.
+   *
+   * @param dom interval domain for which an enumeration is created.
+   */
+  public FloatIntervalDomainIntervalEnumeration(FloatIntervalDomain dom) {
+    domain = dom;
+    maxIntervalNo = domain.size - 1;
+  }
+
+  @Override
+  public boolean hasMoreElements() {
+    return (intervalNo < maxIntervalNo);
+  }
+
+  @Override
+  public FloatInterval nextElement() {
+
+    if (intervalNo < maxIntervalNo) {
+      intervalNo++;
+      return domain.intervals[intervalNo];
     }
 
-    @Override public boolean hasMoreElements() {
-        return (intervalNo < maxIntervalNo);
-    }
-
-    @Override public FloatInterval nextElement() {
-
-        if (intervalNo < maxIntervalNo) {
-            intervalNo++;
-            return domain.intervals[intervalNo];
-        }
-
-        assert false;
-        return null;
-    }
-
+    assert false;
+    return null;
+  }
 }

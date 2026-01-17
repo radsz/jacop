@@ -30,155 +30,142 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates an inclusion set constraint to make sure that provided set is
- * included in a set variable a.
+ * It creates an inclusion set constraint to make sure that provided set is included in a set
+ * variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class SinA extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies the set s which must be in variable a. */
+  public IntDomain set;
+
+  /** It specifies variable a within which it must contains set s. */
+  public SetVar a;
+
+  /** It specifies if the inclusion relation is strict. */
+  public boolean strict;
+
+  /**
+   * It creates a set inclusion constraint.
+   *
+   * @param a variable which value must include a provided set.
+   * @param set a set that must be included within a provided set variable a.
+   * @param strict it specifies if the inclusion relation is strict.
+   */
+  public SinA(IntDomain set, SetVar a, boolean strict) {
+
+    checkInputForNullness(new String[] {"set", "a"}, new Object[] {set, a});
+
+    numberId = idNumber.incrementAndGet();
+
+    this.a = a;
+    this.set = set;
+    this.strict = strict;
+
+    setScope(a);
+  }
+
+  /**
+   * It creates a set inclusion constraint. It is not strict by default.
+   *
+   * @param a variable which value must include a provided set.
+   * @param set a set that must be included within a provided set variable a.
+   */
+  public SinA(IntDomain set, SetVar a) {
+
+    this(set, a, false);
+  }
+
+  @Override
+  public void consistency(Store store) {
 
     /**
-     * It specifies the set s which must be in variable a.
-     */
-    public IntDomain set;
-
-    /**
-     * It specifies variable a within which it must contains set s.
-     */
-    public SetVar a;
-
-    /**
-     * It specifies if the inclusion relation is strict.
-     */
-    public boolean strict;
-
-    /**
-     * It creates a set inclusion constraint.
+     * This consistency enforces the following rules.
      *
-     * @param a      variable which value must include a provided set.
-     * @param set    a set that must be included within a provided set variable a.
-     * @param strict it specifies if the inclusion relation is strict.
-     */
-    public SinA(IntDomain set, SetVar a, boolean strict) {
-
-        checkInputForNullness(new String[] {"set", "a"}, new Object[] {set, a});
-
-        numberId = idNumber.incrementAndGet();
-
-        this.a = a;
-        this.set = set;
-        this.strict = strict;
-
-        setScope(a);
-
-    }
-
-    /**
-     * It creates a set inclusion constraint. It is not strict by default.
+     * <p>if (s not in lubA) then fail.
      *
-     * @param a   variable which value must include a provided set.
-     * @param set a set that must be included within a provided set variable a.
+     * <p>glbA = glbA \/ S
      */
-    public SinA(IntDomain set, SetVar a) {
+    a.domain.inGLB(store.level, a, set);
 
-        this(set, a, false);
+    if (strict) a.domain.inCardinality(store.level, a, set.getSize() + 1, Integer.MAX_VALUE);
+  }
 
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public boolean satisfied() {
+    return grounded() && a.domain.lub().lex(set) < 0;
+  }
 
-        /**
-         * This consistency enforces the following rules.
-         *
-         * if (s not in lubA) then fail.
-         *
-         * glbA = glbA \/ S
-         *
-         *
-         */
+  @Override
+  public String toString() {
+    return id() + " : SinA(" + set + " '< " + a + ")";
+  }
 
-        a.domain.inGLB(store.level, a, set);
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        if (strict)
-            a.domain.inCardinality(store.level, a, set.getSize() + 1, Integer.MAX_VALUE);
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
+  @Override
+  public void notConsistency(Store store) {
 
-    @Override public boolean satisfied() {
-        return grounded() && a.domain.lub().lex(set) < 0;
-    }
+    // TODO, test it properly.
 
-    @Override public String toString() {
-        return id() + " : SinA(" + set + " '< " + a + ")";
-    }
+    if (set.getSize() > a.domain.lub().getSize() + 1) return;
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
+    if (!a.domain.lub().contains(set)) return;
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
+    IntDomain result = set.subtract(a.domain.glb());
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public void notConsistency(Store store) {
-
-        // TODO, test it properly.
-
-        if (set.getSize() > a.domain.lub().getSize() + 1)
-            return;
-
-        if (!a.domain.lub().contains(set))
-            return;
-
-        IntDomain result = set.subtract(a.domain.glb());
-
-        if (result.isEmpty())
-            if (strict) {
-                if (set.getSize() < a.domain.glb().getSize())
-                    throw Store.failException;
-                else {
-                    // set contains only elements within a.domain.glb()
-                    // set does not have less elements a.domain.glb()
-                    // => a must be equal to set to make strict relation not true.
-                    a.domain.inGLB(store.level, a, set);
-                }
-            } else
-                throw Store.failException;
-
-        if (!strict && result.getSize() == 1) {
-            a.domain.inLUBComplement(store.level, a, result.value());
+    if (result.isEmpty())
+      if (strict) {
+        if (set.getSize() < a.domain.glb().getSize()) throw Store.failException;
+        else {
+          // set contains only elements within a.domain.glb()
+          // set does not have less elements a.domain.glb()
+          // => a must be equal to set to make strict relation not true.
+          a.domain.inGLB(store.level, a, set);
         }
+      } else throw Store.failException;
 
-        if (strict && result.getSize() == 1 && set.getSize() - 1 < a.domain.glb().getSize()) {
-            a.domain.inLUBComplement(store.level, a, result.value());
-        }
-
-
+    if (!strict && result.getSize() == 1) {
+      a.domain.inLUBComplement(store.level, a, result.value());
     }
 
-    @Override public boolean notSatisfied() {
-        return !a.domain.lub().contains(set) || (strict && set.eq(a.domain.lub()));
+    if (strict && result.getSize() == 1 && set.getSize() - 1 < a.domain.glb().getSize()) {
+      a.domain.inLUBComplement(store.level, a, result.value());
     }
+  }
 
+  @Override
+  public boolean notSatisfied() {
+    return !a.domain.lub().contains(set) || (strict && set.eq(a.domain.lub()));
+  }
 }

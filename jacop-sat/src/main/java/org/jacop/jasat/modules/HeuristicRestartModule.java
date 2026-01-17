@@ -40,72 +40,62 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
  * TODO: some idea about the heuristic:
  * do not decide to restart only depending on some variable and the number of
  * conflicts since the last restart; instead, use some "scheme".
- * 
+ *
  * This scheme would be :
  * 1) restart often (like, every 500 conflicts) for some
  * number of times N. This aims at finding good activities about literals.
- * 2) Then, perform a long run without restart (or maybe 2 runs ?), 
- * to try to reach a solution (too frequent restarts predate termination), 
+ * 2) Then, perform a long run without restart (or maybe 2 runs ?),
+ * to try to reach a solution (too frequent restarts predate termination),
  * like 2000 or 3000 conflicts at most.
- * 
+ *
  * If it fails, do the same thing with a slightly higher value of N.
  */
 
-
 /**
- * A module that indicates if a restart would be useful now.
- * Currently based on number of conflicts since last restart. Each restart makes
- * the next restart twice harder to reach.
+ * A module that indicates if a restart would be useful now. Currently based on number of conflicts
+ * since last restart. Each restart makes the next restart twice harder to reach.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
 public final class HeuristicRestartModule implements ConflictListener, BackjumpListener {
 
-    // should we restart ?
-    public boolean shouldRestart = false;
+  // should we restart ?
+  public boolean shouldRestart = false;
 
-    // number of conflicts
-    private long conflictCount = 0;
+  // number of conflicts
+  private long conflictCount = 0;
 
-    // number of conflicts needed to restart
-    private long threshold;
+  // number of conflicts needed to restart
+  private long threshold;
 
-    // factor to increase the threshold by
-    private double THRESHOLD_INCREASE_RATE;
+  // factor to increase the threshold by
+  private double THRESHOLD_INCREASE_RATE;
 
+  public void onConflict(MapClause clause, int level) {
+    conflictCount++;
 
+    if (conflictCount > threshold) shouldRestart = true;
+  }
 
-    public void onConflict(MapClause clause, int level) {
-        conflictCount++;
+  public void onBackjump(int oldLevel, int newLevel) {}
 
-        if (conflictCount > threshold)
-            shouldRestart = true;
-    }
+  public void onRestart(int oldLevel) {
+    // increase the number of conflicts needed to restart
+    threshold = Math.round(threshold * THRESHOLD_INCREASE_RATE);
 
+    // reset counter
+    conflictCount = 0;
+    shouldRestart = false;
+  }
 
-    public void onBackjump(int oldLevel, int newLevel) {
-    }
+  public void initialize(Core core) {
+    conflictCount = 0;
+    threshold = core.config.RESTART_CONFLICT_THRESHOLD;
+    THRESHOLD_INCREASE_RATE = core.config.RESTART_THRESHOLD_INCREASE_RATE;
 
-
-    public void onRestart(int oldLevel) {
-        // increase the number of conflicts needed to restart
-        threshold = Math.round(threshold * THRESHOLD_INCREASE_RATE);
-
-        // reset counter
-        conflictCount = 0;
-        shouldRestart = false;
-    }
-
-
-    public void initialize(Core core) {
-        conflictCount = 0;
-        threshold = core.config.RESTART_CONFLICT_THRESHOLD;
-        THRESHOLD_INCREASE_RATE = core.config.RESTART_THRESHOLD_INCREASE_RATE;
-
-        // register
-        core.conflictModules[core.numConflictModules++] = this;
-        core.restartModules[core.numRestartModules++] = this;
-    }
-
+    // register
+    core.conflictModules[core.numConflictModules++] = this;
+    core.restartModules[core.numRestartModules++] = this;
+  }
 }

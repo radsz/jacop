@@ -32,25 +32,18 @@ package org.jacop.core;
 
 import java.util.Enumeration;
 
-
 /**
- * Defines a methods for enumerating values contain in the intersal domain. It
- * implements the interface Enumeration.
+ * Defines a methods for enumerating values contain in the intersal domain. It implements the
+ * interface Enumeration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public abstract class IntervalEnumeration implements Enumeration<Interval> {
 
-    /**
-     * @return true if there are more elements to enumerate.
-     */
-    public abstract boolean hasMoreElements();
+  /** @return true if there are more elements to enumerate. */
+  public abstract boolean hasMoreElements();
 
-    /**
-     * @return next interval.
-     */
-    public abstract Interval nextElement();
-
+  /** @return next interval. */
+  public abstract Interval nextElement();
 }

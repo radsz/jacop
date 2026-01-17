@@ -34,33 +34,31 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraints atan(P) = R
- * <p>
- * Bounds consistency can be used; third parameter of constructor controls this.
+ *
+ * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AtanPeqR extends TanPeqR {
 
-    /**
-     * It constructs sin(P) = Q constraints.
-     *
-     * @param p variable P
-     * @param q variable Q
-     */
-    public AtanPeqR(FloatVar p, FloatVar q) {
-        super(q, p);
-    }
+  /**
+   * It constructs sin(P) = Q constraints.
+   *
+   * @param p variable P
+   * @param q variable Q
+   */
+  public AtanPeqR(FloatVar p, FloatVar q) {
+    super(q, p);
+  }
 
-    @Override public String toString() {
+  @Override
+  public String toString() {
 
-        StringBuffer result = new StringBuffer(id());
+    StringBuffer result = new StringBuffer(id());
 
-        result.append(" : AtanPeqR(").append(p).append(", ").append(q).append(" )");
+    result.append(" : AtanPeqR(").append(p).append(", ").append(q).append(" )");
 
-        return result.toString();
-
-    }
-
+    return result.toString();
+  }
 }

@@ -29,21 +29,20 @@
  */
 package org.jacop.fz;
 
-import java.lang.management.ThreadMXBean;
 import java.lang.management.ManagementFactory;
-import java.lang.Thread;
+import java.lang.management.ThreadMXBean;
 
 public class ThreadTimer implements Timer {
 
-    Thread thread;
-    ThreadMXBean timer;
-    
-    public ThreadTimer() {
-        thread = Thread.currentThread();
-        timer = ManagementFactory.getThreadMXBean();
-    }
+  Thread thread;
+  ThreadMXBean timer;
 
-    public long getCPUTime() {
-	return timer.getThreadCpuTime(thread.getId());
-    }
+  public ThreadTimer() {
+    thread = Thread.currentThread();
+    timer = ManagementFactory.getThreadMXBean();
+  }
+
+  public long getCPUTime() {
+    return timer.getThreadCpuTime(thread.getId());
+  }
 }

@@ -36,45 +36,45 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Handler for IntVar domain operations in search algorithms.
- * This is the default implementation for integer variable domain operations.
+ * Handler for IntVar domain operations in search algorithms. This is the default implementation for
+ * integer variable domain operations.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public class IntDomainOperationHandler implements DomainOperationHandler {
 
-    @Override
-    public boolean isApplicable(Var var) {
-        return var instanceof IntVar;
-    }
+  @Override
+  public boolean isApplicable(Var var) {
+    return var instanceof IntVar;
+  }
 
-    @Override
-    public void inValue(Store store, Var var, int value, boolean leftBranch) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        // For IntVar, leftBranch parameter is ignored - always use inValue
-        ((IntDomain) intVar.dom()).inValue(store.level, intVar, value);
+  @Override
+  public void inValue(Store store, Var var, int value, boolean leftBranch) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    // For IntVar, leftBranch parameter is ignored - always use inValue
+    ((IntDomain) intVar.dom()).inValue(store.level, intVar, value);
+  }
 
-    @Override
-    public void inComplement(Store store, Var var, int value, boolean leftBranch) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        // For IntVar, leftBranch parameter is ignored - always use inComplement
-        ((IntDomain) intVar.dom()).inComplement(store.level, intVar, value);
+  @Override
+  public void inComplement(Store store, Var var, int value, boolean leftBranch) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    // For IntVar, leftBranch parameter is ignored - always use inComplement
+    ((IntDomain) intVar.dom()).inComplement(store.level, intVar, value);
+  }
 
-    @Override
-    public String getDomainString(Var var) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        return intVar.dom().toString();
+  @Override
+  public String getDomainString(Var var) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    return intVar.dom().toString();
+  }
 }

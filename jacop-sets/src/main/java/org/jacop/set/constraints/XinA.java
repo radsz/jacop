@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -38,182 +39,157 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates a constraint that makes sure that the value assigned to integer variable x is
- * included in the set assigned to the set variable a.
+ * It creates a constraint that makes sure that the value assigned to integer variable x is included
+ * in the set assigned to the set variable a.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
  * @version 4.10
  */
-
 public class XinA extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable a.
-     */
-    public IntVar x;
+  /** It specifies variable a. */
+  public IntVar x;
 
-    /**
-     * It specifies variable b.
-     */
-    public SetVar a;
+  /** It specifies variable b. */
+  public SetVar a;
 
-    /**
-     * It specifies if the inclusion relation is strict.
-     */
-    public boolean strict = false;
+  /** It specifies if the inclusion relation is strict. */
+  public boolean strict = false;
 
-    /**
-     * It constructs an XinY constraint to restrict the domain of the variables X and Y.
-     *
-     * @param x      variable x that is restriction to be a subset of y.
-     * @param a      variable that is restricted to contain x.
-     * @param strict it specifies if the inclusion relation is strict.
-     */
-    public XinA(IntVar x, SetVar a, boolean strict) {
+  /**
+   * It constructs an XinY constraint to restrict the domain of the variables X and Y.
+   *
+   * @param x variable x that is restriction to be a subset of y.
+   * @param a variable that is restricted to contain x.
+   * @param strict it specifies if the inclusion relation is strict.
+   */
+  public XinA(IntVar x, SetVar a, boolean strict) {
 
-        this(x, a);
-        this.strict = strict;
+    this(x, a);
+    this.strict = strict;
+  }
 
+  /**
+   * It constructs an XinA constraint to restrict the domain of the variables X and A.
+   *
+   * @param x variable x that is restriction to be a subset of A.
+   * @param a variable that is restricted to contain x.
+   */
+  public XinA(IntVar x, SetVar a) {
+
+    checkInputForNullness(new String[] {"x", "a"}, new Object[] {x, a});
+
+    this.numberId = idNumber.incrementAndGet();
+
+    this.x = x;
+    this.a = a;
+
+    setScope(x, a);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    x.domain.in(store.level, x, a.domain.lub());
+
+    if (strict) a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
+    else a.domain.inCardinality(store.level, a, 1, Integer.MAX_VALUE);
+
+    if (x.singleton()) a.domain.inGLB(store.level, a, x.value());
+
+    if (!x.domain.isIntersecting(a.domain.lub())) throw Store.failException;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    /**
-     * It constructs an XinA constraint to restrict the domain of the variables X and A.
-     *
-     * @param x variable x that is restriction to be a subset of A.
-     * @param a variable that is restricted to contain x.
-     */
-    public XinA(IntVar x, SetVar a) {
+    if (var == x) return IntDomain.ANY;
+    else return SetDomain.ANY;
+  }
 
-        checkInputForNullness(new String[] {"x", "a"}, new Object[] {x, a});
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
+  }
 
-        this.numberId = idNumber.incrementAndGet();
+  @Override
+  public int getNotConsistencyPruningEvent(Var var) {
 
-        this.x = x;
-        this.a = a;
-
-        setScope(x, a);
-
+    // If notConsistency function mode
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public void consistency(Store store) {
+    if (var == x) return IntDomain.ANY;
+    else return SetDomain.GLB;
+  }
 
-        x.domain.in(store.level, x, a.domain.lub());
+  @Override
+  public void notConsistency(Store store) {
 
-        if (strict)
-            a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
-        else
-            a.domain.inCardinality(store.level, a, 1, Integer.MAX_VALUE);
+    if (x.singleton()) a.domain.inLUBComplement(store.level, a, x.value());
 
-        if(x.singleton())
-	    a.domain.inGLB(store.level, a, x.value());
+    IntDomain xDom = x.domain.subtract(a.domain.glb());
 
-        if (!x.domain.isIntersecting(a.domain.lub()))
-            throw Store.failException;
-    }
+    if (xDom.getSize() == 0) throw Store.failException;
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+    x.domain.in(store.level, x, xDom);
+  }
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+  @Override
+  public boolean notSatisfied() {
 
-        if (var == x)
-            return IntDomain.ANY;
-        else
-            return SetDomain.ANY;
-    }
+    return !a.domain.lub().isIntersecting(x.domain);
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise variant exists.");
+  @Override
+  public boolean satisfied() {
+    return a.domain.glb().contains(x.domain) && (!strict || a.domain.glb().getSize() > 1);
+  }
 
-    }
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
+    // If consistency function mode
+    if (mode) {
+      if (consistencyPruningEvents != null) {
+        Integer possibleEvent = consistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
 
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        if (var == x)
-            return IntDomain.ANY;
-        else
-            return SetDomain.GLB;
+      if (var == x) return IntDomain.ANY;
+      else return SetDomain.GLB;
 
     }
+    // If notConsistency function mode
+    else {
+      if (notConsistencyPruningEvents != null) {
+        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
 
-    @Override public void notConsistency(Store store) {
-
-        if (x.singleton())
-	    a.domain.inLUBComplement(store.level, a, x.value());
-
-	IntDomain xDom = x.domain.subtract(a.domain.glb());
-
-	if (xDom.getSize() == 0)
-	    throw Store.failException;
-
-	x.domain.in(store.level, x, xDom);
+      if (var == x) return IntDomain.ANY;
+      else return SetDomain.GLB;
     }
+  }
 
-    @Override public boolean notSatisfied() {
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
+  }
 
-        return !a.domain.lub().isIntersecting(x.domain);
-
-    }
-
-    @Override public boolean satisfied() {
-        return a.domain.glb().contains(x.domain) && (!strict || a.domain.glb().getSize() > 1);
-    }
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-
-            if (var == x)
-                return IntDomain.ANY;
-            else
-                return SetDomain.GLB;
-
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-
-            if (var == x)
-                return IntDomain.ANY;
-            else
-                return SetDomain.GLB;
-
-        }
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise variant exists.");
-    }
-
-
-    @Override public String toString() {
-        return id() + " : XinA(" + x + ", " + a + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XinA(" + x + ", " + a + " )";
+  }
 }

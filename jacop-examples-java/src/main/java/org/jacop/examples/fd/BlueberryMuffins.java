@@ -30,177 +30,167 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
 
 /**
  * It solves a simple logic puzzle about blueberry muffins.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Logic Puzzle: Blueberry Muffins
- *          <p>
- *          Description :
- *          <p>
- *          Daniel made a dozen blueberry muffins on Friday night -- and by
- *          the timehe was ready for brunch on Saturday, there were only
- *          two left. The other ten had been snitched by his housemates,
- *          all of whom had gotten up early because they had to work on
- *          Saturday. The fourhousemates include two men named Bill and
- *          Mark, and two women named Calla and Lynn; last names are Ellis,
- *          Ingham, Oakley, and Summers, and their differing professions
- *          are dogcatcher, flautist, secretary, and zookeeper. Can you
- *          discover each one's full name, profession, and number of
- *          muffins snitched?
- *          <p>
- *          1. Each housemate snitched a different number of muffins from one to four.
- *          2. Bill and Ellis snitched a total of six muffins.
- *          3. The secretary (who is a woman) snitched more than the dogcatcher.
- *          4. Mark snitched two more than Summers did.
- *          5. The flautist snitched twice as many as Ms. Oakley did.
- *          6. Calla's last name isn't Ingham.
- *          <p>
- *          Solution:
- *          <p>
- *          Calla Oakley dogcatcher 1 muffin
- *          Bill Summers flautist 2 muffins
- *          Lynn Ingham secretary 3 muffins
- *          Mark Ellis zookeeper 4 muffins
+ *     <p>Logic Puzzle: Blueberry Muffins
+ *     <p>Description :
+ *     <p>Daniel made a dozen blueberry muffins on Friday night -- and by the timehe was ready for
+ *     brunch on Saturday, there were only two left. The other ten had been snitched by his
+ *     housemates, all of whom had gotten up early because they had to work on Saturday. The
+ *     fourhousemates include two men named Bill and Mark, and two women named Calla and Lynn; last
+ *     names are Ellis, Ingham, Oakley, and Summers, and their differing professions are dogcatcher,
+ *     flautist, secretary, and zookeeper. Can you discover each one's full name, profession, and
+ *     number of muffins snitched?
+ *     <p>1. Each housemate snitched a different number of muffins from one to four. 2. Bill and
+ *     Ellis snitched a total of six muffins. 3. The secretary (who is a woman) snitched more than
+ *     the dogcatcher. 4. Mark snitched two more than Summers did. 5. The flautist snitched twice as
+ *     many as Ms. Oakley did. 6. Calla's last name isn't Ingham.
+ *     <p>Solution:
+ *     <p>Calla Oakley dogcatcher 1 muffin Bill Summers flautist 2 muffins Lynn Ingham secretary 3
+ *     muffins Mark Ellis zookeeper 4 muffins
  */
-
-
 public class BlueberryMuffins extends ExampleFD {
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        // Constraint store created below.
+    // Constraint store created below.
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        System.out.println("Program to solve Blueberry Muffins ");
+    System.out.println("Program to solve Blueberry Muffins ");
 
-        // String arrays with peoples' names.
+    // String arrays with peoples' names.
 
-        String[] lastnames = {"Ellis", "Ingham", "Oakley", "Summers"};
+    String[] lastnames = {"Ellis", "Ingham", "Oakley", "Summers"};
 
-        // Constant indexes to ease referring to variables denoting people.
-        int iellis = 0, iingham = 1, ioakley = 2, isummer = 3;
+    // Constant indexes to ease referring to variables denoting people.
+    int iellis = 0, iingham = 1, ioakley = 2, isummer = 3;
 
-        // String arrays with profession names.
+    // String arrays with profession names.
 
-        String[] professionNames = {"dogcatcher", "flautist", "secretary", "zookeeper"};
+    String[] professionNames = {"dogcatcher", "flautist", "secretary", "zookeeper"};
 
-        // Constant indexes to ease referring to profession variables.
+    // Constant indexes to ease referring to profession variables.
 
-        int /* izookeeper = 0, */ idogcatcher = 1, iflautist = 2, isecretary = 3;
+    int /* izookeeper = 0, */ idogcatcher = 1, iflautist = 2, isecretary = 3;
 
-        // String arrays with firstname.
+    // String arrays with firstname.
 
-        String[] firstnames = {"Lynn", "Calla", "Bill", "Mark"};
+    String[] firstnames = {"Lynn", "Calla", "Bill", "Mark"};
 
-        // Constant indexes to ease referring to firstname variables.
+    // Constant indexes to ease referring to firstname variables.
 
-        int ilynn = 0, icalla = 1, ibill = 2, imark = 3;
+    int ilynn = 0, icalla = 1, ibill = 2, imark = 3;
 
-        // String arrays with muffin numbers.
+    // String arrays with muffin numbers.
 
-        String[] muffinnumbers = {"muffin1", "muffin2", "muffin3", "muffin4"};
-        int i1 = 0, i2 = 1, i3 = 2, i4 = 3;
+    String[] muffinnumbers = {"muffin1", "muffin2", "muffin3", "muffin4"};
+    int i1 = 0, i2 = 1, i3 = 2, i4 = 3;
 
-        // Arrays for variables.
+    // Arrays for variables.
 
-        IntVar person[] = new IntVar[4];
-        IntVar last[] = new IntVar[4];
-        IntVar profession[] = new IntVar[4];
-        IntVar muffins[] = new IntVar[4];
+    IntVar person[] = new IntVar[4];
+    IntVar last[] = new IntVar[4];
+    IntVar profession[] = new IntVar[4];
+    IntVar muffins[] = new IntVar[4];
 
-        // All variables are created with domain 0..3. Variables from
-        // different arrays with the same values denote the same person.
+    // All variables are created with domain 0..3. Variables from
+    // different arrays with the same values denote the same person.
 
-        for (int i = 0; i < 4; i++) {
-            last[i] = new IntVar(store, lastnames[i], 0, 3);
-            profession[i] = new IntVar(store, professionNames[i], 0, 3);
-            muffins[i] = new IntVar(store, muffinnumbers[i], 0, 3);
-            person[i] = new IntVar(store, firstnames[i], 0, 3);
-            vars.add(last[i]);
-            vars.add(profession[i]);
-            vars.add(muffins[i]);
-            vars.add(person[i]);
-        }
+    for (int i = 0; i < 4; i++) {
+      last[i] = new IntVar(store, lastnames[i], 0, 3);
+      profession[i] = new IntVar(store, professionNames[i], 0, 3);
+      muffins[i] = new IntVar(store, muffinnumbers[i], 0, 3);
+      person[i] = new IntVar(store, firstnames[i], 0, 3);
+      vars.add(last[i]);
+      vars.add(profession[i]);
+      vars.add(muffins[i]);
+      vars.add(person[i]);
+    }
 
-        // It is not possible that one person had two lastnames, or
-        // two professions.
-        store.impose(new Alldifferent(person));
-        store.impose(new Alldifferent(last));
-        store.impose(new Alldifferent(profession));
+    // It is not possible that one person had two lastnames, or
+    // two professions.
+    store.impose(new Alldifferent(person));
+    store.impose(new Alldifferent(last));
+    store.impose(new Alldifferent(profession));
 
-        // 1. Each housemate snitched a different number of muffins from
-        // one to four.
-        store.impose(new Alldifferent(muffins));
+    // 1. Each housemate snitched a different number of muffins from
+    // one to four.
+    store.impose(new Alldifferent(muffins));
 
-        // Auxilary variables to help express clue number 2.
+    // Auxilary variables to help express clue number 2.
 
-        IntVar six = new IntVar(store, "six", 6, 6);
-        IntVar I1 = new IntVar(store, "temp1", 1, 4);
-        IntVar I2 = new IntVar(store, "temp2", 1, 4);
+    IntVar six = new IntVar(store, "six", 6, 6);
+    IntVar I1 = new IntVar(store, "temp1", 1, 4);
+    IntVar I2 = new IntVar(store, "temp2", 1, 4);
 
-        // I1 denotes number of muffins taken by Bill.
-        store.impose(Element.choose(I1, muffins, person[ibill]));
-        // I2 denotes number of muffins taken by Ellis.
-        store.impose(Element.choose(I2, muffins, last[iellis]));
-        // 2. Bill and Ellis snitched a total of six muffins.
-        store.impose(new XplusYeqZ(I1, I2, six));
+    // I1 denotes number of muffins taken by Bill.
+    store.impose(Element.choose(I1, muffins, person[ibill]));
+    // I2 denotes number of muffins taken by Ellis.
+    store.impose(Element.choose(I2, muffins, last[iellis]));
+    // 2. Bill and Ellis snitched a total of six muffins.
+    store.impose(new XplusYeqZ(I1, I2, six));
 
-        // 3. The secretary (who is a woman) snitched more than the dogcatcher.
+    // 3. The secretary (who is a woman) snitched more than the dogcatcher.
 
-        // secretary is a women, so it must have had the same number
-        // as Calla or Lynn.
-        store.impose(new Or(new XeqY(profession[isecretary], person[icalla]), new XeqY(profession[isecretary], person[ilynn])));
+    // secretary is a women, so it must have had the same number
+    // as Calla or Lynn.
+    store.impose(
+        new Or(
+            new XeqY(profession[isecretary], person[icalla]),
+            new XeqY(profession[isecretary], person[ilynn])));
 
-        IntVar I3 = new IntVar(store, "temp3", 1, 4);
-        IntVar I4 = new IntVar(store, "temp4", 1, 4);
+    IntVar I3 = new IntVar(store, "temp3", 1, 4);
+    IntVar I4 = new IntVar(store, "temp4", 1, 4);
 
-        // I3 denotes number of muffins taken by secretary.
-        store.impose(Element.choose(I3, muffins, profession[isecretary]));
-        // I4 denotes number of muffins taken by dogcatcher
-        store.impose(Element.choose(I4, muffins, profession[idogcatcher]));
+    // I3 denotes number of muffins taken by secretary.
+    store.impose(Element.choose(I3, muffins, profession[isecretary]));
+    // I4 denotes number of muffins taken by dogcatcher
+    store.impose(Element.choose(I4, muffins, profession[idogcatcher]));
 
-        // secretary has snitched more muffins than the dogcatcher.
-        store.impose(new XgtY(I3, I4));
+    // secretary has snitched more muffins than the dogcatcher.
+    store.impose(new XgtY(I3, I4));
 
-        // 4. Mark snitched two more than Summers did.
-        store.impose(new Or(new And(new XeqY(last[isummer], muffins[i1]), new XeqY(person[imark], muffins[i3])),
+    // 4. Mark snitched two more than Summers did.
+    store.impose(
+        new Or(
+            new And(new XeqY(last[isummer], muffins[i1]), new XeqY(person[imark], muffins[i3])),
             new And(new XeqY(last[isummer], muffins[i2]), new XeqY(person[imark], muffins[i4]))));
 
-        // 5. The flautist snitched twice as many as Ms. Oakley did.
-        store.impose(new Or(new And(new XeqY(last[ioakley], muffins[i1]), new XeqY(profession[iflautist], muffins[i2])),
-            new And(new XeqY(last[ioakley], muffins[i2]), new XeqY(profession[iflautist], muffins[i4]))));
+    // 5. The flautist snitched twice as many as Ms. Oakley did.
+    store.impose(
+        new Or(
+            new And(
+                new XeqY(last[ioakley], muffins[i1]), new XeqY(profession[iflautist], muffins[i2])),
+            new And(
+                new XeqY(last[ioakley], muffins[i2]),
+                new XeqY(profession[iflautist], muffins[i4]))));
 
-        // 6. Calla's last name isn't Ingham.
-        store.impose(new XneqY(person[icalla], last[iingham]));
+    // 6. Calla's last name isn't Ingham.
+    store.impose(new XneqY(person[icalla], last[iingham]));
+  }
 
-    }
+  /**
+   * It executes the program solving this puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
 
+    BlueberryMuffins example = new BlueberryMuffins();
 
-    /**
-     * It executes the program solving this puzzle.
-     *
-     * @param args no arguments are read.
-     */
-    public static void main(String args[]) {
+    example.model();
 
-        BlueberryMuffins example = new BlueberryMuffins();
-
-        example.model();
-
-        if (example.search())
-            System.out.println("Solution(s) found");
-
-    }
-
+    if (example.search()) System.out.println("Solution(s) found");
+  }
 }

@@ -33,36 +33,32 @@ package org.jacop.search;
 import org.jacop.core.Store;
 
 /**
- * This listener is executed when search has began executing and it is about to enter
- * the labeling procedure.
+ * This listener is executed when search has began executing and it is about to enter the labeling
+ * procedure.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public interface InitializeListener {
 
-    /**
-     * It is executed before the search starts labeling procedure.
-     *
-     * @param store store in which context the search is performed.
-     */
+  /**
+   * It is executed before the search starts labeling procedure.
+   *
+   * @param store store in which context the search is performed.
+   */
+  void executedAtInitialize(Store store);
 
-    void executedAtInitialize(Store store);
+  /**
+   * It sets the children listeners of this initialize listener.
+   *
+   * @param children children listeners being set
+   */
+  void setChildrenListeners(InitializeListener[] children);
 
-    /**
-     * It sets the children listeners of this initialize listener.
-     *
-     * @param children children listeners being set
-     */
-    void setChildrenListeners(InitializeListener[] children);
-
-
-    /**
-     * It sets one child listener for this initialize listener.
-     *
-     * @param child the child of this initialize listener.
-     */
-    void setChildrenListeners(InitializeListener child);
-
+  /**
+   * It sets one child listener for this initialize listener.
+   *
+   * @param child the child of this initialize listener.
+   */
+  void setChildrenListeners(InitializeListener child);
 }

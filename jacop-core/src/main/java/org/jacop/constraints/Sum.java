@@ -30,12 +30,12 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
 
 /*
  * Sum constraint implements the summation over several Variable's . It provides
@@ -50,245 +50,233 @@ import java.util.stream.Stream;
 
 public class Sum extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies the variables to be summed.
-     */
-    public IntVar[] list;
+  /** It specifies the variables to be summed. */
+  public IntVar[] list;
 
-    /**
-     * It specifies variable sum to store the overall sum of the variables being summed up.
-     */
-    public IntVar sum;
+  /** It specifies variable sum to store the overall sum of the variables being summed up. */
+  public IntVar sum;
 
-    /**
-     * The sum of grounded variables.
-     */
-    private TimeStamp<Integer> sumGrounded;
+  /** The sum of grounded variables. */
+  private TimeStamp<Integer> sumGrounded;
 
-    /**
-     * The position for the next grounded variable.
-     */
-    private TimeStamp<Integer> nextGroundedPosition;
+  /** The position for the next grounded variable. */
+  private TimeStamp<Integer> nextGroundedPosition;
 
-    /**
-     * It constructs sum constraint which sums all variables and makes it equal to variable sum.
-     *
-     * @param list list of variables to be added
-     * @param sum  the resulting sum
-     */
-    public Sum(IntVar[] list, IntVar sum) {
+  /**
+   * It constructs sum constraint which sums all variables and makes it equal to variable sum.
+   *
+   * @param list list of variables to be added
+   * @param sum the resulting sum
+   */
+  public Sum(IntVar[] list, IntVar sum) {
 
-        checkInputForNullness(new String[] {"list", "sum"}, new Object[][] {list, {sum}});
+    checkInputForNullness(new String[] {"list", "sum"}, new Object[][] {list, {sum}});
 
-        queueIndex = 1;
-        numberId = idNumber.incrementAndGet();
+    queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
 
-        this.sum = sum;
-        this.list = Arrays.copyOf(list, list.length);
+    this.sum = sum;
+    this.list = Arrays.copyOf(list, list.length);
 
-        // checkForOverflow();
+    // checkForOverflow();
 
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
-    }
+    setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
+  }
 
-    /**
-     * It creates a sum constraints which sums all variables and makes it equal to variable sum.
-     *
-     * @param list variables being summed up.
-     * @param sum  the sum variable.
-     */
+  /**
+   * It creates a sum constraints which sums all variables and makes it equal to variable sum.
+   *
+   * @param list variables being summed up.
+   * @param sum the sum variable.
+   */
+  public Sum(List<? extends IntVar> list, IntVar sum) {
+    this(list.toArray(new IntVar[list.size()]), sum);
+  }
 
-    public Sum(List<? extends IntVar> list, IntVar sum) {
-        this(list.toArray(new IntVar[list.size()]), sum);
-    }
+  @Override
+  public void consistency(Store store) {
 
-    @Override public void consistency(Store store) {
+    int pointer = nextGroundedPosition.value();
+    long sumGroundedLocal = sumGrounded.value();
 
+    do {
 
-        int pointer = nextGroundedPosition.value();
-        long sumGroundedLocal = sumGrounded.value();
+      store.propagationHasOccurred = false;
 
-        do {
+      long lMin = sumGroundedLocal;
+      long lMax = lMin;
 
-            store.propagationHasOccurred = false;
+      long sumJustGrounded = 0;
 
-            long lMin = sumGroundedLocal;
-            long lMax = lMin;
+      for (int i = pointer; i < list.length; i++) {
+        IntDomain currentDomain = list[i].domain;
 
-            long sumJustGrounded = 0;
+        if (currentDomain.singleton()) {
 
-            for (int i = pointer; i < list.length; i++) {
-                IntDomain currentDomain = list[i].domain;
+          if (pointer < i) {
+            IntVar grounded = list[i];
+            list[i] = list[pointer];
+            list[pointer] = grounded;
+          }
 
-                if (currentDomain.singleton()) {
-
-                    if (pointer < i) {
-                        IntVar grounded = list[i];
-                        list[i] = list[pointer];
-                        list[pointer] = grounded;
-                    }
-
-                    pointer++;
-                    sumJustGrounded += currentDomain.min();
-                    continue;
-                }
-
-                lMin += currentDomain.min();
-                lMax += currentDomain.max();
-            }
-
-            sumGroundedLocal += sumJustGrounded;
-
-            lMin += sumJustGrounded;
-            lMax += sumJustGrounded;
-
-            boolean needAdaptMin = false;
-            boolean needAdaptMax = false;
-
-            if (sum.min() > lMin)
-                needAdaptMin = true;
-
-            if (sum.max() < lMax)
-                needAdaptMax = true;
-
-            sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
-
-            store.propagationHasOccurred = false;
-
-            if (needAdaptMin && !needAdaptMax)
-                for (int i = pointer; i < list.length; i++) {
-                    IntVar v = list[i];
-                    v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
-                }
-
-            if (!needAdaptMin && needAdaptMax)
-                for (int i = pointer; i < list.length; i++) {
-                    IntVar v = list[i];
-                    v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
-                }
-
-            if (needAdaptMin && needAdaptMax)
-                for (int i = pointer; i < list.length; i++) {
-                    IntVar v = list[i];
-                    v.domain.in(store.level, v, long2int(sum.min() - lMax + v.max()),
-                                long2int(sum.max() - lMin + v.min()));
-                }
-
-        } while (store.propagationHasOccurred);
-
-        nextGroundedPosition.update(pointer);
-        sumGrounded.update(long2int(sumGroundedLocal));
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        sumGrounded = new TimeStamp<Integer>(store, 0);
-        nextGroundedPosition = new TimeStamp<Integer>(store, 0);
-
-        super.impose(store);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        if (!grounded())
-            return false;
-
-        int sumAll = 0;
-        for (IntVar v : list)
-            sumAll += v.min();
-
-        return sumAll == sum.min();
-    }
-
-    // void checkForOverflow() {
-
-    //     int sumMin = 0, sumMax = 0;
-    //     for (int i = 0; i < list.length; i++) {
-    //         int n1 = list[i].min();
-    //         int n2 = list[i].max();
-
-    //         sumMin = Math.addExact(sumMin, n1);
-    //         sumMax = Math.addExact(sumMax, n2);
-    //     }
-
-    //     Math.subtractExact(sumMin, sum.max());
-    //     Math.subtractExact(sumMax, sum.min());
-    // }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : sum( [");
-
-        for (int i = 0; i < list.length; i++) {
-            result.append(list[i]);
-            if (i < list.length - 1)
-                result.append(", ");
-        }
-        result.append("], ").append(sum).append(" )");
-
-        return result.toString();
-    }
-
-    @Override public Constraint getGuideConstraint() {
-
-        IntVar proposedVariable = (IntVar) getGuideVariable();
-        if (proposedVariable != null)
-            return new XeqC(proposedVariable, guideValue);
-        else
-            return null;
-    }
-
-    @Override public int getGuideValue() {
-        return guideValue;
-    }
-
-    int guideValue = 0;
-
-
-    @Override public Var getGuideVariable() {
-
-        int regret = 1;
-        Var proposedVariable = null;
-
-        for (IntVar v : list) {
-
-            IntDomain listDom = v.dom();
-
-            if (v.singleton())
-                continue;
-
-            int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
-
-            if (currentRegret > regret) {
-                regret = currentRegret;
-                proposedVariable = v;
-                guideValue = listDom.min();
-            }
-
-            currentRegret = listDom.max() - listDom.previousValue(listDom.max());
-
-            if (currentRegret > regret) {
-                regret = currentRegret;
-                proposedVariable = v;
-                guideValue = listDom.max();
-            }
-
+          pointer++;
+          sumJustGrounded += currentDomain.min();
+          continue;
         }
 
-        return proposedVariable;
+        lMin += currentDomain.min();
+        lMax += currentDomain.max();
+      }
 
+      sumGroundedLocal += sumJustGrounded;
+
+      lMin += sumJustGrounded;
+      lMax += sumJustGrounded;
+
+      boolean needAdaptMin = false;
+      boolean needAdaptMax = false;
+
+      if (sum.min() > lMin) needAdaptMin = true;
+
+      if (sum.max() < lMax) needAdaptMax = true;
+
+      sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
+
+      store.propagationHasOccurred = false;
+
+      if (needAdaptMin && !needAdaptMax)
+        for (int i = pointer; i < list.length; i++) {
+          IntVar v = list[i];
+          v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
+        }
+
+      if (!needAdaptMin && needAdaptMax)
+        for (int i = pointer; i < list.length; i++) {
+          IntVar v = list[i];
+          v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
+        }
+
+      if (needAdaptMin && needAdaptMax)
+        for (int i = pointer; i < list.length; i++) {
+          IntVar v = list[i];
+          v.domain.in(
+              store.level,
+              v,
+              long2int(sum.min() - lMax + v.max()),
+              long2int(sum.max() - lMin + v.min()));
+        }
+
+    } while (store.propagationHasOccurred);
+
+    nextGroundedPosition.update(pointer);
+    sumGrounded.update(long2int(sumGroundedLocal));
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  // registers the constraint in the constraint store
+  @Override
+  public void impose(Store store) {
+
+    sumGrounded = new TimeStamp<Integer>(store, 0);
+    nextGroundedPosition = new TimeStamp<Integer>(store, 0);
+
+    super.impose(store);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    if (!grounded()) return false;
+
+    int sumAll = 0;
+    for (IntVar v : list) sumAll += v.min();
+
+    return sumAll == sum.min();
+  }
+
+  // void checkForOverflow() {
+
+  //     int sumMin = 0, sumMax = 0;
+  //     for (int i = 0; i < list.length; i++) {
+  //         int n1 = list[i].min();
+  //         int n2 = list[i].max();
+
+  //         sumMin = Math.addExact(sumMin, n1);
+  //         sumMax = Math.addExact(sumMax, n2);
+  //     }
+
+  //     Math.subtractExact(sumMin, sum.max());
+  //     Math.subtractExact(sumMax, sum.min());
+  // }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+    result.append(" : sum( [");
+
+    for (int i = 0; i < list.length; i++) {
+      result.append(list[i]);
+      if (i < list.length - 1) result.append(", ");
+    }
+    result.append("], ").append(sum).append(" )");
+
+    return result.toString();
+  }
+
+  @Override
+  public Constraint getGuideConstraint() {
+
+    IntVar proposedVariable = (IntVar) getGuideVariable();
+    if (proposedVariable != null) return new XeqC(proposedVariable, guideValue);
+    else return null;
+  }
+
+  @Override
+  public int getGuideValue() {
+    return guideValue;
+  }
+
+  int guideValue = 0;
+
+  @Override
+  public Var getGuideVariable() {
+
+    int regret = 1;
+    Var proposedVariable = null;
+
+    for (IntVar v : list) {
+
+      IntDomain listDom = v.dom();
+
+      if (v.singleton()) continue;
+
+      int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
+
+      if (currentRegret > regret) {
+        regret = currentRegret;
+        proposedVariable = v;
+        guideValue = listDom.min();
+      }
+
+      currentRegret = listDom.max() - listDom.previousValue(listDom.max());
+
+      if (currentRegret > regret) {
+        regret = currentRegret;
+        proposedVariable = v;
+        guideValue = listDom.max();
+      }
     }
 
-    @Override public void supplyGuideFeedback(boolean feedback) {
-    }
+    return proposedVariable;
+  }
 
+  @Override
+  public void supplyGuideFeedback(boolean feedback) {}
 }

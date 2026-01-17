@@ -33,36 +33,33 @@ package org.jacop.search;
 import org.jacop.core.Store;
 
 /**
- * This listener is executed when search has finished executing is about to exit
- * the labeling procedure.
+ * This listener is executed when search has finished executing is about to exit the labeling
+ * procedure.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public interface ExitListener {
 
-    /**
-     * It is executed right after time out is determined.
-     *
-     * @param store       store in the context of which the search took place.
-     * @param solutionsNo the number of solutions found.
-     */
+  /**
+   * It is executed right after time out is determined.
+   *
+   * @param store store in the context of which the search took place.
+   * @param solutionsNo the number of solutions found.
+   */
+  void executedAtExit(Store store, int solutionsNo);
 
-    void executedAtExit(Store store, int solutionsNo);
+  /**
+   * It sets the children of this exit listener.
+   *
+   * @param children an array containing the children.
+   */
+  void setChildrenListeners(ExitListener[] children);
 
-    /**
-     * It sets the children of this exit listener.
-     *
-     * @param children an array containing the children.
-     */
-    void setChildrenListeners(ExitListener[] children);
-
-    /**
-     * It sets one child listener.
-     *
-     * @param child the only child listener used by this listener.
-     */
-    void setChildrenListeners(ExitListener child);
-
+  /**
+   * It sets one child listener.
+   *
+   * @param child the only child listener used by this listener.
+   */
+  void setChildrenListeners(ExitListener child);
 }

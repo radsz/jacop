@@ -3,30 +3,30 @@
 package org.jacop.fz;
 
 public class ASTSetLiteral extends SimpleNode {
-    public ASTSetLiteral(int id) {
-        super(id);
-    }
+  public ASTSetLiteral(int id) {
+    super(id);
+  }
 
-    public ASTSetLiteral(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTSetLiteral(Parser p, int id) {
+    super(p, id);
+  }
 
-    // My additions
-    // 0 - interval, 1 - list, 2 - range set
-    int type;
+  // My additions
+  // 0 - interval, 1 - list, 2 - range set
+  int type;
 
-    public void setType(int t) {
-        type = t;
-    }
+  public void setType(int t) {
+    type = t;
+  }
 
-    public int getType() {
-        return type;
-    }
+  public int getType() {
+    return type;
+  }
 
-    public String toString() {
-        String tt = "";
-        tt = (type == 0) ? "interval" : (type == 1) ? "list" : "range";
-        return super.toString() + "(" + tt + ")";
-    }
+  public String toString() {
+    String tt = "";
+    tt = (type == 0) ? "interval" : (type == 1) ? "list" : "range";
+    return super.toString() + "(" + tt + ")";
+  }
 }
 /* JavaCC - OriginalChecksum=eac36c59f17604f0b8011fa86cdb66d3 (do not edit this line) */

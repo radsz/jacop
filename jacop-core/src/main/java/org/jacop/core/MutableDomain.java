@@ -36,96 +36,88 @@ package org.jacop.core;
  */
 public class MutableDomain implements MutableVar {
 
-    /**
-     * It specifies if debugging info should be printed out.
-     */
-    public final static boolean debug = false;
+  /** It specifies if debugging info should be printed out. */
+  public static final boolean debug = false;
 
-    int index;
+  int index;
 
-    Store store;
+  Store store;
 
-    MutableDomainValue value = null;
+  MutableDomainValue value = null;
 
-    /**
-     * @param store store in which the mutable domain is created.
-     */
-    public MutableDomain(Store store) {
-        this.value = new MutableDomainValue(IntervalDomain.emptyDomain);
-        this.index = store.putMutableVar(this);
-        this.store = store;
+  /** @param store store in which the mutable domain is created. */
+  public MutableDomain(Store store) {
+    this.value = new MutableDomainValue(IntervalDomain.emptyDomain);
+    this.index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  /**
+   * @param store store in which the mutable domain is created.
+   * @param domain specifies the domain used to create mutable domain.
+   */
+  public MutableDomain(Store store, IntDomain domain) {
+    MutableDomainValue val = new MutableDomainValue();
+    val.domain = domain;
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  int index() {
+    return index;
+  }
+
+  public MutableVarValue previous() {
+    return value.previousMutableDomainVariableValue;
+  }
+
+  public void removeLevel(int removeLevel) {
+    if (value.stamp == removeLevel) {
+      value = value.previousMutableDomainVariableValue;
     }
+  }
 
-    /**
-     * @param store  store in which the mutable domain is created.
-     * @param domain specifies the domain used to create mutable domain.
-     */
-    public MutableDomain(Store store, IntDomain domain) {
-        MutableDomainValue val = new MutableDomainValue();
-        val.domain = domain;
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+  public void setCurrent(MutableVarValue o) {
+    value = (MutableDomainValue) o;
+  }
+
+  int stamp() {
+    return value.stamp;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer buffer = new StringBuffer("MutableVar[");
+    buffer.append((index + 1)).append("] = ");
+    buffer.append(value);
+    return buffer.toString();
+  }
+
+  public void update(MutableVarValue val) {
+
+    if (value.stamp == store.level) {
+
+      if (debug) System.out.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
+
+      value.setValue(((MutableDomainValue) val).domain);
+
+      if (debug) System.out.println(", OUT " + value);
+
+    } else if (value.stamp < store.level) {
+      if (debug) System.out.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
+
+      val.setStamp(store.level);
+      val.setPrevious(value);
+
+      value = (MutableDomainValue) val;
+
+      if (debug) System.out.println("\n=> OUT " + this + "\nOLD " + value().previous());
     }
+  }
 
-    int index() {
-        return index;
-    }
-
-    public MutableVarValue previous() {
-        return value.previousMutableDomainVariableValue;
-    }
-
-    public void removeLevel(int removeLevel) {
-        if (value.stamp == removeLevel) {
-            value = value.previousMutableDomainVariableValue;
-        }
-    }
-
-    public void setCurrent(MutableVarValue o) {
-        value = (MutableDomainValue) o;
-    }
-
-    int stamp() {
-        return value.stamp;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer buffer = new StringBuffer("MutableVar[");
-        buffer.append((index + 1)).append("] = ");
-        buffer.append(value);
-        return buffer.toString();
-
-    }
-
-    public void update(MutableVarValue val) {
-
-        if (value.stamp == store.level) {
-
-            if (debug)
-                System.out.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
-
-            value.setValue(((MutableDomainValue) val).domain);
-
-            if (debug)
-                System.out.println(", OUT " + value);
-
-        } else if (value.stamp < store.level) {
-            if (debug)
-                System.out.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
-
-            val.setStamp(store.level);
-            val.setPrevious(value);
-
-            value = (MutableDomainValue) val;
-
-            if (debug)
-                System.out.println("\n=> OUT " + this + "\nOLD " + value().previous());
-        }
-    }
-
-    public MutableVarValue value() {
-        return value;
-    }
+  public MutableVarValue value() {
+    return value;
+  }
 }

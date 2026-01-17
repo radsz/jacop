@@ -30,131 +30,124 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates an equality constraint to make sure that two set variables
- * have the same value.
+ * It creates an equality constraint to make sure that two set variables have the same value.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class AeqB extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies set variable a, which must be equal to set variable b. */
+  public SetVar a;
+
+  /** It specifies set variable b, which must be equal to set variable a. */
+  public SetVar b;
+
+  // private boolean aHasChanged = true;
+  // private boolean bHasChanged = true;
+
+  /**
+   * It constructs an AeqB constraint to restrict the domain of the variables.
+   *
+   * @param a variable a restricted to be equal to b.
+   * @param b variable b restricted to be equal to a.
+   */
+  public AeqB(SetVar a, SetVar b) {
+
+    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+
+    numberId = idNumber.incrementAndGet();
+
+    this.a = a;
+    this.b = b;
+    setScope(a, b);
+  }
+
+  @Override
+  public void consistency(Store store) {
 
     /**
-     * It specifies set variable a, which must be equal to set variable b.
-     */
-    public SetVar a;
-
-    /**
-     * It specifies set variable b, which must be equal to set variable a.
-     */
-    public SetVar b;
-
-    // private boolean aHasChanged = true;
-    // private boolean bHasChanged = true;
-
-    /**
-     * It constructs an AeqB constraint to restrict the domain of the variables.
+     * It computes the consistency of the constraint.
      *
-     * @param a variable a restricted to be equal to b.
-     * @param b variable b restricted to be equal to a.
+     * <p>If two set variables are to be equal then they are always reduced to the intersection of
+     * their domains.
+     *
+     * <p>glbA = glbA \/ glbB glbB = glbA \/ glbB
+     *
+     * <p>lubA = lubA /\ lubB lubB = lubA /\ lubB
      */
-    public AeqB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+    // if (bHasChanged)
+    a.domain.in(store.level, a, b.dom());
 
-        numberId = idNumber.incrementAndGet();
+    // if (aHasChanged)
+    b.domain.in(store.level, b, a.dom());
 
-        this.a = a;
-        this.b = b;
-        setScope(a, b);
+    a.domain.inCardinality(store.level, a, b.domain.card().min(), b.domain.card().max());
+    b.domain.inCardinality(store.level, b, a.domain.card().min(), a.domain.card().max());
 
-    }
+    // aHasChanged = false;
+    // bHasChanged = false;
 
-    @Override public void consistency(Store store) {
+  }
 
-        /**
-         * It computes the consistency of the constraint.
-         *
-         * If two set variables are to be equal then they
-         * are always reduced to the intersection of their domains.
-         *
-         * glbA = glbA \/ glbB
-         * glbB = glbA \/ glbB
-         *
-         * lubA = lubA /\ lubB
-         * lubB = lubA /\ lubB
-         *
-         *
-         */
+  @Override
+  public void notConsistency(Store store) {
 
-        // if (bHasChanged)
-        a.domain.in(store.level, a, b.dom());
+    if (a.singleton() && b.singleton() && a.dom().glb().eq(b.dom().glb()))
+      throw Store.failException;
+  }
 
-        // if (aHasChanged)
-        b.domain.in(store.level, b, a.dom());
+  @Override
+  public boolean notSatisfied() {
 
-        a.domain.inCardinality(store.level, a, b.domain.card().min(), b.domain.card().max());
-        b.domain.inCardinality(store.level, b, a.domain.card().min(), a.domain.card().max());
+    if (!a.domain.lub().contains(b.domain.glb()) || !b.domain.lub().contains(a.domain.glb()))
+      return true;
 
-        // aHasChanged = false;
-        // bHasChanged = false;
+    if (a.singleton() && b.singleton() && !a.domain.glb().eq(b.domain.glb())) return true;
 
-    }
+    return false;
+  }
 
-    @Override public void notConsistency(Store store) {
+  @Override
+  public boolean satisfied() {
 
-        if (a.singleton() && b.singleton() && a.dom().glb().eq(b.dom().glb()))
-            throw Store.failException;
+    if (grounded() && a.domain.glb().eq(b.domain.glb())) return true;
 
-    }
+    return false;
+  }
 
-    @Override public boolean notSatisfied() {
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        if (!a.domain.lub().contains(b.domain.glb()) || !b.domain.lub().contains(a.domain.glb()))
-            return true;
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        if (a.singleton() && b.singleton() && !a.domain.glb().eq(b.domain.glb()))
-            return true;
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return SetDomain.GROUND;
+  }
 
-        return false;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    @Override public boolean satisfied() {
-
-        if (grounded() && a.domain.glb().eq(b.domain.glb()))
-            return true;
-
-        return false;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return SetDomain.GROUND;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public String toString() {
-        return id() + " : AeqB(" + a + ", " + b + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : AeqB(" + a + ", " + b + " )";
+  }
 }

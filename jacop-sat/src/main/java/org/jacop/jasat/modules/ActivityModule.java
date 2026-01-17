@@ -31,21 +31,19 @@
 
 package org.jacop.jasat.modules;
 
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Comparator;
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.ClauseListener;
 import org.jacop.jasat.modules.interfaces.ConflictListener;
 
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Comparator;
-
 /*
  * TODO : polarity caching
  * TODO : some nice data structure to have a real Priority queue
  */
-
 
 /**
  * counts the activity of literals
@@ -55,223 +53,202 @@ import java.util.Comparator;
  */
 public final class ActivityModule implements ClauseListener, BackjumpListener, ConflictListener {
 
-    // number by which activity bump rate is multiplied
-    private int BUMP_INCREASE_FACTOR = 2;
+  // number by which activity bump rate is multiplied
+  private int BUMP_INCREASE_FACTOR = 2;
 
-    // number of conflicts needed to increase bump rate (ie, it is increased
-    // every 20 learnt clauses)
-    private final int LEARNT_COUNT_TO_INCREASE = 20;
-    // how often do we sort again the priority queue
-    private final int CONFLICT_COUNT_TO_SORT = 100;
+  // number of conflicts needed to increase bump rate (ie, it is increased
+  // every 20 learnt clauses)
+  private final int LEARNT_COUNT_TO_INCREASE = 20;
+  // how often do we sort again the priority queue
+  private final int CONFLICT_COUNT_TO_SORT = 100;
 
-    // the rates, for each variable and polarity.
-    private int[] posActivities;
-    private int[] negActivities;
-    private int activitiesIndex = 0;
+  // the rates, for each variable and polarity.
+  private int[] posActivities;
+  private int[] negActivities;
+  private int activitiesIndex = 0;
 
-    // the bump rate
-    private int currentBumpRate;
+  // the bump rate
+  private int currentBumpRate;
 
-    // above which value do we rebase values ?
-    private int rebaseThreshold;
+  // above which value do we rebase values ?
+  private int rebaseThreshold;
 
-    // the number of learnt clauses since last bump rate increase
-    private int learntCount = 0;
+  // the number of learnt clauses since last bump rate increase
+  private int learntCount = 0;
 
-    // hand-managed priority queue for literals (always sorted by activity)
-    private Integer[] priorities = new Integer[50];
-    private int prioritiesIndex = 0;
+  // hand-managed priority queue for literals (always sorted by activity)
+  private Integer[] priorities = new Integer[50];
+  private int prioritiesIndex = 0;
 
-    // set of literals that are in priorities
-    private BitSet prioritizedVars = new BitSet();
+  // set of literals that are in priorities
+  private BitSet prioritizedVars = new BitSet();
 
-    // used to update sorting of priorities sometimes
-    private int conflictCount = 0;
+  // used to update sorting of priorities sometimes
+  private int conflictCount = 0;
 
-    // solver instance
-    public Core core;
+  // solver instance
+  public Core core;
 
+  public void onBackjump(int oldLevel, int newLevel) {}
 
-    public void onBackjump(int oldLevel, int newLevel) {
+  public void onRestart(int oldLevel) {
+    // get the priorities sorted again
+    sortArray();
+  }
+
+  public void onConflict(MapClause conflictClause, int level) {
+    conflictCount++;
+
+    // sometimes, update sorting of literals
+    if (conflictCount >= CONFLICT_COUNT_TO_SORT) {
+      sortArray();
+      conflictCount = 0;
+    }
+  }
+
+  /** sort the priorities array (useful after adding a lot of clauses) */
+  public void sortArray() {
+    Arrays.sort(priorities, 0, prioritiesIndex, comparator);
+  }
+
+  public final void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
+
+    // if needed, increase bump rate
+    if (!isModelClause) learntCount++;
+
+    if (learntCount >= LEARNT_COUNT_TO_INCREASE) {
+      increaseBumpRate();
+      learntCount = 0;
     }
 
+    // bump all literals in the explanation clause
+    for (int i = 0; i < clause.length; ++i) {
+      int literal = clause[i];
+      // bump the variable
+      bumpVar(literal);
 
-    public void onRestart(int oldLevel) {
-        // get the priorities sorted again
-        sortArray();
-    }
-
-
-    public void onConflict(MapClause conflictClause, int level) {
-        conflictCount++;
-
-        // sometimes, update sorting of literals
-        if (conflictCount >= CONFLICT_COUNT_TO_SORT) {
-            sortArray();
-            conflictCount = 0;
-        }
-    }
-
-    /**
-     * sort the priorities array (useful after adding a lot of clauses)
-     */
-    public void sortArray() {
-        Arrays.sort(priorities, 0, prioritiesIndex, comparator);
-    }
-
-
-    public final void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
-
-        // if needed, increase bump rate
-        if (!isModelClause)
-            learntCount++;
-
-        if (learntCount >= LEARNT_COUNT_TO_INCREASE) {
-            increaseBumpRate();
-            learntCount = 0;
-        }
-
-        // bump all literals in the explanation clause
-        for (int i = 0; i < clause.length; ++i) {
-            int literal = clause[i];
-            // bump the variable
-            bumpVar(literal);
-
-            // get it in the priority queue
-            int var = Math.abs(literal);
-            if (!prioritizedVars.get(var)) {
-                if (prioritiesIndex + 2 >= priorities.length) {
-                    int newLength = 2 * priorities.length;
-                    priorities = Arrays.copyOf(priorities, newLength);
-                }
-
-                priorities[prioritiesIndex++] = var;
-                priorities[prioritiesIndex++] = -var;
-                prioritizedVars.set(var);
-            }
-        }
-    }
-
-
-    public final void onClauseRemoval(int clauseId) {
-        // nothing to do
-    }
-
-    /**
-     * returns the non-set literal with highest activity, if any
-     *
-     * @return a non set literal, or 0 if all known literals are set
-     */
-    public final int getLiteralToAssert() {
-
-        // by decreasing activity order
-        for (int i = 0; i < prioritiesIndex; ++i) {
-            int literal = priorities[i];
-            int var = Math.abs(literal);
-
-            // var with highest activity
-            if (!core.trail.isSet(var))
-                return literal;
+      // get it in the priority queue
+      int var = Math.abs(literal);
+      if (!prioritizedVars.get(var)) {
+        if (prioritiesIndex + 2 >= priorities.length) {
+          int newLength = 2 * priorities.length;
+          priorities = Arrays.copyOf(priorities, newLength);
         }
 
-        // no free literal
-        return 0;
+        priorities[prioritiesIndex++] = var;
+        priorities[prioritiesIndex++] = -var;
+        prioritizedVars.set(var);
+      }
+    }
+  }
+
+  public final void onClauseRemoval(int clauseId) {
+    // nothing to do
+  }
+
+  /**
+   * returns the non-set literal with highest activity, if any
+   *
+   * @return a non set literal, or 0 if all known literals are set
+   */
+  public final int getLiteralToAssert() {
+
+    // by decreasing activity order
+    for (int i = 0; i < prioritiesIndex; ++i) {
+      int literal = priorities[i];
+      int var = Math.abs(literal);
+
+      // var with highest activity
+      if (!core.trail.isSet(var)) return literal;
     }
 
-    /**
-     * gives activity of a (signed) literal
-     *
-     * @param literal the literal
-     * @return the activity of this (variable, polarity)
-     */
-    private final int getLiteralActivity(int var, boolean polarity) {
-        assert var > 0;
+    // no free literal
+    return 0;
+  }
 
-        if (polarity)
-            return posActivities[var];
-        else
-            return negActivities[var];
+  /**
+   * gives activity of a (signed) literal
+   *
+   * @param literal the literal
+   * @return the activity of this (variable, polarity)
+   */
+  private final int getLiteralActivity(int var, boolean polarity) {
+    assert var > 0;
+
+    if (polarity) return posActivities[var];
+    else return negActivities[var];
+  }
+
+  /**
+   * code that really performs variable and polarity activity bumping.
+   *
+   * @param var the variable
+   * @return the new activity of the variable
+   */
+  private final int bumpVar(int literal) {
+    int var = Math.abs(literal);
+    ensureVarSize(var);
+    int curValue = (literal > 0 ? posActivities[var] : negActivities[var]);
+
+    // keep rates under some threshold
+    if (curValue >= rebaseThreshold) rebase(curValue);
+
+    // increase rate
+    if (literal > 0) return posActivities[var] = curValue + currentBumpRate;
+    else return negActivities[var] = curValue + currentBumpRate;
+  }
+
+  // be sure the variable bump can be accessed safely
+  private final void ensureVarSize(int var) {
+    assert var > 0;
+    assert posActivities.length == negActivities.length;
+
+    if (var > activitiesIndex) {
+      if (var >= posActivities.length) {
+        // resize the arrays
+        int newSize = 2 * var;
+        posActivities = Arrays.copyOf(posActivities, newSize);
+        negActivities = Arrays.copyOf(negActivities, newSize);
+      }
+
+      // set rate = 0 for elements between maxVar+1 and var
+      Arrays.fill(posActivities, activitiesIndex + 1, var, 0);
+      Arrays.fill(negActivities, activitiesIndex + 1, var, 0);
+
+      activitiesIndex = var;
     }
+  }
 
-    /**
-     * code that really performs variable and polarity activity bumping.
-     *
-     * @param var the variable
-     * @return the new activity of the variable
-     */
-    private final int bumpVar(int literal) {
-        int var = Math.abs(literal);
-        ensureVarSize(var);
-        int curValue = (literal > 0 ? posActivities[var] : negActivities[var]);
+  /** increases the bump rate, so that recent activity is more important than old activity */
+  private final void increaseBumpRate() {
+    currentBumpRate = currentBumpRate * BUMP_INCREASE_FACTOR;
+  }
 
-        // keep rates under some threshold
-        if (curValue >= rebaseThreshold)
-            rebase(curValue);
+  /**
+   * rebases all values
+   *
+   * @param value the value that just overflowed
+   */
+  private final void rebase(int value) {
 
-        // increase rate
-        if (literal > 0)
-            return posActivities[var] = curValue + currentBumpRate;
-        else
-            return negActivities[var] = curValue + currentBumpRate;
+    // RS: Rebasing should use shift operations instead of *
+    // e.g. >> 20 (?)
+    // TODO : kind of integer log
+    int rebaseFactor = 100 / value;
+    for (int curVar = 1; curVar <= activitiesIndex; ++curVar) {
+      posActivities[curVar] = posActivities[curVar] * rebaseFactor;
+      negActivities[curVar] = negActivities[curVar] * rebaseFactor;
     }
+  }
 
-
-    // be sure the variable bump can be accessed safely
-    private final void ensureVarSize(int var) {
-        assert var > 0;
-        assert posActivities.length == negActivities.length;
-
-        if (var > activitiesIndex) {
-            if (var >= posActivities.length) {
-                // resize the arrays
-                int newSize = 2 * var;
-                posActivities = Arrays.copyOf(posActivities, newSize);
-                negActivities = Arrays.copyOf(negActivities, newSize);
-            }
-
-
-            // set rate = 0 for elements between maxVar+1 and var
-            Arrays.fill(posActivities, activitiesIndex + 1, var, 0);
-            Arrays.fill(negActivities, activitiesIndex + 1, var, 0);
-
-            activitiesIndex = var;
-        }
-    }
-
-
-    /**
-     * increases the bump rate, so that recent activity is more important
-     * than old activity
-     */
-    private final void increaseBumpRate() {
-        currentBumpRate = currentBumpRate * BUMP_INCREASE_FACTOR;
-    }
-
-    /**
-     * rebases all values
-     *
-     * @param value the value that just overflowed
-     */
-    private final void rebase(int value) {
-
-        // RS: Rebasing should use shift operations instead of *
-        // e.g. >> 20 (?)
-        // TODO : kind of integer log
-        int rebaseFactor = 100 / value;
-        for (int curVar = 1; curVar <= activitiesIndex; ++curVar) {
-            posActivities[curVar] = posActivities[curVar] * rebaseFactor;
-            negActivities[curVar] = negActivities[curVar] * rebaseFactor;
-        }
-    }
-
-    /**
-     * compares literals according to their activity. This stands for
-     * i > j and not i < j, because we want activities to
-     * be sorted in decreasing order
-     *
-     * @author simon
-     */
-    private final Comparator<Integer> comparator = (i, j) -> {
+  /**
+   * compares literals according to their activity. This stands for i > j and not i < j, because we
+   * want activities to be sorted in decreasing order
+   *
+   * @author simon
+   */
+  private final Comparator<Integer> comparator =
+      (i, j) -> {
         assert Math.abs(i) <= posActivities.length + 1;
         assert Math.abs(j) <= posActivities.length + 1;
         assert posActivities.length == negActivities.length;
@@ -280,30 +257,28 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
         int activity_j = getLiteralActivity(Math.abs(j), j > 0);
 
         return activity_j - activity_i;
-    };
+      };
 
-    @Override public String toString() {
-        return "ActivityModule";
-    }
+  @Override
+  public String toString() {
+    return "ActivityModule";
+  }
 
+  public void initialize(Core core) {
 
-    public void initialize(Core core) {
+    this.core = core;
 
-        this.core = core;
+    // register
+    core.clauseModules[core.numClauseModules++] = this;
+    core.conflictModules[core.numConflictModules++] = this;
+    core.restartModules[core.numRestartModules++] = this;
 
-        // register
-        core.clauseModules[core.numClauseModules++] = this;
-        core.conflictModules[core.numConflictModules++] = this;
-        core.restartModules[core.numRestartModules++] = this;
+    // FIXME: what if maxVariable() increases ? (with wrapper, for instance)
+    activitiesIndex = Math.max(core.getMaxVariable(), 100);
+    posActivities = new int[activitiesIndex + 1];
+    negActivities = new int[activitiesIndex + 1];
 
-        // FIXME: what if maxVariable() increases ? (with wrapper, for instance)
-        activitiesIndex = Math.max(core.getMaxVariable(), 100);
-        posActivities = new int[activitiesIndex + 1];
-        negActivities = new int[activitiesIndex + 1];
-
-
-        currentBumpRate = core.config.bump_rate;
-        rebaseThreshold = core.config.rebase_threshold;
-    }
-
+    currentBumpRate = core.config.bump_rate;
+    rebaseThreshold = core.config.rebase_threshold;
+  }
 }

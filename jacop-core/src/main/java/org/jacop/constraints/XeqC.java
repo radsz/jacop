@@ -30,11 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /*
  * Constraints X #= C
@@ -47,86 +47,88 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XeqC extends PrimitiveConstraint {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies the constant to which a specified variable should be equal to.
-     */
-    public final int c;
+  /** It specifies the constant to which a specified variable should be equal to. */
+  public final int c;
 
-    /**
-     * It specifies the variable which is constrained to be equal to the specified value.
-     */
-    public final IntVar x;
+  /** It specifies the variable which is constrained to be equal to the specified value. */
+  public final IntVar x;
 
-    /**
-     * It constructs the constraint X = C.
-     *
-     * @param x variable x.
-     * @param c constant c.
-     */
-    public XeqC(IntVar x, int c) {
+  /**
+   * It constructs the constraint X = C.
+   *
+   * @param x variable x.
+   * @param c constant c.
+   */
+  public XeqC(IntVar x, int c) {
 
-        checkInputForNullness("x", new Object[] {x});
+    checkInputForNullness("x", new Object[] {x});
 
-        if (c < IntDomain.MinInt || c > IntDomain.MaxInt)
-            throw new IllegalArgumentException("Constraint XeqC has a  constant c " + c + " that is not in the allowed range.");
+    if (c < IntDomain.MinInt || c > IntDomain.MaxInt)
+      throw new IllegalArgumentException(
+          "Constraint XeqC has a  constant c " + c + " that is not in the allowed range.");
 
-        numberId = idNumber.incrementAndGet();
-        this.x = x;
-        this.c = c;
+    numberId = idNumber.incrementAndGet();
+    this.x = x;
+    this.c = c;
 
-        setScope(x);
+    setScope(x);
+  }
 
-    }
+  @Override
+  public void consistency(final Store store) {
 
-    @Override public void consistency(final Store store) {
+    x.domain.inValue(store.level, x, c);
+  }
 
-        x.domain.inValue(store.level, x, c);
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  public void notConsistency(final Store store) {
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+    x.domain.inComplement(store.level, x, c);
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public boolean notSatisfied() {
+    return !x.domain.contains(c);
+  }
 
-        x.domain.inComplement(store.level, x, c);
+  @Override
+  public boolean satisfied() {
+    return x.singleton(c);
+  }
 
-    }
+  @Override
+  public String toString() {
+    return id() + " : XeqC(" + x + ", " + c + " )";
+  }
 
-    @Override public boolean notSatisfied() {
-        return !x.domain.contains(c);
-    }
-
-    @Override public boolean satisfied() {
-        return x.singleton(c);
-    }
-
-    @Override public String toString() {
-        return id() + " : XeqC(" + x + ", " + c + " )";
-    }
-
-    /**
-     * It returns the constant to which a given variable should be equal to.
-     *
-     * @return the constant to which the variable should be equal to.
-     */
-    public int getC() {
-        return c;
-    }
-
+  /**
+   * It returns the constant to which a given variable should be equal to.
+   *
+   * @return the constant to which the variable should be equal to.
+   */
+  public int getC() {
+    return c;
+  }
 }

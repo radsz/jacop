@@ -33,32 +33,28 @@ package org.jacop.search;
 import org.jacop.core.IntVar;
 
 /**
- * IndomainMin - implements enumeration method based on the selection of the
- * minimal value in the domain of variable
+ * IndomainMin - implements enumeration method based on the selection of the minimal value in the
+ * domain of variable
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IndomainMin<T extends IntVar> implements Indomain<T> {
 
-    /**
-     * It creates Indomain heuristic, which will choose the minimal value
-     * from the variable domain.
-     */
-    public IndomainMin() {
-    }
+  /**
+   * It creates Indomain heuristic, which will choose the minimal value from the variable domain.
+   */
+  public IndomainMin() {}
 
-    // FIXME. check and remove.
+  // FIXME. check and remove.
   /*
-  public int indomain(IntDomain dom) {
-		return dom.min();
-	}
-	 */
+   public int indomain(IntDomain dom) {
+  	return dom.min();
+  }
+   */
 
-    public int indomain(IntVar var) {
-        return var.min();
-    }
-
+  public int indomain(IntVar var) {
+    return var.min();
+  }
 }

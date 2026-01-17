@@ -30,190 +30,186 @@
 
 package org.jacop.set.constraints;
 
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.set.core.*;
-import org.jacop.api.SatisfiedPresent;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 /**
- * Channel constraint requires that array of int variables x and array
- * of set variables y are related such that (x[i] = j) {@literal <->}
- (i in s[j]).  Indexes start form 0, both for integer and set variables,
- * by default. To define other starting index use offset definitions.
+ * Channel constraint requires that array of int variables x and array of set variables y are
+ * related such that (x[i] = j) {@literal <->} (i in s[j]). Indexes start form 0, both for integer
+ * and set variables, by default. To define other starting index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
-
 public class ChannelIntSet extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    IntVar[] x;
-    SetVar[] s;
-    int ni;
-    int ns;
-    int offsetInt;
-    int offsetSet;
+  IntVar[] x;
+  SetVar[] s;
+  int ni;
+  int ns;
+  int offsetInt;
+  int offsetSet;
 
-    boolean firstConsistencyCheck = true;
+  boolean firstConsistencyCheck = true;
 
-    /**
-     * It constructs a Channel constraint.
-     *
-     * @param x array of integer variables.
-     * @param s array of set variables.
-     * @param offsetInt offset for integer variables array.
-     * @param offsetSet offset for set variables array.
-     */
-    public ChannelIntSet(IntVar[] x, SetVar[] s, int offsetInt, int offsetSet) {
+  /**
+   * It constructs a Channel constraint.
+   *
+   * @param x array of integer variables.
+   * @param s array of set variables.
+   * @param offsetInt offset for integer variables array.
+   * @param offsetSet offset for set variables array.
+   */
+  public ChannelIntSet(IntVar[] x, SetVar[] s, int offsetInt, int offsetSet) {
 
-        checkInputForNullness(new String[] {"x", "x"}, new Object[] {x, s});
+    checkInputForNullness(new String[] {"x", "x"}, new Object[] {x, s});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        ni = x.length;
-        this.s = s;
-        ns = s.length;
-        this.offsetInt = offsetInt;
-        this.offsetSet = offsetSet;
+    this.x = x;
+    ni = x.length;
+    this.s = s;
+    ns = s.length;
+    this.offsetInt = offsetInt;
+    this.offsetSet = offsetSet;
 
-        setScope(Stream.concat(Arrays.stream(x), Arrays.stream(s)));
+    setScope(Stream.concat(Arrays.stream(x), Arrays.stream(s)));
+  }
+
+  /**
+   * It constructs a Channel constraint.
+   *
+   * @param x array of integer variables.
+   * @param s array of set variables.
+   */
+  public ChannelIntSet(IntVar[] x, SetVar[] s) {
+    this(x, s, 0, 0);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+      for (int i = 0; i < ni; i++) x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
+
+      for (int i = 0; i < ns; i++)
+        s[i].domain.inLUB(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
+
+      firstConsistencyCheck = false;
     }
 
-    /**
-     * It constructs a Channel constraint.
-     *
-     * @param x array of integer variables.
-     * @param s array of set variables.
-     */
-    public ChannelIntSet(IntVar[] x, SetVar[] s) {
-        this(x, s, 0, 0);
-        
+    // check array of integer variables first
+    for (int i = 0; i < ni; i++) {
+      IntDomain vs = new IntervalDomain(5);
+      for (ValueEnumeration e = x[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int xd = e.nextElement();
+        if (s[xd - offsetInt].dom().lub().contains(i + offsetInt)) vs.unionAdapt(xd);
+      }
+
+      x[i].domain.in(store.level, x[i], vs);
+
+      if (x[i].singleton()) {
+        IntDomain glb = new IntervalDomain(i + offsetInt, i + offsetInt);
+        s[x[i].value() - offsetInt].dom().inGLB(store.level, s[x[i].value() - offsetInt], glb);
+      }
     }
 
-    @Override public void consistency(Store store) {
+    // check array of set variables
+    for (int i = 0; i < ns; i++) {
+      IntDomain lub = s[i].dom().lub();
+      IntDomain vs = new IntervalDomain(5);
+      for (ValueEnumeration e = lub.valueEnumeration(); e.hasMoreElements(); ) {
+        int se = e.nextElement();
+        if (se >= offsetSet
+            && se <= ni + offsetInt
+            && x[se - offsetSet].domain.contains(i + offsetSet)) vs.unionAdapt(se);
+      }
 
-        if (firstConsistencyCheck) {
-            for (int i = 0; i < ni; i++)
-                x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
+      s[i].domain.inLUB(store.level, s[i], vs);
 
-            for (int i = 0; i < ns; i++)
-                s[i].domain.inLUB(store.level, s[i],
-                                  new IntervalDomain(offsetSet, ni - 1 + offsetInt));
+      IntDomain glb = s[i].dom().glb();
+      for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+        int se = e.nextElement();
+        x[se - offsetSet].domain.in(store.level, x[se - offsetSet], i + offsetSet, i + offsetSet);
+      }
+    }
+  }
 
-            firstConsistencyCheck = false;
+  @Override
+  public boolean satisfied() {
+
+    for (int i = 0; i < ni; i++) {
+      if (x[i].singleton()) {
+        int v = x[i].value();
+        if (v < offsetInt
+            || v >= ns + offsetInt
+            || !s[v - offsetInt].dom().lub().contains(i + offsetSet)) {
+          return false;
         }
-
-        // check array of integer variables first
-        for (int i = 0; i < ni; i++) {
-            IntDomain vs = new IntervalDomain(5);
-            for (ValueEnumeration e = x[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
-                int xd = e.nextElement();
-                if (s[xd - offsetInt].dom().lub().contains(i + offsetInt))
-                    vs.unionAdapt(xd);
-            }
-
-            x[i].domain.in(store.level, x[i], vs);
-
-            if (x[i].singleton()) {
-                IntDomain glb = new IntervalDomain(i + offsetInt, i + offsetInt);
-                s[x[i].value() - offsetInt].dom().inGLB(store.level, s[x[i].value() - offsetInt], glb);
-            }
+      }
+    }
+    for (int i = 0; i < ns; i++) {
+      IntDomain glb = s[i].dom().glb();
+      for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+        int se = e.nextElement();
+        if (se < offsetSet
+            || se >= ni + offsetSet
+            || !x[se - offsetSet].domain.contains(i + offsetInt)) {
+          return false;
         }
-
-        // check array of set variables
-        for (int i = 0; i < ns; i++) {
-            IntDomain lub = s[i].dom().lub();
-            IntDomain vs = new IntervalDomain(5);
-            for (ValueEnumeration e = lub.valueEnumeration(); e.hasMoreElements(); ) {
-                int se = e.nextElement();
-                if (se >= offsetSet && se <= ni + offsetInt && x[se - offsetSet].domain.contains(i + offsetSet))
-                    vs.unionAdapt(se);
-            }
-
-            s[i].domain.inLUB(store.level, s[i], vs);
-
-            IntDomain glb = s[i].dom().glb();
-            for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-                int se = e.nextElement();
-                x[se - offsetSet].domain.in(store.level, x[se - offsetSet], i + offsetSet, i + offsetSet);
-            }
-        }
+      }
     }
 
-    @Override public boolean satisfied() {
-
-        for (int i = 0; i < ni; i++) {
-            if (x[i].singleton()) {
-                int v = x[i].value();
-                if (v < offsetInt || v >= ns + offsetInt || !s[v - offsetInt].dom().lub().contains(i + offsetSet)) {
-                    return false;
-                }
-            }
-        }
-        for (int i = 0; i < ns; i++) {
-            IntDomain glb = s[i].dom().glb();
-            for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements();) {
-                int se = e.nextElement();
-                if (se < offsetSet || se >= ni + offsetSet || !x[se - offsetSet].domain.contains(i + offsetInt)) {
-                    return false;
-                }
-            }
-        }
-
-        if (allGround()) {
-            return true;
-        }
-
-        return false;
+    if (allGround()) {
+      return true;
     }
 
-    boolean allGround() {
-        for (int i = 0; i < ni; i++) {
-            if (!x[i].singleton())
-                return false;
-        }
-        for (int i = 0; i < ns; i++) {
-            if (!s[i].singleton())
-                return false;
-        }
+    return false;
+  }
 
-        return true;
+  boolean allGround() {
+    for (int i = 0; i < ni; i++) {
+      if (!x[i].singleton()) return false;
     }
-    
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        if (var instanceof IntVar)
-            return IntDomain.ANY;
-        else
-            return SetDomain.ANY;
+    for (int i = 0; i < ns; i++) {
+      if (!s[i].singleton()) return false;
     }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise variant exists.");
+    return true;
+  }
 
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public String toString() {
+    if (var instanceof IntVar) return IntDomain.ANY;
+    else return SetDomain.ANY;
+  }
 
-        StringBuffer result = new StringBuffer();
-        result.append(id() + " : ChannelIntSet(");
-        result.append(Arrays.asList(x)).append(", ").append(Arrays.asList(s));
-        result.append(", " + offsetInt + ", " + offsetSet + ")");
-        return result.toString();
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
+  }
 
-    }
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer();
+    result.append(id() + " : ChannelIntSet(");
+    result.append(Arrays.asList(x)).append(", ").append(Arrays.asList(s));
+    result.append(", " + offsetInt + ", " + offsetSet + ")");
+    return result.toString();
+  }
 }

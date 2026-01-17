@@ -36,80 +36,74 @@ import org.jacop.fz.FlatzincLoader;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.SelectChoicePoint;
 
-
 /**
- * The class Run is used to run test programs for JaCoP package.
- * It is used for test purpose only.
+ * The class Run is used to run test programs for JaCoP package. It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
 public class FlatzincSolver {
 
-    public static void main(String args[]) {
+  public static void main(String args[]) {
 
-        FlatzincSolver run = new FlatzincSolver();
+    FlatzincSolver run = new FlatzincSolver();
 
-        run.ex(args);
+    run.ex(args);
+  }
 
+  FlatzincSolver() {}
+
+  void ex(String[] args) {
+
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
+
+    if (args.length == 0) {
+      args = new String[2];
+      args[0] = "-s";
+      args[1] = "wilkinson.fzn";
     }
+    FlatzincLoader fl = new FlatzincLoader(args);
+    fl.load();
 
-    FlatzincSolver() {
-    }
+    Store store = fl.getStore();
 
-    void ex(String[] args) {
+    // System.out.println (store);
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    // System.out.println("============================================");
+    // System.out.println(fl.getTables());
+    // System.out.println("============================================");
 
-        if (args.length == 0) {
-            args = new String[2];
-            args[0] = "-s";
-            args[1] = "wilkinson.fzn";
-        }
-        FlatzincLoader fl = new FlatzincLoader(args);
-        fl.load();
+    System.out.println(
+        "\nIntVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
 
-        Store store = fl.getStore();
+    DepthFirstSearch<Var> label = fl.getDFS();
+    SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
+    Var cost = fl.getCost();
 
-        // System.out.println (store);
+    boolean result = false;
+    if (cost != null) result = label.labeling(fl.getStore(), select, cost);
+    else result = label.labeling(fl.getStore(), select);
 
-        // System.out.println("============================================");
-        // System.out.println(fl.getTables());
-        // System.out.println("============================================");
+    if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
+      System.out.print(fl.getSolve().lastSolution);
 
-        System.out.println("\nIntVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
+    fl.getSolve().statistics(result);
 
-        DepthFirstSearch<Var> label = fl.getDFS();
-        SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
-        Var cost = fl.getCost();
+    // System.out.println(fl.getTables());
 
-        boolean result = false;
-        if (cost != null)
-            result = label.labeling(fl.getStore(), select, cost);
-        else
-            result = label.labeling(fl.getStore(), select);
+    // System.out.println(fl.getSearch());
 
-        if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
-            System.out.print(fl.getSolve().lastSolution);
+    // System.out.println("cost: " + fl.getCost());
 
-        fl.getSolve().statistics(result);
+    if (result) System.out.println("*** Yes");
+    else System.out.println("*** No");
 
-        // System.out.println(fl.getTables());
-
-        // System.out.println(fl.getSearch());
-
-        // System.out.println("cost: " + fl.getCost());
-
-        if (result)
-            System.out.println("*** Yes");
-        else
-            System.out.println("*** No");
-
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
-        System.out.println("\n\t*** Execution time = " + T + " ms");
-
-    }
-
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
 }

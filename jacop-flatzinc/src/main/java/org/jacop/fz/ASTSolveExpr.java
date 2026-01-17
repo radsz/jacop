@@ -3,59 +3,59 @@
 package org.jacop.fz;
 
 public class ASTSolveExpr extends SimpleNode {
-    public ASTSolveExpr(int id) {
-        super(id);
+  public ASTSolveExpr(int id) {
+    super(id);
+  }
+
+  public ASTSolveExpr(Parser p, int id) {
+    super(p, id);
+  }
+
+  int type = -1; // 0 - ident, 1 - array access
+  int index; // keeps index
+  String ident;
+
+  public void setType(int t) {
+    type = t;
+  }
+
+  public int getType() {
+    return type;
+  }
+
+  public void setIndex(int i) {
+    index = i;
+  }
+
+  public int getIndex() {
+    return index;
+  }
+
+  public void setIdent(String i) {
+    ident = i;
+  }
+
+  public String getIdent() {
+    return ident;
+  }
+
+  public String toString() {
+    String val = "";
+
+    if (type != -1) {
+      switch (type) {
+        case 0:
+          val = "(ident): " + ident;
+          break;
+        case 1:
+          val = "(array access): " + ident + "[" + index + "]";
+          break;
+        default:
+          throw new RuntimeException("Internal parsing error; " + getClass().getName());
+      }
     }
 
-    public ASTSolveExpr(Parser p, int id) {
-        super(p, id);
-    }
-
-    int type = -1;  // 0 - ident, 1 - array access
-    int index;  // keeps index
-    String ident;
-
-    public void setType(int t) {
-        type = t;
-    }
-
-    public int getType() {
-        return type;
-    }
-
-    public void setIndex(int i) {
-        index = i;
-    }
-
-    public int getIndex() {
-        return index;
-    }
-
-    public void setIdent(String i) {
-        ident = i;
-    }
-
-    public String getIdent() {
-        return ident;
-    }
-
-    public String toString() {
-        String val = "";
-
-        if (type != -1) {
-            switch (type) {
-                case 0:
-                    val = "(ident): " + ident;
-                    break;
-                case 1:
-                    val = "(array access): " + ident + "[" + index + "]";
-                    break;
-                default:
-                    throw new RuntimeException("Internal parsing error; " + getClass().getName());
-            }
-        }
-
-        return super.toString() + val;
-    }
+    return super.toString() + val;
+  }
 }
 /* JavaCC - OriginalChecksum=5931bb897b8f90fb6543ec7905a67886 (do not edit this line) */

@@ -41,49 +41,45 @@ import org.jacop.core.IntVar;
 
 class TaskNormalView extends TaskView {
 
-    TaskNormalView(IntVar start, IntVar dur, IntVar res) {
-        super(start, dur, res);
-    }
+  TaskNormalView(IntVar start, IntVar dur, IntVar res) {
+    super(start, dur, res);
+  }
 
-    // last complition time
-    int lct() {
-        return start.max() + dur.max();
-    }
+  // last complition time
+  int lct() {
+    return start.max() + dur.max();
+  }
 
-    // erliest complition time
-    int ect() {
-        return start.min() + dur.min();
-    }
+  // erliest complition time
+  int ect() {
+    return start.min() + dur.min();
+  }
 
-    // erliest start time
-    int est() {
-        return start.min();
-    }
+  // erliest start time
+  int est() {
+    return start.min();
+  }
 
-    // last start time
-    int lst() {
-        return start.max();
-    }
+  // last start time
+  int lst() {
+    return start.max();
+  }
 
-    // envelope
-    long env(long c) {
-        return c * (long) est() + e();
-    }
+  // envelope
+  long env(long c) {
+    return c * (long) est() + e();
+  }
 
-    void updateEdgeFind(int storeLevel, int est) {
-        if (est > start.min())
-            start.domain.inMin(storeLevel, start, est);
-    }
+  void updateEdgeFind(int storeLevel, int est) {
+    if (est > start.min()) start.domain.inMin(storeLevel, start, est);
+  }
 
-    void updateNotFirstNotLast(int storeLevel, int lct) {
-        int max = lct - dur.min();
-        if (max < start.max())
-            start.domain.inMax(storeLevel, start, max);
-    }
+  void updateNotFirstNotLast(int storeLevel, int lct) {
+    int max = lct - dur.min();
+    if (max < start.max()) start.domain.inMax(storeLevel, start, max);
+  }
 
-    void updateDetectable(int storeLevel, int est) {
-        if (est > start.min())
-            start.domain.inMin(storeLevel, start, est);
-    }
-
+  void updateDetectable(int storeLevel, int est) {
+    if (est > start.min()) start.domain.inMin(storeLevel, start, est);
+  }
 }

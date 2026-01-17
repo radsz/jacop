@@ -30,79 +30,75 @@
 
 package org.jacop.fz.constraints;
 
-import org.jacop.core.*;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashMap;
+import org.jacop.core.*;
 
 /**
- * It collects all int_eq_(reif|imp) constraint to create Channel(Reif|Imply)
- * constraints, if possible.
+ * It collects all int_eq_(reif|imp) constraint to create Channel(Reif|Imply) constraints, if
+ * possible.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
-
 class ChannelMap {
 
-    Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
+  Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
 
-    int minSize = 1;
+  int minSize = 1;
 
-    Support support;
+  Support support;
 
-    public ChannelMap(Support support) {
-        this.support = support;
+  public ChannelMap(Support support) {
+    this.support = support;
+  }
+
+  public void add(IntVar x, int v, IntVar b) {
+    Map<Integer, IntVar> map = cs.get(x);
+
+    if (map != null)
+      if (map.get(v) != null) {
+        support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
+      } else {
+        map.put(v, b);
+        cs.put(x, map);
+      }
+    else {
+      map = new HashMap<>();
+      map.put(v, b);
+      cs.put(x, map);
     }
+  }
 
-    public void add(IntVar x, int v, IntVar b) {
-        Map<Integer, IntVar> map = cs.get(x);
+  public int size(IntVar v) {
+    Map<Integer, IntVar> m = cs.get(v);
 
-        if (map != null)
-            if (map.get(v) != null) {
-                support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
-            } else {
-                map.put(v, b);
-                cs.put(x, map);
-            }
-        else {
-            map = new HashMap<>();
-            map.put(v, b);
-            cs.put(x, map);
-        }
+    if (m != null) return m.size();
+    else return 0;
+  }
+
+  public String toString() {
+
+    StringBuilder result = new StringBuilder();
+
+    Set<Map.Entry<IntVar, Map<Integer, IntVar>>> entries = cs.entrySet();
+
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : entries) {
+      IntVar var = e.getKey();
+      Map<Integer, IntVar> vb = e.getValue();
+      Set<Map.Entry<Integer, IntVar>> es = vb.entrySet();
+
+      result.append(var + "[");
+
+      for (Map.Entry<Integer, IntVar> ei : es) {
+        int val = ei.getKey();
+        IntVar bb = ei.getValue();
+
+        result.append("[" + val + ", " + bb + "]");
+      }
     }
-
-    public int size(IntVar v) {
-        Map<Integer, IntVar> m = cs.get(v);
-
-        if (m != null)
-            return m.size();
-        else
-            return 0;
-    }
-
-    public String toString() {
-
-        StringBuilder result = new StringBuilder();
-
-        Set<Map.Entry<IntVar, Map<Integer,IntVar>>> entries = cs.entrySet();
-
-        for (Map.Entry<IntVar, Map<Integer,IntVar>> e : entries) {
-            IntVar var = e.getKey();
-            Map<Integer,IntVar> vb = e.getValue();
-            Set<Map.Entry<Integer,IntVar>> es = vb.entrySet();
-
-            result.append(var + "[");
-
-            for (Map.Entry<Integer,IntVar> ei : es) {
-                int val = ei.getKey();
-                IntVar bb = ei.getValue();
-
-                result.append("[" + val + ", " + bb + "]");
-            }
-        }
-        result.append("]");
-        return result.toString();
-    }
+    result.append("]");
+    return result.toString();
+  }
 }

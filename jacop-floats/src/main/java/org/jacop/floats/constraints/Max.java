@@ -30,6 +30,10 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -37,145 +41,133 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
 /**
- * Max constraint implements the Maximum/2 constraint. It provides the maximum
- * variable from all variables on the list.
- * <p>
- * max(list) = max.
+ * Max constraint implements the Maximum/2 constraint. It provides the maximum variable from all
+ * variables on the list.
+ *
+ * <p>max(list) = max.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Max extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a list of variables among which a maximum value is being searched for.
-     */
-    public FloatVar list[];
+  /** It specifies a list of variables among which a maximum value is being searched for. */
+  public FloatVar list[];
 
-    /**
-     * It specifies variable max which stores the maximum value present in the list.
-     */
-    public FloatVar max;
+  /** It specifies variable max which stores the maximum value present in the list. */
+  public FloatVar max;
 
-    /**
-     * It constructs max constraint.
-     *
-     * @param max  variable denoting the maximum value
-     * @param list the array of variables for which the maximum value is imposed.
-     */
-    public Max(FloatVar[] list, FloatVar max) {
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param list the array of variables for which the maximum value is imposed.
+   */
+  public Max(FloatVar[] list, FloatVar max) {
 
-        checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
+    checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
 
-        this.queueIndex = 1;
-        this.numberId = idNumber.incrementAndGet();
-        this.max = max;
-        this.list = Arrays.copyOf(list, list.length);
+    this.queueIndex = 1;
+    this.numberId = idNumber.incrementAndGet();
+    this.max = max;
+    this.list = Arrays.copyOf(list, list.length);
 
-        setScope(Stream.concat(Stream.of(list), Stream.of(max)));
+    setScope(Stream.concat(Stream.of(list), Stream.of(max)));
+  }
+
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param variables the array of variables for which the maximum value is imposed.
+   */
+  public Max(List<? extends FloatVar> variables, FloatVar max) {
+
+    this(variables.toArray(new FloatVar[variables.size()]), max);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    FloatVar var;
+    FloatDomain vDom;
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      // @todo, optimize, if there is no change on min.min() then
+      // the below inMin does not have to be executed.
+
+      double minValue = FloatDomain.MinFloat;
+      double maxValue = FloatDomain.MinFloat;
+
+      double maxMax = max.max();
+      for (int i = 0; i < list.length; i++) {
+
+        var = list[i];
+
+        var.domain.inMax(store.level, var, maxMax);
+
+        vDom = var.dom();
+        double VdomMin = vDom.min(), VdomMax = vDom.max();
+
+        minValue = (minValue > VdomMin) ? minValue : VdomMin;
+        maxValue = (maxValue > VdomMax) ? maxValue : VdomMax;
+      }
+
+      max.domain.in(store.level, max, minValue, maxValue);
+
+      int n = 0, pos = -1;
+      for (int i = 0; i < list.length; i++) {
+        var = list[i];
+        if (minValue > var.max()) n++;
+        else pos = i;
+      }
+      if (n
+          == list.length
+              - 1) // one variable on the list is maximal; its is min > max of all other variables
+      list[pos].domain.in(store.level, list[pos], max.dom());
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    boolean sat = max.singleton();
+    double MAX = max.min();
+    int i = 0, eq = 0;
+    while (sat && i < list.length) {
+      if (list[i].singleton() && list[i].value() == MAX) eq++;
+      sat = list[i].max() <= MAX;
+      i++;
+    }
+    return sat && eq > 0;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+
+    result.append(" : max(  [ ");
+    for (int i = 0; i < list.length; i++) {
+      result.append(list[i]);
+      if (i < list.length - 1) result.append(", ");
     }
 
-    /**
-     * It constructs max constraint.
-     *
-     * @param max       variable denoting the maximum value
-     * @param variables the array of variables for which the maximum value is imposed.
-     */
-    public Max(List<? extends FloatVar> variables, FloatVar max) {
+    result.append("], ").append(this.max);
+    result.append(")");
 
-        this(variables.toArray(new FloatVar[variables.size()]), max);
-
-    }
-
-    @Override public void consistency(Store store) {
-
-        FloatVar var;
-        FloatDomain vDom;
-
-        do {
-
-            store.propagationHasOccurred = false;
-
-            // @todo, optimize, if there is no change on min.min() then
-            // the below inMin does not have to be executed.
-
-            double minValue = FloatDomain.MinFloat;
-            double maxValue = FloatDomain.MinFloat;
-
-            double maxMax = max.max();
-            for (int i = 0; i < list.length; i++) {
-
-                var = list[i];
-
-                var.domain.inMax(store.level, var, maxMax);
-
-                vDom = var.dom();
-                double VdomMin = vDom.min(), VdomMax = vDom.max();
-
-                minValue = (minValue > VdomMin) ? minValue : VdomMin;
-                maxValue = (maxValue > VdomMax) ? maxValue : VdomMax;
-
-            }
-
-            max.domain.in(store.level, max, minValue, maxValue);
-
-            int n = 0, pos = -1;
-            for (int i = 0; i < list.length; i++) {
-                var = list[i];
-                if (minValue > var.max())
-                    n++;
-                else
-                    pos = i;
-            }
-            if (n == list.length - 1)  // one variable on the list is maximal; its is min > max of all other variables
-                list[pos].domain.in(store.level, list[pos], max.dom());
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public boolean satisfied() {
-
-        boolean sat = max.singleton();
-        double MAX = max.min();
-        int i = 0, eq = 0;
-        while (sat && i < list.length) {
-            if (list[i].singleton() && list[i].value() == MAX)
-                eq++;
-            sat = list[i].max() <= MAX;
-            i++;
-        }
-        return sat && eq > 0;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : max(  [ ");
-        for (int i = 0; i < list.length; i++) {
-            result.append(list[i]);
-            if (i < list.length - 1)
-                result.append(", ");
-        }
-
-        result.append("], ").append(this.max);
-        result.append(")");
-
-        return result.toString();
-    }
-
+    return result.toString();
+  }
 }

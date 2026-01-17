@@ -36,171 +36,157 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
 public class RootBNode extends BNode {
 
-    // right hand value
-    double val;
-    // relation
-    byte rel;
+  // right hand value
+  double val;
+  // relation
+  byte rel;
 
-    public RootBNode(Store store) {
-        super(store);
+  public RootBNode(Store store) {
+    super(store);
+  }
+
+  public RootBNode(Store store, double min, double max) {
+    super(store, min, max);
+  }
+
+  void propagateAndPrune() {
+
+    boolean changed = propagateForRoot();
+
+    if (changed) {
+
+      prune();
+
+      propagateForRoot();
+    }
+  }
+
+  void propagate() {
+
+    propagateForRoot();
+  }
+
+  boolean propagateForRoot() { // result indicate whthter bounds are changed (true) or not changed
+    // (flase)
+
+    FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
+    double min = d.min();
+    double max = d.max();
+
+    switch (rel) {
+      case Linear.eq:
+        if (min > val || max < val) throw Store.failException;
+        break;
+      case Linear.lt:
+        if (min >= val) throw Store.failException;
+        break;
+      case Linear.le:
+        if (min > val) throw Store.failException;
+        break;
+      case Linear.gt:
+        if (max <= val) throw Store.failException;
+        break;
+      case Linear.ge:
+        if (max < val) throw Store.failException;
+        break;
+      case Linear.ne:
+        if (min == max && min == val) throw Store.failException;
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
     }
 
-    public RootBNode(Store store, double min, double max) {
-        super(store, min, max);
+    double current_min = min();
+    double current_max = max();
+
+    FloatDomain l = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = l.min();
+    double ub = l.max();
+
+    // if (current_min < min || current_max > max) {
+    //     bound.update(min, max, lb, ub);
+
+    //     return true;
+    // }
+
+    // =====
+    if (min > current_min)
+      if (max < current_max) {
+
+        if (min > max) throw Store.failException;
+
+        bound.update(min, max, lb, ub);
+
+        return true;
+      } else {
+
+        if (min > current_max) throw Store.failException;
+
+        bound.update(min, current_max, lb, ub);
+
+        return true;
+      }
+    else if (max < current_max) {
+
+      if (current_min > max) throw Store.failException;
+
+      bound.update(current_min, max, lb, ub);
+
+      return true;
+    }
+    // =====
+
+    return false;
+  }
+
+  void prune() {
+
+    double min = min();
+    double max = max();
+
+    switch (rel) {
+      case Linear.eq: // =============================================
+        min = val;
+        max = val;
+        break;
+      case Linear.lt: // =============================================
+        max = FloatDomain.previous(val);
+        break;
+      case Linear.le: // =============================================
+        max = val;
+        break;
+      case Linear.ne: // =============================================
+        if (val >= min && val <= max)
+          if (min == val) {
+            if (FloatDomain.next(min) <= max) {
+              min = FloatDomain.next(min);
+            } else throw Store.failException;
+          } else {
+            if (max == val)
+              if (FloatDomain.previous(max) >= min) {
+                max = FloatDomain.previous(max);
+              } else throw Store.failException;
+          }
+        break;
+      case Linear.gt: // =============================================
+        min = FloatDomain.next(val);
+        break;
+      case Linear.ge: // =============================================
+        min = val;
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
     }
 
-    void propagateAndPrune() {
+    prune(min, max);
+  }
 
-        boolean changed = propagateForRoot();
-
-        if (changed) {
-
-            prune();
-
-            propagateForRoot();
-
-        }
-    }
-
-    void propagate() {
-
-        propagateForRoot();
-
-    }
-
-    boolean propagateForRoot() { // result indicate whthter bounds are changed (true) or not changed (flase)
-
-        FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
-        double min = d.min();
-        double max = d.max();
-
-        switch (rel) {
-            case Linear.eq:
-                if (min > val || max < val)
-                    throw Store.failException;
-                break;
-            case Linear.lt:
-                if (min >= val)
-                    throw Store.failException;
-                break;
-            case Linear.le:
-                if (min > val)
-                    throw Store.failException;
-                break;
-            case Linear.gt:
-                if (max <= val)
-                    throw Store.failException;
-                break;
-            case Linear.ge:
-                if (max < val)
-                    throw Store.failException;
-                break;
-            case Linear.ne:
-                if (min == max && min == val)
-                    throw Store.failException;
-                break;
-            default:
-                throw new RuntimeException("Internal error in " + getClass().getName());
-        }
-
-        double current_min = min();
-        double current_max = max();
-
-        FloatDomain l = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
-        double lb = l.min();
-        double ub = l.max();
-
-        // if (current_min < min || current_max > max) {
-        //     bound.update(min, max, lb, ub);
-
-        //     return true;
-        // }
-
-        // =====
-        if (min > current_min)
-            if (max < current_max) {
-
-                if (min > max)
-                    throw Store.failException;
-
-                bound.update(min, max, lb, ub);
-
-                return true;
-            } else {
-
-                if (min > current_max)
-                    throw Store.failException;
-
-                bound.update(min, current_max, lb, ub);
-
-                return true;
-            }
-        else if (max < current_max) {
-
-            if (current_min > max)
-                throw Store.failException;
-
-            bound.update(current_min, max, lb, ub);
-
-            return true;
-        }
-        // =====
-
-        return false;
-    }
-
-    void prune() {
-
-        double min = min();
-        double max = max();
-
-        switch (rel) {
-            case Linear.eq: //=============================================
-                min = val;
-                max = val;
-                break;
-            case Linear.lt: //=============================================
-                max = FloatDomain.previous(val);
-                break;
-            case Linear.le: //=============================================
-                max = val;
-                break;
-            case Linear.ne: //=============================================
-                if (val >= min && val <= max)
-                    if (min == val) {
-                        if (FloatDomain.next(min) <= max) {
-                            min = FloatDomain.next(min);
-                        } else
-                            throw Store.failException;
-                    } else {
-                        if (max == val)
-                            if (FloatDomain.previous(max) >= min) {
-                                max = FloatDomain.previous(max);
-                            } else
-                                throw Store.failException;
-                    }
-                break;
-            case Linear.gt: //=============================================
-                min = FloatDomain.next(val);
-                break;
-            case Linear.ge: //=============================================
-                min = val;
-                break;
-            default:
-                throw new RuntimeException("Internal error in " + getClass().getName());
-        }
-
-        prune(min, max);
-
-    }
-
-    public String toString() {
-        return super.toString() + " (rel = " + rel + ", val = " + val + ")";
-    }
+  public String toString() {
+    return super.toString() + " (rel = " + rel + ", val = " + val + ")";
+  }
 }

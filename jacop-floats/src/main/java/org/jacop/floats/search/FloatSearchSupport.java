@@ -33,35 +33,30 @@ package org.jacop.floats.search;
 import org.jacop.search.SearchHandlerRegistry;
 
 /**
- * Support class for FloatVar search operations.
- * This class automatically registers FloatVar handlers with the search handler registry
- * when the jacop-floats module is loaded.
- * <p>
- * The registration happens via a static initializer, ensuring handlers are available
- * as soon as any class from this package is loaded.
+ * Support class for FloatVar search operations. This class automatically registers FloatVar
+ * handlers with the search handler registry when the jacop-floats module is loaded.
+ *
+ * <p>The registration happens via a static initializer, ensuring handlers are available as soon as
+ * any class from this package is loaded.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public class FloatSearchSupport {
 
-    static {
-        // Register FloatVar cost handler when this class is loaded
-        SearchHandlerRegistry.getInstance().registerCostHandler(new FloatCostVariableHandler());
-    }
+  static {
+    // Register FloatVar cost handler when this class is loaded
+    SearchHandlerRegistry.getInstance().registerCostHandler(new FloatCostVariableHandler());
+  }
 
-    /**
-     * Private constructor to prevent instantiation.
-     */
-    private FloatSearchSupport() {
-    }
+  /** Private constructor to prevent instantiation. */
+  private FloatSearchSupport() {}
 
-    /**
-     * Explicitly registers FloatVar handlers.
-     * This method can be called to ensure handlers are registered,
-     * though the static initializer should handle this automatically.
-     */
-    public static void registerHandlers() {
-        SearchHandlerRegistry.getInstance().registerCostHandler(new FloatCostVariableHandler());
-    }
+  /**
+   * Explicitly registers FloatVar handlers. This method can be called to ensure handlers are
+   * registered, though the static initializer should handle this automatically.
+   */
+  public static void registerHandlers() {
+    SearchHandlerRegistry.getInstance().registerCostHandler(new FloatCostVariableHandler());
+  }
 }

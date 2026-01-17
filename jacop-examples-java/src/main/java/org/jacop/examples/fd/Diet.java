@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -37,194 +38,168 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * It specifies a simple diet problem.
- * <p>
- * Problem from http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf
- * <p>
- * My diet requires that all the food I eat come from one of the four .basic
- * food groups. (chocolate cake, ice cream, soft drink, and cheesecake).
- * Each (large) slice of chocolate cake costs 50c,
- * each scoop of chocolate ice cream costs 20c,
- * each bottle of cola costs 30c,
- * and each piece of pineapple cheesecake costs 80c.
- * <p>
- * Each day, I must ingest at least 500 calories,
- * 6 oz of chocolate,
- * 10 oz of sugar,
- * and 8 oz of fat.
- * The nutritional content per unit of each food is shown in the table below.
- * <p>
- * Formulate a linear programming model that can be used to satisfy my daily
- * nutritional requirement at minimum cost.
- * <p>
- * Type of                        Calories   Chocolate    Sugar    Fat
- * Food                                      (ounces)     (ounces) (ounces)
- * Chocolate Cake (1 slice)       400           3            2      2
- * Chocolate ice cream (1 scoop)  200           2            2      4
- * Cola (1 bottle)                150           0            4      1
- * Pineapple cheesecake (1 piece) 500           0            4      5
- * <p>
- * """
+ *
+ * <p>Problem from http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf
+ *
+ * <p>My diet requires that all the food I eat come from one of the four .basic food groups.
+ * (chocolate cake, ice cream, soft drink, and cheesecake). Each (large) slice of chocolate cake
+ * costs 50c, each scoop of chocolate ice cream costs 20c, each bottle of cola costs 30c, and each
+ * piece of pineapple cheesecake costs 80c.
+ *
+ * <p>Each day, I must ingest at least 500 calories, 6 oz of chocolate, 10 oz of sugar, and 8 oz of
+ * fat. The nutritional content per unit of each food is shown in the table below.
+ *
+ * <p>Formulate a linear programming model that can be used to satisfy my daily nutritional
+ * requirement at minimum cost.
+ *
+ * <p>Type of Calories Chocolate Sugar Fat Food (ounces) (ounces) (ounces) Chocolate Cake (1 slice)
+ * 400 3 2 2 Chocolate ice cream (1 scoop) 200 2 2 4 Cola (1 bottle) 150 0 4 1 Pineapple cheesecake
+ * (1 piece) 500 0 4 5
+ *
+ * <p>"""
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Compare with my MiniZinc model:
- *          http://www.hakank.org/minizinc/diet1.mzn
+ *     <p>Compare with my MiniZinc model: http://www.hakank.org/minizinc/diet1.mzn
  */
-
 public class Diet extends ExampleFD {
 
-    public IntVar[] x;
+  public IntVar[] x;
 
-    public int n = 4; // number of ingredients
-    public int m = 4; // number of food types
+  public int n = 4; // number of ingredients
+  public int m = 4; // number of food types
 
-    public String[] food = {"Chocolate Cake", "Chocolate ice cream", "Cola", "Pineapple cheesecake"};
+  public String[] food = {"Chocolate Cake", "Chocolate ice cream", "Cola", "Pineapple cheesecake"};
 
-    public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
+  public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
 
-    public int[] price = {50, 20, 30, 80}; // in cents
-    public int[] limits = {500, 6, 10, 8};  // minimum required for a diet
+  public int[] price = {50, 20, 30, 80}; // in cents
+  public int[] limits = {500, 6, 10, 8}; // minimum required for a diet
 
-    // Food: 0   1     2    3
-    public int[][] matrix = {{400, 200, 150, 500},  // calories
-        {3, 2, 0, 0},  // chocolate
-        {2, 2, 4, 4},  // sugar
-        {2, 4, 1, 5}}; // fat
+  // Food: 0   1     2    3
+  public int[][] matrix = {
+    {400, 200, 150, 500}, // calories
+    {3, 2, 0, 0}, // chocolate
+    {2, 2, 4, 4}, // sugar
+    {2, 4, 1, 5}
+  }; // fat
 
-    /**
-     * Imposes the model of the problem.
-     */
-    @Override public void model() {
+  /** Imposes the model of the problem. */
+  @Override
+  public void model() {
 
-        store = new Store();
+    store = new Store();
 
-        // create x before using it in SumWeight
-        x = new IntVar[m];
-        for (int i = 0; i < m; i++) {
-            x[i] = new IntVar(store, "x_" + i, 0, 10);
-        }
-
-        IntVar[] sums = new IntVar[n];
-        for (int i = 0; i < n; i++) {
-            sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MaxInt);
-
-            store.impose(new LinearInt(x, matrix[i], "==", sums[i]));
-            // store.impose(new SumWeight(x, matrix[i], sums[i]));
-            store.impose(new XgteqC(sums[i], limits[i]));
-        }
-
-        // Cost to minimize: x * price
-        cost = new IntVar(store, "cost", 0, 120);
-
-        store.impose(new LinearInt(x, price, "==", cost));
-        // store.impose( new SumWeight(x, price, cost) );
-
-        vars = new ArrayList<IntVar>();
-        for (IntVar v : x)
-            vars.add(v);
-
-
+    // create x before using it in SumWeight
+    x = new IntVar[m];
+    for (int i = 0; i < m; i++) {
+      x[i] = new IntVar(store, "x_" + i, 0, 10);
     }
 
+    IntVar[] sums = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MaxInt);
 
-    /**
-     * Imposes the model of the problem.
-     */
-    public void modelKnapsack() {
-
-        store = new Store();
-
-        // create x before using it in SumWeight
-        x = new IntVar[m];
-        for (int i = 0; i < m; i++) {
-            x[i] = new IntVar(store, "x_" + i, 0, 10);
-        }
-
-        // Cost to minimize: x * price
-        cost = new IntVar(store, "cost", 0, 120);
-
-        for (int i = 0; i < n; i++) {
-            IntVar minReq = new IntVar(store, "limit" + i, limits[i], IntDomain.MaxInt);
-            if (i != 1)
-                store.impose(new Knapsack(matrix[i], price, x, cost, minReq));
-            else {
-                // this category has some items with zero profit, violates knapsack conditions so it is not used.
-                store.impose(new LinearInt(x, matrix[i], "==", minReq));
-                // store.impose(new SumWeight(x, matrix[i], minReq));
-            }
-        }
-
-        vars = new ArrayList<IntVar>();
-        for (IntVar v : x)
-            vars.add(v);
-
+      store.impose(new LinearInt(x, matrix[i], "==", sums[i]));
+      // store.impose(new SumWeight(x, matrix[i], sums[i]));
+      store.impose(new XgteqC(sums[i], limits[i]));
     }
 
-    public static void printLastSolution(Diet diet) {
+    // Cost to minimize: x * price
+    cost = new IntVar(store, "cost", 0, 120);
 
-        System.out.println("Cost: " + diet.cost.value());
-        for (int i = 0; i < diet.m; i++) {
-            System.out.println(diet.food[i] + ": " + diet.x[i].value());
-        }
+    store.impose(new LinearInt(x, price, "==", cost));
+    // store.impose( new SumWeight(x, price, cost) );
 
+    vars = new ArrayList<IntVar>();
+    for (IntVar v : x) vars.add(v);
+  }
+
+  /** Imposes the model of the problem. */
+  public void modelKnapsack() {
+
+    store = new Store();
+
+    // create x before using it in SumWeight
+    x = new IntVar[m];
+    for (int i = 0; i < m; i++) {
+      x[i] = new IntVar(store, "x_" + i, 0, 10);
     }
 
-    /**
-     * It executes the program optimizing the diet.
-     *
-     * @param args no argument is used.
-     */
-    public static void main(String args[]) {
+    // Cost to minimize: x * price
+    cost = new IntVar(store, "cost", 0, 120);
 
-        Diet diet = new Diet();
-        diet.model();
-
-        System.out.println("Searching for optimal using sum weight constraints");
-        if (diet.searchOptimal()) {
-            printLastSolution(diet);
-        } else {
-            System.out.println("No solution.");
-        }
-
-
-        diet = new Diet();
-        diet.modelKnapsack();
-
-        System.out.println("Searching for optimal using knapsack constraints");
-        if (diet.searchOptimal()) {
-            printLastSolution(diet);
-        } else {
-            System.out.println("No solution.");
-        }
-
-        diet = new Diet();
-        diet.model();
-
-        System.out.println("Searching for all solutions using sum weight constraints");
-
-        if (diet.searchAllAtOnce()) {
-            printLastSolution(diet);
-        } else {
-            System.out.println("No solution.");
-        }
-
-
-        diet = new Diet();
-        diet.modelKnapsack();
-
-        System.out.println("Searching for all solutions using knapsack constraints");
-        if (diet.searchAllAtOnce()) {
-            printLastSolution(diet);
-        } else {
-            System.out.println("No solution.");
-        }
-
-
+    for (int i = 0; i < n; i++) {
+      IntVar minReq = new IntVar(store, "limit" + i, limits[i], IntDomain.MaxInt);
+      if (i != 1) store.impose(new Knapsack(matrix[i], price, x, cost, minReq));
+      else {
+        // this category has some items with zero profit, violates knapsack conditions so it is not
+        // used.
+        store.impose(new LinearInt(x, matrix[i], "==", minReq));
+        // store.impose(new SumWeight(x, matrix[i], minReq));
+      }
     }
 
+    vars = new ArrayList<IntVar>();
+    for (IntVar v : x) vars.add(v);
+  }
+
+  public static void printLastSolution(Diet diet) {
+
+    System.out.println("Cost: " + diet.cost.value());
+    for (int i = 0; i < diet.m; i++) {
+      System.out.println(diet.food[i] + ": " + diet.x[i].value());
+    }
+  }
+
+  /**
+   * It executes the program optimizing the diet.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    Diet diet = new Diet();
+    diet.model();
+
+    System.out.println("Searching for optimal using sum weight constraints");
+    if (diet.searchOptimal()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+
+    diet = new Diet();
+    diet.modelKnapsack();
+
+    System.out.println("Searching for optimal using knapsack constraints");
+    if (diet.searchOptimal()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+
+    diet = new Diet();
+    diet.model();
+
+    System.out.println("Searching for all solutions using sum weight constraints");
+
+    if (diet.searchAllAtOnce()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+
+    diet = new Diet();
+    diet.modelKnapsack();
+
+    System.out.println("Searching for all solutions using knapsack constraints");
+    if (diet.searchAllAtOnce()) {
+      printLastSolution(diet);
+    } else {
+      System.out.println("No solution.");
+    }
+  }
 }

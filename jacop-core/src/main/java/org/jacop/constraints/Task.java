@@ -40,89 +40,87 @@ import org.jacop.core.IntervalDomain;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class Task {
 
-    final IntVar start, dur, res;
+  final IntVar start, dur, res;
 
-    Task(IntVar start, IntVar duration, IntVar resourceUsage) {
-        this.start = start;
-        this.dur = duration;
-        this.res = resourceUsage;
-    }
+  Task(IntVar start, IntVar duration, IntVar resourceUsage) {
+    this.start = start;
+    this.dur = duration;
+    this.res = resourceUsage;
+  }
 
-    long areaMax() {
-        return dur.max() * res.max();
-    }
+  long areaMax() {
+    return dur.max() * res.max();
+  }
 
-    long areaMin() {
-        return dur.min() * res.min();
-    }
+  long areaMin() {
+    return dur.min() * res.min();
+  }
 
-    IntDomain compl() {
-        IntDomain sDom = start.dom();
-        IntDomain dDom = dur.dom();
-        return new IntervalDomain(sDom.min() + dDom.min(), sDom.max() + dDom.max());
-    }
+  IntDomain compl() {
+    IntDomain sDom = start.dom();
+    IntDomain dDom = dur.dom();
+    return new IntervalDomain(sDom.min() + dDom.min(), sDom.max() + dDom.max());
+  }
 
-    IntDomain completion() {
-        IntDomain sDom = start.dom();
-        int dDomMin = dur.dom().min();
-        return new IntervalDomain(sDom.min() + dDomMin, sDom.max() + dDomMin);
-    }
+  IntDomain completion() {
+    IntDomain sDom = start.dom();
+    int dDomMin = dur.dom().min();
+    return new IntervalDomain(sDom.min() + dDomMin, sDom.max() + dDomMin);
+  }
 
-    IntVar dur() {
-        return dur;
-    }
+  IntVar dur() {
+    return dur;
+  }
 
-    int ect() {
-        return start.min() + dur.min();
-    }
+  int ect() {
+    return start.min() + dur.min();
+  }
 
-    int est() {
-        return start.min();
-    }
+  int est() {
+    return start.min();
+  }
 
-    int lastCT() {
-        return start.max() + dur.max();
-    }
+  int lastCT() {
+    return start.max() + dur.max();
+  }
 
-    int lct() {
-        return start.max() + dur.min();
-    }
+  int lct() {
+    return start.max() + dur.min();
+  }
 
-    int lst() {
-        return start.max();
-    }
+  int lst() {
+    return start.max();
+  }
 
-    boolean minUse(IntTask t) {
-        int lst, ect;
-        IntDomain sDom = start.dom();
+  boolean minUse(IntTask t) {
+    int lst, ect;
+    IntDomain sDom = start.dom();
 
-        lst = sDom.max();
-        ect = sDom.min() + dur.min();
-        if (lst < ect) {
-            t.start = lst;
-            t.stop = ect;
-            return true;
-        } else
-            return false;
-    }
+    lst = sDom.max();
+    ect = sDom.min() + dur.min();
+    if (lst < ect) {
+      t.start = lst;
+      t.stop = ect;
+      return true;
+    } else return false;
+  }
 
-    IntVar res() {
-        return res;
-    }
+  IntVar res() {
+    return res;
+  }
 
-    IntVar start() {
-        return start;
-    }
+  IntVar start() {
+    return start;
+  }
 
-    boolean nonZeroTask() {
-        return dur.min() > 0 && res.min() > 0;
-    }
+  boolean nonZeroTask() {
+    return dur.min() > 0 && res.min() > 0;
+  }
 
-    @Override public String toString() {
-        return "[" + start + ", " + dur + ", " + res + "]";
-    }
-
+  @Override
+  public String toString() {
+    return "[" + start + ", " + dur + ", " + res + "]";
+  }
 }

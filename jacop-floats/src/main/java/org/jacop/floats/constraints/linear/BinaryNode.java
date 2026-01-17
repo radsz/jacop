@@ -38,36 +38,35 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
-
 public abstract class BinaryNode {
 
-    static AtomicInteger n = new AtomicInteger(0);
-    int id;
+  static AtomicInteger n = new AtomicInteger(0);
+  int id;
 
-    // tree structure
-    BinaryNode parent = null;
-    BinaryNode left = null;
-    BinaryNode right = null;
-    // BinaryNode sibling = null;  // currently not used
+  // tree structure
+  BinaryNode parent = null;
+  BinaryNode left = null;
+  BinaryNode right = null;
 
-    abstract void propagateAndPrune();
+  // BinaryNode sibling = null;  // currently not used
 
-    abstract void prune();
+  abstract void propagateAndPrune();
 
-    abstract void propagate();
+  abstract void prune();
 
-    abstract double min();
+  abstract void propagate();
 
-    abstract double max();
+  abstract double min();
 
-    abstract double lb();
+  abstract double max();
 
-    abstract double ub();
+  abstract double lb();
 
-    abstract void updateBounds(double min, double max, double lb, double ub);
+  abstract double ub();
 
-    public String toString() {
-        return "" + id;
-    }
+  abstract void updateBounds(double min, double max, double lb, double ub);
+
+  public String toString() {
+    return "" + id;
+  }
 }

@@ -35,45 +35,36 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 
 /**
- * Defines a Smallest Domain comparator for Variables. The variable with the smallest
- * domain has the priority.
+ * Defines a Smallest Domain comparator for Variables. The variable with the smallest domain has the
+ * priority.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class SmallestDomainFloat<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs a smallest domain variable comparator.
-     */
-    public SmallestDomainFloat() {
-    }
+  /** It constructs a smallest domain variable comparator. */
+  public SmallestDomainFloat() {}
 
-    public int compare(double left, T var) {
-        double right = ((FloatVar) var).getSizeFloat();
+  public int compare(double left, T var) {
+    double right = ((FloatVar) var).getSizeFloat();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        double left = ((FloatVar) leftVar).getSizeFloat();
-        double right = ((FloatVar) rightVar).getSizeFloat();
+  public int compare(T leftVar, T rightVar) {
+    double left = ((FloatVar) leftVar).getSizeFloat();
+    double right = ((FloatVar) rightVar).getSizeFloat();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return ((FloatVar) var).getSizeFloat();
-    }
-
+  public double metric(T var) {
+    return ((FloatVar) var).getSizeFloat();
+  }
 }

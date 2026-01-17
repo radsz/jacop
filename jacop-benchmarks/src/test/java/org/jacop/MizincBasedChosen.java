@@ -30,40 +30,37 @@
 
 package org.jacop;
 
+import java.io.IOException;
+import java.util.Collection;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
-import java.util.Collection;
-
 /**
- * Minizinc based tests for problems that run chosen minizinc based problems
- * as specified by the problem listing in minizincbasedchosen directory.
+ * Minizinc based tests for problems that run chosen minizinc based problems as specified by the
+ * problem listing in minizincbasedchosen directory.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.10
  */
-@RunWith(Parameterized.class) public class MizincBasedChosen extends MinizincBasedTestsHelper {
+@RunWith(Parameterized.class)
+public class MizincBasedChosen extends MinizincBasedTestsHelper {
 
-    protected static final String timeCategory = "mizincbasedchosen/";
+  protected static final String timeCategory = "mizincbasedchosen/";
 
+  public MizincBasedChosen(String testFilename) {
+    super(timeCategory);
+    this.testFilename = testFilename;
+  }
 
-    public MizincBasedChosen(String testFilename) {
-        super(timeCategory);
-        this.testFilename = testFilename;
-    }
+  @Parameterized.Parameters
+  public static Collection<String> parametricTest() throws IOException {
 
-    @Parameterized.Parameters public static Collection<String> parametricTest() throws IOException {
+    return fileReader(timeCategory);
+  }
 
-
-        return fileReader(timeCategory);
-    }
-
-    @Test() public void testMinizinc() throws IOException {
-        testExecution("/");
-    }
-
-
-
+  @Test()
+  public void testMinizinc() throws IOException {
+    testExecution("/");
+  }
 }

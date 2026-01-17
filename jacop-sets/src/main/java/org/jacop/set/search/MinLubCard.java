@@ -35,63 +35,48 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * Defines a minimum cardinality, of the least upper bound, variable comparator. The variable with the minimum
- * cardinality for the least upper bound has the priority.
+ * Defines a minimum cardinality, of the least upper bound, variable comparator. The variable with
+ * the minimum cardinality for the least upper bound has the priority.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Robert Åkemalm
  * @version 4.10
  */
-
 public class MinLubCard<T extends SetVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs a minimum cardinality, of the least upper bound, variable comparator.
-     */
-    public MinLubCard() {
-    }
+  /** It constructs a minimum cardinality, of the least upper bound, variable comparator. */
+  public MinLubCard() {}
 
-    /**
-     * Compares the cardinality of the variables lub to the float value.
-     */
-    public int compare(double left, T var) {
+  /** Compares the cardinality of the variables lub to the float value. */
+  public int compare(double left, T var) {
 
-        SetDomain SD = var.dom();
+    SetDomain SD = var.dom();
 
-        int right = SD.lub().getSize();
+    int right = SD.lub().getSize();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    /**
-     * Compares the cardinality of the variables lubs.
-     */
-    public int compare(T leftVar, T rightVar) {
+  /** Compares the cardinality of the variables lubs. */
+  public int compare(T leftVar, T rightVar) {
 
-        SetDomain leftSD = leftVar.dom();
-        SetDomain rightSD = rightVar.dom();
+    SetDomain leftSD = leftVar.dom();
+    SetDomain rightSD = rightVar.dom();
 
-        int left = leftSD.lub().getSize();
-        int right = rightSD.lub().getSize();
+    int left = leftSD.lub().getSize();
+    int right = rightSD.lub().getSize();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    /**
-     * Returns the cardinality of the lub.
-     */
-    public double metric(T var) {
+  /** Returns the cardinality of the lub. */
+  public double metric(T var) {
 
-        SetDomain SD = var.dom();
-        return SD.lub().getSize();
-    }
-
+    SetDomain SD = var.dom();
+    return SD.lub().getSize();
+  }
 }

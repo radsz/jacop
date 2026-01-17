@@ -41,46 +41,46 @@ import org.jacop.core.IntVar;
 
 class Task {
 
-    int index;
+  int index;
 
-    final IntVar start;
-    final IntVar dur;
-    final IntVar res;
+  final IntVar start;
+  final IntVar dur;
+  final IntVar res;
 
-    int treeIndex;
+  int treeIndex;
 
-    Task(IntVar start, IntVar duration, IntVar resourceUsage) {
-        this.start = start;
-        this.dur = duration;
-        this.res = resourceUsage;
-    }
+  Task(IntVar start, IntVar duration, IntVar resourceUsage) {
+    this.start = start;
+    this.dur = duration;
+    this.res = resourceUsage;
+  }
 
-    IntVar res() {
-        return res;
-    }
+  IntVar res() {
+    return res;
+  }
 
-    IntVar dur() {
-        return dur;
-    }
+  IntVar dur() {
+    return dur;
+  }
 
-    IntVar start() {
-        return start;
-    }
+  IntVar start() {
+    return start;
+  }
 
-    long e() {
-        return (long) dur.min() * (long) res.min();
-    }
+  long e() {
+    return (long) dur.min() * (long) res.min();
+  }
 
-    boolean exists() {
-        return dur.min() > 0 && res.min() > 0;
-    }
+  boolean exists() {
+    return dur.min() > 0 && res.min() > 0;
+  }
 
-    boolean maxNonZero() {
-        return dur.max() > 0 && res.max() > 0;
-    }
+  boolean maxNonZero() {
+    return dur.max() > 0 && res.max() > 0;
+  }
 
-    @Override public String toString() {
-        return "[" + index + ": " + start + ", " + dur + ", " + res + "]";
-    }
-
+  @Override
+  public String toString() {
+    return "[" + index + ": " + start + ", " + dur + ", " + res + "]";
+  }
 }

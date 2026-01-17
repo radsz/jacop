@@ -30,14 +30,13 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28).
@@ -45,111 +44,98 @@ import java.util.List;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-
 public class BIBD extends ExampleFD {
 
-    /**
-     * It specifies number of rows in the incidence matrix.
-     */
-    public int v = 7;
-    /**
-     * It specifies number of columns in the incidence matrix.
-     */
-    public int b = 7;
-    /**
-     * It specifies number of ones in each row.
-     */
-    public int r = 3;
-    /**
-     * It specifies number of ones in each column.
-     */
-    public int k = 3;
-    /**
-     * It specifies the value of the scalar product of any two distinct rows.
-     */
-    public int lambda = 1;
+  /** It specifies number of rows in the incidence matrix. */
+  public int v = 7;
 
-    IntVar[][] x;
+  /** It specifies number of columns in the incidence matrix. */
+  public int b = 7;
 
-    @Override public void model() {
+  /** It specifies number of ones in each row. */
+  public int r = 3;
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+  /** It specifies number of ones in each column. */
+  public int k = 3;
 
-        // Get problem size n from second program argument.
-        x = new IntVar[v][b];
+  /** It specifies the value of the scalar product of any two distinct rows. */
+  public int lambda = 1;
 
-        for (int i = 0; i < v; i++)
-            for (int j = 0; j < b; j++) {
-                x[i][j] = new BooleanVar(store, "x" + i + "_" + j);
-                vars.add(x[i][j]);
-            }
+  IntVar[][] x;
 
-        IntVar rVar = new IntVar(store, "r", r, r);
-        IntVar kVar = new IntVar(store, "k", k, k);
-        IntVar lambdaVar = new IntVar(store, "lambda", lambda, lambda);
+  @Override
+  public void model() {
 
-        for (int i = 0; i < v; i++) {
-            store.impose(new SumInt(x[i], "==", rVar), 1);
-        }
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        for (int j = 0; j < b; j++) {
-            IntVar[] column = new IntVar[v];
-            for (int i = 0; i < v; i++)
-                column[i] = x[i][j];
-            store.impose(new SumInt(column, "==", kVar), 1);
-        }
+    // Get problem size n from second program argument.
+    x = new IntVar[v][b];
 
-        for (int i = 0; i - 1 < v; i++)
-            for (int j = i + 1; j < v; j++) {
+    for (int i = 0; i < v; i++)
+      for (int j = 0; j < b; j++) {
+        x[i][j] = new BooleanVar(store, "x" + i + "_" + j);
+        vars.add(x[i][j]);
+      }
 
-                List<IntVar> result = new ArrayList<IntVar>();
+    IntVar rVar = new IntVar(store, "r", r, r);
+    IntVar kVar = new IntVar(store, "k", k, k);
+    IntVar lambdaVar = new IntVar(store, "lambda", lambda, lambda);
 
-                for (int m = 0; m < b; m++) {
-                    BooleanVar product = new BooleanVar(store, "p" + i + "_" + j + "_" + m);
-                    BooleanVar[] array = {(BooleanVar) x[i][m], (BooleanVar) x[j][m]};
-                    store.imposeDecomposition(new AndBool(array, product), 0);
-                    result.add(product);
-                }
-
-                store.impose(new SumInt(result, "==", lambdaVar), 1);
-            }
-
+    for (int i = 0; i < v; i++) {
+      store.impose(new SumInt(x[i], "==", rVar), 1);
     }
 
-
-    /**
-     * It executes the program to solve the Langford problem.
-     * It is possible to specify two parameters. If no
-     * parameter is used then default values for n and m are used.
-     *
-     * @param args the first parameter denotes n, the second parameter denotes m.
-     */
-    public static void main(String args[]) {
-
-        BIBD example = new BIBD();
-
-        if (args.length > 1) {
-            try {
-                example.v = Integer.parseInt(args[0]);
-                example.b = Integer.parseInt(args[1]);
-                example.r = Integer.parseInt(args[2]);
-                example.k = Integer.parseInt(args[3]);
-                example.lambda = Integer.parseInt(args[4]);
-            } catch (Exception ex) {
-                System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
-            }
-        }
-
-        example.model();
-
-        if (example.searchAllAtOnce()) {
-            System.out.println("Solution(s) found");
-
-            ExampleFD.printMatrix(example.x, example.v, example.b);
-
-        }
+    for (int j = 0; j < b; j++) {
+      IntVar[] column = new IntVar[v];
+      for (int i = 0; i < v; i++) column[i] = x[i][j];
+      store.impose(new SumInt(column, "==", kVar), 1);
     }
 
+    for (int i = 0; i - 1 < v; i++)
+      for (int j = i + 1; j < v; j++) {
 
+        List<IntVar> result = new ArrayList<IntVar>();
+
+        for (int m = 0; m < b; m++) {
+          BooleanVar product = new BooleanVar(store, "p" + i + "_" + j + "_" + m);
+          BooleanVar[] array = {(BooleanVar) x[i][m], (BooleanVar) x[j][m]};
+          store.imposeDecomposition(new AndBool(array, product), 0);
+          result.add(product);
+        }
+
+        store.impose(new SumInt(result, "==", lambdaVar), 1);
+      }
+  }
+
+  /**
+   * It executes the program to solve the Langford problem. It is possible to specify two
+   * parameters. If no parameter is used then default values for n and m are used.
+   *
+   * @param args the first parameter denotes n, the second parameter denotes m.
+   */
+  public static void main(String args[]) {
+
+    BIBD example = new BIBD();
+
+    if (args.length > 1) {
+      try {
+        example.v = Integer.parseInt(args[0]);
+        example.b = Integer.parseInt(args[1]);
+        example.r = Integer.parseInt(args[2]);
+        example.k = Integer.parseInt(args[3]);
+        example.lambda = Integer.parseInt(args[4]);
+      } catch (Exception ex) {
+        System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
+      }
+    }
+
+    example.model();
+
+    if (example.searchAllAtOnce()) {
+      System.out.println("Solution(s) found");
+
+      ExampleFD.printMatrix(example.x, example.v, example.b);
+    }
+  }
 }

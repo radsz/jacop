@@ -36,21 +36,32 @@ package org.jacop.constraints.cumulative;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 class ThetaLambdaUnaryNode extends ThetaNode {
 
-    // Lambda parameters
-    int pLambda;
-    int ectLambda;
-    int responsiblePLambda;
-    int responsibleEctLambda;
+  // Lambda parameters
+  int pLambda;
+  int ectLambda;
+  int responsiblePLambda;
+  int responsibleEctLambda;
 
-    ThetaLambdaUnaryNode() {
-    }
+  ThetaLambdaUnaryNode() {}
 
-    public String toString() {
-        String taskNo = task != null ? "\ntask = " + task.index : "";
-        return "node: " + index + taskNo + "\np = " + p + "\nect = " + ect + "\npLambda = " + pLambda + "\nectLambda = " + ectLambda
-            + "\nresponsiblePLambda = " + responsiblePLambda + "\nresponsibleEctLambda = " + responsibleEctLambda;
-    }
+  public String toString() {
+    String taskNo = task != null ? "\ntask = " + task.index : "";
+    return "node: "
+        + index
+        + taskNo
+        + "\np = "
+        + p
+        + "\nect = "
+        + ect
+        + "\npLambda = "
+        + pLambda
+        + "\nectLambda = "
+        + ectLambda
+        + "\nresponsiblePLambda = "
+        + responsiblePLambda
+        + "\nresponsibleEctLambda = "
+        + responsibleEctLambda;
+  }
 }

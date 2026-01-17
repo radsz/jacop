@@ -30,15 +30,15 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
 
 /*
  * It defines Value Precedence constraint for integers.
@@ -55,260 +55,259 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class ValuePrecede extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class ValuePrecede extends Constraint
+    implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    Store store;
+  Store store;
 
-    /**
-     * It specifies lists of variables for the constraint.
-     */
-    public final IntVar[] x;
-    private int n;
+  /** It specifies lists of variables for the constraint. */
+  public final IntVar[] x;
 
-    /**
-     * It specifies values s and t for the constraint.
-     */
-    protected final int s;
-    protected final int t;
+  private int n;
 
-    /*
-     * Defines variables alpha, beta, gamma for the algorithm
-     */
-    private TimeStamp<Integer> alpha;
-    private TimeStamp<Integer> beta;
-    private TimeStamp<Integer> gamma;
+  /** It specifies values s and t for the constraint. */
+  protected final int s;
 
-    private int  alphaValue;
-    private int  betaValue;
-    private int  gammaValue;
+  protected final int t;
 
-    private boolean firstConsistencyCheck = true;
+  /*
+   * Defines variables alpha, beta, gamma for the algorithm
+   */
+  private TimeStamp<Integer> alpha;
+  private TimeStamp<Integer> beta;
+  private TimeStamp<Integer> gamma;
 
-    private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
+  private int alphaValue;
+  private int betaValue;
+  private int gammaValue;
 
-    private final Map<IntVar, Integer> varMap;
+  private boolean firstConsistencyCheck = true;
 
+  private LinkedHashSet<IntVar> varQueue = new LinkedHashSet<>();
 
-    /**
-     * It constructs ValuePrecede.
-     *
-     * @param s value occuring first
-     * @param t value occuring next
-     * @param x list of arguments x's.
-     */
-    public ValuePrecede(int s, int t, IntVar[] x) {
+  private final Map<IntVar, Integer> varMap;
 
-        checkInputForNullness("x", x);
-        checkInputForDuplication("x", x);
+  /**
+   * It constructs ValuePrecede.
+   *
+   * @param s value occuring first
+   * @param t value occuring next
+   * @param x list of arguments x's.
+   */
+  public ValuePrecede(int s, int t, IntVar[] x) {
 
-        this.numberId = idNumber.incrementAndGet();
+    checkInputForNullness("x", x);
+    checkInputForDuplication("x", x);
 
-        this.s = s;
-        this.t = t;
-        this.n = x.length;
-        this.x = Arrays.copyOf(x, n);
+    this.numberId = idNumber.incrementAndGet();
 
-        queueIndex = 1;
+    this.s = s;
+    this.t = t;
+    this.n = x.length;
+    this.x = Arrays.copyOf(x, n);
 
-        varMap = Var.positionMapping(x, false, this.getClass());
+    queueIndex = 1;
 
-        setScope(Arrays.stream(x));
+    varMap = Var.positionMapping(x, false, this.getClass());
+
+    setScope(Arrays.stream(x));
+  }
+
+  /**
+   * It constructs ValuePrecede.
+   *
+   * @param s value occuring first
+   * @param t value occuring next
+   * @param x list of arguments x's.
+   */
+  public ValuePrecede(int s, int t, List<? extends IntVar> x) {
+    this(s, t, x.toArray(new IntVar[x.size()]));
+  }
+
+  // registers the constraint in the constraint store and
+  // initialize stateful variables
+  @Override
+  public void impose(Store store) {
+
+    this.store = store;
+
+    super.impose(store);
+
+    alpha = new TimeStamp<>(store, 0);
+    beta = new TimeStamp<>(store, 0);
+    gamma = new TimeStamp<>(store, 0);
+
+    alphaValue = 0;
+    betaValue = 0;
+    gammaValue = 0;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  /*
+   *
+   */
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+      initialize();
+      firstConsistencyCheck = false;
     }
 
-    /**
-     * It constructs ValuePrecede.
-     *
-     * @param s value occuring first
-     * @param t value occuring next
-     * @param x list of arguments x's.
-     */
-    public ValuePrecede(int s, int t, List<? extends IntVar> x) {
-        this(s, t, x.toArray(new IntVar[x.size()]));
+    alphaValue = alpha.value();
+    betaValue = beta.value();
+    gammaValue = gamma.value();
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      LinkedHashSet<IntVar> fdvs = varQueue;
+      varQueue = new LinkedHashSet<IntVar>();
+
+      for (IntVar v : fdvs) {
+        int i = varMap.get(v);
+        propagate(i);
+      }
+
+    } while (store.propagationHasOccurred);
+
+    // if (satisfied())
+    //     removeConstraint();
+
+    alpha.update(alphaValue);
+    beta.update(betaValue);
+    gamma.update(gammaValue);
+  }
+
+  private void initialize() {
+    int a = alphaValue;
+    while (a < n && !x[a].domain.contains(s)) {
+      x[a].domain.inComplement(store.level, x[a], t);
+      a++;
+    }
+    alphaValue = a;
+    betaValue = a;
+    gammaValue = a;
+
+    int g = a;
+    if (a < n) {
+      x[a].domain.inComplement(store.level, x[a], t);
+      do {
+        g++;
+      } while (g < n && !x[g].singleton(t));
+      gammaValue = g;
+      updateBeta();
     }
 
+    alpha.update(alphaValue);
+    beta.update(betaValue);
+    gamma.update(gammaValue);
+  }
 
-    // registers the constraint in the constraint store and
-    // initialize stateful variables
-    @Override public void impose(Store store) {
-
-        this.store = store;
-
-        super.impose(store);
-
-        alpha = new TimeStamp<>(store, 0);
-        beta = new TimeStamp<>(store, 0);
-        gamma = new TimeStamp<>(store, 0);
-
-        alphaValue = 0;
-        betaValue = 0;
-        gammaValue = 0;
-
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    /*
-     *
-     */
-    @Override public void consistency(Store store) {
-
-        if (firstConsistencyCheck) {
-            initialize();
-            firstConsistencyCheck = false;
+  private void propagate(int i) {
+    int b = betaValue;
+    if (b <= gammaValue) {
+      int a = alphaValue;
+      if (i == a && !x[i].domain.contains(s)) {
+        a++;
+        while (a < b) {
+          x[a].domain.inComplement(store.level, x[a], t);
+          a++;
         }
-
-        alphaValue = alpha.value();
-        betaValue = beta.value();
-        gammaValue = gamma.value();
-        
-        do {
-
-            store.propagationHasOccurred = false;
-
-            LinkedHashSet<IntVar> fdvs = varQueue;
-            varQueue = new LinkedHashSet<IntVar>();
-
-            for (IntVar v : fdvs) {
-                int i = varMap.get(v);
-                propagate(i);
-            }
-
-        } while (store.propagationHasOccurred);
-
-        // if (satisfied())
-        //     removeConstraint();
-
-        alpha.update(alphaValue);
-        beta.update(betaValue);
-        gamma.update(gammaValue);
-    }
-
-    private void initialize() {
-        int a = alphaValue;
         while (a < n && !x[a].domain.contains(s)) {
-            x[a].domain.inComplement(store.level, x[a], t);
-            a++;
+          x[a].domain.inComplement(store.level, x[a], t);
+          a++;
+        }
+        if (a < n) {
+          x[a].domain.inComplement(store.level, x[a], t);
         }
         alphaValue = a;
         betaValue = a;
-        gammaValue = a;
-
-        int g = a;
         if (a < n) {
-            x[a].domain.inComplement(store.level, x[a], t);
-            do {
-                g++;
-            } while (g < n && !x[g].singleton(t));
-            gammaValue = g;
-            updateBeta();
+          updateBeta();
         }
-
-        alpha.update(alphaValue);
-        beta.update(betaValue);
-        gamma.update(gammaValue);
+      } else if (i == b && !x[i].domain.contains(s)) {
+        updateBeta();
+      }
     }
+    checkGamma(i);
+  }
 
-    private void propagate(int i) {
-        int b = betaValue;
-        if (b <= gammaValue) {
-            int a = alphaValue;
-            if (i == a && !x[i].domain.contains(s)) {
-                a++;
-                while (a < b) {
-                    x[a].domain.inComplement(store.level, x[a], t);
-                    a++;
-                }
-                while (a < n && !x[a].domain.contains(s)) {
-                    x[a].domain.inComplement(store.level, x[a], t);
-                    a++;
-                }
-                if (a < n) {
-                    x[a].domain.inComplement(store.level, x[a], t);
-                }
-                alphaValue = a;
-                betaValue = a;
-                if (a < n) {
-                    updateBeta();
-                }
-            } else if (i == b && !x[i].domain.contains(s)) {
-                updateBeta();
-            }
+  private void updateBeta() {
+    int b = betaValue;
+    do {
+      b++;
+    } while (b < n && !x[b].domain.contains(s));
+
+    if (b > gammaValue) {
+      int a = alphaValue;
+      x[a].domain.inValue(store.level, x[a], s);
+      removeConstraint();
+    }
+    betaValue = b;
+  }
+
+  private void checkGamma(int i) {
+    int g = gammaValue;
+    if (betaValue < g && i < g && x[i].singleton(t)) {
+      gammaValue = i;
+      if (betaValue > i) {
+        int a = alphaValue;
+        x[a].domain.inValue(store.level, x[a], s);
+        removeConstraint();
+      }
+    }
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    int i = 0;
+    for (; i < x.length; i++) {
+      if (!x[i].domain.contains(t)) {
+        if (x[i].singleton(s)) {
+          break;
         }
-        checkGamma(i);
+      } else return false;
     }
-
-    private void updateBeta() {
-        int b = betaValue;
-        do {
-            b++;
-        } while (b < n && !x[b].domain.contains(s));
-
-        if (b > gammaValue) {
-            int a = alphaValue;
-            x[a].domain.inValue(store.level, x[a], s);
-            removeConstraint();
-        }
-        betaValue = b;
+    for (; i < x.length; i++) {
+      if (x[i].singleton(t)) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    private void checkGamma(int i) {
-        int g = gammaValue;
-        if (betaValue < g && i < g && x[i].singleton(t)) {
-            gammaValue = i;
-            if (betaValue > i) {
-                int a = alphaValue;
-                x[a].domain.inValue(store.level, x[a], s);
-                removeConstraint();
-            }
-        }
+  @Override
+  public void queueVariable(int level, Var var) {
+    varQueue.add((IntVar) var);
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    varQueue.clear();
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder resultString = new StringBuilder(id());
+
+    resultString.append(" : ValuePrecede(" + s + ", " + t + ", [");
+    int lx = x.length;
+    for (int i = 0; i < lx; i++) {
+      resultString.append(x[i]);
+      if (i < lx - 1) resultString.append(", ");
     }
+    resultString.append("])");
 
-
-    @Override public boolean satisfied() {
-
-        int i = 0;
-        for (; i < x.length; i++) {
-           if (!x[i].domain.contains(t)) {
-                if (x[i].singleton(s)) {
-                    break;
-                }
-            }
-            else
-                return false;
-        }
-        for (; i < x.length; i++) {
-            if (x[i].singleton(t)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override public void queueVariable(int level, Var var) {
-        varQueue.add((IntVar) var);
-    }
-
-    @Override public void removeLevel(int level) {
-        varQueue.clear();
-    }
-
-    @Override public String toString() {
-
-        StringBuilder resultString = new StringBuilder(id());
-
-        resultString.append(" : ValuePrecede(" + s + ", " + t + ", [");
-        int lx = x.length;
-        for (int i = 0; i < lx; i++) {
-            resultString.append(x[i]);
-            if (i < lx - 1)
-                resultString.append(", ");
-        }
-        resultString.append("])");
-
-        return resultString.toString();
-    }
+    return resultString.toString();
+  }
 }

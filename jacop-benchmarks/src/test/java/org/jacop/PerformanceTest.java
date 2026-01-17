@@ -30,14 +30,14 @@
 
 package org.jacop;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.junit.Test;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * It is performing testing for performance comparisons.
@@ -47,90 +47,86 @@ import static org.junit.Assert.assertThat;
  */
 public class PerformanceTest extends TestHelper {
 
-    @Test public void testSumWeightPerformance() {
+  @Test
+  public void testSumWeightPerformance() {
 
-        Store store = new Store();
+    Store store = new Store();
 
-        int xLength = 15;
-        int xSize = 3;
+    int xLength = 15;
+    int xSize = 3;
 
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 10, 40);
-        SumWeight sum = new SumWeight(x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, n);
+    IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
+    IntVar n = new IntVar(store, "sum", 10, 40);
+    SumWeight sum = new SumWeight(x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, n);
 
-        store.impose(sum);
+    store.impose(sum);
 
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
+    int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-        assertThat(noOfSolutions, is(31733221));
+    assertThat(noOfSolutions, is(31733221));
+  }
 
-    }
+  @Test
+  public void testLinearIntPerformance() {
 
-    @Test public void testLinearIntPerformance() {
+    Store store = new Store();
 
-        Store store = new Store();
+    int xLength = 15;
+    int xSize = 3;
 
-        int xLength = 15;
-        int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
+    IntVar n = new IntVar(store, "sum", 10, 40);
+    LinearInt sum =
+        new LinearInt(x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, "==", n);
 
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 10, 40);
-        LinearInt sum = new LinearInt(x, new int[] {1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5}, "==", n);
+    store.impose(sum);
 
-        store.impose(sum);
+    int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
+    assertThat(noOfSolutions, is(31733221));
+  }
 
-        assertThat(noOfSolutions, is(31733221));
+  @Test
+  public void testSumWeightPerformance2() {
 
-    }
+    Store store = new Store();
 
-    @Test public void testSumWeightPerformance2() {
+    int xLength = 50;
+    int xSize = 2;
 
-        Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
+    IntVar n = new IntVar(store, "sum", 237, 240);
+    int weights[] = new int[xLength];
+    for (int i = 0; i < weights.length; i++) weights[i] = i % 6;
 
-        int xLength = 50;
-        int xSize = 2;
+    SumWeight sum = new SumWeight(x, weights, n);
 
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 237, 240);
-        int weights[] = new int[xLength];
-        for (int i = 0; i < weights.length; i++)
-            weights[i] = i % 6;
+    store.impose(sum);
 
-        SumWeight sum = new SumWeight(x, weights, n);
+    int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-        store.impose(sum);
+    assertThat(noOfSolutions, is(81428571));
+  }
 
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
+  @Test
+  public void testLinearIntPerformance2() {
 
-        assertThat(noOfSolutions, is(81428571));
+    Store store = new Store();
 
-    }
+    int xLength = 50;
+    int xSize = 2;
 
+    IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
+    IntVar n = new IntVar(store, "sum", 237, 240);
+    int weights[] = new int[xLength];
+    for (int i = 0; i < weights.length; i++) weights[i] = i % 6;
 
-    @Test public void testLinearIntPerformance2() {
+    LinearInt sum = new LinearInt(x, weights, "==", n);
 
-        Store store = new Store();
+    store.impose(sum);
 
-        int xLength = 50;
-        int xSize = 2;
+    int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-        IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
-        IntVar n = new IntVar(store, "sum", 237, 240);
-        int weights[] = new int[xLength];
-        for (int i = 0; i < weights.length; i++)
-            weights[i] = i % 6;
-
-        LinearInt sum = new LinearInt(x, weights, "==", n);
-
-        store.impose(sum);
-
-        int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(81428571));
-
-    }
-
-
+    assertThat(noOfSolutions, is(81428571));
+  }
 }

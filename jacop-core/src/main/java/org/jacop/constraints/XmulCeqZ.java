@@ -30,8 +30,8 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
 /*
  * Constraint X * C #= Z
@@ -44,120 +44,117 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XmulCeqZ extends PrimitiveConstraint {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x * c = z.
-     */
-    public final IntVar x;
+  /** It specifies variable x in constraint x * c = z. */
+  public final IntVar x;
 
-    /**
-     * It specifies constant c in constraint x * c = z.
-     */
-    public final int c;
+  /** It specifies constant c in constraint x * c = z. */
+  public final int c;
 
-    /**
-     * It specifies variable x in constraint x * c = z.
-     */
-    public final IntVar z;
+  /** It specifies variable x in constraint x * c = z. */
+  public final IntVar z;
 
-    /**
-     * It constructs a constraint X * C = Z.
-     *
-     * @param x variable x.
-     * @param c constant c.
-     * @param z variable z.
-     */
-    public XmulCeqZ(IntVar x, int c, IntVar z) {
+  /**
+   * It constructs a constraint X * C = Z.
+   *
+   * @param x variable x.
+   * @param c constant c.
+   * @param z variable z.
+   */
+  public XmulCeqZ(IntVar x, int c, IntVar z) {
 
-        checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
+    checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.c = c;
-        this.z = z;
+    this.x = x;
+    this.c = c;
+    this.z = z;
 
-        setScope(x, z);
-    }
+    setScope(x, z);
+  }
 
-    @Override public void consistency(final Store store) {
+  @Override
+  public void consistency(final Store store) {
 
-        if (c != 0)
-            do {
+    if (c != 0)
+      do {
 
-                // Bounds for Z
-                Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c);
+        // Bounds for Z
+        Interval zBounds = IntDomain.mulBounds(x.min(), x.max(), c);
 
-                z.domain.in(store.level, z, zBounds.min(), zBounds.max());
+        z.domain.in(store.level, z, zBounds.min(), zBounds.max());
 
-                store.propagationHasOccurred = false;
+        store.propagationHasOccurred = false;
 
-                // Bounds for X
-                Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), c);
+        // Bounds for X
+        Interval xBounds = IntDomain.divIntBounds(z.min(), z.max(), c);
 
-                x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+        x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
-            } while (store.propagationHasOccurred);
-        else
-            z.domain.inValue(store.level, z, 0);
-    }
+      } while (store.propagationHasOccurred);
+    else z.domain.inValue(store.level, z, 0);
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public void notConsistency(final Store store) {
 
-        if (c != 0) {
+    if (c != 0) {
 
-            if (x.singleton())
+      if (x.singleton()) z.domain.inComplement(store.level, z, x.value() * c);
 
-                z.domain.inComplement(store.level, z, x.value() * c);
+      if (z.singleton()) {
+        Interval xBounds;
 
-            if (z.singleton()) {
-                Interval xBounds;
+        try {
+          xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
+        } catch (FailException e) {
+          // z/c does not produce integer value; nothing to do since inequality holds
+          return;
+        }
 
-                try {
-                    xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
-                } catch (FailException e) {
-                    // z/c does not produce integer value; nothing to do since inequality holds
-                    return;
-                }
+        x.domain.inComplement(store.level, x, xBounds.min());
+      }
 
-                x.domain.inComplement(store.level, x, xBounds.min());
-            }
+    } else z.domain.inComplement(store.level, z, 0);
+  }
 
-        } else
-            z.domain.inComplement(store.level, z, 0);
-    }
+  @Override
+  public boolean satisfied() {
+    return grounded() && x.min() * c == z.min();
+  }
 
-    @Override public boolean satisfied() {
-        return grounded() && x.min() * c == z.min();
-    }
+  @Override
+  public boolean notSatisfied() {
 
-    @Override public boolean notSatisfied() {
+    Interval r = IntDomain.mulBounds(x.min(), x.max(), c, c);
+    return !z.domain.isIntersecting(r.min(), r.max());
+  }
 
-        Interval r = IntDomain.mulBounds(x.min(), x.max(), c, c);
-        return !z.domain.isIntersecting(r.min(), r.max());
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public String toString() {
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XmulCeqZ(" + x + ", " + c + ", " + z + " )";
-    }
-
+    return id() + " : XmulCeqZ(" + x + ", " + c + ", " + z + " )";
+  }
 }

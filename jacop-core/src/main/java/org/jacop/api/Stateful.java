@@ -38,24 +38,22 @@ package org.jacop.api;
  */
 public interface Stateful {
 
-    /**
-     * This function is called in case of the backtrack, so a constraint can
-     * clear the queue of changed variables which is no longer valid. This
-     * function is called *before* all timestamps, variables, mutablevariables
-     * have reverted to their previous value.
-     *
-     * @param level the level which is being removed.
-     */
-    void removeLevel(int level);
+  /**
+   * This function is called in case of the backtrack, so a constraint can clear the queue of
+   * changed variables which is no longer valid. This function is called *before* all timestamps,
+   * variables, mutablevariables have reverted to their previous value.
+   *
+   * @param level the level which is being removed.
+   */
+  void removeLevel(int level);
 
-    /**
-     * This function can be overriden by any constraint to specify dynamic conditions (based on
-     * the domain of variables at imposition level to decide if it is a stateful constraint.
-     *
-     * @return true if constraint is stateful.
-     */
-    default boolean isStateful() {
-        return true;
-    }
-
+  /**
+   * This function can be overriden by any constraint to specify dynamic conditions (based on the
+   * domain of variables at imposition level to decide if it is a stateful constraint.
+   *
+   * @return true if constraint is stateful.
+   */
+  default boolean isStateful() {
+    return true;
+  }
 }

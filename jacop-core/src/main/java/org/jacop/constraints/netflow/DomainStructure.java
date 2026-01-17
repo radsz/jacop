@@ -28,224 +28,217 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.netflow;
 
+import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
+
+import java.util.Arrays;
+import java.util.List;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
-import java.util.Arrays;
-import java.util.List;
-
-import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
-
 /**
  * A domain based structure variable.
- * <p>
- * Arcs can be associated to sub-domains of the structure variable. The state of
- * the arc is said to be active if the variable takes a value from its
- * sub-domain and it is inactive otherwise.
+ *
+ * <p>Arcs can be associated to sub-domains of the structure variable. The state of the arc is said
+ * to be active if the variable takes a value from its sub-domain and it is inactive otherwise.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class DomainStructure implements VarHandler {
 
-    public enum Behavior {
-        PRUNE_ACTIVE, PRUNE_INACTIVE, PRUNE_BOTH
+  public enum Behavior {
+    PRUNE_ACTIVE,
+    PRUNE_INACTIVE,
+    PRUNE_BOTH
+  }
+
+  public final IntVar variable;
+
+  public final Arc[] arcs;
+
+  public final IntDomain[] domains;
+
+  // public final int[] supports;
+  public final Behavior behavior;
+
+  public int notGrounded;
+
+  /**
+   * Creates an S-variable
+   *
+   * @param variable variable to create for
+   * @param domList list of domains
+   * @param arcList list of arcs
+   */
+  public DomainStructure(IntVar variable, List<Domain> domList, List<Arc> arcList) {
+
+    this(
+        variable,
+        domList.toArray(new IntDomain[domList.size()]),
+        arcList.toArray(new Arc[arcList.size()]));
+  }
+
+  public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs) {
+
+    this(variable, domains, arcs, Behavior.PRUNE_BOTH);
+  }
+
+  public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs, Behavior behavior) {
+
+    if (domains.length != arcs.length) throw new IllegalArgumentException("#domains != #arcs");
+
+    this.variable = variable;
+    this.arcs = arcs;
+    this.domains = domains;
+    // this.supports = new int[arcs.length];
+    this.notGrounded = arcs.length;
+    this.behavior = behavior;
+
+    for (int id = 0; id < arcs.length; id++) {
+      if (!arcs[id].forward) throw new IllegalArgumentException("Not a forward arc");
+
+      ArcCompanion companion = arcs[id].companion;
+      if (companion == null) {
+        arcs[id].companion = companion = new ArcCompanion(arcs[id], 0);
+      }
+      arcs[id].companion.structure = this;
+      arcs[id].companion.arcID = id;
+      // supports[id] = domains[id].min();
     }
+  }
 
+  // updates the network after the structure variable changed
+  public void processEvent(IntVar variable, MutableNetwork network) {
 
-    public final IntVar variable;
+    IntDomain vardom = variable.domain;
+    int size = vardom.getSize();
 
-    public final Arc[] arcs;
+    // System.out.println("Event " + variable + " is " + vardom);
 
-    public final IntDomain[] domains;
+    for (int id = notGrounded - 1; id >= 0; id--) {
 
-    // public final int[] supports;
-    public final Behavior behavior;
+      // arc already deleted ?
+      if (arcs[id].index == DELETED_ARC) {
+        // TODO can this happen after we implement arc grounding?
+        // if yes, ground arc now
+        assert false;
+        continue;
+      }
 
-    public int notGrounded;
+      int inter = domains[id].intersect(vardom).getSize();
+      // TODO is this a bug ? BoundDomain.emptyDomain.getSize() == -1
+      // (The bug is being fixed.. until then we use a workaround)
+      if (inter < 0) {
+        inter = 0;
+      }
 
-    /**
-     * Creates an S-variable
-     *
-     * @param variable variable to create for
-     * @param domList  list of domains
-     * @param arcList  list of arcs
-     */
-    public DomainStructure(IntVar variable, List<Domain> domList, List<Arc> arcList) {
-
-        this(variable, domList.toArray(new IntDomain[domList.size()]), arcList.toArray(new Arc[arcList.size()]));
-
-    }
-
-    public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs) {
-
-        this(variable, domains, arcs, Behavior.PRUNE_BOTH);
-
-    }
-
-    public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs, Behavior behavior) {
-
-        if (domains.length != arcs.length)
-            throw new IllegalArgumentException("#domains != #arcs");
-
-        this.variable = variable;
-        this.arcs = arcs;
-        this.domains = domains;
-        // this.supports = new int[arcs.length];
-        this.notGrounded = arcs.length;
-        this.behavior = behavior;
-
-        for (int id = 0; id < arcs.length; id++) {
-            if (!arcs[id].forward)
-                throw new IllegalArgumentException("Not a forward arc");
-
-            ArcCompanion companion = arcs[id].companion;
-            if (companion == null) {
-                arcs[id].companion = companion = new ArcCompanion(arcs[id], 0);
-            }
-            arcs[id].companion.structure = this;
-            arcs[id].companion.arcID = id;
-            // supports[id] = domains[id].min();
+      // make arc inactive ?
+      if (inter == 0) {
+        if (behavior != Behavior.PRUNE_ACTIVE) {
+          groundArc(id, false, network);
         }
-    }
-
-    // updates the network after the structure variable changed
-    public void processEvent(IntVar variable, MutableNetwork network) {
-
-        IntDomain vardom = variable.domain;
-        int size = vardom.getSize();
-
-        // System.out.println("Event " + variable + " is " + vardom);
-
-        for (int id = notGrounded - 1; id >= 0; id--) {
-
-            // arc already deleted ?
-            if (arcs[id].index == DELETED_ARC) {
-                // TODO can this happen after we implement arc grounding?
-                // if yes, ground arc now
-                assert false;
-                continue;
-            }
-
-            int inter = domains[id].intersect(vardom).getSize();
-            // TODO is this a bug ? BoundDomain.emptyDomain.getSize() == -1
-            // (The bug is being fixed.. until then we use a workaround)
-            if (inter < 0) {
-                inter = 0;
-            }
-
-            // make arc inactive ?
-            if (inter == 0) {
-                if (behavior != Behavior.PRUNE_ACTIVE) {
-                    groundArc(id, false, network);
-                }
-            }
-            // make arc active ?
-            else if (inter == size) {
-                if (behavior != Behavior.PRUNE_INACTIVE) {
-                    groundArc(id, true, network);
-                }
-            }
+      }
+      // make arc active ?
+      else if (inter == size) {
+        if (behavior != Behavior.PRUNE_INACTIVE) {
+          groundArc(id, true, network);
         }
+      }
+    }
+  }
+
+  private void groundArc(int arcID, boolean active, MutableNetwork network) {
+
+    assert (arcID < notGrounded);
+
+    // prune domain of x variable
+
+    Arc arc = arcs[arcID];
+    ArcCompanion companion = arc.companion;
+    IntVar xVar = companion.xVar;
+
+    // active arc - ground flow at upper bound
+    if (active) {
+
+      int maxFlow = companion.flowOffset + arc.capacity + arc.sister.capacity;
+
+      if (xVar != null) {
+        int level = network.getStoreLevel();
+        xVar.domain.in(level, xVar, maxFlow, maxFlow);
+      }
+
+      // TODO else here ? if queueVar performs update
+
+      companion.setFlow(maxFlow);
+
+      if (arc.index >= 0) {
+        // TODO this isn't nice
+        ((Network) network).lower[arc.index] = arc.sister;
+      }
+
+    }
+    // inactive arc - ground flow at lower bound
+    else {
+      int minFlow = companion.flowOffset;
+
+      if (xVar != null) {
+        int level = network.getStoreLevel();
+        xVar.domain.in(level, xVar, minFlow, minFlow);
+      }
+      // TODO else here ? if queueVar performs update
+
+      companion.setFlow(minFlow);
+      if (arc.index >= 0) {
+        // TODO this isn't nice either
+        ((Network) network).lower[arc.index] = arc;
+      }
     }
 
-    private void groundArc(int arcID, boolean active, MutableNetwork network) {
+    // remove arc from graph
+    network.remove(arcs[arcID]);
 
-        assert (arcID < notGrounded);
+    // remove domain/arc pair
+    swap(arcID, --notGrounded);
+  }
 
-        // prune domain of x variable
+  private void swap(int i, int j) {
+    if (i == j) return;
 
-        Arc arc = arcs[arcID];
-        ArcCompanion companion = arc.companion;
-        IntVar xVar = companion.xVar;
+    IntDomain temp1 = domains[i];
+    domains[i] = domains[j];
+    domains[j] = temp1;
 
-        // active arc - ground flow at upper bound
-        if (active) {
+    Arc temp2 = arcs[i];
+    arcs[i] = arcs[j];
+    arcs[j] = temp2;
 
-            int maxFlow = companion.flowOffset + arc.capacity + arc.sister.capacity;
+    arcs[j].companion.arcID = j;
+    arcs[i].companion.arcID = i;
+  }
 
-            if (xVar != null) {
-                int level = network.getStoreLevel();
-                xVar.domain.in(level, xVar, maxFlow, maxFlow);
-            }
+  public void ungroundArc(int arcID) {
+    assert (arcID >= notGrounded);
 
-            // TODO else here ? if queueVar performs update
+    // add domain/arc pair
+    // swap(arcID, notGrounded++);
+    assert (arcID == notGrounded);
+    notGrounded++;
+  }
 
-            companion.setFlow(maxFlow);
+  public List<IntVar> listVariables() {
+    return Arrays.asList(variable);
+  }
 
-            if (arc.index >= 0) {
-                // TODO this isn't nice
-                ((Network) network).lower[arc.index] = arc.sister;
-            }
+  public boolean isGrounded(int arcID) {
+    return (arcID >= notGrounded);
+  }
 
-        }
-        // inactive arc - ground flow at lower bound
-        else {
-            int minFlow = companion.flowOffset;
-
-            if (xVar != null) {
-                int level = network.getStoreLevel();
-                xVar.domain.in(level, xVar, minFlow, minFlow);
-            }
-            // TODO else here ? if queueVar performs update
-
-            companion.setFlow(minFlow);
-            if (arc.index >= 0) {
-                // TODO this isn't nice either
-                ((Network) network).lower[arc.index] = arc;
-            }
-        }
-
-        // remove arc from graph
-        network.remove(arcs[arcID]);
-
-        // remove domain/arc pair
-        swap(arcID, --notGrounded);
-    }
-
-    private void swap(int i, int j) {
-        if (i == j)
-            return;
-
-        IntDomain temp1 = domains[i];
-        domains[i] = domains[j];
-        domains[j] = temp1;
-
-        Arc temp2 = arcs[i];
-        arcs[i] = arcs[j];
-        arcs[j] = temp2;
-
-        arcs[j].companion.arcID = j;
-        arcs[i].companion.arcID = i;
-    }
-
-    public void ungroundArc(int arcID) {
-        assert (arcID >= notGrounded);
-
-        // add domain/arc pair
-        // swap(arcID, notGrounded++);
-        assert (arcID == notGrounded);
-        notGrounded++;
-    }
-
-
-    public List<IntVar> listVariables() {
-        return Arrays.asList(variable);
-    }
-
-    public boolean isGrounded(int arcID) {
-        return (arcID >= notGrounded);
-    }
-
-
-    public int getPruningEvent(Var var) {
-        return IntDomain.ANY; // for S-variables
-    }
+  public int getPruningEvent(Var var) {
+    return IntDomain.ANY; // for S-variables
+  }
 }

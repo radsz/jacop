@@ -3,36 +3,34 @@
 package org.jacop.fz;
 
 public class ASTAnnExpr extends SimpleNode {
-    public ASTAnnExpr(int id) {
-        super(id);
-    }
+  public ASTAnnExpr(int id) {
+    super(id);
+  }
 
-    public ASTAnnExpr(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTAnnExpr(Parser p, int id) {
+    super(p, id);
+  }
 
-    // My additions
-    String id = "";
-    boolean ident_present = false;
+  // My additions
+  String id = "";
+  boolean ident_present = false;
 
-    void setIdent(String ID) {
-        ident_present = true;
-        id = ID;
-    }
+  void setIdent(String ID) {
+    ident_present = true;
+    id = ID;
+  }
 
-    String getIdent() {
-        return id;
-    }
+  String getIdent() {
+    return id;
+  }
 
-    boolean idPresent() {
-        return ident_present;
-    }
+  boolean idPresent() {
+    return ident_present;
+  }
 
-    public String toString() {
-        if (ident_present)
-            return super.toString() + "(ident): " + id;
-        else
-            return super.toString();
-    }
+  public String toString() {
+    if (ident_present) return super.toString() + "(ident): " + id;
+    else return super.toString();
+  }
 }
 /* JavaCC - OriginalChecksum=630861ca1db540584d08dcc361f5d889 (do not edit this line) */

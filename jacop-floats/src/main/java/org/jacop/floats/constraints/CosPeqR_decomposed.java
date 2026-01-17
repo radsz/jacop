@@ -30,88 +30,77 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.ArrayList;
-import java.util.List;
-
-
 /**
  * Constraints cos(P) = R
- * <p>
- * Bounds consistency can be used; third parameter of constructor controls this.
+ *
+ * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
 
-    /**
-     * It contains variable p.
-     */
-    public FloatVar p;
+  /** It contains variable p. */
+  public FloatVar p;
 
-    /**
-     * It contains variable q.
-     */
-    public FloatVar q;
+  /** It contains variable q. */
+  public FloatVar q;
 
-    /**
-     * It contains constraints of the CosPeqR_decomposed constraint decomposition.
-     */
-    List<Constraint> constraints;
+  /** It contains constraints of the CosPeqR_decomposed constraint decomposition. */
+  List<Constraint> constraints;
 
-    /**
-     * It constructs cos(P) = Q constraints.
-     *
-     * @param p variable P
-     * @param q variable Q
-     */
-    public CosPeqR_decomposed(FloatVar p, FloatVar q) {
+  /**
+   * It constructs cos(P) = Q constraints.
+   *
+   * @param p variable P
+   * @param q variable Q
+   */
+  public CosPeqR_decomposed(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[] {"p", "q"}, new Object[][] {{p}, {q}});
-        this.p = p;
-        this.q = q;
-    }
+    checkInputForNullness(new String[] {"p", "q"}, new Object[][] {{p}, {q}});
+    this.p = p;
+    this.q = q;
+  }
 
-    @Override public String toString() {
+  @Override
+  public String toString() {
 
-        StringBuffer result = new StringBuffer("Decomposition of CosPeqR(" + p + ", " + q + "): { ");
+    StringBuffer result = new StringBuffer("Decomposition of CosPeqR(" + p + ", " + q + "): { ");
 
-        for (Constraint c : constraints)
-            result.append(c).append(System.getProperty("line.separator"));
-        result.append("}");
+    for (Constraint c : constraints) result.append(c).append(System.getProperty("line.separator"));
+    result.append("}");
 
-        return result.toString();
+    return result.toString();
+  }
 
-    }
+  @Override
+  public void imposeDecomposition(Store store) {
 
-    @Override public void imposeDecomposition(Store store) {
+    if (constraints == null || constraints.size() == 0) constraints = decompose(store);
 
-        if (constraints == null || constraints.size() == 0)
-            constraints = decompose(store);
+    for (Constraint c : constraints) store.impose(c);
+  }
 
-        for (Constraint c : constraints)
-            store.impose(c);
-    }
+  @Override
+  public List<Constraint> decompose(Store store) {
 
-    @Override public List<Constraint> decompose(Store store) {
+    constraints = new ArrayList<Constraint>();
 
-        constraints = new ArrayList<Constraint>();
+    FloatVar pPlus = new FloatVar(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    Constraint c1 = new PplusCeqR(p, FloatDomain.PI / 2, pPlus);
+    Constraint c2 = new SinPeqR(pPlus, q);
 
-        FloatVar pPlus = new FloatVar(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
-        Constraint c1 = new PplusCeqR(p, FloatDomain.PI / 2, pPlus);
-        Constraint c2 = new SinPeqR(pPlus, q);
+    constraints.add(c1);
+    constraints.add(c2);
 
-        constraints.add(c1);
-        constraints.add(c2);
-
-        return constraints;
-
-    }
+    return constraints;
+  }
 }

@@ -31,46 +31,40 @@
 package org.jacop.constraints.netflow.simplex;
 
 /**
- * A simple rule that always chooses the arc with maximum violation.
- * It minimizes the number of iterations but the computational overhead
- * might be large.
+ * A simple rule that always chooses the arc with maximum violation. It minimizes the number of
+ * iterations but the computational overhead might be large.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Danzig implements PivotRule {
 
-    public NetworkSimplex network;
+  public NetworkSimplex network;
 
-    public Danzig(NetworkSimplex network) {
-        this.network = network;
+  public Danzig(NetworkSimplex network) {
+    this.network = network;
+  }
+
+  /**
+   * Finds the lower arc which violates optimality the most (If all lower arcs satisfy optimality
+   * then all upper arcs do too. In this case null is returned)
+   */
+  public Arc next() {
+    Arc next = null;
+    int minimumCost = 0;
+    for (int i = 0; i < network.numArcs; i++) {
+      Arc arc = network.lower[i];
+      int reducedCost = arc.reducedCost();
+      if (minimumCost > reducedCost) {
+        minimumCost = reducedCost;
+        next = arc;
+      }
     }
+    return next;
+  }
 
+  public void reset() {
+    // TODO Auto-generated method stub
 
-    /**
-     * Finds the lower arc which violates optimality the most
-     * (If all lower arcs satisfy optimality then all upper arcs do too.
-     * In this case null is returned)
-     */
-    public Arc next() {
-        Arc next = null;
-        int minimumCost = 0;
-        for (int i = 0; i < network.numArcs; i++) {
-            Arc arc = network.lower[i];
-            int reducedCost = arc.reducedCost();
-            if (minimumCost > reducedCost) {
-                minimumCost = reducedCost;
-                next = arc;
-            }
-        }
-        return next;
-    }
-
-
-    public void reset() {
-        // TODO Auto-generated method stub
-
-    }
-
+  }
 }

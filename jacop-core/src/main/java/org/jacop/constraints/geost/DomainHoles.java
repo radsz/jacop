@@ -29,234 +29,228 @@
  */
 package org.jacop.constraints.geost;
 
+import java.util.Arrays;
+import java.util.Collection;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Internal constraint used to generate outboxes that correspond to holes in the
- *          feasible domain of the object origin.
- *          <p>
- *          Due to the amount of space it can cover, this constraint will probably cause
- *          slower processing in case of domains with holes, when using the event point
- *          series to prune the set of internal constraints
- *          <p>
- *          TODO implement outbox generation for time (if feasible)
+ *     <p>Internal constraint used to generate outboxes that correspond to holes in the feasible
+ *     domain of the object origin.
+ *     <p>Due to the amount of space it can cover, this constraint will probably cause slower
+ *     processing in case of domains with holes, when using the event point series to prune the set
+ *     of internal constraints
+ *     <p>TODO implement outbox generation for time (if feasible)
  */
-
 public class DomainHoles extends InternalConstraint {
 
-    final static boolean debug = false;
+  static final boolean debug = false;
 
-    final GeostObject object;
+  final GeostObject object;
 
-    /**
-     * It creates Domain Holes internal constraint for a given object. This
-     * internal constraint reflects the holes in the domains of the objects
-     * variables.
-     *
-     * @param object the object for which the domain holes internal constraint
-     *               is applied to.
-     */
-    public DomainHoles(GeostObject object) {
-        super();
-        this.object = object;
-    }
+  /**
+   * It creates Domain Holes internal constraint for a given object. This internal constraint
+   * reflects the holes in the domains of the objects variables.
+   *
+   * @param object the object for which the domain holes internal constraint is applied to.
+   */
+  public DomainHoles(GeostObject object) {
+    super();
+    this.object = object;
+  }
 
-    @Override public int[] absInfeasible(Geost.SweepDirection minlex) {
+  @Override
+  public int[] absInfeasible(Geost.SweepDirection minlex) {
 
-        //don't allocate array for transient data
-        int[] outPoint = DBox.getAllocatedInstance(object.dimension).origin;
+    // don't allocate array for transient data
+    int[] outPoint = DBox.getAllocatedInstance(object.dimension).origin;
 
-		/*
+    /*
      * if for some dimension there is a hole, the hole will slice the
-		 * whole feasible domain; in other words, the minimal point is
-		 * the extremum of the hole in its dimension, and the complete space
-		 * in the other dimensions
-		 * 
-		 * A direct implication is that if there are holes in more than
-		 * one dimension, the extrema are the whole space
-		 */
-
-        //counts the number of dimensions that have a hole
-        int holeCount = 0;
-
-        //the dimension that has a hole
-        int holeDimension = 0;
-
-        //the extremum of the hole in the dimension of interest
-        int holeBound = 0;
-
-        for (int i = 0; i < object.dimension; i++) {
-
-            IntVar v = object.coords[i];
-
-            if (v.domain.noIntervals() > 1) {
-
-                holeCount++;
-
-                if (holeCount > 1)
-                    break; //stop here if we have already seen a hole
-
-                holeDimension = i;
-
-                //implies that there is at least one hole in the domain
-                switch (minlex) {
-
-                    case PRUNEMAX:
-                        //last infeasible point is lower bound of last interval
-                        holeBound = v.domain.getInterval(v.domain.noIntervals() - 1).min;
-                        break;
-                    case PRUNEMIN:
-                        //first infeasible point is upper bound of first interval
-                        holeBound = v.domain.getInterval(0).max;
-                        break;
-                }
-
-            }
-
-        }
-
-        assert (holeCount == 0 || holeCount == 1 || holeCount == 2) : "bad number of holes";
-
-        if (holeCount == 0) {
-            //no hole: no infeasible area
-            Arrays.fill(outPoint, 0);
-
-        } else {
-			
-			/*
-			 * holes in at least 2 different dimensions, absolute max infeasible points are extrema
-			 * of the domain
-			 */
-            switch (minlex) {
-                case PRUNEMAX:
-                    Arrays.fill(outPoint, Integer.MAX_VALUE);
-                    break;
-                case PRUNEMIN:
-                    Arrays.fill(outPoint, Integer.MIN_VALUE);
-                    break;
-            }
-
-            if (holeCount == 1)
-                //same thing as before, except that in the dimension with the hole, the extremum is the hole extremum
-                outPoint[holeDimension] = holeBound;
-
-        }
-
-        return outPoint;
-    }
-
-
-
-    /**
-     * It specifies if still any domain variable of the object in focus by this domain holes constraint
-     * has still any holes.
+     * whole feasible domain; in other words, the minimal point is
+     * the extremum of the hole in its dimension, and the complete space
+     * in the other dimensions
      *
-     * @return true if there are holes, false otherwise.
+     * A direct implication is that if there are holes in more than
+     * one dimension, the extrema are the whole space
      */
-    public boolean stillHasHole() {
 
-        assert (object.dimension == object.coords.length) : "object dimension is not equal to dimension indicated by coords.";
+    // counts the number of dimensions that have a hole
+    int holeCount = 0;
 
-        IntVar[] vars = object.coords;
+    // the dimension that has a hole
+    int holeDimension = 0;
 
-        for (IntVar v : vars)
-            if (v.domain.noIntervals() > 1)
-                return true;
+    // the extremum of the hole in the dimension of interest
+    int holeBound = 0;
 
-        return false;
+    for (int i = 0; i < object.dimension; i++) {
 
-    }
+      IntVar v = object.coords[i];
 
-    @Override public int cardInfeasible() {
-        //priority is actually not defined here, but in findForbiddenDomain
-        return 0;
-    }
+      if (v.domain.noIntervals() > 1) {
 
-    @Override public Collection<Var> definingVariables() {
-        return object.getVariables();
-    }
+        holeCount++;
 
-    @Override public DBox isFeasible(Geost.SweepDirection min, LexicographicalOrder order, GeostObject o, int currentShape, int[] c) {
+        if (holeCount > 1) break; // stop here if we have already seen a hole
 
-        if (o != object)
-            return null; //only need to work if this is the same object
+        holeDimension = i;
 
-        DBox forbiddenRegion = DBox.getAllocatedInstance(o.dimension + 1);
-
-        int[] forbiddenOrigin = forbiddenRegion.origin;
-        int[] forbiddenLength = forbiddenRegion.length;
-
-        //TODO make sure which dimension ordering is the best
-		/*
-		 * give an outbox that advances the sweep most in its current dimension,
-		 * in other words, begin with the less significant dimension.
-		 * The forbidden domain may be seen again, but for a more significant dimension
-		 * only.
-		 * This still needs to be discussed.
-		 */
-        for (int i = 0; i < o.dimension + 1; i++) {
-
-            int d = order.dimensionAt(i);
-            if (d == o.dimension) {
-                // ignore time for now //TODO implement if possible, to improve pruning.
-
-            } else {
-                IntDomain dom = o.coords[d].domain;
-                if (dom.noIntervals() == 1)
-                    continue; //there are no domain holes in this dimension
-                if (!dom.contains(c[d])) {
-
-                    assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d] : "current point not located in a domain hole";
-
-                    if (debug)
-                        System.out.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
-					
-					/*
-					 * we found a hole, the infeasible slice is the whole domain, except in the
-					 * dimension of the hole
-					 */
-                    for (int j = 0; j < o.dimension + 1; j++) {
-                        if (j == d) {
-                            forbiddenOrigin[j] = dom.previousValue(c[d]) + 1; //min bound not feasible
-                            forbiddenLength[j] = dom.nextValue(c[d]) - forbiddenOrigin[j]; // max bound feasible
-                        } else {
-                            forbiddenOrigin[j] = Integer.MIN_VALUE / 2;
-                            forbiddenLength[j] = Integer.MAX_VALUE;
-                        }
-                    }
-
-                    if (debug) {
-                        System.out.println("forbidden domain: " + forbiddenRegion);
-                    }
-
-                    assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
-
-                    assert forbiddenRegion.containsPoint(c) : "bad forbidden region, c is not contained";
-
-                    return forbiddenRegion;
-                }
-                if (debug) {
-                    System.out.println(Arrays.toString(c) + " is not in a hole of " + o.coords[d]);
-                }
-            }
+        // implies that there is at least one hole in the domain
+        switch (minlex) {
+          case PRUNEMAX:
+            // last infeasible point is lower bound of last interval
+            holeBound = v.domain.getInterval(v.domain.noIntervals() - 1).min;
+            break;
+          case PRUNEMIN:
+            // first infeasible point is upper bound of first interval
+            holeBound = v.domain.getInterval(0).max;
+            break;
         }
-
-        return null;
+      }
     }
 
-    @Override public boolean isStatic() {
-        return false;
+    assert (holeCount == 0 || holeCount == 1 || holeCount == 2) : "bad number of holes";
+
+    if (holeCount == 0) {
+      // no hole: no infeasible area
+      Arrays.fill(outPoint, 0);
+
+    } else {
+
+      /*
+       * holes in at least 2 different dimensions, absolute max infeasible points are extrema
+       * of the domain
+       */
+      switch (minlex) {
+        case PRUNEMAX:
+          Arrays.fill(outPoint, Integer.MAX_VALUE);
+          break;
+        case PRUNEMIN:
+          Arrays.fill(outPoint, Integer.MIN_VALUE);
+          break;
+      }
+
+      if (holeCount == 1)
+        // same thing as before, except that in the dimension with the hole, the extremum is the
+        // hole extremum
+        outPoint[holeDimension] = holeBound;
     }
 
-    @Override public boolean isSingleUse() {
-        return false;
+    return outPoint;
+  }
+
+  /**
+   * It specifies if still any domain variable of the object in focus by this domain holes
+   * constraint has still any holes.
+   *
+   * @return true if there are holes, false otherwise.
+   */
+  public boolean stillHasHole() {
+
+    assert (object.dimension == object.coords.length)
+        : "object dimension is not equal to dimension indicated by coords.";
+
+    IntVar[] vars = object.coords;
+
+    for (IntVar v : vars) if (v.domain.noIntervals() > 1) return true;
+
+    return false;
+  }
+
+  @Override
+  public int cardInfeasible() {
+    // priority is actually not defined here, but in findForbiddenDomain
+    return 0;
+  }
+
+  @Override
+  public Collection<Var> definingVariables() {
+    return object.getVariables();
+  }
+
+  @Override
+  public DBox isFeasible(
+      Geost.SweepDirection min,
+      LexicographicalOrder order,
+      GeostObject o,
+      int currentShape,
+      int[] c) {
+
+    if (o != object) return null; // only need to work if this is the same object
+
+    DBox forbiddenRegion = DBox.getAllocatedInstance(o.dimension + 1);
+
+    int[] forbiddenOrigin = forbiddenRegion.origin;
+    int[] forbiddenLength = forbiddenRegion.length;
+
+    // TODO make sure which dimension ordering is the best
+    /*
+     * give an outbox that advances the sweep most in its current dimension,
+     * in other words, begin with the less significant dimension.
+     * The forbidden domain may be seen again, but for a more significant dimension
+     * only.
+     * This still needs to be discussed.
+     */
+    for (int i = 0; i < o.dimension + 1; i++) {
+
+      int d = order.dimensionAt(i);
+      if (d == o.dimension) {
+        // ignore time for now //TODO implement if possible, to improve pruning.
+
+      } else {
+        IntDomain dom = o.coords[d].domain;
+        if (dom.noIntervals() == 1) continue; // there are no domain holes in this dimension
+        if (!dom.contains(c[d])) {
+
+          assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
+              : "current point not located in a domain hole";
+
+          if (debug) System.out.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
+
+          /*
+           * we found a hole, the infeasible slice is the whole domain, except in the
+           * dimension of the hole
+           */
+          for (int j = 0; j < o.dimension + 1; j++) {
+            if (j == d) {
+              forbiddenOrigin[j] = dom.previousValue(c[d]) + 1; // min bound not feasible
+              forbiddenLength[j] = dom.nextValue(c[d]) - forbiddenOrigin[j]; // max bound feasible
+            } else {
+              forbiddenOrigin[j] = Integer.MIN_VALUE / 2;
+              forbiddenLength[j] = Integer.MAX_VALUE;
+            }
+          }
+
+          if (debug) {
+            System.out.println("forbidden domain: " + forbiddenRegion);
+          }
+
+          assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
+
+          assert forbiddenRegion.containsPoint(c) : "bad forbidden region, c is not contained";
+
+          return forbiddenRegion;
+        }
+        if (debug) {
+          System.out.println(Arrays.toString(c) + " is not in a hole of " + o.coords[d]);
+        }
+      }
     }
+
+    return null;
+  }
+
+  @Override
+  public boolean isStatic() {
+    return false;
+  }
+
+  @Override
+  public boolean isSingleUse() {
+    return false;
+  }
 }

@@ -30,12 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X {@literal <} C
@@ -43,74 +42,77 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XltC extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x to be lower than a given constant.
-     */
-    final public IntVar x;
+  /** It specifies variable x to be lower than a given constant. */
+  public final IntVar x;
 
-    /**
-     * It specifies constant
-     */
-    final public int c;
+  /** It specifies constant */
+  public final int c;
 
-    /**
-     * It constructs constraint X {@literal <} C.
-     *
-     * @param x variable x.
-     * @param c constant c.
-     */
-    public XltC(IntVar x, int c) {
+  /**
+   * It constructs constraint X {@literal <} C.
+   *
+   * @param x variable x.
+   * @param c constant c.
+   */
+  public XltC(IntVar x, int c) {
 
-        if (x == null)
-            throw new IllegalArgumentException("Constraint XltC has variable x that is null.");
+    if (x == null)
+      throw new IllegalArgumentException("Constraint XltC has variable x that is null.");
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.c = c;
+    this.x = x;
+    this.c = c;
 
-        setScope(x);
-    }
+    setScope(x);
+  }
 
-    @Override public void consistency(final Store store) {
-        x.domain.inMax(store.level, x, c - 1);
-    }
+  @Override
+  public void consistency(final Store store) {
+    x.domain.inMax(store.level, x, c - 1);
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override public void notConsistency(final Store store) {
-        x.domain.inMin(store.level, x, c);
-    }
+  @Override
+  public void notConsistency(final Store store) {
+    x.domain.inMin(store.level, x, c);
+  }
 
-    @Override public boolean notSatisfied() {
-        return x.min() >= c;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return x.min() >= c;
+  }
 
-    @Override public boolean satisfied() {
-        return x.max() < c;
-    }
+  @Override
+  public boolean satisfied() {
+    return x.max() < c;
+  }
 
-    @Override public String toString() {
-        return id() + " : XltC(" + x + ", " + c + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XltC(" + x + ", " + c + " )";
+  }
 }

@@ -30,76 +30,65 @@
 
 package org.jacop.search;
 
+import java.util.Random;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import java.util.Random;
 
 /**
- * IndomainRandom - implements enumeration method based on the selection of the
- * random value in the domain of FD variable. Can split domains into multiple
- * intervals
+ * IndomainRandom - implements enumeration method based on the selection of the random value in the
+ * domain of FD variable. Can split domains into multiple intervals
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
-    private final Random generator;
+  private final Random generator;
 
-    /**
-     * It specifies Indomain function, which assigns values randomly.
-     */
-    public IndomainRandom() {
-        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  /** It specifies Indomain function, which assigns values randomly. */
+  public IndomainRandom() {
+    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  }
+
+  /**
+   * It specifies Indomain function, which assigns values randomly.
+   *
+   * @param seed it specifies the seed of the random generator.
+   */
+  public IndomainRandom(int seed) {
+    generator = new Random(seed);
+  }
+
+  public int indomain(IntVar var) {
+
+    assert (!var.singleton()) : "Indomain should not be called with singleton domain";
+
+    IntDomain dom = var.domain;
+
+    int min = dom.min();
+    int size = dom.getSize();
+
+    if (size == 0) return min;
+
+    int value = generator.nextInt(size);
+
+    int domainSize = dom.noIntervals();
+    if (domainSize == 1) return value + min;
+
+    for (int i = 0; i < domainSize; i++) {
+
+      int currentMin = dom.leftElement(i);
+      int currentMax = dom.rightElement(i);
+
+      // System.out.println( dom +", "+value);
+      if (currentMax - currentMin + 1 > value) return currentMin + value;
+      else value -= currentMax - currentMin + 1;
     }
 
-    /**
-     * It specifies Indomain function, which assigns values randomly.
-     *
-     * @param seed it specifies the seed of the random generator.
-     */
-    public IndomainRandom(int seed) {
-        generator = new Random(seed);
-    }
-
-    public int indomain(IntVar var) {
-
-        assert (!var.singleton()) : "Indomain should not be called with singleton domain";
-
-        IntDomain dom = var.domain;
-
-        int min = dom.min();
-        int size = dom.getSize();
-
-        if (size == 0)
-            return min;
-
-        int value = generator.nextInt(size);
-
-        int domainSize = dom.noIntervals();
-        if (domainSize == 1)
-            return value + min;
-
-        for (int i = 0; i < domainSize; i++) {
-
-            int currentMin = dom.leftElement(i);
-            int currentMax = dom.rightElement(i);
-
-            // System.out.println( dom +", "+value);
-            if (currentMax - currentMin + 1 > value)
-                return currentMin + value;
-            else
-                value -= currentMax - currentMin + 1;
-
-        }
-
-        // Only to satisfy the compiler.
-        assert false : "Error. This code should not be reached.";
-        return Integer.MAX_VALUE;
-
-    }
-
+    // Only to satisfy the compiler.
+    assert false : "Error. This code should not be reached.";
+    return Integer.MAX_VALUE;
+  }
 }

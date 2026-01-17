@@ -30,36 +30,31 @@
 
 package org.jacop.fz.constraints;
 
-import org.jacop.core.*;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashMap;
 import org.jacop.constraints.ChannelImply;
+import org.jacop.core.*;
 
 /**
- * It collects all int_eq_imp constraint to create ChannelImply
- * constraints, if possible.
+ * It collects all int_eq_imp constraint to create ChannelImply constraints, if possible.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
-
 class ImplicationConstraints extends ChannelMap {
 
-    public ImplicationConstraints(Support support) {
-        super(support);
+  public ImplicationConstraints(Support support) {
+    super(support);
+  }
+
+  void pose() {
+    Set<Map.Entry<IntVar, Map<Integer, IntVar>>> entries = cs.entrySet();
+
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : entries) {
+      IntVar var = e.getKey();
+      Map<Integer, IntVar> vb = e.getValue();
+
+      if (vb.size() > minSize) support.pose(new ChannelImply(var, vb));
     }
-
-    void pose() {
-        Set<Map.Entry<IntVar, Map<Integer,IntVar>>> entries = cs.entrySet();
-
-        for (Map.Entry<IntVar, Map<Integer,IntVar>> e : entries) {
-            IntVar var = e.getKey();
-            Map<Integer,IntVar> vb = e.getValue();
-
-            if (vb.size() > minSize)
-                support.pose(new ChannelImply(var, vb));
-        }
-    }
+  }
 }

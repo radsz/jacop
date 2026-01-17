@@ -35,85 +35,85 @@ import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
 
 /**
- * Defines a Variable for Diff2 constraints and related operations on it. It
- * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
+ * Defines a Variable for Diff2 constraints and related operations on it. It keeps current
+ * recatngles for evaluation ([[R2, R3], [R1, R3], ...]
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class Diff2Var implements MutableVar {
 
-    int index;
+  int index;
 
-    Store store;
+  Store store;
 
-    Diff2VarValue value = null;
+  Diff2VarValue value = null;
 
-    Diff2Var(Store store) {
-        Diff2VarValue val = new Diff2VarValue();
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+  Diff2Var(Store store) {
+    Diff2VarValue val = new Diff2VarValue();
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  Diff2Var(Store store, Rectangle[] R) {
+    Diff2VarValue val = new Diff2VarValue();
+    val.Rects = R;
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  int index() {
+    return index;
+  }
+
+  public MutableVarValue previous() {
+    return value.previousDiff2VarValue;
+  }
+
+  public void removeLevel(int removeLevel) {
+    if (value.stamp == removeLevel) {
+      value = value.previousDiff2VarValue;
     }
+  }
 
-    Diff2Var(Store store, Rectangle[] R) {
-        Diff2VarValue val = new Diff2VarValue();
-        val.Rects = R;
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+  public void setCurrent(MutableVarValue o) {
+    value = (Diff2VarValue) o;
+  }
+
+  int stamp() {
+    return value.stamp;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer();
+    result.append("Diff2Var[").append(index).append("] = [");
+    result.append(value).append("]");
+    return result.toString();
+  }
+
+  public void update(MutableVarValue val) {
+    if (value.stamp == store.level) {
+      // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
+      // New " + val);
+      value.setValue(((Diff2VarValue) val).Rects);
+      // System.out.println(", OUT "+ VarValue);
+    } else if (value.stamp < store.level) {
+      // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
+      // + val);
+
+      val.setStamp(store.level);
+      val.setPrevious(value);
+      value = (Diff2VarValue) val;
+
+      // System.out.println("\n=> OUT "+ this+ "\nOLD "+ value().next());
     }
+  }
 
-    int index() {
-        return index;
-    }
-
-    public MutableVarValue previous() {
-        return value.previousDiff2VarValue;
-    }
-
-    public void removeLevel(int removeLevel) {
-        if (value.stamp == removeLevel) {
-            value = value.previousDiff2VarValue;
-        }
-    }
-
-    public void setCurrent(MutableVarValue o) {
-        value = (Diff2VarValue) o;
-    }
-
-    int stamp() {
-        return value.stamp;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer();
-        result.append("Diff2Var[").append(index).append("] = [");
-        result.append(value).append("]");
-        return result.toString();
-    }
-
-    public void update(MutableVarValue val) {
-        if (value.stamp == store.level) {
-            // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
-            // New " + val);
-            value.setValue(((Diff2VarValue) val).Rects);
-            // System.out.println(", OUT "+ VarValue);
-        } else if (value.stamp < store.level) {
-            // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
-            // + val);
-
-            val.setStamp(store.level);
-            val.setPrevious(value);
-            value = (Diff2VarValue) val;
-
-            // System.out.println("\n=> OUT "+ this+ "\nOLD "+ value().next());
-        }
-    }
-
-    public MutableVarValue value() {
-        return value;
-    }
+  public MutableVarValue value() {
+    return value;
+  }
 }

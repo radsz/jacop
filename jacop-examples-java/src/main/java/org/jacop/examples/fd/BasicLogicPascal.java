@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
@@ -37,99 +38,86 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * It solves an arithmetic puzzle BASIC+LOGIC=PASCAL.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Find for the equation on the left
- *          what digits are represented by the letters
- *          different letters represent different digits
- *          <p>
- *          BASIC 			9567
- *          +LOGIC{@literal =======>} +1085
- *          PASCAL 		   10652
+ *     <p>Find for the equation on the left what digits are represented by the letters different
+ *     letters represent different digits
+ *     <p>BASIC 9567 +LOGIC{@literal =======>} +1085 PASCAL 10652
  */
 public class BasicLogicPascal extends ExampleFD {
 
+  @Override
+  public void model() {
 
-    @Override public void model() {
+    // Creating constraint store
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    // Creating FDV (finite domain variables)
+    IntVar b = new IntVar(store, "B", 0, 9);
+    IntVar a = new IntVar(store, "A", 0, 9);
+    IntVar s = new IntVar(store, "S", 0, 9);
+    IntVar i = new IntVar(store, "I", 0, 9);
+    IntVar l = new IntVar(store, "L", 0, 9);
+    IntVar o = new IntVar(store, "O", 0, 9);
+    IntVar g = new IntVar(store, "G", 0, 9);
+    IntVar c = new IntVar(store, "C", 0, 9);
+    IntVar p = new IntVar(store, "P", 0, 9);
 
-        // Creating FDV (finite domain variables)
-        IntVar b = new IntVar(store, "B", 0, 9);
-        IntVar a = new IntVar(store, "A", 0, 9);
-        IntVar s = new IntVar(store, "S", 0, 9);
-        IntVar i = new IntVar(store, "I", 0, 9);
-        IntVar l = new IntVar(store, "L", 0, 9);
-        IntVar o = new IntVar(store, "O", 0, 9);
-        IntVar g = new IntVar(store, "G", 0, 9);
-        IntVar c = new IntVar(store, "C", 0, 9);
-        IntVar p = new IntVar(store, "P", 0, 9);
+    IntVar valueBASIC = new IntVar(store, "v(BASIC)", 0, 99999);
+    IntVar valueLOGIC = new IntVar(store, "v(LOGIC)", 0, 99999);
+    IntVar valuePASCAL = new IntVar(store, "v(PASCAL)", 0, 999999);
 
-        IntVar valueBASIC = new IntVar(store, "v(BASIC)", 0, 99999);
-        IntVar valueLOGIC = new IntVar(store, "v(LOGIC)", 0, 99999);
-        IntVar valuePASCAL = new IntVar(store, "v(PASCAL)", 0, 999999);
+    // Creating arrays for FDVs
+    IntVar digits[] = {b, a, s, i, l, o, g, c, p};
+    IntVar basic[] = {b, a, s, i, c};
+    IntVar logic[] = {l, o, g, i, c};
+    IntVar pascal[] = {p, a, s, c, a, l};
 
-        // Creating arrays for FDVs
-        IntVar digits[] = {b, a, s, i, l, o, g, c, p};
-        IntVar basic[] = {b, a, s, i, c};
-        IntVar logic[] = {l, o, g, i, c};
-        IntVar pascal[] = {p, a, s, c, a, l};
+    for (IntVar v : digits) vars.add(v);
 
-        for (IntVar v : digits)
-            vars.add(v);
+    // Imposing inequalities constraints between letters
+    // Only one global constraint
+    store.impose(new Alldifferent(digits));
 
-        // Imposing inequalities constraints between letters
-        // Only one global constraint
-        store.impose(new Alldifferent(digits));
+    int[] weights5 = {10000, 1000, 100, 10, 1};
+    int[] weights6 = {100000, 10000, 1000, 100, 10, 1};
 
-        int[] weights5 = {10000, 1000, 100, 10, 1};
-        int[] weights6 = {100000, 10000, 1000, 100, 10, 1};
+    // Constraints for getting value for words
+    // BASIC = 10000 * B + 1000 * A + 100 * S + I * 10 + C * 1
+    // LOGIC = 10000 * L + 1000 * O + 100 * G + I * 10 + C * 1
+    // PASCAL = 100000 * P + 10000 * A + 1000 * S + 100 * C + 10 * A + L * 1
+    store.impose(new LinearInt(basic, weights5, "==", valueBASIC));
+    // store.impose(new SumWeight(basic, weights5, valueBASIC));
+    store.impose(new LinearInt(logic, weights5, "==", valueLOGIC));
+    // store.impose(new SumWeight(logic, weights5, valueLOGIC));
+    store.impose(new LinearInt(pascal, weights6, "==", valuePASCAL));
+    // store.impose(new SumWeight(pascal, weights6, valuePASCAL));
 
-        // Constraints for getting value for words
-        // BASIC = 10000 * B + 1000 * A + 100 * S + I * 10 + C * 1
-        // LOGIC = 10000 * L + 1000 * O + 100 * G + I * 10 + C * 1
-        // PASCAL = 100000 * P + 10000 * A + 1000 * S + 100 * C + 10 * A + L * 1
-        store.impose(new LinearInt(basic, weights5, "==", valueBASIC));
-        // store.impose(new SumWeight(basic, weights5, valueBASIC));
-        store.impose(new LinearInt(logic, weights5, "==", valueLOGIC));
-        // store.impose(new SumWeight(logic, weights5, valueLOGIC));
-        store.impose(new LinearInt(pascal, weights6, "==", valuePASCAL));
-        // store.impose(new SumWeight(pascal, weights6, valuePASCAL));
+    // Main equation of the problem BASIC+ LOGIC = PASCAL
+    store.impose(new XplusYeqZ(valueBASIC, valueLOGIC, valuePASCAL));
+    // Since B is the first digit of BASIC
+    // and L is the first digit of LOGIC or PASCAL
+    // both letters can not be equal to zero
+    store.impose(new XneqC(basic[0], 0));
+    store.impose(new XneqC(logic[0], 0));
+    store.impose(new XneqC(pascal[0], 0));
+  }
 
-        // Main equation of the problem BASIC+ LOGIC = PASCAL
-        store.impose(new XplusYeqZ(valueBASIC, valueLOGIC, valuePASCAL));
-        // Since B is the first digit of BASIC
-        // and L is the first digit of LOGIC or PASCAL
-        // both letters can not be equal to zero
-        store.impose(new XneqC(basic[0], 0));
-        store.impose(new XneqC(logic[0], 0));
-        store.impose(new XneqC(pascal[0], 0));
+  /**
+   * It executes the program to solve this puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
 
-    }
+    BasicLogicPascal example = new BasicLogicPascal();
 
-    /**
-     * It executes the program to solve this puzzle.
-     *
-     * @param args no arguments are read.
-     */
-    public static void main(String args[]) {
+    example.model();
 
-        BasicLogicPascal example = new BasicLogicPascal();
-
-        example.model();
-
-        if (example.searchMostConstrainedStatic())
-            System.out.println("Solution(s) found");
-
-    }
-
-
+    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
+  }
 }

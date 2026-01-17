@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
@@ -37,102 +38,92 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
- * It specifies the logic puzzle (cryptogram) which need to satisfy the following
- * equation that DONALD+GERALD=ROBERT.
- * <p>
- * The solution is provided below.
- * <p>
- * Donald 		  526485
- * Gerald{@literal =====>} +197485
- * Robert         723970
+ * It specifies the logic puzzle (cryptogram) which need to satisfy the following equation that
+ * DONALD+GERALD=ROBERT.
+ *
+ * <p>The solution is provided below.
+ *
+ * <p>Donald 526485 Gerald{@literal =====>} +197485 Robert 723970
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-
 public class DonaldGeraldRobert extends ExampleFD {
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        System.out.println("Program to solve Donald+Gerald=Robert problem ");
+    System.out.println("Program to solve Donald+Gerald=Robert problem ");
 
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    // Creating constraint store
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        IntVar d = new IntVar(store, "d", 0, 9);
-        IntVar o = new IntVar(store, "o", 0, 9);
-        IntVar n = new IntVar(store, "n", 0, 9);
-        IntVar a = new IntVar(store, "a", 0, 9);
-        IntVar l = new IntVar(store, "l", 0, 9);
-        IntVar g = new IntVar(store, "g", 0, 9);
-        IntVar e = new IntVar(store, "e", 0, 9);
-        IntVar r = new IntVar(store, "r", 0, 9);
-        IntVar b = new IntVar(store, "b", 0, 9);
-        IntVar t = new IntVar(store, "t", 0, 9);
+    IntVar d = new IntVar(store, "d", 0, 9);
+    IntVar o = new IntVar(store, "o", 0, 9);
+    IntVar n = new IntVar(store, "n", 0, 9);
+    IntVar a = new IntVar(store, "a", 0, 9);
+    IntVar l = new IntVar(store, "l", 0, 9);
+    IntVar g = new IntVar(store, "g", 0, 9);
+    IntVar e = new IntVar(store, "e", 0, 9);
+    IntVar r = new IntVar(store, "r", 0, 9);
+    IntVar b = new IntVar(store, "b", 0, 9);
+    IntVar t = new IntVar(store, "t", 0, 9);
 
-        IntVar[] donald = {d, o, n, a, l, d};
-        IntVar[] gerald = {g, e, r, a, l, d};
-        IntVar[] robert = {r, o, b, e, r, t};
+    IntVar[] donald = {d, o, n, a, l, d};
+    IntVar[] gerald = {g, e, r, a, l, d};
+    IntVar[] robert = {r, o, b, e, r, t};
 
-        IntVar[] digits = {d, o, n, a, l, g, e, r, b, t};
+    IntVar[] digits = {d, o, n, a, l, g, e, r, b, t};
 
-        for (IntVar v : digits)
-            vars.add(v);
+    for (IntVar v : digits) vars.add(v);
 
-        // Imposing inequalities constraints between letters
-        store.impose(new Alldifferent(digits));
+    // Imposing inequalities constraints between letters
+    store.impose(new Alldifferent(digits));
 
-        int[] weights = {100000, 10000, 1000, 100, 10, 1};
+    int[] weights = {100000, 10000, 1000, 100, 10, 1};
 
-        IntVar donaldValue = new IntVar(store, "Donald", 0, 999999);
-        IntVar geraldValue = new IntVar(store, "Gerald", 0, 999999);
-        IntVar robertValue = new IntVar(store, "Robert", 0, 999999);
+    IntVar donaldValue = new IntVar(store, "Donald", 0, 999999);
+    IntVar geraldValue = new IntVar(store, "Gerald", 0, 999999);
+    IntVar robertValue = new IntVar(store, "Robert", 0, 999999);
 
-        store.impose(new LinearInt(donald, weights, "==", donaldValue));
-        // store.impose(new SumWeight(donald, weights, donaldValue));
-        store.impose(new LinearInt(gerald, weights, "==", geraldValue));
-        // store.impose(new SumWeight(gerald, weights, geraldValue));
-        store.impose(new LinearInt(robert, weights, "==", robertValue));
-        // store.impose(new SumWeight(robert, weights, robertValue));
+    store.impose(new LinearInt(donald, weights, "==", donaldValue));
+    // store.impose(new SumWeight(donald, weights, donaldValue));
+    store.impose(new LinearInt(gerald, weights, "==", geraldValue));
+    // store.impose(new SumWeight(gerald, weights, geraldValue));
+    store.impose(new LinearInt(robert, weights, "==", robertValue));
+    // store.impose(new SumWeight(robert, weights, robertValue));
 
-        // Equation
-        store.impose(new XplusYeqZ(donaldValue, geraldValue, robertValue));
+    // Equation
+    store.impose(new XplusYeqZ(donaldValue, geraldValue, robertValue));
 
-        // Since T is D+D mod 10 then T must be even or 5,
-        // additional reasoning.
+    // Since T is D+D mod 10 then T must be even or 5,
+    // additional reasoning.
 
-        store.impose(new XneqC(robert[5], 1));
-        store.impose(new XneqC(robert[5], 3));
-        store.impose(new XneqC(robert[5], 5));
-        store.impose(new XneqC(robert[5], 7));
-        store.impose(new XneqC(robert[5], 9));
+    store.impose(new XneqC(robert[5], 1));
+    store.impose(new XneqC(robert[5], 3));
+    store.impose(new XneqC(robert[5], 5));
+    store.impose(new XneqC(robert[5], 7));
+    store.impose(new XneqC(robert[5], 9));
 
-        // // First letter of every word can not equal 0
-        store.impose(new XneqC(donald[0], 0));
-        store.impose(new XneqC(gerald[0], 0));
-        store.impose(new XneqC(robert[0], 0));
+    // // First letter of every word can not equal 0
+    store.impose(new XneqC(donald[0], 0));
+    store.impose(new XneqC(gerald[0], 0));
+    store.impose(new XneqC(robert[0], 0));
+  }
 
-    }
+  /**
+   * It executes the program to solve cryptogram puzzle DONALD+GERALD=ROBERT.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
 
-    /**
-     * It executes the program to solve cryptogram puzzle
-     * DONALD+GERALD=ROBERT.
-     *
-     * @param args no argument is used.
-     */
-    public static void main(String args[]) {
+    DonaldGeraldRobert example = new DonaldGeraldRobert();
 
-        DonaldGeraldRobert example = new DonaldGeraldRobert();
+    example.model();
 
-        example.model();
-
-        if (example.searchSmallestDomain(false))
-            System.out.println("Solution(s) found");
-
-    }
-
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
 }

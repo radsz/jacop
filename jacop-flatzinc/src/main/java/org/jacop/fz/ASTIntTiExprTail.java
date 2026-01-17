@@ -3,59 +3,59 @@
 package org.jacop.fz;
 
 public class ASTIntTiExprTail extends SimpleNode {
-    public ASTIntTiExprTail(int id) {
-        super(id);
-    }
+  public ASTIntTiExprTail(int id) {
+    super(id);
+  }
 
-    public ASTIntTiExprTail(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTIntTiExprTail(Parser p, int id) {
+    super(p, id);
+  }
 
-    //type 0=int; 1=interval; 2=list; 3=range set
-    int type = -1;
-    int low, high;
+  // type 0=int; 1=interval; 2=list; 3=range set
+  int type = -1;
+  int low, high;
 
-    public void setType(int t) {
-        type = t;
-    }
+  public void setType(int t) {
+    type = t;
+  }
 
-    public int getType() {
-        return type;
-    }
+  public int getType() {
+    return type;
+  }
 
-    public void setLowHigh(int l, int h) {
-        low = l;
-        high = h;
-    }
+  public void setLowHigh(int l, int h) {
+    low = l;
+    high = h;
+  }
 
-    public int getLow() {
-        return low;
-    }
+  public int getLow() {
+    return low;
+  }
 
-    public int getHigh() {
-        return high;
-    }
+  public int getHigh() {
+    return high;
+  }
 
-    public String toString() {
-        String limits = type == 1 ? "" + low + ".." + high : "";
-        String typeS = null;
-        switch (type) {
-            case 0:
-                typeS = "(int): ";
-                break;
-            case 1:
-                typeS = "(interval): ";
-                break;
-            case 2:
-                typeS = "(list): ";
-                break;
-            case 3:
-                typeS = "(range): ";
-                break;
-            default:
-                throw new RuntimeException("Internal parsing error; " + getClass().getName());
-        }
-        return super.toString() + typeS + limits;
+  public String toString() {
+    String limits = type == 1 ? "" + low + ".." + high : "";
+    String typeS = null;
+    switch (type) {
+      case 0:
+        typeS = "(int): ";
+        break;
+      case 1:
+        typeS = "(interval): ";
+        break;
+      case 2:
+        typeS = "(list): ";
+        break;
+      case 3:
+        typeS = "(range): ";
+        break;
+      default:
+        throw new RuntimeException("Internal parsing error; " + getClass().getName());
     }
+    return super.toString() + typeS + limits;
+  }
 }
 /* JavaCC - OriginalChecksum=f5ca97a90bb21060f4d23a3ce57ab48b (do not edit this line) */

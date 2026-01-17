@@ -30,327 +30,291 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.Store;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
 
 /**
- * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable
- * is equal to zero. It restricts the domains of all variables to be either 0 or 1.
+ * If all x's are equal to each other then result variable is equal 1. Otherwise, result variable is
+ * equal to zero. It restricts the domains of all variables to be either 0 or 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class EqBool extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies x variables in the constraint.
-     */
-    public IntVar[] list;
+  /** It specifies x variables in the constraint. */
+  public IntVar[] list;
 
-    /**
-     * It specifies variable result in the constraint.
-     */
-    public IntVar result;
+  /** It specifies variable result in the constraint. */
+  public IntVar result;
 
-    /**
-     * It constructs eqBool.
-     *
-     * @param list   list of x's which must all be equal to the same value to make result equal 1.
-     * @param result variable which is equal 0 if x's contain different values.
-     */
-    public EqBool(IntVar[] list, IntVar result) {
+  /**
+   * It constructs eqBool.
+   *
+   * @param list list of x's which must all be equal to the same value to make result equal 1.
+   * @param result variable which is equal 0 if x's contain different values.
+   */
+  public EqBool(IntVar[] list, IntVar result) {
 
-        checkInputForNullness(new String[] {"list", "result"}, new Object[][] {list, {result}});
+    checkInputForNullness(new String[] {"list", "result"}, new Object[][] {list, {result}});
 
-        numberId = idNumber.incrementAndGet();
-        this.list = Arrays.copyOf(list, list.length);
-        this.result = result;
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
+    numberId = idNumber.incrementAndGet();
+    this.list = Arrays.copyOf(list, list.length);
+    this.result = result;
+    setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
 
-        assert (checkInvariants() == null) : checkInvariants();
+    assert (checkInvariants() == null) : checkInvariants();
+  }
 
+  /**
+   * It constructs eqBool.
+   *
+   * @param list list of variables which must all be equal to the same value to make result equal 1.
+   * @param result variable which is equal 0 if variables from list contain different values.
+   */
+  public EqBool(List<? extends IntVar> list, IntVar result) {
+    this(list.toArray(new IntVar[list.size()]), result);
+  }
+
+  /**
+   * It checks invariants required by the constraint. Namely that boolean variables have boolean
+   * domain.
+   *
+   * @return the string describing the violation of the invariant, null otherwise.
+   */
+  public String checkInvariants() {
+
+    for (IntVar var : list)
+      if (var.min() < 0 || var.max() > 1)
+        return "Variable " + var + " does not have boolean domain";
+
+    return null;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  public void consistency(Store store) {
+
+    int x1 = 0;
+    int x0 = 0;
+    int index_01 = 0;
+
+    for (int i = 0; i < list.length; i++) {
+      if (list[i].min() == 1) x1++;
+      else if (list[i].max() == 0) x0++;
+      else index_01 = i;
     }
 
-    /**
-     * It constructs eqBool.
-     *
-     * @param list   list of variables which must all be equal to the same value to make result equal 1.
-     * @param result variable which is equal 0 if variables from list contain different values.
-     */
-    public EqBool(List<? extends IntVar> list, IntVar result) {
-        this(list.toArray(new IntVar[list.size()]), result);
+    if (result.min() == 1) {
+
+      if (x0 > 0)
+        for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 0);
+      if (x1 > 0)
+        for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 1);
+
+    } else {
+      if (result.max() == 0) {
+        if (x0 == 0 && x1 == list.length - 1)
+          list[index_01].domain.inValue(store.level, list[index_01], 0);
+        if (x1 == 0 && x0 == list.length - 1)
+          list[index_01].domain.inValue(store.level, list[index_01], 1);
+      }
     }
 
-    /**
-     * It checks invariants required by the constraint. Namely that
-     * boolean variables have boolean domain.
-     *
-     * @return the string describing the violation of the invariant, null otherwise.
-     */
-    public String checkInvariants() {
+    if (x0 > 0 && x1 > 0) result.domain.inValue(store.level, result, 0);
 
-        for (IntVar var : list)
-            if (var.min() < 0 || var.max() > 1)
-                return "Variable " + var + " does not have boolean domain";
+    if (x0 == list.length || x1 == list.length) result.domain.inValue(store.level, result, 1);
+  }
 
-        return null;
+  @Override
+  public void notConsistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      int x1 = 0;
+      int x0 = 0;
+      int index_01 = 0;
+
+      for (int i = 0; i < list.length; i++) {
+        if (list[i].min() == 1) x1++;
+        else if (list[i].max() == 0) x0++;
+        else index_01 = i;
+      }
+
+      if (result.min() == 1) {
+
+        if (x0 == 0 && x1 == list.length - 1)
+          list[index_01].domain.inValue(store.level, list[index_01], 0);
+        if (x1 == 0 && x0 == list.length - 1)
+          list[index_01].domain.inValue(store.level, list[index_01], 1);
+
+      } else {
+        if (result.max() == 0) {
+          if (x0 > 0)
+            for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 0);
+          if (x1 > 0)
+            for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 1);
+        }
+      }
+
+      if (x0 > 0 && x1 > 0) result.domain.inValue(store.level, result, 1);
+
+      if (x0 == list.length || x1 == list.length) result.domain.inValue(store.level, result, 0);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    if (!result.singleton()) return false;
+
+    if (result.max() == 0) {
+
+      int x1 = 0;
+      int x0 = 0;
+
+      for (int i = 0; i < list.length; i++) {
+
+        if (list[i].min() == 1) x1++;
+        else if (list[i].max() == 0) x0++;
+
+        if (x0 > 0 && x1 > 0) return true;
+      }
+
+      return false;
+
+    } else {
+
+      if (result.min() == 1) {
+
+        if (!grounded()) return false;
+
+        for (int i = 0; i < list.length - 1; i++)
+          if (list[i].value() != list[i + 1].value()) return false;
+
+        return true;
+      } else {
+        return false;
+      }
     }
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public boolean notSatisfied() {
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+    if (!result.singleton()) return false;
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+    if (result.max() == 0) {
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+      int x1 = 0;
+      int x0 = 0;
 
-    public void consistency(Store store) {
+      for (int i = 0; i < list.length; i++) {
+
+        if (list[i].min() == 1) x1++;
+        else if (list[i].max() == 0) x0++;
+
+        if (x0 > 0 && x1 > 0) return false;
+      }
+
+      if (x0 == list.length || x1 == list.length) return true;
+
+    } else {
+
+      if (result.min() == 1) {
 
         int x1 = 0;
         int x0 = 0;
-        int index_01 = 0;
 
         for (int i = 0; i < list.length; i++) {
-            if (list[i].min() == 1)
-                x1++;
-            else if (list[i].max() == 0)
-                x0++;
-            else
-                index_01 = i;
-        }
 
-        if (result.min() == 1) {
+          if (list[i].min() == 1) x1++;
+          else if (list[i].max() == 0) x0++;
 
-            if (x0 > 0)
-                for (int i = 0; i < list.length; i++)
-                    list[i].domain.inValue(store.level, list[i], 0);
-            if (x1 > 0)
-                for (int i = 0; i < list.length; i++)
-                    list[i].domain.inValue(store.level, list[i], 1);
-
-        } else {
-            if (result.max() == 0) {
-                if (x0 == 0 && x1 == list.length - 1)
-                    list[index_01].domain.inValue(store.level, list[index_01], 0);
-                if (x1 == 0 && x0 == list.length - 1)
-                    list[index_01].domain.inValue(store.level, list[index_01], 1);
-            }
-        }
-
-        if (x0 > 0 && x1 > 0)
-            result.domain.inValue(store.level, result, 0);
-
-        if (x0 == list.length || x1 == list.length)
-            result.domain.inValue(store.level, result, 1);
-
-    }
-
-    @Override public void notConsistency(Store store) {
-
-        do {
-
-            store.propagationHasOccurred = false;
-
-            int x1 = 0;
-            int x0 = 0;
-            int index_01 = 0;
-
-            for (int i = 0; i < list.length; i++) {
-                if (list[i].min() == 1)
-                    x1++;
-                else if (list[i].max() == 0)
-                    x0++;
-                else
-                    index_01 = i;
-            }
-
-            if (result.min() == 1) {
-
-                if (x0 == 0 && x1 == list.length - 1)
-                    list[index_01].domain.inValue(store.level, list[index_01], 0);
-                if (x1 == 0 && x0 == list.length - 1)
-                    list[index_01].domain.inValue(store.level, list[index_01], 1);
-
-            } else {
-                if (result.max() == 0) {
-                    if (x0 > 0)
-                        for (int i = 0; i < list.length; i++)
-                            list[i].domain.inValue(store.level, list[i], 0);
-                    if (x1 > 0)
-                        for (int i = 0; i < list.length; i++)
-                            list[i].domain.inValue(store.level, list[i], 1);
-                }
-            }
-
-            if (x0 > 0 && x1 > 0)
-                result.domain.inValue(store.level, result, 1);
-
-            if (x0 == list.length || x1 == list.length)
-                result.domain.inValue(store.level, result, 0);
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        if (!result.singleton())
-            return false;
-
-        if (result.max() == 0) {
-
-            int x1 = 0;
-            int x0 = 0;
-
-            for (int i = 0; i < list.length; i++) {
-
-                if (list[i].min() == 1)
-                    x1++;
-                else if (list[i].max() == 0)
-                    x0++;
-
-                if (x0 > 0 && x1 > 0)
-                    return true;
-            }
-
-            return false;
-
-        } else {
-
-            if (result.min() == 1) {
-
-                if (!grounded())
-                    return false;
-
-                for (int i = 0; i < list.length - 1; i++)
-                    if (list[i].value() != list[i + 1].value())
-                        return false;
-
-                return true;
-            } else {
-                return false;
-            }
-
-        }
-
-    }
-
-    @Override public boolean notSatisfied() {
-
-        if (!result.singleton())
-            return false;
-
-        if (result.max() == 0) {
-
-            int x1 = 0;
-            int x0 = 0;
-
-            for (int i = 0; i < list.length; i++) {
-
-                if (list[i].min() == 1)
-                    x1++;
-                else if (list[i].max() == 0)
-                    x0++;
-
-                if (x0 > 0 && x1 > 0)
-                    return false;
-            }
-
-            if (x0 == list.length || x1 == list.length)
-                return true;
-
-        } else {
-
-            if (result.min() == 1) {
-
-                int x1 = 0;
-                int x0 = 0;
-
-                for (int i = 0; i < list.length; i++) {
-
-                    if (list[i].min() == 1)
-                        x1++;
-                    else if (list[i].max() == 0)
-                        x0++;
-
-                    if (x0 > 0 && x1 > 0)
-                        return true;
-                }
-
-                return false;
-            }
-
+          if (x0 > 0 && x1 > 0) return true;
         }
 
         return false;
-
-
+      }
     }
 
-    @Override public String toString() {
+    return false;
+  }
 
-        StringBuffer resultString = new StringBuffer(id());
+  @Override
+  public String toString() {
 
-        resultString.append(" : eqBool( ");
-        for (int i = 0; i < list.length; i++) {
-            resultString.append(list[i]);
-            if (i < list.length - 1)
-                resultString.append(", ");
-        }
-        resultString.append(", ");
-        resultString.append(result);
-        resultString.append(")");
-        return resultString.toString();
+    StringBuffer resultString = new StringBuffer(id());
+
+    resultString.append(" : eqBool( ");
+    for (int i = 0; i < list.length; i++) {
+      resultString.append(list[i]);
+      if (i < list.length - 1) resultString.append(", ");
+    }
+    resultString.append(", ");
+    resultString.append(result);
+    resultString.append(")");
+    return resultString.toString();
+  }
+
+  List<Constraint> constraints;
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    constraints = new ArrayList<Constraint>();
+
+    PrimitiveConstraint[] eqConstraints = new PrimitiveConstraint[list.length];
+
+    IntervalDomain booleanDom = new IntervalDomain(0, 1);
+
+    for (int i = 0; i < eqConstraints.length - 1; i++) {
+      eqConstraints[0] = new XeqY(list[i], list[i + 1]);
+      constraints.add(new In(list[i], booleanDom));
     }
 
-    List<Constraint> constraints;
+    constraints.add(new In(result, booleanDom));
 
-    @Override public List<Constraint> decompose(Store store) {
+    constraints.add(new Eq(new And(eqConstraints), new XeqC(result, 1)));
 
-        constraints = new ArrayList<Constraint>();
+    return constraints;
+  }
 
-        PrimitiveConstraint[] eqConstraints = new PrimitiveConstraint[list.length];
+  @Override
+  public void imposeDecomposition(Store store) {
 
-        IntervalDomain booleanDom = new IntervalDomain(0, 1);
+    if (constraints == null) constraints = decompose(store);
 
-        for (int i = 0; i < eqConstraints.length - 1; i++) {
-            eqConstraints[0] = new XeqY(list[i], list[i + 1]);
-            constraints.add(new In(list[i], booleanDom));
-        }
-
-        constraints.add(new In(result, booleanDom));
-
-        constraints.add(new Eq(new And(eqConstraints), new XeqC(result, 1)));
-
-        return constraints;
-    }
-
-    @Override public void imposeDecomposition(Store store) {
-
-        if (constraints == null)
-            constraints = decompose(store);
-
-        for (Constraint c : constraints)
-            store.impose(c, queueIndex);
-
-    }
-
+    for (Constraint c : constraints) store.impose(c, queueIndex);
+  }
 }

@@ -31,21 +31,19 @@
 package org.jacop.api;
 
 /**
- * Interface that provides the entity ability to be called after the level
- * has been removed to finalize the removal of the level for the constraint.
+ * Interface that provides the entity ability to be called after the level has been removed to
+ * finalize the removal of the level for the constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
 public interface RemoveLevelLate {
 
-    /**
-     * This function is called in case of the backtrack. It is called
-     * after all timestamps, variables, mutablevariables have reverted
-     * to their values *after* removing the level.
-     *
-     * @param level the level which is being removed.
-     */
-    public void removeLevelLate(int level);
-
+  /**
+   * This function is called in case of the backtrack. It is called after all timestamps, variables,
+   * mutablevariables have reverted to their values *after* removing the level.
+   *
+   * @param level the level which is being removed.
+   */
+  public void removeLevelLate(int level);
 }

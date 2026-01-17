@@ -35,120 +35,120 @@ import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
 
 /**
- * Defines a variable for Linear constraints to keep intermediate bounds
- * values
+ * Defines a variable for Linear constraints to keep intermediate bounds values
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 class BoundsVar implements MutableVar {
 
-    int index;
+  int index;
 
-    Store store;
+  Store store;
 
-    BoundsVarValue value = null;
+  BoundsVarValue value = null;
 
-    BoundsVar(Store store) {
-        BoundsVarValue val = new BoundsVarValue();
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+  BoundsVar(Store store) {
+    BoundsVarValue val = new BoundsVarValue();
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  BoundsVar(Store store, double min, double max) {
+    BoundsVarValue val = new BoundsVarValue();
+
+    assert (min <= max) : "Min value " + min + " greater than max value " + max + " in BoundsVar";
+
+    val.min = min;
+    val.max = max;
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  BoundsVar(Store store, double min, double max, double lb, double ub) {
+    BoundsVarValue val = new BoundsVarValue();
+
+    assert (min <= max) : "Min value " + min + " greater than max value " + max + " in BoundsVar";
+
+    val.min = min;
+    val.max = max;
+    val.lb = lb;
+    val.ub = ub;
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  int index() {
+    return index;
+  }
+
+  public MutableVarValue previous() {
+    return value.previousBoundsVarValue;
+  }
+
+  public void removeLevel(int removeLevel) {
+    if (value.stamp == removeLevel) {
+      value = value.previousBoundsVarValue;
     }
+  }
 
-    BoundsVar(Store store, double min, double max) {
-        BoundsVarValue val = new BoundsVarValue();
+  public void setCurrent(MutableVarValue o) {
+    value = (BoundsVarValue) o;
+  }
 
-        assert (min <= max) : "Min value " + min + " greater than max value " + max + " in BoundsVar";
+  int stamp() {
+    return value.stamp;
+  }
 
-        val.min = min;
-        val.max = max;
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer();
+    result.append("BoundsVar[").append(index).append("] = [");
+    result.append(value).append("]");
+    return result.toString();
+  }
+
+  public void update(MutableVarValue val) {
+    if (value.stamp == store.level) {
+
+      value.setValue(
+          ((BoundsVarValue) val).min,
+          ((BoundsVarValue) val).max,
+          ((BoundsVarValue) val).lb,
+          ((BoundsVarValue) val).ub);
+
+    } else if (value.stamp < store.level) {
+
+      val.setStamp(store.level);
+      val.setPrevious(value);
+      value = (BoundsVarValue) val;
     }
+  }
 
-    BoundsVar(Store store, double min, double max, double lb, double ub) {
-        BoundsVarValue val = new BoundsVarValue();
+  public void update(double min, double max, double lb, double ub) {
+    if (value.stamp == store.level) {
 
-        assert (min <= max) : "Min value " + min + " greater than max value " + max + " in BoundsVar";
+      // value.setValue(min, max);
+      value.min = min;
+      value.max = max;
 
-        val.min = min;
-        val.max = max;
-        val.lb = lb;
-        val.ub = ub;
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+      value.lb = lb;
+      value.ub = ub;
+
+    } else if (value.stamp < store.level) {
+
+      BoundsVarValue val = new BoundsVarValue(min, max, lb, ub);
+      val.stamp = store.level;
+      val.setPrevious(value);
+      value = val;
     }
+  }
 
-    int index() {
-        return index;
-    }
-
-    public MutableVarValue previous() {
-        return value.previousBoundsVarValue;
-    }
-
-    public void removeLevel(int removeLevel) {
-        if (value.stamp == removeLevel) {
-            value = value.previousBoundsVarValue;
-        }
-    }
-
-    public void setCurrent(MutableVarValue o) {
-        value = (BoundsVarValue) o;
-    }
-
-    int stamp() {
-        return value.stamp;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer();
-        result.append("BoundsVar[").append(index).append("] = [");
-        result.append(value).append("]");
-        return result.toString();
-    }
-
-    public void update(MutableVarValue val) {
-        if (value.stamp == store.level) {
-
-            value.setValue(((BoundsVarValue) val).min, ((BoundsVarValue) val).max, ((BoundsVarValue) val).lb, ((BoundsVarValue) val).ub);
-
-        } else if (value.stamp < store.level) {
-
-            val.setStamp(store.level);
-            val.setPrevious(value);
-            value = (BoundsVarValue) val;
-
-        }
-    }
-
-
-    public void update(double min, double max, double lb, double ub) {
-        if (value.stamp == store.level) {
-
-            // value.setValue(min, max);
-            value.min = min;
-            value.max = max;
-
-            value.lb = lb;
-            value.ub = ub;
-
-        } else if (value.stamp < store.level) {
-
-            BoundsVarValue val = new BoundsVarValue(min, max, lb, ub);
-            val.stamp = store.level;
-            val.setPrevious(value);
-            value = val;
-
-        }
-    }
-
-    public MutableVarValue value() {
-        return value;
-    }
+  public MutableVarValue value() {
+    return value;
+  }
 }

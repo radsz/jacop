@@ -30,11 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /*
  * Constraints X #\= C
@@ -45,73 +45,76 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class XneqC extends PrimitiveConstraint {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x != c.
-     */
-    public final IntVar x;
+  /** It specifies variable x in constraint x != c. */
+  public final IntVar x;
 
-    /**
-     * It specifies constant c in constraint x != c.
-     */
-    public final int c;
+  /** It specifies constant c in constraint x != c. */
+  public final int c;
 
-    /**
-     * It constructs x != c constraint.
-     *
-     * @param x variable x.
-     * @param c constant c.
-     */
-    public XneqC(IntVar x, int c) {
+  /**
+   * It constructs x != c constraint.
+   *
+   * @param x variable x.
+   * @param c constant c.
+   */
+  public XneqC(IntVar x, int c) {
 
-        if (x == null)
-            throw new IllegalArgumentException("Constraint XgtC has variable x that is null.");
+    if (x == null)
+      throw new IllegalArgumentException("Constraint XgtC has variable x that is null.");
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.c = c;
+    this.x = x;
+    this.c = c;
 
-        setScope(x);
-    }
+    setScope(x);
+  }
 
-    @Override public void consistency(final Store store) {
+  @Override
+  public void consistency(final Store store) {
 
-        x.domain.inComplement(store.level, x, c);
+    x.domain.inComplement(store.level, x, c);
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  public void notConsistency(final Store store) {
+    x.domain.inValue(store.level, x, c);
+  }
 
-    @Override public void notConsistency(final Store store) {
-        x.domain.inValue(store.level, x, c);
-    }
+  @Override
+  public boolean notSatisfied() {
+    return x.singleton(c);
+  }
 
-    @Override public boolean notSatisfied() {
-        return x.singleton(c);
-    }
+  @Override
+  public boolean satisfied() {
+    return !x.domain.contains(c);
+  }
 
-    @Override public boolean satisfied() {
-        return !x.domain.contains(c);
-    }
-
-    @Override public String toString() {
-        return id() + " : XneqC(" + x + ", " + c + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XneqC(" + x + ", " + c + " )";
+  }
 }

@@ -30,6 +30,10 @@
 
 package org.jacop.constraints.netflow;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.LinearInt;
@@ -38,290 +42,263 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 /**
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Arithmetic extends DecomposedConstraint<Constraint> {
 
-    public static final IntVar NULL_VAR = new IntVar() {
-        @Override public String toString() {
-            return "NULL-var";
+  public static final IntVar NULL_VAR =
+      new IntVar() {
+        @Override
+        public String toString() {
+          return "NULL-var";
         }
-    };
+      };
 
-    protected List<int[]> eqns;
-    protected List<IntVar> vars;
-    protected Map<IntVar, Integer> map;
+  protected List<int[]> eqns;
+  protected List<IntVar> vars;
+  protected Map<IntVar, Integer> map;
 
-    List<Constraint> decomposition;
+  List<Constraint> decomposition;
 
-    public Arithmetic() {
-        this.eqns = new ArrayList<int[]>();
-        this.vars = new ArrayList<IntVar>();
-        this.map = Var.createEmptyPositioning();
+  public Arithmetic() {
+    this.eqns = new ArrayList<int[]>();
+    this.vars = new ArrayList<IntVar>();
+    this.map = Var.createEmptyPositioning();
 
-        vars.add(NULL_VAR);
-        map.put(NULL_VAR, 0);
+    vars.add(NULL_VAR);
+    map.put(NULL_VAR, 0);
+  }
+
+  private int lookup(IntVar var) {
+    Integer id = map.get(var);
+    if (id == null) {
+      map.put(var, id = vars.size());
+      vars.add(var);
+    }
+    return id;
+  }
+
+  public void addEquation(IntVar[] vars, int[] coeffs) {
+    addEquation(vars, coeffs, 0);
+  }
+
+  public void addEquation(IntVar[] vars, int[] coeffs, int constant) {
+    if (vars.length == 0 || vars.length != coeffs.length) throw new IllegalArgumentException();
+
+    int max = 1;
+    for (int i = 0; i < vars.length; i++) {
+      int id = lookup(vars[i]);
+      if (max <= id) max = id + 1;
     }
 
-    private int lookup(IntVar var) {
-        Integer id = map.get(var);
-        if (id == null) {
-            map.put(var, id = vars.size());
-            vars.add(var);
-        }
-        return id;
+    int[] eqn = new int[max];
+    for (int i = 0; i < vars.length; i++) {
+      int id = lookup(vars[i]);
+      eqn[id] = coeffs[i];
     }
+    eqn[0] = constant;
+    eqns.add(eqn);
+  }
 
-    public void addEquation(IntVar[] vars, int[] coeffs) {
-        addEquation(vars, coeffs, 0);
-    }
+  public void addXplusYeqZ(IntVar x, IntVar y, IntVar z) {
+    IntVar[] vars = {x, y, z};
+    int[] coeffs = {1, 1, -1};
+    addEquation(vars, coeffs);
+  }
 
-    public void addEquation(IntVar[] vars, int[] coeffs, int constant) {
-        if (vars.length == 0 || vars.length != coeffs.length)
-            throw new IllegalArgumentException();
+  public void addXsubYeqZ(IntVar x, IntVar y, IntVar z) {
+    addXplusYeqZ(z, y, x);
+  }
 
-        int max = 1;
-        for (int i = 0; i < vars.length; i++) {
-            int id = lookup(vars[i]);
-            if (max <= id)
-                max = id + 1;
-        }
+  public void addSum(IntVar[] vars, IntVar sum) {
+    int n = vars.length;
+    IntVar[] _vars = Arrays.copyOf(vars, n + 1);
+    int[] coeffs = new int[n + 1];
 
-        int[] eqn = new int[max];
-        for (int i = 0; i < vars.length; i++) {
-            int id = lookup(vars[i]);
-            eqn[id] = coeffs[i];
-        }
-        eqn[0] = constant;
-        eqns.add(eqn);
-    }
+    Arrays.fill(coeffs, 1);
+    _vars[n] = sum;
+    coeffs[n] = -1;
 
-    public void addXplusYeqZ(IntVar x, IntVar y, IntVar z) {
-        IntVar[] vars = {x, y, z};
-        int[] coeffs = {1, 1, -1};
-        addEquation(vars, coeffs);
-    }
+    addEquation(_vars, coeffs);
+  }
 
-    public void addXsubYeqZ(IntVar x, IntVar y, IntVar z) {
-        addXplusYeqZ(z, y, x);
-    }
+  public List<Constraint> primitiveDecomposition(Store store) {
 
-    public void addSum(IntVar[] vars, IntVar sum) {
-        int n = vars.length;
-        IntVar[] _vars = Arrays.copyOf(vars, n + 1);
-        int[] coeffs = new int[n + 1];
+    if (decomposition == null) {
 
-        Arrays.fill(coeffs, 1);
-        _vars[n] = sum;
-        coeffs[n] = -1;
+      decomposition = new ArrayList<Constraint>();
 
-        addEquation(_vars, coeffs);
-    }
+      // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
+      for (int[] eqn : eqns) {
+        List<IntVar> variables = new ArrayList<IntVar>();
+        List<Integer> weights = new ArrayList<Integer>();
 
-    public List<Constraint> primitiveDecomposition(Store store) {
-
-        if (decomposition == null) {
-
-            decomposition = new ArrayList<Constraint>();
-
-            // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
-
-            for (int[] eqn : eqns) {
-                List<IntVar> variables = new ArrayList<IntVar>();
-                List<Integer> weights = new ArrayList<Integer>();
-
-                for (int i = 0; i < eqn.length; i++)
-                    if (eqn[i] != 0) {
-                        variables.add(vars.get(i));
-                        weights.add(eqn[i]);
-                    }
-
-
-                decomposition.add(new LinearInt(variables, weights, "==", 0));
-                // decomposition.add(new SumWeight(variables, weights, ZERO));
-            }
-
-            return decomposition;
-        } else {
-
-            List<Constraint> result = new ArrayList<Constraint>();
-
-            // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
-
-            for (int[] eqn : eqns) {
-                List<IntVar> variables = new ArrayList<IntVar>();
-                List<Integer> weights = new ArrayList<Integer>();
-
-                for (int i = 0; i < eqn.length; i++)
-                    if (eqn[i] != 0) {
-                        variables.add(vars.get(i));
-                        weights.add(eqn[i]);
-                    }
-
-                result.add(new LinearInt(variables, weights, "==", 0));
-            }
-
-            return result;
-
-        }
-
-    }
-
-    protected boolean optimize(final int[] sum) {
-        boolean change = false;
-        int[] sum1 = sum;
-        int w1 = weight(sum1);
-
-        for (int[] eqn : eqns) {
-            int[] sum2 = transform(sum1, eqn);
-            int w2 = weight(sum2);
-
-            if (w1 > w2) {
-                w1 = w2;
-                sum1 = sum2;
-                flip(eqn);
-                change = true;
-            }
-        }
-        System.arraycopy(sum1, 0, sum, 0, sum.length);
-        return change;
-    }
-
-    private static int weight(int[] array) {
-        int weight = 0;
-        for (int i : array)
-            weight += Math.abs(i);
-        return weight;
-    }
-
-    private static int[] transform(int[] sum, int[] eqn) {
-        int[] result = Arrays.copyOf(sum, sum.length);
         for (int i = 0; i < eqn.length; i++)
-            result[i] -= 2 * eqn[i];
-        return result;
-    }
+          if (eqn[i] != 0) {
+            variables.add(vars.get(i));
+            weights.add(eqn[i]);
+          }
 
-    private static void flip(int[] eqn) {
+        decomposition.add(new LinearInt(variables, weights, "==", 0));
+        // decomposition.add(new SumWeight(variables, weights, ZERO));
+      }
+
+      return decomposition;
+    } else {
+
+      List<Constraint> result = new ArrayList<Constraint>();
+
+      // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
+
+      for (int[] eqn : eqns) {
+        List<IntVar> variables = new ArrayList<IntVar>();
+        List<Integer> weights = new ArrayList<Integer>();
+
         for (int i = 0; i < eqn.length; i++)
-            eqn[i] = -eqn[i];
+          if (eqn[i] != 0) {
+            variables.add(vars.get(i));
+            weights.add(eqn[i]);
+          }
+
+        result.add(new LinearInt(variables, weights, "==", 0));
+      }
+
+      return result;
     }
+  }
 
-    private class ArithmeticBuilder extends NetworkBuilder {
+  protected boolean optimize(final int[] sum) {
+    boolean change = false;
+    int[] sum1 = sum;
+    int w1 = weight(sum1);
 
-        private ArithmeticBuilder(Store store, int[] sum) {
+    for (int[] eqn : eqns) {
+      int[] sum2 = transform(sum1, eqn);
+      int w2 = weight(sum2);
 
-            super(new IntVar(store, "Zero-cost", 0, 0));
+      if (w1 > w2) {
+        w1 = w2;
+        sum1 = sum2;
+        flip(eqn);
+        change = true;
+      }
+    }
+    System.arraycopy(sum1, 0, sum, 0, sum.length);
+    return change;
+  }
 
-            // copy equations
-            int size = Arithmetic.this.eqns.size();
-            int[][] eqns = new int[size][];
-            for (int i = 0; i < size; i++) {
-                int[] eqn = Arithmetic.this.eqns.get(i);
-                eqns[i] = Arrays.copyOf(eqn, eqn.length);
+  private static int weight(int[] array) {
+    int weight = 0;
+    for (int i : array) weight += Math.abs(i);
+    return weight;
+  }
+
+  private static int[] transform(int[] sum, int[] eqn) {
+    int[] result = Arrays.copyOf(sum, sum.length);
+    for (int i = 0; i < eqn.length; i++) result[i] -= 2 * eqn[i];
+    return result;
+  }
+
+  private static void flip(int[] eqn) {
+    for (int i = 0; i < eqn.length; i++) eqn[i] = -eqn[i];
+  }
+
+  private class ArithmeticBuilder extends NetworkBuilder {
+
+    private ArithmeticBuilder(Store store, int[] sum) {
+
+      super(new IntVar(store, "Zero-cost", 0, 0));
+
+      // copy equations
+      int size = Arithmetic.this.eqns.size();
+      int[][] eqns = new int[size][];
+      for (int i = 0; i < size; i++) {
+        int[] eqn = Arithmetic.this.eqns.get(i);
+        eqns[i] = Arrays.copyOf(eqn, eqn.length);
+      }
+
+      // create nodes
+      Node root = addNode("source/sink", -sum[0]);
+      Node[] nodes = new Node[eqns.length];
+      flip(sum);
+
+      for (int i = 0; i < nodes.length; i++) nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
+
+      // create arcs
+      for (int i = 0; i < nodes.length; i++) {
+        int[] eqn = eqns[i];
+
+        for (int var = 1; var < eqn.length; var++) {
+          if (eqn[var] == 0) continue;
+
+          int found = -1;
+          for (int j = 1; j < nodes.length; j++) {
+            int k = (i + j) % nodes.length;
+            int[] eqn2 = eqns[k];
+            if (var >= eqn2.length) continue;
+
+            if (eqn[var] > 0 && eqn[var] <= -eqn2[var]) {
+              found = k;
+              break;
             }
-
-            // create nodes
-            Node root = addNode("source/sink", -sum[0]);
-            Node[] nodes = new Node[eqns.length];
-            flip(sum);
-
-            for (int i = 0; i < nodes.length; i++)
-                nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
-
-            // create arcs
-            for (int i = 0; i < nodes.length; i++) {
-                int[] eqn = eqns[i];
-
-                for (int var = 1; var < eqn.length; var++) {
-                    if (eqn[var] == 0)
-                        continue;
-
-                    int found = -1;
-                    for (int j = 1; j < nodes.length; j++) {
-                        int k = (i + j) % nodes.length;
-                        int[] eqn2 = eqns[k];
-                        if (var >= eqn2.length)
-                            continue;
-
-                        if (eqn[var] > 0 && eqn[var] <= -eqn2[var]) {
-                            found = k;
-                            break;
-                        }
-                        if (eqn[var] < 0 && -eqn[var] <= eqn2[var]) {
-                            found = k;
-                            break;
-                        }
-                    }
-
-                    int[] eqn2 = (found == -1) ? sum : eqns[found];
-                    Node n1 = nodes[i];
-                    Node n2 = (found == -1) ? root : nodes[found];
-
-                    if (eqn[var] > 0) {
-                        // TODO use variable-view instead
-                        for (int cnt = eqn[var]; cnt-- > 0; )
-                            addArc(n2, n1, 0, vars.get(var));
-                    } else {
-                        // TODO use variable-view instead
-                        for (int cnt = -eqn[var]; cnt-- > 0; )
-                            addArc(n1, n2, 0, vars.get(var));
-                    }
-
-                    eqn2[var] += eqn[var];
-                    eqn[var] = 0;
-                }
+            if (eqn[var] < 0 && -eqn[var] <= eqn2[var]) {
+              found = k;
+              break;
             }
+          }
 
-            // Assertions
-            for (int[] eqn : eqns)
-                for (int i = 1; i < eqn.length; i++)
-                    if (eqn[i] != 0)
-                        throw new AssertionError();
+          int[] eqn2 = (found == -1) ? sum : eqns[found];
+          Node n1 = nodes[i];
+          Node n2 = (found == -1) ? root : nodes[found];
 
-            for (int i = 1; i < sum.length; i++)
-                if (sum[i] != 0)
-                    throw new AssertionError(Arrays.toString(sum));
+          if (eqn[var] > 0) {
+            // TODO use variable-view instead
+            for (int cnt = eqn[var]; cnt-- > 0; ) addArc(n2, n1, 0, vars.get(var));
+          } else {
+            // TODO use variable-view instead
+            for (int cnt = -eqn[var]; cnt-- > 0; ) addArc(n1, n2, 0, vars.get(var));
+          }
+
+          eqn2[var] += eqn[var];
+          eqn[var] = 0;
         }
+      }
+
+      // Assertions
+      for (int[] eqn : eqns)
+        for (int i = 1; i < eqn.length; i++) if (eqn[i] != 0) throw new AssertionError();
+
+      for (int i = 1; i < sum.length; i++)
+        if (sum[i] != 0) throw new AssertionError(Arrays.toString(sum));
+    }
+  }
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    if (decomposition == null || decomposition.size() > 1) {
+
+      decomposition = new ArrayList<Constraint>();
+      int[] sum = new int[vars.size()];
+      for (int[] eqn : eqns) for (int i = 0; i < eqn.length; i++) sum[i] += eqn[i];
+
+      for (int it = 0; optimize(sum); it++)
+        if (it > 2 * eqns.size()) throw new AssertionError(it + " iterations");
+
+      decomposition.add(new ArithmeticBuilder(store, sum).build());
     }
 
-    @Override public List<Constraint> decompose(Store store) {
+    return decomposition;
+  }
 
-        if (decomposition == null || decomposition.size() > 1) {
+  @Override
+  public void imposeDecomposition(Store store) {
 
-            decomposition = new ArrayList<Constraint>();
-            int[] sum = new int[vars.size()];
-            for (int[] eqn : eqns)
-                for (int i = 0; i < eqn.length; i++)
-                    sum[i] += eqn[i];
+    if (decomposition == null) decomposition = decompose(store);
 
-            for (int it = 0; optimize(sum); it++)
-                if (it > 2 * eqns.size())
-                    throw new AssertionError(it + " iterations");
-
-            decomposition.add(new ArithmeticBuilder(store, sum).build());
-
-        }
-
-        return decomposition;
-
-    }
-
-    @Override public void imposeDecomposition(Store store) {
-
-        if (decomposition == null)
-            decomposition = decompose(store);
-
-        for (Constraint c : decomposition)
-            store.impose(c);
-
-    }
+    for (Constraint c : decomposition) store.impose(c);
+  }
 }

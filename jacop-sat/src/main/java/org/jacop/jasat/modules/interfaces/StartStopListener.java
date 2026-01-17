@@ -41,14 +41,9 @@ import org.jacop.jasat.core.SolverComponent;
  */
 public interface StartStopListener extends SolverComponent {
 
-    /**
-     * called when the solver starts search. It will be called only once.
-     */
-    void onStart();
+  /** called when the solver starts search. It will be called only once. */
+  void onStart();
 
-    /**
-     * called when the solver stop search, for any reason
-     */
-    void onStop();
-
+  /** called when the solver stop search, for any reason */
+  void onStop();
 }

@@ -3,33 +3,33 @@
 package org.jacop.fz;
 
 public class ASTIntFlatExpr extends SimpleNode {
-    public ASTIntFlatExpr(int id) {
-        super(id);
-    }
+  public ASTIntFlatExpr(int id) {
+    super(id);
+  }
 
-    public ASTIntFlatExpr(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTIntFlatExpr(Parser p, int id) {
+    super(p, id);
+  }
 
-    // My additions
-    int value;
+  // My additions
+  int value;
 
-    public void setInt(int i) {
-        //   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
-        value = i;
-        //   	else {
-        //   	    System.err.println("Error: Too large or too small integer " + i +
-        //   			       "; execution aborted");
-        //  	    System.exit(0);
-        //   	}
-    }
+  public void setInt(int i) {
+    //   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
+    value = i;
+    //   	else {
+    //   	    System.err.println("Error: Too large or too small integer " + i +
+    //   			       "; execution aborted");
+    //  	    System.exit(0);
+    //   	}
+  }
 
-    public int getInt() {
-        return value;
-    }
+  public int getInt() {
+    return value;
+  }
 
-    public String toString() {
-        return super.toString() + ": " + value;
-    }
+  public String toString() {
+    return super.toString() + ": " + value;
+  }
 }
 /* JavaCC - OriginalChecksum=c6d9e8b614a5d7a17f9a1b5ab4da61c7 (do not edit this line) */

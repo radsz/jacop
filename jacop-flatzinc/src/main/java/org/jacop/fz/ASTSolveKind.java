@@ -3,27 +3,27 @@
 package org.jacop.fz;
 
 public class ASTSolveKind extends SimpleNode {
-    public ASTSolveKind(int id) {
-        super(id);
-    }
+  public ASTSolveKind(int id) {
+    super(id);
+  }
 
-    public ASTSolveKind(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTSolveKind(Parser p, int id) {
+    super(p, id);
+  }
 
-    // My additions
-    String kind;
+  // My additions
+  String kind;
 
-    public void setKind(String k) {
-        kind = k;
-    }
+  public void setKind(String k) {
+    kind = k;
+  }
 
-    public String getKind() {
-        return kind;
-    }
+  public String getKind() {
+    return kind;
+  }
 
-    public String toString() {
-        return super.toString() + ": " + kind;
-    }
+  public String toString() {
+    return super.toString() + ": " + kind;
+  }
 }
 /* JavaCC - OriginalChecksum=ccb785e78a408650ada4cd9f1a866267 (do not edit this line) */

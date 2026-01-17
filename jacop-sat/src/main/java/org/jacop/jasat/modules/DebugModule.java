@@ -41,176 +41,162 @@ import org.jacop.jasat.utils.Utils;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
-
 public final class DebugModule
-    implements AssertionListener, BackjumpListener, ConflictListener, PropagateListener, SolutionListener, ForgetListener,
-    ExplanationListener, ClauseListener, StartStopListener {
+    implements AssertionListener,
+        BackjumpListener,
+        ConflictListener,
+        PropagateListener,
+        SolutionListener,
+        ForgetListener,
+        ExplanationListener,
+        ClauseListener,
+        StartStopListener {
 
-    private Core core;
+  private Core core;
 
-    private MapClause mapClause = new MapClause();
+  private MapClause mapClause = new MapClause();
 
+  public void onRestart(int level) {
+    printLine(true);
 
-    public void onRestart(int level) {
-        printLine(true);
+    core.logc(3, "restart from level %d", level);
 
-        core.logc(3, "restart from level %d", level);
+    printLine(false);
+    printBlank();
+  }
 
-        printLine(false);
-        printBlank();
+  public void onConflict(MapClause conflictClause, int level) {
+    printLine(true);
+
+    core.logc(3, "conflict at level %d", level);
+    printClause("conflict clause :", conflictClause);
+    printTrail("var state:       ", conflictClause);
+    printLine(false);
+    printBlank();
+  }
+
+  public void onBackjump(int oldLevel, int newLevel) {
+    printLine(true);
+
+    core.logc(3, "backjump from %d to %d", oldLevel, newLevel);
+
+    printLine(false);
+    printBlank();
+  }
+
+  public void onAssertion(int literal, int level) {
+    printLine(true);
+
+    core.logc(3, "(at level %d) assertion %d", level, literal);
+
+    printLine(false);
+    printBlank();
+  }
+
+  public void onPropagate(int literal, int clauseId) {
+    printLine(true);
+
+    core.logc(3, "propagate literal %s", literal);
+
+    printLine(false);
+    printBlank();
+  }
+
+  public void onSolution(boolean satisfiable) {
+    printLine(true);
+
+    core.logc(3, "current level: %d", core.currentLevel);
+    int numOfSetVar = core.trail.size();
+    core.logc(3, "number of set vars: %d", numOfSetVar);
+    core.logc(3, "solver state: %s", core.currentState);
+
+    printLine(false);
+    printBlank();
+  }
+
+  public void onExplain(MapClause explanation) {
+    printLine(true);
+    printClause("explanation clause : ", explanation);
+    printTrail("var state :          ", explanation);
+
+    printLine(false);
+    printBlank();
+  }
+
+  public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
+    String c = Utils.showClause(clause);
+    core.logc(3, "add clause (%s): %s", isModelClause ? "model" : "learnt", c);
+  }
+
+  public void onClauseRemoval(int clauseId) {
+    core.logc(3, "remove clause %d", clauseId);
+  }
+
+  public void onForget() {
+    printLine(true);
+    core.logc(3, "forget() called");
+    printLine(false);
+    printBlank();
+  }
+
+  public void onStart() {
+    printLine(true);
+    core.logc(3, "solver started at %d", core.getTime("start"));
+    printLine(false);
+    printBlank();
+  }
+
+  public void onStop() {
+    printLine(true);
+    core.logc(3, "solver stopped at %d", core.getTime("stop"));
+    printLine(false);
+    printBlank();
+  }
+
+  private void printLine(boolean start) {
+    if (start) core.logc(3, "/==================================");
+    else core.logc(3, "\\==================================");
+  }
+
+  private void printBlank() {
+    core.logc(3, "");
+  }
+
+  private void printTrail(String prefix, MapClause clause) {
+    StringBuilder sb = new StringBuilder(prefix).append("[ ");
+    for (int var : clause.literals.keySet()) {
+      int value = core.trail.values[var];
+      if (value >= 0) sb.append(' ');
+      sb.append(value);
+      sb.append(' ');
     }
+    core.logc(3, sb.append(']').toString());
+  }
 
-
-    public void onConflict(MapClause conflictClause, int level) {
-        printLine(true);
-
-        core.logc(3, "conflict at level %d", level);
-        printClause("conflict clause :", conflictClause);
-        printTrail("var state:       ", conflictClause);
-        printLine(false);
-        printBlank();
+  private void printClause(String prefix, MapClause mapClause) {
+    StringBuilder sb = new StringBuilder(prefix).append("[ ");
+    for (int var : mapClause.literals.keySet()) {
+      boolean pos = mapClause.literals.get(var);
+      sb.append(pos ? ' ' : '-');
+      sb.append(var);
+      sb.append(' ');
     }
+    core.logc(3, sb.append(']').toString());
+  }
 
+  public void initialize(Core core) {
+    this.core = core;
 
-    public void onBackjump(int oldLevel, int newLevel) {
-        printLine(true);
+    core.assertionModules[core.numAssertionModules++] = this;
+    core.backjumpModules[core.numBackjumpModules++] = this;
+    core.conflictModules[core.numConflictModules++] = this;
+    core.forgetModules[core.numForgetModules++] = this;
+    core.propagateModules[core.numPropagateModules++] = this;
+    core.solutionModules[core.numSolutionModules++] = this;
+    core.explanationModules[core.numExplanationModules++] = this;
+    core.clauseModules[core.numClauseModules++] = this;
+    core.startStopModules[core.numStartStopModules++] = this;
 
-        core.logc(3, "backjump from %d to %d", oldLevel, newLevel);
-
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onAssertion(int literal, int level) {
-        printLine(true);
-
-        core.logc(3, "(at level %d) assertion %d", level, literal);
-
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onPropagate(int literal, int clauseId) {
-        printLine(true);
-
-        core.logc(3, "propagate literal %s", literal);
-
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onSolution(boolean satisfiable) {
-        printLine(true);
-
-        core.logc(3, "current level: %d", core.currentLevel);
-        int numOfSetVar = core.trail.size();
-        core.logc(3, "number of set vars: %d", numOfSetVar);
-        core.logc(3, "solver state: %s", core.currentState);
-
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onExplain(MapClause explanation) {
-        printLine(true);
-        printClause("explanation clause : ", explanation);
-        printTrail("var state :          ", explanation);
-
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
-        String c = Utils.showClause(clause);
-        core.logc(3, "add clause (%s): %s", isModelClause ? "model" : "learnt", c);
-
-    }
-
-
-    public void onClauseRemoval(int clauseId) {
-        core.logc(3, "remove clause %d", clauseId);
-    }
-
-
-    public void onForget() {
-        printLine(true);
-        core.logc(3, "forget() called");
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onStart() {
-        printLine(true);
-        core.logc(3, "solver started at %d", core.getTime("start"));
-        printLine(false);
-        printBlank();
-    }
-
-
-    public void onStop() {
-        printLine(true);
-        core.logc(3, "solver stopped at %d", core.getTime("stop"));
-        printLine(false);
-        printBlank();
-    }
-
-    private void printLine(boolean start) {
-        if (start)
-            core.logc(3, "/==================================");
-        else
-            core.logc(3, "\\==================================");
-    }
-
-    private void printBlank() {
-        core.logc(3, "");
-    }
-
-    private void printTrail(String prefix, MapClause clause) {
-        StringBuilder sb = new StringBuilder(prefix).append("[ ");
-        for (int var : clause.literals.keySet()) {
-            int value = core.trail.values[var];
-            if (value >= 0)
-                sb.append(' ');
-            sb.append(value);
-            sb.append(' ');
-        }
-        core.logc(3, sb.append(']').toString());
-    }
-
-
-
-    private void printClause(String prefix, MapClause mapClause) {
-        StringBuilder sb = new StringBuilder(prefix).append("[ ");
-        for (int var : mapClause.literals.keySet()) {
-            boolean pos = mapClause.literals.get(var);
-            sb.append(pos ? ' ' : '-');
-            sb.append(var);
-            sb.append(' ');
-        }
-        core.logc(3, sb.append(']').toString());
-    }
-
-
-    public void initialize(Core core) {
-        this.core = core;
-
-        core.assertionModules[core.numAssertionModules++] = this;
-        core.backjumpModules[core.numBackjumpModules++] = this;
-        core.conflictModules[core.numConflictModules++] = this;
-        core.forgetModules[core.numForgetModules++] = this;
-        core.propagateModules[core.numPropagateModules++] = this;
-        core.solutionModules[core.numSolutionModules++] = this;
-        core.explanationModules[core.numExplanationModules++] = this;
-        core.clauseModules[core.numClauseModules++] = this;
-        core.startStopModules[core.numStartStopModules++] = this;
-
-        mapClause.clear();
-    }
-
+    mapClause.clear();
+  }
 }

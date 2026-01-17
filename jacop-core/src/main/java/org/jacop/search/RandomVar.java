@@ -30,50 +30,40 @@
 
 package org.jacop.search;
 
-import org.jacop.core.Var;
-import org.jacop.core.Store;
 import java.util.Random;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
- * Defines a RandomVar comparator for variables. It selects variables
- * randomly.
+ * Defines a RandomVar comparator for variables. It selects variables randomly.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {
 
-    Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-    
-    /**
-     * It constructs RandomVar Comparator.
-     */
-    public RandomVar() {
-    }
+  Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
-    public int compare(double left, T var) {
-        double right = generator.nextFloat();
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+  /** It constructs RandomVar Comparator. */
+  public RandomVar() {}
 
-    public int compare(T leftVar, T rightVar) {
-        double left = generator.nextFloat();
-        double right = generator.nextFloat();
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    double right = generator.nextFloat();
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public double metric(T o) {
-        return generator.nextFloat();
-    }
+  public int compare(T leftVar, T rightVar) {
+    double left = generator.nextFloat();
+    double right = generator.nextFloat();
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
+  public double metric(T o) {
+    return generator.nextFloat();
+  }
 }

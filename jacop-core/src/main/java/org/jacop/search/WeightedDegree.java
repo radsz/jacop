@@ -34,67 +34,51 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Defines a WeightedDegree comparator for variables. Every time a constraint
- * failure is encountered all variables within the scope of that constraints
- * have increased weight. The comparator will choose the variable with the
- * highest weight divided by its size.
+ * Defines a WeightedDegree comparator for variables. Every time a constraint failure is encountered
+ * all variables within the scope of that constraints have increased weight. The comparator will
+ * choose the variable with the highest weight divided by its size.
  *
- * This implementation is not equivalent to AFCMaxDeg since it takes
- * all accumulated failures for a variable while AFCMaxDeg sums up
- * weights for still active constraints only!
+ * <p>This implementation is not equivalent to AFCMaxDeg since it takes all accumulated failures for
+ * a variable while AFCMaxDeg sums up weights for still active constraints only!
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
+  private WeightedDegree() {}
 
-    private WeightedDegree() {}
+  public WeightedDegree(Store store) {
+    store.variableWeightManagement = true;
+  }
 
-    public WeightedDegree(Store store) {
-	store.variableWeightManagement = true;	
-    }
-    
-    public int compare(double left, T var) {
+  public int compare(double left, T var) {
 
-        double right = ((double)var.weight) / var.getSizeFloat();
+    double right = ((double) var.weight) / var.getSizeFloat();
 
-        if (left > right)
+    if (left > right) return 1;
 
-            return 1;
+    if (left < right) return -1;
 
-        if (left < right)
+    return 0;
+  }
 
-            return -1;
+  public int compare(T leftVar, T rightVar) {
 
-        return 0;
+    double left = ((double) leftVar.weight) / leftVar.getSizeFloat();
 
-    }
+    double right = ((double) rightVar.weight) / rightVar.getSizeFloat();
 
-    public int compare(T leftVar, T rightVar) {
-    
-        double left = ((double) leftVar.weight) / leftVar.getSizeFloat();
+    if (left > right) return 1;
 
-        double right = ((double) rightVar.weight) / rightVar.getSizeFloat();
+    if (left < right) return -1;
 
-        if (left > right)
+    return 0;
+  }
 
-            return 1;
+  public double metric(T var) {
 
-        if (left < right)
-
-            return -1;
-
-        return 0;
-
-    }
-
-    public double metric(T var) {
-
-        return var.weight / var.getSizeFloat();
-
-    }
-
+    return var.weight / var.getSizeFloat();
+  }
 }

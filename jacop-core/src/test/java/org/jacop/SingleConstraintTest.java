@@ -30,6 +30,16 @@
  */
 package org.jacop;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.jacop.constraints.*;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.SimpleTable;
@@ -42,17 +52,6 @@ import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-
 /**
  * It is performing testing based on simple problems containing only one constraint.
  *
@@ -61,828 +60,824 @@ import static org.junit.Assert.assertThat;
  */
 public class SingleConstraintTest extends TestHelper {
 
-    @Rule public TestRule watcher = new TestWatcher() {
+  @Rule
+  public TestRule watcher =
+      new TestWatcher() {
         protected void starting(Description description) {
-            System.out.println("Starting test: " + description.getMethodName());
+          System.out.println("Starting test: " + description.getMethodName());
         }
-    };
+      };
 
-    @Test public void testAnonymousConstraint() {
+  @Test
+  public void testAnonymousConstraint() {
 
-        Function<IntVar[], Constraint> listXeqY = (IntVar[] list) -> new Constraint(list) {
+    Function<IntVar[], Constraint> listXeqY =
+        (IntVar[] list) ->
+            new Constraint(list) {
 
-            @Override public void consistency(Store store) {
+              @Override
+              public void consistency(Store store) {
 
                 do {
 
-                    store.propagationHasOccurred = false;
+                  store.propagationHasOccurred = false;
 
-                    for (int i = 0; i < list.length - 1; i++) {
+                  for (int i = 0; i < list.length - 1; i++) {
 
-                        IntVar x = list[i];
-                        IntVar y = list[i + 1];
+                    IntVar x = list[i];
+                    IntVar y = list[i + 1];
 
-                        x.domain.in(store.level, x, y.domain);
-                        y.domain.in(store.level, y, x.domain);
-
-                    }
+                    x.domain.in(store.level, x, y.domain);
+                    y.domain.in(store.level, y, x.domain);
+                  }
 
                 } while (store.propagationHasOccurred);
+              }
 
-            }
-
-            @Override public int getDefaultConsistencyPruningEvent() {
+              @Override
+              public int getDefaultConsistencyPruningEvent() {
                 return IntDomain.ANY;
-            }
-        };
+              }
+            };
 
-        Store store = new Store();
+    Store store = new Store();
 
-        int xLength = 3;
-        int xSize = 2;
-        IntVar[] x = getIntVars(store, "vars", xLength, xSize);
+    int xLength = 3;
+    int xSize = 2;
+    IntVar[] x = getIntVars(store, "vars", xLength, xSize);
 
-        store.impose(listXeqY.apply(x));
+    store.impose(listXeqY.apply(x));
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        assertThat(noOfSolutions, is(2));
+    assertThat(noOfSolutions, is(2));
+  }
 
+  @Test
+  public void testNegatedIfThen() {
 
-    }
+    Store store = new Store();
 
-    @Test public void testNegatedIfThen() {
+    int xLength = 3;
+    int xSize = 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        Store store = new Store();
+    IfThen ifThen = new IfThen(new XneqY(x[0], x[1]), new XeqY(x[1], x[2]));
 
-        int xLength = 3;
-        int xSize = 2;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    Not not = new Not(ifThen);
+    store.impose(not);
 
-        IfThen ifThen = new IfThen(new XneqY(x[0], x[1]), new XeqY(x[1], x[2]));
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        Not not = new Not(ifThen);
-        store.impose(not);
+    assertThat(noOfSolutions, is(2));
+  }
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidTable() {
 
-        assertThat(noOfSolutions, is(2));
+    Store store = new Store();
 
-    }
+    int xLength = 4;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidTable() {
+    Table c = new Table(x, tuples);
+    store.impose(c);
+  }
 
-        Store store = new Store();
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidSimpleTable() {
 
-        int xLength = 4;
-        int xSize = 3;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+    Store store = new Store();
 
-        Table c = new Table(x, tuples);
-        store.impose(c);
+    int xLength = 4;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
-    }
+    SimpleTable c = new SimpleTable(x, tuples);
+    store.impose(c);
+  }
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidSimpleTable() {
+  @Test
+  public void testSimpleTable() {
 
-        Store store = new Store();
+    Store store = new Store();
 
-        int xLength = 4;
-        int xSize = 3;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+    int xLength = 3;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
-        SimpleTable c = new SimpleTable(x, tuples);
-        store.impose(c);
+    SimpleTable c = new SimpleTable(x, tuples);
+    store.impose(c);
 
-    }
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
+    assertThat(noOfSolutions, is(6));
+  }
 
-    @Test public void testSimpleTable() {
+  @Test
+  public void testBinpacking() {
 
-        Store store = new Store();
+    Store store = new Store();
 
-        int xLength = 3;
-        int xSize = 3;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+    int xLength = 4;
+    int xSize = 3;
+    IntVar[] items = getIntVars(store, "item", xLength, xSize);
+    int[] itemSize = {1, 2, 1, 2};
+    IntVar[] binLoad = getIntVars(store, "binLoad", xSize, 4);
+    Binpacking c = new Binpacking(items, binLoad, itemSize, 0);
+    store.impose(c);
 
-        SimpleTable c = new SimpleTable(x, tuples);
-        store.impose(c);
+    store.print();
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+    assertThat(noOfSolutions, is(42));
+  }
 
-        assertThat(noOfSolutions, is(6));
+  @Test
+  @Ignore("Requires org.jacop.examples.fd.PerfectSquare - moved to examples module")
+  public void testGeost() {
+    // This test requires PerfectSquare from examples module
+    // Moved to jacop-examples-java module
+  }
 
-    }
+  @Test
+  public void testCheckForInputDuplicationSkippsingSingletons2() {
 
+    Store store = new Store();
+    int xLength = 4;
+    IntVar[] list = getIntVars(store, "list", xLength, 2);
+    IntVar dubleton = new IntVar(store, "dubleton", 2, 3);
+    IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
+    parameters[xLength] = dubleton;
+    parameters[xLength + 1] = dubleton;
 
-    @Test public void testBinpacking() {
+    Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
-        Store store = new Store();
+    assertThat(dubletons.size(), is(1));
+  }
 
-        int xLength = 4;
-        int xSize = 3;
-        IntVar[] items = getIntVars(store, "item", xLength, xSize);
-        int[] itemSize = {1, 2, 1, 2};
-        IntVar[] binLoad = getIntVars(store, "binLoad", xSize, 4);
-        Binpacking c = new Binpacking(items, binLoad, itemSize, 0);
-        store.impose(c);
+  @Test
+  public void testCheckForInputDuplicationSkippsingSingletons1() {
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+    Store store = new Store();
+    int xLength = 4;
+    IntVar[] list = getIntVars(store, "list", xLength, 2);
+    IntVar dubleton = new IntVar(store, "dubleton", 2, 2);
+    IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
+    parameters[xLength] = dubleton;
+    parameters[xLength + 1] = dubleton;
 
-        assertThat(noOfSolutions, is(42));
+    Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
-    }
+    assertThat(dubletons.size(), is(0));
+  }
 
-    @Test @Ignore("Requires org.jacop.examples.fd.PerfectSquare - moved to examples module")
-    public void testGeost() {
-        // This test requires PerfectSquare from examples module
-        // Moved to jacop-examples-java module
-    }
+  @Test
+  public void testSubcircuit() {
 
-    @Test public void testCheckForInputDuplicationSkippsingSingletons2() {
+    Store store = new Store();
 
-        Store store = new Store();
-        int xLength = 4;
-        IntVar[] list = getIntVars(store, "list", xLength, 2);
-        IntVar dubleton = new IntVar(store, "dubleton", 2, 3);
-        IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
-        parameters[xLength] = dubleton;
-        parameters[xLength + 1] = dubleton;
+    int xLength = 4;
+    int xSize = 5;
+    IntVar[] list = getIntVars(store, "list", xLength, xSize);
+    Subcircuit c = new Subcircuit(list);
+    store.impose(c);
 
-        Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, list);
 
-        assertThat(dubletons.size(), is(1));
-    }
+    assertThat(noOfSolutions, is(21));
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidSubcircuit() {
 
-    @Test public void testCheckForInputDuplicationSkippsingSingletons1() {
+    Store store = new Store();
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    list[list.length - 1] = list[0];
+    Subcircuit c = new Subcircuit(list);
+  }
 
-        Store store = new Store();
-        int xLength = 4;
-        IntVar[] list = getIntVars(store, "list", xLength, 2);
-        IntVar dubleton = new IntVar(store, "dubleton", 2, 2);
-        IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
-        parameters[xLength] = dubleton;
-        parameters[xLength + 1] = dubleton;
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidStretch() {
+    IntVar[] list = null;
+    Stretch stretch = new Stretch(null, null, null, list);
+  }
 
-        Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
+  @Test
+  public void testStretch() {
 
-        assertThat(dubletons.size(), is(0));
-    }
+    Store store = new Store();
 
-    @Test public void testSubcircuit() {
+    int[] values = {1, 2};
+    int[] min = {1, 2};
+    int[] max = {2, 3};
+    int xLength = 4;
+    int xSize = 4;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        Store store = new Store();
+    Stretch stretch = new Stretch(values, min, max, x);
 
-        int xLength = 4;
-        int xSize = 5;
-        IntVar[] list = getIntVars(store, "list", xLength, xSize);
-        Subcircuit c = new Subcircuit(list);
-        store.impose(c);
+    store.imposeDecomposition(stretch);
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, list);
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        assertThat(noOfSolutions, is(21));
+    assertThat(noOfSolutions, is(5));
+  }
 
-    }
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidElementVariable() {
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidSubcircuit() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar[] list = null;
+    ElementVariable c = new ElementVariable(x, list, x);
+  }
 
-        Store store = new Store();
-        IntVar[] list = getIntVars(store, "list", 3, 3);
-        list[list.length - 1] = list[0];
-        Subcircuit c = new Subcircuit(list);
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidAmong3() {
 
-    }
+    Store store = new Store();
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    list[list.length - 1] = null;
+    Among c = new Among(list, new IntervalDomain(1, 2), null);
+  }
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidStretch() {
-        IntVar[] list = null;
-        Stretch stretch = new Stretch(null, null, null, list);
-    }
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidAmong2() {
 
-    @Test public void testStretch() {
+    Store store = new Store();
 
-        Store store = new Store();
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    Among c = new Among(list, new IntervalDomain(1, 2), null);
+  }
 
-        int[] values = {1, 2};
-        int[] min = {1, 2};
-        int[] max = {2, 3};
-        int xLength = 4;
-        int xSize = 4;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidAmong1() {
 
-        Stretch stretch = new Stretch(values, min, max, x);
+    Store store = new Store();
 
-        store.imposeDecomposition(stretch);
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    Among c = new Among(list, null, min);
+  }
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidMin2() {
 
-        assertThat(noOfSolutions, is(5));
+    Store store = new Store();
 
-    }
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    list[list.length - 1] = null;
+    Min c = new Min(list, min);
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidMin1() {
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidElementVariable() {
+    Store store = new Store();
 
-        Store store = new Store();
-        IntVar x = new IntVar(store, "x", 0, 4);
-        IntVar[] list = null;
-        ElementVariable c = new ElementVariable(x, list, x);
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = null;
 
-    }
+    Min c = new Min(list, min);
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidAbs() {
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidAmong3() {
+    Store store = new Store();
 
-        Store store = new Store();
-        IntVar min = new IntVar(store, "x", 0, 4);
-        IntVar[] list = getIntVars(store, "list", 3, 3);
-        list[list.length - 1] = null;
-        Among c = new Among(list, new IntervalDomain(1, 2), null);
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = null;
 
-    }
+    AbsXeqY absXeqY = new AbsXeqY(x, y);
+  }
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidAmong2() {
+  @Test
+  public void testExtensionalConflictVA() {
 
-        Store store = new Store();
+    Store store = new Store();
 
-        IntVar[] list = getIntVars(store, "list", 3, 3);
-        Among c = new Among(list, new IntervalDomain(1, 2), null);
+    int xLength = 2;
+    int xSize = 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-    }
+    int[][] tuples = new int[][] {{0, 0}, {1, 1}};
+    ExtensionalConflictVA extensionalConflictVA = new ExtensionalConflictVA(x, tuples);
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidAmong1() {
+    store.impose(extensionalConflictVA);
 
-        Store store = new Store();
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        IntVar min = new IntVar(store, "x", 0, 4);
-        IntVar[] list = getIntVars(store, "list", 3, 3);
-        Among c = new Among(list, null, min);
+    assertThat(noOfSolutions, is(xSize * xSize - 2));
+  }
 
-    }
+  @Test
+  public void testIfThenBool() {
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidMin2() {
+    Store store = new Store();
 
-        Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
 
-        IntVar min = new IntVar(store, "x", 0, 4);
-        IntVar[] list = getIntVars(store, "list", 3, 3);
-        list[list.length - 1] = null;
-        Min c = new Min(list, min);
+    IfThenBool ifThenBool = new IfThenBool(x, y, b);
 
-    }
+    store.impose(ifThenBool);
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidMin1() {
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
 
-        Store store = new Store();
+    assertThat(noOfSolutions, is(4));
+  }
 
-        IntVar min = new IntVar(store, "x", 0, 4);
-        IntVar[] list = null;
+  @Test
+  public void testXor() {
 
-        Min c = new Min(list, min);
+    Store store = new Store();
 
-    }
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
 
+    PrimitiveConstraint c = new XeqY(x, y);
+    Xor xor = new Xor(c, b);
 
-    @Test(expected = IllegalArgumentException.class) public void testInvalidAbs() {
+    store.impose(xor);
 
-        Store store = new Store();
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
 
-        IntVar x = new IntVar(store, "x", 0, 4);
-        IntVar y = null;
+    assertThat(noOfSolutions, is(10));
+  }
 
-        AbsXeqY absXeqY = new AbsXeqY(x, y);
+  @Test
+  public void testXexpYeqZ() {
 
-    }
+    Store store = new Store();
 
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    IntVar z = new IntVar(store, "z", 0, 16);
 
-    @Test public void testExtensionalConflictVA() {
+    XexpYeqZ xexpYeqZ = new XexpYeqZ(x, y, z);
 
-        Store store = new Store();
+    store.impose(xexpYeqZ);
 
-        int xLength = 2;
-        int xSize = 2;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
 
-        int[][] tuples = new int[][] {{0, 0}, {1, 1}};
-        ExtensionalConflictVA extensionalConflictVA = new ExtensionalConflictVA(x, tuples);
+    assertThat(noOfSolutions, is(10));
+  }
 
-        store.impose(extensionalConflictVA);
+  @Test
+  public void testXmulYeqC() {
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+    Store store = new Store();
 
-        assertThat(noOfSolutions, is(xSize * xSize - 2));
+    int xLength = 2;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-    }
+    XmulCeqZ xmulCeqZ = new XmulCeqZ(x[0], 2, x[1]);
 
-    @Test public void testIfThenBool() {
+    store.impose(xmulCeqZ);
 
-        Store store = new Store();
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        IntVar x = new IntVar(store, "x", 0, 1);
-        IntVar y = new IntVar(store, "y", 0, 1);
-        IntVar b = new IntVar(store, "b", 0, 1);
+    assertThat(noOfSolutions, is(2));
+  }
 
-        IfThenBool ifThenBool = new IfThenBool(x, y, b);
+  @Test
+  public void testAlldiff() {
 
-        store.impose(ifThenBool);
+    Store store = new Store();
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
+    int xLength = 2;
+    int xSize = xLength * 2 + 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        assertThat(noOfSolutions, is(4));
+    Alldiff alldiff = new Alldiff(x);
 
-    }
+    store.impose(alldiff);
 
-    @Test public void testXor() {
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        Store store = new Store();
+    assertThat(noOfSolutions, is(30));
+  }
 
-        IntVar x = new IntVar(store, "x", 0, 4);
-        IntVar y = new IntVar(store, "y", 1, 2);
-        IntVar b = new IntVar(store, "b", 0, 1);
+  @Test
+  public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
 
-        PrimitiveConstraint c = new XeqY(x, y);
-        Xor xor = new Xor(c, b);
+    Store store = new Store();
 
-        store.impose(xor);
+    int xLength = 2;
+    int xSize = xLength * 2 + 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
+    Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+    store.impose(new Alldiff(x));
 
-        assertThat(noOfSolutions, is(10));
+    store.print();
 
-    }
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-    @Test public void testXexpYeqZ() {
+    assertThat(noOfSolutions, is(2));
+  }
 
-        Store store = new Store();
+  @Test
+  public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
 
-        IntVar x = new IntVar(store, "x", 0, 4);
-        IntVar y = new IntVar(store, "y", 1, 2);
-        IntVar z = new IntVar(store, "z", 0, 16);
+    Store store = new Store();
 
-        XexpYeqZ xexpYeqZ = new XexpYeqZ(x, y, z);
+    int xLength = 4;
+    int xSize = xLength * 2 + 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
-        store.impose(xexpYeqZ);
+    Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+    store.impose(new Alldiff(x));
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
+    store.print();
 
-        assertThat(noOfSolutions, is(10));
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-    }
+    assertThat(noOfSolutions, is(24));
+  }
 
-    @Test public void testXmulYeqC() {
+  @Test
+  public void testArgMin() {
 
-        Store store = new Store();
+    Store store = new Store();
 
-        int xLength = 2;
-        int xSize = 3;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int xLength = 4;
+    int xSize = 6;
 
-        XmulCeqZ xmulCeqZ = new XmulCeqZ(x[0], 2, x[1]);
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    IntVar index = new IntVar(store, "index", 0, xLength);
+    ArgMin argMin = new ArgMin(x, index, -1);
 
-        store.impose(xmulCeqZ);
+    store.impose(argMin);
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
-        assertThat(noOfSolutions, is(2));
+    assertThat(noOfSolutions, is(2401));
+  }
 
-    }
+  @Test
+  // BUG, problem with using BoundDomain, SmallDenseDomain and asserts, need to investigate.
+  // The same problem and fixed applied for ArgMin. Keep this for investigation of the buggy
+  // scenario.
+  public void testArgMax() {
 
+    Store store = new Store();
 
-    @Test public void testAlldiff() {
+    int xLength = 4;
+    int xSize = 6;
 
-        Store store = new Store();
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    IntVar index = new IntVar(store, "index", 0, xLength);
+    ArgMax argMax = new ArgMax(x, index, -1);
 
-        int xLength = 2;
-        int xSize = xLength * 2 + 2;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    store.impose(argMax);
 
-        Alldiff alldiff = new Alldiff(x);
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
-        store.impose(alldiff);
+    assertThat(noOfSolutions, is(2401));
+  }
 
-        store.print();
-        int noOfSolutions = noOfAllSolutions(store, x);
+  @Test
+  public void testSum() {
 
-        assertThat(noOfSolutions, is(30));
+    Store store = new Store();
 
-    }
+    int xLength = 4;
+    int xSize = 2;
 
-    @Test public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    IntVar sum = new IntVar(store, "sum", 0, xLength * xSize);
 
-        Store store = new Store();
+    SumInt sumConstraint = new SumInt(x, "==", sum);
 
-        int xLength = 2;
-        int xSize = xLength * 2 + 2;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    store.impose(sumConstraint);
 
-        Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
-        store.impose(new Alldiff(x));
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        store.print();
+    assertThat(noOfSolutions, is(15));
+  }
 
-        int noOfSolutions = noOfAllSolutions(store, x);
+  @Test
+  public void testLinear() {
 
-        assertThat(noOfSolutions, is(2));
+    Store store = new Store();
 
-    }
+    int xLength = 4;
+    int xSize = 2;
 
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
 
-    @Test public void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
+    LinearInt linear = new LinearInt(x, new int[] {2, 1, 3, 1}, ">=", 5);
 
-        Store store = new Store();
+    store.impose(linear);
 
-        int xLength = 4;
-        int xSize = xLength * 2 + 2;
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int noOfSolutions = noOfAllSolutions(store, x);
 
-        Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
-        store.impose(new Alldiff(x));
+    assertThat(noOfSolutions, is(81));
+  }
 
-        store.print();
+  @Test
+  public void testIfThenElse() {
 
-        int noOfSolutions = noOfAllSolutions(store, x);
+    Store store = new Store();
 
-        assertThat(noOfSolutions, is(24));
+    int size = 3;
 
-    }
+    IntVar x = new IntVar(store, "x", 0, size);
+    IntVar y = new IntVar(store, "y", 0, size);
+    IntVar z = new IntVar(store, "z", 0, size);
 
-    @Test public void testArgMin() {
+    PrimitiveConstraint ifCond = new XeqY(x, y);
+    PrimitiveConstraint thenCond = new XneqY(y, z);
+    PrimitiveConstraint elseCond = new XeqY(y, z);
 
-        Store store = new Store();
+    IfThenElse ifThenElse = new IfThenElse(ifCond, thenCond, elseCond);
 
-        int xLength = 4;
-        int xSize = 6;
+    store.impose(ifThenElse);
 
-        IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
-        IntVar index = new IntVar(store, "index", 0, xLength);
-        ArgMin argMin = new ArgMin(x, index, -1);
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
 
-        store.impose(argMin);
+    assertThat(noOfSolutions, is(24));
+  }
 
-        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
+  @Test
+  public void testElementIntegerFast() {
 
-        assertThat(noOfSolutions, is(2401));
+    Store store = new Store();
 
-    }
+    int size = 3;
+    int length = 1000;
 
-    @Test
-    // BUG, problem with using BoundDomain, SmallDenseDomain and asserts, need to investigate.
-    // The same problem and fixed applied for ArgMin. Keep this for investigation of the buggy scenario.
-    public void testArgMax() {
+    IntVar x = new IntVar(store, "x", 0, length);
+    IntVar z = new IntVar(store, "z", 0, length);
 
-        Store store = new Store();
+    int[] values = IntStream.iterate(1, i -> i + 1).map(i -> i / size).limit(length).toArray();
 
-        int xLength = 4;
-        int xSize = 6;
+    ElementIntegerFast ifThenElse = new ElementIntegerFast(x, values, z);
 
-        IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
-        IntVar index = new IntVar(store, "index", 0, xLength);
-        ArgMax argMax = new ArgMax(x, index, -1);
+    store.impose(ifThenElse);
 
-        store.impose(argMax);
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, z});
 
-        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
+    assertThat(noOfSolutions, is(length));
+  }
 
-        assertThat(noOfSolutions, is(2401));
+  @Test
+  public void testEqBool() {
 
-    }
+    Store store = new Store();
 
-    @Test public void testSum() {
+    int xLength = 4;
 
-        Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", xLength, 2);
+    IntVar n = new IntVar(store, "sum", 0, 1);
+    EqBool eqBool = new EqBool(x, n);
 
-        int xLength = 4;
-        int xSize = 2;
+    store.impose(eqBool);
 
-        IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
-        IntVar sum = new IntVar(store, "sum", 0, xLength * xSize);
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
-        SumInt sumConstraint = new SumInt(x, "==", sum);
+    assertThat(noOfSolutions, is(16));
+  }
 
-        store.impose(sumConstraint);
+  @Test
+  public void testLex() {
 
-        int noOfSolutions = noOfAllSolutions(store, x);
+    Store store = new Store();
 
-        assertThat(noOfSolutions, is(15));
+    int xLength = 4;
+    int xSize = 2;
 
-    }
+    IntVar[] x1 = getShiftedIntVars(store, "a", xLength, xSize + 1);
+    IntVar[] x2 = getIntVars(store, "b", xLength + xSize, xLength);
 
+    Lex lex = new Lex(new IntVar[][] {x1, x2}, true);
 
+    store.imposeDecomposition(lex);
 
-    @Test public void testLinear() {
+    int noOfSolutions = noOfAllSolutions(store, x1, x2);
 
-        Store store = new Store();
+    assertThat(noOfSolutions, is(188640));
+  }
 
-        int xLength = 4;
-        int xSize = 2;
+  @Test
+  public void testGCC() {
 
-        IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    Store store = new Store();
 
-        LinearInt linear = new LinearInt(x, new int[] {2, 1, 3, 1}, ">=", 5);
+    int xLength = 4;
+    int xSize = 2;
 
-        store.impose(linear);
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
 
-        int noOfSolutions = noOfAllSolutions(store, x);
+    IntVar[] counters = getIntVars(store, "counters", xLength + xSize, xLength);
 
-        assertThat(noOfSolutions, is(81));
+    GCC gcc = new GCC(x, counters);
 
-    }
+    store.impose(gcc);
 
-    @Test public void testIfThenElse() {
+    int noOfSolutions = noOfAllSolutions(store, x, counters);
 
-        Store store = new Store();
+    assertThat(noOfSolutions, is(81));
+  }
 
-        int size = 3;
+  @Test
+  public void testAmongVar() {
 
-        IntVar x = new IntVar(store, "x", 0, size);
-        IntVar y = new IntVar(store, "y", 0, size);
-        IntVar z = new IntVar(store, "z", 0, size);
+    Store store = new Store();
 
-        PrimitiveConstraint ifCond = new XeqY(x, y);
-        PrimitiveConstraint thenCond = new XneqY(y, z);
-        PrimitiveConstraint elseCond = new XeqY(y, z);
+    int xLength = 4;
+    int xSize = 3;
+    int nMax = 3;
 
-        IfThenElse ifThenElse = new IfThenElse(ifCond, thenCond, elseCond);
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize);
 
-        store.impose(ifThenElse);
+    IntVar[] y = getIntVars(store, "y", xLength + xSize, xSize);
 
-        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
+    IntVar n = new IntVar(store, "n", 0, nMax);
+    AmongVar amongVar = new AmongVar(x, y, n);
 
-        assertThat(noOfSolutions, is(24));
+    store.impose(amongVar);
 
-    }
+    int noOfSolutions = noOfAllSolutions(store, x, y, new IntVar[] {n});
 
-    @Test public void testElementIntegerFast() {
+    assertThat(noOfSolutions, is(177147));
+  }
 
-        Store store = new Store();
+  @Test
+  public void testDiff() {
 
-        int size = 3;
-        int length = 1000;
+    Store store = new Store();
 
-        IntVar x = new IntVar(store, "x", 0, length);
-        IntVar z = new IntVar(store, "z", 0, length);
+    int noOfRectangles = 4;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
 
-        int[] values = IntStream.iterate(1, i -> i + 1).map(i -> i / size).limit(length).toArray();
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
 
-        ElementIntegerFast ifThenElse = new ElementIntegerFast(x, values, z);
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
 
-        store.impose(ifThenElse);
+    Diff diff = new Diff(origin1, origin2, length1, length2);
 
-        int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, z});
+    store.impose(diff);
 
-        assertThat(noOfSolutions, is(length));
+    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
 
-    }
+    assertThat(noOfSolutions, is(741642));
+  }
 
+  @Test
+  public void testDisjoint() {
 
+    Store store = new Store();
 
-    @Test public void testEqBool() {
+    int noOfRectangles = 4;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
 
-        Store store = new Store();
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
 
-        int xLength = 4;
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
 
-        IntVar[] x = getIntVars(store, "x", xLength, 2);
-        IntVar n = new IntVar(store, "sum", 0, 1);
-        EqBool eqBool = new EqBool(x, n);
+    Disjoint diff = new Disjoint(origin1, origin2, length1, length2);
 
-        store.impose(eqBool);
+    store.impose(diff);
 
-        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
+    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
 
-        assertThat(noOfSolutions, is(16));
+    assertThat(noOfSolutions, is(699189));
+  }
 
-    }
+  @Test
+  public void testDiff2() {
 
+    Store store = new Store();
 
+    int noOfRectangles = 4;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
 
-    @Test public void testLex() {
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
 
-        Store store = new Store();
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
 
-        int xLength = 4;
-        int xSize = 2;
+    Diff2 diff2 = new Diff2(origin1, origin2, length1, length2);
 
-        IntVar[] x1 = getShiftedIntVars(store, "a", xLength, xSize + 1);
-        IntVar[] x2 = getIntVars(store, "b", xLength + xSize, xLength);
+    store.impose(diff2);
 
-        Lex lex = new Lex(new IntVar[][] {x1, x2}, true);
+    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
 
-        store.imposeDecomposition(lex);
+    assertThat(noOfSolutions, is(791208));
+  }
 
-        int noOfSolutions = noOfAllSolutions(store, x1, x2);
+  @Test
+  public void testDisjointConditional() {
 
-        assertThat(noOfSolutions, is(188640));
+    Store store = new Store();
 
-    }
+    int noOfRectangles = 3;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
 
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
 
-    @Test public void testGCC() {
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
 
-        Store store = new Store();
+    List<List<Integer>> conditionalPairs = new ArrayList<>();
+    conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {1, 3})));
+    conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {2, 3})));
 
-        int xLength = 4;
-        int xSize = 2;
+    IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
 
-        IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    Diff disjointConditional =
+        new DisjointConditional(
+            origin1,
+            origin2,
+            length1,
+            length2,
+            conditionalPairs,
+            Arrays.asList(exceptionCondition));
 
-        IntVar[] counters = getIntVars(store, "counters", xLength + xSize, xLength);
+    store.impose(disjointConditional);
 
-        GCC gcc = new GCC(x, counters);
+    int noOfSolutions =
+        noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
 
-        store.impose(gcc);
+    assertThat(noOfSolutions, is(141141));
+  }
 
-        int noOfSolutions = noOfAllSolutions(store, x, counters);
+  @Test
+  public void testValues() {
 
-        assertThat(noOfSolutions, is(81));
+    Store store = new Store();
 
-    }
+    int xLength = 4;
+    int xSize = 7;
 
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    IntVar n = new IntVar(store, "sum", 0, 1);
+    Values values = new Values(x, n);
 
-    @Test public void testAmongVar() {
+    store.impose(values);
 
-        Store store = new Store();
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
-        int xLength = 4;
-        int xSize = 3;
-        int nMax = 3;
+    assertThat(noOfSolutions, is(xSize));
+  }
 
-        IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize);
+  @Test
+  public void testValues2() {
 
-        IntVar[] y = getIntVars(store, "y", xLength + xSize, xSize);
+    Store store = new Store();
 
-        IntVar n = new IntVar(store, "n", 0, nMax);
-        AmongVar amongVar = new AmongVar(x, y, n);
+    int xLength = 4;
+    int xSize = 4;
 
-        store.impose(amongVar);
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    IntVar n = new IntVar(store, "sum", 1, 2);
+    Values values = new Values(x, n);
 
-        int noOfSolutions = noOfAllSolutions(store, x, y, new IntVar[] {n});
+    store.impose(values);
 
-        assertThat(noOfSolutions, is(177147));
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
-    }
-
-
-    @Test public void testDiff() {
-
-        Store store = new Store();
-
-        int noOfRectangles = 4;
-        int xSize = 2;
-        int ySize = 2;
-        int durationSize = 3;
-
-        IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
-        IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
-
-        IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
-        IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
-
-        Diff diff = new Diff(origin1, origin2, length1, length2);
-
-        store.impose(diff);
-
-        int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
-
-        assertThat(noOfSolutions, is(741642));
-
-    }
-
-    @Test public void testDisjoint() {
-
-        Store store = new Store();
-
-        int noOfRectangles = 4;
-        int xSize = 2;
-        int ySize = 2;
-        int durationSize = 3;
-
-        IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
-        IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
-
-        IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
-        IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
-
-        Disjoint diff = new Disjoint(origin1, origin2, length1, length2);
-
-        store.impose(diff);
-
-        int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
-
-        assertThat(noOfSolutions, is(699189));
-
-    }
-
-    @Test public void testDiff2() {
-
-        Store store = new Store();
-
-        int noOfRectangles = 4;
-        int xSize = 2;
-        int ySize = 2;
-        int durationSize = 3;
-
-        IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
-        IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
-
-        IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
-        IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
-
-        Diff2 diff2 = new Diff2(origin1, origin2, length1, length2);
-
-        store.impose(diff2);
-
-        int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
-
-        assertThat(noOfSolutions, is(791208));
-
-    }
-
-    @Test public void testDisjointConditional() {
-
-        Store store = new Store();
-
-        int noOfRectangles = 3;
-        int xSize = 2;
-        int ySize = 2;
-        int durationSize = 3;
-
-        IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
-        IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
-
-        IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
-        IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
-
-        List<List<Integer>> conditionalPairs = new ArrayList<>();
-        conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {1, 3})));
-        conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {2, 3})));
-
-        IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
-
-        Diff disjointConditional =
-            new DisjointConditional(origin1, origin2, length1, length2, conditionalPairs, Arrays.asList(exceptionCondition));
-
-        store.impose(disjointConditional);
-
-        int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
-
-        assertThat(noOfSolutions, is(141141));
-
-    }
-
-
-    @Test public void testValues() {
-
-        Store store = new Store();
-
-        int xLength = 4;
-        int xSize = 7;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        IntVar n = new IntVar(store, "sum", 0, 1);
-        Values values = new Values(x, n);
-
-        store.impose(values);
-
-        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(xSize));
-
-    }
-
-    @Test public void testValues2() {
-
-        Store store = new Store();
-
-        int xLength = 4;
-        int xSize = 4;
-
-        IntVar[] x = getIntVars(store, "x", xLength, xSize);
-        IntVar n = new IntVar(store, "sum", 1, 2);
-        Values values = new Values(x, n);
-
-        store.impose(values);
-
-        int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
-
-        assertThat(noOfSolutions, is(88));
-
-    }
-
-
+    assertThat(noOfSolutions, is(88));
+  }
 }

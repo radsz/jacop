@@ -30,310 +30,268 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * It solves a Magic squares problem.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          MagicSquare problem consists of filling the square of size n with
- *          numbers from 1 to n^2 in such a way that all rows, all columns, and
- *          main diagonals are equal to the same number K. K can be computed to
- *          be equal to (n * (n^2 + 1)) / 2.
+ *     <p>MagicSquare problem consists of filling the square of size n with numbers from 1 to n^2 in
+ *     such a way that all rows, all columns, and main diagonals are equal to the same number K. K
+ *     can be computed to be equal to (n * (n^2 + 1)) / 2.
  */
-
 public class MagicSquares extends ExampleFD {
 
-    /**
-     * It specifies the number
-     */
-    public int number = 4;
+  /** It specifies the number */
+  public int number = 4;
 
-    /**
-     * It specifies the list of constraints which can be used for guiding shaving.
-     */
-    public List<Constraint> guidingShaving;
+  /** It specifies the list of constraints which can be used for guiding shaving. */
+  public List<Constraint> guidingShaving;
 
+  @Override
+  public void model() {
 
-    @Override public void model() {
+    // Creating constraint store
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    IntVar squares[] = new IntVar[number * number];
 
-        IntVar squares[] = new IntVar[number * number];
+    IntVar k =
+        new IntVar(
+            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
 
-        IntVar k = new IntVar(store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
+    for (int i = 0; i < number; i++)
+      for (int j = 0; j < number; j++)
+        squares[i * number + j] =
+            new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
 
-        for (int i = 0; i < number; i++)
-            for (int j = 0; j < number; j++)
-                squares[i * number + j] = new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
+    for (int i = 0; i < number; i++) vars.add(squares[(i) * number + i]);
+    for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
+    for (IntVar v : squares) vars.add(v);
 
-        for (int i = 0; i < number; i++)
-            vars.add(squares[(i) * number + i]);
-        for (int i = number; i > 0; i--)
-            vars.add(squares[(i - 1) * number + (number - i)]);
-        for (IntVar v : squares)
-            vars.add(v);
+    // Imposing inequalities constraints between squares
+    store.impose(new Alldiff(squares));
 
-        // Imposing inequalities constraints between squares
-        store.impose(new Alldiff(squares));
+    IntVar row[] = new IntVar[number];
 
-        IntVar row[] = new IntVar[number];
-
-        for (int i = 0; i < number; i++) {
-            for (int j = 0; j < number; j++)
-                row[j] = squares[i * number + j];
-            store.impose(new SumInt(row, "==", k));
-        }
-
-        IntVar column[] = new IntVar[number];
-
-        for (int j = 0; j < number; j++) {
-            for (int i = 0; i < number; i++)
-                column[i] = squares[i * number + j];
-            store.impose(new SumInt(column, "==", k));
-        }
-
-        IntVar diagonal[] = new IntVar[number];
-
-        for (int i = 0; i < number; i++)
-            diagonal[i] = squares[(i) * number + i];
-
-        store.impose(new SumInt(diagonal, "==", k));
-
-        for (int i = number; i > 0; i--)
-            diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(diagonal, "==", k));
-
-        // symmetry breaking
-        store.impose(new XltY(squares[0], squares[number - 1]));
-        store.impose(new XltY(squares[0], squares[number * number - 1]));
-        store.impose(new XltY(squares[0], squares[number * number - number]));
-
+    for (int i = 0; i < number; i++) {
+      for (int j = 0; j < number; j++) row[j] = squares[i * number + j];
+      store.impose(new SumInt(row, "==", k));
     }
 
-    /**
-     * It creates the model with specification of what constraint can
-     * help in guiding shaving.
-     */
-    public void model4Shaving() {
+    IntVar column[] = new IntVar[number];
 
-        guidingShaving = new ArrayList<Constraint>();
-
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
-
-        IntVar squares[] = new IntVar[number * number];
-
-        IntVar k = new IntVar(store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
-
-        for (int i = 0; i < number; i++)
-            for (int j = 0; j < number; j++)
-                squares[i * number + j] = new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
-
-        for (int i = 0; i < number; i++)
-            vars.add(squares[(i) * number + i]);
-        for (int i = number; i > 0; i--)
-            vars.add(squares[(i - 1) * number + (number - i)]);
-        for (IntVar v : squares)
-            vars.add(v);
-
-        // Imposing inequalities constraints between squares
-        store.impose(new Alldiff(squares));
-
-        IntVar row[] = new IntVar[number];
-
-        for (int i = 0; i < number; i++) {
-            for (int j = 0; j < number; j++)
-                row[j] = squares[i * number + j];
-            Constraint cx = new SumInt(row, "==", k);
-            store.impose(cx);
-            guidingShaving.add(cx);
-        }
-
-        IntVar column[] = new IntVar[number];
-
-        for (int j = 0; j < number; j++) {
-            for (int i = 0; i < number; i++)
-                column[i] = squares[i * number + j];
-
-            Constraint cx = new SumInt(column, "==", k);
-            store.impose(cx);
-            guidingShaving.add(cx);
-        }
-
-        IntVar diagonal[] = new IntVar[number];
-
-        for (int i = 0; i < number; i++)
-            diagonal[i] = squares[(i) * number + i];
-
-        Constraint cx = new SumInt(diagonal, "==", k);
-        store.impose(cx);
-        guidingShaving.add(cx);
-
-        for (int i = number; i > 0; i--)
-            diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(diagonal, "==", k));
-
-        // symmetry breaking
-        store.impose(new XltY(squares[0], squares[number - 1]));
-        store.impose(new XltY(squares[0], squares[number * number - 1]));
-        store.impose(new XltY(squares[0], squares[number * number - number]));
-
-        // store.print();
-
+    for (int j = 0; j < number; j++) {
+      for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
+      store.impose(new SumInt(column, "==", k));
     }
 
-    /**
-     * IT creates a dual model.
-     */
-    public void modelDual() {
+    IntVar diagonal[] = new IntVar[number];
 
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
 
-        IntVar squares[] = new IntVar[number * number];
+    store.impose(new SumInt(diagonal, "==", k));
 
-        IntVar k = new IntVar(store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
+    for (int i = number; i > 0; i--) diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    store.impose(new SumInt(diagonal, "==", k));
 
-        for (int i = 0; i < number; i++)
-            for (int j = 0; j < number; j++)
-                squares[i * number + j] = new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
+    // symmetry breaking
+    store.impose(new XltY(squares[0], squares[number - 1]));
+    store.impose(new XltY(squares[0], squares[number * number - 1]));
+    store.impose(new XltY(squares[0], squares[number * number - number]));
+  }
 
-        for (int i = 0; i < number; i++)
-            vars.add(squares[(i) * number + i]);
-        for (int i = number; i > 0; i--)
-            vars.add(squares[(i - 1) * number + (number - i)]);
-        for (IntVar v : squares)
-            vars.add(v);
+  /** It creates the model with specification of what constraint can help in guiding shaving. */
+  public void model4Shaving() {
 
-        IntVar row[] = new IntVar[number];
+    guidingShaving = new ArrayList<Constraint>();
 
-        for (int i = 0; i < number; i++) {
-            for (int j = 0; j < number; j++)
-                row[j] = squares[i * number + j];
-            store.impose(new SumInt(row, "==", k));
-        }
+    // Creating constraint store
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        IntVar column[] = new IntVar[number];
+    IntVar squares[] = new IntVar[number * number];
 
-        for (int j = 0; j < number; j++) {
-            for (int i = 0; i < number; i++)
-                column[i] = squares[i * number + j];
-            store.impose(new SumInt(column, "==", k));
-        }
+    IntVar k =
+        new IntVar(
+            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
 
-        IntVar diagonal[] = new IntVar[number];
+    for (int i = 0; i < number; i++)
+      for (int j = 0; j < number; j++)
+        squares[i * number + j] =
+            new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
 
-        for (int i = 0; i < number; i++)
-            diagonal[i] = squares[(i) * number + i];
+    for (int i = 0; i < number; i++) vars.add(squares[(i) * number + i]);
+    for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
+    for (IntVar v : squares) vars.add(v);
 
-        store.impose(new SumInt(diagonal, "==", k));
+    // Imposing inequalities constraints between squares
+    store.impose(new Alldiff(squares));
 
-        for (int i = number; i > 0; i--)
-            diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-        store.impose(new SumInt(diagonal, "==", k));
+    IntVar row[] = new IntVar[number];
 
-        // // symmetry breaking
-        // store.impose(new XltY(squares[0], squares[number-1]));
-        // store.impose(new XltY(squares[0], squares[number*number - 1]));
-        // store.impose(new XltY(squares[0], squares[number*number - number]));
-
-        IntVar[] d = new IntVar[number * number];
-
-        for (int i = 0; i < number * number; i++) {
-            d[i] = new IntVar(store, "d" + i, 1, number * number);
-            vars.add(d[i]);
-        }
-
-        store.impose(new Assignment(squares, d, 1));
-
-        // Imposing inequalities constraints between squares
-        Constraint cx = new Alldistinct(squares);
-        store.impose(cx);
-
+    for (int i = 0; i < number; i++) {
+      for (int j = 0; j < number; j++) row[j] = squares[i * number + j];
+      Constraint cx = new SumInt(row, "==", k);
+      store.impose(cx);
+      guidingShaving.add(cx);
     }
 
-    /**
-     * It executes the program which solves the MagicSquare problem using many different
-     * model and searches.
-     *
-     * @param args the first argument allows to specify the size of magic square.
-     */
-    public static void test(String args[]) {
+    IntVar column[] = new IntVar[number];
 
-        MagicSquares example = new MagicSquares();
+    for (int j = 0; j < number; j++) {
+      for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
 
-        if (args.length != 0)
-            example.number = Integer.parseInt(args[0]);
-
-        example.model();
-
-        if (example.searchMiddle())
-            System.out.println("Solution(s) found");
-
-        MagicSquares exampleDual = new MagicSquares();
-
-        if (args.length != 0)
-            exampleDual.number = Integer.parseInt(args[0]);
-
-        exampleDual.modelDual();
-
-        if (exampleDual.creditSearch(64, 5000, 10))
-            System.out.println("Solution(s) found");
-
-        MagicSquares exampleShave = new MagicSquares();
-
-        if (args.length != 0)
-            exampleShave.number = Integer.parseInt(args[0]);
-
-        exampleShave.model4Shaving();
-
-        if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
-            System.out.println("Solution(s) found");
-
+      Constraint cx = new SumInt(column, "==", k);
+      store.impose(cx);
+      guidingShaving.add(cx);
     }
 
+    IntVar diagonal[] = new IntVar[number];
 
+    for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
 
-    /**
-     * It executes the program which solves the MagicSquare problem.
-     *
-     * @param args the first argument allows to specify the size of magic square.
-     */
-    public static void main(String args[]) {
+    Constraint cx = new SumInt(diagonal, "==", k);
+    store.impose(cx);
+    guidingShaving.add(cx);
 
-        MagicSquares example = new MagicSquares();
+    for (int i = number; i > 0; i--) diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    store.impose(new SumInt(diagonal, "==", k));
 
-        if (args.length != 0)
-            example.number = Integer.parseInt(args[0]);
+    // symmetry breaking
+    store.impose(new XltY(squares[0], squares[number - 1]));
+    store.impose(new XltY(squares[0], squares[number * number - 1]));
+    store.impose(new XltY(squares[0], squares[number * number - number]));
 
-        example.model();
+    // store.print();
 
-        if (example.searchMiddle())
-            System.out.println("Solution(s) found");
+  }
 
-        MagicSquares exampleDual = new MagicSquares();
+  /** IT creates a dual model. */
+  public void modelDual() {
 
-        if (args.length != 0)
-            exampleDual.number = Integer.parseInt(args[0]);
+    // Creating constraint store
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        exampleDual.modelDual();
+    IntVar squares[] = new IntVar[number * number];
 
-        if (exampleDual.creditSearch(64, 5000, 10))
-            System.out.println("Solution(s) found");
+    IntVar k =
+        new IntVar(
+            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
 
+    for (int i = 0; i < number; i++)
+      for (int j = 0; j < number; j++)
+        squares[i * number + j] =
+            new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
+
+    for (int i = 0; i < number; i++) vars.add(squares[(i) * number + i]);
+    for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
+    for (IntVar v : squares) vars.add(v);
+
+    IntVar row[] = new IntVar[number];
+
+    for (int i = 0; i < number; i++) {
+      for (int j = 0; j < number; j++) row[j] = squares[i * number + j];
+      store.impose(new SumInt(row, "==", k));
     }
 
+    IntVar column[] = new IntVar[number];
 
+    for (int j = 0; j < number; j++) {
+      for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
+      store.impose(new SumInt(column, "==", k));
+    }
+
+    IntVar diagonal[] = new IntVar[number];
+
+    for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
+
+    store.impose(new SumInt(diagonal, "==", k));
+
+    for (int i = number; i > 0; i--) diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    store.impose(new SumInt(diagonal, "==", k));
+
+    // // symmetry breaking
+    // store.impose(new XltY(squares[0], squares[number-1]));
+    // store.impose(new XltY(squares[0], squares[number*number - 1]));
+    // store.impose(new XltY(squares[0], squares[number*number - number]));
+
+    IntVar[] d = new IntVar[number * number];
+
+    for (int i = 0; i < number * number; i++) {
+      d[i] = new IntVar(store, "d" + i, 1, number * number);
+      vars.add(d[i]);
+    }
+
+    store.impose(new Assignment(squares, d, 1));
+
+    // Imposing inequalities constraints between squares
+    Constraint cx = new Alldistinct(squares);
+    store.impose(cx);
+  }
+
+  /**
+   * It executes the program which solves the MagicSquare problem using many different model and
+   * searches.
+   *
+   * @param args the first argument allows to specify the size of magic square.
+   */
+  public static void test(String args[]) {
+
+    MagicSquares example = new MagicSquares();
+
+    if (args.length != 0) example.number = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchMiddle()) System.out.println("Solution(s) found");
+
+    MagicSquares exampleDual = new MagicSquares();
+
+    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
+
+    exampleDual.modelDual();
+
+    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
+
+    MagicSquares exampleShave = new MagicSquares();
+
+    if (args.length != 0) exampleShave.number = Integer.parseInt(args[0]);
+
+    exampleShave.model4Shaving();
+
+    if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
+      System.out.println("Solution(s) found");
+  }
+
+  /**
+   * It executes the program which solves the MagicSquare problem.
+   *
+   * @param args the first argument allows to specify the size of magic square.
+   */
+  public static void main(String args[]) {
+
+    MagicSquares example = new MagicSquares();
+
+    if (args.length != 0) example.number = Integer.parseInt(args[0]);
+
+    example.model();
+
+    if (example.searchMiddle()) System.out.println("Solution(s) found");
+
+    MagicSquares exampleDual = new MagicSquares();
+
+    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
+
+    exampleDual.modelDual();
+
+    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
+  }
 }

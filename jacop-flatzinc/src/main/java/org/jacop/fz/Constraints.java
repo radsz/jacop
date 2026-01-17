@@ -43,212 +43,216 @@ import org.jacop.satwrapper.SatTranslation;
  */
 public class Constraints implements ParserTreeConstants {
 
-    Tables dictionary;
-    Store store;
-    String p;
+  Tables dictionary;
+  Store store;
+  String p;
 
-    boolean debug;
+  boolean debug;
 
-    final static int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
 
-    // ============ SAT solver interface ==============
-    float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
-    long boolClauses = 0;
-    long noConstraints = 0;
-    long bool2Int = 0;
-    SatTranslation sat;
+  // ============ SAT solver interface ==============
+  float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
+  long boolClauses = 0;
+  long noConstraints = 0;
+  long bool2Int = 0;
+  SatTranslation sat;
 
-    Support support;
+  Support support;
 
-    final org.jacop.fz.constraints.ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
+  final org.jacop.fz.constraints.ConstraintFncs
+      cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
 
-    /**
-     * It creates an object to parse the constraint part of the flatzinc file.
-     *
-     * @param store the constraint store in which the constraints are being created.
-     * @param dict  the current dictionary (tables of all variables and constants)
-     */
-    public Constraints(Store store, Tables dict) {
-        this.store = store;
-        this.dictionary = dict;
+  /**
+   * It creates an object to parse the constraint part of the flatzinc file.
+   *
+   * @param store the constraint store in which the constraints are being created.
+   * @param dict the current dictionary (tables of all variables and constants)
+   */
+  public Constraints(Store store, Tables dict) {
+    this.store = store;
+    this.dictionary = dict;
 
-        sat = new SatTranslation(store);
-        // impose SAT-solver
-        sat.impose();
+    sat = new SatTranslation(store);
+    // impose SAT-solver
+    sat.impose();
 
-        support = new Support(store, dict, sat);
+    support = new Support(store, dict, sat);
 
-        cf = new org.jacop.fz.constraints.ConstraintFncs(support);
+    cf = new org.jacop.fz.constraints.ConstraintFncs(support);
+  }
 
+  void setOptions(Options options) {
+    support.options = options;
+    debug = options.debug();
+  }
+
+  void generateAllConstraints(SimpleNode astTree) throws Throwable {
+
+    if (support.options.debug())
+      System.out.println(
+          "% bool constraints = "
+              + boolClauses
+              + " of "
+              + (noConstraints - bool2Int)
+              + " p = "
+              + (float) (boolClauses) / (float) (noConstraints - bool2Int));
+
+    if ((float) (boolClauses) / (float) (noConstraints - bool2Int) >= satThreshold)
+      support.options.setSat();
+
+    sat.debug = debug;
+
+    int n = astTree.jjtGetNumChildren();
+
+    for (int i = 0; i < n; i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      // go for ConstraintItems
+      if (node.getId() == JJTCONSTRAINTITEMS) {
+
+        int k = node.jjtGetNumChildren();
+        for (int j = 0; j < k; j++) {
+          SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
+          generateConstraint(snode);
+        }
+      }
     }
 
-    void setOptions(Options options) {
-        support.options = options;
-        debug = options.debug();
+    support.poseDelayedConstraints();
+
+    // to be sure that all constraints queues are empty and the
+    // model is consistent; it can happen that search will not
+    // find out inconsistency if all variables are ground
+    if (!store.consistency()) throw Store.failException;
+  }
+
+  void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {
+
+    // if (debug)
+    //   constraintWithAnnotations.dump("");
+
+    // default consistency - bounds
+    support.boundsConsistency = true;
+    support.domainConsistency = false;
+    support.definedVar = null;
+
+    int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
+    if (numberChildren > 1) {
+      support.parseAnnotations(constraintWithAnnotations);
     }
 
-    void generateAllConstraints(SimpleNode astTree) throws Throwable {
+    SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
 
-        if (support.options.debug())
-            System.out.println("% bool constraints = " + boolClauses + " of " +
-                               (noConstraints - bool2Int)+ " p = " +
-                               (float)(boolClauses)/(float)(noConstraints - bool2Int));
+    // Generate constraint
+    if (node.getId() == JJTCONSTELEM) {
 
-        if ((float)(boolClauses)/(float)(noConstraints - bool2Int) >= satThreshold)
-            support.options.setSat();
+      p = ((ASTConstElem) node).getName();
 
-        sat.debug = debug;
+      try {
 
-        int n = astTree.jjtGetNumChildren();
+        java.lang.reflect.Method method = cf.getClass().getMethod(p, SimpleNode.class);
+        method.invoke(cf, node);
 
-        for (int i = 0; i < n; i++) {
-            SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-            // go for ConstraintItems
-            if (node.getId() == JJTCONSTRAINTITEMS) {
+      } catch (NoSuchMethodException e) {
+        throw new RuntimeException(
+            "%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
+      } catch (IllegalAccessException e) {
+        System.out.println(e);
+      } catch (java.lang.reflect.InvocationTargetException e) {
+        System.out.println("%% problem detected for " + p);
 
-                int k = node.jjtGetNumChildren();
-                for (int j = 0; j < k; j++) {
-                    SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
-                    generateConstraint(snode);
-                }
-            }
+        try {
+          throw e.getCause();
+        } catch (FailException fe) {
+          throw fe;
+        } catch (ArithmeticException ae) {
+          throw ae;
+        } catch (IllegalArgumentException ie) {
+          throw ie;
+        } catch (ParseException pe) {
+          throw pe;
+        } catch (TokenMgrError te) {
+          throw te;
+        } catch (ArrayIndexOutOfBoundsException ie) {
+          throw ie;
+        } catch (OutOfMemoryError me) {
+          throw me;
+        } catch (StackOverflowError stack) {
+          throw stack;
+        } catch (TrivialSolution trivial) {
+          throw trivial;
+        }
+      }
+    }
+  }
+
+  void generateAlias(SimpleNode constraintWithAnnotations) {
+
+    SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
+
+    if (node.getId() == JJTCONSTELEM) {
+
+      p = ((ASTConstElem) node).getName();
+
+      noConstraints++;
+
+      if (p.startsWith("bool_clause")
+          || p.startsWith("bool_not")
+          || p.startsWith("bool_eq")
+          || p.startsWith("array_bool_or"))
+        // || p.startsWith("array_bool") || p.startsWith("bool_xor"))
+        boolClauses++;
+      else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
+        bool2Int++;
+
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+        IntVar v1 = support.getVariable(p1), v2 = support.getVariable(p2);
+        dictionary.addAlias(v1, v2);
+
+        if (v1.singleton() || v2.singleton()) {
+          v1.domain.in(store.level, v1, v2.domain);
+          v2.domain.in(store.level, v2, v1.domain);
         }
 
-        support.poseDelayedConstraints();
+        if (debug) System.out.println("% Alias: " + v1 + " == " + v2);
+      } else if (p.startsWith("int_eq_reif")) {
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+        ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+        IntVar b = support.getVariable(p3);
+        IntVar x;
+        int v;
 
-	// to be sure that all constraints queues are empty and the
-	// model is consistent; it can happen that search will not
-	// find out inconsistency if all variables are ground
-	if (!store.consistency())
-	    throw Store.failException;
+        if (p2.getType() == 0) { // second argument integer
+          x = support.getVariable(p1);
+          v = support.getInt(p2);
+        } else if (p1.getType() == 0) { // first argument integer
+          x = support.getVariable(p2);
+          v = support.getInt(p1);
+        } else // no integers
+        return;
+
+        support.addReified(x, v, b);
+      } else if (p.startsWith("int_eq_imp")) {
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+        ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
+        IntVar b = support.getVariable(p3);
+        IntVar x;
+        int v;
+
+        if (p2.getType() == 0) { // second argument integer
+          x = support.getVariable(p1);
+          v = support.getInt(p2);
+        } else if (p1.getType() == 0) { // first argument integer
+          x = support.getVariable(p2);
+          v = support.getInt(p1);
+        } else // no integers
+        return;
+
+        support.addImplied(x, v, b);
+      }
     }
-
-    void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {
-
-        // if (debug)
-        //   constraintWithAnnotations.dump("");
-
-        // default consistency - bounds
-        support.boundsConsistency = true;
-        support.domainConsistency = false;
-        support.definedVar = null;
-
-        int numberChildren = constraintWithAnnotations.jjtGetNumChildren();
-        if (numberChildren > 1) {
-            support.parseAnnotations(constraintWithAnnotations);
-        }
-
-        SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
-
-        // Generate constraint
-        if (node.getId() == JJTCONSTELEM) {
-
-            p = ((ASTConstElem) node).getName();
-
-            try {
-
-                java.lang.reflect.Method method = cf.getClass().getMethod(p, SimpleNode.class);
-                method.invoke(cf, node);
-
-            } catch (NoSuchMethodException e) {
-                throw new RuntimeException("%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
-            } catch (IllegalAccessException e) {
-                System.out.println(e);
-            } catch (java.lang.reflect.InvocationTargetException e) {
-                System.out.println("%% problem detected for " + p);
-
-                try {
-                    throw e.getCause();
-                } catch (FailException fe) {
-                    throw fe;
-                } catch (ArithmeticException ae) {
-                    throw ae;
-                } catch (IllegalArgumentException ie) {
-                    throw ie;
-                } catch (ParseException pe) {
-                    throw pe;
-                } catch (TokenMgrError te) {
-                    throw te;
-                } catch (ArrayIndexOutOfBoundsException ie) {
-                    throw ie;
-                } catch (OutOfMemoryError me) {
-                    throw me;
-                } catch (StackOverflowError stack) {
-                    throw stack;
-                } catch (TrivialSolution trivial) {
-                    throw trivial;
-                }
-            }
-        }
-    }
-
-    void generateAlias(SimpleNode constraintWithAnnotations) {
-
-        SimpleNode node = (SimpleNode) constraintWithAnnotations.jjtGetChild(0);
-
-        if (node.getId() == JJTCONSTELEM) {
-
-            p = ((ASTConstElem) node).getName();
-
-            noConstraints++;
-
-            if (p.startsWith("bool_clause") || p.startsWith("bool_not") ||
-                p.startsWith("bool_eq") || p.startsWith("array_bool_or"))
-                // || p.startsWith("array_bool") || p.startsWith("bool_xor"))
-                boolClauses++;
-            else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
-                bool2Int++;
-
-                ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-                ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-                IntVar v1 = support.getVariable(p1), v2 = support.getVariable(p2);
-                dictionary.addAlias(v1, v2);
-
-                if (v1.singleton() || v2.singleton()) {
-                    v1.domain.in(store.level, v1, v2.domain);
-                    v2.domain.in(store.level, v2, v1.domain);
-                }
-
-                if (debug)
-                    System.out.println("% Alias: " + v1 + " == " + v2);
-            } else if (p.startsWith("int_eq_reif")) {
-                ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-                ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-                ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-		IntVar b = support.getVariable(p3);
-		IntVar x;
-		int v;
-
-		if (p2.getType() == 0) { // second argument integer
-		    x = support.getVariable(p1);
-		    v = support.getInt(p2);
-		} else if (p1.getType() == 0) { // first argument integer
-		    x = support.getVariable(p2);
-		    v = support.getInt(p1);
-		} else // no integers
-		    return;
-
-		support.addReified(x, v, b);
-	    }  else if (p.startsWith("int_eq_imp")) {
-                ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
-                ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-                ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
-		IntVar b = support.getVariable(p3);
-		IntVar x;
-		int v;
-
-		if (p2.getType() == 0) { // second argument integer
-		    x = support.getVariable(p1);
-		    v = support.getInt(p2);
-		} else if (p1.getType() == 0) { // first argument integer
-		    x = support.getVariable(p2);
-		    v = support.getInt(p1);
-		} else // no integers
-		    return;
-
-		support.addImplied(x, v, b);
-	    }
-        }
-    }
+  }
 }
-    

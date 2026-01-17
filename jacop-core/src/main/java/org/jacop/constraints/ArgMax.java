@@ -30,242 +30,226 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
 
 /**
- * ArgMax constraint provides the index of the maximum
- * variable from all variables on the list.
+ * ArgMax constraint provides the index of the maximum variable from all variables on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class ArgMax extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    boolean firstConsistencyCheck = true;
+  boolean firstConsistencyCheck = true;
 
-    /**
-     * It specifies a list of variables among which a maximum value is being searched for.
-     */
-    final public IntVar list[];
+  /** It specifies a list of variables among which a maximum value is being searched for. */
+  public final IntVar list[];
 
-    /**
-     * It specifies variable max which stores the maximum value present in the list.
-     */
-    final public IntVar maxIndex;
+  /** It specifies variable max which stores the maximum value present in the list. */
+  public final IntVar maxIndex;
 
+  /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
+  public int indexOffset;
 
-    /**
-     * It specifies indexOffset within an element constraint list[index-indexOffset] = value.
-     */
-    public int indexOffset;
+  /**
+   * It constructs max constraint.
+   *
+   * @param maxIndex variable denoting the index of the maximum value
+   * @param list the array of variables for which the index of the maximum value is imposed.
+   * @param indexOffset the offset for the index that is computed from 1 by default (if needed from
+   *     0, use -1 for this parameter)
+   */
+  public ArgMax(IntVar[] list, IntVar maxIndex, int indexOffset) {
+    this(list, maxIndex);
+    this.indexOffset = indexOffset;
+  }
 
-    /**
-     * It constructs max constraint.
-     *
-     * @param maxIndex    variable denoting the index of the maximum value
-     * @param list        the array of variables for which the index of the maximum value is imposed.
-     * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     */
-    public ArgMax(IntVar[] list, IntVar maxIndex, int indexOffset) {
-        this(list, maxIndex);
-        this.indexOffset = indexOffset;
+  public ArgMax(IntVar[] list, IntVar maxIndex) {
+
+    checkInputForNullness(new String[] {"list", "maxIndex"}, new Object[][] {list, {maxIndex}});
+
+    this.queueIndex = 1;
+    this.numberId = idNumber.incrementAndGet();
+    this.indexOffset = 0;
+    this.maxIndex = maxIndex;
+    this.list = Arrays.copyOf(list, list.length);
+
+    setScope(Stream.concat(Arrays.stream(list), Stream.of(maxIndex)));
+  }
+
+  /**
+   * It constructs max constraint.
+   *
+   * @param maxIndex variable denoting index of the maximum value
+   * @param variables the array of variables for which the maximum value is imposed.
+   * @param indexOffset the offset for the index that is computed from 1 by default (if needed from
+   *     0, use -1 for this parameter)
+   */
+  public ArgMax(List<? extends IntVar> variables, IntVar maxIndex, int indexOffset) {
+    this(variables, maxIndex);
+    this.indexOffset = indexOffset;
+  }
+
+  public ArgMax(List<? extends IntVar> variables, IntVar maxIndex) {
+    this(variables.toArray(new IntVar[variables.size()]), maxIndex);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+      maxIndex.domain.in(store.level, maxIndex, 1 + indexOffset, list.length + indexOffset);
+      firstConsistencyCheck = false;
     }
 
-    public ArgMax(IntVar[] list, IntVar maxIndex) {
+    do {
 
-        checkInputForNullness(new String[] {"list", "maxIndex"}, new Object[][] {list, {maxIndex}});
+      store.propagationHasOccurred = false;
 
-        this.queueIndex = 1;
-        this.numberId = idNumber.incrementAndGet();
-        this.indexOffset = 0;
-        this.maxIndex = maxIndex;
-        this.list = Arrays.copyOf(list, list.length);
+      int lb = IntDomain.MinInt;
+      int ub = IntDomain.MinInt;
+      int pos = -1;
 
-        setScope(Stream.concat(Arrays.stream(list), Stream.of(maxIndex)));
-    }
+      // find lower/upper bounds for indexed elements on list
+      for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int cp = e.nextElement();
+        int i = cp - 1 - indexOffset;
 
-    /**
-     * It constructs max constraint.
-     *
-     * @param maxIndex    variable denoting index of the maximum value
-     * @param variables   the array of variables for which the maximum value is imposed.
-     * @param indexOffset the offset for the index that is computed from 1 by default (if needed from 0, use -1 for this parameter)
-     */
-    public ArgMax(List<? extends IntVar> variables, IntVar maxIndex, int indexOffset) {
-        this(variables, maxIndex);
-        this.indexOffset = indexOffset;
-    }
-
-    public ArgMax(List<? extends IntVar> variables, IntVar maxIndex) {
-        this(variables.toArray(new IntVar[variables.size()]), maxIndex);
-    }
-
-    @Override public void consistency(Store store) {
-
-        if (firstConsistencyCheck) {
-            maxIndex.domain.in(store.level, maxIndex, 1 + indexOffset, list.length + indexOffset);
-            firstConsistencyCheck = false;
+        int vDomMin = list[i].min();
+        if (lb < vDomMin) {
+          lb = vDomMin;
+          pos = i;
         }
 
-        do {
-
-            store.propagationHasOccurred = false;
-
-            int lb = IntDomain.MinInt;
-            int ub = IntDomain.MinInt;
-            int pos = -1;
-
-            // find lower/upper bounds for indexed elements on list
-            for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-                int cp = e.nextElement();
-                int i = cp - 1 - indexOffset;
-
-                int vDomMin = list[i].min();
-                if (lb < vDomMin) {
-                    lb = vDomMin;
-                    pos = i;
-                }
-
-                int vDomMax = list[i].max();
-                if (ub < vDomMax) {
-                    ub = vDomMax;
-                }
-            }
-            if (lb == ub)
-                maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
-
-            // find min/max values for index
-            IntervalDomain idxDomain = new IntervalDomain();
-            for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-                int cp = e.nextElement();
-                int i = cp - 1 - indexOffset;
-
-                if (list[i].max() >= lb) {
-                    if (idxDomain.getSize() == 0)
-                        idxDomain.unionAdapt(cp, cp);
-                    else
-                        idxDomain.addLastElement(cp);
-                }
-            }
-            if (idxDomain.isEmpty())
-                throw Store.failException;
-            else
-                maxIndex.domain.in(store.level, maxIndex, idxDomain);
-
-            ub = IntDomain.MinInt;
-            pos = -1;
-            for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
-                int i = e.nextElement() - 1 - indexOffset;
-
-                int vDomMax = list[i].max();
-                if (ub < vDomMax) {
-                    ub = vDomMax;
-                    pos = i;
-                }
-            }
-            if (list[pos].singleton())
-                maxIndex.domain.in(store.level, maxIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
-
-            if (maxIndex.singleton()) {
-
-                int idx = maxIndex.value() - 1 - indexOffset;
-                IntVar y = list[idx];
-
-                for (int i = 0; i < list.length; i++) {
-
-                    // prune variables before and after index of max value
-                    IntVar x = list[i];
-                    if (i < idx) {
-                        // x < y
-                        x.domain.inMax(store.level, x, y.max() - 1);
-                        y.domain.inMin(store.level, y, x.min() + 1);
-                    }
-                    else {
-                        // x <= y
-                        x.domain.inMax(store.level, x, y.max());
-                        y.domain.inMin(store.level, y, x.min());
-                    }
-                }
-            } else {
-                // prune values on the list
-                int im = maxIndex.min();
-                for (int i = 0; i < list.length; i++) {
-                    int cp = i + 1 + indexOffset;
-
-                    // prune variables before and after minimal index of max value
-                    IntVar v = list[i];
-                    if (cp < im)
-                        v.domain.inMax(store.level, v, ub - 1);
-                    else
-                        v.domain.inMax(store.level, v, ub);    
-                }
-            }
-        } while (store.propagationHasOccurred);
-
-	// if (maxIndex.singleton() && list[maxIndex.value() - 1 - indexOffset].singleton())
-	//     removeConstraint();
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
+        int vDomMax = list[i].max();
+        if (ub < vDomMax) {
+          ub = vDomMax;
         }
+      }
+      if (lb == ub) maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
 
-        if (var == maxIndex)
-            return IntDomain.ANY;
-        else {
-    	    return IntDomain.BOUND;
-    	}
-    }
+      // find min/max values for index
+      IntervalDomain idxDomain = new IntervalDomain();
+      for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int cp = e.nextElement();
+        int i = cp - 1 - indexOffset;
 
-    @Override public boolean satisfied() {
-
-        boolean sat = maxIndex.singleton();
-
-        int MAX = list[maxIndex.value() - 1 - indexOffset].value();
-        int i = 0, eq = 0;
-        while (sat && i < list.length) {
-            if (list[i].singleton() && list[i].value() <= MAX)
-                eq++;
-            sat = list[i].max() <= MAX;
-            i++;
+        if (list[i].max() >= lb) {
+          if (idxDomain.getSize() == 0) idxDomain.unionAdapt(cp, cp);
+          else idxDomain.addLastElement(cp);
         }
+      }
+      if (idxDomain.isEmpty()) throw Store.failException;
+      else maxIndex.domain.in(store.level, maxIndex, idxDomain);
 
-        return sat && eq == list.length;
-    }
+      ub = IntDomain.MinInt;
+      pos = -1;
+      for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int i = e.nextElement() - 1 - indexOffset;
 
-    @Override public String toString() {
+        int vDomMax = list[i].max();
+        if (ub < vDomMax) {
+          ub = vDomMax;
+          pos = i;
+        }
+      }
+      if (list[pos].singleton())
+        maxIndex.domain.in(store.level, maxIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
 
-        StringBuilder result = new StringBuilder(id());
+      if (maxIndex.singleton()) {
 
-        result.append(" : ArgMax(  [ ");
+        int idx = maxIndex.value() - 1 - indexOffset;
+        IntVar y = list[idx];
+
         for (int i = 0; i < list.length; i++) {
-            result.append(list[i]);
-            if (i < list.length - 1)
-                result.append(", ");
+
+          // prune variables before and after index of max value
+          IntVar x = list[i];
+          if (i < idx) {
+            // x < y
+            x.domain.inMax(store.level, x, y.max() - 1);
+            y.domain.inMin(store.level, y, x.min() + 1);
+          } else {
+            // x <= y
+            x.domain.inMax(store.level, x, y.max());
+            y.domain.inMin(store.level, y, x.min());
+          }
         }
+      } else {
+        // prune values on the list
+        int im = maxIndex.min();
+        for (int i = 0; i < list.length; i++) {
+          int cp = i + 1 + indexOffset;
 
-        result.append("], ").append(this.maxIndex);
-        result.append(", "+indexOffset+")");
+          // prune variables before and after minimal index of max value
+          IntVar v = list[i];
+          if (cp < im) v.domain.inMax(store.level, v, ub - 1);
+          else v.domain.inMax(store.level, v, ub);
+        }
+      }
+    } while (store.propagationHasOccurred);
 
-        return result.toString();
+    // if (maxIndex.singleton() && list[maxIndex.value() - 1 - indexOffset].singleton())
+    //     removeConstraint();
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
+    if (var == maxIndex) return IntDomain.ANY;
+    else {
+      return IntDomain.BOUND;
+    }
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    boolean sat = maxIndex.singleton();
+
+    int MAX = list[maxIndex.value() - 1 - indexOffset].value();
+    int i = 0, eq = 0;
+    while (sat && i < list.length) {
+      if (list[i].singleton() && list[i].value() <= MAX) eq++;
+      sat = list[i].max() <= MAX;
+      i++;
+    }
+
+    return sat && eq == list.length;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : ArgMax(  [ ");
+    for (int i = 0; i < list.length; i++) {
+      result.append(list[i]);
+      if (i < list.length - 1) result.append(", ");
+    }
+
+    result.append("], ").append(this.maxIndex);
+    result.append(", " + indexOffset + ")");
+
+    return result.toString();
+  }
 }

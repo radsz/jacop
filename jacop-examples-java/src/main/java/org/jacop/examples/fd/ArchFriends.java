@@ -30,115 +30,97 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
 
 /**
  * It is a simple logic puzzle about shoe purchases.
  *
  * @author Adam Plonka, Piotr Ogrodzki, and Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Logic Puzzle
- *          <p>
- *          Title       : Arch Friends
- *          Author      : Mark T. Zegarelli
- *          Publication : Dell Logic Puzzles
- *          Issue       : April, 1998
- *          Page        : 7
- *          Stars       : 1
- *          <p>
- *          Description :
- *          <p>
- *          Harriet, upon returning from the mall, is happily describing her
- *          four shoe purchases to her friend Aurora. Aurora just loves the four
- *          different kinds of shoes that Harriet bought (ecru espadrilles,
- *          fuchsia flats, purple pumps, and suede sandals), but Harriet can't
- *          recall at which different store (Foot Farm, Heels in a Handcart, The
- *          Shoe Palace, or Tootsies) she got each pair. Can you help these two
- *          figure out the order in which Harriet bought each pair of shoes, and
- *          where she bought each?
+ *     <p>Logic Puzzle
+ *     <p>Title : Arch Friends Author : Mark T. Zegarelli Publication : Dell Logic Puzzles Issue :
+ *     April, 1998 Page : 7 Stars : 1
+ *     <p>Description :
+ *     <p>Harriet, upon returning from the mall, is happily describing her four shoe purchases to
+ *     her friend Aurora. Aurora just loves the four different kinds of shoes that Harriet bought
+ *     (ecru espadrilles, fuchsia flats, purple pumps, and suede sandals), but Harriet can't recall
+ *     at which different store (Foot Farm, Heels in a Handcart, The Shoe Palace, or Tootsies) she
+ *     got each pair. Can you help these two figure out the order in which Harriet bought each pair
+ *     of shoes, and where she bought each?
  */
-
 public class ArchFriends extends ExampleFD {
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        vars = new ArrayList<IntVar>();
-        store = new Store();
+    vars = new ArrayList<IntVar>();
+    store = new Store();
 
-        System.out.println("Program to solve ArchFriends problem ");
+    System.out.println("Program to solve ArchFriends problem ");
 
-        // Declaration of constants (names, variables' indexes
+    // Declaration of constants (names, variables' indexes
 
-        String[] shoeNames = {"EcruEspadrilles", "FuchsiaFlats", "PurplePumps", "SuedeSandals"};
+    String[] shoeNames = {"EcruEspadrilles", "FuchsiaFlats", "PurplePumps", "SuedeSandals"};
 
-        int /* iEcruEspadrilles = 0, */ iFuchsiaFlats = 1, iPurplePumps = 2, iSuedeSandals = 3;
+    int /* iEcruEspadrilles = 0, */ iFuchsiaFlats = 1, iPurplePumps = 2, iSuedeSandals = 3;
 
-        String[] shopNames = {"FootFarm", "HeelsInAHandcart", "TheShoePalace", "Tootsies"};
+    String[] shopNames = {"FootFarm", "HeelsInAHandcart", "TheShoePalace", "Tootsies"};
 
-        int iFootFarm = 0, iHeelsInAHandcart = 1, iTheShoePalace = 2, iTootsies = 3;
+    int iFootFarm = 0, iHeelsInAHandcart = 1, iTheShoePalace = 2, iTootsies = 3;
 
-        // Variables shoe and shop
+    // Variables shoe and shop
 
-        IntVar shoe[] = new IntVar[4];
-        IntVar shop[] = new IntVar[4];
+    IntVar shoe[] = new IntVar[4];
+    IntVar shop[] = new IntVar[4];
 
-        // Each variable has a domain 1..4 as there are four different
-        // shoes and shops. Values 1 to 4 within variables shoe
-        // denote the order in which the shoes were bought.
+    // Each variable has a domain 1..4 as there are four different
+    // shoes and shops. Values 1 to 4 within variables shoe
+    // denote the order in which the shoes were bought.
 
-        for (int i = 0; i < 4; i++) {
-            shoe[i] = new IntVar(store, shoeNames[i], 1, 4);
-            shop[i] = new IntVar(store, shopNames[i], 1, 4);
-        }
-
-        for (IntVar v : shoe)
-            vars.add(v);
-        for (IntVar v : shop)
-            vars.add(v);
-
-
-        // Each shoe, shop have to have a unique identifier.
-        store.impose(new Alldifferent(shoe));
-        store.impose(new Alldifferent(shop));
-
-        // Constraints given in the problem description.
-
-        // 1. Harriet bought fuchsia flats at Heels in a Handcart.
-        store.impose(new XeqY(shoe[iFuchsiaFlats], shop[iHeelsInAHandcart]));
-
-        // 2.The store she visited just after buying her purple pumps
-        // was not Tootsies.
-
-        // Nested constraint by applying constraint Not to constraint XplusCeqZ
-        store.impose(new Not(new XplusCeqZ(shoe[iPurplePumps], 1, shop[iTootsies])));
-
-        // 3. The Foot Farm was Harriet's second stop.
-        store.impose(new XeqC(shop[iFootFarm], 2));
-
-        // 4. Two stops after leaving The Shoe Place, Harriet
-        // bought her suede sandals.
-        store.impose(new XplusCeqZ(shop[iTheShoePalace], 2, shoe[iSuedeSandals]));
-
+    for (int i = 0; i < 4; i++) {
+      shoe[i] = new IntVar(store, shoeNames[i], 1, 4);
+      shop[i] = new IntVar(store, shopNames[i], 1, 4);
     }
 
-    /**
-     * It executes the program to solve the logic puzzle.
-     *
-     * @param args no arguments are read.
-     */
-    public static void main(String args[]) {
+    for (IntVar v : shoe) vars.add(v);
+    for (IntVar v : shop) vars.add(v);
 
-        ArchFriends example = new ArchFriends();
+    // Each shoe, shop have to have a unique identifier.
+    store.impose(new Alldifferent(shoe));
+    store.impose(new Alldifferent(shop));
 
-        example.model();
+    // Constraints given in the problem description.
 
-        if (example.searchAllAtOnce())
-            System.out.println("Solution(s) found");
+    // 1. Harriet bought fuchsia flats at Heels in a Handcart.
+    store.impose(new XeqY(shoe[iFuchsiaFlats], shop[iHeelsInAHandcart]));
 
-    }
+    // 2.The store she visited just after buying her purple pumps
+    // was not Tootsies.
 
+    // Nested constraint by applying constraint Not to constraint XplusCeqZ
+    store.impose(new Not(new XplusCeqZ(shoe[iPurplePumps], 1, shop[iTootsies])));
+
+    // 3. The Foot Farm was Harriet's second stop.
+    store.impose(new XeqC(shop[iFootFarm], 2));
+
+    // 4. Two stops after leaving The Shoe Place, Harriet
+    // bought her suede sandals.
+    store.impose(new XplusCeqZ(shop[iTheShoePalace], 2, shoe[iSuedeSandals]));
+  }
+
+  /**
+   * It executes the program to solve the logic puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
+
+    ArchFriends example = new ArchFriends();
+
+    example.model();
+
+    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
+  }
 }

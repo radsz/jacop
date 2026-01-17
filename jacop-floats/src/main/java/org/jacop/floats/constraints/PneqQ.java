@@ -30,112 +30,110 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints P #= Q for P and Q floats
- * <p>
- * Domain consistency is used.
+ *
+ * <p>Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PneqQ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a left hand variable in equality constraint.
-     */
-    public FloatVar p;
+  /** It specifies a left hand variable in equality constraint. */
+  public FloatVar p;
 
-    /**
-     * It specifies a right hand variable in equality constraint.
-     */
-    public FloatVar q;
+  /** It specifies a right hand variable in equality constraint. */
+  public FloatVar q;
 
-    /**
-     * It constructs constraint P = Q.
-     *
-     * @param p variable p.
-     * @param q variable q.
-     */
-    public PneqQ(FloatVar p, FloatVar q) {
+  /**
+   * It constructs constraint P = Q.
+   *
+   * @param p variable p.
+   * @param q variable q.
+   */
+  public PneqQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
+    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.queueIndex = 0;
+    this.queueIndex = 0;
 
-        this.p = p;
-        this.q = q;
+    this.p = p;
+    this.q = q;
 
-        setScope(p, q);
-    }
+    setScope(p, q);
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public void consistency(Store store) {
 
-        if (q.singleton())
-            p.domain.inComplement(store.level, p, q.value());
+    if (q.singleton()) p.domain.inComplement(store.level, p, q.value());
 
+    if (p.singleton()) q.domain.inComplement(store.level, q, p.value());
+  }
 
-        if (p.singleton())
-            q.domain.inComplement(store.level, q, p.value());
+  @Override
+  public void notConsistency(Store store) {
 
-    }
+    do {
 
-    @Override public void notConsistency(Store store) {
+      // domain consistency
+      p.domain.in(store.level, p, q.dom()); // min(), q.max());
 
-        do {
+      store.propagationHasOccurred = false;
 
-            // domain consistency
-            p.domain.in(store.level, p, q.dom()); //min(), q.max());
+      q.domain.in(store.level, q, p.dom()); // min(), p.max());
 
-            store.propagationHasOccurred = false;
+    } while (store.propagationHasOccurred);
+  }
 
-            q.domain.in(store.level, q, p.dom()); //min(), p.max());
+  @Override
+  public boolean satisfied() {
 
-        } while (store.propagationHasOccurred);
+    return !p.domain.isIntersecting(q.domain);
+  }
 
-    }
+  @Override
+  public boolean notSatisfied() {
+    return p.singleton()
+        && q.singleton()
+        && java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision()
+        && java.lang.Math.abs(p.max() - q.min()) <= FloatDomain.precision();
+  }
 
-    @Override public boolean satisfied() {
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-        return !p.domain.isIntersecting(q.domain);
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override public boolean notSatisfied() {
-        return p.singleton() && q.singleton() && java.lang.Math.abs(p.min() - q.max()) <= FloatDomain.precision()
-            && java.lang.Math.abs(p.max() - q.min()) <= FloatDomain.precision();
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override public String toString() {
-        return id() + " : PneqQ(" + p + ", " + q + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : PneqQ(" + p + ", " + q + " )";
+  }
 }

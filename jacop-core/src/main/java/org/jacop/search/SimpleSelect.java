@@ -30,301 +30,279 @@
 
 package org.jacop.search;
 
+import java.util.Iterator;
+import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
-import java.util.Iterator;
-import java.util.Map;
-
 /**
- * It is simple and customizable selector of decisions (constraints) which will
- * be enforced by search.
+ * It is simple and customizable selector of decisions (constraints) which will be enforced by
+ * search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@SuppressWarnings("unchecked")
+public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
-@SuppressWarnings("unchecked") public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
+  static final boolean debugAll = false;
 
-    static final boolean debugAll = false;
+  /** It chooses if input order tie breaking is used. */
+  public boolean inputOrderTieBreaking = true;
 
-    /**
-     * It chooses if input order tie breaking is used.
-     */
-    public boolean inputOrderTieBreaking = true;
+  public T[] searchVariables;
 
-    public T[] searchVariables;
+  public ComparatorVariable<T> variableOrdering;
 
-    public ComparatorVariable<T> variableOrdering;
+  public ComparatorVariable<T> tieBreakingComparator = null;
 
-    public ComparatorVariable<T> tieBreakingComparator = null;
+  Indomain<T> valueOrdering;
 
-    Indomain<T> valueOrdering;
+  /** It stores the original positions of variables to be used for input order tie-breaking. */
+  public Map<T, Integer> position;
 
-    /**
-     * It stores the original positions of variables to be used for input order
-     * tie-breaking.
-     */
+  int currentIndex = 0;
 
-    public Map<T, Integer> position;
+  /**
+   * The constructor to create a simple choice select mechanism.
+   *
+   * @param variables variables upon which the choice points are created.
+   * @param varSelect the variable comparator to choose the variable.
+   * @param indomain the value heuristic to choose a value for a given variable.
+   */
+  public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
 
-    int currentIndex = 0;
+    position = Var.createEmptyPositioning();
 
-    /**
-     * The constructor to create a simple choice select mechanism.
-     *
-     * @param variables variables upon which the choice points are created.
-     * @param varSelect the variable comparator to choose the variable.
-     * @param indomain  the value heuristic to choose a value for a given variable.
-     */
-    public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
-
-        position = Var.createEmptyPositioning();
-
-        int unique = 0;
-        for (int i = 0; i < variables.length; i++) {
-            if (position.get(variables[i]) == null)
-                position.put(variables[i], unique++);
-        }
-
-        this.searchVariables = (T[]) new Var[position.size()];
-
-        for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-            Map.Entry<T, Integer> e = itr.next();
-            searchVariables[e.getValue()] = e.getKey();
-        }
-
-        variableOrdering = varSelect;
-        valueOrdering = indomain;
-
+    int unique = 0;
+    for (int i = 0; i < variables.length; i++) {
+      if (position.get(variables[i]) == null) position.put(variables[i], unique++);
     }
 
-    /**
-     * It constructs a simple selection mechanism for choice points.
-     *
-     * @param variables           variables used as basis of the choice point.
-     * @param varSelect           the main variable comparator.
-     * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the same metric.
-     * @param indomain            the heuristic to choose value assigned to a chosen variable.
-     */
-    public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, ComparatorVariable<T> tieBreakerVarSelect, Indomain<T> indomain) {
+    this.searchVariables = (T[]) new Var[position.size()];
 
-        position = Var.createEmptyPositioning();
-
-        int unique = 0;
-        for (int i = 0; i < variables.length; i++) {
-            if (position.get(variables[i]) == null)
-                position.put(variables[i], unique++);
-        }
-
-        this.searchVariables = (T[]) new Var[position.size()];
-
-        for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-            Map.Entry<T, Integer> e = itr.next();
-            searchVariables[e.getValue()] = e.getKey();
-        }
-
-        variableOrdering = varSelect;
-        tieBreakingComparator = tieBreakerVarSelect;
-
-        if (tieBreakingComparator != null)
-            inputOrderTieBreaking = false;
-
-        valueOrdering = indomain;
-
+    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
+      Map.Entry<T, Integer> e = itr.next();
+      searchVariables[e.getValue()] = e.getKey();
     }
 
-    /**
-     * It returns the variable which is the base on the next choice point. Only
-     * if choice is of an X = C type. This function returns null if all
-     * variables have a value assigned or a choice point based on other type of
-     * constraint is being selected. The parameter index is the last value which
-     * have been return by this SelectChoicePoint object which has not been
-     * backtracked upon yet.
-     */
+    variableOrdering = varSelect;
+    valueOrdering = indomain;
+  }
 
-    public T getChoiceVariable(int index) {
+  /**
+   * It constructs a simple selection mechanism for choice points.
+   *
+   * @param variables variables used as basis of the choice point.
+   * @param varSelect the main variable comparator.
+   * @param tieBreakerVarSelect secondary variable comparator employed if the first one gives the
+   *     same metric.
+   * @param indomain the heuristic to choose value assigned to a chosen variable.
+   */
+  public SimpleSelect(
+      T[] variables,
+      ComparatorVariable<T> varSelect,
+      ComparatorVariable<T> tieBreakerVarSelect,
+      Indomain<T> indomain) {
 
-        assert (index < searchVariables.length);
+    position = Var.createEmptyPositioning();
 
-        int finalIndex = searchVariables.length;
-        T currentVariable;
+    int unique = 0;
+    for (int i = 0; i < variables.length; i++) {
+      if (position.get(variables[i]) == null) position.put(variables[i], unique++);
+    }
 
-        do {
-            currentVariable = searchVariables[index];
-        } while (currentVariable.singleton() && ++index < finalIndex);
+    this.searchVariables = (T[]) new Var[position.size()];
 
-        if (index == finalIndex) {
-            return null;
-        }
+    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
+      Map.Entry<T, Integer> e = itr.next();
+      searchVariables[e.getValue()] = e.getKey();
+    }
 
-        if (variableOrdering == null || index + 1 == finalIndex) {
-            currentIndex = index;
-            return searchVariables[currentIndex];
-        }
+    variableOrdering = varSelect;
+    tieBreakingComparator = tieBreakerVarSelect;
 
-        double optimalMetric = variableOrdering.metric(currentVariable);
-        int optimalPosition = index;
+    if (tieBreakingComparator != null) inputOrderTieBreaking = false;
 
-        int comparison = 0;
+    valueOrdering = indomain;
+  }
 
-        T v = null;
-        for (int currentPosition = index + 1; currentPosition < finalIndex; currentPosition++) {
+  /**
+   * It returns the variable which is the base on the next choice point. Only if choice is of an X =
+   * C type. This function returns null if all variables have a value assigned or a choice point
+   * based on other type of constraint is being selected. The parameter index is the last value
+   * which have been return by this SelectChoicePoint object which has not been backtracked upon
+   * yet.
+   */
+  public T getChoiceVariable(int index) {
 
-            v = searchVariables[currentPosition];
+    assert (index < searchVariables.length);
 
-            if (v.singleton()) {
+    int finalIndex = searchVariables.length;
+    T currentVariable;
 
-                if (index == optimalPosition) {
-                    placeSearchVariable(index, currentPosition);
-                    optimalPosition = currentPosition;
-                    index++;
-                } else {
+    do {
+      currentVariable = searchVariables[index];
+    } while (currentVariable.singleton() && ++index < finalIndex);
 
-                    while (index < currentPosition && searchVariables[index].singleton())
-                        index++;
+    if (index == finalIndex) {
+      return null;
+    }
 
-                    if (index != currentPosition) {
+    if (variableOrdering == null || index + 1 == finalIndex) {
+      currentIndex = index;
+      return searchVariables[currentIndex];
+    }
 
-                        if (index == optimalPosition) {
-                            placeSearchVariable(index, currentPosition);
-                            optimalPosition = currentPosition;
-                        } else {
-                            placeSearchVariable(index, currentPosition);
-                        }
-                        index++;
-                    }
-                }
+    double optimalMetric = variableOrdering.metric(currentVariable);
+    int optimalPosition = index;
 
-                continue;
-            }
+    int comparison = 0;
 
-            comparison = variableOrdering.compare(optimalMetric, v);
-            if (comparison < 0) {
-                optimalPosition = currentPosition;
-                optimalMetric = variableOrdering.metric(v);
+    T v = null;
+    for (int currentPosition = index + 1; currentPosition < finalIndex; currentPosition++) {
+
+      v = searchVariables[currentPosition];
+
+      if (v.singleton()) {
+
+        if (index == optimalPosition) {
+          placeSearchVariable(index, currentPosition);
+          optimalPosition = currentPosition;
+          index++;
+        } else {
+
+          while (index < currentPosition && searchVariables[index].singleton()) index++;
+
+          if (index != currentPosition) {
+
+            if (index == optimalPosition) {
+              placeSearchVariable(index, currentPosition);
+              optimalPosition = currentPosition;
             } else {
-                if (comparison == 0)
-                    if (tieBreakingComparator != null) {
-                        int comp = tieBreakingComparator.compare(searchVariables[optimalPosition], v);
-
-                        if (comp < 0)
-                            optimalPosition = currentPosition;
-                        else if (comp == 0 && inputOrderTieBreaking) {
-                            // Employs input order tie breaking
-                            int position1 = position.get(searchVariables[optimalPosition]);
-                            int position2 = position.get(searchVariables[currentPosition]);
-
-                            if (position2 < position1) {
-                                optimalPosition = currentPosition;
-                                // Variable with currentPosition had a smaller
-                                // initial position within search variables
-                            }
-                        }
-                    } else {
-
-                        // If not InputOrderTieBreaking then dynamicLex as
-                        // specified by search object is used
-
-                        if (inputOrderTieBreaking) {
-                            // Employs input order tie breaking
-                            int position1 = position.get(searchVariables[optimalPosition]);
-                            int position2 = position.get(searchVariables[currentPosition]);
-
-                            if (position2 < position1) {
-                                optimalPosition = currentPosition;
-                                // Variable with currentPosition had a smaller
-                                // initial position within search variables
-                            }
-                        }
-
-                    }
+              placeSearchVariable(index, currentPosition);
             }
-
+            index++;
+          }
         }
 
-        if (index != optimalPosition) {
-            placeSearchVariable(index, optimalPosition);
-        }
+        continue;
+      }
 
-        this.currentIndex = index;
+      comparison = variableOrdering.compare(optimalMetric, v);
+      if (comparison < 0) {
+        optimalPosition = currentPosition;
+        optimalMetric = variableOrdering.metric(v);
+      } else {
+        if (comparison == 0)
+          if (tieBreakingComparator != null) {
+            int comp = tieBreakingComparator.compare(searchVariables[optimalPosition], v);
 
-        return searchVariables[index];
+            if (comp < 0) optimalPosition = currentPosition;
+            else if (comp == 0 && inputOrderTieBreaking) {
+              // Employs input order tie breaking
+              int position1 = position.get(searchVariables[optimalPosition]);
+              int position2 = position.get(searchVariables[currentPosition]);
 
+              if (position2 < position1) {
+                optimalPosition = currentPosition;
+                // Variable with currentPosition had a smaller
+                // initial position within search variables
+              }
+            }
+          } else {
+
+            // If not InputOrderTieBreaking then dynamicLex as
+            // specified by search object is used
+
+            if (inputOrderTieBreaking) {
+              // Employs input order tie breaking
+              int position1 = position.get(searchVariables[optimalPosition]);
+              int position2 = position.get(searchVariables[currentPosition]);
+
+              if (position2 < position1) {
+                optimalPosition = currentPosition;
+                // Variable with currentPosition had a smaller
+                // initial position within search variables
+              }
+            }
+          }
+      }
     }
 
-    /**
-     * It returns a value which is the base of the next choice point. Only if
-     * choice is of an X = C type.
-     */
-
-    public int getChoiceValue() {
-
-        assert (currentIndex >= 0);
-        assert (currentIndex < searchVariables.length);
-        assert (searchVariables[currentIndex].dom() != null);
-
-        return valueOrdering.indomain(searchVariables[currentIndex]);
-
+    if (index != optimalPosition) {
+      placeSearchVariable(index, optimalPosition);
     }
 
-    /**
-     * It always returns null as choice point is obtained by getChoiceVariable
-     * and getChoiceValue.
-     */
+    this.currentIndex = index;
 
-    public PrimitiveConstraint getChoiceConstraint(int index) {
+    return searchVariables[index];
+  }
 
-        return null;
+  /**
+   * It returns a value which is the base of the next choice point. Only if choice is of an X = C
+   * type.
+   */
+  public int getChoiceValue() {
 
+    assert (currentIndex >= 0);
+    assert (currentIndex < searchVariables.length);
+    assert (searchVariables[currentIndex].dom() != null);
+
+    return valueOrdering.indomain(searchVariables[currentIndex]);
+  }
+
+  /** It always returns null as choice point is obtained by getChoiceVariable and getChoiceValue. */
+  public PrimitiveConstraint getChoiceConstraint(int index) {
+
+    return null;
+  }
+
+  /** It returns the variables for which assignment in the solution is given. */
+  public Map<T, Integer> getVariablesMapping() {
+
+    return position;
+  }
+
+  /**
+   * It returns the current index. Supplying this value in the next invocation of select will make
+   * search for next variable faster without comprimising efficiency.
+   */
+  public int getIndex() {
+    return currentIndex;
+  }
+
+  /**
+   * It gets as input the index of the variable which is chosen by search to be instantiated at this
+   * stage. The variable is positioned at search position.
+   *
+   * @param searchPosition position at which search store currently choosen variable.
+   * @param variablePosition current position of the variable choosen by search.
+   * @return variable choosen to be a base of the choice point.
+   */
+  public T placeSearchVariable(int searchPosition, int variablePosition) {
+
+    if (searchPosition != variablePosition) {
+
+      T temp = searchVariables[searchPosition];
+
+      searchVariables[searchPosition] = searchVariables[variablePosition];
+
+      searchVariables[variablePosition] = temp;
     }
 
-    /**
-     * It returns the variables for which assignment in the solution is given.
-     */
+    return searchVariables[searchPosition];
+  }
 
-    public Map<T, Integer> getVariablesMapping() {
-
-        return position;
-
-    }
-
-    /**
-     * It returns the current index. Supplying this value in the next invocation
-     * of select will make search for next variable faster without comprimising
-     * efficiency.
-     */
-
-    public int getIndex() {
-        return currentIndex;
-    }
-
-    /**
-     * It gets as input the index of the variable which is chosen by search to
-     * be instantiated at this stage. The variable is positioned at search
-     * position.
-     *
-     * @param searchPosition   position at which search store currently choosen variable.
-     * @param variablePosition current position of the variable choosen by search.
-     * @return variable choosen to be a base of the choice point.
-     */
-
-    public T placeSearchVariable(int searchPosition, int variablePosition) {
-
-        if (searchPosition != variablePosition) {
-
-            T temp = searchVariables[searchPosition];
-
-            searchVariables[searchPosition] = searchVariables[variablePosition];
-
-            searchVariables[variablePosition] = temp;
-        }
-
-        return searchVariables[searchPosition];
-
-    }
-
-    public String toString() {
-        return "" + java.util.Arrays.asList(searchVariables) + ", SimpleSelect(" + variableOrdering +", "+ tieBreakingComparator + ", " + valueOrdering + ")";
-    }
+  public String toString() {
+    return ""
+        + java.util.Arrays.asList(searchVariables)
+        + ", SimpleSelect("
+        + variableOrdering
+        + ", "
+        + tieBreakingComparator
+        + ", "
+        + valueOrdering
+        + ")";
+  }
 }

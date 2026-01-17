@@ -30,122 +30,119 @@
 
 package org.jacop.set.constraints;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.set.core.*;
-import org.jacop.api.UsesQueueVariable;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.stream.Stream;
-import java.util.LinkedHashSet;
 
 /**
- * Channel constraint requires that array of int variables x and array
- * of set variables y are related such that (x[i] = j) {@literal <->}
- (i in s[j]).  Indexes start form 0, both for integer and set variables,
- * by default. To define other starting index use offset definitions.
+ * Channel constraint requires that array of int variables x and array of set variables y are
+ * related such that (x[i] = j) {@literal <->} (i in s[j]). Indexes start form 0, both for integer
+ * and set variables, by default. To define other starting index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
-
 public class PartitionSet extends Constraint implements UsesQueueVariable {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    SetVar[] s;
-    int n;
-    IntDomain u;
+  SetVar[] s;
+  int n;
+  IntDomain u;
 
-    boolean firstConsistencyCheck = true;
+  boolean firstConsistencyCheck = true;
 
-    LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
-    HashMap<SetVar, Integer> varMap = new HashMap<>();
+  LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
+  HashMap<SetVar, Integer> varMap = new HashMap<>();
 
-    Store store;
+  Store store;
 
-    /**
-     * It constructs a Channel constraint.
-     *
-     * @param s array of set variables.
-     * @param universe set of all values.
-     */
-    public PartitionSet(SetVar[] s, IntDomain universe) {
+  /**
+   * It constructs a Channel constraint.
+   *
+   * @param s array of set variables.
+   * @param universe set of all values.
+   */
+  public PartitionSet(SetVar[] s, IntDomain universe) {
 
-        checkInputForNullness(new String[] {"s"}, new Object[] {s});
+    checkInputForNullness(new String[] {"s"}, new Object[] {s});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.s = s;
-        n = s.length;
-        this.u = universe;
+    this.s = s;
+    n = s.length;
+    this.u = universe;
 
-        for (int i = 0; i < n; i++) {
-            varMap.put(s[i], i);
-        }
-
-        setScope(Arrays.stream(s));
+    for (int i = 0; i < n; i++) {
+      varMap.put(s[i], i);
     }
 
-    @Override public void consistency(Store store) throws FailException {
+    setScope(Arrays.stream(s));
+  }
 
-        if (firstConsistencyCheck) {
-            
-            for (int i = 0; i < n; i++)
-                s[i].domain.inLUB(store.level, s[i], u);
+  @Override
+  public void consistency(Store store) throws FailException {
 
-            firstConsistencyCheck = false;
-        }
+    if (firstConsistencyCheck) {
 
-        do {
+      for (int i = 0; i < n; i++) s[i].domain.inLUB(store.level, s[i], u);
 
-            store.propagationHasOccurred = false;
+      firstConsistencyCheck = false;
+    }
 
-            LinkedHashSet<Integer> fdvs = variableQueue;
-            variableQueue = new LinkedHashSet<Integer>();
+    do {
 
-            for (Integer i : fdvs)
-                if (i != null) {
-                    IntDomain glb = s[i].dom().glb();
-                    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-                        int si = e.nextElement();
-                        for (int j = 0; j < n; j++) {
-                            if (i != j)
-                                s[j].dom().inLUBComplement(store.level, s[j], si);
-                        }
-                    }
-                }
-        } while (store.propagationHasOccurred);
+      store.propagationHasOccurred = false;
 
-        // check union constraint
-        for (int i = 0; i < n; i++) {
-            IntDomain t = u.cloneLight();
+      LinkedHashSet<Integer> fdvs = variableQueue;
+      variableQueue = new LinkedHashSet<Integer>();
+
+      for (Integer i : fdvs)
+        if (i != null) {
+          IntDomain glb = s[i].dom().glb();
+          for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+            int si = e.nextElement();
             for (int j = 0; j < n; j++) {
-                if (i != j) {
-                    t = t.subtract(s[j].dom().lub());
-                }
+              if (i != j) s[j].dom().inLUBComplement(store.level, s[j], si);
             }
-            s[i].dom().inGLB(store.level, s[i], t);
+          }
         }
+    } while (store.propagationHasOccurred);
+
+    // check union constraint
+    for (int i = 0; i < n; i++) {
+      IntDomain t = u.cloneLight();
+      for (int j = 0; j < n; j++) {
+        if (i != j) {
+          t = t.subtract(s[j].dom().lub());
+        }
+      }
+      s[i].dom().inGLB(store.level, s[i], t);
     }
+  }
 
-    @Override public void queueVariable(int level, Var var) {
-        variableQueue.add(varMap.get((SetVar)var));
-    }
+  @Override
+  public void queueVariable(int level, Var var) {
+    variableQueue.add(varMap.get((SetVar) var));
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    @Override public String toString() {
+  @Override
+  public String toString() {
 
-        StringBuffer result = new StringBuffer();
-        result.append(id() + " : PartitionSet(");
-        result.append(Arrays.asList(s)).append(", ").append(u);
-        result.append(")");
-        return result.toString();
-
-    }
+    StringBuffer result = new StringBuffer();
+    result.append(id() + " : PartitionSet(");
+    result.append(Arrays.asList(s)).append(", ").append(u);
+    result.append(")");
+    return result.toString();
+  }
 }

@@ -36,16 +36,14 @@ package org.jacop.core;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public final class FailException extends RuntimeException {
 
-    private static final long serialVersionUID = 8683452581100000007L;
+  private static final long serialVersionUID = 8683452581100000007L;
 
-    FailException() {
-    }
+  FailException() {}
 
-    @Override public Throwable fillInStackTrace() {
-        return this;
-    }
-
+  @Override
+  public Throwable fillInStackTrace() {
+    return this;
+  }
 }

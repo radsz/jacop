@@ -28,12 +28,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
-import org.jacop.core.MutableVarValue;
-
 import java.util.List;
+import org.jacop.core.MutableVarValue;
 
 /**
  * Defines a current value of the Diff2Var and related operations on it.
@@ -41,68 +39,63 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
-    DisjointCondVarValue previousDisjointCondVarValue = null;
+  DisjointCondVarValue previousDisjointCondVarValue = null;
 
-    RectangleWithCondition[] Rects;
+  RectangleWithCondition[] Rects;
 
-    int stamp = 0;
+  int stamp = 0;
 
-    DisjointCondVarValue() {
-    }
+  DisjointCondVarValue() {}
 
-    DisjointCondVarValue(RectangleWithCondition[] R) {
-        Rects = R;
-    }
+  DisjointCondVarValue(RectangleWithCondition[] R) {
+    Rects = R;
+  }
 
-    @Override public Object clone() {
+  @Override
+  public Object clone() {
 
-        DisjointCondVarValue val = new DisjointCondVarValue(Rects);
-        val.stamp = stamp;
-        val.previousDisjointCondVarValue = previousDisjointCondVarValue;
-        return val;
+    DisjointCondVarValue val = new DisjointCondVarValue(Rects);
+    val.stamp = stamp;
+    val.previousDisjointCondVarValue = previousDisjointCondVarValue;
+    return val;
+  }
 
-    }
+  public MutableVarValue previous() {
+    return previousDisjointCondVarValue;
+  }
 
-    public MutableVarValue previous() {
-        return previousDisjointCondVarValue;
-    }
+  public void setPrevious(MutableVarValue n) {
+    previousDisjointCondVarValue = (DisjointCondVarValue) n;
+  }
 
-    public void setPrevious(MutableVarValue n) {
-        previousDisjointCondVarValue = (DisjointCondVarValue) n;
-    }
+  public void setStamp(int s) {
+    stamp = s;
+  }
 
-    public void setStamp(int s) {
-        stamp = s;
-    }
+  void setValue(RectangleWithCondition[] R) {
+    Rects = R;
+  }
 
-    void setValue(RectangleWithCondition[] R) {
-        Rects = R;
-    }
+  void setValue(List<RectangleWithCondition> VR) {
+    Rects = new RectangleWithCondition[VR.size()];
+    for (int i = 0; i < Rects.length; i++) Rects[i] = VR.get(i);
+  }
 
-    void setValue(List<RectangleWithCondition> VR) {
-        Rects = new RectangleWithCondition[VR.size()];
-        for (int i = 0; i < Rects.length; i++)
-            Rects[i] = VR.get(i);
-    }
+  public int stamp() {
+    return stamp;
+  }
 
-    public int stamp() {
-        return stamp;
-    }
+  @Override
+  public String toString() {
 
-    @Override public String toString() {
+    StringBuffer result = new StringBuffer();
 
-        StringBuffer result = new StringBuffer();
+    for (int i = 0; i < Rects.length; i++)
+      if (i == Rects.length - 1) result.append(Rects[i]);
+      else result.append(Rects[i]).append(", ");
 
-        for (int i = 0; i < Rects.length; i++)
-            if (i == Rects.length - 1)
-                result.append(Rects[i]);
-            else
-                result.append(Rects[i]).append(", ");
-
-        return result.toString();
-    }
-
+    return result.toString();
+  }
 }

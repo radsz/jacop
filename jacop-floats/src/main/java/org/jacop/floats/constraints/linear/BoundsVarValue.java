@@ -38,65 +38,64 @@ import org.jacop.core.MutableVarValue;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 class BoundsVarValue implements MutableVarValue, Cloneable {
 
-    BoundsVarValue previousBoundsVarValue = null;
+  BoundsVarValue previousBoundsVarValue = null;
 
-    double min, max;
+  double min, max;
+  double lb, ub;
 
-    double lb, ub;
+  int stamp = 0;
 
-    int stamp = 0;
+  // Constructors
+  BoundsVarValue() {}
 
-    // Constructors
-    BoundsVarValue() {
-    }
+  BoundsVarValue(double min, double max, double lb, double ub) {
+    this.min = min;
+    this.max = max;
 
-    BoundsVarValue(double min, double max, double lb, double ub) {
-        this.min = min;
-        this.max = max;
+    this.lb = lb;
+    this.ub = ub;
+  }
 
-        this.lb = lb;
-        this.ub = ub;
-    }
+  // Methods
 
-    // Methods
+  @Override
+  public Object clone() {
 
-    @Override public Object clone() {
+    BoundsVarValue Val = new BoundsVarValue(min, max, lb, ub);
+    Val.stamp = stamp;
+    Val.previousBoundsVarValue = previousBoundsVarValue;
+    return Val;
+  }
 
-        BoundsVarValue Val = new BoundsVarValue(min, max, lb, ub);
-        Val.stamp = stamp;
-        Val.previousBoundsVarValue = previousBoundsVarValue;
-        return Val;
-    }
+  public MutableVarValue previous() {
+    return previousBoundsVarValue;
+  }
 
-    public MutableVarValue previous() {
-        return previousBoundsVarValue;
-    }
+  public void setPrevious(MutableVarValue n) {
+    previousBoundsVarValue = (BoundsVarValue) n;
+  }
 
-    public void setPrevious(MutableVarValue n) {
-        previousBoundsVarValue = (BoundsVarValue) n;
-    }
+  public void setStamp(int s) {
+    stamp = s;
+  }
 
-    public void setStamp(int s) {
-        stamp = s;
-    }
+  void setValue(double min, double max, double lb, double ub) {
+    this.min = min;
+    this.max = max;
 
-    void setValue(double min, double max, double lb, double ub) {
-        this.min = min;
-        this.max = max;
+    this.lb = lb;
+    this.ub = ub;
+  }
 
-        this.lb = lb;
-        this.ub = ub;
-    }
+  public int stamp() {
+    return stamp;
+  }
 
-    public int stamp() {
-        return stamp;
-    }
+  @Override
+  public String toString() {
 
-    @Override public String toString() {
-
-        return min + ".." + max + ", " + lb + ".." + ub;
-    }
+    return min + ".." + max + ", " + lb + ".." + ub;
+  }
 }

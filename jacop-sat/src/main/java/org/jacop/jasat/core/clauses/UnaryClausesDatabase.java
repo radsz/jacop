@@ -31,10 +31,9 @@
 
 package org.jacop.jasat.core.clauses;
 
-import org.jacop.jasat.utils.Utils;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
+import org.jacop.jasat.utils.Utils;
 
 /**
  * A database for unit clauses (length 1). It only accepts those.
@@ -42,148 +41,136 @@ import java.io.IOException;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
-
 public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
+  /**
+   * TODO: Radek, just curious
+   *
+   * <p>how is the conflict raised by this database? how is the propagation done? After clauses are
+   * added, how is the unit propagation taking place?
+   *
+   * <p>=> conflicts are only raised when a clause is added, because either we propagate the only
+   * literal of the clause, either it is false (=> conflict) However, a good question is: what if we
+   * add such a clause at level > 0 and some backjump goes under this level, maybe we should watch
+   * literals after all. ==> FIXME
+   *
+   * <p>Is the addClause a right place to do above? Would it cause troubles for consistency of state
+   * of different components?
+   */
+  private static final int INITIAL_SIZE = 100;
+
+  // the clauses
+  private int[] clauses = new int[INITIAL_SIZE];
+
+  // current max index
+  private int currentIndex = 0;
+
+  // number of removed clauses
+  private int numRemoved = 0;
+
+  /**
+   * TODO: Radek,
+   *
+   * <p>why would you bother with having any code for removal when nothing is being actually
+   * removed. Why not disallow removal altogether and call it StaticUnaryClausesDatabase?
+   */
+  public int addClause(int[] clause, boolean isModel) {
+
+    assert clause.length == 1;
+
+    int newIndex = currentIndex++;
+    int newId = indexToUniqueId(newIndex);
+
+    // resize if needed
+    if (newIndex >= clauses.length) {
+      int newSize = newIndex * 2;
+      clauses = Utils.resize(clauses, newSize, clauses.length, pool);
+    }
+
+    // set clause
+    clauses[newIndex] = clause[0];
+
+    // propagate the literal if it is not yet set
+    int literal = clause[0];
+    int var = (literal < 0) ? -literal : literal;
+    int value = trail.values[var];
+    if (value == 0) core.triggerPropagateEvent(literal, newId);
+    else if (value == -literal) {
+      MapClause conflictClause = core.explanationClause;
+      conflictClause.clear();
+      conflictClause.addLiteral(literal);
+      core.triggerConflictEvent(conflictClause);
+    } else assert value == literal;
+
+    return newId;
+  }
+
+  public void removeClause(int clauseId) {
+    assert clauseId < currentIndex;
+    numRemoved++;
+    clauses[clauseId] = 0;
+    // nothing to do (not worthy to remember empty slots)
+  }
+
+  public boolean canRemove(int clauseId) {
+    return true;
+  }
+
+  public MapClause resolutionWith(int clauseId, MapClause clause) {
+    int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
+    assert clauseIndex < currentIndex;
+
+    int literal = clauses[clauseIndex];
+    // try to remove -literal. If it fails, add literal
+    // if (! clause.removeLiteral(-literal))
+    //	clause.addLiteral(literal);
+    clause.partialResolveWith(literal);
+
+    return clause;
+  }
+
+  public void backjump(int level) {
+    // nothing to do
+  }
+
+  public void assertLiteral(int literal) {
+    // nothing to do
+
     /**
-     * TODO: Radek, just curious
-     * <p>
-     * how is the conflict raised by this database?
-     * how is the propagation done? After clauses are added, how is the unit propagation taking place?
-     * <p>
-     * => conflicts are only raised when a clause is added, because either
-     * we propagate the only literal of the clause, either it is false (=> conflict)
-     * However, a good question is: what if we add such a clause at level > 0
-     * and some backjump goes under this level, maybe we should watch literals
-     * after all. ==> FIXME
-     * <p>
-     * Is the addClause a right place to do above? Would it cause troubles for consistency of state
-     * of different components?
+     * TODO: Radek, Really nothing to do? What about checking that there is no conflict with
+     * asserted literal?
+     *
+     * <p>=> literals are already asserted (all clauses here are unit clauses)
      */
-    private static final int INITIAL_SIZE = 100;
+  }
 
-    // the clauses
-    private int[] clauses = new int[INITIAL_SIZE];
+  @Override
+  public int rateThisClause(int[] clause) {
+    if (clause.length == 1) return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
+    else return CLAUSE_RATE_UNSUPPORTED;
+  }
 
-    // current max index
-    private int currentIndex = 0;
+  @Override
+  public String toString(String prefix) {
+    StringBuilder sb = new StringBuilder().append("unary clause database\n");
+    for (int i = 0; i < currentIndex; ++i) sb.append("[" + clauses[i] + "]\n");
+    return sb.toString();
+  }
 
-    // number of removed clauses
-    private int numRemoved = 0;
+  @Override
+  public int size() {
+    return currentIndex - numRemoved;
+  }
 
-    /**
-     * TODO: Radek,
-     * <p>
-     * why would you bother with having any code for removal when nothing is being actually removed.
-     * Why not disallow removal altogether and call it StaticUnaryClausesDatabase?
-     */
+  @Override
+  public void toCNF(BufferedWriter output) throws IOException {
 
-    public int addClause(int[] clause, boolean isModel) {
-
-        assert clause.length == 1;
-
-        int newIndex = currentIndex++;
-        int newId = indexToUniqueId(newIndex);
-
-        // resize if needed
-        if (newIndex >= clauses.length) {
-            int newSize = newIndex * 2;
-            clauses = Utils.resize(clauses, newSize, clauses.length, pool);
-        }
-
-        // set clause
-        clauses[newIndex] = clause[0];
-
-        // propagate the literal if it is not yet set
-        int literal = clause[0];
-        int var = (literal < 0) ? -literal : literal;
-        int value = trail.values[var];
-        if (value == 0)
-            core.triggerPropagateEvent(literal, newId);
-        else if (value == -literal) {
-            MapClause conflictClause = core.explanationClause;
-            conflictClause.clear();
-            conflictClause.addLiteral(literal);
-            core.triggerConflictEvent(conflictClause);
-        } else
-            assert value == literal;
-
-        return newId;
+    for (int i = 0; i < currentIndex; i++) {
+      int offset = i;
+      if (clauses[offset] != 0) {
+        output.write(Integer.toString(clauses[offset]));
+        output.write(" 0\n");
+      }
     }
-
-
-    public void removeClause(int clauseId) {
-        assert clauseId < currentIndex;
-        numRemoved++;
-        clauses[clauseId] = 0;
-        // nothing to do (not worthy to remember empty slots)
-    }
-
-
-    public boolean canRemove(int clauseId) {
-        return true;
-    }
-
-
-    public MapClause resolutionWith(int clauseId, MapClause clause) {
-        int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
-        assert clauseIndex < currentIndex;
-
-        int literal = clauses[clauseIndex];
-        // try to remove -literal. If it fails, add literal
-        //if (! clause.removeLiteral(-literal))
-        //	clause.addLiteral(literal);
-        clause.partialResolveWith(literal);
-
-        return clause;
-    }
-
-
-
-    public void backjump(int level) {
-        // nothing to do
-    }
-
-
-    public void assertLiteral(int literal) {
-        // nothing to do
-
-        /**
-         * TODO: Radek, Really nothing to do? What about checking that there is no conflict
-         * with asserted literal?
-         *
-         * => literals are already asserted (all clauses here are unit clauses)
-         */
-    }
-
-    @Override public int rateThisClause(int[] clause) {
-        if (clause.length == 1)
-            return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
-        else
-            return CLAUSE_RATE_UNSUPPORTED;
-    }
-
-    @Override public String toString(String prefix) {
-        StringBuilder sb = new StringBuilder().append("unary clause database\n");
-        for (int i = 0; i < currentIndex; ++i)
-            sb.append("[" + clauses[i] + "]\n");
-        return sb.toString();
-    }
-
-    @Override public int size() {
-        return currentIndex - numRemoved;
-    }
-
-    @Override public void toCNF(BufferedWriter output) throws IOException {
-
-        for (int i = 0; i < currentIndex; i++) {
-            int offset = i;
-            if (clauses[offset] != 0) {
-                output.write(Integer.toString(clauses[offset]));
-                output.write(" 0\n");
-            }
-        }
-
-    }
-
+  }
 }

@@ -28,159 +28,170 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.regular;
 
+import java.util.Map;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
 
-import java.util.Map;
-
 /**
- * It is an implementation of the Regular state which uses a separate successor for each
- * value. Different values using different entries in the successor array can lead to the
- * same successor.
+ * It is an implementation of the Regular state which uses a separate successor for each value.
+ * Different values using different entries in the successor array can lead to the same successor.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
 public class RegStateInt extends RegState {
 
-    private int[] toSucDom;
+  private int[] toSucDom;
 
-    /**
-     * It constructs an integer based representation of the state.
-     *
-     * @param level      level of the state (position of the associated variable).
-     * @param id         id of the state.
-     * @param sucNumber  the number of successors.
-     * @param posInArray the position within the array of states.
-     */
-    public RegStateInt(int level, int id, int sucNumber, int posInArray) {
+  /**
+   * It constructs an integer based representation of the state.
+   *
+   * @param level level of the state (position of the associated variable).
+   * @param id id of the state.
+   * @param sucNumber the number of successors.
+   * @param posInArray the position within the array of states.
+   */
+  public RegStateInt(int level, int id, int sucNumber, int posInArray) {
 
-        this.id = id;
-        this.level = level;
-        this.successors = new RegState[sucNumber];
-        this.toSucDom = new int[sucNumber];
-        this.outDegree = 0;
-        this.inDegree = 0;
-        this.pos = posInArray;
+    this.id = id;
+    this.level = level;
+    this.successors = new RegState[sucNumber];
+    this.toSucDom = new int[sucNumber];
+    this.outDegree = 0;
+    this.inDegree = 0;
+    this.pos = posInArray;
+  }
 
+  @Override
+  public void addTransitions(RegState suc, IntervalDomain val) {
+
+    for (int h = 0; h < val.size; h++) {
+      Interval inv = (val).intervals[h];
+      // for each interval of val
+      if (inv != null)
+        // For each value of the interval
+        for (int v = inv.min(); v <= inv.max(); v++) addTransition(suc, v);
+    }
+  }
+
+  @Override
+  public void addTransition(RegState suc, Integer val) {
+
+    if (outDegree < this.successors.length) {
+
+      this.successors[outDegree] = suc;
+      this.toSucDom[outDegree] = val;
+      this.outDegree++;
+
+      suc.inDegree++;
+      return;
     }
 
-    @Override public void addTransitions(RegState suc, IntervalDomain val) {
+    assert false
+        : "no place in q_" + this.level + this.id + " for successor q_" + suc.level + suc.id;
+  }
 
-        for (int h = 0; h < val.size; h++) {
-            Interval inv = (val).intervals[h];
-            //for each interval of val
-            if (inv != null)
-                //For each value of the interval
-                for (int v = inv.min(); v <= inv.max(); v++)
-                    addTransition(suc, v);
-        }
+  @Override
+  public boolean isActive(TimeStamp<Integer>[] activeLevels) {
+
+    return (pos < activeLevels[level].value());
+  }
+
+  @Override
+  public void removeTransition(int pos) {
+
+    if (pos < outDegree) {
+
+      if (debugAll)
+        System.out.println(
+            "remove the SUC arc q_"
+                + level
+                + "%"
+                + id
+                + " -> "
+                + "q_"
+                + this.successors[pos].level
+                + "%"
+                + this.successors[pos].id);
+
+      // must be first, before swap.
+      successors[pos].inDegree--;
+
+      // must be before other operation which use outDegree
+      outDegree--;
+
+      RegState tmp = successors[outDegree];
+      successors[outDegree] = successors[pos];
+      successors[pos] = tmp;
+
+      int tmpD = toSucDom[outDegree];
+      toSucDom[outDegree] = toSucDom[pos];
+      toSucDom[pos] = tmpD;
+
+      return;
     }
 
+    assert false
+        : "State q_" + level + id + ": Successors on position " + pos + " is already removed";
+  }
 
-    @Override public void addTransition(RegState suc, Integer val) {
+  @Override
+  public boolean intersects(IntDomain dom, int successorNo) {
 
-        if (outDegree < this.successors.length) {
+    return dom.isIntersecting(toSucDom[successorNo], toSucDom[successorNo]);
+  }
 
-            this.successors[outDegree] = suc;
-            this.toSucDom[outDegree] = val;
-            this.outDegree++;
+  @Override
+  public void setSupports(Map<Integer, RegEdge> hashMap, int i) {
 
-            suc.inDegree++;
-            return;
-        }
+    if (hashMap.get(toSucDom[i]) == null)
+      hashMap.put(toSucDom[i], new RegEdge(this, successors[i]));
+  }
 
-        assert false : "no place in q_" + this.level + this.id + " for successor q_" + suc.level + suc.id;
+  @Override
+  public boolean updateSupport(RegEdge edge, int v) {
 
+    for (int suc = 0; suc < outDegree; suc++) {
+      if (toSucDom[suc] == v) {
+        edge.org = this;
+        edge.dest = successors[suc];
+        return true;
+      }
     }
 
-    @Override public boolean isActive(TimeStamp<Integer>[] activeLevels) {
+    return false;
+  }
 
-        return (pos < activeLevels[level].value());
+  @Override
+  public void add(IntDomain varDom, int successorNo) {
 
-    }
+    varDom.unionAdapt(toSucDom[successorNo], toSucDom[successorNo]);
+  }
 
+  @Override
+  public String sucDomToString(int successorNo) {
 
-    @Override public void removeTransition(int pos) {
+    return "" + toSucDom[successorNo];
+  }
 
-        if (pos < outDegree) {
+  @Override
+  public String toString() {
 
-            if (debugAll)
-                System.out.println("remove the SUC arc q_" + level + "%" + id + " -> " + "q_" + this.successors[pos].level + "%"
-                    + this.successors[pos].id);
-
-            // must be first, before swap.
-            successors[pos].inDegree--;
-
-            // must be before other operation which use outDegree
-            outDegree--;
-
-            RegState tmp = successors[outDegree];
-            successors[outDegree] = successors[pos];
-            successors[pos] = tmp;
-
-            int tmpD = toSucDom[outDegree];
-            toSucDom[outDegree] = toSucDom[pos];
-            toSucDom[pos] = tmpD;
-
-            return;
-
-        }
-
-        assert false : "State q_" + level + id + ": Successors on position " + pos + " is already removed";
-
-    }
-
-    @Override public boolean intersects(IntDomain dom, int successorNo) {
-
-        return dom.isIntersecting(toSucDom[successorNo], toSucDom[successorNo]);
-
-    }
-
-    @Override public void setSupports(Map<Integer, RegEdge> hashMap, int i) {
-
-        if (hashMap.get(toSucDom[i]) == null)
-            hashMap.put(toSucDom[i], new RegEdge(this, successors[i]));
-
-    }
-
-
-    @Override public boolean updateSupport(RegEdge edge, int v) {
-
-        for (int suc = 0; suc < outDegree; suc++) {
-            if (toSucDom[suc] == v) {
-                edge.org = this;
-                edge.dest = successors[suc];
-                return true;
-            }
-        }
-
-        return false;
-
-    }
-
-    @Override public void add(IntDomain varDom, int successorNo) {
-
-        varDom.unionAdapt(toSucDom[successorNo], toSucDom[successorNo]);
-
-    }
-
-    @Override public String sucDomToString(int successorNo) {
-
-        return "" + toSucDom[successorNo];
-
-    }
-
-    @Override public String toString() {
-
-        return "id " + id + " level " + level + " inDegree " + inDegree + " outDegree" + outDegree + " position " + pos + " id " + id;
-
-    }
+    return "id "
+        + id
+        + " level "
+        + level
+        + " inDegree "
+        + inDegree
+        + " outDegree"
+        + outDegree
+        + " position "
+        + pos
+        + " id "
+        + id;
+  }
 }
-
-

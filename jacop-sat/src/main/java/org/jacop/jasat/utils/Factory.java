@@ -39,12 +39,10 @@ package org.jacop.jasat.utils;
  */
 public interface Factory<E> {
 
-    /**
-     * method to call to get a new instance of the type E
-     *
-     * @return a new instance of E
-     */
-    E newInstance();
-
-
+  /**
+   * method to call to get a new instance of the type E
+   *
+   * @return a new instance of E
+   */
+  E newInstance();
 }

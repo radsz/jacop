@@ -30,160 +30,150 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
-
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
 /**
  * Constraint X * Y #= C
- * <p>
- * Boundary consistency is used.
+ *
+ * <p>Boundary consistency is used.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class XmulYeqC extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x * y = c.
-     */
-    final public IntVar x;
+  /** It specifies variable x in constraint x * y = c. */
+  public final IntVar x;
 
-    /**
-     * It specifies variable y in constraint x * y = c.
-     */
-    final public IntVar y;
+  /** It specifies variable y in constraint x * y = c. */
+  public final IntVar y;
 
-    /**
-     * It specifies constant c in constraint x * y = c.
-     */
-    final public int c;
+  /** It specifies constant c in constraint x * y = c. */
+  public final int c;
 
-    /**
-     * It specifies if the constraint is actually, x^2 = c.
-     */
-    private final boolean xSquare;
+  /** It specifies if the constraint is actually, x^2 = c. */
+  private final boolean xSquare;
 
-    /**
-     * It constructs constraint X * Y = C.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     * @param c constant c.
-     */
-    public XmulYeqC(IntVar x, IntVar y, int c) {
+  /**
+   * It constructs constraint X * Y = C.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param c constant c.
+   */
+  public XmulYeqC(IntVar x, IntVar y, int c) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        xSquare = x == y;
+    xSquare = x == y;
 
-        this.x = x;
-        this.y = y;
-        this.c = c;
+    this.x = x;
+    this.y = y;
+    this.c = c;
 
-        setScope(x, y);
+    setScope(x, y);
+  }
 
-    }
+  @Override
+  public void consistency(final Store store) {
 
-    @Override public void consistency(final Store store) {
+    if (xSquare) // x^2 = c
+    do {
 
-        if (xSquare)  // x^2 = c
-            do {
+        store.propagationHasOccurred = false;
 
-                store.propagationHasOccurred = false;
+        if (c < 0) throw Store.failException;
 
-                if (c < 0)
-                    throw Store.failException;
+        double sqrtOfC = Math.sqrt((double) c);
 
-                double sqrtOfC = Math.sqrt((double) c);
+        if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC)) throw Store.failException;
 
-                if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC))
-                    throw Store.failException;
+        int value = (int) sqrtOfC;
 
-                int value = (int) sqrtOfC;
+        IntDomain dom = new IntervalDomain(-value, -value);
+        dom.unionAdapt(value, value);
 
-                IntDomain dom = new IntervalDomain(-value, -value);
-                dom.unionAdapt(value, value);
+        x.domain.in(store.level, x, dom);
 
-                x.domain.in(store.level, x, dom);
+      } while (store.propagationHasOccurred);
+    else // X*Y=C
+    do {
 
-            } while (store.propagationHasOccurred);
-        else    // X*Y=C
-            do {
+        store.propagationHasOccurred = false;
 
-                store.propagationHasOccurred = false;
+        // Bounds for X
+        Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
 
-                // Bounds for X
-                Interval xBounds = IntDomain.divIntBounds(c, c, y.min(), y.max());
+        x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
-                x.domain.in(store.level, x, xBounds.min(), xBounds.max());
+        // Bounds for Y
+        Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
 
-                // Bounds for Y
-                Interval yBounds = IntDomain.divIntBounds(c, c, x.min(), x.max());
+        y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
-                y.domain.in(store.level, y, yBounds.min(), yBounds.max());
+        // check bounds, if C is covered.
+        Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
 
-                // check bounds, if C is covered.
-                Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
+        if (c < cBounds.min() || c > cBounds.max()) throw Store.failException;
 
-                if (c < cBounds.min() || c > cBounds.max())
-                    throw Store.failException;
+      } while (store.propagationHasOccurred);
+  }
 
-            } while (store.propagationHasOccurred);
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public void notConsistency(final Store store) {
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+    do {
 
-    @Override public void notConsistency(final Store store) {
+      store.propagationHasOccurred = false;
 
-        do {
+      if (x.singleton()) {
+        if (c % x.value() == 0) y.domain.inComplement(store.level, y, c / x.value());
+      } else if (y.singleton()) {
+        if (c % y.value() == 0) x.domain.inComplement(store.level, x, c / y.value());
+      }
 
-            store.propagationHasOccurred = false;
+    } while (store.propagationHasOccurred);
+  }
 
-            if (x.singleton()) {
-                if (c % x.value() == 0)
-                    y.domain.inComplement(store.level, y, c / x.value());
-            } else if (y.singleton()) {
-                if (c % y.value() == 0)
-                    x.domain.inComplement(store.level, x, c / y.value());
-            }
+  @Override
+  public boolean notSatisfied() {
+    IntDomain Xdom = x.dom(), Ydom = y.dom();
+    return (Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c);
+  }
 
-        } while (store.propagationHasOccurred);
+  @Override
+  public boolean satisfied() {
+    return (grounded() && (x.min() * y.min() == c));
+  }
 
-    }
+  @Override
+  public String toString() {
 
-    @Override public boolean notSatisfied() {
-        IntDomain Xdom = x.dom(), Ydom = y.dom();
-        return (Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c);
-    }
-
-    @Override public boolean satisfied() {
-        return (grounded() && (x.min() * y.min() == c));
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XmulYeqC(" + x + ", " + y + ", " + c + " )";
-    }
-
+    return id() + " : XmulYeqC(" + x + ", " + y + ", " + c + " )";
+  }
 }

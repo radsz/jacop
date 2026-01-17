@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
@@ -37,135 +38,130 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraint P + C #= R
- * <p>
- * Bound consistency is used.
+ *
+ * <p>Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable p in constraint p+c=r.
-     */
-    public FloatVar p;
+  /** It specifies variable p in constraint p+c=r. */
+  public FloatVar p;
 
-    /**
-     * It specifies constant c in constraint p+c=r.
-     */
-    public double c;
+  /** It specifies constant c in constraint p+c=r. */
+  public double c;
 
-    /**
-     * It specifies variable r in constraint p+c=r.
-     */
-    public FloatVar r;
+  /** It specifies variable r in constraint p+c=r. */
+  public FloatVar r;
 
-    /**
-     * It constructs constraint P+C=R.
-     *
-     * @param p variable p.
-     * @param c constant c.
-     * @param r variable r.
-     */
-    public PplusCeqR(FloatVar p, double c, FloatVar r) {
+  /**
+   * It constructs constraint P+C=R.
+   *
+   * @param p variable p.
+   * @param c constant c.
+   * @param r variable r.
+   */
+  public PplusCeqR(FloatVar p, double c, FloatVar r) {
 
-        checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
+    checkInputForNullness(new String[] {"p", "r"}, new Object[] {p, r});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.p = p;
-        this.c = c;
-        this.r = r;
+    this.p = p;
+    this.c = c;
+    this.r = r;
 
-        setScope(p, r);
+    setScope(p, r);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    do {
+      store.propagationHasOccurred = false;
+
+      FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), c, c);
+      p.domain.in(store.level, p, pDom.min(), pDom.max());
+
+      FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), c, c);
+      r.domain.in(store.level, r, rDom.min(), rDom.max());
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      if (r.singleton()) p.domain.inComplement(store.level, p, r.min() - c);
+
+      if (p.singleton()) r.domain.inComplement(store.level, r, p.min() + c);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    FloatDomain pDom = p.dom(), rDom = r.dom();
+    return (pDom.max() + c < rDom.min() || pDom.min() + c > rDom.max());
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    return (p.singleton()
+        && r.singleton()
+        && r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : PplusCeqR(" + p + ", " + c + ", " + r + " )";
+  }
+
+  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+    if (f.equals(r)) {
+      // f = p + c
+      // f' = d(p)
+      FloatVar v = Derivative.getDerivative(store, p, vars, x);
+      return v;
+
+    } else if (f.equals(p)) {
+      // f = r - c
+      // f' = d(r)
+      FloatVar v = Derivative.getDerivative(store, r, vars, x);
+      return v;
     }
 
-    @Override public void consistency(Store store) {
-
-        do {
-            store.propagationHasOccurred = false;
-
-            FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), c, c);
-            p.domain.in(store.level, p, pDom.min(), pDom.max());
-
-            FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), c, c);
-            r.domain.in(store.level, r, rDom.min(), rDom.max());
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public void notConsistency(Store store) {
-
-        do {
-
-            store.propagationHasOccurred = false;
-
-            if (r.singleton())
-                p.domain.inComplement(store.level, p, r.min() - c);
-
-            if (p.singleton())
-                r.domain.inComplement(store.level, r, p.min() + c);
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public boolean notSatisfied() {
-        FloatDomain pDom = p.dom(), rDom = r.dom();
-        return (pDom.max() + c < rDom.min() || pDom.min() + c > rDom.max());
-    }
-
-    @Override public boolean satisfied() {
-
-        return (p.singleton() && r.singleton() && r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
-
-    }
-
-    @Override public String toString() {
-
-        return id() + " : PplusCeqR(" + p + ", " + c + ", " + r + " )";
-    }
-
-    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
-        if (f.equals(r)) {
-            // f = p + c
-            // f' = d(p)
-            FloatVar v = Derivative.getDerivative(store, p, vars, x);
-            return v;
-
-        } else if (f.equals(p)) {
-            // f = r - c
-            // f' = d(r)
-            FloatVar v = Derivative.getDerivative(store, r, vars, x);
-            return v;
-
-        }
-
-        return null;
-
-    }
+    return null;
+  }
 }

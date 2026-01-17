@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.core;
 
 /**
@@ -37,55 +36,51 @@ package org.jacop.core;
  */
 public class MutableDomainValue implements MutableVarValue, Cloneable {
 
-    /**
-     * It stores the value of the mutable domain.
-     */
-    public Domain domain;
+  /** It stores the value of the mutable domain. */
+  public Domain domain;
 
-    MutableDomainValue previousMutableDomainVariableValue = null;
+  MutableDomainValue previousMutableDomainVariableValue = null;
 
-    int stamp = 0;
+  int stamp = 0;
 
-    MutableDomainValue() {
-    }
+  MutableDomainValue() {}
 
-    /**
-     * @param domain specifies domain stored by a mutable domain.
-     */
-    public MutableDomainValue(Domain domain) {
-        this.domain = domain;
-    }
+  /** @param domain specifies domain stored by a mutable domain. */
+  public MutableDomainValue(Domain domain) {
+    this.domain = domain;
+  }
 
-    @Override public Object clone() {
+  @Override
+  public Object clone() {
 
-        MutableDomainValue val = new MutableDomainValue(domain.clone());
-        val.stamp = stamp;
-        val.previousMutableDomainVariableValue = previousMutableDomainVariableValue;
-        return val;
-    }
+    MutableDomainValue val = new MutableDomainValue(domain.clone());
+    val.stamp = stamp;
+    val.previousMutableDomainVariableValue = previousMutableDomainVariableValue;
+    return val;
+  }
 
-    public MutableVarValue previous() {
-        return previousMutableDomainVariableValue;
-    }
+  public MutableVarValue previous() {
+    return previousMutableDomainVariableValue;
+  }
 
-    public void setPrevious(MutableVarValue nn) {
-        previousMutableDomainVariableValue = (MutableDomainValue) nn;
-    }
+  public void setPrevious(MutableVarValue nn) {
+    previousMutableDomainVariableValue = (MutableDomainValue) nn;
+  }
 
-    public void setStamp(int stamp) {
-        this.stamp = stamp;
-    }
+  public void setStamp(int stamp) {
+    this.stamp = stamp;
+  }
 
-    void setValue(Domain domain) {
-        this.domain = domain;
-    }
+  void setValue(Domain domain) {
+    this.domain = domain;
+  }
 
-    public int stamp() {
-        return stamp;
-    }
+  public int stamp() {
+    return stamp;
+  }
 
-    @Override public String toString() {
-        return "[" + domain + "]";
-    }
-
+  @Override
+  public String toString() {
+    return "[" + domain + "]";
+  }
 }

@@ -28,58 +28,72 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
+import java.util.List;
 import org.jacop.core.IntDomain;
 
-import java.util.List;
-
 /**
- * Defines a basic data structure to keep the profile for the diffn/1
- * constraints. It consists of ordered pair of time points and the current
- * value.
+ * Defines a basic data structure to keep the profile for the diffn/1 constraints. It consists of
+ * ordered pair of time points and the current value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class DisjointConditionalProfile extends ProfileConditional {
 
-    private static final long serialVersionUID = 8683452581100000008L;
+  private static final long serialVersionUID = 8683452581100000008L;
 
-    static final boolean trace = false;
+  static final boolean trace = false;
 
-    DisjointConditionalProfile() {
-    }
+  DisjointConditionalProfile() {}
 
-    void make(int i, int j, Rectangle r, int begin, int end, List<RectangleWithCondition> Rs, ExclusiveList ExList) {
+  void make(
+      int i,
+      int j,
+      Rectangle r,
+      int begin,
+      int end,
+      List<RectangleWithCondition> Rs,
+      ExclusiveList ExList) {
 
-        clear();
-        MaxProfile = 0;
-        IntDomain rOrigin_i_Dom = r.origin[i].dom();
-        IntDomain rLength_i_Dom = r.length[i].dom();
-        int rOriginMin = rOrigin_i_Dom.min(), rOriginMax = rOrigin_i_Dom.max(), rLengthMax = rLength_i_Dom.max();
-        IntRectangle R = new IntRectangle(r.dim);
+    clear();
+    MaxProfile = 0;
+    IntDomain rOrigin_i_Dom = r.origin[i].dom();
+    IntDomain rLength_i_Dom = r.length[i].dom();
+    int rOriginMin = rOrigin_i_Dom.min(),
+        rOriginMax = rOrigin_i_Dom.max(),
+        rLengthMax = rLength_i_Dom.max();
+    IntRectangle R = new IntRectangle(r.dim);
 
-        for (RectangleWithCondition t : Rs) {
+    for (RectangleWithCondition t : Rs) {
 
-            IntDomain tOrigin_i_Dom = t.origin[i].dom();
-            if (t != r && tOrigin_i_Dom.min() >= rOriginMin && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
-                R.dim = 0;
-                if (t.minUse(i, R)) {
-                    if (trace)
-                        System.out
-                            .println("Update profile " + "[" + R.origin[j] + ".." + (R.origin[j] + R.length[j]) + ")=" + t.length(i).min());
+      IntDomain tOrigin_i_Dom = t.origin[i].dom();
+      if (t != r
+          && tOrigin_i_Dom.min() >= rOriginMin
+          && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
+        R.dim = 0;
+        if (t.minUse(i, R)) {
+          if (trace)
+            System.out.println(
+                "Update profile "
+                    + "["
+                    + R.origin[j]
+                    + ".."
+                    + (R.origin[j] + R.length[j])
+                    + ")="
+                    + t.length(i).min());
 
-                    ExclusiveList tExclusive = ExList.listFor(t.index);
-                    addToProfile(t.index, R.origin[j], R.origin[j] + R.length[j], t.length[i].min(), tExclusive);
-                }
-            }
+          ExclusiveList tExclusive = ExList.listFor(t.index);
+          addToProfile(
+              t.index, R.origin[j], R.origin[j] + R.length[j], t.length[i].min(), tExclusive);
         }
+      }
     }
+  }
 
-    @Override int max() {
-        return super.max();
-    }
+  @Override
+  int max() {
+    return super.max();
+  }
 }

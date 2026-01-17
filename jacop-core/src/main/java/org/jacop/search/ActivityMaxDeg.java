@@ -34,67 +34,54 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Defines a pruning activity comparatorfor variables. Every time a constraint
- * prunes a variable activity weight is increased by one. All other variables of
- * constraint's activity weight value is recalculated as activity weight * decay.
- * The comparator will choose the variable with the highest activity
- * weight divided by its domain size.
+ * Defines a pruning activity comparatorfor variables. Every time a constraint prunes a variable
+ * activity weight is increased by one. All other variables of constraint's activity weight value is
+ * recalculated as activity weight * decay. The comparator will choose the variable with the highest
+ * activity weight divided by its domain size.
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class ActivityMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
-    private ActivityMaxDeg() {}
+  private ActivityMaxDeg() {}
 
-    public ActivityMaxDeg(Store store) {
-	this(store, store.getDecay());
-    }
-    
-    public ActivityMaxDeg(Store store, double decay) {
-	store.activityManagement(true);
-	store.setDecay(decay);
-    }
-    
-    public int compare(double left, T var) {
+  public ActivityMaxDeg(Store store) {
+    this(store, store.getDecay());
+  }
 
-        double right = var.activity() / var.getSizeFloat();
+  public ActivityMaxDeg(Store store, double decay) {
+    store.activityManagement(true);
+    store.setDecay(decay);
+  }
 
-        if (left > right)
+  public int compare(double left, T var) {
 
-            return 1;
+    double right = var.activity() / var.getSizeFloat();
 
-        if (left < right)
+    if (left > right) return 1;
 
-            return -1;
+    if (left < right) return -1;
 
-        return 0;
+    return 0;
+  }
 
-    }
+  public int compare(T leftVar, T rightVar) {
 
-    public int compare(T leftVar, T rightVar) {
-    
-        double left = leftVar.activity() / leftVar.getSizeFloat();
+    double left = leftVar.activity() / leftVar.getSizeFloat();
 
-        double right = rightVar.activity() / rightVar.getSizeFloat();
+    double right = rightVar.activity() / rightVar.getSizeFloat();
 
-        if (left > right)
+    if (left > right) return 1;
 
-            return 1;
+    if (left < right) return -1;
 
-        if (left < right)
+    return 0;
+  }
 
-            return -1;
+  public double metric(T var) {
 
-        return 0;
-
-    }
-
-    public double metric(T var) {
-
-        return var.activity() / var.getSizeFloat();
-
-    }
+    return var.activity() / var.getSizeFloat();
+  }
 }

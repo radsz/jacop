@@ -30,137 +30,135 @@
 
 package org.jacop.floats.core;
 
-
 /**
- * Defines interval of numbers which is part of FDV definition which consist of
- * one or several intervals.
+ * Defines interval of numbers which is part of FDV definition which consist of one or several
+ * intervals.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public final class FloatInterval implements Cloneable {
 
-    /**
-     * It specifies the minimal value in the interval.
-     */
-    public final double min;
+  /** It specifies the minimal value in the interval. */
+  public final double min;
 
-    /**
-     * It specifies the maximal value in the interval.
-     */
-    public final double max;
+  /** It specifies the maximal value in the interval. */
+  public final double max;
 
-    /**
-     * It creates the largest possible interval.
-     */
-    public FloatInterval() {
-        min = FloatDomain.MinFloat;
-        max = FloatDomain.MaxFloat;
+  /** It creates the largest possible interval. */
+  public FloatInterval() {
+    min = FloatDomain.MinFloat;
+    max = FloatDomain.MaxFloat;
+  }
+
+  /**
+   * It creates an interval with a given minimum and maximal value.
+   *
+   * @param min the minimal value in the interval (the left bound).
+   * @param max the maximal value in the interval (the right bound).
+   */
+  public FloatInterval(double min, double max) {
+
+    assert (min <= max) : "min value " + min + " is larger than max value " + max;
+
+    this.min = min;
+    this.max = max;
+  }
+
+  @Override
+  public Object clone() {
+    return new FloatInterval(min, max);
+  }
+
+  /**
+   * It checks equality between intervals.
+   *
+   * @param interval the inerval to which the comparison is made.
+   * @return true if an input interval is equal to this one.
+   */
+  public boolean eq(FloatInterval interval) {
+    // return min == interval.min && max == interval.max;
+
+    double v = Math.max(Math.abs(min - interval.min), Math.abs(max - interval.max));
+    return v <= FloatDomain.epsilon(v);
+  }
+
+  /**
+   * It returns the right bound of the interval (maximum value).
+   *
+   * @return the maximal value from the interval.
+   */
+  public double max() {
+    return max;
+  }
+
+  /**
+   * It returns the left range of the interval (minimum value).
+   *
+   * @return the minimal value from the interval.
+   */
+  public double min() {
+    return min;
+  }
+
+  /**
+   * It checks if an intervals contains only one value (singleton).
+   *
+   * @return true if domain has only one value.
+   */
+  public boolean singleton() {
+
+    double large = (Math.abs(max) >= Math.abs(min)) ? max : min;
+    // double small = (Math.abs(max) >= Math.abs(min)) ? min : max;
+
+    return (max - min) <= FloatDomain.epsilon(large);
+  }
+
+  /**
+   * It checks if an intervals contains only value c.
+   *
+   * @param c integer value to which the singleton is compared to.
+   * @return true if variable has a singleton domain and it is equal to value c.
+   */
+  public boolean singleton(double c) {
+    // return (min == max && min == c);
+
+    return (max - min) <= FloatDomain.epsilon(max - min) && c <= max && c >= min;
+  }
+
+  @Override
+  public String toString() {
+
+    java.util.Locale locale = new java.util.Locale("ENGLISH", "GERMANY");
+    long p;
+    String form;
+    if (FloatDomain.format() == Double.MAX_VALUE) {
+      form = "%s";
+    } else {
+      p = (long) Math.ceil(Math.log10(1 / FloatDomain.format()));
+      form = // "%s";
+          (Math.abs(min) >= 1.0E+7d
+                  || Math.abs(max) >= 1.0E+7
+                  || (Math.abs(min) <= 1.0E-3 && min != 0)
+                  || (Math.abs(max) <= 1.0E-3 && max != 0))
+              ? "%." + p + "e"
+              : "%." + p + "f";
     }
+    String result;
 
-    /**
-     * It creates an interval with a given minimum and maximal value.
-     *
-     * @param min the minimal value in the interval (the left bound).
-     * @param max the maximal value in the interval (the right bound).
-     */
-    public FloatInterval(double min, double max) {
+    if (!FloatDomain.intervalPrint && singleton())
+      result =
+          String.format(
+              locale, form, ((min + max) / 2)); // mean value if singleton considering precision
+    else
+      result =
+          String.format(locale, form, min)
+              + ".."
+              + String.format(
+                  locale, form, max); // String.format("%.16f..%.16f", min, max); // interval
 
-        assert (min <= max) : "min value " + min + " is larger than max value " + max;
+    // result += "[±"+ FloatDomain.ulp(min) + "]";
 
-        this.min = min;
-        this.max = max;
-
-    }
-
-    @Override public Object clone() {
-        return new FloatInterval(min, max);
-    }
-
-    /**
-     * It checks equality between intervals.
-     *
-     * @param interval the inerval to which the comparison is made.
-     * @return true if an input interval is equal to this one.
-     */
-    public boolean eq(FloatInterval interval) {
-        // return min == interval.min && max == interval.max;
-
-        double v = Math.max(Math.abs(min - interval.min), Math.abs(max - interval.max));
-        return v <= FloatDomain.epsilon(v);
-
-    }
-
-    /**
-     * It returns the right bound of the interval (maximum value).
-     *
-     * @return the maximal value from the interval.
-     */
-    public double max() {
-        return max;
-    }
-
-    /**
-     * It returns the left range of the interval (minimum value).
-     *
-     * @return the minimal value from the interval.
-     */
-    public double min() {
-        return min;
-    }
-
-    /**
-     * It checks if an intervals contains only one value (singleton).
-     *
-     * @return true if domain has only one value.
-     */
-    public boolean singleton() {
-
-        double large = (Math.abs(max) >= Math.abs(min)) ? max : min;
-        // double small = (Math.abs(max) >= Math.abs(min)) ? min : max;
-
-        return (max - min) <= FloatDomain.epsilon(large);
-
-    }
-
-    /**
-     * It checks if an intervals contains only value c.
-     *
-     * @param c integer value to which the singleton is compared to.
-     * @return true if variable has a singleton domain and it is equal to value c.
-     */
-
-    public boolean singleton(double c) {
-        // return (min == max && min == c);
-
-        return (max - min) <= FloatDomain.epsilon(max - min) && c <= max && c >= min;
-    }
-
-    @Override public String toString() {
-
-        java.util.Locale locale = new java.util.Locale("ENGLISH", "GERMANY");
-        long p;
-        String form;
-        if (FloatDomain.format() == Double.MAX_VALUE) {
-            form = "%s";
-        } else {
-            p = (long) Math.ceil(Math.log10(1 / FloatDomain.format()));
-            form = //"%s";
-                (Math.abs(min) >= 1.0E+7d || Math.abs(max) >= 1.0E+7 || (Math.abs(min) <= 1.0E-3 && min != 0) || (Math.abs(max) <= 1.0E-3
-                    && max != 0)) ? "%." + p + "e" : "%." + p + "f";
-        }
-        String result;
-
-        if (!FloatDomain.intervalPrint && singleton())
-            result = String.format(locale, form, ((min + max) / 2)); // mean value if singleton considering precision
-        else
-            result = String.format(locale, form, min) + ".." + String
-                .format(locale, form, max);  // String.format("%.16f..%.16f", min, max); // interval
-
-        // result += "[±"+ FloatDomain.ulp(min) + "]";
-
-        return result;
-    }
-
+    return result;
+  }
 }

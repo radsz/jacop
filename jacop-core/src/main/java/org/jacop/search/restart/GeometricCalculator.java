@@ -36,27 +36,26 @@ package org.jacop.search.restart;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class GeometricCalculator extends Calculator {
 
-    int scale;
-    double base;
-    int n;
-    
-    public GeometricCalculator(double base, int scale) {
-        n = 0;
-        failLimit = scale;
-        this.base = base;
-        this.scale = scale;
-    }
+  int scale;
+  double base;
+  int n;
 
-    public void newLimit() {
-        numberFails = 0;
-        double p = Double.valueOf(Math.pow(base, ++n));
-        failLimit = (long)p * scale;
-    }
-    
-    public String toString() {
-        return "geometricCalculator(" + base + ", " + scale + ")";
-    }
+  public GeometricCalculator(double base, int scale) {
+    n = 0;
+    failLimit = scale;
+    this.base = base;
+    this.scale = scale;
+  }
+
+  public void newLimit() {
+    numberFails = 0;
+    double p = Double.valueOf(Math.pow(base, ++n));
+    failLimit = (long) p * scale;
+  }
+
+  public String toString() {
+    return "geometricCalculator(" + base + ", " + scale + ")";
+  }
 }

@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 /*
@@ -38,84 +37,78 @@ package org.jacop.constraints.cumulative;
  * @version 4.10
  */
 
-
 /*
  * Defines the basic data structure for cumulative constraint's edge-finding algorithm.
  */
 abstract class Tree {
 
-    // binary tree structure; number of nodes
-    int treeSize;
-    // number of leaves (tasks)
-    int n;
+  // binary tree structure; number of nodes
+  int treeSize;
+  // number of leaves (tasks)
+  int n;
 
-    abstract void clearNode(int i);
+  abstract void clearNode(int i);
 
-    void clearTree() {
-        for (int i = 0; i < treeSize; i++)
-            clearNode(i);
-    }
+  void clearTree() {
+    for (int i = 0; i < treeSize; i++) clearNode(i);
+  }
 
-    int root() {
-        return 0;
-    }
+  int root() {
+    return 0;
+  }
 
-    boolean isRoot(int i) {
-        return i == root();
-    }
+  boolean isRoot(int i) {
+    return i == root();
+  }
 
-    int parent(int i) {
-        return (i - 1) < 0 ? -1 : (i - 1) / 2;
-    }
+  int parent(int i) {
+    return (i - 1) < 0 ? -1 : (i - 1) / 2;
+  }
 
-    int left(int i) {
-        return 2 * i + 1;
-    }
+  int left(int i) {
+    return 2 * i + 1;
+  }
 
-    int right(int i) {
-        return 2 * i + 2;
-    }
+  int right(int i) {
+    return 2 * i + 2;
+  }
 
-    int siblingLeft(int i) {
-        return left(parent(i));
-    }
+  int siblingLeft(int i) {
+    return left(parent(i));
+  }
 
-    int siblingRight(int i) {
-        return right(parent(i));
-    }
+  int siblingRight(int i) {
+    return right(parent(i));
+  }
 
-    boolean isLeft(int i) {
-        return i % 2 != 0;
-    }
+  boolean isLeft(int i) {
+    return i % 2 != 0;
+  }
 
-    boolean isRight(int i) {
-        return !isLeft(i);
-    }
+  boolean isRight(int i) {
+    return !isLeft(i);
+  }
 
-    int leafIndex(int i) {
-        return i - (treeSize - n);
-    }
+  int leafIndex(int i) {
+    return i - (treeSize - n);
+  }
 
-    boolean notExist(int i) {
-        return i < 0 || i >= treeSize;
-    }
+  boolean notExist(int i) {
+    return i < 0 || i >= treeSize;
+  }
 
-    boolean exist(int i) {
-        return !notExist(i);
-    }
+  boolean exist(int i) {
+    return !notExist(i);
+  }
 
-    long plus(long x, long y) {
-        if (x == Long.MIN_VALUE)
-            return Long.MIN_VALUE;
-        else
-            return x + y;
-    }
+  long plus(long x, long y) {
+    if (x == Long.MIN_VALUE) return Long.MIN_VALUE;
+    else return x + y;
+  }
 
-    int plus(int x, int y) {
-        if (x == Integer.MIN_VALUE) {
-            return Integer.MIN_VALUE;
-        } else
-            return x + y;
-    }
-
+  int plus(int x, int y) {
+    if (x == Integer.MIN_VALUE) {
+      return Integer.MIN_VALUE;
+    } else return x + y;
+  }
 }

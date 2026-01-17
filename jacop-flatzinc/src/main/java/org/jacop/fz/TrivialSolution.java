@@ -36,14 +36,13 @@ package org.jacop.fz;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 @SuppressWarnings("serial")
 public class TrivialSolution extends RuntimeException {
 
-    public TrivialSolution() {
-    }
+  public TrivialSolution() {}
 
-    @Override public Throwable fillInStackTrace() {
-        return this;
-    }
+  @Override
+  public Throwable fillInStackTrace() {
+    return this;
+  }
 }

@@ -34,33 +34,29 @@ import java.util.Arrays;
 import org.jacop.core.Var;
 
 /**
- * Print-outs all variables defined in the constructor when restart
- * search finds a solution.
+ * Print-outs all variables defined in the constructor when restart search finds a solution.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class CustomReport {
 
-    Var[] vars = null;
+  Var[] vars = null;
 
-    public CustomReport(Var[] vs) {
-        addVariables(vs);
-    }
-    
-    public CustomReport() {
-    }
-    
-    public void addVariables(Var[] vs) {
-        vars = new Var[vs.length];
-        for (int i = 0; i < vs.length; i++) {
-            vars[i] = vs[i];
-        }
-    }
-    
-    public void report() {
-        System.out.println(Arrays.asList(vars));
+  public CustomReport(Var[] vs) {
+    addVariables(vs);
+  }
 
+  public CustomReport() {}
+
+  public void addVariables(Var[] vs) {
+    vars = new Var[vs.length];
+    for (int i = 0; i < vs.length; i++) {
+      vars[i] = vs[i];
     }
+  }
+
+  public void report() {
+    System.out.println(Arrays.asList(vars));
+  }
 }

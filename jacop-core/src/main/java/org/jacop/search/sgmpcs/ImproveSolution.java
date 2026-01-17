@@ -33,32 +33,29 @@ package org.jacop.search.sgmpcs;
 import org.jacop.core.Var;
 
 /**
- * Defines an interface for defining different methods for selecting next search
- * decision to be taken. The search decision called choice point will be first
- * enforced and later upon backtrack a negation of that search decision will be
- * enforced.
+ * Defines an interface for defining different methods for selecting next search decision to be
+ * taken. The search decision called choice point will be first enforced and later upon backtrack a
+ * negation of that search decision will be enforced.
  *
  * @param <T> type of the variable for which choice point is being created.
  * @author krzysztof Kuchcinski
  * @version 4.10
  */
-
 public interface ImproveSolution<T extends Var> {
 
-    boolean searchFromEmptySolution(int failLimit);
+  boolean searchFromEmptySolution(int failLimit);
 
-    boolean searchFromEliteSolution(int[] solution, int failLimit);
+  boolean searchFromEliteSolution(int[] solution, int failLimit);
 
-    int getCurrentCost();
+  int getCurrentCost();
 
-    int[] getSolution();
+  int[] getSolution();
 
-    int getNumberFails();
+  int getNumberFails();
 
-    int getFailLimit();
+  int getFailLimit();
 
-    void setPrintInfo(boolean p);
+  void setPrintInfo(boolean p);
 
-    void setTimeOut(long timeOut);
-
+  void setTimeOut(long timeOut);
 }

@@ -33,24 +33,19 @@ package org.jacop.search;
 import org.jacop.core.IntVar;
 
 /**
- * IndomainMax - implements enumeration method based on the selection of the
- * maximal value in the domain of the variable.
+ * IndomainMax - implements enumeration method based on the selection of the maximal value in the
+ * domain of the variable.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IndomainMax<T extends IntVar> implements Indomain<T> {
 
-    /**
-     * It creates an IndomainMax heuristic.
-     */
-    public IndomainMax() {
-    }
+  /** It creates an IndomainMax heuristic. */
+  public IndomainMax() {}
 
-    public int indomain(T var) {
-        return var.max();
-    }
-
+  public int indomain(T var) {
+    return var.max();
+  }
 }

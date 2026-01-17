@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 /**
@@ -37,14 +36,11 @@ package org.jacop.constraints.cumulative;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 class TreeNode {
 
-    TaskView task = null;
-    // index in the tree
-    int index;
+  TaskView task = null;
+  // index in the tree
+  int index;
 
-    TreeNode() {
-    }
-
+  TreeNode() {}
 }

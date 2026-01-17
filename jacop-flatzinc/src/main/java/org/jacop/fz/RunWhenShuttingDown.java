@@ -28,23 +28,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.fz;
 
 public class RunWhenShuttingDown extends Thread {
 
-    Parser parser;
+  Parser parser;
 
-    public RunWhenShuttingDown(Parser parser) {
-        this.parser = parser;
-    }
+  public RunWhenShuttingDown(Parser parser) {
+    this.parser = parser;
+  }
 
-    public void run() {
+  public void run() {
 
-        if (!parser.options.getAll() && parser.solver.lastSolution != null)
-	    parser.solver.helperSolutionPrinter(parser.solver.lastSolution.toString());
-	
-        parser.solver.printStatisticsIterrupt();
+    if (!parser.options.getAll() && parser.solver.lastSolution != null)
+      parser.solver.helperSolutionPrinter(parser.solver.lastSolution.toString());
 
-    }
+    parser.solver.printStatisticsIterrupt();
+  }
 }

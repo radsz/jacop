@@ -30,74 +30,64 @@
 
 package org.jacop.util.fsm;
 
-import org.jacop.core.IntDomain;
-
 import java.util.Set;
+import org.jacop.core.IntDomain;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class FSMTransition {
 
-    /**
-     * It specifies the domain associated with the transition.
-     */
-    public IntDomain domain;
+  /** It specifies the domain associated with the transition. */
+  public IntDomain domain;
 
-    /**
-     * It specifies the successor state we arrive to after taking the transition.
-     */
-    public FSMState successor;
+  /** It specifies the successor state we arrive to after taking the transition. */
+  public FSMState successor;
 
-    /**
-     * It constructs a finite machine state transition.
-     *
-     * @param domain the domain which triggers the transition.
-     * @param state  the successor state reached by a transition.
-     */
-    public FSMTransition(IntDomain domain, FSMState state) {
-        this.domain = domain;
-        this.successor = state;
-    }
+  /**
+   * It constructs a finite machine state transition.
+   *
+   * @param domain the domain which triggers the transition.
+   * @param state the successor state reached by a transition.
+   */
+  public FSMTransition(IntDomain domain, FSMState state) {
+    this.domain = domain;
+    this.successor = state;
+  }
 
+  /**
+   * It performs a clone of a transition with copying the attributes too.
+   *
+   * @param states a list of states which have been already copied.
+   * @return the transition clone.
+   */
+  public FSMTransition deepClone(Set<FSMState> states) {
 
-    /**
-     * It performs a clone of a transition with copying the attributes too.
-     *
-     * @param states a list of states which have been already copied.
-     * @return the transition clone.
-     */
-    public FSMTransition deepClone(Set<FSMState> states) {
+    return new FSMTransition(domain, successor.deepClone(states));
+  }
 
-        return new FSMTransition(domain, successor.deepClone(states));
+  @Override
+  public int hashCode() {
+    return successor.id;
+  }
 
-    }
+  @Override
+  public boolean equals(Object o) {
 
-    @Override public int hashCode() {
-        return successor.id;
-    }
+    if (o == null) return false;
 
-    @Override public boolean equals(Object o) {
+    if (o == this) return true;
 
-        if (o == null)
-            return false;
+    FSMTransition compareTo = (FSMTransition) o;
 
-        if (o == this)
-            return true;
+    if (compareTo.successor.equals(successor) && compareTo.domain.eq(domain)) return true;
 
-        FSMTransition compareTo = (FSMTransition) o;
+    return false;
+  }
 
-        if (compareTo.successor.equals(successor) && compareTo.domain.eq(domain))
-            return true;
-
-        return false;
-
-    }
-
-    @Override public String toString() {
-        return successor.toString() + "@" + domain.toString();
-    }
-
+  @Override
+  public String toString() {
+    return successor.toString() + "@" + domain.toString();
+  }
 }

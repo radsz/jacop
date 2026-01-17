@@ -33,39 +33,37 @@ package org.jacop.constraints;
 import org.jacop.core.IntVar;
 
 /**
- * Defines a basic structure for exsclusive rectangles used in
- * DisjointConditional
+ * Defines a basic structure for exsclusive rectangles used in DisjointConditional
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class ExclusiveItem {
 
-    IntVar cond;
+  IntVar cond;
 
-    int i1, i2;
+  int i1, i2;
 
-    ExclusiveItem(int a, int b, IntVar c) {
-        i1 = a;
-        i2 = b;
-        cond = c;
-    }
+  ExclusiveItem(int a, int b, IntVar c) {
+    i1 = a;
+    i2 = b;
+    cond = c;
+  }
 
-    IntVar condition() {
-        return cond;
-    }
+  IntVar condition() {
+    return cond;
+  }
 
-    int index1() {
-        return i1;
-    }
+  int index1() {
+    return i1;
+  }
 
-    int index2() {
-        return i2;
-    }
+  int index2() {
+    return i2;
+  }
 
-    @Override public String toString() {
-        return "[" + i1 + ", " + i2 + ", " + cond + "]";
-    }
-
+  @Override
+  public String toString() {
+    return "[" + i1 + ", " + i2 + ", " + cond + "]";
+  }
 }

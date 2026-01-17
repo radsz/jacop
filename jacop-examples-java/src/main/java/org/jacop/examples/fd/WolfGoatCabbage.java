@@ -30,144 +30,131 @@
 
 package org.jacop.examples.fd;
 
-
+import java.util.ArrayList;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
 
 /**
  * A simple logic problem of transporting wolf, goat, and cabbage over the river.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          We need to transfer the cabbage, the goat and the wolf from one bank of the river to
- *          the other bank. But there is only one seat available on his boat !
- *          <p>
- *          Furthermore, if the goat and the cabbage stay together as we are leaving on a boat,
- *          the goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving,
- *          the wolf will eat the goat !
+ *     <p>We need to transfer the cabbage, the goat and the wolf from one bank of the river to the
+ *     other bank. But there is only one seat available on his boat !
+ *     <p>Furthermore, if the goat and the cabbage stay together as we are leaving on a boat, the
+ *     goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving, the
+ *     wolf will eat the goat !
  */
-
 public class WolfGoatCabbage extends ExampleFD {
 
-    /**
-     * It specifies number of moves allowed (one move is from one river bank to the other)
-     */
-    public int numberInnerMoves = 1;
+  /** It specifies number of moves allowed (one move is from one river bank to the other) */
+  public int numberInnerMoves = 1;
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        System.out.println("Creating model for solution with " + numberInnerMoves + " intermediate steps");
-        // Creating constraint store
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    System.out.println(
+        "Creating model for solution with " + numberInnerMoves + " intermediate steps");
+    // Creating constraint store
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        IntVar left = new IntVar(store, "left", 0, 0);
-        IntVar right = new IntVar(store, "right", 2, 2);
+    IntVar left = new IntVar(store, "left", 0, 0);
+    IntVar right = new IntVar(store, "right", 2, 2);
 
-        IntVar[] wolf = new IntVar[2 + numberInnerMoves];
-        IntVar[] goat = new IntVar[2 + numberInnerMoves];
-        IntVar[] cabbage = new IntVar[2 + numberInnerMoves];
+    IntVar[] wolf = new IntVar[2 + numberInnerMoves];
+    IntVar[] goat = new IntVar[2 + numberInnerMoves];
+    IntVar[] cabbage = new IntVar[2 + numberInnerMoves];
 
-        wolf[0] = goat[0] = cabbage[0] = left;
-        wolf[numberInnerMoves + 1] = goat[numberInnerMoves + 1] = cabbage[numberInnerMoves + 1] = right;
+    wolf[0] = goat[0] = cabbage[0] = left;
+    wolf[numberInnerMoves + 1] = goat[numberInnerMoves + 1] = cabbage[numberInnerMoves + 1] = right;
 
-        for (int i = 1; i < numberInnerMoves + 1; i++) {
+    for (int i = 1; i < numberInnerMoves + 1; i++) {
 
-            wolf[i] = new IntVar(store, "wolfStateInMove" + i, 0, 2);
-            goat[i] = new IntVar(store, "goatStateInMove" + i, 0, 2);
-            cabbage[i] = new IntVar(store, "cabbageStateInMove" + i, 0, 2);
+      wolf[i] = new IntVar(store, "wolfStateInMove" + i, 0, 2);
+      goat[i] = new IntVar(store, "goatStateInMove" + i, 0, 2);
+      cabbage[i] = new IntVar(store, "cabbageStateInMove" + i, 0, 2);
 
-            vars.add(wolf[i]);
-            vars.add(goat[i]);
-            vars.add(cabbage[i]);
-
-        }
-
-        // {0, 1, 0}, any item was on left bank and end up on boat so boat
-        // was on left bank too
-        int[][] allowedTransitions = {{0, 1, 0}, {1, 0, 0}, {2, 1, 2}, {1, 2, 2}, {0, 0, 0}, {0, 0, 2}, {2, 2, 0}, {2, 2, 2}};
-
-        for (int i = 0; i < numberInnerMoves + 1; i++) {
-
-            IntVar[] temp = {wolf[i], wolf[i + 1], null};
-            if (i % 2 == 0)
-                temp[2] = left;
-            else
-                temp[2] = right;
-
-            store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
-
-            temp[0] = goat[i];
-            temp[1] = goat[i + 1];
-
-            store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
-
-            temp[0] = cabbage[i];
-            temp[1] = cabbage[i + 1];
-
-            store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
-        }
-
-        IntVar[] bw = new IntVar[numberInnerMoves];
-        IntVar[] bg = new IntVar[numberInnerMoves];
-        IntVar[] bc = new IntVar[numberInnerMoves];
-
-        for (int i = 1; i < numberInnerMoves + 1; i++) {
-            // at most one item on boat
-
-            bw[i - 1] = new IntVar(store, "wolfOnBoatInMove" + i, 0, 1);
-            bg[i - 1] = new IntVar(store, "goatOnBoatInMove" + i, 0, 1);
-            bc[i - 1] = new IntVar(store, "cabbageOnBoatInMove" + i, 0, 1);
-
-            store.impose(new Reified(new XeqC(wolf[i], 1), bw[i - 1]));
-            store.impose(new Reified(new XeqC(goat[i], 1), bg[i - 1]));
-            store.impose(new Reified(new XeqC(cabbage[i], 1), bc[i - 1]));
-
-            IntVar[] b = {bw[i - 1], bg[i - 1], bc[i - 1]};
-
-            IntVar numberOnBoat = new IntVar(store, "numberOnBoatInMove" + i, 0, 1);
-            store.impose(new SumBool(b, "==", numberOnBoat));
-
-            store.impose(new XneqY(wolf[i], goat[i]));
-            store.impose(new XneqY(goat[i], cabbage[i]));
-
-        }
-
+      vars.add(wolf[i]);
+      vars.add(goat[i]);
+      vars.add(cabbage[i]);
     }
 
-    /**
-     * It executes a program which finds the optimal trip
-     * and load of the boat between the river banks so all
-     * parties survive.
-     *
-     * @param args no argument is used.
-     */
-    public static void main(String args[]) {
+    // {0, 1, 0}, any item was on left bank and end up on boat so boat
+    // was on left bank too
+    int[][] allowedTransitions = {
+      {0, 1, 0}, {1, 0, 0}, {2, 1, 2}, {1, 2, 2}, {0, 0, 0}, {0, 0, 2}, {2, 2, 0}, {2, 2, 2}
+    };
 
-        WolfGoatCabbage example;
-        int numberInnerMoves = 1;
-        boolean result = false;
+    for (int i = 0; i < numberInnerMoves + 1; i++) {
 
-        while (numberInnerMoves < 20 && !result) {
+      IntVar[] temp = {wolf[i], wolf[i + 1], null};
+      if (i % 2 == 0) temp[2] = left;
+      else temp[2] = right;
 
-            example = new WolfGoatCabbage();
-            example.numberInnerMoves = numberInnerMoves;
+      store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
 
-            example.model();
+      temp[0] = goat[i];
+      temp[1] = goat[i + 1];
 
-            if (!example.searchMostConstrainedStatic())
-                System.out.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
-            else
-                result = true;
+      store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
 
-            numberInnerMoves++;
-        }
+      temp[0] = cabbage[i];
+      temp[1] = cabbage[i + 1];
 
-
+      store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
     }
 
+    IntVar[] bw = new IntVar[numberInnerMoves];
+    IntVar[] bg = new IntVar[numberInnerMoves];
+    IntVar[] bc = new IntVar[numberInnerMoves];
+
+    for (int i = 1; i < numberInnerMoves + 1; i++) {
+      // at most one item on boat
+
+      bw[i - 1] = new IntVar(store, "wolfOnBoatInMove" + i, 0, 1);
+      bg[i - 1] = new IntVar(store, "goatOnBoatInMove" + i, 0, 1);
+      bc[i - 1] = new IntVar(store, "cabbageOnBoatInMove" + i, 0, 1);
+
+      store.impose(new Reified(new XeqC(wolf[i], 1), bw[i - 1]));
+      store.impose(new Reified(new XeqC(goat[i], 1), bg[i - 1]));
+      store.impose(new Reified(new XeqC(cabbage[i], 1), bc[i - 1]));
+
+      IntVar[] b = {bw[i - 1], bg[i - 1], bc[i - 1]};
+
+      IntVar numberOnBoat = new IntVar(store, "numberOnBoatInMove" + i, 0, 1);
+      store.impose(new SumBool(b, "==", numberOnBoat));
+
+      store.impose(new XneqY(wolf[i], goat[i]));
+      store.impose(new XneqY(goat[i], cabbage[i]));
+    }
+  }
+
+  /**
+   * It executes a program which finds the optimal trip and load of the boat between the river banks
+   * so all parties survive.
+   *
+   * @param args no argument is used.
+   */
+  public static void main(String args[]) {
+
+    WolfGoatCabbage example;
+    int numberInnerMoves = 1;
+    boolean result = false;
+
+    while (numberInnerMoves < 20 && !result) {
+
+      example = new WolfGoatCabbage();
+      example.numberInnerMoves = numberInnerMoves;
+
+      example.model();
+
+      if (!example.searchMostConstrainedStatic())
+        System.out.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
+      else result = true;
+
+      numberInnerMoves++;
+    }
+  }
 }

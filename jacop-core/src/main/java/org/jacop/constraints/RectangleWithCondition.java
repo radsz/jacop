@@ -30,9 +30,8 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntVar;
-
 import java.util.List;
+import org.jacop.core.IntVar;
 
 /**
  * Defines a rectangle used in the diffn constraint.
@@ -40,39 +39,39 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class RectangleWithCondition extends Rectangle {
 
-    IntVar c;
+  IntVar c;
 
-    int index = 0;
+  int index = 0;
 
-    public RectangleWithCondition(int i, List<? extends IntVar> R, IntVar cond) {
-        super(R);
-        c = cond;
-        index = i;
-    }
+  public RectangleWithCondition(int i, List<? extends IntVar> R, IntVar cond) {
+    super(R);
+    c = cond;
+    index = i;
+  }
 
-    public RectangleWithCondition(int i, IntVar[] R, IntVar cond) {
-        super(R);
-        c = cond;
-        index = i;
-    }
+  public RectangleWithCondition(int i, IntVar[] R, IntVar cond) {
+    super(R);
+    c = cond;
+    index = i;
+  }
 
-    public RectangleWithCondition(int i, Rectangle R, IntVar cond) {
-        super(R);
-        c = cond;
-        index = i;
-    }
+  public RectangleWithCondition(int i, Rectangle R, IntVar cond) {
+    super(R);
+    c = cond;
+    index = i;
+  }
 
-    public IntVar condition() {
-        return c;
-    }
+  public IntVar condition() {
+    return c;
+  }
 
-    @Override public String toString() {
-        String s = "[" + index + ", ";
-        s = s + super.toString();
-        s = s + ", " + c + "]";
-        return s;
-    }
+  @Override
+  public String toString() {
+    String s = "[" + index + ", ";
+    s = s + super.toString();
+    s = s + ", " + c + "]";
+    return s;
+  }
 }

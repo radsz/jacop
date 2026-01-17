@@ -41,96 +41,97 @@ import java.util.List;
  */
 public class DFQ extends Filter {
 
-    /**
-     * It creates a standard DFQ filter problem with addition
-     * delay equal 1 and multiplication delay equal 2.
-     */
-    public DFQ() {
-        this(1, 2);
-    }
+  /**
+   * It creates a standard DFQ filter problem with addition delay equal 1 and multiplication delay
+   * equal 2.
+   */
+  public DFQ() {
+    this(1, 2);
+  }
 
-    /**
-     * It creates DFQ filter problem with specified delays.
-     *
-     * @param addDel addition delay.
-     * @param mulDel multiplication delay.
-     */
-    public DFQ(int addDel, int mulDel) {
+  /**
+   * It creates DFQ filter problem with specified delays.
+   *
+   * @param addDel addition delay.
+   * @param mulDel multiplication delay.
+   */
+  public DFQ(int addDel, int mulDel) {
 
-        this.addDel = addDel;
-        this.mulDel = mulDel;
+    this.addDel = addDel;
+    this.mulDel = mulDel;
 
-        name = "DFQ";
+    name = "DFQ";
 
-        int dependencies[][] = {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
+    int dependencies[][] = {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
 
-        this.dependencies = dependencies;
+    this.dependencies = dependencies;
 
-        int ids[] = {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
-        this.ids = ids;
+    int ids[] = {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
+    this.ids = ids;
 
-        int last[] = {7, 8, 10};
-        this.last = last;
+    int last[] = {7, 8, 10};
+    this.last = last;
+  }
 
-    }
+  @Override
+  public List<String> names() {
+    List<String> names = new ArrayList<String>(11);
 
-    @Override public List<String> names() {
-        List<String> names = new ArrayList<String>(11);
+    names.add("*1");
+    names.add("*2");
+    names.add("*3");
+    names.add("*4");
+    names.add("+5");
+    names.add("*6");
+    names.add("*7");
+    names.add("+8");
+    names.add("+9");
+    names.add("+10");
+    names.add("+11");
 
-        names.add("*1");
-        names.add("*2");
-        names.add("*3");
-        names.add("*4");
-        names.add("+5");
-        names.add("*6");
-        names.add("*7");
-        names.add("+8");
-        names.add("+9");
-        names.add("+10");
-        names.add("+11");
+    return names;
+  }
 
-        return names;
-    }
+  @Override
+  public List<String> namesPipeline() {
+    List<String> names = new ArrayList<String>(11);
 
-    @Override public List<String> namesPipeline() {
-        List<String> names = new ArrayList<String>(11);
+    names.add("*1");
+    names.add("*2");
+    names.add("*3");
+    names.add("*4");
+    names.add("+5");
+    names.add("*6");
+    names.add("*7");
+    names.add("+8");
+    names.add("+9");
+    names.add("+10");
+    names.add("+11");
 
-        names.add("*1");
-        names.add("*2");
-        names.add("*3");
-        names.add("*4");
-        names.add("+5");
-        names.add("*6");
-        names.add("*7");
-        names.add("+8");
-        names.add("+9");
-        names.add("+10");
-        names.add("+11");
+    names.add("*1a");
+    names.add("*2a");
+    names.add("*3a");
+    names.add("*4a");
+    names.add("+5a");
+    names.add("*6a");
+    names.add("*7a");
+    names.add("+8a");
+    names.add("+9a");
+    names.add("+10a");
+    names.add("+11a");
 
-        names.add("*1a");
-        names.add("*2a");
-        names.add("*3a");
-        names.add("*4a");
-        names.add("+5a");
-        names.add("*6a");
-        names.add("*7a");
-        names.add("+8a");
-        names.add("+9a");
-        names.add("+10a");
-        names.add("+11a");
+    names.add("*1b");
+    names.add("*2b");
+    names.add("*3b");
+    names.add("*4b");
+    names.add("+5b");
+    names.add("*6b");
+    names.add("*7b");
+    names.add("+8b");
+    names.add("+9b");
+    names.add("+10b");
+    names.add("+11b");
 
-        names.add("*1b");
-        names.add("*2b");
-        names.add("*3b");
-        names.add("*4b");
-        names.add("+5b");
-        names.add("*6b");
-        names.add("*7b");
-        names.add("+8b");
-        names.add("+9b");
-        names.add("+10b");
-        names.add("+11b");
-
-        return names;
-    }
+    return names;
+  }
 }

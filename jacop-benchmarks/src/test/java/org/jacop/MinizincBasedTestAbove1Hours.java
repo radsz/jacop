@@ -30,39 +30,37 @@
 
 package org.jacop;
 
+import java.io.IOException;
+import java.util.Collection;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
-import java.util.Collection;
-
 /**
- * Test class for running problems above 1hour. It is not really used except to
- * see if some problems are now being executed faster.
+ * Test class for running problems above 1hour. It is not really used except to see if some problems
+ * are now being executed faster.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.10
  */
-@RunWith(Parameterized.class) public class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
-    protected static final String timeCategory = "above1hour/";
+@RunWith(Parameterized.class)
+public class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
+  protected static final String timeCategory = "above1hour/";
 
-    public MinizincBasedTestAbove1Hours(String testFilename) {
-        super(timeCategory);
-        this.testFilename = testFilename;
+  public MinizincBasedTestAbove1Hours(String testFilename) {
+    super(timeCategory);
+    this.testFilename = testFilename;
+  }
 
-    }
+  @Parameterized.Parameters
+  public static Collection<String> parametricTest() throws IOException {
 
-    @Parameterized.Parameters public static Collection<String> parametricTest() throws IOException {
+    return fileReader(timeCategory);
+  }
 
-        return fileReader(timeCategory);
-    }
+  @Test()
+  public void testMinizinc() throws IOException {
 
-    @Test() public void testMinizinc() throws IOException {
-
-        testExecution(timeCategory);
-    }
-
-
-
+    testExecution(timeCategory);
+  }
 }

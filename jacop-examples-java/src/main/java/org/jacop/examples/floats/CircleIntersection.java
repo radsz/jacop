@@ -32,18 +32,16 @@ package org.jacop.examples.floats;
 
 /**
  * It models circle intersection for floating solver.
- * <p>
- * The following equations are solved
- * <p>
- * 4 = X^2 + Y^2,
- * 4 = (X-1)^2 + (Y-1)^2,
- * <p>
- * Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
+ *
+ * <p>The following equations are solved
+ *
+ * <p>4 = X^2 + Y^2, 4 = (X-1)^2 + (Y-1)^2,
+ *
+ * <p>Based on minizinc model circle_intersection.mzn by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PplusCeqR;
@@ -57,74 +55,78 @@ import org.jacop.search.PrintOutListener;
 
 public class CircleIntersection {
 
-    double MIN_FLOAT = -1e+150;
-    double MAX_FLOAT = 1e+150;
+  double MIN_FLOAT = -1e+150;
+  double MAX_FLOAT = 1e+150;
 
-    void circle_intersection() {
+  void circle_intersection() {
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-        System.out.println("========= circle_intersection =========");
+    System.out.println("========= circle_intersection =========");
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatDomain.setPrecision(1e-13);
-        FloatDomain.intervalPrint(false);
+    FloatDomain.setPrecision(1e-13);
+    FloatDomain.intervalPrint(false);
 
-        // x*x + y*y = 4.0 /\ (x-1.0)*(x-1.0) + (y-1.0)(y-1.0) = 4.0
-        FloatVar x = new FloatVar(store, "x", MIN_FLOAT, MAX_FLOAT);
-        FloatVar y = new FloatVar(store, "y", MIN_FLOAT, MAX_FLOAT);
+    // x*x + y*y = 4.0 /\ (x-1.0)*(x-1.0) + (y-1.0)(y-1.0) = 4.0
+    FloatVar x = new FloatVar(store, "x", MIN_FLOAT, MAX_FLOAT);
+    FloatVar y = new FloatVar(store, "y", MIN_FLOAT, MAX_FLOAT);
 
-        FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new PmulQeqR(x, x, t1));
-        FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new PmulQeqR(y, y, t2));
-        store.impose(new PplusQeqR(t1, t2, new FloatVar(store, 4.0, 4.0)));
+    FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
+    store.impose(new PmulQeqR(x, x, t1));
+    FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
+    store.impose(new PmulQeqR(y, y, t2));
+    store.impose(new PplusQeqR(t1, t2, new FloatVar(store, 4.0, 4.0)));
 
-        FloatVar s1 = new FloatVar(store, "s1", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new PplusCeqR(x, -1.0, s1));
-        FloatVar s2 = new FloatVar(store, "s2", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new PplusCeqR(y, -1.0, s2));
-        FloatVar r1 = new FloatVar(store, "r1", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new PmulQeqR(s1, s1, r1));
-        FloatVar r2 = new FloatVar(store, "r2", MIN_FLOAT, MAX_FLOAT);
-        store.impose(new PmulQeqR(s2, s2, r2));
-        store.impose(new PplusQeqR(r1, r2, new FloatVar(store, 4.0, 4.0)));
+    FloatVar s1 = new FloatVar(store, "s1", MIN_FLOAT, MAX_FLOAT);
+    store.impose(new PplusCeqR(x, -1.0, s1));
+    FloatVar s2 = new FloatVar(store, "s2", MIN_FLOAT, MAX_FLOAT);
+    store.impose(new PplusCeqR(y, -1.0, s2));
+    FloatVar r1 = new FloatVar(store, "r1", MIN_FLOAT, MAX_FLOAT);
+    store.impose(new PmulQeqR(s1, s1, r1));
+    FloatVar r2 = new FloatVar(store, "r2", MIN_FLOAT, MAX_FLOAT);
+    store.impose(new PmulQeqR(s2, s2, r2));
+    store.impose(new PplusQeqR(r1, r2, new FloatVar(store, 4.0, 4.0)));
 
-        System.out.println("\bVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
+    System.out.println(
+        "\bVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
 
-        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x, y}, new SmallestDomainFloat<FloatVar>());
-        label.setSolutionListener(new PrintOutListener<FloatVar>());
-        label.getSolutionListener().recordSolutions(true);
-        label.getSolutionListener().searchAll(true);
-        label.setAssignSolution(true);
-        // s.leftFirst = false;
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s =
+        new SplitSelectFloat<FloatVar>(
+            store, new FloatVar[] {x, y}, new SmallestDomainFloat<FloatVar>());
+    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    label.getSolutionListener().recordSolutions(true);
+    label.getSolutionListener().searchAll(true);
+    label.setAssignSolution(true);
+    // s.leftFirst = false;
 
+    label.labeling(store, s);
 
-        label.labeling(store, s);
+    label.printAllSolutions();
 
-        label.printAllSolutions();
+    System.out.println("\nPrecision = " + FloatDomain.precision());
 
-        System.out.println("\nPrecision = " + FloatDomain.precision());
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
 
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
 
-        System.out.println("\n\t*** Execution time = " + T + " ms");
-    }
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
 
-    /**
-     * It executes the program. 
-     *
-     * @param args no arguments
-     */
-    public static void main(String args[]) {
+    CircleIntersection example = new CircleIntersection();
 
-        CircleIntersection example = new CircleIntersection();
-
-        example.circle_intersection();
-
-    }
+    example.circle_intersection();
+  }
 }

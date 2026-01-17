@@ -30,93 +30,83 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * MinSimple constraint implements the minimum/2 constraint. It provides the minimum
- * variable from all variables on the list.
- * <p>
- * min(x1, x2) = min.
+ * MinSimple constraint implements the minimum/2 constraint. It provides the minimum variable from
+ * all variables on the list.
+ *
+ * <p>min(x1, x2) = min.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class MinSimple extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a variables between which a minimum value is being searched for.
-     */
-    final public IntVar x1, x2;
+  /** It specifies a variables between which a minimum value is being searched for. */
+  public final IntVar x1, x2;
 
-    /**
-     * It specifies variable min which stores the minimum value present in the list.
-     */
-    final public IntVar min;
+  /** It specifies variable min which stores the minimum value present in the list. */
+  public final IntVar min;
 
-    /**
-     * It constructs min constraint.
-     *
-     * @param min variable denoting the minimum value
-     * @param x1  first variable for which a  minimum value is imposed.
-     * @param x2  second variable for which a  minimum value is imposed.
-     */
-    public MinSimple(IntVar x1, IntVar x2, IntVar min) {
+  /**
+   * It constructs min constraint.
+   *
+   * @param min variable denoting the minimum value
+   * @param x1 first variable for which a minimum value is imposed.
+   * @param x2 second variable for which a minimum value is imposed.
+   */
+  public MinSimple(IntVar x1, IntVar x2, IntVar min) {
 
-        checkInputForNullness(new String[] {"x1", "x2", "min"}, new Object[] {x1, x2, min});
+    checkInputForNullness(new String[] {"x1", "x2", "min"}, new Object[] {x1, x2, min});
 
-        this.numberId = idNumber.incrementAndGet();
-        this.min = min;
-        this.x1 = x1;
-        this.x2 = x2;
+    this.numberId = idNumber.incrementAndGet();
+    this.min = min;
+    this.x1 = x1;
+    this.x2 = x2;
 
-        this.queueIndex = 1;
+    this.queueIndex = 1;
 
-        setScope(x1, x2, min);
+    setScope(x1, x2, min);
+  }
 
-    }
+  @Override
+  public void consistency(final Store store) {
 
-    @Override public void consistency(final Store store) {
+    int minMin = min.min();
 
-        int minMin = min.min();
+    x1.domain.inMin(store.level, x1, minMin);
+    x2.domain.inMin(store.level, x2, minMin);
 
-        x1.domain.inMin(store.level, x1, minMin);
-        x2.domain.inMin(store.level, x2, minMin);
+    int minValue = (x1.min() > x2.min()) ? x2.min() : x1.min();
+    int maxValue = (x1.max() > x2.max()) ? x2.max() : x1.max();
 
-        int minValue = (x1.min() > x2.min()) ? x2.min() : x1.min();
-        int maxValue = (x1.max() > x2.max()) ? x2.max() : x1.max();
+    min.domain.in(store.level, min, minValue, maxValue);
 
-        min.domain.in(store.level, min, minValue, maxValue);
+    if (x1.min() > min.max()) x2.domain.in(store.level, x2, min.dom());
+    if (x2.min() > min.max()) x1.domain.in(store.level, x1, min.dom());
+  }
 
-        if (x1.min() > min.max())
-            x2.domain.in(store.level, x2, min.dom());
-        if (x2.min() > min.max())
-            x1.domain.in(store.level, x1, min.dom());
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    }
+  public boolean satisfied() {
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+    int MIN = min.max();
+    return x1.min() >= MIN && x2.min() >= MIN;
+  }
 
-    public boolean satisfied() {
+  @Override
+  public String toString() {
 
-        int MIN = min.max();
-        return x1.min() >= MIN && x2.min() >= MIN;
-
-    }
-
-    @Override public String toString() {
-
-        return id() + " : minSimple(" + x1 + ", " + x2 + ", " + min + ")";
-
-    }
-
+    return id() + " : minSimple(" + x1 + ", " + x2 + ", " + min + ")";
+  }
 }

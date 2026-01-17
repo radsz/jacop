@@ -40,28 +40,24 @@ import org.jacop.jasat.core.SolverComponent;
  */
 public interface BackjumpListener extends SolverComponent {
 
-    /**
-     * Called when the solver backtracks. It will also be called when the
-     * solver restarts.
-     * <p>
-     * components that want to be warned about backjumps should
-     * put themselves in Core.backjumpModules.
-     *
-     * @param oldLevel the level at which the solver was before backtracking
-     * @param newLevel the level to which the solver backtracks
-     */
-    void onBackjump(int oldLevel, int newLevel);
+  /**
+   * Called when the solver backtracks. It will also be called when the solver restarts.
+   *
+   * <p>components that want to be warned about backjumps should put themselves in
+   * Core.backjumpModules.
+   *
+   * @param oldLevel the level at which the solver was before backtracking
+   * @param newLevel the level to which the solver backtracks
+   */
+  void onBackjump(int oldLevel, int newLevel);
 
-
-
-    /**
-     * called when the solver restarts.
-     * <p>
-     * components that want to be warned about restarts should
-     * put themselves in Core.restartModules.
-     *
-     * @param oldLevel the level at which the solver was before restarting
-     */
-    void onRestart(int oldLevel);
-
+  /**
+   * called when the solver restarts.
+   *
+   * <p>components that want to be warned about restarts should put themselves in
+   * Core.restartModules.
+   *
+   * @param oldLevel the level at which the solver was before restarting
+   */
+  void onRestart(int oldLevel);
 }

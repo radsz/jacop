@@ -30,12 +30,11 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint P {@literal <} C for floats
@@ -43,74 +42,77 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PltC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x to be lower than a given constant.
-     */
-    public FloatVar p;
+  /** It specifies variable x to be lower than a given constant. */
+  public FloatVar p;
 
-    /**
-     * It specifies constant
-     */
-    public double c;
+  /** It specifies constant */
+  public double c;
 
-    /**
-     * It constructs constraint P {@literal <} C.
-     *
-     * @param p variable p.
-     * @param c constant c.
-     */
-    public PltC(FloatVar p, double c) {
+  /**
+   * It constructs constraint P {@literal <} C.
+   *
+   * @param p variable p.
+   * @param c constant c.
+   */
+  public PltC(FloatVar p, double c) {
 
-        checkInputForNullness("p", new Object[] {p});
+    checkInputForNullness("p", new Object[] {p});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.p = p;
-        this.c = c;
+    this.p = p;
+    this.c = c;
 
-        setScope(p);
-    }
+    setScope(p);
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public void consistency(Store store) {
 
-        p.domain.inMax(store.level, p, FloatDomain.previous(c));
-    }
+    p.domain.inMax(store.level, p, FloatDomain.previous(c));
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return FloatDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return FloatDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return FloatDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return FloatDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return FloatDomain.NONE;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return FloatDomain.NONE;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return FloatDomain.NONE;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return FloatDomain.NONE;
+  }
 
-    @Override public void notConsistency(Store store) {
-        p.domain.inMin(store.level, p, c);
-    }
+  @Override
+  public void notConsistency(Store store) {
+    p.domain.inMin(store.level, p, c);
+  }
 
-    @Override public boolean notSatisfied() {
-        return p.min() >= c;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return p.min() >= c;
+  }
 
-    @Override public boolean satisfied() {
-        return p.max() < c;
-    }
+  @Override
+  public boolean satisfied() {
+    return p.max() < c;
+  }
 
-    @Override public String toString() {
-        return id() + " : PltC(" + p + ", " + c + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : PltC(" + p + ", " + c + " )";
+  }
 }

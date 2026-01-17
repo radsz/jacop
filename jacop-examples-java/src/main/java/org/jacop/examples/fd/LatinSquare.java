@@ -30,80 +30,68 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * It solves a Latin Square problem.
- * <p>
- * LatinSquare problem consists of filling the square
- * of size n by n with numbers 1..n in such a way that
- * every row and column does not contain two numbers
- * of the same value.
- * <p>
- * QuasiGroupCompletion example provides possibility to
- * impose initial conditions on the values of pre-assigned
- * cells.
+ *
+ * <p>LatinSquare problem consists of filling the square of size n by n with numbers 1..n in such a
+ * way that every row and column does not contain two numbers of the same value.
+ *
+ * <p>QuasiGroupCompletion example provides possibility to impose initial conditions on the values
+ * of pre-assigned cells.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LatinSquare extends ExampleFD {
 
-    /**
-     * The size of the latin square.
-     */
-    public int n = 20;
+  /** The size of the latin square. */
+  public int n = 20;
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        System.out.println("Quasigroup (Latin-square) problem size = " + n + "x" + n);
+    System.out.println("Quasigroup (Latin-square) problem size = " + n + "x" + n);
 
-        // Get problem size n from second program argument.
-        IntVar[][] x = new IntVar[n][n];
+    // Get problem size n from second program argument.
+    IntVar[][] x = new IntVar[n][n];
 
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++) {
-                x[i][j] = new IntVar(store, "x" + i + "_" + j, 1, n);
-                vars.add(x[i][j]);
-            }
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 1, n);
+        vars.add(x[i][j]);
+      }
 
-        // Create variables and state constraints.
-        for (int i = 0; i < n; i++) {
-            store.impose(new Alldifferent(x[i]));
+    // Create variables and state constraints.
+    for (int i = 0; i < n; i++) {
+      store.impose(new Alldifferent(x[i]));
 
-            IntVar[] y = new IntVar[n];
-            for (int j = 0; j < n; j++)
-                y[j] = x[j][i];
-            store.impose(new Alldifferent(y));
-        }
-
+      IntVar[] y = new IntVar[n];
+      for (int j = 0; j < n; j++) y[j] = x[j][i];
+      store.impose(new Alldifferent(y));
     }
+  }
 
-    /**
-     * It executes the program to solve the LatinSquare problem.
-     *
-     * @param args size of the problem
-     */
-    public static void main(String args[]) {
+  /**
+   * It executes the program to solve the LatinSquare problem.
+   *
+   * @param args size of the problem
+   */
+  public static void main(String args[]) {
 
-        LatinSquare example = new LatinSquare();
+    LatinSquare example = new LatinSquare();
 
-        if (args.length > 0)
-            example.n = Integer.parseInt(args[0]);
+    if (args.length > 0) example.n = Integer.parseInt(args[0]);
 
-        example.model();
+    example.model();
 
-        if (example.searchSmallestDomain(false))
-            System.out.println("Solution(s) found");
-
-    }
-
+    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+  }
 }

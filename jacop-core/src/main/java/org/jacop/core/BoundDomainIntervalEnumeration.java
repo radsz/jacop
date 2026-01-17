@@ -30,39 +30,38 @@
 
 package org.jacop.core;
 
-
 /**
- * Defines a methods for enumerating intervals contained in the BoundDomain. It
- * implements the interface IntervalEnumeration. It always returns only one
- * interval as BoundDomain by definition is specified by one interval.
+ * Defines a methods for enumerating intervals contained in the BoundDomain. It implements the
+ * interface IntervalEnumeration. It always returns only one interval as BoundDomain by definition
+ * is specified by one interval.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class BoundDomainIntervalEnumeration extends IntervalEnumeration {
 
-    Interval i;
+  Interval i;
 
-    boolean done = false;
+  boolean done = false;
 
-    /**
-     * It creates an enumeration of intervals for BoundDomain.
-     *
-     * @param min the left bound of the BoundDomain.
-     * @param max the right bound of the BoundDomain.
-     */
-    public BoundDomainIntervalEnumeration(int min, int max) {
-        i = new Interval(min, max);
-    }
+  /**
+   * It creates an enumeration of intervals for BoundDomain.
+   *
+   * @param min the left bound of the BoundDomain.
+   * @param max the right bound of the BoundDomain.
+   */
+  public BoundDomainIntervalEnumeration(int min, int max) {
+    i = new Interval(min, max);
+  }
 
-    @Override public boolean hasMoreElements() {
-        return !done;
-    }
+  @Override
+  public boolean hasMoreElements() {
+    return !done;
+  }
 
-    @Override public Interval nextElement() {
-        done = true;
-        return i;
-    }
-
+  @Override
+  public Interval nextElement() {
+    done = true;
+    return i;
+  }
 }

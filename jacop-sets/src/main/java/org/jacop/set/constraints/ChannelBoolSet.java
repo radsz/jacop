@@ -30,154 +30,146 @@
 
 package org.jacop.set.constraints;
 
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.set.core.*;
-import org.jacop.api.SatisfiedPresent;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 /**
- * Channel constraint reqires the array of Booleans b to be a
- * representation of the set s: i in s {@literal <->} b[i]. Indexes start form 0,
- * both for Boolean variables, by default. To define other starting
- * index use offset definitions.
+ * Channel constraint reqires the array of Booleans b to be a representation of the set s: i in s
+ * {@literal <->} b[i]. Indexes start form 0, both for Boolean variables, by default. To define
+ * other starting index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
-
 public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    IntVar[] b;
-    SetVar s;
-    int n;
-    int offset;
+  IntVar[] b;
+  SetVar s;
+  int n;
+  int offset;
 
-    boolean firstConsistencyCheck = true;
+  boolean firstConsistencyCheck = true;
 
-    /**
-     * It constructs a Channel constraint.
-     *
-     * @param b array of Boolean variables.
-     * @param s set variable.
-     * @param offset offset for Boolean variables array.
-     */
-    public ChannelBoolSet(IntVar[] b, SetVar s, int offset) {
+  /**
+   * It constructs a Channel constraint.
+   *
+   * @param b array of Boolean variables.
+   * @param s set variable.
+   * @param offset offset for Boolean variables array.
+   */
+  public ChannelBoolSet(IntVar[] b, SetVar s, int offset) {
 
-        checkInputForNullness(new String[] {"b"}, new Object[] {b});
+    checkInputForNullness(new String[] {"b"}, new Object[] {b});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.b = b;
-        n = b.length;
-        for (int i = 0; i < n; i++) {
-            if (b[i].min() < 0 || b[i].max() > 1)
-                throw new RuntimeException("Error; prameters in array of ChannelBoolSet must be in interval 0..1");
-        }
-        this.s = s;
-        this.offset = offset;
+    this.b = b;
+    n = b.length;
+    for (int i = 0; i < n; i++) {
+      if (b[i].min() < 0 || b[i].max() > 1)
+        throw new RuntimeException(
+            "Error; prameters in array of ChannelBoolSet must be in interval 0..1");
+    }
+    this.s = s;
+    this.offset = offset;
 
-        setScope(Stream.concat(Arrays.stream(b), Stream.of(s)));
+    setScope(Stream.concat(Arrays.stream(b), Stream.of(s)));
+  }
+
+  /**
+   * It constructs a Channel constraint.
+   *
+   * @param b array of Boolean variables.
+   * @param s set variable.
+   */
+  public ChannelBoolSet(IntVar[] b, SetVar s) {
+    this(b, s, 0);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+      s.domain.inLUB(store.level, s, new IntervalDomain(offset, n - 1 + offset));
+
+      firstConsistencyCheck = false;
     }
 
-    /**
-     * It constructs a Channel constraint.
-     *
-     * @param b array of Boolean variables.
-     * @param s set variable.
-     */
-    public ChannelBoolSet(IntVar[] b, SetVar s) {
-        this(b, s, 0);        
+    // check Boolean variables
+    IntDomain ub = new IntervalDomain(5);
+    IntDomain lb = new IntervalDomain(5);
+    for (int i = 0; i < n; i++) {
+      if (b[i].max() != 0) ub.unionAdapt(i + offset);
+      if (b[i].singleton(1)) lb.unionAdapt(i + offset);
+    }
+    s.domain.inLUB(store.level, s, ub);
+    s.domain.inGLB(store.level, s, lb);
+
+    // check set variable's GLB
+    IntDomain glb = s.dom().glb();
+    for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
+      int i = e.nextElement();
+      b[i - offset].domain.in(store.level, b[i - offset], 1, 1);
+    }
+  }
+
+  @Override
+  public boolean satisfied() {
+    if (!allGround()) return false;
+
+    for (int i = 0; i < n; i++) {
+      if (b[i].singleton(0) && s.dom().glb().contains(i + offset)) {
+        return false;
+      }
+      if (b[i].singleton(1) && !s.dom().glb().contains(i + offset)) {
+        return false;
+      }
     }
 
-    @Override public void consistency(Store store) {
+    return true;
+  }
 
-        if (firstConsistencyCheck) {
-            s.domain.inLUB(store.level, s,
-                           new IntervalDomain(offset, n - 1 + offset));
-            
-            firstConsistencyCheck = false;
-        }
+  boolean allGround() {
+    for (int i = 0; i < n; i++) {
+      if (!b[i].singleton()) return false;
+    }
+    if (!s.singleton()) return false;
 
-        // check Boolean variables
-        IntDomain ub = new IntervalDomain(5);
-        IntDomain lb = new IntervalDomain(5);
-        for (int i = 0; i < n; i++) {
-            if (b[i].max() != 0)
-                ub.unionAdapt(i + offset);
-            if (b[i].singleton(1))
-                lb.unionAdapt(i + offset);
-        }
-        s.domain.inLUB(store.level, s, ub);
-        s.domain.inGLB(store.level, s, lb);
+    return true;
+  }
 
-        // check set variable's GLB
-        IntDomain glb = s.dom().glb();
-        for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-            int i = e.nextElement();
-            b[i - offset].domain.in(store.level, b[i - offset], 1, 1);
-        }
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public boolean satisfied() {
-        if (!allGround())
-            return false;
+    if (var instanceof IntVar) return IntDomain.ANY;
+    else return SetDomain.ANY;
+  }
 
-        for (int i = 0; i < n; i++) {
-            if (b[i].singleton(0) && s.dom().glb().contains(i + offset)) {
-                return false;
-            }
-            if (b[i].singleton(1) && !s.dom().glb().contains(i + offset)) {
-                return false;
-            }
-        }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise variant exists.");
+  }
 
-        return true;
-    }
+  @Override
+  public String toString() {
 
-    boolean allGround() {
-        for (int i = 0; i < n; i++) {
-            if (!b[i].singleton())
-                return false;
-        }
-        if (!s.singleton())
-            return false;
-
-        return true;
-    }
-    
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        if (var instanceof IntVar)
-            return IntDomain.ANY;
-        else
-            return SetDomain.ANY;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise variant exists.");
-
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer();
-        result.append(id() + " : ChannelBoolSet(");
-        result.append(Arrays.asList(b)).append(", ").append(s);
-        result.append(", " + offset + ")");
-        return result.toString();
-
-    }
+    StringBuffer result = new StringBuffer();
+    result.append(id() + " : ChannelBoolSet(");
+    result.append(Arrays.asList(b)).append(", ").append(s);
+    result.append(", " + offset + ")");
+    return result.toString();
+  }
 }

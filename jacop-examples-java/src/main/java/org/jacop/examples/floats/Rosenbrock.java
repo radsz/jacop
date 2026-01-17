@@ -31,25 +31,19 @@
 package org.jacop.examples.floats;
 
 /**
- * It models rosenbrock for floating solver based on minizinc model
- * by Håkan Kjellerstrand
- * <p>
- * Rosenbrock function (a nonlinear standard problem).
- * <p>
- * This is problem 3.1 from
- * http://www.cs.cas.cz/ics/reports/v798-00.ps
- * <p>
- * Also see:
- * http://mathworld.wolfram.com/RosenbrockFunction.html
- * http://en.wikipedia.org/wiki/Rosenbrock_function
- * """
- * It is also known as Rosenbrock's valley or Rosenbrock's banana function.
- * It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
+ * It models rosenbrock for floating solver based on minizinc model by Håkan Kjellerstrand
+ *
+ * <p>Rosenbrock function (a nonlinear standard problem).
+ *
+ * <p>This is problem 3.1 from http://www.cs.cas.cz/ics/reports/v798-00.ps
+ *
+ * <p>Also see: http://mathworld.wolfram.com/RosenbrockFunction.html
+ * http://en.wikipedia.org/wiki/Rosenbrock_function """ It is also known as Rosenbrock's valley or
+ * Rosenbrock's banana function. It has a global minimum at (x,y) = (1,1) where f(x,y) = 0.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -62,78 +56,83 @@ import org.jacop.search.DepthFirstSearch;
 
 public class Rosenbrock {
 
-    double MIN_FLOAT = -1e+150;
-    double MAX_FLOAT = 1e+150;
+  double MIN_FLOAT = -1e+150;
+  double MAX_FLOAT = 1e+150;
 
-    void rosenbrock() {
+  void rosenbrock() {
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-        System.out.println("========= rosenbrock =========");
+    System.out.println("========= rosenbrock =========");
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatDomain.setPrecision(1e-14);
-        FloatDomain.intervalPrint(false);
+    FloatDomain.setPrecision(1e-14);
+    FloatDomain.intervalPrint(false);
 
-        FloatVar x1 = new FloatVar(store, "x1", -1.0, 8.0);
-        FloatVar x2 = new FloatVar(store, "x2", -1.0, 8.0);
-        FloatVar z = new FloatVar(store, "z", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1 = new FloatVar(store, "x1", -1.0, 8.0);
+    FloatVar x2 = new FloatVar(store, "x2", -1.0, 8.0);
+    FloatVar z = new FloatVar(store, "z", MIN_FLOAT, MAX_FLOAT);
 
-        FloatVar x1x1 = new FloatVar(store, "x1x1", MIN_FLOAT, MAX_FLOAT);
-        FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
-        FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
-        FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
-        FloatVar t3 = new FloatVar(store, "t3", MIN_FLOAT, MAX_FLOAT);
-        FloatVar t4 = new FloatVar(store, "t4", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1x1 = new FloatVar(store, "x1x1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
+    FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t3 = new FloatVar(store, "t3", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t4 = new FloatVar(store, "t4", MIN_FLOAT, MAX_FLOAT);
 
-        //var float: z =   100.0*(x2-x1*x1)*(x2-x1*x1)+(1.0-x1)*(1.0-x1);
-        store.impose(new PmulQeqR(x1, x1, x1x1));   // x1*x1
-        store.impose(new PplusQeqR(x1x1, t1, x2));  // x2 - x1*x1
-        store.impose(new PplusQeqR(x1, t2, one));   // 1 - x1
-        store.impose(new PmulQeqR(t1, t1, t3));     // (x2 - x1*x1)*(x2 - x1*x1)
-        store.impose(new PmulQeqR(t2, t2, t4));     // (1 - x1)*(1 -x1)
-        store.impose(new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
+    // var float: z =   100.0*(x2-x1*x1)*(x2-x1*x1)+(1.0-x1)*(1.0-x1);
+    store.impose(new PmulQeqR(x1, x1, x1x1)); // x1*x1
+    store.impose(new PplusQeqR(x1x1, t1, x2)); // x2 - x1*x1
+    store.impose(new PplusQeqR(x1, t2, one)); // 1 - x1
+    store.impose(new PmulQeqR(t1, t1, t3)); // (x2 - x1*x1)*(x2 - x1*x1)
+    store.impose(new PmulQeqR(t2, t2, t4)); // (1 - x1)*(1 -x1)
+    store.impose(
+        new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
 
-        System.out.println("\bFloatVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
-  /*
-  DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2, z}, new SmallestDomainFloat<FloatVar>());
-	label.setAssignSolution(true);
-	// s.leftFirst = false;
+    System.out.println(
+        "\bFloatVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+    /*
+     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2, z}, new SmallestDomainFloat<FloatVar>());
+    label.setAssignSolution(true);
+    // s.leftFirst = false;
 
-	// label.setSolutionListener(new PrintOutListener<FloatVar>());
+    // label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-	label.labeling(store, s, z);
-	*/
+    label.labeling(store, s, z);
+    */
 
-        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null);
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s =
+        new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null);
 
-        Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, z);
-        boolean result = min.minimize();
+    Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, z);
+    boolean result = min.minimize();
 
-        if (result) {
-            System.out.println("\nPrecision = " + FloatDomain.precision());
+    if (result) {
+      System.out.println("\nPrecision = " + FloatDomain.precision());
 
-            T2 = System.currentTimeMillis();
-            T = T2 - T1;
+      T2 = System.currentTimeMillis();
+      T = T2 - T1;
 
-            System.out.println("\n\t*** Execution time = " + T + " ms");
-        }
+      System.out.println("\n\t*** Execution time = " + T + " ms");
     }
+  }
 
-    /**
-     * It executes the program. 
-     *
-     * @param args no arguments
-     */
-    public static void main(String args[]) {
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
 
-        Rosenbrock example = new Rosenbrock();
+    Rosenbrock example = new Rosenbrock();
 
-        example.rosenbrock();
-
-    }
+    example.rosenbrock();
+  }
 }

@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.lang.Integer;
+import org.jacop.core.*;
 
 /*
  * It defines Sequence Precedence Chain constraint for integers.  <p>
@@ -48,104 +47,103 @@ import java.lang.Integer;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class SeqPrecedeChain extends Constraint { 
+public class SeqPrecedeChain extends Constraint {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies lists of variables for the constraint.
-     */
-    final IntVar[] x;
-    int n;
+  /** It specifies lists of variables for the constraint. */
+  final IntVar[] x;
 
-    int[] first;
-    int[] last;
+  int n;
 
-    /**
-     * It constructs SeqPrecedeChain.
-     *
-     * @param x list of arguments x's.
-     */
-    public SeqPrecedeChain(IntVar[] x) {
+  int[] first;
+  int[] last;
 
-        checkInputForNullness("x", x);
+  /**
+   * It constructs SeqPrecedeChain.
+   *
+   * @param x list of arguments x's.
+   */
+  public SeqPrecedeChain(IntVar[] x) {
 
-        this.numberId = idNumber.incrementAndGet();
+    checkInputForNullness("x", x);
 
-        this.n = x.length;
-        this.x = Arrays.copyOf(x, n);
+    this.numberId = idNumber.incrementAndGet();
 
-        first = new int[n + 1];
-        last = new int[n + 1];
+    this.n = x.length;
+    this.x = Arrays.copyOf(x, n);
 
-        queueIndex = 1;
+    first = new int[n + 1];
+    last = new int[n + 1];
 
-        setScope(Arrays.stream(x));
+    queueIndex = 1;
+
+    setScope(Arrays.stream(x));
+  }
+
+  /**
+   * It constructs SeqPrecedeChain.
+   *
+   * @param x list of arguments x's.
+   */
+  public SeqPrecedeChain(List<? extends IntVar> x) {
+    this(x.toArray(new IntVar[x.size()]));
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    int up = 0;
+    int low = 0;
+    Arrays.fill(first, 0);
+    Arrays.fill(last, n + 1);
+
+    for (int i = 1; i < n + 1; i++) {
+      IntVar xi = x[i - 1];
+
+      if (xi.max() > up + 1) xi.domain.inMax(store.level, xi, up + 1);
+      if (xi.max() == up + 1) {
+        up++;
+        first[up] = i;
+      }
+      if (low < xi.min()) {
+        last[xi.min()] = i;
+        low = xi.min();
+      }
     }
 
-    /**
-     * It constructs SeqPrecedeChain.
-     *
-     * @param x list of arguments x's.
-     */
-    public SeqPrecedeChain(List<? extends IntVar> x) {
-        this(x.toArray(new IntVar[x.size()]));
+    for (int i = n; i >= 1; i--) {
+      IntVar xi = x[i - 1];
+
+      last[i] = xi.min();
+      if (first[low] == i) xi.domain.inMin(store.level, xi, low);
+      if (i <= last[low] && xi.domain.contains(low)) {
+        last[i] = low;
+        last[low] = i;
+        low--;
+        if (low < 0) break;
+      }
     }
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
+  @Override
+  public String toString() {
+
+    StringBuilder resultString = new StringBuilder(id());
+
+    resultString.append(" : SeqPrecedeChain([");
+    int lx = x.length;
+    for (int i = 0; i < lx; i++) {
+      resultString.append(x[i]);
+      if (i < lx - 1) resultString.append(", ");
     }
+    resultString.append("])");
 
-    @Override public void consistency(Store store) {
-
-        int up = 0;
-        int low = 0;
-        Arrays.fill(first, 0);
-        Arrays.fill(last, n + 1);
-
-        for (int i = 1; i < n + 1; i++) {
-            IntVar xi = x[i - 1];
-
-            if (xi.max() > up + 1)
-                xi.domain.inMax(store.level, xi, up + 1);
-            if (xi.max() == up + 1) {
-                up++;
-                first[up] = i;
-            }
-            if (low < xi.min()) {
-                last[xi.min()] = i;
-                low = xi.min();
-            }
-        }
-
-        for (int i = n; i >= 1; i--) {
-            IntVar xi = x[i - 1];
-
-            last[i] = xi.min();
-            if (first[low] == i) 
-                xi.domain.inMin(store.level, xi, low);
-            if (i <= last[low] && xi.domain.contains(low)) {
-                last[i] = low;
-                last[low] = i;
-                low--;
-                if (low < 0) break;
-            }
-        }
-    }
-
-    @Override public String toString() {
-
-        StringBuilder resultString = new StringBuilder(id());
-
-        resultString.append(" : SeqPrecedeChain([");
-        int lx = x.length;
-        for (int i = 0; i < lx; i++) {
-            resultString.append(x[i]);
-            if (i < lx - 1)
-                resultString.append(", ");
-        }
-        resultString.append("])");
-
-        return resultString.toString();
-    }
+    return resultString.toString();
+  }
 }

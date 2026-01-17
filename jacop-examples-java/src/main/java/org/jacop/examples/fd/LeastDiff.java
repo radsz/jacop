@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgtY;
@@ -37,98 +38,89 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * Simple least Diff problem.
- * <p>
- * Minimize the difference ABCDE - FGHIJ
- * where A..J is all different in the range 0..9.
- * <p>
- * The solution is: 50123 - 49876 = 247
- * <p>
- * JaCoP Model by Hakan Kjellerstrand (hakank@bonetmail.com)
- * Also see http://www.hakank.org/JaCoP/
+ *
+ * <p>Minimize the difference ABCDE - FGHIJ where A..J is all different in the range 0..9.
+ *
+ * <p>The solution is: 50123 - 49876 = 247
+ *
+ * <p>JaCoP Model by Hakan Kjellerstrand (hakank@bonetmail.com) Also see
+ * http://www.hakank.org/JaCoP/
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LeastDiff extends ExampleFD {
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        // Creating constraint store .
-        // This object contains information about all the constraints and variables.    
-        store = new Store();
+    // Creating constraint store .
+    // This object contains information about all the constraints and variables.
+    store = new Store();
 
-        // Creating Variables (finite domain variables). 
-        // There are as many variables as there are letters/digits.
-        IntVar a = new IntVar(store, "a", 0, 9);
-        IntVar b = new IntVar(store, "b", 0, 9);
-        IntVar c = new IntVar(store, "c", 0, 9);
-        IntVar d = new IntVar(store, "d", 0, 9);
-        IntVar e = new IntVar(store, "e", 0, 9);
-        IntVar f = new IntVar(store, "f", 0, 9);
-        IntVar g = new IntVar(store, "g", 0, 9);
-        IntVar h = new IntVar(store, "h", 0, 9);
-        IntVar i = new IntVar(store, "i", 0, 9);
-        IntVar j = new IntVar(store, "j", 0, 9);
+    // Creating Variables (finite domain variables).
+    // There are as many variables as there are letters/digits.
+    IntVar a = new IntVar(store, "a", 0, 9);
+    IntVar b = new IntVar(store, "b", 0, 9);
+    IntVar c = new IntVar(store, "c", 0, 9);
+    IntVar d = new IntVar(store, "d", 0, 9);
+    IntVar e = new IntVar(store, "e", 0, 9);
+    IntVar f = new IntVar(store, "f", 0, 9);
+    IntVar g = new IntVar(store, "g", 0, 9);
+    IntVar h = new IntVar(store, "h", 0, 9);
+    IntVar i = new IntVar(store, "i", 0, 9);
+    IntVar j = new IntVar(store, "j", 0, 9);
 
-        cost = new IntVar(store, "diff", 0, 99999);
+    cost = new IntVar(store, "diff", 0, 99999);
 
-        // Creating arrays for FDVs
-        IntVar digits[] = {a, b, c, d, e, f, g, h, i, j};
-        IntVar abcde[] = {a, b, c, d, e};
-        IntVar fghij[] = {f, g, h, i, j};
+    // Creating arrays for FDVs
+    IntVar digits[] = {a, b, c, d, e, f, g, h, i, j};
+    IntVar abcde[] = {a, b, c, d, e};
+    IntVar fghij[] = {f, g, h, i, j};
 
-        // Creating and imposing constraints
+    // Creating and imposing constraints
 
-        // Imposing inequalities constraints between letters
-        // Only one global constraint to make sure that all digits are different.
-        store.impose(new Alldifferent(digits));
+    // Imposing inequalities constraints between letters
+    // Only one global constraint to make sure that all digits are different.
+    store.impose(new Alldifferent(digits));
 
-        int[] weights5 = {10000, 1000, 100, 10, 1};
-        IntVar value_abcde = new IntVar(store, "v_abcde", 0, 99999);
-        IntVar value_fghij = new IntVar(store, "v_fghij", 0, 99999);
+    int[] weights5 = {10000, 1000, 100, 10, 1};
+    IntVar value_abcde = new IntVar(store, "v_abcde", 0, 99999);
+    IntVar value_fghij = new IntVar(store, "v_fghij", 0, 99999);
 
-        // Constraints for getting value for words
-        store.impose(new LinearInt(abcde, weights5, "==", value_abcde));
-        // store.impose(new SumWeight (abcde, weights5, value_abcde));
-        store.impose(new LinearInt(fghij, weights5, "==", value_fghij));
-        // store.impose(new SumWeight (fghij, weights5, value_fghij));
+    // Constraints for getting value for words
+    store.impose(new LinearInt(abcde, weights5, "==", value_abcde));
+    // store.impose(new SumWeight (abcde, weights5, value_abcde));
+    store.impose(new LinearInt(fghij, weights5, "==", value_fghij));
+    // store.impose(new SumWeight (fghij, weights5, value_fghij));
 
-        // abcde > fghij
-        store.impose(new XgtY(value_abcde, value_fghij));
+    // abcde > fghij
+    store.impose(new XgtY(value_abcde, value_fghij));
 
+    // Main equation of the problem:
+    //    diff = abcde - fghij
+    //  ->
+    //    diff + fghij = abcde
+    // It would be niced with a constraint XminusYeqZ(...), though
+    store.impose(new XplusYeqZ(cost, value_fghij, value_abcde));
 
-        // Main equation of the problem:
-        //    diff = abcde - fghij
-        //  -> 
-        //    diff + fghij = abcde
-        // It would be niced with a constraint XminusYeqZ(...), though
-        store.impose(new XplusYeqZ(cost, value_fghij, value_abcde));
+    vars = new ArrayList<IntVar>();
+    for (IntVar v : digits) vars.add(v);
+  }
 
-        vars = new ArrayList<IntVar>();
-        for (IntVar v : digits)
-            vars.add(v);
+  /**
+   * It executes the program which solves this simple optimization problem.
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String args[]) {
 
-    }
+    LeastDiff example = new LeastDiff();
 
+    example.model();
 
-    /**
-     * It executes the program which solves this simple optimization problem.
-     *
-     * @param args parameters (none)
-     */
-    public static void main(String args[]) {
-
-        LeastDiff example = new LeastDiff();
-
-        example.model();
-
-        example.searchSmallestDomain(true);
-
-    }
-
-} 
+    example.searchSmallestDomain(true);
+  }
+}

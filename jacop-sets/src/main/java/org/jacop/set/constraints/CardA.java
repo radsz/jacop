@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -38,122 +39,107 @@ import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * The set cardinality constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class CardA extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies a set variable x which is being restricted. */
+  public SetVar a;
+
+  /** It specifies variable c specifying the possible cardinality of variable x. */
+  public IntDomain cardinality;
+
+  /**
+   * It constructs a cardinality constraint to restrict the number of elements in the set assigned
+   * to a set variable a.
+   *
+   * @param a variable that is restricted to have the cardinality c.
+   * @param c the value specifying cardinality of variable a.
+   */
+  public CardA(SetVar a, int c) {
+
+    this(a);
+    this.cardinality = new IntervalDomain(c, c);
+  }
+
+  /**
+   * It constructs a cardinality constraint to restrict the number of elements in the set assigned
+   * to set variable a.
+   *
+   * @param a variable that is restricted to have the cardinality c.
+   * @param c domain for the cardinality variable.
+   */
+  public CardA(SetVar a, IntDomain c) {
+
+    this(a);
+    this.cardinality = c.cloneLight();
+  }
+
+  /**
+   * It constructs a cardinality constraint to restrict the number of elements in the set assigned
+   * to set variable a.
+   *
+   * @param a variable that is restricted to have the cardinality [min, max].
+   * @param min the minimum value possible for the cardinality of a.
+   * @param max the maximum value possible for the cardinality of a.
+   */
+  public CardA(SetVar a, int min, int max) {
+
+    this(a);
+    this.cardinality = new IntervalDomain(min, max);
+  }
+
+  private CardA(SetVar a) {
+
+    checkInputForNullness("a", new Object[] {a});
+    numberId = idNumber.incrementAndGet();
+    this.a = a;
+    setScope(a);
+  }
+
+  @Override
+  public void consistency(Store store) {
 
     /**
-     * It specifies a set variable x which is being restricted.
-     */
-    public SetVar a;
-
-    /**
-     * It specifies variable c specifying the possible cardinality of variable x.
-     */
-    public IntDomain cardinality;
-
-    /**
-     * It constructs a cardinality constraint to restrict the number of elements
-     * in the set assigned to a set variable a.
+     * It computes the consistency of the constraint.
      *
-     * @param a variable that is restricted to have the cardinality c.
-     * @param c the value specifying  cardinality of variable a.
+     * <p>#A in (min, max)
+     *
+     * <p>Cardinality of set variable A is within interval (min, max).
      */
-    public CardA(SetVar a, int c) {
+    SetDomain aDom = a.domain;
 
-        this(a);
-        this.cardinality = new IntervalDomain(c, c);
+    int min = Math.max(aDom.glb().getSize(), cardinality.min());
+    int max = Math.min(aDom.lub().getSize(), cardinality.max());
 
-    }
+    if (min > max) throw Store.failException;
 
     /**
-     * It constructs a cardinality constraint to restrict the number of elements
-     * in the set assigned to set variable a.
-     *
-     * @param a variable that is restricted to have the cardinality c.
-     * @param c domain for the cardinality variable.
+     * If #glbA is already equal to maximum allowed cardinality then set is specified by glbA. if
+     * (#glbA == max) then A = glbA If #lubA is already equal to minimum allowed cardinality then
+     * set is specified by lubA. if (#lubA == min) then A = lubA
      */
-    public CardA(SetVar a, IntDomain c) {
+    a.domain.inCardinality(store.level, a, min, max);
+  }
 
-        this(a);
-        this.cardinality = c.cloneLight();
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    }
+  @Override
+  public boolean satisfied() {
+    return grounded() && cardinality.contains(a.domain.glb().getSize());
+  }
 
-    /**
-     * It constructs a cardinality constraint to restrict the number of elements
-     * in the set assigned to set variable a.
-     *
-     * @param a   variable that is restricted to have the cardinality [min, max].
-     * @param min the minimum value possible for the cardinality of a.
-     * @param max the maximum value possible for the cardinality of a.
-     */
-    public CardA(SetVar a, int min, int max) {
-
-        this(a);
-        this.cardinality = new IntervalDomain(min, max);
-
-    }
-
-    private CardA(SetVar a) {
-
-        checkInputForNullness("a", new Object[] {a});
-        numberId = idNumber.incrementAndGet();
-        this.a = a;
-        setScope(a);
-
-    }
-
-    @Override public void consistency(Store store) {
-
-        /**
-         * It computes the consistency of the constraint.
-         *
-         * #A in (min, max)
-         *
-         * Cardinality of set variable A is within interval (min, max).
-         *
-         */
-
-        SetDomain aDom = a.domain;
-
-        int min = Math.max(aDom.glb().getSize(), cardinality.min());
-        int max = Math.min(aDom.lub().getSize(), cardinality.max());
-
-        if (min > max)
-            throw Store.failException;
-
-        /**
-         * If #glbA is already equal to maximum allowed cardinality then set is specified by glbA.
-         * if (#glbA == max) then A = glbA
-         * If #lubA is already equal to minimum allowed cardinality then set is specified by lubA.
-         * if (#lubA == min) then A = lubA
-         *
-         */
-
-        a.domain.inCardinality(store.level, a, min, max);
-
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public boolean satisfied() {
-        return grounded() && cardinality.contains(a.domain.glb().getSize());
-    }
-
-    @Override public String toString() {
-        return id() + " : cardA(" + a + ", " + cardinality + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : cardA(" + a + ", " + cardinality + " )";
+  }
 }

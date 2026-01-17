@@ -38,226 +38,209 @@ package org.jacop.util;
  */
 public class TupleUtils {
 
-    int tupleNumber = 0;
+  int tupleNumber = 0;
 
-    int[][] tuples;
+  int[][] tuples;
 
-    /**
-     * It recordTuples to store so tuples can be reused across multiple
-     * extensional constraints. It can potentially save memory.
-     *
-     * @param ts tuples to be recorded.
-     * @return two-dimensional array with tuples.
-     */
+  /**
+   * It recordTuples to store so tuples can be reused across multiple extensional constraints. It
+   * can potentially save memory.
+   *
+   * @param ts tuples to be recorded.
+   * @return two-dimensional array with tuples.
+   */
+  public int[][] recordTuples(int[][] ts) {
 
-    public int[][] recordTuples(int[][] ts) {
+    int[][] sortedTs = sortTuples(ts);
 
-        int[][] sortedTs = sortTuples(ts);
+    if (tuples == null) {
+      tuples = new int[sortedTs.length][];
+      for (int i = 0; i < sortedTs.length; i++) {
+        tuples[i] = new int[sortedTs[i].length];
+        for (int j = 0; j < sortedTs[i].length; j++) tuples[i][j] = sortedTs[i][j];
+      }
+      tupleNumber = sortedTs.length;
 
-        if (tuples == null) {
-            tuples = new int[sortedTs.length][];
-            for (int i = 0; i < sortedTs.length; i++) {
-                tuples[i] = new int[sortedTs[i].length];
-                for (int j = 0; j < sortedTs[i].length; j++)
-                    tuples[i][j] = sortedTs[i][j];
-            }
-            tupleNumber = sortedTs.length;
+      int[][] reusedTuples = new int[sortedTs.length][];
+      for (int i = 0; i < sortedTs.length; i++) reusedTuples[i] = tuples[i];
 
-            int[][] reusedTuples = new int[sortedTs.length][];
-            for (int i = 0; i < sortedTs.length; i++)
-                reusedTuples[i] = tuples[i];
-
-            return reusedTuples;
-        }
-
-        int[] position = new int[sortedTs.length];
-        boolean[] insert = new boolean[sortedTs.length];
-        int insertNo = 0;
-
-        int[][] reusedTuples = new int[sortedTs.length][];
-
-        for (int i = 0; i < sortedTs.length; i++) {
-            position[i] = findPositionForInsert(sortedTs[i]);
-
-            insert[i] = true;
-
-            if (smallerEqualTuple(tuples[position[i]], sortedTs[i]) && smallerEqualTuple(sortedTs[i], tuples[position[i]]))
-                insert[i] = false;
-
-            if (insert[i])
-                insertNo++;
-            else
-                reusedTuples[i] = tuples[position[i]];
-        }
-
-        if (insertNo == 0)
-            return reusedTuples;
-
-        int[][] tuplesBeforeExtension = tuples;
-
-        if (tupleNumber + insertNo > tuples.length)
-            tuples = new int[tuples.length * 2][];
-        else
-            tuples = new int[tuples.length][];
-
-        int previousPosition = 0;
-        int performedInserts = 1;
-
-        for (; previousPosition < insert.length; previousPosition++)
-            if (insert[previousPosition])
-                break;
-
-        System.arraycopy(tuplesBeforeExtension, 0, tuples, 0, position[previousPosition]);
-
-        tuplesBeforeExtension[position[previousPosition]] = new int[sortedTs[previousPosition].length];
-
-        for (int j = 0; j < sortedTs[previousPosition].length; j++)
-            tuplesBeforeExtension[position[previousPosition]][j] = sortedTs[previousPosition][j];
-
-        reusedTuples[previousPosition] = tuplesBeforeExtension[position[previousPosition]];
-
-        for (int i = previousPosition + 1; i < sortedTs.length; i++) {
-
-            if (!insert[i])
-                continue;
-
-            System.arraycopy(tuplesBeforeExtension, position[previousPosition], // source
-                tuples, position[previousPosition] + performedInserts, // target
-                position[i] - position[previousPosition]); // quantity
-
-            tuplesBeforeExtension[position[i] + performedInserts] = new int[sortedTs[i].length];
-
-            for (int j = 0; j < sortedTs[i].length; j++)
-                tuplesBeforeExtension[position[i] + performedInserts][j] = sortedTs[i][j];
-
-            reusedTuples[i] = tuplesBeforeExtension[position[i] + performedInserts];
-
-            performedInserts++;
-            previousPosition = i;
-        }
-
-        System.arraycopy(tuplesBeforeExtension, position[previousPosition], // source
-            tuples, position[previousPosition] + performedInserts, // target
-            tupleNumber - position[previousPosition]); // quantity
-
-        tupleNumber += performedInserts;
-
-        return reusedTuples;
-
+      return reusedTuples;
     }
 
-    /**
-     * searches for the position of the tuple in the tuple list.
-     *
-     * @param tuple to be compared to.
-     * @return position at which the tuple is stored in tuple list array.
-     */
-    public int findPositionForInsert(int[] tuple) {
+    int[] position = new int[sortedTs.length];
+    boolean[] insert = new boolean[sortedTs.length];
+    int insertNo = 0;
 
-        int left = 0;
-        int right = tupleNumber;
+    int[][] reusedTuples = new int[sortedTs.length][];
 
-        int position = (left + right) >> 1;
+    for (int i = 0; i < sortedTs.length; i++) {
+      position[i] = findPositionForInsert(sortedTs[i]);
 
-        while (!(left + 1 >= right)) {
+      insert[i] = true;
 
-            if (smallerEqualTuple(tuples[position], tuple)) {
-                left = position;
-            } else {
-                right = position;
-            }
+      if (smallerEqualTuple(tuples[position[i]], sortedTs[i])
+          && smallerEqualTuple(sortedTs[i], tuples[position[i]])) insert[i] = false;
 
-            position = (left + right) >> 1;
-
-        }
-
-        if (smallerEqualTuple(tuple, tuples[left]))
-            return left;
-
-        if (smallerEqualTuple(tuple, tuples[right]))
-            return right;
-
-        return -1;
+      if (insert[i]) insertNo++;
+      else reusedTuples[i] = tuples[position[i]];
     }
 
-    /**
-     * @param ts tuples to be sorted.
-     * @return sorted tuples.
-     */
-    public int[][] sortTuples(int[][] ts) {
+    if (insertNo == 0) return reusedTuples;
 
-        int[][] result = new int[ts.length][];
+    int[][] tuplesBeforeExtension = tuples;
 
-        System.arraycopy(ts, 0, result, 0, ts.length);
+    if (tupleNumber + insertNo > tuples.length) tuples = new int[tuples.length * 2][];
+    else tuples = new int[tuples.length][];
 
-        for (int i = 0; i < result.length; i++) {
+    int previousPosition = 0;
+    int performedInserts = 1;
 
-            boolean change = false;
+    for (; previousPosition < insert.length; previousPosition++)
+      if (insert[previousPosition]) break;
 
-            for (int j = result.length - 1; j > i; j--)
-                if (!smallerEqualTuple(result[j - 1], result[j])) {
-                    change = true;
-                    int[] tmp = result[j - 1];
-                    result[j - 1] = result[j];
-                    result[j] = tmp;
-                }
+    System.arraycopy(tuplesBeforeExtension, 0, tuples, 0, position[previousPosition]);
 
-            if (!change)
-                break;
-        }
+    tuplesBeforeExtension[position[previousPosition]] = new int[sortedTs[previousPosition].length];
 
-        return result;
+    for (int j = 0; j < sortedTs[previousPosition].length; j++)
+      tuplesBeforeExtension[position[previousPosition]][j] = sortedTs[previousPosition][j];
 
+    reusedTuples[previousPosition] = tuplesBeforeExtension[position[previousPosition]];
+
+    for (int i = previousPosition + 1; i < sortedTs.length; i++) {
+
+      if (!insert[i]) continue;
+
+      System.arraycopy(
+          tuplesBeforeExtension,
+          position[previousPosition], // source
+          tuples,
+          position[previousPosition] + performedInserts, // target
+          position[i] - position[previousPosition]); // quantity
+
+      tuplesBeforeExtension[position[i] + performedInserts] = new int[sortedTs[i].length];
+
+      for (int j = 0; j < sortedTs[i].length; j++)
+        tuplesBeforeExtension[position[i] + performedInserts][j] = sortedTs[i][j];
+
+      reusedTuples[i] = tuplesBeforeExtension[position[i] + performedInserts];
+
+      performedInserts++;
+      previousPosition = i;
     }
 
-    /**
-     * It sorts tuples.
-     *
-     * @param ts tuples to be sorted.
-     */
-    public static void sortTuplesWithin(int[][] ts) {
+    System.arraycopy(
+        tuplesBeforeExtension,
+        position[previousPosition], // source
+        tuples,
+        position[previousPosition] + performedInserts, // target
+        tupleNumber - position[previousPosition]); // quantity
 
-        for (int i = 0; i < ts.length; i++) {
+    tupleNumber += performedInserts;
 
-            boolean change = false;
+    return reusedTuples;
+  }
 
-            for (int j = ts.length - 1; j > i; j--)
-                if (!smallerEqualTuple(ts[j - 1], ts[j])) {
-                    change = true;
-                    int[] tmp = ts[j - 1];
-                    ts[j - 1] = ts[j];
-                    ts[j] = tmp;
-                }
+  /**
+   * searches for the position of the tuple in the tuple list.
+   *
+   * @param tuple to be compared to.
+   * @return position at which the tuple is stored in tuple list array.
+   */
+  public int findPositionForInsert(int[] tuple) {
 
-            if (!change)
-                break;
-        }
+    int left = 0;
+    int right = tupleNumber;
 
+    int position = (left + right) >> 1;
+
+    while (!(left + 1 >= right)) {
+
+      if (smallerEqualTuple(tuples[position], tuple)) {
+        left = position;
+      } else {
+        right = position;
+      }
+
+      position = (left + right) >> 1;
     }
 
-    /**
-     * It compares tuples.
-     *
-     * @param left  tuple to be compared to.
-     * @param right tuple to compar with.
-     * @return true if the left tuple is larger than right tuple.
-     */
-    public static boolean smallerEqualTuple(int[] left, int[] right) {
+    if (smallerEqualTuple(tuple, tuples[left])) return left;
 
-        if (right.length < left.length)
-            return false;
+    if (smallerEqualTuple(tuple, tuples[right])) return right;
 
-        if (right.length > left.length)
-            return true;
+    return -1;
+  }
 
-        for (int i = 0; i < left.length; i++) {
-            if (left[i] < right[i])
-                return true;
-            if (left[i] > right[i])
-                return false;
+  /**
+   * @param ts tuples to be sorted.
+   * @return sorted tuples.
+   */
+  public int[][] sortTuples(int[][] ts) {
+
+    int[][] result = new int[ts.length][];
+
+    System.arraycopy(ts, 0, result, 0, ts.length);
+
+    for (int i = 0; i < result.length; i++) {
+
+      boolean change = false;
+
+      for (int j = result.length - 1; j > i; j--)
+        if (!smallerEqualTuple(result[j - 1], result[j])) {
+          change = true;
+          int[] tmp = result[j - 1];
+          result[j - 1] = result[j];
+          result[j] = tmp;
         }
 
-        return true;
+      if (!change) break;
     }
 
+    return result;
+  }
+
+  /**
+   * It sorts tuples.
+   *
+   * @param ts tuples to be sorted.
+   */
+  public static void sortTuplesWithin(int[][] ts) {
+
+    for (int i = 0; i < ts.length; i++) {
+
+      boolean change = false;
+
+      for (int j = ts.length - 1; j > i; j--)
+        if (!smallerEqualTuple(ts[j - 1], ts[j])) {
+          change = true;
+          int[] tmp = ts[j - 1];
+          ts[j - 1] = ts[j];
+          ts[j] = tmp;
+        }
+
+      if (!change) break;
+    }
+  }
+
+  /**
+   * It compares tuples.
+   *
+   * @param left tuple to be compared to.
+   * @param right tuple to compar with.
+   * @return true if the left tuple is larger than right tuple.
+   */
+  public static boolean smallerEqualTuple(int[] left, int[] right) {
+
+    if (right.length < left.length) return false;
+
+    if (right.length > left.length) return true;
+
+    for (int i = 0; i < left.length; i++) {
+      if (left[i] < right[i]) return true;
+      if (left[i] > right[i]) return false;
+    }
+
+    return true;
+  }
 }

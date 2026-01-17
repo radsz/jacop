@@ -3,40 +3,38 @@
 package org.jacop.fz;
 
 public class ASTVariableExpr extends SimpleNode {
-    public ASTVariableExpr(int id) {
-        super(id);
-    }
+  public ASTVariableExpr(int id) {
+    super(id);
+  }
 
-    public ASTVariableExpr(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTVariableExpr(Parser p, int id) {
+    super(p, id);
+  }
 
-    String ident = null;
-    ArrayAccess arrAccess = null;
+  String ident = null;
+  ArrayAccess arrAccess = null;
 
-    void setIdent(String ID) {
-        ident = ID;
-    }
+  void setIdent(String ID) {
+    ident = ID;
+  }
 
-    String getIdent() {
-        return ident;
-    }
+  String getIdent() {
+    return ident;
+  }
 
-    void setArrayAccess(ArrayAccess a) {
-        arrAccess = a;
-    }
+  void setArrayAccess(ArrayAccess a) {
+    arrAccess = a;
+  }
 
-    ArrayAccess getArrayAccess() {
-        return arrAccess;
-    }
+  ArrayAccess getArrayAccess() {
+    return arrAccess;
+  }
 
-    public String toString() {
-        String s = null;
-        if (ident != null)
-            s = ident;
-        if (arrAccess != null)
-            s = arrAccess.toString();
-        return super.toString() + ": " + s;
-    }
+  public String toString() {
+    String s = null;
+    if (ident != null) s = ident;
+    if (arrAccess != null) s = arrAccess.toString();
+    return super.toString() + ": " + s;
+  }
 }
 /* JavaCC - OriginalChecksum=7d7b62cf4b90b450c733bc6f3e54888e (do not edit this line) */

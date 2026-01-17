@@ -33,43 +33,34 @@ package org.jacop.search;
 import org.jacop.core.IntVar;
 
 /**
- * Defines a SmallestMax comparator for Variables. The variable with maximum value 5 will
- * have a priority over variable with maximum value equal 10.
+ * Defines a SmallestMax comparator for Variables. The variable with maximum value 5 will have a
+ * priority over variable with maximum value equal 10.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class SmallestMax<T extends IntVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs the variable comparator based on the smallest maximal value from the domain.
-     */
-    public SmallestMax() {
-    }
+  /** It constructs the variable comparator based on the smallest maximal value from the domain. */
+  public SmallestMax() {}
 
-    public int compare(double left, T var) {
-        int right = var.dom().max();
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    int right = var.dom().max();
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.dom().max();
-        int right = rightVar.dom().max();
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.dom().max();
+    int right = rightVar.dom().max();
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.dom().max();
-    }
-
+  public double metric(T var) {
+    return var.dom().max();
+  }
 }

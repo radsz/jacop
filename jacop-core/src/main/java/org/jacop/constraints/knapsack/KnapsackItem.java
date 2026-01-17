@@ -33,138 +33,124 @@ package org.jacop.constraints.knapsack;
 import org.jacop.core.IntVar;
 
 /**
- * This class stores information about items being considered by a Knapsack constraint.
- * It is a holder for integer attributes like weight and profit, as well as finite domain
- * variable denoting the quantity being taken. It also stores precomputed efficiency of the item.
- * <p>
- * It implements comparable interface in such a away so that items can be sorted in decreasing
+ * This class stores information about items being considered by a Knapsack constraint. It is a
+ * holder for integer attributes like weight and profit, as well as finite domain variable denoting
+ * the quantity being taken. It also stores precomputed efficiency of the item.
+ *
+ * <p>It implements comparable interface in such a away so that items can be sorted in decreasing
  * efficiency. In case of equal efficiency then item which is heavier is preferred.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.10
  */
-
 public final class KnapsackItem implements Comparable<KnapsackItem> {
 
-    /**
-     * It is a finite domain variable specifying the possible quantity of that item.
-     */
-    final public IntVar quantity;
+  /** It is a finite domain variable specifying the possible quantity of that item. */
+  public final IntVar quantity;
 
-    /**
-     * It specifies the weight of a single instance of this item.
-     */
-    final public int weight;
+  /** It specifies the weight of a single instance of this item. */
+  public final int weight;
 
-    /**
-     * It specifies the profit of a single instance of this item.
-     */
-    final public int profit;
+  /** It specifies the profit of a single instance of this item. */
+  public final int profit;
 
-    /**
-     * It stores information about the item efficiency - profit/weight.
-     */
-    final public double efficiency;
+  /** It stores information about the item efficiency - profit/weight. */
+  public final double efficiency;
 
-    /**
-     * It constructs an item. It requires information about weight and profit,
-     * as well as finite domain variable denoting the quantity. It will compute
-     * efficiency as well.
-     *
-     * @param quantity - number of items it is possible to take.
-     * @param weight   - weight of the single item.
-     * @param profit   - profit due to one single item.
-     */
-    KnapsackItem(IntVar quantity, int weight, int profit) {
-        super();
-        if (weight <= 0)
-            throw new IllegalArgumentException("Weight attribute has to be greater than 0.");
-        if (profit <= 0)
-            throw new IllegalArgumentException("Profit attribute has to be greater than 0.");
-        this.quantity = quantity;
-        this.weight = weight;
-        this.profit = profit;
-        this.efficiency = this.profit / (double) this.weight;
+  /**
+   * It constructs an item. It requires information about weight and profit, as well as finite
+   * domain variable denoting the quantity. It will compute efficiency as well.
+   *
+   * @param quantity - number of items it is possible to take.
+   * @param weight - weight of the single item.
+   * @param profit - profit due to one single item.
+   */
+  KnapsackItem(IntVar quantity, int weight, int profit) {
+    super();
+    if (weight <= 0)
+      throw new IllegalArgumentException("Weight attribute has to be greater than 0.");
+    if (profit <= 0)
+      throw new IllegalArgumentException("Profit attribute has to be greater than 0.");
+    this.quantity = quantity;
+    this.weight = weight;
+    this.profit = profit;
+    this.efficiency = this.profit / (double) this.weight;
+  }
+
+  /**
+   * Method used in the sorting of the items, we use profit and weight to know the less efficient
+   * item without using division. This function returns 1 if this item is less efficient than that
+   * item. This function returns -1 if this item is more efficient than that item. If both items are
+   * equally efficient then this function returns 1 if this item has smaller weight than that item.
+   *
+   * <p>In connection with Arrays.sort() it will produce items from most efficient to least
+   * efficient breaking ties in the favor of the larger weight.
+   */
+  public int compareTo(KnapsackItem that) {
+
+    long comparison = (long) weight * (long) that.profit - (long) profit * (long) that.weight;
+
+    if (comparison == 0) {
+
+      if (that.weight >= weight) return 1;
+      else return -1;
+
+    } else {
+
+      if (comparison > 0) return 1;
+      else return -1;
     }
+  }
 
-    /**
-     * Method used in the sorting of the items, we use profit and weight to know
-     * the less efficient item without using division. This function returns 1 if
-     * this item is less efficient than that item. This function returns -1 if
-     * this item is more efficient than that item. If both items are equally efficient
-     * then this function returns 1 if this item has smaller weight than that item.
-     * <p>
-     * In connection with Arrays.sort() it will produce items from most efficient to
-     * least efficient breaking ties in the favor of the larger weight.
-     */
+  /**
+   * t returns quantity variable associated with that item.
+   *
+   * @return quantity finite domain variable.
+   */
+  public final IntVar getVariable() {
+    return quantity;
+  }
 
-    public int compareTo(KnapsackItem that) {
+  /**
+   * It returns a profit of a single instance of that item.
+   *
+   * @return profit of a single instance of that item.
+   */
+  public final int getProfit() {
+    return profit;
+  }
 
-        long comparison = (long) weight * (long) that.profit - (long) profit * (long) that.weight;
+  /**
+   * It returns a weight of a single instance of that item.
+   *
+   * @return weight of a single instance of that item.
+   */
+  public final int getWeight() {
+    return weight;
+  }
 
-        if (comparison == 0) {
+  /**
+   * It returns an efficiency of that item.
+   *
+   * @return the efficiency of that item.
+   */
+  public final double getEfficiency() {
+    return efficiency;
+  }
 
-            if (that.weight >= weight)
-                return 1;
-            else
-                return -1;
+  @Override
+  public String toString() {
 
-        } else {
+    StringBuilder result = new StringBuilder();
 
-            if (comparison > 0)
-                return 1;
-            else
-                return -1;
+    result.append("item[ fdv: ").append(quantity.toString()).append(", weight: ").append(weight);
+    result
+        .append(", profit: ")
+        .append(profit)
+        .append(", efficiency: ")
+        .append(efficiency)
+        .append(" ]");
 
-        }
-    }
-
-    /**
-     * t returns quantity variable associated with that item.
-     *
-     * @return quantity finite domain variable.
-     */
-
-    public final IntVar getVariable() {
-        return quantity;
-    }
-
-
-    /**
-     * It returns a profit of a single instance of that item.
-     *
-     * @return profit of a single instance of that item.
-     */
-    public final int getProfit() {
-        return profit;
-    }
-
-    /**
-     * It returns a weight of a single instance of that item.
-     *
-     * @return weight of a single instance of that item.
-     */
-    public final int getWeight() {
-        return weight;
-    }
-
-    /**
-     * It returns an efficiency of that item.
-     *
-     * @return the efficiency of that item.
-     */
-    public final double getEfficiency() {
-        return efficiency;
-    }
-
-    @Override public String toString() {
-
-        StringBuilder result = new StringBuilder();
-
-        result.append("item[ fdv: ").append(quantity.toString()).append(", weight: ").append(weight);
-        result.append(", profit: ").append(profit).append(", efficiency: ").append(efficiency).append(" ]");
-
-        return result.toString();
-    }
-
+    return result.toString();
+  }
 }

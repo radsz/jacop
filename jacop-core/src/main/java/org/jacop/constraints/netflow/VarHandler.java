@@ -28,46 +28,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.netflow;
 
+import java.util.List;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
-import java.util.List;
-
 /**
- * Common interface to all objects that can handle one or more variables of the
- * network flow constraint.
+ * Common interface to all objects that can handle one or more variables of the network flow
+ * constraint.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public interface VarHandler {
 
-    /**
-     * @return the list of variables handled by this handler
-     */
-    List<IntVar> listVariables();
+  /** @return the list of variables handled by this handler */
+  List<IntVar> listVariables();
 
-    /**
-     * Retrieves the consistency pruning event of a handler variable that causes
-     * the handler to be reevaluated. For instance, X- and W-variables will
-     * listen to BOUND events while S-variables typically consider ANY events.
-     *
-     * @param variable a handler variable
-     * @return the pruning event which causes reevaluation of the handler
-     */
-    int getPruningEvent(Var variable);
+  /**
+   * Retrieves the consistency pruning event of a handler variable that causes the handler to be
+   * reevaluated. For instance, X- and W-variables will listen to BOUND events while S-variables
+   * typically consider ANY events.
+   *
+   * @param variable a handler variable
+   * @return the pruning event which causes reevaluation of the handler
+   */
+  int getPruningEvent(Var variable);
 
-    /**
-     * Informs the handler that one of its variable has changed and asks the
-     * handler to update the state of the network accordingly.
-     *
-     * @param variable the variable that changed
-     * @param network  the network
-     */
-    void processEvent(IntVar variable, MutableNetwork network);
-
+  /**
+   * Informs the handler that one of its variable has changed and asks the handler to update the
+   * state of the network accordingly.
+   *
+   * @param variable the variable that changed
+   * @param network the network
+   */
+  void processEvent(IntVar variable, MutableNetwork network);
 }

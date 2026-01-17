@@ -30,158 +30,155 @@
 
 package org.jacop.search.sgmpcs;
 
+import java.util.Map;
 import org.jacop.core.*;
 import org.jacop.search.*;
 
-import java.util.Map;
-
 /**
- * Defines an interface for defining different methods for selecting next search
- * decision to be taken. The search decision called choice point will be first
- * enforced and later upon backtrack a negation of that search decision will be
- * enforced.
+ * Defines an interface for defining different methods for selecting next search decision to be
+ * taken. The search decision called choice point will be first enforced and later upon backtrack a
+ * negation of that search decision will be enforced.
  *
  * @param <T> type of the variable for which choice point is being created.
  * @author krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {
 
+  boolean printInfo = true;
 
-    boolean printInfo = true;
+  /*
+   * current store
+   */
+  public Store store;
 
-    /*
-     * current store
-     */
-    public Store store;
+  /*
+   * search variable
+   */
+  public IntVar[] vars;
 
-    /*
-     * search variable
-     */
-    public IntVar[] vars;
+  /*
+   * cost variable
+   */ IntVar cost;
 
-    /*
-     * cost variable
-     */ IntVar cost;
+  /*
+   * The solution produced by last search
+   */
+  public int[] solution;
 
-    /*
-     * The solution produced by last search
-     */
-    public int[] solution;
+  /*
+   * The cost produced by last search
+   */ int searchCost;
 
-    /*
-     * The cost produced by last search
-     */ int searchCost;
+  long timeOut;
 
-    long timeOut;
+  public SGMPCSCalculator<Var> failCalculator;
 
-    public SGMPCSCalculator<Var> failCalculator;
+  public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
+    this.store = store;
+    this.vars = new IntVar[vars.length];
+    System.arraycopy(vars, 0, this.vars, 0, vars.length);
+    this.cost = cost;
+  }
 
-    public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
-        this.store = store;
-        this.vars = new IntVar[vars.length];
-        System.arraycopy(vars, 0, this.vars, 0, vars.length);
-        this.cost = cost;
+  public boolean searchFromEmptySolution(int failLimit) {
+
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<IntVar>(vars, new SmallestMin<IntVar>(), new IndomainMin<IntVar>());
+    // SelectChoicePoint<IntVar> select = new RandomSelect<IntVar>(vars, new
+    // IndomainRandom<IntVar>());
+    label.setAssignSolution(false);
+    label.setSolutionListener(new CostListener<IntVar>());
+    label.getSolutionListener().recordSolutions(true);
+    failCalculator = new SGMPCSCalculator<>(failLimit);
+    label.setConsistencyListener(failCalculator);
+    label.setPrintInfo(false);
+    label.setTimeOut(timeOut);
+
+    boolean result = label.labeling(store, select);
+
+    if (result) {
+      Domain[] domSolution = label.getSolution();
+      solution = new int[domSolution.length];
+      for (int i = 0; i < domSolution.length; i++)
+        solution[i] = ((IntDomain) domSolution[i]).value();
     }
 
-    public boolean searchFromEmptySolution(int failLimit) {
+    return result;
+  }
 
-        DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMin<IntVar>(), new IndomainMin<IntVar>());
-        // SelectChoicePoint<IntVar> select = new RandomSelect<IntVar>(vars, new IndomainRandom<IntVar>());
-        label.setAssignSolution(false);
-        label.setSolutionListener(new CostListener<IntVar>());
-        label.getSolutionListener().recordSolutions(true);
-        failCalculator = new SGMPCSCalculator<>(failLimit);
-        label.setConsistencyListener(failCalculator);
-        label.setPrintInfo(false);
-        label.setTimeOut(timeOut);
+  public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
 
-        boolean result = label.labeling(store, select);
+    Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
+    for (int i = 0; i < eliteSolution.length - 1; i++) mapping.put(vars[i], eliteSolution[i]);
 
-        if (result) {
-            Domain[] domSolution = label.getSolution();
-            solution = new int[domSolution.length];
-            for (int i = 0; i < domSolution.length; i++)
-                solution[i] = ((IntDomain) domSolution[i]).value();
-        }
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+    // SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax<IntVar>(),
+    // 					       new IndomainDefaultValue<IntVar>(mapping, new IndomainRandom<IntVar>()));
+    SelectChoicePoint<IntVar> select =
+        new RandomSelect<IntVar>(
+            vars, new IndomainDefaultValue<IntVar>(mapping, new IndomainMin<IntVar>()));
+    label.setAssignSolution(false);
+    label.setSolutionListener(new CostListener<IntVar>());
+    label.getSolutionListener().recordSolutions(true);
+    failCalculator = new SGMPCSCalculator<>(failLimit);
+    label.setConsistencyListener(failCalculator);
+    label.setPrintInfo(false);
+    label.setTimeOut(timeOut);
 
-        return result;
+    boolean result = label.labeling(store, select);
+
+    if (result) {
+      Domain[] domSolution = label.getSolution();
+      solution = new int[domSolution.length];
+      for (int i = 0; i < domSolution.length; i++)
+        solution[i] = ((IntDomain) domSolution[i]).value();
     }
 
-    public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
+    return result;
+  }
 
-        Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
-        for (int i = 0; i < eliteSolution.length - 1; i++)
-            mapping.put(vars[i], eliteSolution[i]);
+  public int getCurrentCost() {
+    return searchCost;
+  }
 
-        DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-        // SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax<IntVar>(),
-        // 					       new IndomainDefaultValue<IntVar>(mapping, new IndomainRandom<IntVar>()));
-        SelectChoicePoint<IntVar> select =
-            new RandomSelect<IntVar>(vars, new IndomainDefaultValue<IntVar>(mapping, new IndomainMin<IntVar>()));
-        label.setAssignSolution(false);
-        label.setSolutionListener(new CostListener<IntVar>());
-        label.getSolutionListener().recordSolutions(true);
-        failCalculator = new SGMPCSCalculator<>(failLimit);
-        label.setConsistencyListener(failCalculator);
-        label.setPrintInfo(false);
-        label.setTimeOut(timeOut);
+  public int[] getSolution() {
+    return solution;
+  }
 
-        boolean result = label.labeling(store, select);
+  public int getNumberFails() {
+    return failCalculator.getNumberFails();
+  }
 
-        if (result) {
-            Domain[] domSolution = label.getSolution();
-            solution = new int[domSolution.length];
-            for (int i = 0; i < domSolution.length; i++)
-                solution[i] = ((IntDomain) domSolution[i]).value();
-        }
+  public int getFailLimit() {
+    return failCalculator.getFailLimit();
+  }
 
-        return result;
+  public void setPrintInfo(boolean print) {
+    printInfo = print;
+  }
+
+  public void setTimeOut(long timeOut) {
+    this.timeOut = timeOut;
+  }
+
+  /**
+   * Saves the cost produced by a given search
+   *
+   * @author Krzysztof Kuchcinski
+   */
+  public class CostListener<T extends IntVar> extends SimpleSolutionListener<T> {
+
+    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+      boolean returnCode = super.executeAfterSolution(search, select);
+
+      searchCost = cost.value();
+
+      if (printInfo) System.out.println("----------\nCost = " + searchCost);
+
+      return returnCode;
     }
-
-    public int getCurrentCost() {
-        return searchCost;
-    }
-
-    public int[] getSolution() {
-        return solution;
-    }
-
-    public int getNumberFails() {
-        return failCalculator.getNumberFails();
-    }
-
-    public int getFailLimit() {
-        return failCalculator.getFailLimit();
-    }
-
-    public void setPrintInfo(boolean print) {
-        printInfo = print;
-    }
-
-    public void setTimeOut(long timeOut) {
-        this.timeOut = timeOut;
-    }
-
-    /**
-     * Saves the cost produced by a given search
-     *
-     * @author Krzysztof Kuchcinski
-     */
-    public class CostListener<T extends IntVar> extends SimpleSolutionListener<T> {
-
-        public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
-
-            boolean returnCode = super.executeAfterSolution(search, select);
-
-            searchCost = cost.value();
-
-            if (printInfo)
-                System.out.println("----------\nCost = " + searchCost);
-
-            return returnCode;
-        }
-    }
+  }
 }

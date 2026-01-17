@@ -36,42 +36,41 @@ package org.jacop.search.restart;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class LubyCalculator extends Calculator {
 
-    long scale;
-    int n;
-    
-    public LubyCalculator(int scale) {
-        n = 1;
-        this.scale = (long)scale;
-        failLimit = this.scale * getLuby(n);
+  long scale;
+  int n;
+
+  public LubyCalculator(int scale) {
+    n = 1;
+    this.scale = (long) scale;
+    failLimit = this.scale * getLuby(n);
+  }
+
+  public void newLimit() {
+    numberFails = 0;
+    failLimit = scale * getLuby(++n);
+  }
+
+  public String toString() {
+    return "lubyCalculator(" + scale + ")";
+  }
+
+  public int getLuby(int i) {
+
+    double precision = 1E-8;
+
+    if (i == 1) {
+      return 1;
     }
 
-    public void newLimit() {
-        numberFails = 0;
-        failLimit = scale * getLuby(++n);
+    double k = Math.log(i + 1) / Math.log(2d);
+
+    if (Math.abs(k - Math.floor(k + 0.5)) < precision) { // k == Math.floor(k + 0.5)
+      return (int) Math.pow(2, k - 1);
+    } else {
+      k = Math.floor(k);
+      return getLuby(i - (int) Math.pow(2, k) + 1);
     }
-    
-    public String toString() {
-        return "lubyCalculator("+scale+")";
-    }
-
-    public int getLuby(int i) {
-
-        double precision = 1E-8;
-
-        if (i == 1) {
-            return 1;
-        }
-
-        double k = Math.log(i + 1) / Math.log(2d);
-
-        if (Math.abs(k - Math.floor(k + 0.5)) < precision) {  // k == Math.floor(k + 0.5)
-            return (int) Math.pow(2, k - 1);
-        } else {
-            k = Math.floor(k);
-            return getLuby(i - (int) Math.pow(2, k) + 1);
-        }
-    }
+  }
 }

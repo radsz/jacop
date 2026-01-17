@@ -38,219 +38,220 @@ import org.jacop.constraints.netflow.ArcCompanion;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public final class Arc {
 
-    /**
-     * The head of the arc (where the arc points to). The head of an arc is the
-     * tail of its sister arc.
-     */
-    public final Node head;
+  /**
+   * The head of the arc (where the arc points to). The head of an arc is the tail of its sister
+   * arc.
+   */
+  public final Node head;
 
-    /**
-     * The cost of the Arc cost
-     */
-    public int cost;
+  /** The cost of the Arc cost */
+  public int cost;
 
-    /**
-     * The unused (i.e. residual) capacity of the arc
-     */
-    public int capacity;
+  /** The unused (i.e. residual) capacity of the arc */
+  public int capacity;
 
-    /**
-     * The flow of an arc is the residual capacity of its sister arc.
-     */
-    public final Arc sister;
+  /** The flow of an arc is the residual capacity of its sister arc. */
+  public final Arc sister;
 
-    /**
-     * Index in lower arcs array
-     */
-    public int index;
+  /** Index in lower arcs array */
+  public int index;
 
-    /**
-     * The arc companion for constraint API. Only forward arcs have a companion,
-     * residual arcs do not.
-     */
-    public ArcCompanion companion;
+  /**
+   * The arc companion for constraint API. Only forward arcs have a companion, residual arcs do not.
+   */
+  public ArcCompanion companion;
 
-    /**
-     * whether this arc is a forward arc or a residual arc
-     */
-    public boolean forward;
+  /** whether this arc is a forward arc or a residual arc */
+  public boolean forward;
 
-    /**
-     * Special constructor to create artificial arcs. Should NOT be used in a
-     * model. Models should use (or subclass) a NetworkBuilder instead. A
-     * NetworkBuilder provides various addArc methods to create arcs more
-     * conveniently.
-     *
-     * @param tail tail of the arc
-     * @param head head of the arc
-     */
-    public Arc(Node tail, Node head) {
-        this(tail, head, 0, 0, 0);
+  /**
+   * Special constructor to create artificial arcs. Should NOT be used in a model. Models should use
+   * (or subclass) a NetworkBuilder instead. A NetworkBuilder provides various addArc methods to
+   * create arcs more conveniently.
+   *
+   * @param tail tail of the arc
+   * @param head head of the arc
+   */
+  public Arc(Node tail, Node head) {
+    this(tail, head, 0, 0, 0);
+  }
+
+  /**
+   * General constructor to create arcs. Models should consider to use (or subclass) a
+   * NetworkBuilder instead. A NetworkBuilder provides various addArc methods to create arcs more
+   * conveniently.
+   *
+   * @param tail tail of the arc
+   * @param head head of the arc
+   * @param cost cost-per-unit of the arc
+   * @param lowerCapacity lower capacity of the arc
+   * @param upperCapacity upper capacity of the arc
+   */
+  public Arc(Node tail, Node head, int cost, int lowerCapacity, int upperCapacity) {
+
+    if (lowerCapacity > upperCapacity)
+      throw new IllegalArgumentException("lower capacity > upper capacity");
+
+    this.head = head;
+    this.cost = cost;
+    this.capacity = upperCapacity - lowerCapacity;
+    this.index = -2;
+    this.forward = true;
+    this.sister = new Arc(this, tail);
+
+    if (lowerCapacity != 0) {
+      this.companion = new ArcCompanion(this, lowerCapacity);
+
+      // set balance correction for next flow computation
+      tail.deltaBalance -= lowerCapacity;
+      head.deltaBalance += lowerCapacity;
     }
+  }
 
-    /**
-     * General constructor to create arcs. Models should consider to use (or
-     * subclass) a NetworkBuilder instead. A NetworkBuilder provides various
-     * addArc methods to create arcs more conveniently.
-     *
-     * @param tail          tail of the arc
-     * @param head          head of the arc
-     * @param cost          cost-per-unit of the arc
-     * @param lowerCapacity lower capacity of the arc
-     * @param upperCapacity upper capacity of the arc
-     */
-    public Arc(Node tail, Node head, int cost, int lowerCapacity, int upperCapacity) {
+  // creates the sister arc
+  private Arc(Arc sister, Node to) {
+    this.head = to;
+    this.cost = -sister.cost;
+    this.capacity = 0;
+    this.index = -2;
+    this.sister = sister;
+    this.forward = false;
+  }
 
-        if (lowerCapacity > upperCapacity)
-            throw new IllegalArgumentException("lower capacity > upper capacity");
+  /**
+   * Computes the cost of this arc considering node potentials.
+   *
+   * @return the reduced cost
+   */
+  public int reducedCost() {
+    // arc from i (tail) to j (head)
+    // c_ij^pi = c_ij - pi_i + pi_j
+    Node tail = tail();
+    return cost - tail.potential + head.potential;
+  }
 
-        this.head = head;
-        this.cost = cost;
-        this.capacity = upperCapacity - lowerCapacity;
-        this.index = -2;
-        this.forward = true;
-        this.sister = new Arc(this, tail);
+  public void addFlow(int delta) {
+    capacity -= delta;
+    sister.capacity += delta;
 
-        if (lowerCapacity != 0) {
-            this.companion = new ArcCompanion(this, lowerCapacity);
+    assert (sister.capacity >= 0) : delta + ", Bad capacity: " + this;
+    assert (capacity >= 0) : delta + ", Bad capacity: " + this;
+  }
 
-            // set balance correction for next flow computation
-            tail.deltaBalance -= lowerCapacity;
-            head.deltaBalance += lowerCapacity;
-        }
+  public Node tail() {
+    return sister.head;
+  }
 
-    }
+  public boolean isInCut(boolean forward) {
+    boolean t = tail().marked;
+    boolean h = head.marked;
+    return (t ^ h) && (t == forward);
+  }
 
-    // creates the sister arc
-    private Arc(Arc sister, Node to) {
-        this.head = to;
-        this.cost = -sister.cost;
-        this.capacity = 0;
-        this.index = -2;
-        this.sister = sister;
-        this.forward = false;
-    }
+  /**
+   * Initializes an artificial arc
+   *
+   * @param newCost new cost for the arc
+   * @param newCapacity new capacity for the arc
+   */
+  public void set(int newCost, int newCapacity) {
 
-    /**
-     * Computes the cost of this arc considering node potentials.
-     *
-     * @return the reduced cost
-     */
-    public int reducedCost() {
-        // arc from i (tail) to j (head)
-        // c_ij^pi = c_ij - pi_i + pi_j
-        Node tail = tail();
-        return cost - tail.potential + head.potential;
-    }
+    assert (cost == 0);
+    assert (sister.cost == 0);
+    assert (capacity == 0);
+    assert (sister.capacity == 0);
 
-    public void addFlow(int delta) {
-        capacity -= delta;
-        sister.capacity += delta;
+    cost = newCost;
+    sister.cost = -newCost;
+    capacity = newCapacity;
+    sister.capacity = 0;
+    forward = false;
+    sister.forward = true;
+  }
 
-        assert (sister.capacity >= 0) : delta + ", Bad capacity: " + this;
-        assert (capacity >= 0) : delta + ", Bad capacity: " + this;
-    }
+  /** Clears an artificial arc */
+  public void clear() {
 
-    public Node tail() {
-        return sister.head;
-    }
+    cost = 0;
+    sister.cost = 0;
+    capacity = 0;
+    sister.capacity = 0;
+  }
 
-    public boolean isInCut(boolean forward) {
-        boolean t = tail().marked;
-        boolean h = head.marked;
-        return (t ^ h) && (t == forward);
-    }
+  /** @return cost associated with an arc. */
+  public long longCost() {
 
-    /**
-     * Initializes an artificial arc
-     *
-     * @param newCost     new cost for the arc
-     * @param newCapacity new capacity for the arc
-     */
-    public void set(int newCost, int newCapacity) {
+    if (cost == 0) return 0L;
 
-        assert (cost == 0);
-        assert (sister.cost == 0);
-        assert (capacity == 0);
-        assert (sister.capacity == 0);
+    if (!forward) return sister.longCost();
 
-        cost = newCost;
-        sister.cost = -newCost;
-        capacity = newCapacity;
-        sister.capacity = 0;
-        forward = false;
-        sister.forward = true;
-    }
+    int flow = sister.capacity;
+    if (companion != null) flow += companion.flowOffset;
 
-    /**
-     * Clears an artificial arc
-     */
-    public void clear() {
+    return (long) flow * (long) cost;
+  }
 
-        cost = 0;
-        sister.cost = 0;
-        capacity = 0;
-        sister.capacity = 0;
+  /* for debugging */
+  public String toString() {
 
-    }
+    // TODO only for debugging, otherwise we would use StringBuilder
+    Node tail = tail();
+    int flow = sister.capacity;
+    int total = capacity + flow;
 
-    /**
-     * @return cost associated with an arc.
-     */
-    public long longCost() {
+    ArcCompanion comp = forward ? companion : sister.companion;
+    //		String x = (companion == null) ? "" : ", offset=" + companion.flowOffset;
+    String compstr =
+        (comp == null) ? "" : ", forward = " + forward + ", companion = " + comp.toString();
 
-        if (cost == 0)
-            return 0L;
+    return "["
+        + tail.name
+        + "->"
+        + head.name
+        + ", flow="
+        + flow
+        + "/"
+        + total
+        + "  reduced="
+        + reducedCost()
+        + ", index="
+        + index
+        + compstr
+        + "]";
+  }
 
-        if (!forward)
-            return sister.longCost();
+  public String toFlow() {
+    // TODO only for debugging, otherwise we would use StringBuilder
+    Node tail = tail();
+    int flow = sister.capacity;
+    int total = capacity + flow;
+    String coststr = (cost > 0) ? "+" + cost : "" + cost;
+    return tail.name
+        + "->"
+        + head.name
+        + " "
+        + flow
+        + " / "
+        + total
+        + ", cost: "
+        + flow
+        + " * "
+        + coststr
+        + " = "
+        + (flow * cost);
+  }
 
-        int flow = sister.capacity;
-        if (companion != null)
-            flow += companion.flowOffset;
+  public boolean hasCompanion() {
+    return (companion != null) || (sister.companion != null);
+  }
 
-        return (long) flow * (long) cost;
+  public ArcCompanion getCompanion() {
+    return (companion != null) ? companion : sister.companion;
+  }
 
-    }
-
-    /* for debugging */
-    public String toString() {
-
-        // TODO only for debugging, otherwise we would use StringBuilder
-        Node tail = tail();
-        int flow = sister.capacity;
-        int total = capacity + flow;
-
-        ArcCompanion comp = forward ? companion : sister.companion;
-        //		String x = (companion == null) ? "" : ", offset=" + companion.flowOffset;
-        String compstr = (comp == null) ? "" : ", forward = " + forward + ", companion = " + comp.toString();
-
-        return "[" + tail.name + "->" + head.name + ", flow=" + flow + "/" + total + "  reduced=" + reducedCost() + ", index=" + index
-            + compstr + "]";
-
-    }
-
-    public String toFlow() {
-        // TODO only for debugging, otherwise we would use StringBuilder
-        Node tail = tail();
-        int flow = sister.capacity;
-        int total = capacity + flow;
-        String coststr = (cost > 0) ? "+" + cost : "" + cost;
-        return tail.name + "->" + head.name + " " + flow + " / " + total + ", cost: " + flow + " * " + coststr + " = " + (flow * cost);
-    }
-
-    public boolean hasCompanion() {
-        return (companion != null) || (sister.companion != null);
-    }
-
-    public ArcCompanion getCompanion() {
-        return (companion != null) ? companion : sister.companion;
-    }
-
-    public String name() {
-        return tail().name + "->" + head.name;
-    }
+  public String name() {
+    return tail().name + "->" + head.name;
+  }
 }

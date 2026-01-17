@@ -31,6 +31,7 @@
 
 package org.jacop.jasat.modules;
 
+import java.util.TimerTask;
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverState;
 import org.jacop.jasat.core.clauses.MapClause;
@@ -38,197 +39,182 @@ import org.jacop.jasat.modules.interfaces.ExplanationListener;
 import org.jacop.jasat.modules.interfaces.SolutionListener;
 import org.jacop.jasat.modules.interfaces.StartStopListener;
 
-import java.util.TimerTask;
-
 /**
  * A basic searching component, which controls the solver to solve the problem
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
+public final class SearchModule
+    implements SolutionListener, ExplanationListener, StartStopListener {
 
-public final class SearchModule implements SolutionListener, ExplanationListener, StartStopListener {
+  // the error margin for timeout. If time elapsed > timeout - TIME_MARGIN,
+  // the search will stop. Written in milliseconds.
+  private static final long TIME_MARGIN = 50;
 
-    // the error margin for timeout. If time elapsed > timeout - TIME_MARGIN,
-    // the search will stop. Written in milliseconds.
-    private static final long TIME_MARGIN = 50;
+  // the core instance
+  public Core core;
 
-    // the core instance
-    public Core core;
+  // tracks activity of literals
+  public ActivityModule activity;
 
-    // tracks activity of literals
-    public ActivityModule activity;
+  // module used to choose literals based on activity
+  public HeuristicAssertionModule assertionH;
 
-    // module used to choose literals based on activity
-    public HeuristicAssertionModule assertionH;
+  // module used to know if a restart is good
+  public HeuristicRestartModule restartH;
 
-    // module used to know if a restart is good
-    public HeuristicRestartModule restartH;
+  // timeout for search
+  private long timeout;
 
+  // used to stop search
+  private boolean mustStop = false;
 
-    // timeout for search
-    private long timeout;
+  // thread used for timeouts
+  private TimerTask task = null;
 
-    // used to stop search
-    private boolean mustStop = false;
+  // next clause to learn
+  private MapClause clauseToLearn = null;
 
-    // thread used for timeouts
-    private TimerTask task = null;
+  public void onExplain(MapClause explanation) {
+    clauseToLearn = explanation;
+  }
 
-    // next clause to learn
-    private MapClause clauseToLearn = null;
+  public void onSolution(boolean solution) {
+    mustStop = true;
+  }
 
+  /**
+   * perform search on the given solver, without limit of time. Must be called at most once after
+   * initialize() was called.
+   */
+  public void onStart() {
 
-    public void onExplain(MapClause explanation) {
-        clauseToLearn = explanation;
+    // setup timeout architecture
+    if (timeout > 0) {
+      core.logc("begin solving, time limit: %d ms", timeout);
+      // in case of timeout, add a task to stop after the timeout
+      initializeTask();
+    } else {
+      core.logc("begin solving, no time limit");
     }
 
+    search();
 
-    public void onSolution(boolean solution) {
-        mustStop = true;
-    }
+    core.stop();
+    core.logc("end solving");
+  }
 
-    /**
-     * perform search on the given solver, without limit of time.
-     * Must be called at most once after initialize() was called.
-     */
-    public void onStart() {
+  /** stops search */
+  public void onStop() {
+    // cancel task
+    if (task != null) task.cancel();
+    mustStop = true;
+  }
 
-        // setup timeout architecture
-        if (timeout > 0) {
-            core.logc("begin solving, time limit: %d ms", timeout);
-            // in case of timeout, add a task to stop after the timeout
-            initializeTask();
-        } else {
-            core.logc("begin solving, no time limit");
-        }
+  /** main search loop */
+  private void search() {
+    int currentLevel = 0;
 
-        search();
+    // loop until a solution is found or timeout occurs
+    while (!mustStop) {
 
-        core.stop();
-        core.logc("end solving");
-    }
+      // if conflict, backtrack or restart
+      if (core.currentState == SolverState.CONFLICT) {
+        assert core.currentLevel > 0; // else, should have solution
 
-    /**
-     * stops search
-     */
-    public void onStop() {
-        // cancel task
-        if (task != null)
-            task.cancel();
-        mustStop = true;
-    }
-
-    /**
-     * main search loop
-     */
-    private void search() {
-        int currentLevel = 0;
-
-        // loop until a solution is found or timeout occurs
-        while (!mustStop) {
-
-            // if conflict, backtrack or restart
-            if (core.currentState == SolverState.CONFLICT) {
-                assert core.currentLevel > 0; // else, should have solution
-
-				/*
+        /*
          * restarts may be proposed by the restart module. Otherwise,
-				 * just perform a backjump.
-				 */
-                if (restartH.shouldRestart) {
-                    // restart
+         * just perform a backjump.
+         */
+        if (restartH.shouldRestart) {
+          // restart
 
-                    core.restart();
-                    currentLevel = core.currentLevel;
-                    assert currentLevel == 0;
+          core.restart();
+          currentLevel = core.currentLevel;
+          assert currentLevel == 0;
 
-                } else {
-                    // backjump
+        } else {
+          // backjump
 
-                    int bjLevel = core.getLevelToBackjump();
-                    assert bjLevel < currentLevel;
-                    core.backjumpToLevel(bjLevel);
-                    core.triggerIdleEvent();
+          int bjLevel = core.getLevelToBackjump();
+          assert bjLevel < currentLevel;
+          core.backjumpToLevel(bjLevel);
+          core.triggerIdleEvent();
 
-                    if (clauseToLearn != null) {
-                        core.triggerLearnEvent(clauseToLearn);
-                        clauseToLearn = null;
-                    }
+          if (clauseToLearn != null) {
+            core.triggerLearnEvent(clauseToLearn);
+            clauseToLearn = null;
+          }
 
-                    currentLevel = core.currentLevel;
-
-                }
-
-            } else {
-                // no conflict, one search step
-
-                currentLevel++;
-
-                // find literal (if not possible, return unsatisfiable)
-                int nextLiteral = assertionH.findNextVar();
-
-                if (nextLiteral == 0) {
-                    // if no literal is available, solver must be SAT
-                    assert core.hasSolution();
-
-                    break;
-                } else {
-                    // else, set the literal
-                    core.assertLiteral(nextLiteral, currentLevel);
-                }
-            }
+          currentLevel = core.currentLevel;
         }
+
+      } else {
+        // no conflict, one search step
+
+        currentLevel++;
+
+        // find literal (if not possible, return unsatisfiable)
+        int nextLiteral = assertionH.findNextVar();
+
+        if (nextLiteral == 0) {
+          // if no literal is available, solver must be SAT
+          assert core.hasSolution();
+
+          break;
+        } else {
+          // else, set the literal
+          core.assertLiteral(nextLiteral, currentLevel);
+        }
+      }
     }
+  }
 
-    /**
-     * creates a thread and runs it
-     */
-    private void initializeTask() {
+  /** creates a thread and runs it */
+  private void initializeTask() {
 
-        // after a while, stop search
-        task = new TimerTask() {
-            @Override public void run() {
-                core.stop();
-                core.logc("timeout occurred");
-            }
+    // after a while, stop search
+    task =
+        new TimerTask() {
+          @Override
+          public void run() {
+            core.stop();
+            core.logc("timeout occurred");
+          }
         };
 
-        // schedule task for timeout
-        long realTimeout = timeout - TIME_MARGIN;
-        core.timer.schedule(task, realTimeout);
-    }
+    // schedule task for timeout
+    long realTimeout = timeout - TIME_MARGIN;
+    core.timer.schedule(task, realTimeout);
+  }
 
-    /**
-     * search implementation, without timeout (search until solution is found)
-     */
-    public SearchModule() {
-    }
+  /** search implementation, without timeout (search until solution is found) */
+  public SearchModule() {}
 
-    @Override public String toString() {
-        return "SearchModule";
-    }
+  @Override
+  public String toString() {
+    return "SearchModule";
+  }
 
+  public void initialize(Core core) {
+    timeout = core.config.timeout > 0 ? core.config.timeout : 0;
 
-    public void initialize(Core core) {
-        timeout = core.config.timeout > 0 ? core.config.timeout : 0;
+    // add itself to the Core
+    this.core = core;
+    core.search = this;
 
-        // add itself to the Core
-        this.core = core;
-        core.search = this;
+    // register for events
+    core.solutionModules[core.numSolutionModules++] = this;
+    core.explanationModules[core.numExplanationModules++] = this;
+    core.startStopModules[core.numStartStopModules++] = this;
 
-        // register for events
-        core.solutionModules[core.numSolutionModules++] = this;
-        core.explanationModules[core.numExplanationModules++] = this;
-        core.startStopModules[core.numStartStopModules++] = this;
-
-        // create heuristic and forget heuristic modules
-        activity = new ActivityModule();
-        assertionH = new HeuristicAssertionModule(activity);
-        restartH = new HeuristicRestartModule();
-        core.addComponent(activity);
-        core.addComponent(assertionH);
-        core.addComponent(restartH);
-    }
-
+    // create heuristic and forget heuristic modules
+    activity = new ActivityModule();
+    assertionH = new HeuristicAssertionModule(activity);
+    restartH = new HeuristicRestartModule();
+    core.addComponent(activity);
+    core.addComponent(assertionH);
+    core.addComponent(restartH);
+  }
 }

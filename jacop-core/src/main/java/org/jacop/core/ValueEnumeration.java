@@ -36,29 +36,26 @@ package org.jacop.core;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public abstract class ValueEnumeration {
 
-    /**
-     * It checks if the value enumeration has more elements.
-     *
-     * @return true if more elements can be enumerated, false otherwise.
-     */
-    public abstract boolean hasMoreElements();
+  /**
+   * It checks if the value enumeration has more elements.
+   *
+   * @return true if more elements can be enumerated, false otherwise.
+   */
+  public abstract boolean hasMoreElements();
 
-    /**
-     * It returns the next element in the enumeration.
-     *
-     * @return the next element.
-     */
-    public abstract int nextElement();
+  /**
+   * It returns the next element in the enumeration.
+   *
+   * @return the next element.
+   */
+  public abstract int nextElement();
 
-    /**
-     * This function is called to inform enumeration of the change of the domain
-     * it enumerates over. The enumeration will update its private data structure
-     * and if possible adapt next element to the closest (on the right) which is
-     * still in the domain.
-     */
-    public abstract void domainHasChanged();
-
+  /**
+   * This function is called to inform enumeration of the change of the domain it enumerates over.
+   * The enumeration will update its private data structure and if possible adapt next element to
+   * the closest (on the right) which is still in the domain.
+   */
+  public abstract void domainHasChanged();
 }

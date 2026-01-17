@@ -37,93 +37,82 @@ import java.util.Set;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class FSMState {
 
-    /**
-     * Id of the state. There can be multiple copies of the same state with the same id.
-     */
-    public int id;
+  /** Id of the state. There can be multiple copies of the same state with the same id. */
+  public int id;
 
-    /**
-     * It specifies the list of transitions  outgoing from this state.
-     */
-    public Set<FSMTransition> transitions;
+  /** It specifies the list of transitions outgoing from this state. */
+  public Set<FSMTransition> transitions;
 
-    /**
-     * It constructs a FSM state.
-     *
-     * @param transitions it specifies transition
-     * @param id          state id
-     */
-    public FSMState(HashSet<FSMTransition> transitions, int id) {
-        this.transitions = transitions;
-        this.id = id;
-    }
+  /**
+   * It constructs a FSM state.
+   *
+   * @param transitions it specifies transition
+   * @param id state id
+   */
+  public FSMState(HashSet<FSMTransition> transitions, int id) {
+    this.transitions = transitions;
+    this.id = id;
+  }
 
-    /**
-     * It creates a state with id equl to the number of instances FSMState created.
-     */
-    public FSMState() {
-        this.id = FSM.idNumber.incrementAndGet();
-        transitions = new HashSet<FSMTransition>();
-    }
+  /** It creates a state with id equl to the number of instances FSMState created. */
+  public FSMState() {
+    this.id = FSM.idNumber.incrementAndGet();
+    transitions = new HashSet<FSMTransition>();
+  }
 
+  /**
+   * It creates a state with an id as the id specified by a supplied state.
+   *
+   * @param a state from which id is taken while creating this state.
+   */
+  public FSMState(FSMState a) {
+    this.id = a.id;
+    transitions = new HashSet<FSMTransition>();
+  }
 
-    /**
-     * It creates a state with an id as the id specified by a supplied state.
-     *
-     * @param a state from which id is taken while creating this state.
-     */
-    public FSMState(FSMState a) {
-        this.id = a.id;
-        transitions = new HashSet<FSMTransition>();
-    }
+  /**
+   * Performing deep clone unless this state has already a state with the same id in the array of
+   * states.
+   *
+   * @param states it contains the states which do not need to be created, only reused.
+   * @return a deep clone of the current state.
+   */
+  public FSMState deepClone(Set<FSMState> states) {
 
-    /**
-     * Performing deep clone unless this state has already a state with
-     * the same id in the array of states.
-     *
-     * @param states it contains the states which do not need to be created, only reused.
-     * @return a deep clone of the current state.
-     */
-    public FSMState deepClone(Set<FSMState> states) {
+    // replace by HashSet contains check.
+    FSMState newFSM = null;
+    for (FSMState s : states) if (s.id == this.id) newFSM = s;
+    if (newFSM != null) return newFSM;
 
-        // replace by HashSet contains check.
-        FSMState newFSM = null;
-        for (FSMState s : states)
-            if (s.id == this.id)
-                newFSM = s;
-        if (newFSM != null)
-            return newFSM;
+    newFSM = new FSMState(this);
+    states.add(newFSM);
+    for (FSMTransition t : this.transitions) newFSM.transitions.add(t.deepClone(states));
+    return newFSM;
+  }
 
-        newFSM = new FSMState(this);
-        states.add(newFSM);
-        for (FSMTransition t : this.transitions)
-            newFSM.transitions.add(t.deepClone(states));
-        return newFSM;
-    }
+  /**
+   * It adds transition to the list of transitions from this state.
+   *
+   * @param transition the transition being added.
+   */
+  public void addTransition(FSMTransition transition) {
+    transitions.add(transition);
+  }
 
-    /**
-     * It adds transition to the list of transitions from
-     * this state.
-     *
-     * @param transition the transition being added.
-     */
-    public void addTransition(FSMTransition transition) {
-        transitions.add(transition);
-    }
+  @Override
+  public boolean equals(Object o) {
+    return this.id == ((FSMState) o).id;
+  }
 
-    @Override public boolean equals(Object o) {
-        return this.id == ((FSMState) o).id;
-    }
+  @Override
+  public int hashCode() {
+    return id;
+  }
 
-    @Override public int hashCode() {
-        return id;
-    }
-
-    @Override public String toString() {
-        return "state_" + String.valueOf(id);
-    }
-
+  @Override
+  public String toString() {
+    return "state_" + String.valueOf(id);
+  }
 }

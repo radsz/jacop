@@ -30,6 +30,7 @@
 
 package org.jacop.fz.examples;
 
+import java.util.Arrays;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
@@ -39,82 +40,79 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.FlatzincLoader;
 import org.jacop.search.DepthFirstSearch;
 
-import java.util.Arrays;
-
 /**
- * The class Run is used to run test programs for JaCoP package.
- * It is used for test purpose only.
+ * The class Run is used to run test programs for JaCoP package. It is used for test purpose only.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
 public class FloatMinimize {
 
-    public static void main(String args[]) {
+  public static void main(String args[]) {
 
-        FloatMinimize run = new FloatMinimize();
+    FloatMinimize run = new FloatMinimize();
 
-        run.ex(args);
+    run.ex(args);
+  }
 
+  FloatMinimize() {}
+
+  void ex(String[] args) {
+
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
+
+    if (args.length == 0) {
+      args = new String[2];
+      args[0] = "-s";
+      args[1] = "camel6.fzn";
     }
 
-    FloatMinimize() {
+    FloatDomain.setPrecision(1E-4);
+
+    FlatzincLoader fl = new FlatzincLoader(args);
+    fl.load();
+
+    Store store = fl.getStore();
+
+    // System.out.println (store);
+
+    System.out.println(
+        "\nVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+
+    if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("float_search"))) {
+      throw new RuntimeException(
+          "The problem is not of type float_search and cannot be handled by this method");
+    }
+    if (fl.getSolve().getSolveKind() != 1) {
+      throw new RuntimeException(
+          "The problem is not minimization problem and cannot be handled by this method");
     }
 
-    void ex(String[] args) {
+    FloatVar[] vars = (FloatVar[]) fl.getSearch().vars();
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
 
-        if (args.length == 0) {
-            args = new String[2];
-            args[0] = "-s";
-            args[1] = "camel6.fzn";
-        }
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s =
+        new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect().getVarSel());
 
-        FloatDomain.setPrecision(1E-4);
+    Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, (FloatVar) fl.getCost());
+    boolean result = min.minimize();
 
-        FlatzincLoader fl = new FlatzincLoader(args);
-        fl.load();
+    if (result) {
+      System.out.println("Final cost = " + min.getFinalCost());
+      System.out.println("Variables: ");
+      FloatInterval[] values = min.getFinalVarValues();
+      for (int i = 0; i < vars.length; i++) System.out.println(vars[i].id() + " = " + values[i]);
+      System.out.println("Yes");
+    } else System.out.println("*** No");
 
-        Store store = fl.getStore();
-
-        // System.out.println (store);
-
-        System.out.println("\nVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
-
-
-        if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("float_search"))) {
-            throw new RuntimeException("The problem is not of type float_search and cannot be handled by this method");
-        }
-        if (fl.getSolve().getSolveKind() != 1) {
-            throw new RuntimeException("The problem is not minimization problem and cannot be handled by this method");
-        }
-
-        FloatVar[] vars = (FloatVar[]) fl.getSearch().vars();
-
-        System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
-
-        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect().getVarSel());
-
-        Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, (FloatVar) fl.getCost());
-        boolean result = min.minimize();
-
-        if (result) {
-            System.out.println("Final cost = " + min.getFinalCost());
-            System.out.println("Variables: ");
-            FloatInterval[] values = min.getFinalVarValues();
-            for (int i = 0; i < vars.length; i++)
-                System.out.println(vars[i].id() + " = " + values[i]);
-            System.out.println("Yes");
-        } else
-            System.out.println("*** No");
-
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
-        System.out.println("\n\t*** Execution time = " + T + " ms");
-
-    }
-
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
 }

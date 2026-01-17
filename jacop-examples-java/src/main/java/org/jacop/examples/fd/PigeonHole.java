@@ -30,102 +30,81 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * It solves the PigeonHole problem.
- * <p>
- * The problem is how to assign n pigeons into n-1 holes in
- * such a way that each hole holds only one pigeons.
- * Clearly this problem is not satisfiable.
+ *
+ * <p>The problem is how to assign n pigeons into n-1 holes in such a way that each hole holds only
+ * one pigeons. Clearly this problem is not satisfiable.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PigeonHole extends ExampleFD {
 
-    /**
-     *
-     */
-    public int noPigeons = 5;
+  /** */
+  public int noPigeons = 5;
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        IntVar[] numbers = new IntVar[noPigeons];
+    IntVar[] numbers = new IntVar[noPigeons];
 
-        for (int i = 0; i < noPigeons; i++)
-            numbers[i] = new IntVar(store, "h" + (i + 1), 1, noPigeons - 1);
+    for (int i = 0; i < noPigeons; i++)
+      numbers[i] = new IntVar(store, "h" + (i + 1), 1, noPigeons - 1);
 
-        store.impose(new Alldiff(numbers));
+    store.impose(new Alldiff(numbers));
 
-        for (IntVar v : numbers)
-            vars.add(v);
+    for (IntVar v : numbers) vars.add(v);
+  }
 
-    }
+  /** It specifies inefficient model which uses only primitive constraints. */
+  public void modelBasic() {
 
-    /**
-     * It specifies inefficient model which uses only
-     * primitive constraints.
-     */
-    public void modelBasic() {
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    IntVar[] numbers = new IntVar[noPigeons];
 
-        IntVar[] numbers = new IntVar[noPigeons];
+    for (int i = 0; i < noPigeons; i++)
+      numbers[i] = new IntVar(store, "h" + (i + 1), 1, noPigeons - 1);
 
-        for (int i = 0; i < noPigeons; i++)
-            numbers[i] = new IntVar(store, "h" + (i + 1), 1, noPigeons - 1);
+    for (int i = 0; i < noPigeons; i++)
+      for (int j = i + 1; j < noPigeons; j++) store.impose(new XneqY(numbers[i], numbers[j]));
 
-        for (int i = 0; i < noPigeons; i++)
-            for (int j = i + 1; j < noPigeons; j++)
-                store.impose(new XneqY(numbers[i], numbers[j]));
+    for (IntVar v : numbers) vars.add(v);
+  }
 
-        for (IntVar v : numbers)
-            vars.add(v);
+  /**
+   * It executes the program to solve PigeonHole problem in two different ways. The first approach
+   * uses global constraint, the second approach uses only primitive constraints.
+   *
+   * @param args the number of pigeons.
+   */
+  public static void main(String args[]) {
 
-    }
+    PigeonHole example = new PigeonHole();
 
-    /**
-     * It executes the program to solve PigeonHole problem in two
-     * different ways. The first approach uses global constraint,
-     * the second approach uses only primitive constraints.
-     *
-     * @param args the number of pigeons.
-     */
-    public static void main(String args[]) {
+    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
 
-        PigeonHole example = new PigeonHole();
+    example.model();
 
-        if (args.length > 1)
-            example.noPigeons = Integer.parseInt(args[1]);
+    if (example.search()) System.out.println("Solution(s) found");
 
-        example.model();
+    example = new PigeonHole();
 
-        if (example.search())
-            System.out.println("Solution(s) found");
+    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
 
-        example = new PigeonHole();
+    example.modelBasic();
 
-        if (args.length > 1)
-            example.noPigeons = Integer.parseInt(args[1]);
-
-        example.modelBasic();
-
-        if (example.search())
-            System.out.println("Solution(s) found");
-
-    }
-
-
-
+    if (example.search()) System.out.println("Solution(s) found");
+  }
 }

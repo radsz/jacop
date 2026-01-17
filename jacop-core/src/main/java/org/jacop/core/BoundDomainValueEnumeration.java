@@ -36,41 +36,39 @@ package org.jacop.core;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class BoundDomainValueEnumeration extends ValueEnumeration {
 
-    int current;
+  int current;
 
-    int min;
+  int min;
 
-    int max;
+  int max;
 
-    BoundDomain domain;
+  BoundDomain domain;
 
-    /**
-     * @param dom It specifies the BoundDomain for which enumeration of values is performed.
-     */
-    public BoundDomainValueEnumeration(BoundDomain dom) {
-        min = dom.min();
-        current = min - 1;
-        max = dom.max();
-        domain = dom;
-    }
+  /** @param dom It specifies the BoundDomain for which enumeration of values is performed. */
+  public BoundDomainValueEnumeration(BoundDomain dom) {
+    min = dom.min();
+    current = min - 1;
+    max = dom.max();
+    domain = dom;
+  }
 
-    @Override public boolean hasMoreElements() {
-        return (current < max);
-    }
+  @Override
+  public boolean hasMoreElements() {
+    return (current < max);
+  }
 
-    @Override public int nextElement() {
-        assert (current < max);
-        return ++current;
-    }
+  @Override
+  public int nextElement() {
+    assert (current < max);
+    return ++current;
+  }
 
-    @Override public void domainHasChanged() {
-        min = domain.min();
-        max = domain.max();
-        if (current < min - 1)
-            current = min - 1;
-    }
-
+  @Override
+  public void domainHasChanged() {
+    min = domain.min();
+    max = domain.max();
+    if (current < min - 1) current = min - 1;
+  }
 }

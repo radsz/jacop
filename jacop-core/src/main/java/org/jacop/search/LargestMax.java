@@ -39,36 +39,27 @@ import org.jacop.core.IntVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LargestMax<T extends IntVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs variable comparator with priority based on the largest maximal value.
-     */
-    public LargestMax() {
-    }
+  /** It constructs variable comparator with priority based on the largest maximal value. */
+  public LargestMax() {}
 
-    public int compare(double left, T var) {
-        int right = var.dom().max();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    int right = var.dom().max();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.dom().max();
-        int right = rightVar.dom().max();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.dom().max();
+    int right = rightVar.dom().max();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.dom().max();
-    }
-
+  public double metric(T var) {
+    return var.dom().max();
+  }
 }

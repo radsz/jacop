@@ -28,56 +28,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.regular;
 
 import org.jacop.core.TimeStamp;
 
 /**
- * The class responsible for connecting two states in regular automaton
- * of Regular constraint.
+ * The class responsible for connecting two states in regular automaton of Regular constraint.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class RegEdge {
 
-    /**
-     * The origin state.
-     */
-    public RegState org;
+  /** The origin state. */
+  public RegState org;
 
-    /**
-     * The destination state.
-     */
-    public RegState dest;
+  /** The destination state. */
+  public RegState dest;
 
-    /**
-     * The constructor which creates an edge.
-     *
-     * @param org  the origin state.
-     * @param dest the destination state.
-     */
-    public RegEdge(RegState org, RegState dest) {
-        this.org = org;
-        this.dest = dest;
-    }
+  /**
+   * The constructor which creates an edge.
+   *
+   * @param org the origin state.
+   * @param dest the destination state.
+   */
+  public RegEdge(RegState org, RegState dest) {
+    this.org = org;
+    this.dest = dest;
+  }
 
-    /**
-     * It checks if the edge is between active states.
-     *
-     * @param activeLevels specifies last active states.
-     * @return true if both origin and destination state are active.
-     */
-    public boolean check(TimeStamp<Integer>[] activeLevels) {
+  /**
+   * It checks if the edge is between active states.
+   *
+   * @param activeLevels specifies last active states.
+   * @return true if both origin and destination state are active.
+   */
+  public boolean check(TimeStamp<Integer>[] activeLevels) {
 
-        if (org.isActive(activeLevels) && dest.isActive(activeLevels))
-            return true;
+    if (org.isActive(activeLevels) && dest.isActive(activeLevels)) return true;
 
-        return false;
-
-
-    }
-
-}		
+    return false;
+  }
+}

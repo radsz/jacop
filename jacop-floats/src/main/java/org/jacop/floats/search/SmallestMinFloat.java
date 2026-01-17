@@ -34,43 +34,34 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 
 /**
- * Defines a SmallestMinFloat comparator for variables. It prefers variables
- * which have smaller minimal value in their domain.
+ * Defines a SmallestMinFloat comparator for variables. It prefers variables which have smaller
+ * minimal value in their domain.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class SmallestMinFloat<T extends FloatVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs SmallestMinFloat Comparator.
-     */
-    public SmallestMinFloat() {
-    }
+  /** It constructs SmallestMinFloat Comparator. */
+  public SmallestMinFloat() {}
 
-    public int compare(double left, T var) {
-        double right = var.dom().min();
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    double right = var.dom().min();
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        double left = leftVar.dom().min();
-        double right = rightVar.dom().min();
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    double left = leftVar.dom().min();
+    double right = rightVar.dom().min();
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public double metric(T o) {
-        return o.dom().min();
-    }
-
+  public double metric(T o) {
+    return o.dom().min();
+  }
 }

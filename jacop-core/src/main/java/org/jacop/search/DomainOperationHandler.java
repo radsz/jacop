@@ -34,13 +34,12 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Handler interface for type-specific domain operations in search algorithms.
- * This interface allows search classes to perform domain operations (inValue, inComplement, etc.)
- * on different variable types without directly depending on their concrete implementations.
- * <p>
- * Implementations of this interface should be provided by the respective modules:
- * - IntDomainOperationHandler in jacop-core
- * - FloatDomainOperationHandler in jacop-floats (if needed)
+ * Handler interface for type-specific domain operations in search algorithms. This interface allows
+ * search classes to perform domain operations (inValue, inComplement, etc.) on different variable
+ * types without directly depending on their concrete implementations.
+ *
+ * <p>Implementations of this interface should be provided by the respective modules: -
+ * IntDomainOperationHandler in jacop-core - FloatDomainOperationHandler in jacop-floats (if needed)
  * - SetDomainOperationHandler in jacop-sets
  *
  * @author Generated for multi-module refactoring
@@ -48,43 +47,42 @@ import org.jacop.core.Var;
  */
 public interface DomainOperationHandler {
 
-    /**
-     * Checks if this handler can process the given variable type.
-     *
-     * @param var the variable to check
-     * @return true if this handler can process the variable, false otherwise
-     */
-    boolean isApplicable(Var var);
+  /**
+   * Checks if this handler can process the given variable type.
+   *
+   * @param var the variable to check
+   * @return true if this handler can process the variable, false otherwise
+   */
+  boolean isApplicable(Var var);
 
-    /**
-     * Assigns a specific value to the variable's domain.
-     * For IntVar: assigns the integer value.
-     * For SetVar: adds the value to the GLB (Greatest Lower Bound) or LUB complement.
-     *
-     * @param store the store containing the variable
-     * @param var the variable to assign
-     * @param value the value to assign
-     * @param leftBranch true if this is the left branch (for SetVar: use GLB), false for right branch
-     */
-    void inValue(Store store, Var var, int value, boolean leftBranch);
+  /**
+   * Assigns a specific value to the variable's domain. For IntVar: assigns the integer value. For
+   * SetVar: adds the value to the GLB (Greatest Lower Bound) or LUB complement.
+   *
+   * @param store the store containing the variable
+   * @param var the variable to assign
+   * @param value the value to assign
+   * @param leftBranch true if this is the left branch (for SetVar: use GLB), false for right branch
+   */
+  void inValue(Store store, Var var, int value, boolean leftBranch);
 
-    /**
-     * Removes a specific value from the variable's domain (complement operation).
-     * For IntVar: removes the integer value.
-     * For SetVar: removes from GLB or adds to LUB complement.
-     *
-     * @param store the store containing the variable
-     * @param var the variable to modify
-     * @param value the value to remove
-     * @param leftBranch true if this is the left branch (for SetVar: use LUB complement), false for right branch
-     */
-    void inComplement(Store store, Var var, int value, boolean leftBranch);
+  /**
+   * Removes a specific value from the variable's domain (complement operation). For IntVar: removes
+   * the integer value. For SetVar: removes from GLB or adds to LUB complement.
+   *
+   * @param store the store containing the variable
+   * @param var the variable to modify
+   * @param value the value to remove
+   * @param leftBranch true if this is the left branch (for SetVar: use LUB complement), false for
+   *     right branch
+   */
+  void inComplement(Store store, Var var, int value, boolean leftBranch);
 
-    /**
-     * Gets a string representation of the variable's domain for display purposes.
-     *
-     * @param var the variable
-     * @return string representation of the domain
-     */
-    String getDomainString(Var var);
+  /**
+   * Gets a string representation of the variable's domain for display purposes.
+   *
+   * @param var the variable
+   * @return string representation of the domain
+   */
+  String getDomainString(Var var);
 }

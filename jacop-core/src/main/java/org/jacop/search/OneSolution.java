@@ -34,90 +34,81 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Defines functionality for OneSolution plug-in, that is the search
- * with this plug-in will stop after funding first solution. Each call
- * to this search will restore the functionality and the search will
- * again search for a single solution.
+ * Defines functionality for OneSolution plug-in, that is the search with this plug-in will stop
+ * after funding first solution. Each call to this search will restore the functionality and the
+ * search will again search for a single solution.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
+    implements ConsistencyListener, InitializeListener {
 
-public class OneSolution<T extends Var> extends SimpleSolutionListener<T> implements ConsistencyListener, InitializeListener {
+  boolean solutionFound = false;
 
-    boolean solutionFound = false;
+  ConsistencyListener[] childrenConsistencyListeners;
 
-    ConsistencyListener[] childrenConsistencyListeners;
+  InitializeListener[] childrenInitializeListeners;
 
-    InitializeListener[] childrenInitializeListeners;
+  public OneSolution() {}
 
-    public OneSolution() {
-    }
+  /*
+   * Initilize listener
+   */
+  public void executedAtInitialize(Store store) {
+    solutionFound = false;
+  }
 
-    /*
-     * Initilize listener
-     */
-    public void executedAtInitialize(Store store) {
-        solutionFound = false;
-    }
+  /**
+   * It sets the children listeners of this initialize listener.
+   *
+   * @param children children listeners
+   */
+  public void setChildrenListeners(InitializeListener[] children) {
 
-    /**
-     * It sets the children listeners of this initialize listener.
-     *
-     * @param children children listeners
-     */
-    public void setChildrenListeners(InitializeListener[] children) {
+    childrenInitializeListeners = children;
+  }
 
-        childrenInitializeListeners = children;
+  /**
+   * It sets one child listener for this initialize listener.
+   *
+   * @param child the child of this initialize listener.
+   */
+  public void setChildrenListeners(InitializeListener child) {
 
-    }
+    childrenInitializeListeners = new InitializeListener[1];
+    childrenInitializeListeners[0] = child;
+  }
 
-    /**
-     * It sets one child listener for this initialize listener.
-     *
-     * @param child the child of this initialize listener.
-     */
-    public void setChildrenListeners(InitializeListener child) {
+  /*
+   * Solution listener
+   */
+  public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
-        childrenInitializeListeners = new InitializeListener[1];
-        childrenInitializeListeners[0] = child;
+    boolean returnCode = super.executeAfterSolution(search, select);
 
-    }
+    solutionFound = true;
 
-    /*
-     * Solution listener
-     */
-    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+    return returnCode;
+  }
 
-        boolean returnCode = super.executeAfterSolution(search, select);
+  /*
+   * Consistency listener
+   */
+  public boolean executeAfterConsistency(boolean consistent) {
 
-        solutionFound = true;
+    if (solutionFound) return false;
+    else return consistent;
+  }
 
-        return returnCode;
-    }
+  public void setChildrenListeners(ConsistencyListener[] children) {
 
-    /*
-     * Consistency listener
-     */
-    public boolean executeAfterConsistency(boolean consistent) {
+    childrenConsistencyListeners = children; //
+  }
 
-        if (solutionFound)
-            return false;
-        else
-            return consistent;
-    }
+  public void setChildrenListeners(ConsistencyListener child) {
 
-    public void setChildrenListeners(ConsistencyListener[] children) {
-
-        childrenConsistencyListeners = children; //
-
-    }
-
-    public void setChildrenListeners(ConsistencyListener child) {
-
-        childrenConsistencyListeners = new ConsistencyListener[1];
-        childrenConsistencyListeners[0] = child;
-
-    }
-
+    childrenConsistencyListeners = new ConsistencyListener[1];
+    childrenConsistencyListeners[0] = child;
+  }
 }

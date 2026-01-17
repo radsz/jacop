@@ -33,8 +33,8 @@ package org.jacop.floats.search;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
-//import org.jacop.core.ValueEnumeration;
 
+// import org.jacop.core.ValueEnumeration;
 
 /**
  * Defines a MaxRegretFloat comparator for Variables.
@@ -43,89 +43,77 @@ import org.jacop.search.ComparatorVariable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs MaxRegretFloat comparator.
-     */
-    public MaxRegretFloat() {
-    }
+  /** It constructs MaxRegretFloat comparator. */
+  public MaxRegretFloat() {}
 
-    public int compare(double ldiff, T var) {
+  public int compare(double ldiff, T var) {
 
-        // ValueEnumeration rEnum = var.domain.valueEnumeration();
+    // ValueEnumeration rEnum = var.domain.valueEnumeration();
 
-        // int rmin = rEnum.nextElement();
-        // int rminNext = 0;
-        // if (rEnum.hasMoreElements())
-        // 	rminNext = rEnum.nextElement();
-        // else
-        // 	rminNext = IntDomain.MaxInt;
-        double rmin = var.min();
-        double rminNext = ((FloatIntervalDomain) var.domain).nextValue(rmin);
+    // int rmin = rEnum.nextElement();
+    // int rminNext = 0;
+    // if (rEnum.hasMoreElements())
+    // 	rminNext = rEnum.nextElement();
+    // else
+    // 	rminNext = IntDomain.MaxInt;
+    double rmin = var.min();
+    double rminNext = ((FloatIntervalDomain) var.domain).nextValue(rmin);
 
-        double rdiff = rminNext - rmin;
+    double rdiff = rminNext - rmin;
 
-        if (ldiff > rdiff)
-            return 1;
-        if (ldiff < rdiff)
-            return -1;
-        return 0;
+    if (ldiff > rdiff) return 1;
+    if (ldiff < rdiff) return -1;
+    return 0;
+  }
 
-    }
+  public int compare(T left, T right) {
 
-    public int compare(T left, T right) {
+    // ValueEnumeration lEnum = left.domain.valueEnumeration();
 
-        // ValueEnumeration lEnum = left.domain.valueEnumeration();
+    // int lmin = lEnum.nextElement();
+    // int lminNext = 0;
+    // if (lEnum.hasMoreElements())
+    //   lminNext = lEnum.nextElement();
+    // else
+    //   lminNext = IntDomain.MaxInt;
+    double lmin = left.min();
+    double lminNext = ((FloatIntervalDomain) left.domain).nextValue(lmin);
 
-        // int lmin = lEnum.nextElement();
-        // int lminNext = 0;
-        // if (lEnum.hasMoreElements())
-        //   lminNext = lEnum.nextElement();
-        // else
-        //   lminNext = IntDomain.MaxInt;
-        double lmin = left.min();
-        double lminNext = ((FloatIntervalDomain) left.domain).nextValue(lmin);
+    double ldiff = lminNext - lmin;
 
-        double ldiff = lminNext - lmin;
+    // ValueEnumeration rEnum = right.domain.valueEnumeration();
 
-        // ValueEnumeration rEnum = right.domain.valueEnumeration();
+    // int rmin = rEnum.nextElement();
+    // int rminNext = 0;
+    // if (rEnum.hasMoreElements())
+    //   rminNext = rEnum.nextElement();
+    // else
+    //   rminNext = IntDomain.MaxInt;
+    double rmin = right.min();
+    double rminNext = ((FloatIntervalDomain) right.domain).nextValue(rmin);
 
-        // int rmin = rEnum.nextElement();
-        // int rminNext = 0;
-        // if (rEnum.hasMoreElements())
-        //   rminNext = rEnum.nextElement();
-        // else
-        //   rminNext = IntDomain.MaxInt;
-        double rmin = right.min();
-        double rminNext = ((FloatIntervalDomain) right.domain).nextValue(rmin);
+    double rdiff = rminNext - rmin;
 
-        double rdiff = rminNext - rmin;
+    if (ldiff > rdiff) return 1;
+    if (ldiff < rdiff) return -1;
+    return 0;
+  }
 
-        if (ldiff > rdiff)
-            return 1;
-        if (ldiff < rdiff)
-            return -1;
-        return 0;
+  public double metric(T o) {
 
-    }
+    // ValueEnumeration oEnum = o.domain.valueEnumeration();
 
-    public double metric(T o) {
+    // int omin = oEnum.nextElement();
+    // int ominNext = 0;
+    // if (oEnum.hasMoreElements())
+    //   ominNext = oEnum.nextElement();
+    // else
+    //   ominNext = IntDomain.MaxInt;
+    double omin = o.min();
+    double ominNext = ((FloatIntervalDomain) o.domain).nextValue(omin);
 
-        // ValueEnumeration oEnum = o.domain.valueEnumeration();
-
-        // int omin = oEnum.nextElement();
-        // int ominNext = 0;
-        // if (oEnum.hasMoreElements())
-        //   ominNext = oEnum.nextElement();
-        // else
-        //   ominNext = IntDomain.MaxInt;
-        double omin = o.min();
-        double ominNext = ((FloatIntervalDomain) o.domain).nextValue(omin);
-
-        return ominNext - omin;
-
-    }
-
+    return ominNext - omin;
+  }
 }

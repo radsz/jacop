@@ -39,36 +39,27 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class MostConstrainedStatic<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs MostConstraintStatic comparator.
-     */
-    public MostConstrainedStatic() {
-    }
+  /** It constructs MostConstraintStatic comparator. */
+  public MostConstrainedStatic() {}
 
-    public int compare(double left, T var) {
-        int right = var.sizeConstraintsOriginal();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    int right = var.sizeConstraintsOriginal();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.sizeConstraintsOriginal();
-        int right = rightVar.sizeConstraintsOriginal();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.sizeConstraintsOriginal();
+    int right = rightVar.sizeConstraintsOriginal();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T o) {
-        return o.sizeConstraintsOriginal();
-    }
-
+  public double metric(T o) {
+    return o.sizeConstraintsOriginal();
+  }
 }

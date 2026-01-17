@@ -30,185 +30,158 @@
 
 package org.jacop.search;
 
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.Var;
-import org.jacop.core.Store;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
- * It is simple and customizable selector of decisions (constraints) which will
- * be enforced by search.
+ * It is simple and customizable selector of decisions (constraints) which will be enforced by
+ * search.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
-    static final boolean debugAll = false;
+  static final boolean debugAll = false;
 
-    public T[] searchVariables;
+  public T[] searchVariables;
 
-    Indomain<T> valueOrdering;
+  Indomain<T> valueOrdering;
 
-    /**
-     * It stores the original positions of variables to be used for input order
-     * tie-breaking.
-     */
+  /** It stores the original positions of variables to be used for input order tie-breaking. */
+  public Map<T, Integer> position;
 
-    public Map<T, Integer> position;
+  int currentIndex = 0;
 
-    int currentIndex = 0;
+  Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
-    Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  /**
+   * The constructor to create a simple choice select mechanism.
+   *
+   * @param variables variables upon which the choice points are created.
+   * @param indomain the value heuristic to choose a value for a given variable.
+   */
+  @SuppressWarnings("unchecked")
+  public RandomSelect(T[] variables, Indomain<T> indomain) {
 
-    /**
-     * The constructor to create a simple choice select mechanism.
-     *
-     * @param variables variables upon which the choice points are created.
-     * @param indomain  the value heuristic to choose a value for a given variable.
-     */
-    @SuppressWarnings("unchecked")
-    public RandomSelect(T[] variables, Indomain<T> indomain) {
+    position = Var.createEmptyPositioning();
 
-        position = Var.createEmptyPositioning();
-
-        int unique = 0;
-        for (int i = 0; i < variables.length; i++) {
-            if (position.get(variables[i]) == null)
-                position.put(variables[i], unique++);
-        }
-
-        this.searchVariables = (T[]) new Var[position.size()];
-
-        for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
-            Map.Entry<T, Integer> e = itr.next();
-            searchVariables[e.getValue()] = e.getKey();
-        }
-
-        valueOrdering = indomain;
-
+    int unique = 0;
+    for (int i = 0; i < variables.length; i++) {
+      if (position.get(variables[i]) == null) position.put(variables[i], unique++);
     }
 
-    /**
-     * It returns the variable which is the base on the next choice point. Only
-     * if choice is of an X = C type. This function returns null if all
-     * variables have a value assigned or a choice point based on other type of
-     * constraint is being selected. The parameter index is the last value which
-     * have been return by this SelectChoicePoint object which has not been
-     * backtracked upon yet.
-     */
+    this.searchVariables = (T[]) new Var[position.size()];
 
-    public T getChoiceVariable(int index) {
-
-        assert (index < searchVariables.length);
-
-        if (debugAll) {
-            System.out.println("index = " + index);
-
-            for (int i = 0; i < searchVariables.length; i++)
-                System.out.print(searchVariables[i] + " ");
-            System.out.println();
-        }
-
-        int finalIndex = searchVariables.length;
-        T currentVariable;
-
-        do {
-
-            int size = finalIndex - index;
-
-            int selectedIndex = index + random.nextInt(size);
-            currentVariable = placeSearchVariable(index, selectedIndex);
-
-        } while (currentVariable.singleton() && ++index < finalIndex);
-
-        if (index == finalIndex) {
-            return null;
-        } else {
-            currentIndex = index;
-
-            if (debugAll)
-                System.out.println("selected " + currentVariable);
-
-            return currentVariable;
-        }
+    for (Iterator<Map.Entry<T, Integer>> itr = position.entrySet().iterator(); itr.hasNext(); ) {
+      Map.Entry<T, Integer> e = itr.next();
+      searchVariables[e.getValue()] = e.getKey();
     }
 
-    /**
-     * It returns a value which is the base of the next choice point. Only if
-     * choice is of an X = C type.
-     */
+    valueOrdering = indomain;
+  }
 
-    public int getChoiceValue() {
+  /**
+   * It returns the variable which is the base on the next choice point. Only if choice is of an X =
+   * C type. This function returns null if all variables have a value assigned or a choice point
+   * based on other type of constraint is being selected. The parameter index is the last value
+   * which have been return by this SelectChoicePoint object which has not been backtracked upon
+   * yet.
+   */
+  public T getChoiceVariable(int index) {
 
-        assert (currentIndex >= 0);
-        assert (currentIndex < searchVariables.length);
-        assert (searchVariables[currentIndex].dom() != null);
+    assert (index < searchVariables.length);
 
-        return valueOrdering.indomain(searchVariables[currentIndex]);
+    if (debugAll) {
+      System.out.println("index = " + index);
 
+      for (int i = 0; i < searchVariables.length; i++) System.out.print(searchVariables[i] + " ");
+      System.out.println();
     }
 
-    /**
-     * It always returns null as choice point is obtained by getChoiceVariable
-     * and getChoiceValue.
-     */
+    int finalIndex = searchVariables.length;
+    T currentVariable;
 
-    public PrimitiveConstraint getChoiceConstraint(int index) {
+    do {
 
-        return null;
+      int size = finalIndex - index;
 
+      int selectedIndex = index + random.nextInt(size);
+      currentVariable = placeSearchVariable(index, selectedIndex);
+
+    } while (currentVariable.singleton() && ++index < finalIndex);
+
+    if (index == finalIndex) {
+      return null;
+    } else {
+      currentIndex = index;
+
+      if (debugAll) System.out.println("selected " + currentVariable);
+
+      return currentVariable;
+    }
+  }
+
+  /**
+   * It returns a value which is the base of the next choice point. Only if choice is of an X = C
+   * type.
+   */
+  public int getChoiceValue() {
+
+    assert (currentIndex >= 0);
+    assert (currentIndex < searchVariables.length);
+    assert (searchVariables[currentIndex].dom() != null);
+
+    return valueOrdering.indomain(searchVariables[currentIndex]);
+  }
+
+  /** It always returns null as choice point is obtained by getChoiceVariable and getChoiceValue. */
+  public PrimitiveConstraint getChoiceConstraint(int index) {
+
+    return null;
+  }
+
+  /** It returns the variables for which assignment in the solution is given. */
+  public Map<T, Integer> getVariablesMapping() {
+
+    return position;
+  }
+
+  /**
+   * It returns the current index. Supplying this value in the next invocation of select will make
+   * search for next variable faster without comprimising efficiency.
+   */
+  public int getIndex() {
+    return currentIndex;
+  }
+
+  /**
+   * It gets as input the index of the variable which is chosen by search to be instantiated at this
+   * stage. The variable is positioned at search position.
+   *
+   * @param searchPosition position at which search store currently choosen variable.
+   * @param variablePosition current position of the variable choosen by search.
+   * @return variable choosen to be a base of the choice point.
+   */
+  public T placeSearchVariable(int searchPosition, int variablePosition) {
+
+    if (searchPosition != variablePosition) {
+
+      T temp = searchVariables[searchPosition];
+
+      searchVariables[searchPosition] = searchVariables[variablePosition];
+
+      searchVariables[variablePosition] = temp;
     }
 
-    /**
-     * It returns the variables for which assignment in the solution is given.
-     */
+    return searchVariables[searchPosition];
+  }
 
-    public Map<T, Integer> getVariablesMapping() {
-
-        return position;
-
-    }
-
-    /**
-     * It returns the current index. Supplying this value in the next invocation
-     * of select will make search for next variable faster without comprimising
-     * efficiency.
-     */
-
-    public int getIndex() {
-        return currentIndex;
-    }
-
-    /**
-     * It gets as input the index of the variable which is chosen by search to
-     * be instantiated at this stage. The variable is positioned at search
-     * position.
-     *
-     * @param searchPosition   position at which search store currently choosen variable.
-     * @param variablePosition current position of the variable choosen by search.
-     * @return variable choosen to be a base of the choice point.
-     */
-
-    public T placeSearchVariable(int searchPosition, int variablePosition) {
-
-        if (searchPosition != variablePosition) {
-
-            T temp = searchVariables[searchPosition];
-
-            searchVariables[searchPosition] = searchVariables[variablePosition];
-
-            searchVariables[variablePosition] = temp;
-        }
-
-        return searchVariables[searchPosition];
-
-    }
-
-    public String toString() {
-        return "" + java.util.Arrays.asList(searchVariables);
-    }
+  public String toString() {
+    return "" + java.util.Arrays.asList(searchVariables);
+  }
 }

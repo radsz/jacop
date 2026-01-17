@@ -42,203 +42,183 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IfThenBool extends PrimitiveConstraint {
 
-         /*
-          * X | Y | Z
-          * 0   0   1
-          * 0   1   1
-          * 1   0   0
-          * 1   1   1
-          */
+  /*
+   * X | Y | Z
+   * 0   0   1
+   * 0   1   1
+   * 1   0   0
+   * 1   1   1
+   */
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
-     */
-    public IntVar x;
+  /** It specifies variable x in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
+  public IntVar x;
 
-    /**
-     * It specifies variable y in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
-     */
-    public IntVar y;
+  /** It specifies variable y in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
+  public IntVar y;
 
-    /**
-     * It specifies variable z in constraint ( X {@literal =>} Y ) {@literal <=>} Z.
-     */
-    public IntVar z;
+  /** It specifies variable z in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
+  public IntVar z;
 
-    /**
-     * It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     * @param z variable z.
-     */
-    public IfThenBool(IntVar x, IntVar y, IntVar z) {
+  /**
+   * It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
+   */
+  public IfThenBool(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
+    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
-        this.z = z;
+    this.x = x;
+    this.y = y;
+    this.z = z;
 
-        setScope(x, y, z);
+    setScope(x, y, z);
 
-        assert (checkInvariants() == null) : checkInvariants();
+    assert (checkInvariants() == null) : checkInvariants();
+  }
 
+  /**
+   * It checks invariants required by the constraint. Namely that boolean variables have boolean
+   * domain.
+   *
+   * @return the string describing the violation of the invariant, null otherwise.
+   */
+  public String checkInvariants() {
+
+    if (x.min() < 0 || x.max() > 1) return "Variable " + x + " does not have boolean domain";
+
+    if (y.min() < 0 || y.max() > 1) return "Variable " + y + " does not have boolean domain";
+
+    if (z.min() < 0 || z.max() > 1) return "Variable " + z + " does not have boolean domain";
+
+    return null;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (z.max() == 0) {
+      x.domain.inValue(store.level, x, 1);
+      y.domain.inValue(store.level, y, 0);
     }
 
-    /**
-     * It checks invariants required by the constraint. Namely that
-     * boolean variables have boolean domain.
-     *
-     * @return the string describing the violation of the invariant, null otherwise.
-     */
-    public String checkInvariants() {
-
-        if (x.min() < 0 || x.max() > 1)
-            return "Variable " + x + " does not have boolean domain";
-
-        if (y.min() < 0 || y.max() > 1)
-            return "Variable " + y + " does not have boolean domain";
-
-        if (z.min() < 0 || z.max() > 1)
-            return "Variable " + z + " does not have boolean domain";
-
-        return null;
+    if (x.max() == 0) {
+      z.domain.inValue(store.level, z, 1);
+    } else if (x.min() == 1) {
+      z.domain.in(store.level, z, y.domain);
+      y.domain.in(store.level, y, z.domain);
     }
 
-    @Override public void consistency(Store store) {
+    if (y.max() == 0) {
+      if (x.singleton()) z.domain.inComplement(store.level, z, x.value());
+      if (z.singleton()) x.domain.inComplement(store.level, x, z.value());
+    } else if (y.min() == 1) {
+      z.domain.inValue(store.level, z, 1);
+    }
+  }
 
-        if (z.max() == 0) {
-            x.domain.inValue(store.level, x, 1);
-            y.domain.inValue(store.level, y, 0);
-        }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      if (x.singleton()) {
 
         if (x.max() == 0) {
-            z.domain.inValue(store.level, z, 1);
-        } else if (x.min() == 1) {
-            z.domain.in(store.level, z, y.domain);
-            y.domain.in(store.level, y, z.domain);
+          z.domain.inValue(store.level, z, 0);
         }
+
+        if (x.min() == 1) {
+          if (y.singleton()) z.domain.inComplement(store.level, z, y.value());
+          if (z.singleton()) y.domain.inComplement(store.level, y, z.value());
+        }
+      }
+
+      if (y.singleton()) {
 
         if (y.max() == 0) {
-            if (x.singleton())
-                z.domain.inComplement(store.level, z, x.value());
-            if (z.singleton())
-                x.domain.inComplement(store.level, x, z.value());
-        } else if (y.min() == 1) {
-            z.domain.inValue(store.level, z, 1);
+          z.domain.in(store.level, z, x.domain);
+          x.domain.in(store.level, x, z.domain);
         }
 
-    }
+        if (y.min() == 1) {
+          z.domain.inValue(store.level, z, 0);
+        }
+      }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+      if (z.min() == 1) {
+        x.domain.inValue(store.level, x, 1);
+        y.domain.inValue(store.level, y, 0);
+      }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+    } while (store.propagationHasOccurred);
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public boolean notSatisfied() {
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+    if (!x.singleton()) return false;
+    if (!z.singleton()) return false;
 
-    @Override public void notConsistency(Store store) {
+    if (x.singleton(0) && z.singleton(0)) return true;
 
-        do {
+    if (!y.singleton()) return false;
 
-            store.propagationHasOccurred = false;
+    if (x.singleton(1) && y.singleton(1) && z.singleton(0)) return true;
 
-            if (x.singleton()) {
+    // 1 0 1
+    return false;
+  }
 
-                if (x.max() == 0) {
-                    z.domain.inValue(store.level, z, 0);
-                }
+  @Override
+  public boolean satisfied() {
 
-                if (x.min() == 1) {
-                    if (y.singleton())
-                        z.domain.inComplement(store.level, z, y.value());
-                    if (z.singleton())
-                        y.domain.inComplement(store.level, y, z.value());
-                }
-            }
+    if (!x.singleton()) return false;
+    if (!z.singleton()) return false;
 
-            if (y.singleton()) {
+    if (x.singleton(0) && z.singleton(1)) return true;
 
-                if (y.max() == 0) {
-                    z.domain.in(store.level, z, x.domain);
-                    x.domain.in(store.level, x, z.domain);
-                }
+    if (!y.singleton()) return false;
 
-                if (y.min() == 1) {
-                    z.domain.inValue(store.level, z, 0);
-                }
-            }
+    if (x.singleton(1) && y.singleton(1) && z.singleton(1)) return true;
 
-            if (z.min() == 1) {
-                x.domain.inValue(store.level, x, 1);
-                y.domain.inValue(store.level, y, 0);
-            }
+    // 1 0 0
+    return false;
+  }
 
-        } while (store.propagationHasOccurred);
+  @Override
+  public String toString() {
 
-    }
-
-    @Override public boolean notSatisfied() {
-
-        if (!x.singleton())
-            return false;
-        if (!z.singleton())
-            return false;
-
-        if (x.singleton(0) && z.singleton(0))
-            return true;
-
-        if (!y.singleton())
-            return false;
-
-        if (x.singleton(1) && y.singleton(1) && z.singleton(0))
-            return true;
-
-        // 1 0 1
-        return false;
-    }
-
-    @Override public boolean satisfied() {
-
-        if (!x.singleton())
-            return false;
-        if (!z.singleton())
-            return false;
-
-        if (x.singleton(0) && z.singleton(1))
-            return true;
-
-        if (!y.singleton())
-            return false;
-
-        if (x.singleton(1) && y.singleton(1) && z.singleton(1))
-            return true;
-
-        // 1 0 0
-        return false;
-
-    }
-
-    @Override public String toString() {
-
-        return id() + " : IfThenBool( (" + x + "=> " + y + ") <=> " + z + " )";
-    }
-
+    return id() + " : IfThenBool( (" + x + "=> " + y + ") <=> " + z + " )";
+  }
 }

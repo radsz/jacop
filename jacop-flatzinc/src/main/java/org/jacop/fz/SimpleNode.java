@@ -4,99 +4,97 @@ package org.jacop.fz;
 
 public class SimpleNode implements Node {
 
-    protected Node parent;
-    protected Node[] children;
-    protected int id;
-    protected Object value;
-    protected Parser parser;
+  protected Node parent;
+  protected Node[] children;
+  protected int id;
+  protected Object value;
+  protected Parser parser;
 
-    public SimpleNode(int i) {
-        id = i;
-    }
+  public SimpleNode(int i) {
+    id = i;
+  }
 
-    public SimpleNode(Parser p, int i) {
-        this(i);
-        parser = p;
-    }
+  public SimpleNode(Parser p, int i) {
+    this(i);
+    parser = p;
+  }
 
-    public void jjtOpen() {
-    }
+  public void jjtOpen() {}
 
-    public void jjtClose() {
-    }
+  public void jjtClose() {}
 
-    public void jjtSetParent(Node n) {
-        parent = n;
-    }
+  public void jjtSetParent(Node n) {
+    parent = n;
+  }
 
-    public Node jjtGetParent() {
-        return parent;
-    }
+  public Node jjtGetParent() {
+    return parent;
+  }
 
-    public void jjtAddChild(Node n, int i) {
-        if (children == null) {
-            children = new Node[i + 1];
-        } else if (i >= children.length) {
-            Node c[] = new Node[i + 1];
-            System.arraycopy(children, 0, c, 0, children.length);
-            children = c;
-        }
-        children[i] = n;
+  public void jjtAddChild(Node n, int i) {
+    if (children == null) {
+      children = new Node[i + 1];
+    } else if (i >= children.length) {
+      Node c[] = new Node[i + 1];
+      System.arraycopy(children, 0, c, 0, children.length);
+      children = c;
     }
+    children[i] = n;
+  }
 
-    public Node jjtGetChild(int i) {
-        return children[i];
-    }
+  public Node jjtGetChild(int i) {
+    return children[i];
+  }
 
-    public int jjtGetNumChildren() {
-        return (children == null) ? 0 : children.length;
-    }
+  public int jjtGetNumChildren() {
+    return (children == null) ? 0 : children.length;
+  }
 
-    public void jjtSetValue(Object value) {
-        this.value = value;
-    }
+  public void jjtSetValue(Object value) {
+    this.value = value;
+  }
 
-    public Object jjtGetValue() {
-        return value;
-    }
+  public Object jjtGetValue() {
+    return value;
+  }
 
   /* You can override these two methods in subclasses of SimpleNode to
-     customize the way the node appears when the tree is dumped.  If
-     your output uses more than one line you should override
-     toString(String), otherwise overriding toString() is probably all
-     you need to do. */
+  customize the way the node appears when the tree is dumped.  If
+  your output uses more than one line you should override
+  toString(String), otherwise overriding toString() is probably all
+  you need to do. */
 
-    public String toString() {
-        return ParserTreeConstants.jjtNodeName[id];
-    }
+  public String toString() {
+    return ParserTreeConstants.jjtNodeName[id];
+  }
 
-    public String toString(String prefix) {
-        return prefix + toString();
-    }
+  public String toString(String prefix) {
+    return prefix + toString();
+  }
 
   /* Override this method if you want to customize how the node dumps
-     out its children. */
+  out its children. */
 
-    public void dump(String prefix) {
-        System.out.println(toString(prefix));
-        if (children != null) {
-            for (int i = 0; i < children.length; ++i) {
-                SimpleNode n = (SimpleNode) children[i];
-                if (n != null) {
-                    n.dump(prefix + " ");
-                }
-            }
+  public void dump(String prefix) {
+    System.out.println(toString(prefix));
+    if (children != null) {
+      for (int i = 0; i < children.length; ++i) {
+        SimpleNode n = (SimpleNode) children[i];
+        if (n != null) {
+          n.dump(prefix + " ");
         }
+      }
     }
+  }
 
-    public int getId() {
-        return id;
-    }
+  public int getId() {
+    return id;
+  }
 
-    // remove all nodes KK
-    void removeChildren() {
-        children = null;
-    }
+  // remove all nodes KK
+  void removeChildren() {
+    children = null;
+  }
 }
 
 /* JavaCC - OriginalChecksum=437df12e360880d1ad7d1ba139165523 (do not edit this line) */

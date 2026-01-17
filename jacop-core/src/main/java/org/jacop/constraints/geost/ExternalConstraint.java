@@ -29,95 +29,85 @@
  */
 package org.jacop.constraints.geost;
 
-import org.jacop.util.SimpleHashSet;
-
 import java.util.Collection;
+import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          This interface defines the minimal functionality that is required by
- *          a constraint in order to be used by Geost as an external constraint.
- *          <p>
- *          External constraints are loosely coupled with Geost internals, in the sense
- *          that they are only required to be able to provide a representation usable by
- *          Geost.
- *          <p>
- *          The generation of internal constraints is done only once per search,
- *          implying that it is possible to do costly operations in order to
- *          generate these constraints.
+ *     <p>This interface defines the minimal functionality that is required by a constraint in order
+ *     to be used by Geost as an external constraint.
+ *     <p>External constraints are loosely coupled with Geost internals, in the sense that they are
+ *     only required to be able to provide a representation usable by Geost.
+ *     <p>The generation of internal constraints is done only once per search, implying that it is
+ *     possible to do costly operations in order to generate these constraints.
  */
 public interface ExternalConstraint {
 
-    /**
-     * It generates internal constraints which will be used by Geost's sweeping
-     * algorithm.
-     * <p>
-     * The generation of internal constraints is done only once per search,
-     * implying that it is possible to do costly operations in order to
-     * generate internal constraints. However, another implication of
-     * this one-time use is that the internal constraints generated have
-     * to remain valid during the whole search.
-     *
-     * @param geost the geost kernel that will use the generated constraint
-     * @return the collection of internal constraints which correspond
-     * to this external constraint
-     */
-    Collection<? extends InternalConstraint> genInternalConstraints(Geost geost);
+  /**
+   * It generates internal constraints which will be used by Geost's sweeping algorithm.
+   *
+   * <p>The generation of internal constraints is done only once per search, implying that it is
+   * possible to do costly operations in order to generate internal constraints. However, another
+   * implication of this one-time use is that the internal constraints generated have to remain
+   * valid during the whole search.
+   *
+   * @param geost the geost kernel that will use the generated constraint
+   * @return the collection of internal constraints which correspond to this external constraint
+   */
+  Collection<? extends InternalConstraint> genInternalConstraints(Geost geost);
 
+  /**
+   * It provides the collection of internal constraints that the given object has to satisfy. For
+   * instance, for the non overlapping constraint, the result would contain all the constraints
+   * corresponding to the objects in the non overlapping group.
+   *
+   * <p>This method is used by the kernel only once per object, at the beginning of the search, to
+   * collect the set of constraints to use for each object.
+   *
+   * @param o the geost object that needs to be constrained
+   * @return the collection of internal constraints acting on the given object
+   */
+  Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o);
 
-    /**
-     * It provides the collection of internal constraints that the given object has to satisfy.
-     * For instance, for the non overlapping constraint, the result would contain all the constraints
-     * corresponding to the objects in the non overlapping group.
-     * <p>
-     * This method is used by the kernel only once per object, at the beginning of the search,
-     * to collect the set of constraints to use for each object.
-     *
-     * @param o the geost object that needs to be constrained
-     * @return the collection of internal constraints acting on the given object
-     */
-    Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o);
+  /**
+   * It adds to the accumulator collection the objects that are likely to be pruned if the given
+   * object changes. For instance, in the case of the non-overlapping constraint, these would be the
+   * objects that are close to the given object.
+   *
+   * <p>TODO, optimize all the code around this functionality, avoid situation when accumulator has
+   * all objects anyway and external constraints are continuously queried to add objects and keep
+   * adding objects which are already in the set.
+   *
+   * @param o the object that was pruned
+   * @param accumulator the set of objects to add the object to
+   * @return true if a value was added, false otherwise
+   */
+  boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator);
 
-    /**
-     * It adds to the accumulator collection the objects that are likely to be pruned if the given object
-     * changes. For instance, in the case of the non-overlapping constraint, these would be the objects
-     * that are close to the given object.
-     * <p>
-     * TODO, optimize all the code around this functionality, avoid situation when accumulator has all objects
-     * anyway and external constraints are continuously queried to add objects and keep adding objects which
-     * are already in the set.
-     *
-     * @param o           the object that was pruned
-     * @param accumulator the set of objects to add the object to
-     * @return true if a value was added, false otherwise
-     */
-    boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator);
+  /**
+   * Handler method called by the Geost kernel when the domain of the object changes. Use this
+   * method to make changes to the state of the constraint (and of its relative internal
+   * constraints) if needed.
+   *
+   * @param o the object
+   */
+  void onObjectUpdate(GeostObject o);
 
-    /**
-     * Handler method called by the Geost kernel when the domain of the object changes.
-     * Use this method to make changes to the state of the constraint (and of its relative internal
-     * constraints) if needed.
-     *
-     * @param o the object
-     */
-    void onObjectUpdate(GeostObject o);
+  /**
+   * Returns true if the external constraint generated the supplied internal constraint ic, and that
+   * ic applies to object o.
+   *
+   * @param ic internal constraint being checked
+   * @param o object to which internal constrain should apply to
+   * @return true if the constraint was generated by this external constraint for the object o.
+   */
+  boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o);
 
-    /**
-     * Returns true if the external constraint generated the supplied internal constraint ic, and that ic
-     * applies to object o.
-     *
-     * @param ic internal constraint being checked
-     * @param o  object to which internal constrain should apply to
-     * @return true if the constraint was generated by this external constraint for the object o.
-     */
-    boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o);
-
-    /**
-     * Provides the collection of objects that this constraint applies to
-     *
-     * @return the collection of objects, or null if the constraint applies to all objects
-     */
-    GeostObject[] getObjectScope();
+  /**
+   * Provides the collection of objects that this constraint applies to
+   *
+   * @return the collection of objects, or null if the constraint applies to all objects
+   */
+  GeostObject[] getObjectScope();
 }

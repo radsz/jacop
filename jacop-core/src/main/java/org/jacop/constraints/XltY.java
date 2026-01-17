@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X {@literal <} Y
@@ -42,90 +41,92 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XltY extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies x variable in constraint x {@literal <} y.
-     */
-    final public IntVar x;
+  /** It specifies x variable in constraint x {@literal <} y. */
+  public final IntVar x;
 
-    /**
-     * It specifies y variable in constraint x {@literal <} y.
-     */
-    final public IntVar y;
+  /** It specifies y variable in constraint x {@literal <} y. */
+  public final IntVar y;
 
-    /**
-     * It constructs the constraint X {@literal <} Y.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     */
-    public XltY(IntVar x, IntVar y) {
+  /**
+   * It constructs the constraint X {@literal <} Y.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   */
+  public XltY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
+    this.x = x;
+    this.y = y;
 
-        setScope(x, y);
+    setScope(x, y);
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    if (x == y) {
+      // If x and y are the same, XltY is trivially inconsistent.
+      throw new IllegalArgumentException(
+          "Arguments to XltY are the same, the model is trivially inconsistent.");
     }
 
-    @Override public void impose(Store store) {
+    super.impose(store);
+  }
 
-        if (x == y) {
-            // If x and y are the same, XltY is trivially inconsistent.
-	    throw new IllegalArgumentException("Arguments to XltY are the same, the model is trivially inconsistent.");
-        }
+  @Override
+  public void consistency(final Store store) {
 
-        super.impose(store);
+    x.domain.inMax(store.level, x, y.max() - 1);
+    y.domain.inMin(store.level, y, x.min() + 1);
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public void consistency(final Store store) {
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-        x.domain.inMax(store.level, x, y.max() - 1);
-        y.domain.inMin(store.level, y, x.min() + 1);
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public void notConsistency(final Store store) {
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+    x.domain.inMin(store.level, x, y.min());
+    y.domain.inMax(store.level, y, x.max());
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return x == y || x.min() >= y.max();
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public boolean satisfied() {
+    return x.max() < y.min();
+  }
 
-    @Override public void notConsistency(final Store store) {
-
-        x.domain.inMin(store.level, x, y.min());
-        y.domain.inMax(store.level, y, x.max());
-
-    }
-
-    @Override public boolean notSatisfied() {
-        return x == y || x.min() >= y.max();
-    }
-
-    @Override public boolean satisfied() {
-        return x.max() < y.min();
-    }
-
-    @Override public String toString() {
-        return id() + " : XltY(" + x + ", " + y + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XltY(" + x + ", " + y + " )";
+  }
 }

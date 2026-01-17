@@ -32,124 +32,105 @@ package org.jacop.constraints.geost;
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          It provides a very simple lexicographical order based on the dimension
- *          ordering, with the possibility to choose the most significant dimension
+ *     <p>It provides a very simple lexicographical order based on the dimension ordering, with the
+ *     possibility to choose the most significant dimension
  */
-
 public class ShiftOrder implements LexicographicalOrder {
 
-    int mostSignificant;
+  int mostSignificant;
 
-    final int noOfDimensions;
+  final int noOfDimensions;
 
-    final int[] masterOrdering;
+  final int[] masterOrdering;
 
-    final int[] orderingWithShiftConsidered;//stores precomputed results
+  final int[] orderingWithShiftConsidered; // stores precomputed results
 
-    /**
-     * It creates a lexicographical order with the possibility
-     * to shift the order according to the most significant dimension.
-     *
-     * @param dimensions      number of dimensions.
-     * @param mostSignificant the position of the most significant dimension.
-     */
-    public ShiftOrder(int dimensions, int mostSignificant) {
+  /**
+   * It creates a lexicographical order with the possibility to shift the order according to the
+   * most significant dimension.
+   *
+   * @param dimensions number of dimensions.
+   * @param mostSignificant the position of the most significant dimension.
+   */
+  public ShiftOrder(int dimensions, int mostSignificant) {
 
-        this.noOfDimensions = dimensions;
-        this.mostSignificant = mostSignificant;
+    this.noOfDimensions = dimensions;
+    this.mostSignificant = mostSignificant;
 
-        orderingWithShiftConsidered = new int[noOfDimensions];
-        adjustOrderingToShift();
+    orderingWithShiftConsidered = new int[noOfDimensions];
+    adjustOrderingToShift();
 
-        masterOrdering = new int[noOfDimensions];
-        for (int i = 0; i < noOfDimensions; i++)
-            masterOrdering[i] = i;
+    masterOrdering = new int[noOfDimensions];
+    for (int i = 0; i < noOfDimensions; i++) masterOrdering[i] = i;
 
-        assert checkInvariants() == null : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
+  }
+
+  /**
+   * It checks that this order has consistent data structures.
+   *
+   * @return a string describing the consistency problem with data structures, null if no problem
+   *     encountered.
+   */
+  public String checkInvariants() {
+
+    if (noOfDimensions <= 0) return "invalid number of dimensions";
+
+    if (mostSignificant < 0) return "most significant dimension is negative";
+
+    if (mostSignificant >= noOfDimensions)
+      return "most significant dimension larger than or equal to total number of dimensions";
+
+    return null;
+  }
+
+  /**
+   * It adjust the ordering to the shift caused by most significant dimension which is no longer
+   * positioned at index 0.
+   */
+  private void adjustOrderingToShift() {
+
+    for (int i = 0; i < noOfDimensions; i++)
+      orderingWithShiftConsidered[i] = (i + mostSignificant) % noOfDimensions;
+  }
+
+  public int compare(int[] p1, int[] p2) {
+
+    assert (p1.length == p2.length) : "dimension mismatch";
+
+    for (int i = 0; i < noOfDimensions; i++) {
+
+      int lexI = orderingWithShiftConsidered[i];
+
+      if (p1[lexI] < p2[lexI]) return -1;
+      else if (p1[lexI] > p2[lexI]) return 1;
     }
 
+    return 0;
+  }
 
-    /**
-     * It checks that this order has consistent data structures.
-     *
-     * @return a string describing the consistency problem with data structures, null if no problem encountered.
-     */
-    public String checkInvariants() {
+  public int dimensionAt(int precedenceLevel) {
+    return orderingWithShiftConsidered[precedenceLevel];
+  }
 
-        if (noOfDimensions <= 0)
-            return "invalid number of dimensions";
+  public int precedenceOf(int dimension) {
 
-        if (mostSignificant < 0)
-            return "most significant dimension is negative";
+    return (dimension - mostSignificant) % noOfDimensions;
+  }
 
-        if (mostSignificant >= noOfDimensions)
-            return "most significant dimension larger than or equal to total number of dimensions";
+  public void setMostSignificantDimension(int dimension) {
 
-        return null;
-    }
+    this.mostSignificant = dimension;
+    adjustOrderingToShift();
 
-    /**
-     * It adjust the ordering to the shift caused by most significant dimension which is no longer
-     * positioned at index 0.
-     */
-    private void adjustOrderingToShift() {
+    assert checkInvariants() == null : checkInvariants();
+  }
 
-        for (int i = 0; i < noOfDimensions; i++)
-            orderingWithShiftConsidered[i] = (i + mostSignificant) % noOfDimensions;
+  public int getMostSignificantDimension() {
+    return mostSignificant;
+  }
 
-    }
-
-
-    public int compare(int[] p1, int[] p2) {
-
-        assert (p1.length == p2.length) : "dimension mismatch";
-
-        for (int i = 0; i < noOfDimensions; i++) {
-
-            int lexI = orderingWithShiftConsidered[i];
-
-            if (p1[lexI] < p2[lexI])
-                return -1;
-            else if (p1[lexI] > p2[lexI])
-                return 1;
-
-        }
-
-        return 0;
-    }
-
-
-    public int dimensionAt(int precedenceLevel) {
-        return orderingWithShiftConsidered[precedenceLevel];
-    }
-
-
-    public int precedenceOf(int dimension) {
-
-        return (dimension - mostSignificant) % noOfDimensions;
-
-    }
-
-
-    public void setMostSignificantDimension(int dimension) {
-
-        this.mostSignificant = dimension;
-        adjustOrderingToShift();
-
-        assert checkInvariants() == null : checkInvariants();
-
-    }
-
-
-    public int getMostSignificantDimension() {
-        return mostSignificant;
-    }
-
-
-    public int[] masterOrdering() {
-        return masterOrdering;
-    }
-
-
+  public int[] masterOrdering() {
+    return masterOrdering;
+  }
 }

@@ -30,13 +30,13 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
-import org.jacop.api.SatisfiedPresent;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.core.*;
 
 /**
  * ChannelReif constraints "constraint" {@literal <=>} B.
@@ -44,220 +44,207 @@ import java.util.stream.Stream;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class ChannelReif extends Constraint implements SatisfiedPresent {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * Variables that is checked for a value.
-     */
-    public final IntVar x;
-    
-    /**
-     * length of vector bs.
-     */
-    final int n;
-    
-    /**
-     * It specifies variables b and related values for variable x.
-     */
-    final Item[] item;
+  /** Variables that is checked for a value. */
+  public final IntVar x;
 
-    private TimeStamp<Integer> position;
+  /** length of vector bs. */
+  final int n;
 
-    Map<Integer,IntVar> valueMap = new HashMap<>();
+  /** It specifies variables b and related values for variable x. */
+  final Item[] item;
 
-    /**
-     * It creates ChannelReif constraint.
-     *
-     * @param x variable to be checked.
-     * @param bs array representing the status of equality x = i.
-     * @param value array of values that are checked against x.
-     */
-    public ChannelReif(IntVar x, IntVar[] bs, int[] value) {
+  private TimeStamp<Integer> position;
 
-        if (value.length != bs.length)
-            throw new IllegalArgumentException("ChannelReif: Status array size ("
-                                               + bs.length
-                                               + "), has not equal size as number of values "
-                                               + value.length);
+  Map<Integer, IntVar> valueMap = new HashMap<>();
 
-        checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
-        for (IntVar b : bs)
-            if (b.min() > 1 || b.max() < 0)
-                throw new IllegalArgumentException("ChannelReif: Variable b in reified constraint must have domain at most 0..1");
+  /**
+   * It creates ChannelReif constraint.
+   *
+   * @param x variable to be checked.
+   * @param bs array representing the status of equality x = i.
+   * @param value array of values that are checked against x.
+   */
+  public ChannelReif(IntVar x, IntVar[] bs, int[] value) {
 
-        numberId = idNumber.incrementAndGet();
-        this.x = x;
-        this.n = bs.length;
+    if (value.length != bs.length)
+      throw new IllegalArgumentException(
+          "ChannelReif: Status array size ("
+              + bs.length
+              + "), has not equal size as number of values "
+              + value.length);
 
-        item = new Item[n];
-        for (int i = 0; i < n; i++)
-            item[i] = new Item(bs[i], value[i]);
+    checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
+    for (IntVar b : bs)
+      if (b.min() > 1 || b.max() < 0)
+        throw new IllegalArgumentException(
+            "ChannelReif: Variable b in reified constraint must have domain at most 0..1");
 
-        for (int i = 0; i < value.length; i++)
-            valueMap.put(value[i], bs[i]);
+    numberId = idNumber.incrementAndGet();
+    this.x = x;
+    this.n = bs.length;
 
-        setScope(Stream.concat(Stream.of(x), Arrays.stream(bs)));
-        this.queueIndex = 0;
+    item = new Item[n];
+    for (int i = 0; i < n; i++) item[i] = new Item(bs[i], value[i]);
+
+    for (int i = 0; i < value.length; i++) valueMap.put(value[i], bs[i]);
+
+    setScope(Stream.concat(Stream.of(x), Arrays.stream(bs)));
+    this.queueIndex = 0;
+  }
+
+  /**
+   * It creates ChannelReif constraint.
+   *
+   * @param x variable to be checked.
+   * @param bs array representing the status of equality x = i.
+   * @param value set of values that are checked against x.
+   */
+  public ChannelReif(IntVar x, IntVar[] bs, IntDomain value) {
+    this(x, bs, toArray(value));
+  }
+
+  public ChannelReif(IntVar x, IntVar[] bs) {
+
+    this(x, bs, toArray(x.domain));
+  }
+
+  public ChannelReif(IntVar x, Map<Integer, ? extends IntVar> bs) {
+
+    numberId = idNumber.incrementAndGet();
+
+    this.x = x;
+    this.n = bs.size();
+
+    item = new Item[n];
+    IntVar[] bbs = new IntVar[n];
+    int i = 0;
+    for (Map.Entry<Integer, ? extends IntVar> e : bs.entrySet()) {
+      int val = e.getKey();
+      IntVar b = e.getValue();
+      item[i] = new Item(b, val);
+
+      valueMap.put(val, b);
+      bbs[i] = b;
+      i++;
     }
 
-    /**
-     * It creates ChannelReif constraint.
-     *
-     * @param x variable to be checked.
-     * @param bs array representing the status of equality x = i.
-     * @param value set of values that are checked against x.
-     */
-    public ChannelReif(IntVar x, IntVar[] bs, IntDomain value) {
-        this(x, bs, toArray(value));
+    setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
+    this.queueIndex = 0;
+  }
+
+  static int[] toArray(IntDomain d) {
+
+    int[] vs = new int[d.getSize()];
+    int i = 0;
+    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      vs[i++] = v;
+    }
+    return vs;
+  }
+
+  @Override
+  public void consistency(final Store store) {
+
+    int start = position.value();
+    boolean startChanged = false;
+
+    for (int i = start; i < n; i++) {
+
+      if (item[i].b.max() == 0) {
+        x.domain.inComplement(store.level, x, item[i].value);
+        swap(start, i);
+        start++;
+        startChanged = true;
+        continue;
+      } else if (item[i].b.min() == 1) x.domain.in(store.level, x, item[i].value, item[i].value);
+
+      if (!x.domain.contains(item[i].value)) {
+        item[i].b.domain.inValue(store.level, item[i].b, 0);
+        swap(start, i);
+        start++;
+        startChanged = true;
+      }
     }
 
-    public ChannelReif(IntVar x, IntVar[] bs) {
+    if (startChanged) position.update(start);
 
-        this(x, bs, toArray(x.domain));
+    if (start == n) {
+      if (!x.singleton()) removeConstraint();
+      return;
     }
 
-    public ChannelReif(IntVar x, Map<Integer, ? extends IntVar> bs) {
+    if (x.singleton()) {
+      IntVar b = valueMap.get(x.value());
+      b.domain.inValue(store.level, b, 1);
 
-        numberId = idNumber.incrementAndGet();
+      for (int i = start; i < n; i++)
+        if (item[i].b != b) item[i].b.domain.inValue(store.level, item[i].b, 0);
+      return;
+    }
+  }
 
-        this.x = x;
-        this.n = bs.size();
+  private void swap(int i, int j) {
+    if (i != j) {
+      Item tmp = item[i];
+      item[i] = item[j];
+      item[j] = tmp;
+    }
+  }
 
-        item = new Item[n];
-        IntVar[] bbs = new IntVar[n];
-        int i = 0;
-        for (Map.Entry<Integer, ? extends IntVar> e : bs.entrySet()) {
-            int val = e.getKey();
-            IntVar b = e.getValue();
-            item[i] = new Item(b, val);
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-            valueMap.put(val, b);
-            bbs[i] = b;
-            i++;
-        }
+  public boolean satisfied() {
 
-        setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
-        this.queueIndex = 0;
+    int one = Integer.MIN_VALUE;
+    if (x.singleton()) {
+      for (int i = 0; i < n; i++) {
+        if (item[i].b.singleton()) {
+          if (item[i].b.value() == 1)
+            if (one == -1) one = i;
+            else return false;
+          else return false;
+        } else return false;
+      }
+    } else return false;
+
+    return (one == Integer.MIN_VALUE) ? false : x.value() == item[one].value;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    super.impose(store);
+
+    position = new TimeStamp<>(store, 0);
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : ChannelReif(" + x + ", " + Arrays.asList(item) + " )";
+  }
+
+  static class Item {
+
+    int value;
+    IntVar b;
+
+    public Item(IntVar b, int v) {
+      this.b = b;
+      this.value = v;
     }
 
-    static int[] toArray(IntDomain d) {
+    public String toString() {
 
-        int[] vs = new int[d.getSize()];
-        int i = 0;
-        for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-            int v = e.nextElement();
-            vs[i++] = v;
-        }
-        return vs;
+      return "[" + b + ", " + value + "]";
     }
-    
-    @Override public void consistency(final Store store) {
-
-        int start = position.value();
-        boolean startChanged = false;
-
-        for (int i = start; i < n; i++) {
-
-            if (item[i].b.max() == 0) {
-                x.domain.inComplement(store.level, x, item[i].value);
-                swap(start, i);
-                start++;
-                startChanged = true;
-                continue;
-            } else if (item[i].b.min() == 1)
-                x.domain.in(store.level, x, item[i].value, item[i].value);
-
-            if (! x.domain.contains(item[i].value)) {
-                item[i].b.domain.inValue(store.level, item[i].b, 0);
-                swap(start, i);
-                start++;
-                startChanged = true;
-            }
-        }
-
-        if (startChanged)
-            position.update(start);
-
-        if (start == n) {
-            if (! x.singleton())
-                removeConstraint();
-            return;
-        }
-
-        if (x.singleton()) {
-            IntVar b = valueMap.get(x.value());
-            b.domain.inValue(store.level, b, 1);
-
-            for (int i = start; i < n; i++)
-                if (item[i].b != b)
-                    item[i].b.domain.inValue(store.level, item[i].b, 0);
-            return;
-        }
-
-    }
-
-    private void swap(int i, int j) {
-        if (i != j) {
-            Item tmp = item[i];
-            item[i] = item[j];
-            item[j] = tmp;
-        }
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    public boolean satisfied() {
-
-        int one = Integer.MIN_VALUE;
-        if (x.singleton()) {
-            for (int i = 0; i < n; i++) {
-                if (item[i].b.singleton()) {
-                    if (item[i].b.value() == 1)
-                        if (one == -1)
-                            one = i;
-                        else
-                            return false;
-                    else
-                        return false;
-                } else
-                    return false;
-            }
-        } else
-            return false;
-
-        return (one == Integer.MIN_VALUE) ? false : x.value() == item[one].value;
-    }
-
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-        position = new TimeStamp<>(store, 0);
-    }
-
-    @Override public String toString() {
-
-        return id() + " : ChannelReif(" + x + ", " + Arrays.asList(item) + " )";
-    }
-
-    static class Item {
-
-        int value;
-        IntVar b;
-
-        public Item(IntVar b, int v) {
-            this.b = b;
-            this.value = v;
-        }
-
-        public String toString() {
-
-            return "[" + b + ", " + value + "]";
-        }
-    }
+  }
 }

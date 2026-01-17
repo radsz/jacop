@@ -30,15 +30,15 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.core.IntVar;
 import org.jacop.util.QueueForward;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 /*
  * Constraint b {@literal =>} c (implication or half-reification)
@@ -49,180 +49,173 @@ import java.util.stream.Stream;
 
 public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable b in the Implies constraint.
-     */
-    public IntVar b;
+  /** It specifies variable b in the Implies constraint. */
+  public IntVar b;
 
-    /**
-     * It specifies constraint in the Implies constraint.
-     */
-    public PrimitiveConstraint c;
+  /** It specifies constraint in the Implies constraint. */
+  public PrimitiveConstraint c;
 
-    boolean imposed = false;
+  boolean imposed = false;
 
-    Store store;
+  Store store;
 
-    private final QueueForward<PrimitiveConstraint> queueForward;
+  private final QueueForward<PrimitiveConstraint> queueForward;
 
-    /**
-     * It constructs ifthen constraint.
-     *
-     * @param b the varaible of the implied constraint.
-     * @param c the constraint which must hold if the variable is 1.
-     */
-    public Implies(IntVar b, PrimitiveConstraint c) {
+  /**
+   * It constructs ifthen constraint.
+   *
+   * @param b the varaible of the implied constraint.
+   * @param c the constraint which must hold if the variable is 1.
+   */
+  public Implies(IntVar b, PrimitiveConstraint c) {
 
-        checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
-        if (b.min() > 1 || b.max() < 0)
-            throw new IllegalArgumentException("Variable b in reified constraint must have domain at most 0..1");
+    checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
+    if (b.min() > 1 || b.max() < 0)
+      throw new IllegalArgumentException(
+          "Variable b in reified constraint must have domain at most 0..1");
 
-        numberId = idNumber.incrementAndGet();
-        this.b = b;
-        this.c = c;
-        setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
-        setConstraintScope(c);
-        queueForward = new QueueForward<>(c, arguments());
-        this.queueIndex = c.queueIndex;
+    numberId = idNumber.incrementAndGet();
+    this.b = b;
+    this.c = c;
+    setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
+    setConstraintScope(c);
+    queueForward = new QueueForward<>(c, arguments());
+    this.queueIndex = c.queueIndex;
+  }
 
+  @Override
+  public void consistency(Store store) {
+
+    if (c.satisfied()) {
+      removeConstraint();
+    } else if (c.notSatisfied()) {
+      b.domain.inValue(store.level, b, 0);
+      removeConstraint();
+    } else if (b.max() == 0) {
+      removeConstraint();
+    } else if (b.min() == 1) {
+      c.consistency(store);
     }
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public boolean notSatisfied() {
+    return b.min() == 1 && c.notSatisfied();
+  }
 
-        if (c.satisfied()) {
-            removeConstraint();
-        } else if (c.notSatisfied()) {
-            b.domain.inValue(store.level, b, 0);
-            removeConstraint();
-        } else if (b.max() == 0) {
-            removeConstraint();
-        } else if (b.min() == 1) {
-            c.consistency(store);
-        }
+  @Override
+  public void notConsistency(Store store) {
+
+    c.notConsistency(store);
+    b.domain.inValue(store.level, b, 1);
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
+    return getConsistencyPruningEvent(var);
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise method exists.");
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
+    if (var == b) return IntDomain.GROUND;
+    else {
 
-    @Override public boolean notSatisfied() {
-        return b.min() == 1 && c.notSatisfied();
+      int eventAcross = -1;
+
+      if (c.arguments().contains(var)) {
+        int event = c.getNestedPruningEvent(var, true);
+        if (event > eventAcross) eventAcross = event;
+      }
+
+      if (c.arguments().contains(var)) {
+        int event = c.getNestedPruningEvent(var, false);
+        if (event > eventAcross) eventAcross = event;
+      }
+
+      if (eventAcross == -1) return Domain.NONE;
+      else return eventAcross;
     }
+  }
 
-    @Override public void notConsistency(Store store) {
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise method exists.");
+  }
 
-        c.notConsistency(store);
-        b.domain.inValue(store.level, b, 1);
+  @Override
+  public int getNotConsistencyPruningEvent(Var var) {
 
+    // If notConsistency function mode
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
+    if (var == b) return IntDomain.GROUND;
+    else {
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-        return getConsistencyPruningEvent(var);
+      int eventAcross = -1;
+
+      if (c.arguments().contains(var)) {
+        int event = c.getNestedPruningEvent(var, true);
+        if (event > eventAcross) eventAcross = event;
+      }
+
+      if (c.arguments().contains(var)) {
+        int event = c.getNestedPruningEvent(var, false);
+        if (event > eventAcross) eventAcross = event;
+      }
+
+      if (eventAcross == -1) return Domain.NONE;
+      else return eventAcross;
     }
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise method exists.");
-    }
+  @Override
+  public void impose(Store store) {
 
-    @Override public int getConsistencyPruningEvent(Var var) {
+    this.store = store;
+    super.impose(store);
+    imposed = true;
+  }
 
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        if (var == b)
-            return IntDomain.GROUND;
-        else {
+  @Override
+  public void include(Store store) {
+    this.store = store;
+  }
 
-            int eventAcross = -1;
+  @Override
+  public boolean satisfied() {
 
-            if (c.arguments().contains(var)) {
-                int event = c.getNestedPruningEvent(var, true);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
+    return (b.min() == 1 && c.satisfied()) || (b.max() == 0);
+  }
 
-            if (c.arguments().contains(var)) {
-                int event = c.getNestedPruningEvent(var, false);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
+  @Override
+  public String toString() {
 
-            if (eventAcross == -1)
-                return Domain.NONE;
-            else
-                return eventAcross;
-        }
-    }
+    StringBuffer result = new StringBuffer(id());
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise method exists.");
-    }
+    result.append(" : Implies(").append(b).append(", ").append(c).append(" )");
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
+    return result.toString();
+  }
 
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        if (var == b)
-            return IntDomain.GROUND;
-        else {
+  @Override
+  public void queueVariable(int level, Var variable) {
 
-            int eventAcross = -1;
+    // queueForward.queueForward(level, variable);
 
-            if (c.arguments().contains(var)) {
-                int event = c.getNestedPruningEvent(var, true);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
-
-            if (c.arguments().contains(var)) {
-                int event = c.getNestedPruningEvent(var, false);
-                if (event > eventAcross)
-                    eventAcross = event;
-            }
-
-            if (eventAcross == -1)
-                return Domain.NONE;
-            else
-                return eventAcross;
-        }
-    }
-
-    @Override public void impose(Store store) {
-
-        this.store = store;
-        super.impose(store);
-        imposed = true;
-
-    }
-
-    @Override public void include(Store store) {
-        this.store = store;
-    }
-
-    @Override public boolean satisfied() {
-
-        return (b.min() == 1 && c.satisfied()) || (b.max() == 0);
-
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : Implies(").append(b).append(", ").append(c).append(" )");
-
-        return result.toString();
-
-    }
-
-    @Override public void queueVariable(int level, Var variable) {
-
-        // queueForward.queueForward(level, variable);
-
-    }
+  }
 }

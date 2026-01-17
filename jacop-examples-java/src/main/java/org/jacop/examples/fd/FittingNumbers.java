@@ -30,72 +30,66 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
 
 /**
  * It is program to solve problem of fitting numbers to made them equal to zero.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Find how many copies of each numbers to take that its sum is equal to one of the specified domain.
- *          520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717, -1000
+ *     <p>Find how many copies of each numbers to take that its sum is equal to one of the specified
+ *     domain. 520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717,
+ *     -1000
  */
-
 public class FittingNumbers extends ExampleFD {
 
-    int[] elements = {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
+  int[] elements = {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
 
-    int[] sum = {13000};
+  int[] sum = {13000};
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        IntVar[] counters = new IntVar[elements.length];
+    IntVar[] counters = new IntVar[elements.length];
 
-        IntervalDomain sumDomain = new IntervalDomain();
-        for (int i = 0; i < sum.length; i++)
-            sumDomain.unionAdapt(sum[i]);
-        IntVar sum = new IntVar(store, "sum", sumDomain);
+    IntervalDomain sumDomain = new IntervalDomain();
+    for (int i = 0; i < sum.length; i++) sumDomain.unionAdapt(sum[i]);
+    IntVar sum = new IntVar(store, "sum", sumDomain);
 
-        vars.add(sum);
+    vars.add(sum);
 
-        // Creating variables.
-        for (int i = 0; i < elements.length; i++) {
-            counters[i] = new IntVar(store, "counter" + i, 0, sum.max() / elements[i]);
-            vars.add(counters[i]);
-        }
-
-        store.impose(new LinearInt(counters, elements, "==", sum));
-        // store.impose(new SumWeight(counters, elements, sum));
-
-        System.out.println(store);
+    // Creating variables.
+    for (int i = 0; i < elements.length; i++) {
+      counters[i] = new IntVar(store, "counter" + i, 0, sum.max() / elements[i]);
+      vars.add(counters[i]);
     }
 
+    store.impose(new LinearInt(counters, elements, "==", sum));
+    // store.impose(new SumWeight(counters, elements, sum));
 
-    /**
-     * It executes the program to solve simple Kakro puzzle.
-     *
-     * @param args commans arguments (none)
-     */
-    public static void main(String args[]) {
+    System.out.println(store);
+  }
 
-        FittingNumbers example = new FittingNumbers();
+  /**
+   * It executes the program to solve simple Kakro puzzle.
+   *
+   * @param args commans arguments (none)
+   */
+  public static void main(String args[]) {
 
-        example.model();
+    FittingNumbers example = new FittingNumbers();
 
-        if (example.searchAllAtOnce()) {
-            System.out.println("Solution(s) found");
-        }
+    example.model();
 
+    if (example.searchAllAtOnce()) {
+      System.out.println("Solution(s) found");
     }
-
-
+  }
 }

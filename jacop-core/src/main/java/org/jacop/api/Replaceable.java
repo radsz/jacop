@@ -34,18 +34,17 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 
 /**
- * Interface that provides ability to configure constraint store to
- * replace a particular type of constraints into another one.
+ * Interface that provides ability to configure constraint store to replace a particular type of
+ * constraints into another one.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-public interface Replaceable<T extends Constraint>  {
+public interface Replaceable<T extends Constraint> {
 
-    Class<T> forClass();
+  Class<T> forClass();
 
-    boolean isReplaceable(T constraint);
+  boolean isReplaceable(T constraint);
 
-    DecomposedConstraint<Constraint> replace(T constraint);
-
+  DecomposedConstraint<Constraint> replace(T constraint);
 }

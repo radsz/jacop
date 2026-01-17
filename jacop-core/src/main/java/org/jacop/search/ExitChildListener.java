@@ -34,72 +34,66 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
 /**
- * Defines a listener which is called by the search if a child node is exited.
- * It works for both the right and left child.
+ * Defines a listener which is called by the search if a child node is exited. It works for both the
+ * right and left child.
  *
  * @param <T> type of variable used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public interface ExitChildListener<T extends Var> {
 
-    /**
-     * It is executed after exiting the left child.
-     *
-     * @param var    variable used in the choice point.
-     * @param value  value used in the choice point.
-     * @param status true if the solution was found in the child subtree, false otherwise.
-     * @return true if the search should continue undisturbed, false if it should
-     * exit the current node with false
-     */
+  /**
+   * It is executed after exiting the left child.
+   *
+   * @param var variable used in the choice point.
+   * @param value value used in the choice point.
+   * @param status true if the solution was found in the child subtree, false otherwise.
+   * @return true if the search should continue undisturbed, false if it should exit the current
+   *     node with false
+   */
+  boolean leftChild(T var, int value, boolean status);
 
-    boolean leftChild(T var, int value, boolean status);
+  /**
+   * It is executed after exiting the left child.
+   *
+   * @param choice primitive constraint used as the base of the choice point.
+   * @param status true if the solution was found in the child subtree, false otherwise.
+   * @return true if the search should continue undisturbed to the right node, false if it should
+   *     exit the current node with false
+   */
+  boolean leftChild(PrimitiveConstraint choice, boolean status);
 
-    /**
-     * It is executed after exiting the left child.
-     *
-     * @param choice primitive constraint used as the base of the choice point.
-     * @param status true if the solution was found in the child subtree, false otherwise.
-     * @return true if the search should continue undisturbed to the right node, false if it should
-     * exit the current node with false
-     */
+  /**
+   * It is executed after exiting the right child.
+   *
+   * @param var variable used in the choice point.
+   * @param value value used in the choice point.
+   * @param status true if the solution was found in the child subtree, false otherwise. exit the
+   *     current node with false
+   */
+  void rightChild(T var, int value, boolean status);
 
-    boolean leftChild(PrimitiveConstraint choice, boolean status);
+  /**
+   * It is executed after exiting the right child.
+   *
+   * @param choice primitive constraint used as the base of the choice point.
+   * @param status true if the solution was found in the child subtree, false otherwise. exit the
+   *     current node with false
+   */
+  void rightChild(PrimitiveConstraint choice, boolean status);
 
-    /**
-     * It is executed after exiting the right child.
-     *
-     * @param var    variable used in the choice point.
-     * @param value  value used in the choice point.
-     * @param status true if the solution was found in the child subtree, false otherwise.
-     *               exit the current node with false
-     */
-    void rightChild(T var, int value, boolean status);
+  /**
+   * It sets the children listeners for the current listener.
+   *
+   * @param children array containing children listeners.
+   */
+  void setChildrenListeners(ExitChildListener<T>[] children);
 
-    /**
-     * It is executed after exiting the right child.
-     *
-     * @param choice primitive constraint used as the base of the choice point.
-     * @param status true if the solution was found in the child subtree, false otherwise.
-     *               exit the current node with false
-     */
-
-    void rightChild(PrimitiveConstraint choice, boolean status);
-
-    /**
-     * It sets the children listeners for the current listener.
-     *
-     * @param children array containing children listeners.
-     */
-    void setChildrenListeners(ExitChildListener<T>[] children);
-
-
-    /**
-     * It adds one child listener.
-     *
-     * @param child added child listener.
-     */
-    void setChildrenListeners(ExitChildListener<T> child);
-
+  /**
+   * It adds one child listener.
+   *
+   * @param child added child listener.
+   */
+  void setChildrenListeners(ExitChildListener<T> child);
 }

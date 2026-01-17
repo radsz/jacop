@@ -37,58 +37,58 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * Handler for SetVar domain operations in search algorithms.
- * This implementation handles set variable domain operations with proper
- * GLB (Greatest Lower Bound) and LUB (Least Upper Bound) handling.
+ * Handler for SetVar domain operations in search algorithms. This implementation handles set
+ * variable domain operations with proper GLB (Greatest Lower Bound) and LUB (Least Upper Bound)
+ * handling.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public class SetDomainOperationHandler implements DomainOperationHandler {
 
-    @Override
-    public boolean isApplicable(Var var) {
-        return var instanceof SetVar;
-    }
+  @Override
+  public boolean isApplicable(Var var) {
+    return var instanceof SetVar;
+  }
 
-    @Override
-    public void inValue(Store store, Var var, int value, boolean leftBranch) {
-        if (!(var instanceof SetVar)) {
-            throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
-        }
-        SetVar setVar = (SetVar) var;
-        SetDomain setDomain = (SetDomain) setVar.dom();
-        if (leftBranch) {
-            // Left branch: add element to GLB (Greatest Lower Bound)
-            setDomain.inGLB(store.level, setVar, value);
-        } else {
-            // Right branch: remove element from LUB (add to LUB complement)
-            setDomain.inLUBComplement(store.level, setVar, value);
-        }
+  @Override
+  public void inValue(Store store, Var var, int value, boolean leftBranch) {
+    if (!(var instanceof SetVar)) {
+      throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
+    SetVar setVar = (SetVar) var;
+    SetDomain setDomain = (SetDomain) setVar.dom();
+    if (leftBranch) {
+      // Left branch: add element to GLB (Greatest Lower Bound)
+      setDomain.inGLB(store.level, setVar, value);
+    } else {
+      // Right branch: remove element from LUB (add to LUB complement)
+      setDomain.inLUBComplement(store.level, setVar, value);
+    }
+  }
 
-    @Override
-    public void inComplement(Store store, Var var, int value, boolean leftBranch) {
-        if (!(var instanceof SetVar)) {
-            throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
-        }
-        SetVar setVar = (SetVar) var;
-        SetDomain setDomain = (SetDomain) setVar.dom();
-        if (leftBranch) {
-            // Left branch: remove from GLB (add to LUB complement)
-            setDomain.inLUBComplement(store.level, setVar, value);
-        } else {
-            // Right branch: add to GLB
-            setDomain.inGLB(store.level, setVar, value);
-        }
+  @Override
+  public void inComplement(Store store, Var var, int value, boolean leftBranch) {
+    if (!(var instanceof SetVar)) {
+      throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
+    SetVar setVar = (SetVar) var;
+    SetDomain setDomain = (SetDomain) setVar.dom();
+    if (leftBranch) {
+      // Left branch: remove from GLB (add to LUB complement)
+      setDomain.inLUBComplement(store.level, setVar, value);
+    } else {
+      // Right branch: add to GLB
+      setDomain.inGLB(store.level, setVar, value);
+    }
+  }
 
-    @Override
-    public String getDomainString(Var var) {
-        if (!(var instanceof SetVar)) {
-            throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
-        }
-        SetVar setVar = (SetVar) var;
-        return setVar.dom().toString();
+  @Override
+  public String getDomainString(Var var) {
+    if (!(var instanceof SetVar)) {
+      throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
+    SetVar setVar = (SetVar) var;
+    return setVar.dom().toString();
+  }
 }

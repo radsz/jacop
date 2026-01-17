@@ -30,104 +30,102 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraint X + Y{@literal =<} Z
- * <p>
- * Bound consistency is used.
+ *
+ * <p>Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XplusYlteqZ extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x + y{@literal <=} z.
-     */
-    final public IntVar x;
+  /** It specifies variable x in constraint x + y{@literal <=} z. */
+  public final IntVar x;
 
-    /**
-     * It specifies variable x in constraint x + y{@literal <=} z.
-     */
-    final public IntVar y;
+  /** It specifies variable x in constraint x + y{@literal <=} z. */
+  public final IntVar y;
 
-    /**
-     * It specifies variable x in constraint x + y{@literal <=} z.
-     */
-    final public IntVar z;
+  /** It specifies variable x in constraint x + y{@literal <=} z. */
+  public final IntVar z;
 
-    /**
-     * It constructs X + Y{@literal <=} Z constraint.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     * @param z variable z.
-     */
-    public XplusYlteqZ(IntVar x, IntVar y, IntVar z) {
+  /**
+   * It constructs X + Y{@literal <=} Z constraint.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
+   */
+  public XplusYlteqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
+    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
-        this.z = z;
+    this.x = x;
+    this.y = y;
+    this.z = z;
 
-        setScope(x, y, z);
-    }
+    setScope(x, y, z);
+  }
 
-    @Override public void consistency(final Store store) {
-        x.domain.inMax(store.level, x, z.max() - y.min());
-        y.domain.inMax(store.level, y, z.max() - x.min());
-        z.domain.inMin(store.level, z, x.min() + y.min());
-    }
+  @Override
+  public void consistency(final Store store) {
+    x.domain.inMax(store.level, x, z.max() - y.min());
+    y.domain.inMax(store.level, y, z.max() - x.min());
+    z.domain.inMin(store.level, z, x.min() + y.min());
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public void notConsistency(final Store store) {
 
-        x.domain.inMin(store.level, x, z.min() - y.max() + 1);
+    x.domain.inMin(store.level, x, z.min() - y.max() + 1);
 
-        y.domain.inMin(store.level, y, z.min() - x.max() + 1);
+    y.domain.inMin(store.level, y, z.min() - x.max() + 1);
 
-        z.domain.inMax(store.level, z, x.max() + y.max() - 1);
+    z.domain.inMax(store.level, z, x.max() + y.max() - 1);
+  }
 
+  @Override
+  public boolean notSatisfied() {
+    return x.min() + y.min() > z.max();
+  }
 
-    }
+  @Override
+  public boolean satisfied() {
+    return x.max() + y.max() <= z.min();
+  }
 
-    @Override public boolean notSatisfied() {
-        return x.min() + y.min() > z.max();
-    }
+  @Override
+  public String toString() {
 
-    @Override public boolean satisfied() {
-        return x.max() + y.max() <= z.min();
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XplusYlteqZ(" + x + ", " + y + ", " + z + " )";
-    }
-
+    return id() + " : XplusYlteqZ(" + x + ", " + y + ", " + z + " )";
+  }
 }

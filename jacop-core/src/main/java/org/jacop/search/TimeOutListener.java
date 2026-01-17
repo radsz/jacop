@@ -30,38 +30,33 @@
 
 package org.jacop.search;
 
-
 /**
- * It defines an interface of the class which wants to be informed about timeout
- * occurring during search, as well as the number of solutions found before
- * timeout has occurred.
+ * It defines an interface of the class which wants to be informed about timeout occurring during
+ * search, as well as the number of solutions found before timeout has occurred.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public interface TimeOutListener {
 
-    /**
-     * It is executed right after time out is determined.
-     *
-     * @param solutionsNo number of solutions found before the timeout occurred.
-     */
+  /**
+   * It is executed right after time out is determined.
+   *
+   * @param solutionsNo number of solutions found before the timeout occurred.
+   */
+  void executedAtTimeOut(int solutionsNo);
 
-    void executedAtTimeOut(int solutionsNo);
+  /**
+   * It sets children listeners for this timeout listener.
+   *
+   * @param children list of children listeners.
+   */
+  void setChildrenListeners(TimeOutListener[] children);
 
-    /**
-     * It sets children listeners for this timeout listener.
-     *
-     * @param children list of children listeners.
-     */
-    void setChildrenListeners(TimeOutListener[] children);
-
-    /**
-     * It sets child listener for this timeout listener.
-     *
-     * @param child child listener for this timeout listener.
-     */
-    void setChildrenListeners(TimeOutListener child);
-
+  /**
+   * It sets child listener for this timeout listener.
+   *
+   * @param child child listener for this timeout listener.
+   */
+  void setChildrenListeners(TimeOutListener child);
 }

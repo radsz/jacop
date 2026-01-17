@@ -30,166 +30,156 @@
 
 package org.jacop.constraints;
 
+import java.util.Hashtable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.StoreAware;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
-import java.util.Hashtable;
-
 /**
- * Standard unified interface for all primitive constraints. In addition to
- * functions defined by interface Constraint it also defines function
- * notConsistency and notSatisfied. Only PrimitiveConstraints can be used as
- * arguments to constraints Not, And, Or, etc.
+ * Standard unified interface for all primitive constraints. In addition to functions defined by
+ * interface Constraint it also defines function notConsistency and notSatisfied. Only
+ * PrimitiveConstraints can be used as arguments to constraints Not, And, Or, etc.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+public abstract class PrimitiveConstraint extends Constraint
+    implements StoreAware, SatisfiedPresent {
 
-public abstract class PrimitiveConstraint extends Constraint implements StoreAware, SatisfiedPresent {
+  /** It specifies the events which must occur for notConsistency() method being executed. */
+  public Hashtable<Var, Integer> notConsistencyPruningEvents;
 
-    /**
-     * It specifies the events which must occur for notConsistency()
-     * method being executed.
-     */
-    public Hashtable<Var, Integer> notConsistencyPruningEvents;
+  /**
+   * It retrieves the pruning event which causes reevaluation of the constraint notConsistency()
+   * function.
+   *
+   * @param var for which pruning event is retrieved
+   * @return the int denoting the pruning event associated with given variable.
+   */
+  public int getNotConsistencyPruningEvent(Var var) {
 
-    /**
-     * It retrieves the pruning event which causes reevaluation of the
-     * constraint notConsistency() function.
-     *
-     * @param var for which pruning event is retrieved
-     * @return the int denoting the pruning event associated with given variable.
-     */
-    public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        if (!constraintScope.isEmpty()) {
-
-            int eventAcross =
-                constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, false)).max()
-                    .orElseGet(this::getDefaultNotConsistencyPruningEvent);
-
-            if (eventAcross < getDefaultNotConsistencyPruningEvent())
-                eventAcross = getDefaultNotConsistencyPruningEvent();
-
-            return eventAcross;
-
-        }
-        return getDefaultNotConsistencyPruningEvent();
+    // If notConsistency function mode
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public void impose(Store store) {
+    if (!constraintScope.isEmpty()) {
 
-        super.impose(store);
-        include(store);
+      int eventAcross =
+          constraintScope.stream()
+              .filter(i -> i.arguments().contains(var))
+              .mapToInt(i -> i.getNestedPruningEvent(var, false))
+              .max()
+              .orElseGet(this::getDefaultNotConsistencyPruningEvent);
 
+      if (eventAcross < getDefaultNotConsistencyPruningEvent())
+        eventAcross = getDefaultNotConsistencyPruningEvent();
+
+      return eventAcross;
     }
+    return getDefaultNotConsistencyPruningEvent();
+  }
 
-    /**
-     * It retrieves the pruning event for which any composed constraint which
-     * uses this constraint should be evaluated. This events are the ones which
-     * can change satisfied status?
-     *
-     * @param var  for which pruning event is retrieved
-     * @param mode decides if pruning event for consistency or nonconsistency is required.
-     * @return pruning event associated with the given variable for a given consistency mode.
-     */
-    public int getNestedPruningEvent(Var var, boolean mode) {
+  @Override
+  public void impose(Store store) {
 
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
+    super.impose(store);
+    include(store);
+  }
 
-            if (constraintScope != null && !constraintScope.isEmpty()) {
+  /**
+   * It retrieves the pruning event for which any composed constraint which uses this constraint
+   * should be evaluated. This events are the ones which can change satisfied status?
+   *
+   * @param var for which pruning event is retrieved
+   * @param mode decides if pruning event for consistency or nonconsistency is required.
+   * @return pruning event associated with the given variable for a given consistency mode.
+   */
+  public int getNestedPruningEvent(Var var, boolean mode) {
 
-                int eventAcross =
-                    constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, true))
-                        .max().orElseGet(() -> Integer.MIN_VALUE);
+    // If consistency function mode
+    if (mode) {
+      if (consistencyPruningEvents != null) {
+        Integer possibleEvent = consistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
 
-                if (eventAcross != Integer.MIN_VALUE)
-                    return eventAcross;
+      if (constraintScope != null && !constraintScope.isEmpty()) {
 
-            }
+        int eventAcross =
+            constraintScope.stream()
+                .filter(i -> i.arguments().contains(var))
+                .mapToInt(i -> i.getNestedPruningEvent(var, true))
+                .max()
+                .orElseGet(() -> Integer.MIN_VALUE);
 
-            return getDefaultNestedConsistencyPruningEvent();
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            if (constraintScope != null && !constraintScope.isEmpty()) {
+        if (eventAcross != Integer.MIN_VALUE) return eventAcross;
+      }
 
-                int eventAcross =
-                    constraintScope.stream().filter(i -> i.arguments().contains(var)).mapToInt(i -> i.getNestedPruningEvent(var, false))
-                        .max().orElse(Integer.MIN_VALUE);
-
-                if (eventAcross != Integer.MIN_VALUE)
-                    return eventAcross;
-
-            }
-            return getDefaultNestedNotConsistencyPruningEvent();
-        }
+      return getDefaultNestedConsistencyPruningEvent();
     }
+    // If notConsistency function mode
+    else {
+      if (notConsistencyPruningEvents != null) {
+        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
+      if (constraintScope != null && !constraintScope.isEmpty()) {
 
-    protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return getDefaultNotConsistencyPruningEvent();
+        int eventAcross =
+            constraintScope.stream()
+                .filter(i -> i.arguments().contains(var))
+                .mapToInt(i -> i.getNestedPruningEvent(var, false))
+                .max()
+                .orElse(Integer.MIN_VALUE);
+
+        if (eventAcross != Integer.MIN_VALUE) return eventAcross;
+      }
+      return getDefaultNestedNotConsistencyPruningEvent();
     }
+  }
 
-    protected int getDefaultNestedConsistencyPruningEvent() {
-        return getDefaultConsistencyPruningEvent();
-    }
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return getDefaultNotConsistencyPruningEvent();
+  }
 
-    protected abstract int getDefaultNotConsistencyPruningEvent();
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return getDefaultConsistencyPruningEvent();
+  }
 
-    /**
-     * It makes pruning in such a way that constraint is notConsistent. It
-     * removes values which always belong to a solution.
-     *
-     * @param store the constraint store in which context the notConsistency technique is evaluated.
-     */
-    public abstract void notConsistency(Store store);
+  protected abstract int getDefaultNotConsistencyPruningEvent();
 
-    /**
-     * It checks if constraint would be always not satisfied.
-     *
-     * @return true if constraint must be notSatisfied, false otherwise.
-     */
-    public abstract boolean notSatisfied();
+  /**
+   * It makes pruning in such a way that constraint is notConsistent. It removes values which always
+   * belong to a solution.
+   *
+   * @param store the constraint store in which context the notConsistency technique is evaluated.
+   */
+  public abstract void notConsistency(Store store);
 
-    /**
-     * It allows to specify customized events required to trigger execution
-     * of notConsitency() method.
-     *
-     * @param var          variable for which customized event is setup.
-     * @param pruningEvent the type of the event being setup.
-     */
-    public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
+  /**
+   * It checks if constraint would be always not satisfied.
+   *
+   * @return true if constraint must be notSatisfied, false otherwise.
+   */
+  public abstract boolean notSatisfied();
 
-        if (notConsistencyPruningEvents == null)
-            notConsistencyPruningEvents = new Hashtable<>();
+  /**
+   * It allows to specify customized events required to trigger execution of notConsitency() method.
+   *
+   * @param var variable for which customized event is setup.
+   * @param pruningEvent the type of the event being setup.
+   */
+  public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
 
-        notConsistencyPruningEvents.put(var, pruningEvent);
+    if (notConsistencyPruningEvents == null) notConsistencyPruningEvents = new Hashtable<>();
 
-    }
+    notConsistencyPruningEvents.put(var, pruningEvent);
+  }
 
-    public void include(Store store) {
-        if (constraintScope != null)
-            constraintScope.forEach(i -> i.include(store));
-    }
-
+  public void include(Store store) {
+    if (constraintScope != null) constraintScope.forEach(i -> i.include(store));
+  }
 }

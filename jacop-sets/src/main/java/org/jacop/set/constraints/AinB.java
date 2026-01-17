@@ -30,157 +30,137 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates a constraint that makes sure that the set value of set variable A is included
- * in the set value of set variable B.
+ * It creates a constraint that makes sure that the set value of set variable A is included in the
+ * set value of set variable B.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class AinB extends PrimitiveConstraint {
 
-    // FIXME, check consistency and other methods like satisfied, notConsistency, notSatisfied.
+  // FIXME, check consistency and other methods like satisfied, notConsistency, notSatisfied.
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies variable a. */
+  public SetVar a;
+
+  /** It specifies variable b. */
+  public SetVar b;
+
+  /** It specifies if the inclusion relation is strict. */
+  public boolean strict = false;
+
+  /**
+   * It constructs an AinB constraint to restrict the domain of the variables A and B. By default
+   * this inclusion relation does not have to be strict.
+   *
+   * @param a variable a that is restricted to be a subset of b.
+   * @param b variable that is restricted to contain a.
+   */
+  public AinB(SetVar a, SetVar b) {
+
+    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+
+    this.numberId = idNumber.incrementAndGet();
+
+    this.a = a;
+    this.b = b;
+
+    setScope(a, b);
+  }
+
+  /**
+   * It constructs an AinB constraint to restrict the domain of the variables A and B.
+   *
+   * @param a variable a that is restricted to be a subset of variable b.
+   * @param b variable that is restricted to contain variable a.
+   * @param strict it specifies if the inclusion relation is strict.
+   */
+  public AinB(SetVar a, SetVar b, boolean strict) {
+
+    this(a, b);
+    this.strict = strict;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    // FIXME, take into account strict relation.
 
     /**
-     * It specifies variable a.
-     */
-    public SetVar a;
-
-    /**
-     * It specifies variable b.
-     */
-    public SetVar b;
-
-    /**
-     * It specifies if the inclusion relation is strict.
-     */
-    public boolean strict = false;
-
-    /**
-     * It constructs an AinB constraint to restrict the domain of the variables A and B.
-     * By default this inclusion relation does not have to be strict.
+     * Consistency of the constraint A in B.
      *
-     * @param a variable a that is restricted to be a subset of b.
-     * @param b variable that is restricted to contain a.
-     */
-    public AinB(SetVar a, SetVar b) {
-
-        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
-
-        this.numberId = idNumber.incrementAndGet();
-
-        this.a = a;
-        this.b = b;
-
-        setScope(a, b);
-
-    }
-
-    /**
-     * It constructs an AinB constraint to restrict the domain of the variables A and B.
+     * <p>B can not be an empty set.
      *
-     * @param a      variable a that is restricted to be a subset of variable b.
-     * @param b      variable that is restricted to contain variable a.
-     * @param strict it specifies if the inclusion relation is strict.
+     * <p>T1. glbA = glbA lubA = lubA /\ lubB
+     *
+     * <p>T2 glbB = glbB \/ glbA lubB = lubB
      */
-    public AinB(SetVar a, SetVar b, boolean strict) {
+    if (strict) if (b.domain.isEmpty()) throw Store.failException;
 
-        this(a, b);
-        this.strict = strict;
+    // if (bHasChanged)
+    a.domain.inLUB(store.level, a, b.domain.lub());
 
-    }
+    // if (aHasChanged)
+    b.domain.inGLB(store.level, b, a.domain.glb());
 
-    @Override public void consistency(Store store) {
+    if (strict)
+      a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max() - 1);
+    else a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
 
-        // FIXME, take into account strict relation.
+    if (strict)
+      b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);
+    else b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
+  }
 
-        /**
-         * Consistency of the constraint A in B.
-         *
-         * B can not be an empty set.
-         *
-         * T1.
-         * glbA = glbA
-         * lubA = lubA /\ lubB
-         *
-         * T2
-         * glbB = glbB \/ glbA
-         * lubB = lubB
-         *
-         */
+  @Override
+  public void notConsistency(Store store) {
 
-        if (strict)
-            if (b.domain.isEmpty())
-                throw Store.failException;
+    if (b.domain.glb().contains(a.domain.lub())) throw Store.failException;
+  }
 
-        // if (bHasChanged)
-        a.domain.inLUB(store.level, a, b.domain.lub());
+  @Override
+  public boolean notSatisfied() {
 
-        // if (aHasChanged)
-        b.domain.inGLB(store.level, b, a.domain.glb());
+    if (a.singleton() && b.singleton() && !a.domain.subtract(b.domain).isEmpty()) return true;
+    else return false;
+  }
 
-        if (strict)
-            a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max() - 1);
-        else
-            a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
+  @Override
+  public boolean satisfied() {
+    return grounded() && b.domain.contains(a.domain);
+  }
 
-        if (strict)
-            b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);
-        else
-            b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-    @Override public void notConsistency(Store store) {
-
-        if (b.domain.glb().contains(a.domain.lub()))
-            throw Store.failException;
-
-    }
-
-    @Override public boolean notSatisfied() {
-
-        if (a.singleton() && b.singleton() && !a.domain.subtract(b.domain).isEmpty())
-            return true;
-        else
-            return false;
-
-    }
-
-    @Override public boolean satisfied() {
-        return grounded() && b.domain.contains(a.domain);
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public String toString() {
-        return id() + " : AinB(" + a + ", " + b + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : AinB(" + a + ", " + b + " )";
+  }
 }

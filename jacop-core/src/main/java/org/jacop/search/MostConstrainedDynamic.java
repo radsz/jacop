@@ -39,37 +39,30 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class MostConstrainedDynamic<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs a variable comparator based on the maximal number
-     * of constraints currently attached to a variable.
-     */
-    public MostConstrainedDynamic() {
-    }
+  /**
+   * It constructs a variable comparator based on the maximal number of constraints currently
+   * attached to a variable.
+   */
+  public MostConstrainedDynamic() {}
 
-    public int compare(double left, T var) {
-        int right = var.sizeConstraints();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    int right = var.sizeConstraints();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.sizeConstraints();
-        int right = rightVar.sizeConstraints();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.sizeConstraints();
+    int right = rightVar.sizeConstraints();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.sizeConstraints();
-    }
-
+  public double metric(T var) {
+    return var.sizeConstraints();
+  }
 }

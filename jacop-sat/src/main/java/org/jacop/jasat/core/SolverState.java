@@ -33,32 +33,30 @@ package org.jacop.jasat.core;
 
 public final class SolverState {
 
-    public static final int CONFLICT = 0; // search reached a conflict
-    public static final int UNKNOWN = 1; // unknown state, waiting for a decision
-    public static final int SATISFIABLE = 2; // the solver reached the "SAT" solution
-    public static final int UNSATISFIABLE = 3;  // the solver reached the "UNSAT" solution
+  public static final int CONFLICT = 0; // search reached a conflict
+  public static final int UNKNOWN = 1; // unknown state, waiting for a decision
+  public static final int SATISFIABLE = 2; // the solver reached the "SAT" solution
+  public static final int UNSATISFIABLE = 3; // the solver reached the "UNSAT" solution
 
-    /**
-     * It gives a nice representation of the state.
-     *
-     * @param state the state
-     * @return a string representing the state
-     */
-    public static String show(int state) {
+  /**
+   * It gives a nice representation of the state.
+   *
+   * @param state the state
+   * @return a string representing the state
+   */
+  public static String show(int state) {
 
-        switch (state) {
-            case 0:
-                return "CONFLICT";
-            case 1:
-                return "UNKNOWN";
-            case 2:
-                return "SATISFIABLE";
-            case 3:
-                return "UNSATISFIABLE";
-            default:
-                throw new AssertionError("bad SolverState int");
-        }
-
+    switch (state) {
+      case 0:
+        return "CONFLICT";
+      case 1:
+        return "UNKNOWN";
+      case 2:
+        return "SATISFIABLE";
+      case 3:
+        return "UNSATISFIABLE";
+      default:
+        throw new AssertionError("bad SolverState int");
     }
-
+  }
 }

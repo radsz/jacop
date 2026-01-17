@@ -33,35 +33,30 @@ package org.jacop.set.search;
 import org.jacop.search.SearchHandlerRegistry;
 
 /**
- * Support class for SetVar search operations.
- * This class automatically registers SetVar handlers with the search handler registry
- * when the jacop-sets module is loaded.
- * <p>
- * The registration happens via a static initializer, ensuring handlers are available
- * as soon as any class from this package is loaded.
+ * Support class for SetVar search operations. This class automatically registers SetVar handlers
+ * with the search handler registry when the jacop-sets module is loaded.
+ *
+ * <p>The registration happens via a static initializer, ensuring handlers are available as soon as
+ * any class from this package is loaded.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public class SetSearchSupport {
 
-    static {
-        // Register SetVar domain operation handler when this class is loaded
-        SearchHandlerRegistry.getInstance().registerDomainHandler(new SetDomainOperationHandler());
-    }
+  static {
+    // Register SetVar domain operation handler when this class is loaded
+    SearchHandlerRegistry.getInstance().registerDomainHandler(new SetDomainOperationHandler());
+  }
 
-    /**
-     * Private constructor to prevent instantiation.
-     */
-    private SetSearchSupport() {
-    }
+  /** Private constructor to prevent instantiation. */
+  private SetSearchSupport() {}
 
-    /**
-     * Explicitly registers SetVar handlers.
-     * This method can be called to ensure handlers are registered,
-     * though the static initializer should handle this automatically.
-     */
-    public static void registerHandlers() {
-        SearchHandlerRegistry.getInstance().registerDomainHandler(new SetDomainOperationHandler());
-    }
+  /**
+   * Explicitly registers SetVar handlers. This method can be called to ensure handlers are
+   * registered, though the static initializer should handle this automatically.
+   */
+  public static void registerHandlers() {
+    SearchHandlerRegistry.getInstance().registerDomainHandler(new SetDomainOperationHandler());
+  }
 }

@@ -39,47 +39,38 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs variable comparator with priority based on the minimal value of
-     * domain size divided by the number of constraints currently attached to a variable.
-     */
-    public MinDomainOverDegree() {
+  /**
+   * It constructs variable comparator with priority based on the minimal value of domain size
+   * divided by the number of constraints currently attached to a variable.
+   */
+  public MinDomainOverDegree() {}
 
-    }
+  public int compare(double left, T var) {
 
-    public int compare(double left, T var) {
+    double right = var.getSize() / var.sizeConstraints();
 
-        double right = var.getSize() / var.sizeConstraints();
+    if (left < right) return 1;
 
-        if (left < right)
-            return 1;
+    if (left > right) return -1;
 
-        if (left > right)
-            return -1;
+    return 0;
+  }
 
-        return 0;
+  public int compare(T leftVar, T rightVar) {
 
-    }
+    double left = leftVar.getSize() / leftVar.sizeConstraints();
+    double right = rightVar.getSize() / rightVar.sizeConstraints();
 
-    public int compare(T leftVar, T rightVar) {
+    if (left < right) return 1;
 
-        double left = leftVar.getSize() / leftVar.sizeConstraints();
-        double right = rightVar.getSize() / rightVar.sizeConstraints();
+    if (left > right) return -1;
 
-        if (left < right)
-            return 1;
+    return 0;
+  }
 
-        if (left > right)
-            return -1;
-
-        return 0;
-    }
-
-    public double metric(T var) {
-        return var.getSize() / var.sizeConstraints();
-    }
-
+  public double metric(T var) {
+    return var.getSize() / var.sizeConstraints();
+  }
 }

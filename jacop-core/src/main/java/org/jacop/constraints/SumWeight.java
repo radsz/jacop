@@ -30,412 +30,390 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.RemoveLevelLate;
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.RemoveLevelLate;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
 
 /*
  * SumWeight constraint implements the weighted summation over several
  * variables. It provides the weighted sum from all variables on the
  * list.  The weights are integers.
- * <p> 
+ * <p>
  * Use when number of variables is large (for example, greater than
  * 30), otherwise use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class SumWeight extends Constraint implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
+public class SumWeight extends Constraint
+    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a list of variables being summed.
-     */
-    protected final IntVar[] list;
+  /** It specifies a list of variables being summed. */
+  protected final IntVar[] list;
 
-    /**
-     * It specifies a list of weights associated with the variables being summed.
-     */
-    protected final long[] weights;
+  /** It specifies a list of weights associated with the variables being summed. */
+  protected final long[] weights;
 
-    /**
-     * It specifies value to which SumWeight is equal to.
-     */
-    protected final long equalTo;
+  /** It specifies value to which SumWeight is equal to. */
+  protected final long equalTo;
 
-    /**
-     * The sum of grounded variables.
-     */
-    private TimeStamp<Long> sumGrounded;
+  /** The sum of grounded variables. */
+  private TimeStamp<Long> sumGrounded;
 
-    /**
-     * The position for the next grounded variable.
-     */
-    private TimeStamp<Integer> nextGroundedPosition;
+  /** The position for the next grounded variable. */
+  private TimeStamp<Integer> nextGroundedPosition;
 
-    LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
-    /**
-     * SumWeight constraint implements the weighted summation over several
-     * variables.
-     * @param list    the list of varibales
-     * @param weights the list of weights
-     * @param sum     the resulting sum
-     */
-    public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
-        this(list, weights, sum, 0);
+  /**
+   * SumWeight constraint implements the weighted summation over several variables.
+   *
+   * @param list the list of varibales
+   * @param weights the list of weights
+   * @param sum the resulting sum
+   */
+  public SumWeight(IntVar[] list, int[] weights, IntVar sum) {
+    this(list, weights, sum, 0);
+  }
+
+  /**
+   * SumWeight constraint implements the weighted summation over several variables.
+   *
+   * @param list the list of varibales
+   * @param weights the list of weights
+   * @param equalTo the value to which SumWeight is equal to.
+   */
+  public SumWeight(IntVar[] list, int[] weights, int equalTo) {
+    this(list, weights, null, equalTo);
+  }
+
+  private SumWeight(IntVar[] list, int[] weights, IntVar sum, int equalTo) {
+
+    checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
+
+    if (list.length != weights.length)
+      throw new IllegalArgumentException(
+          "Constraint "
+              + this.getClass().getSimpleName()
+              + "has length of list and weights parameter different.");
+
+    queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+
+    Map<IntVar, Long> parameters = Var.createEmptyPositioning();
+
+    for (int i = 0; i < list.length; i++) {
+      if (weights[i] == 0L) continue;
+      Long accumulatedCoefficient = parameters.getOrDefault(list[i], 0L);
+      accumulatedCoefficient += weights[i];
+      if (accumulatedCoefficient != 0) {
+        parameters.put(list[i], accumulatedCoefficient);
+      } else {
+        parameters.remove(list[i]);
+      }
     }
 
-    /**
-     * SumWeight constraint implements the weighted summation over several
-     * variables.
-     * @param list    the list of varibales
-     * @param weights the list of weights
-     * @param equalTo the value to which SumWeight is equal to.
-     */
-    public SumWeight(IntVar[] list, int[] weights, int equalTo) {
-        this(list, weights, null, equalTo);
+    if (sum != null) {
+      Long accumulatedCoefficient = parameters.getOrDefault(sum, 0L);
+      accumulatedCoefficient -= 1;
+      if (accumulatedCoefficient != 0) {
+        parameters.put(sum, accumulatedCoefficient);
+      } else {
+        parameters.remove(sum);
+      }
     }
 
-    private SumWeight(IntVar[] list, int[] weights, IntVar sum, int equalTo) {
+    this.list = new IntVar[parameters.size()];
+    this.weights = new long[parameters.size()];
+    this.equalTo = equalTo;
 
-        checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
-
-        if (list.length != weights.length)
-            throw new IllegalArgumentException(
-                "Constraint " + this.getClass().getSimpleName() + "has length of list and weights parameter different.");
-
-        queueIndex = 1;
-        numberId = idNumber.incrementAndGet();
-
-        Map<IntVar, Long> parameters = Var.createEmptyPositioning();
-
-        for (int i = 0; i < list.length; i++) {
-            if (weights[i] == 0L)
-                continue;
-            Long accumulatedCoefficient = parameters.getOrDefault(list[i], 0L);
-            accumulatedCoefficient += weights[i];
-            if (accumulatedCoefficient != 0) {
-                parameters.put(list[i], accumulatedCoefficient);
-            } else {
-                parameters.remove(list[i]);
-            }
-
-        }
-
-        if (sum != null) {
-            Long accumulatedCoefficient = parameters.getOrDefault(sum, 0L);
-            accumulatedCoefficient -= 1;
-            if (accumulatedCoefficient != 0) {
-                parameters.put(sum, accumulatedCoefficient);
-            } else {
-                parameters.remove(sum);
-            }
-        }
-
-        this.list = new IntVar[parameters.size()];
-        this.weights = new long[parameters.size()];
-        this.equalTo = equalTo;
-
-        int i = 0;
-        for (Map.Entry<IntVar, Long> e : parameters.entrySet()) {
-            this.list[i] = e.getKey();
-            this.weights[i] = e.getValue();
-            i++;
-        }
-
-        checkForOverflow();
-
-        setScope(Arrays.stream(this.list));
-
+    int i = 0;
+    for (Map.Entry<IntVar, Long> e : parameters.entrySet()) {
+      this.list[i] = e.getKey();
+      this.weights[i] = e.getValue();
+      i++;
     }
 
+    checkForOverflow();
 
-    /**
-     * It constructs the constraint SumWeight.
-     *
-     * @param variables variables which are being multiplied by weights.
-     * @param weights   weight for each variable.
-     * @param sum       variable containing the sum of weighted variables.
-     */
-    public SumWeight(List<? extends IntVar> variables, List<Integer> weights, IntVar sum) {
-        this(variables.toArray(new IntVar[variables.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
-    }
+    setScope(Arrays.stream(this.list));
+  }
 
-    @Override public void removeLevelLate(int level) {
-        variableQueue.clear();
-        backtrackHasOccured = true;
-    }
+  /**
+   * It constructs the constraint SumWeight.
+   *
+   * @param variables variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param sum variable containing the sum of weighted variables.
+   */
+  public SumWeight(List<? extends IntVar> variables, List<Integer> weights, IntVar sum) {
+    this(
+        variables.toArray(new IntVar[variables.size()]),
+        weights.stream().mapToInt(i -> i).toArray(),
+        sum);
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public void removeLevelLate(int level) {
+    variableQueue.clear();
+    backtrackHasOccured = true;
+  }
 
-        treatChangedVariables();
+  @Override
+  public void consistency(Store store) {
 
-        if (backtrackHasOccured) {
+    treatChangedVariables();
 
-            backtrackHasOccured = false;
+    if (backtrackHasOccured) {
 
-            int pointer = nextGroundedPosition.value();
+      backtrackHasOccured = false;
 
-            lMin = sumGrounded.value();
-            lMax = lMin;
+      int pointer = nextGroundedPosition.value();
 
-            for (int i = pointer; i < list.length; i++) {
+      lMin = sumGrounded.value();
+      lMax = lMin;
 
-                IntDomain currentDomain = list[i].domain;
+      for (int i = pointer; i < list.length; i++) {
 
-                assert (!currentDomain.singleton()) : "Singletons should not occur in this part of the array";
+        IntDomain currentDomain = list[i].domain;
 
-                long mul1 = currentDomain.min() * weights[i];
-                long mul2 = currentDomain.max() * weights[i];
+        assert (!currentDomain.singleton())
+            : "Singletons should not occur in this part of the array";
 
-                if (mul1 <= mul2) {
-                    lMin += mul1;
-                    lMinArray[i] = mul1;
-                    lMax += mul2;
-                    lMaxArray[i] = mul2;
-                } else {
+        long mul1 = currentDomain.min() * weights[i];
+        long mul2 = currentDomain.max() * weights[i];
 
-                    lMin += mul2;
-                    lMinArray[i] = mul2;
-                    lMax += mul1;
-                    lMaxArray[i] = mul1;
-
-                }
-
-            }
-
-        }
-
-
-
-        do {
-
-            if (!(lMin <= equalTo && equalTo <= lMax))
-                throw Store.failException;
-
-            store.propagationHasOccurred = false;
-
-            long min = equalTo - lMax;
-            long max = equalTo - lMin;
-
-            int pointer1 = nextGroundedPosition.value();
-
-            for (int i = pointer1; i < list.length; i++) {
-
-                IntVar v = list[i];
-
-                long w = weights[i];
-                int divMin;
-                int divMax;
-                if (w > 0) {
-                    divMin = long2int(IntDomain.divRoundUp((min + lMaxArray[i]), w));
-                    divMax = long2int(IntDomain.divRoundDown((max + lMinArray[i]), w));
-                } else { // w < 0
-                    divMin = long2int(IntDomain.divRoundUp(-(max + lMinArray[i]), -w));
-                    divMax = long2int(IntDomain.divRoundDown(-(min + lMaxArray[i]), -w));
-                }
-
-                if (divMin > divMax)
-                    throw Store.failException;
-
-                v.domain.in(store.level, v, divMin, divMax);
-
-            }
-
-            treatChangedVariables();
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-
-        positionMaping = Var.positionMapping(list, false, this.getClass());
-
-        sumGrounded = new TimeStamp<>(store, 0L);
-        nextGroundedPosition = new TimeStamp<>(store, 0);
-
-        store.registerRemoveLevelLateListener(this);
-
-        lMinArray = new long[list.length];
-        lMaxArray = new long[list.length];
-        lMin = 0L;
-        lMax = 0L;
-
-        super.impose(store);
-
-    }
-
-    private long lMin;
-
-    private long lMax;
-
-    private long[] lMinArray;
-
-    private long[] lMaxArray;
-
-    private Map<Var, Integer> positionMaping;
-
-    private boolean backtrackHasOccured = false;
-
-    @Override public void queueVariable(int level, Var var) {
-        variableQueue.add((IntVar) var);
-    }
-
-
-    private void treatChangedVariables() {
-
-        LinkedHashSet<IntVar> fdvs = variableQueue;
-        variableQueue = new LinkedHashSet<>();
-
-        for (IntVar var : fdvs) {
-
-            int i = positionMaping.get(var);
-
-            if (var.singleton()) {
-
-                int pointer = nextGroundedPosition.value();
-
-                if (i < pointer)
-                    return;
-
-                long value = (long) var.min();
-
-                long sumJustGrounded = 0;
-
-                long weightGrounded = weights[i];
-
-                if (pointer < i) {
-                    IntVar grounded = list[i];
-                    list[i] = list[pointer];
-                    list[pointer] = grounded;
-
-                    positionMaping.put(list[i], i);
-                    positionMaping.put(list[pointer], pointer);
-
-                    long temp = lMinArray[i];
-                    lMinArray[i] = lMinArray[pointer];
-                    lMinArray[pointer] = temp;
-
-                    temp = lMaxArray[i];
-                    lMaxArray[i] = lMaxArray[pointer];
-                    lMaxArray[pointer] = temp;
-
-                    weights[i] = weights[pointer];
-                    weights[pointer] = weightGrounded;
-
-                }
-
-                sumJustGrounded += value * weightGrounded;
-
-                sumGrounded.update(sumGrounded.value() + sumJustGrounded);
-
-                lMin += sumJustGrounded - lMinArray[pointer];
-                lMax += sumJustGrounded - lMaxArray[pointer];
-                lMinArray[pointer] = sumJustGrounded;
-                lMaxArray[pointer] = sumJustGrounded;
-
-                pointer++;
-                nextGroundedPosition.update(pointer);
-
-            } else {
-
-                long mul1 = var.min() * weights[i];
-                long mul2 = var.max() * weights[i];
-
-                if (mul1 <= mul2) {
-
-                    lMin += mul1 - lMinArray[i];
-                    lMinArray[i] = mul1;
-
-                    lMax += mul2 - lMaxArray[i];
-                    lMaxArray[i] = mul2;
-
-                } else {
-
-                    lMin += mul2 - lMinArray[i];
-                    lMinArray[i] = mul2;
-
-                    lMax += mul1 - lMaxArray[i];
-                    lMaxArray[i] = mul1;
-
-                }
-
-            }
-
-        }
-
-    }
-
-    @Override public boolean satisfied() {
-
-        return nextGroundedPosition.value() == list.length && sumGrounded.value() == equalTo;
-
-    }
-
-    void checkForOverflow() {
-
-        long s1 = Math.multiplyExact(equalTo, -1);
-        long s2 = Math.multiplyExact(equalTo, -1);
-
-        long sumMin = 0;
-        long sumMax = 0;
-        if (s1 <= s2) {
-            sumMin = Math.addExact(sumMin, s1);
-            sumMax = Math.addExact(sumMax, s2);
+        if (mul1 <= mul2) {
+          lMin += mul1;
+          lMinArray[i] = mul1;
+          lMax += mul2;
+          lMaxArray[i] = mul2;
         } else {
-            sumMin = Math.addExact(sumMin, s2);
-            sumMax = Math.addExact(sumMax, s1);
-        }
 
-        for (int i = 0; i < list.length; i++) {
-            long n1 = Math.multiplyExact(list[i].min(), weights[i]);
-            long n2 = Math.multiplyExact(list[i].max(), weights[i]);
-
-            if (n1 <= n2) {
-                sumMin = Math.addExact(sumMin, n1);
-                sumMax = Math.addExact(sumMax, n2);
-            } else {
-                sumMin = Math.addExact(sumMin, n2);
-                sumMax = Math.addExact(sumMax, n1);
-            }
+          lMin += mul2;
+          lMinArray[i] = mul2;
+          lMax += mul1;
+          lMaxArray[i] = mul1;
         }
+      }
     }
 
-    @Override public String toString() {
+    do {
 
-        StringBuilder result = new StringBuilder(id());
-        result.append(" : sumWeight( [ ");
+      if (!(lMin <= equalTo && equalTo <= lMax)) throw Store.failException;
 
-        for (int i = 0; i < list.length; i++) {
-            result.append(list[i]);
-            if (i < list.length - 1)
-                result.append(", ");
+      store.propagationHasOccurred = false;
+
+      long min = equalTo - lMax;
+      long max = equalTo - lMin;
+
+      int pointer1 = nextGroundedPosition.value();
+
+      for (int i = pointer1; i < list.length; i++) {
+
+        IntVar v = list[i];
+
+        long w = weights[i];
+        int divMin;
+        int divMax;
+        if (w > 0) {
+          divMin = long2int(IntDomain.divRoundUp((min + lMaxArray[i]), w));
+          divMax = long2int(IntDomain.divRoundDown((max + lMinArray[i]), w));
+        } else { // w < 0
+          divMin = long2int(IntDomain.divRoundUp(-(max + lMinArray[i]), -w));
+          divMax = long2int(IntDomain.divRoundDown(-(min + lMaxArray[i]), -w));
         }
-        result.append("], [");
 
-        for (int i = 0; i < weights.length; i++) {
-            result.append(weights[i]);
-            if (i < weights.length - 1)
-                result.append(", ");
+        if (divMin > divMax) throw Store.failException;
+
+        v.domain.in(store.level, v, divMin, divMax);
+      }
+
+      treatChangedVariables();
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    positionMaping = Var.positionMapping(list, false, this.getClass());
+
+    sumGrounded = new TimeStamp<>(store, 0L);
+    nextGroundedPosition = new TimeStamp<>(store, 0);
+
+    store.registerRemoveLevelLateListener(this);
+
+    lMinArray = new long[list.length];
+    lMaxArray = new long[list.length];
+    lMin = 0L;
+    lMax = 0L;
+
+    super.impose(store);
+  }
+
+  private long lMin;
+
+  private long lMax;
+
+  private long[] lMinArray;
+
+  private long[] lMaxArray;
+
+  private Map<Var, Integer> positionMaping;
+
+  private boolean backtrackHasOccured = false;
+
+  @Override
+  public void queueVariable(int level, Var var) {
+    variableQueue.add((IntVar) var);
+  }
+
+  private void treatChangedVariables() {
+
+    LinkedHashSet<IntVar> fdvs = variableQueue;
+    variableQueue = new LinkedHashSet<>();
+
+    for (IntVar var : fdvs) {
+
+      int i = positionMaping.get(var);
+
+      if (var.singleton()) {
+
+        int pointer = nextGroundedPosition.value();
+
+        if (i < pointer) return;
+
+        long value = (long) var.min();
+
+        long sumJustGrounded = 0;
+
+        long weightGrounded = weights[i];
+
+        if (pointer < i) {
+          IntVar grounded = list[i];
+          list[i] = list[pointer];
+          list[pointer] = grounded;
+
+          positionMaping.put(list[i], i);
+          positionMaping.put(list[pointer], pointer);
+
+          long temp = lMinArray[i];
+          lMinArray[i] = lMinArray[pointer];
+          lMinArray[pointer] = temp;
+
+          temp = lMaxArray[i];
+          lMaxArray[i] = lMaxArray[pointer];
+          lMaxArray[pointer] = temp;
+
+          weights[i] = weights[pointer];
+          weights[pointer] = weightGrounded;
         }
 
-        result.append("], ").append(equalTo).append(" )");
+        sumJustGrounded += value * weightGrounded;
 
-        return result.toString();
+        sumGrounded.update(sumGrounded.value() + sumJustGrounded);
 
+        lMin += sumJustGrounded - lMinArray[pointer];
+        lMax += sumJustGrounded - lMaxArray[pointer];
+        lMinArray[pointer] = sumJustGrounded;
+        lMaxArray[pointer] = sumJustGrounded;
+
+        pointer++;
+        nextGroundedPosition.update(pointer);
+
+      } else {
+
+        long mul1 = var.min() * weights[i];
+        long mul2 = var.max() * weights[i];
+
+        if (mul1 <= mul2) {
+
+          lMin += mul1 - lMinArray[i];
+          lMinArray[i] = mul1;
+
+          lMax += mul2 - lMaxArray[i];
+          lMaxArray[i] = mul2;
+
+        } else {
+
+          lMin += mul2 - lMinArray[i];
+          lMinArray[i] = mul2;
+
+          lMax += mul1 - lMaxArray[i];
+          lMaxArray[i] = mul1;
+        }
+      }
+    }
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    return nextGroundedPosition.value() == list.length && sumGrounded.value() == equalTo;
+  }
+
+  void checkForOverflow() {
+
+    long s1 = Math.multiplyExact(equalTo, -1);
+    long s2 = Math.multiplyExact(equalTo, -1);
+
+    long sumMin = 0;
+    long sumMax = 0;
+    if (s1 <= s2) {
+      sumMin = Math.addExact(sumMin, s1);
+      sumMax = Math.addExact(sumMax, s2);
+    } else {
+      sumMin = Math.addExact(sumMin, s2);
+      sumMax = Math.addExact(sumMax, s1);
     }
 
+    for (int i = 0; i < list.length; i++) {
+      long n1 = Math.multiplyExact(list[i].min(), weights[i]);
+      long n2 = Math.multiplyExact(list[i].max(), weights[i]);
+
+      if (n1 <= n2) {
+        sumMin = Math.addExact(sumMin, n1);
+        sumMax = Math.addExact(sumMax, n2);
+      } else {
+        sumMin = Math.addExact(sumMin, n2);
+        sumMax = Math.addExact(sumMax, n1);
+      }
+    }
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+    result.append(" : sumWeight( [ ");
+
+    for (int i = 0; i < list.length; i++) {
+      result.append(list[i]);
+      if (i < list.length - 1) result.append(", ");
+    }
+    result.append("], [");
+
+    for (int i = 0; i < weights.length; i++) {
+      result.append(weights[i]);
+      if (i < weights.length - 1) result.append(", ");
+    }
+
+    result.append("], ").append(equalTo).append(" )");
+
+    return result.toString();
+  }
 }

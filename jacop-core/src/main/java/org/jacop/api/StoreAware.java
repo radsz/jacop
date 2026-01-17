@@ -33,19 +33,18 @@ package org.jacop.api;
 import org.jacop.core.Store;
 
 /**
- * Interface to mark the need of an entity to receive information about Constraint Store within which this
- * entity operates.
+ * Interface to mark the need of an entity to receive information about Constraint Store within
+ * which this entity operates.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
 public interface StoreAware {
 
-    /**
-     * It provide store for constraints that are not imposed but called from other constraints.
-     *
-     * @param store the constraint store in which context the constraint is executed.
-     */
-    void include(Store store);
-
+  /**
+   * It provide store for constraints that are not imposed but called from other constraints.
+   *
+   * @param store the constraint store in which context the constraint is executed.
+   */
+  void include(Store store);
 }

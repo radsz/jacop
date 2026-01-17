@@ -33,55 +33,48 @@ package org.jacop.search;
 import org.jacop.core.IntVar;
 
 /**
- * IndomainList - implements enumeration method based on the selection
- * of the preferred values for each variable. The preferred values are
- * specified as an ordered list of values. The values will be selected
- * in the order specified by this list. If the non of the values from
- * the list is present in the current domain a default indomain method
- * will be used.
+ * IndomainList - implements enumeration method based on the selection of the preferred values for
+ * each variable. The preferred values are specified as an ordered list of values. The values will
+ * be selected in the order specified by this list. If the non of the values from the list is
+ * present in the current domain a default indomain method will be used.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IndomainList<T extends IntVar> implements Indomain<T> {
 
-    private Indomain<T> defIndomain;
+  private Indomain<T> defIndomain;
 
-    private int[] order;
+  private int[] order;
 
-    /**
-     * It creates an IndomainList heuristic for choosing the values.
-     *
-     * @param order       the order of values used to decide which values goes first.
-     * @param defIndomain the default indomain used if some values are not specified by the order array.
-     */
-    public IndomainList(int[] order, Indomain<T> defIndomain) {
+  /**
+   * It creates an IndomainList heuristic for choosing the values.
+   *
+   * @param order the order of values used to decide which values goes first.
+   * @param defIndomain the default indomain used if some values are not specified by the order
+   *     array.
+   */
+  public IndomainList(int[] order, Indomain<T> defIndomain) {
 
-        this.order = new int[order.length];
+    this.order = new int[order.length];
 
-        for (int i = 0; i < order.length; i++)
-            this.order[i] = order[i];
+    for (int i = 0; i < order.length; i++) this.order[i] = order[i];
 
-        this.defIndomain = defIndomain;
-    }
+    this.defIndomain = defIndomain;
+  }
 
-    /*
-     * @throws JaCoPException if no value can be returned since list does not
-     * contain a value which belongs to the domain and default indomain was not
-     * supplied.
-     */
-    public int indomain(T var) throws RuntimeException {
+  /*
+   * @throws JaCoPException if no value can be returned since list does not
+   * contain a value which belongs to the domain and default indomain was not
+   * supplied.
+   */
+  public int indomain(T var) throws RuntimeException {
 
-        // FIXME, there is no better way than just creating a BoundDomain object?
-        for (int next : order)
-            if (var.dom().contains(next))
-                return next;
+    // FIXME, there is no better way than just creating a BoundDomain object?
+    for (int next : order) if (var.dom().contains(next)) return next;
 
-        if (defIndomain == null)
-            throw new RuntimeException();
+    if (defIndomain == null) throw new RuntimeException();
 
-        return defIndomain.indomain(var);
-    }
-
+    return defIndomain.indomain(var);
+  }
 }

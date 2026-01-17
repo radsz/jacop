@@ -30,6 +30,8 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
+import java.util.function.BiFunction;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.table.SimpleTable;
@@ -39,192 +41,201 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.*;
 
-import java.util.ArrayList;
-import java.util.function.BiFunction;
-
 /**
  * It specifies an adder using gates specified by extensional constraints.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Gates extends ExampleFD {
 
-    @Override public void model() {
-        model(Gates::tableConstraintProviderUsingSimpleTable);
-    }
+  @Override
+  public void model() {
+    model(Gates::tableConstraintProviderUsingSimpleTable);
+  }
 
-    public void model(BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
+  public void model(BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        BooleanVar a = new BooleanVar(store, "a");
-        BooleanVar b = new BooleanVar(store, "b");
-        BooleanVar c = new BooleanVar(store, "c");
-        BooleanVar sum = new BooleanVar(store, "sum");
-        BooleanVar carry = new BooleanVar(store, "carry");
-        vars.add(a);
-        vars.add(b);
-        vars.add(c);
-        vars.add(sum);
-        vars.add(carry);
+    BooleanVar a = new BooleanVar(store, "a");
+    BooleanVar b = new BooleanVar(store, "b");
+    BooleanVar c = new BooleanVar(store, "c");
+    BooleanVar sum = new BooleanVar(store, "sum");
+    BooleanVar carry = new BooleanVar(store, "carry");
+    vars.add(a);
+    vars.add(b);
+    vars.add(c);
+    vars.add(sum);
+    vars.add(carry);
 
-        BooleanVar nca = new BooleanVar(store, "nca");
+    BooleanVar nca = new BooleanVar(store, "nca");
 
-        BooleanVar[] t = new BooleanVar[2];
-        for (int i = 0; i < t.length; i++)
-            t[i] = new BooleanVar(store);
+    BooleanVar[] t = new BooleanVar[2];
+    for (int i = 0; i < t.length; i++) t[i] = new BooleanVar(store);
 
-        // sum part
-        xor(c, nca, sum, tableConstraintProvider);
-        xor(a, b, nca, tableConstraintProvider);
+    // sum part
+    xor(c, nca, sum, tableConstraintProvider);
+    xor(a, b, nca, tableConstraintProvider);
 
+    // carry part
+    or(t[0], t[1], carry, tableConstraintProvider);
+    and(c, nca, t[1], tableConstraintProvider);
+    and(a, b, t[0], tableConstraintProvider);
 
+    System.out.println(
+        "\nBooleanVariable store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+  }
 
-        // carry part
-        or(t[0], t[1], carry, tableConstraintProvider);
-        and(c, nca, t[1], tableConstraintProvider);
-        and(a, b, t[0], tableConstraintProvider);
+  /**
+   * It imposes an extensional constraint enforcing an and relationship between two input parameters
+   * and an output parameter.
+   *
+   * @param in1 the first input parameter.
+   * @param in2 the second input parameter.
+   * @param out the output parameter.
+   * @param tableConstraintProvider function that when provided input to create table constraint
+   *     will create one.
+   */
+  public void and(
+      BooleanVar in1,
+      BooleanVar in2,
+      BooleanVar out,
+      BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
-        System.out.println("\nBooleanVariable store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
+    int[][] tuples = {{0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {1, 1, 1}};
 
-    }
+    store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
+  }
 
-    /**
-     * It imposes an extensional constraint enforcing an and relationship
-     * between two input parameters and an output parameter.
-     *
-     * @param in1                     the first input parameter.
-     * @param in2                     the second input parameter.
-     * @param out                     the output parameter.
-     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
-     */
-    public void and(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
+  /**
+   * It imposes an extensional constraint enforcing an or relationship between two input parameters
+   * and an output parameter.
+   *
+   * @param in1 the first input parameter.
+   * @param in2 the second input parameter.
+   * @param out the output parameter.
+   * @param tableConstraintProvider function that when provided input to create table constraint
+   *     will create one.
+   */
+  public void or(
+      BooleanVar in1,
+      BooleanVar in2,
+      BooleanVar out,
+      BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
-        int[][] tuples = {{0, 0, 0}, {0, 1, 0}, {1, 0, 0}, {1, 1, 1}};
+    int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}};
 
-        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
+    store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
+  }
 
-    }
+  /**
+   * It imposes an extensional constraint enforcing an xor relationship between two input parameters
+   * and an output parameter.
+   *
+   * @param in1 the first input parameter.
+   * @param in2 the second input parameter.
+   * @param out the output parameter.
+   * @param tableConstraintProvider function that when provided input to create table constraint
+   *     will create one.
+   */
+  public void xor(
+      BooleanVar in1,
+      BooleanVar in2,
+      BooleanVar out,
+      BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
-    /**
-     * It imposes an extensional constraint enforcing an or relationship
-     * between two input parameters and an output parameter.
-     *
-     * @param in1                     the first input parameter.
-     * @param in2                     the second input parameter.
-     * @param out                     the output parameter.
-     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
-     */
-    public void or(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
+    int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}};
 
-        int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 1}};
+    store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
+  }
 
-        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
-    }
+  /**
+   * It imposes an extensional constraint enforcing an not relationship between input parameter and
+   * an output parameter.
+   *
+   * @param in the first input parameter.
+   * @param out the output parameter.
+   * @param tableConstraintProvider function that when provided input to create table constraint
+   *     will create one.
+   */
+  public void not(
+      BooleanVar in,
+      BooleanVar out,
+      BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
-    /**
-     * It imposes an extensional constraint enforcing an xor relationship
-     * between two input parameters and an output parameter.
-     *
-     * @param in1                     the first input parameter.
-     * @param in2                     the second input parameter.
-     * @param out                     the output parameter.
-     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
-     */
-    public void xor(BooleanVar in1, BooleanVar in2, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
+    int[][] tuples = {{0, 1}, {1, 0}};
 
-        int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}};
+    store.impose(tableConstraintProvider.apply(new BooleanVar[] {in, out}, tuples));
+  }
 
-        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in1, in2, out}, tuples));
-    }
+  /**
+   * It executes a program to solve gates problems.
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String args[]) {
 
-    /**
-     * It imposes an extensional constraint enforcing an not relationship
-     * between input parameter and an output parameter.
-     *
-     * @param in                      the first input parameter.
-     * @param out                     the output parameter.
-     * @param tableConstraintProvider function that when provided input to create table constraint will create one.
-     */
-    public void not(BooleanVar in, BooleanVar out, BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-        int[][] tuples = {{0, 1}, {1, 0}};
+    Gates example = new Gates();
+    example.model();
 
-        store.impose(tableConstraintProvider.apply(new BooleanVar[] {in, out}, tuples));
-    }
+    if (example.searchSpecific()) System.out.println("Solution found.");
 
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
 
-    /**
-     * It executes a program to solve gates problems.
-     *
-     * @param args parameters (none)
-     */
-    public static void main(String args[]) {
+  /**
+   * It provides a specific search with extensive printout of the result.
+   *
+   * @return true if there is a solution, false otherwise.
+   */
+  public boolean searchSpecific() {
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<IntVar>(
+            vars.toArray(new IntVar[1]),
+            new MostConstrainedStatic<IntVar>(),
+            new IndomainMin<IntVar>());
 
-        Gates example = new Gates();
-        example.model();
+    search = new DepthFirstSearch<IntVar>();
 
-        if (example.searchSpecific())
-            System.out.println("Solution found.");
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
 
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
-        System.out.println("\n\t*** Execution time = " + T + " ms");
-    }
+    boolean searchResult = search.labeling(store, select);
 
+    if (searchResult) {
+      System.out.println("\nYes");
+      Domain[][] solutions = new Domain[search.getSolutionListener().solutionsNo()][];
+      for (int i = 1; i <= solutions.length; i++) solutions[i - 1] = search.getSolution(i);
 
-    /**
-     * It provides a specific search with extensive printout of the result.
-     *
-     * @return true if there is a solution, false otherwise.
-     */
-    public boolean searchSpecific() {
+      System.out.println("\nAll solutions:\n");
+      for (IntVar v : vars) System.out.print(v.id() + "\t");
+      System.out.println("\n-------------------------------------");
+      for (int j = 0; j < solutions.length; j++) {
+        for (int i = 0; i < solutions[0].length; i++) System.out.print(solutions[j][i] + "\t");
+        System.out.println();
+      }
+    } else System.out.println("\nNo");
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new MostConstrainedStatic<IntVar>(), new IndomainMin<IntVar>());
+    return searchResult;
+  }
 
-        search = new DepthFirstSearch<IntVar>();
+  public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
+    return new SimpleTable(vars, tuples);
+  }
 
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
-
-        boolean searchResult = search.labeling(store, select);
-
-        if (searchResult) {
-            System.out.println("\nYes");
-            Domain[][] solutions = new Domain[search.getSolutionListener().solutionsNo()][];
-            for (int i = 1; i <= solutions.length; i++)
-                solutions[i - 1] = search.getSolution(i);
-
-            System.out.println("\nAll solutions:\n");
-            for (IntVar v : vars)
-                System.out.print(v.id() + "\t");
-            System.out.println("\n-------------------------------------");
-            for (int j = 0; j < solutions.length; j++) {
-                for (int i = 0; i < solutions[0].length; i++)
-                    System.out.print(solutions[j][i] + "\t");
-                System.out.println();
-            }
-        } else
-            System.out.println("\nNo");
-
-        return searchResult;
-
-    }
-
-    public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
-        return new SimpleTable(vars, tuples);
-    }
-
-    public static Constraint tableConstraintProviderUsingExtensionalSTR(IntVar[] vars, int[][] tuples) {
-        return new ExtensionalSupportSTR(vars, tuples);
-    }
-
-
+  public static Constraint tableConstraintProviderUsingExtensionalSTR(
+      IntVar[] vars, int[][] tuples) {
+    return new ExtensionalSupportSTR(vars, tuples);
+  }
 }

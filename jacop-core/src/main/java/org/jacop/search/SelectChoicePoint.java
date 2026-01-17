@@ -30,75 +30,64 @@
 
 package org.jacop.search;
 
+import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
-import java.util.Map;
-
 /**
- * Defines an interface for defining different methods for selecting next search
- * decision to be taken. The search decision called choice point will be first
- * enforced and later upon backtrack a negation of that search decision will be
- * enforced.
+ * Defines an interface for defining different methods for selecting next search decision to be
+ * taken. The search decision called choice point will be first enforced and later upon backtrack a
+ * negation of that search decision will be enforced.
  *
  * @param <T> type of the variable for which choice point is being created.
  * @author Radoslaw Szymanek and Radoslaw Szymanek
  * @version 4.10
  */
-
 public interface SelectChoicePoint<T extends Var> {
 
-    /**
-     * It returns the variable which is the base on the next choice point. Only
-     * if choice is of an X = C type. This function returns null if all
-     * variables have a value assigned or a choice point based on other type of
-     * constraint is being selected. The parameter index is the last variable which
-     * have been return by this SelectChoicePoint object which has not been
-     * backtracked upon yet.
-     *
-     * @param index the position of the last variable in selection choice point heuristic.
-     * @return variable based on which the choice needs to be created.
-     */
+  /**
+   * It returns the variable which is the base on the next choice point. Only if choice is of an X =
+   * C type. This function returns null if all variables have a value assigned or a choice point
+   * based on other type of constraint is being selected. The parameter index is the last variable
+   * which have been return by this SelectChoicePoint object which has not been backtracked upon
+   * yet.
+   *
+   * @param index the position of the last variable in selection choice point heuristic.
+   * @return variable based on which the choice needs to be created.
+   */
+  T getChoiceVariable(int index);
 
-    T getChoiceVariable(int index);
+  /**
+   * It returns a value which is the base of the next choice point. Only if choice is of an
+   * getChoiceVariable() = getChoiceValue() type.
+   *
+   * @return value used in the choice point (value).
+   */
+  int getChoiceValue();
 
-    /**
-     * It returns a value which is the base of the next choice point. Only if
-     * choice is of an getChoiceVariable() = getChoiceValue() type.
-     *
-     * @return value used in the choice point (value).
-     */
+  /**
+   * It returns the constraint which is the base of the choice point. If the return value is equal
+   * to null and choice point is also not based on X = C type of constraint then all variables have
+   * been assigned a value.
+   *
+   * @param index the position of the last variable returned by selection choice point heuristic.
+   * @return primitive constraint which is a base of a choice point.
+   */
+  PrimitiveConstraint getChoiceConstraint(int index);
 
-    int getChoiceValue();
+  /**
+   * It specifies the position of variables as given when variables of this select object were
+   * supplied.
+   *
+   * @return mapping of variables to the positions in the variables array.
+   */
+  Map<T, Integer> getVariablesMapping();
 
-    /**
-     * It returns the constraint which is the base of the choice point. If the
-     * return value is equal to null and choice point is also not based on X = C
-     * type of constraint then all variables have been assigned a value.
-     *
-     * @param index the position of the last variable returned by selection choice point heuristic.
-     * @return primitive constraint which is a base of a choice point.
-     */
-
-    PrimitiveConstraint getChoiceConstraint(int index);
-
-    /**
-     * It specifies the position of variables as given when variables of this
-     * select object were supplied.
-     *
-     * @return mapping of variables to the positions in the variables array.
-     */
-
-    Map<T, Integer> getVariablesMapping();
-
-    /**
-     * It returns the current index. Supplying this value in the next invocation
-     * of select will make search for next variable faster without compromising
-     * efficiency.
-     *
-     * @return internal position of the last variable chosen to be the base of the choice point.
-     */
-
-    int getIndex();
-
+  /**
+   * It returns the current index. Supplying this value in the next invocation of select will make
+   * search for next variable faster without compromising efficiency.
+   *
+   * @return internal position of the last variable chosen to be the base of the choice point.
+   */
+  int getIndex();
 }

@@ -36,44 +36,42 @@ package org.jacop.constraints.netflow;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Statistics extends StatisticsBase {
 
-    public final StatisticsBase NVARS = new StatisticsBase();
-    public final StatisticsBase XVARS = new StatisticsBase();
-    public final StatisticsBase WVARS = new StatisticsBase();
-    public final StatisticsBase SVARS = new StatisticsBase();
+  public final StatisticsBase NVARS = new StatisticsBase();
+  public final StatisticsBase XVARS = new StatisticsBase();
+  public final StatisticsBase WVARS = new StatisticsBase();
+  public final StatisticsBase SVARS = new StatisticsBase();
 
-    public String toString() {
+  public String toString() {
 
-        StringBuilder str = new StringBuilder();
+    StringBuilder str = new StringBuilder();
 
-        str.append("# consistency calls      : ");
-        str.append(consistencyCalls);
+    str.append("# consistency calls      : ");
+    str.append(consistencyCalls);
 
-        str.append("\n# consistency iterations : ");
-        str.append(consistencyIterations);
-        str.append("\t(avg ");
-        str.append(StatisticsBase.DF.format((double) consistencyIterations / consistencyCalls));
-        str.append(")");
+    str.append("\n# consistency iterations : ");
+    str.append(consistencyIterations);
+    str.append("\t(avg ");
+    str.append(StatisticsBase.DF.format((double) consistencyIterations / consistencyCalls));
+    str.append(")");
 
-        if (NVARS.arcsExamined > 0) {
-            str.append("\nFor X-variables GAC-pruning (node with degree <= 2)\n");
-            NVARS.toString(str);
-        }
-        if (XVARS.arcsExamined > 0) {
-            str.append("\nFor X-variables\n");
-            XVARS.toString(str);
-        }
-        if (WVARS.arcsExamined > 0) {
-            str.append("\nFor W-variables\n");
-            WVARS.toString(str);
-        }
-        if (SVARS.arcsExamined > 0) {
-            str.append("\nFor S-variables\n");
-            SVARS.toString(str);
-        }
-        return str.toString();
+    if (NVARS.arcsExamined > 0) {
+      str.append("\nFor X-variables GAC-pruning (node with degree <= 2)\n");
+      NVARS.toString(str);
     }
-
+    if (XVARS.arcsExamined > 0) {
+      str.append("\nFor X-variables\n");
+      XVARS.toString(str);
+    }
+    if (WVARS.arcsExamined > 0) {
+      str.append("\nFor W-variables\n");
+      WVARS.toString(str);
+    }
+    if (SVARS.arcsExamined > 0) {
+      str.append("\nFor S-variables\n");
+      SVARS.toString(str);
+    }
+    return str.toString();
+  }
 }

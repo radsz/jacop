@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
@@ -37,124 +38,116 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints |P| #= R
- * <p>
- * Bounds consistency can be used; third parameter of constructor controls this.
+ *
+ * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    boolean firstConsistencyCheck = true;
+  boolean firstConsistencyCheck = true;
 
-    int firstConsistencyLevel;
+  int firstConsistencyLevel;
 
-    /**
-     * It contains variable p.
-     */
-    public FloatVar p;
+  /** It contains variable p. */
+  public FloatVar p;
 
-    /**
-     * It contains variable q.
-     */
-    public FloatVar q;
+  /** It contains variable q. */
+  public FloatVar q;
 
-    /**
-     * It constructs |P| = Q constraints.
-     *
-     * @param p variable P1
-     * @param q variable Q
-     */
-    public AbsPeqR(FloatVar p, FloatVar q) {
+  /**
+   * It constructs |P| = Q constraints.
+   *
+   * @param p variable P1
+   * @param q variable Q
+   */
+  public AbsPeqR(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
+    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.queueIndex = 0;
-        this.p = p;
-        this.q = q;
+    this.queueIndex = 0;
+    this.p = p;
+    this.q = q;
 
-        setScope(p, q);
+    setScope(p, q);
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+      q.domain.inMin(store.level, q, 0.0);
+      firstConsistencyCheck = false;
+      firstConsistencyLevel = store.level;
     }
 
-    @Override public void removeLevel(int level) {
-        if (level == firstConsistencyLevel)
-            firstConsistencyCheck = true;
-    }
+    boundConsistency(store);
+  }
 
-    @Override public void consistency(Store store) {
+  void boundConsistency(Store store) {
 
-        if (firstConsistencyCheck) {
-            q.domain.inMin(store.level, q, 0.0);
-            firstConsistencyCheck = false;
-            firstConsistencyLevel = store.level;
-        }
+    do {
 
-        boundConsistency(store);
+      if (p.min() >= 0) {
+        // possible domain consistecny for this case
+        // p.domain.in(store.level, p, q.domain);
+        // store.propagationHasOccurred = false;
+        // q.domain.in(store.level, q, p.domain);
 
-    }
+        // bounds consistency
+        p.domain.in(store.level, p, q.min(), q.max());
 
-    void boundConsistency(Store store) {
+        store.propagationHasOccurred = false;
 
-        do {
+        q.domain.in(store.level, q, p.min(), p.max());
+      } else if (p.max() < 0) {
+        p.domain.in(store.level, p, -q.max(), -q.min());
 
-            if (p.min() >= 0) {
-                // possible domain consistecny for this case
-                // p.domain.in(store.level, p, q.domain);
-                // store.propagationHasOccurred = false;
-                // q.domain.in(store.level, q, p.domain);
+        store.propagationHasOccurred = false;
 
-                // bounds consistency
-                p.domain.in(store.level, p, q.min(), q.max());
+        q.domain.in(store.level, q, -p.max(), -p.min());
+      } else { // p.min() < 0 && p.max() >= 0
+        // int pBound = Math.max(q.min(), q.max());
+        double pBound = q.max(); // q is always >= 0
+        p.domain.in(store.level, p, -pBound, pBound);
 
-                store.propagationHasOccurred = false;
+        store.propagationHasOccurred = false;
 
-                q.domain.in(store.level, q, p.min(), p.max());
-            } else if (p.max() < 0) {
-                p.domain.in(store.level, p, -q.max(), -q.min());
+        q.domain.inMax(store.level, q, Math.max(-p.min(), p.max()));
+      }
 
-                store.propagationHasOccurred = false;
+    } while (store.propagationHasOccurred);
+  }
 
-                q.domain.in(store.level, q, -p.max(), -p.min());
-            } else { // p.min() < 0 && p.max() >= 0
-                // int pBound = Math.max(q.min(), q.max());
-                double pBound = q.max();   // q is always >= 0
-                p.domain.in(store.level, p, -pBound, pBound);
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-                store.propagationHasOccurred = false;
+  @Override
+  public boolean satisfied() {
+    return grounded() && (p.min() == q.min() || -p.min() == q.min());
+  }
 
-                q.domain.inMax(store.level, q, Math.max(-p.min(), p.max()));
-            }
+  @Override
+  public String toString() {
 
-        } while (store.propagationHasOccurred);
+    StringBuffer result = new StringBuffer(id());
 
-    }
+    result.append(" : absPeqR(").append(p).append(", ").append(q).append(" )");
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public boolean satisfied() {
-        return grounded() && (p.min() == q.min() || -p.min() == q.min());
-    }
-
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : absPeqR(").append(p).append(", ").append(q).append(" )");
-
-        return result.toString();
-
-    }
-
+    return result.toString();
+  }
 }

@@ -28,35 +28,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.floats.constraints;
 
 import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraint P / C = R for floats
- * <p>
- * Boundary consistency is used.
+ *
+ * <p>Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PdivCeqR extends PmulCeqR {
 
-    /**
-     * It constructs a constraint P / Q = R.
-     *
-     * @param p variable p.
-     * @param c constant c.
-     * @param r variable r.
-     */
-    public PdivCeqR(FloatVar p, double c, FloatVar r) {
-        super(r, c, p);
-    }
+  /**
+   * It constructs a constraint P / Q = R.
+   *
+   * @param p variable p.
+   * @param c constant c.
+   * @param r variable r.
+   */
+  public PdivCeqR(FloatVar p, double c, FloatVar r) {
+    super(r, c, p);
+  }
 
-    @Override public String toString() {
+  @Override
+  public String toString() {
 
-        return id() + " : PdivCeqR(" + r + ", " + c + ", " + p + " )";
-    }
+    return id() + " : PdivCeqR(" + r + ", " + c + ", " + p + " )";
+  }
 }

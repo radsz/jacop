@@ -36,7 +36,6 @@ package org.jacop.examples.floats;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 import org.jacop.constraints.Circuit;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -48,82 +47,87 @@ import org.jacop.search.*;
 
 public class TinyTSP {
 
-    // double MIN_FLOAT = -1e+150;
-    double MAX_FLOAT = 1e+150;
+  // double MIN_FLOAT = -1e+150;
+  double MAX_FLOAT = 1e+150;
 
-    void tiny_tsp() {
+  void tiny_tsp() {
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-        System.out.println("========= tiny_tsp =========");
+    System.out.println("========= tiny_tsp =========");
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatDomain.setPrecision(1e-6);
-        FloatDomain.intervalPrint(false);
+    FloatDomain.setPrecision(1e-6);
+    FloatDomain.intervalPrint(false);
 
-        int N = 4;
-        double[][] d =
-            {{0.0, 2.23606797749979, 2.23606797749979, 3.605551275463989}, {2.23606797749979, 0.0, 1.4142135623730951, 1.4142135623730951},
-                {2.23606797749979, 1.4142135623730951, 0.0, 2.0}, {3.605551275463989, 1.4142135623730951, 2.0, 0.0}};
+    int N = 4;
+    double[][] d = {
+      {0.0, 2.23606797749979, 2.23606797749979, 3.605551275463989},
+      {2.23606797749979, 0.0, 1.4142135623730951, 1.4142135623730951},
+      {2.23606797749979, 1.4142135623730951, 0.0, 2.0},
+      {3.605551275463989, 1.4142135623730951, 2.0, 0.0}
+    };
 
-        IntVar[] visit = new IntVar[N];
-        for (int i = 0; i < N; i++)
-            visit[i] = new IntVar(store, "visit[" + i + "]", 1, N);
+    IntVar[] visit = new IntVar[N];
+    for (int i = 0; i < N; i++) visit[i] = new IntVar(store, "visit[" + i + "]", 1, N);
 
-        store.impose(new Circuit(visit));
+    store.impose(new Circuit(visit));
 
-        FloatVar[] dist = new FloatVar[N];
-        for (int i = 0; i < N; i++) {
-            dist[i] = new FloatVar(store, "dist[" + i + "]", 0.0, 10.0);
-            store.impose(new ElementFloat(visit[i], d[i], dist[i]));
-        }
-
-        FloatVar route = new FloatVar(store, "route", 0.0, MAX_FLOAT);
-        FloatVar[] var = new FloatVar[N + 1];
-        for (int i = 0; i < N; i++)
-            var[i] = dist[i];
-        var[N] = route;
-
-        store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
-
-        System.out.println("\bVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
-
-        // DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        // SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, var, new MaxRegretFloat<FloatVar>());
-        DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-        SelectChoicePoint<IntVar> s = new SimpleSelect<IntVar>(visit, new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
-        label.setAssignSolution(true);
-        // s.leftFirst = false;
-
-        // label.setSolutionListener(new PrintOutListener<IntVar>());
-
-        label.labeling(store, s, route);
-
-        System.out.println(route);
-        System.out.println(java.util.Arrays.asList(dist));
-        System.out.println(java.util.Arrays.asList(visit));
-
-        System.out.println("\nPrecision = " + FloatDomain.precision());
-
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
-
-        System.out.println("\n\t*** Execution time = " + T + " ms");
-
+    FloatVar[] dist = new FloatVar[N];
+    for (int i = 0; i < N; i++) {
+      dist[i] = new FloatVar(store, "dist[" + i + "]", 0.0, 10.0);
+      store.impose(new ElementFloat(visit[i], d[i], dist[i]));
     }
 
-    /**
-     * It executes the program. 
-     *
-     * @param args no arguments
-     */
-    public static void main(String args[]) {
+    FloatVar route = new FloatVar(store, "route", 0.0, MAX_FLOAT);
+    FloatVar[] var = new FloatVar[N + 1];
+    for (int i = 0; i < N; i++) var[i] = dist[i];
+    var[N] = route;
 
-        TinyTSP example = new TinyTSP();
+    store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 
-        example.tiny_tsp();
+    System.out.println(
+        "\bVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
 
-    }
+    // DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    // SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, var, new
+    // MaxRegretFloat<FloatVar>());
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+    SelectChoicePoint<IntVar> s =
+        new SimpleSelect<IntVar>(visit, new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+    label.setAssignSolution(true);
+    // s.leftFirst = false;
+
+    // label.setSolutionListener(new PrintOutListener<IntVar>());
+
+    label.labeling(store, s, route);
+
+    System.out.println(route);
+    System.out.println(java.util.Arrays.asList(dist));
+    System.out.println(java.util.Arrays.asList(visit));
+
+    System.out.println("\nPrecision = " + FloatDomain.precision());
+
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    TinyTSP example = new TinyTSP();
+
+    example.tiny_tsp();
+  }
 }

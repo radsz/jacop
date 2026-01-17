@@ -40,36 +40,27 @@ import org.jacop.search.ComparatorVariable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LargestMinFloat<T extends FloatVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs variable comparator with priority based on the largest minimal value.
-     */
-    public LargestMinFloat() {
-    }
+  /** It constructs variable comparator with priority based on the largest minimal value. */
+  public LargestMinFloat() {}
 
-    public int compare(double left, T var) {
-        double right = var.dom().min();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    double right = var.dom().min();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        double left = leftVar.dom().min();
-        double right = rightVar.dom().min();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    double left = leftVar.dom().min();
+    double right = rightVar.dom().min();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.dom().min();
-    }
-
+  public double metric(T var) {
+    return var.dom().min();
+  }
 }

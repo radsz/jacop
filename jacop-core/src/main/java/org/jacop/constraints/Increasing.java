@@ -30,125 +30,119 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
-import org.jacop.constraints.XltY;
-import org.jacop.constraints.XlteqY;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Arrays;
-import java.util.ArrayList;
+import org.jacop.core.*;
 
 /**
- * Increasing constraint assures that all variables are in increasing order. 
+ * Increasing constraint assures that all variables are in increasing order.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Increasing extends Constraint {
 
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  IntVar[] x;
+  int n;
 
-    IntVar[] x;
-    int n;
+  byte strict = 0;
 
-    byte strict = 0;
+  // List of decomposed constraints
+  protected List<Constraint> constraints = null;
 
-    // List of decomposed constraints
-    protected List<Constraint> constraints = null;
+  /*
+   * It constructs an increasing constraint.
+   *
+   * @param x variables which must be in increasing order.
+   */
+  public Increasing(IntVar[] x) {
 
-    /*
-     * It constructs an increasing constraint.
-     *
-     * @param x variables which must be in increasing order.
-     */
-    public Increasing(IntVar[] x) {
+    checkInputForNullness("x", x);
 
-        checkInputForNullness("x", x);
+    this.numberId = idNumber.incrementAndGet();
+    this.x = Arrays.copyOf(x, x.length);
+    this.n = x.length;
 
-        this.numberId = idNumber.incrementAndGet();
-        this.x = Arrays.copyOf(x, x.length);
-        this.n = x.length;
+    this.queueIndex = 1;
 
-        this.queueIndex = 1;
+    setScope(x);
+  }
 
-        setScope(x);
+  public Increasing(IntVar[] x, boolean strict) {
+    this(x);
+
+    if (strict) this.strict = 1;
+  }
+
+  /**
+   * It constructs an increasing constraint.
+   *
+   * @param x variables which must be in increasing order.
+   */
+  public Increasing(List<? extends IntVar> x) {
+    this(x.toArray(new IntVar[x.size()]));
+  }
+
+  public Increasing(List<? extends IntVar> x, boolean strict) {
+    this(x.toArray(new IntVar[x.size()]), strict);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      for (int i = 1; i < n; i++) {
+        x[i - 1].domain.inMax(store.level, x[i - 1], x[i].max() - strict);
+        x[i].domain.inMin(store.level, x[i], x[i - 1].min() + strict);
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+    List<Constraint> cs = new ArrayList<>();
+
+    for (int i = 1; i < n; i++) {
+      if (strict == 1) cs.add(new XltY(x[i - 1], x[i]));
+      else cs.add(new XlteqY(x[i - 1], x[i]));
     }
 
-    public Increasing(IntVar[] x, boolean strict) {
-        this(x);
+    return cs;
+  }
 
-        if (strict)
-            this.strict = 1;
+  @Override
+  public void imposeDecomposition(Store store) {
+
+    if (constraints == null) constraints = decompose(store);
+
+    for (Constraint c : constraints) store.impose(c);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+    result.append(" : Increasing([");
+
+    for (int i = 0; i < n; i++) {
+      result.append(x[i]);
+      if (i < n - 1) result.append(", ");
     }
+    result.append("], " + (strict == 1 ? "strict" : "non-strict") + ")");
 
-    /**
-     * It constructs an increasing constraint.
-     *
-     * @param x variables which must be in increasing order.
-     */
-    public Increasing(List<? extends IntVar> x) {
-        this(x.toArray(new IntVar[x.size()]));
-    }
-
-    public Increasing(List<? extends IntVar> x, boolean strict) {
-        this(x.toArray(new IntVar[x.size()]), strict);
-    }
-
-    @Override public void consistency(Store store) {
-
-        do {
-
-            store.propagationHasOccurred = false;
-
-            for (int i = 1; i < n; i++) {
-                x[i - 1].domain.inMax(store.level, x[i - 1], x[i].max() - strict);
-                x[i].domain.inMin(store.level, x[i], x[i - 1].min() + strict);
-            }
-            
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public List<Constraint> decompose(Store store) {
-        List<Constraint> cs = new ArrayList<>();
-
-        for (int i = 1; i < n; i++) {
-            if (strict == 1)
-                cs.add(new XltY(x[i - 1], x[i]));
-            else
-                cs.add(new XlteqY(x[i - 1], x[i]));
-        }
-        
-        return cs;
-    }
-
-    @Override public void imposeDecomposition(Store store) {
-
-        if (constraints == null)
-            constraints = decompose(store);
-
-        for (Constraint c : constraints)
-            store.impose(c);
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : Increasing([");
-
-        for (int i = 0; i < n; i++) {
-            result.append(x[i]);
-            if (i < n - 1)
-                result.append(", ");
-        }
-        result.append("], " + (strict == 1 ? "strict" : "non-strict") + ")");
-
-        return result.toString();
-    }
+    return result.toString();
+  }
 }

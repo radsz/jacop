@@ -30,36 +30,31 @@
 
 package org.jacop.fz.constraints;
 
-import org.jacop.core.*;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashMap;
 import org.jacop.constraints.ChannelReif;
+import org.jacop.core.*;
 
 /**
- * It collects all int_eq_reif constraint to create ChannelReif
- * constraints, if possible.
+ * It collects all int_eq_reif constraint to create ChannelReif constraints, if possible.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+class ReificationConstraints extends ChannelMap {
 
+  public ReificationConstraints(Support support) {
+    super(support);
+  }
 
-class ReificationConstraints extends ChannelMap  {
+  void pose() {
+    Set<Map.Entry<IntVar, Map<Integer, IntVar>>> entries = cs.entrySet();
 
-    public ReificationConstraints(Support support) {
-        super(support);
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : entries) {
+      IntVar var = e.getKey();
+      Map<Integer, IntVar> vb = e.getValue();
+
+      if (vb.size() > minSize) support.pose(new ChannelReif(var, vb));
     }
-
-    void pose() {
-        Set<Map.Entry<IntVar, Map<Integer,IntVar>>> entries = cs.entrySet();
-
-        for (Map.Entry<IntVar, Map<Integer,IntVar>> e : entries) {
-            IntVar var = e.getKey();
-            Map<Integer,IntVar> vb = e.getValue();
-
-            if (vb.size() > minSize)
-                support.pose(new ChannelReif(var, vb));
-        }
-    }
+  }
 }

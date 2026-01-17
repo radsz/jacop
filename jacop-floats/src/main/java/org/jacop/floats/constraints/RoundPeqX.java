@@ -30,116 +30,111 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints round(P) #= X for integer variable X and float variable P.
+ *
  * <p>
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class RoundPeqX extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a left hand variable in equality constraint.
-     */
-    public IntVar x;
+  /** It specifies a left hand variable in equality constraint. */
+  public IntVar x;
 
-    /**
-     * It specifies a right hand variable in equality constraint.
-     */
-    public FloatVar p;
+  /** It specifies a right hand variable in equality constraint. */
+  public FloatVar p;
 
-    /**
-     * It constructs constraint X = P.
-     *
-     * @param x variable x.
-     * @param p variable p.
-     */
-    public RoundPeqX(FloatVar p, IntVar x) {
+  /**
+   * It constructs constraint X = P.
+   *
+   * @param x variable x.
+   * @param p variable p.
+   */
+  public RoundPeqX(FloatVar p, IntVar x) {
 
-        checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
+    checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
 
-        double q = Double.max(p.min(), p.max());
-        if (q >  (double)Integer.MAX_VALUE || q < (double)Integer.MIN_VALUE)
-            throw new RuntimeException("Error: JaCoP cannor handle "+p+" in rounding to integer.");
-        numberId = idNumber.incrementAndGet();
+    double q = Double.max(p.min(), p.max());
+    if (q > (double) Integer.MAX_VALUE || q < (double) Integer.MIN_VALUE)
+      throw new RuntimeException("Error: JaCoP cannor handle " + p + " in rounding to integer.");
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.p = p;
+    this.x = x;
+    this.p = p;
 
-        setScope(x, p);
+    setScope(x, p);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    do {
+      int min = round(p.min());
+      int max = round(p.max());
+
+      x.domain.in(store.level, x, min, max);
+
+      store.propagationHasOccurred = false;
+
+      double pMin =
+          (x.min() < 0) ? Math.nextUp((double) x.min() - 0.5) : Math.nextUp((double) x.min() - 0.5);
+      double pMax =
+          (x.max() < 0)
+              ? Math.nextDown((double) x.max() + 0.5)
+              : Math.nextDown((double) x.max() + 0.5);
+
+      p.domain.in(store.level, p, pMin, pMax);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  double fractionalPart(double p) {
+    long iPart = (long) p;
+    double fPart = p - iPart;
+    return fPart;
+  }
+
+  int round(double p) {
+
+    double fPart = fractionalPart(p);
+
+    int r;
+    if (p < 0) {
+      if (fPart <= -0.5) r = (int) Math.floor(p);
+      else r = (int) Math.ceil(p);
+    } else { // p >= 0
+      if (fPart >= 0.5) r = (int) Math.ceil(p);
+      else r = (int) Math.floor(p);
     }
+    return r;
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-        do {
-            int min = round(p.min());
-            int max = round(p.max());
+  @Override
+  public boolean satisfied() {
+    return x.singleton()
+        && p.min() > (double) x.value() - 0.5
+        && p.max() < (double) x.value() + 0.5;
+  }
 
-            x.domain.in(store.level, x, min, max);
-
-            store.propagationHasOccurred = false;
-
-            double pMin = (x.min() < 0) ? Math.nextUp((double)x.min() - 0.5) :
-                Math.nextUp((double)x.min() - 0.5);
-            double pMax = (x.max() < 0) ? Math.nextDown((double)x.max() + 0.5) :
-                Math.nextDown((double)x.max() + 0.5);
-
-            p.domain.in(store.level, p, pMin, pMax);
-
-        } while (store.propagationHasOccurred);
-    }
-
-    double fractionalPart(double p) {
-        long iPart = (long)p;
-        double fPart = p - iPart;
-        return fPart;
-    }
-
-    int round(double p) {
-
-        double fPart = fractionalPart(p);
-
-        int r;
-        if (p < 0) {
-            if (fPart <= -0.5)
-                r = (int)Math.floor(p);
-            else
-                r = (int)Math.ceil(p);
-        } else { // p >= 0
-            if (fPart >= 0.5)
-                r = (int)Math.ceil(p);
-            else
-                r = (int)Math.floor(p);
-        }
-        return r;
-    }
-        
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public boolean satisfied() {
-        return x.singleton() &&
-            p.min() > (double)x.value() - 0.5 &&
-            p.max() < (double)x.value() + 0.5;
-    }
-
-    @Override public String toString() {
-        return id() + " : RoundPeqX(" + p + ", " + x + " )";
-    }
+  @Override
+  public String toString() {
+    return id() + " : RoundPeqX(" + p + ", " + x + " )";
+  }
 }

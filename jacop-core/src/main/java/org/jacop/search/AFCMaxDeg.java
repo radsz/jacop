@@ -30,81 +30,67 @@
 
 package org.jacop.search;
 
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.constraints.Constraint;
 
 /**
- * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time
- * a constraint failure is encountered the constraint afc_weight is increased by
- * one. All other constraints afc_weight value is recalculated as afc_weight *
- * decay.  The comparator will choose the variable with the highest afc_weight,
- * defined as sum of all its constraints afc_weights, divided by variable's
+ * Defines a AccumulatedFailureCount comparator (afc) for variables. Every time a constraint failure
+ * is encountered the constraint afc_weight is increased by one. All other constraints afc_weight
+ * value is recalculated as afc_weight * decay. The comparator will choose the variable with the
+ * highest afc_weight, defined as sum of all its constraints afc_weights, divided by variable's
  * domain size.
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AFCMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
-    private AFCMaxDeg() {}
+  private AFCMaxDeg() {}
 
-    public AFCMaxDeg(Store store) {
-	this(store, store.getDecay());
-    }
-    
-    public AFCMaxDeg(Store store, double decay) {
-	store.setAllConstraints();
-	store.afcManagement(true);
-	store.setDecay(decay);
-    }
-    
-    public int compare(double left, T var) {
+  public AFCMaxDeg(Store store) {
+    this(store, store.getDecay());
+  }
 
-        double right = afcValue(var) / var.getSizeFloat();
+  public AFCMaxDeg(Store store, double decay) {
+    store.setAllConstraints();
+    store.afcManagement(true);
+    store.setDecay(decay);
+  }
 
-        if (left > right)
+  public int compare(double left, T var) {
 
-            return 1;
+    double right = afcValue(var) / var.getSizeFloat();
 
-        if (left < right)
+    if (left > right) return 1;
 
-            return -1;
+    if (left < right) return -1;
 
-        return 0;
+    return 0;
+  }
 
-    }
+  public int compare(T leftVar, T rightVar) {
 
-    public int compare(T leftVar, T rightVar) {
-    
-        double left = afcValue(leftVar) / leftVar.getSizeFloat();
+    double left = afcValue(leftVar) / leftVar.getSizeFloat();
 
-        double right = afcValue(rightVar) / rightVar.getSizeFloat();
+    double right = afcValue(rightVar) / rightVar.getSizeFloat();
 
-        if (left > right)
+    if (left > right) return 1;
 
-            return 1;
+    if (left < right) return -1;
 
-        if (left < right)
+    return 0;
+  }
 
-            return -1;
+  public double metric(T var) {
 
-        return 0;
+    return afcValue(var) / var.getSizeFloat();
+  }
 
-    }
-
-    public double metric(T var) {
-
-        return afcValue(var) / var.getSizeFloat();
-
-    }
-
-    double afcValue(Var v) {
-	double value = 0.0f;
-	for (Constraint c : v.dom().constraints())
-	    value += c.afc();
-	return value;
-    }
+  double afcValue(Var v) {
+    double value = 0.0f;
+    for (Constraint c : v.dom().constraints()) value += c.afc();
+    return value;
+  }
 }

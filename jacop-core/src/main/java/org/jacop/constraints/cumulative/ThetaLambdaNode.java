@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 /*
@@ -40,24 +39,38 @@ package org.jacop.constraints.cumulative;
 
 class ThetaLambdaNode extends TreeNode {
 
-    // Theta parameters
-    long e;
-    long env;
-    long envC;
+  // Theta parameters
+  long e;
+  long env;
+  long envC;
 
-    // Lambda parameters
-    long eLambda;
-    long envLambda;
-    int responsibleELambda;
-    int responsibleEnvLambda;
+  // Lambda parameters
+  long eLambda;
+  long envLambda;
+  int responsibleELambda;
+  int responsibleEnvLambda;
 
-    ThetaLambdaNode() {
-    }
+  ThetaLambdaNode() {}
 
-    public String toString() {
-        String taskNo = task != null ? "\ntask = " + task.index : "";
-        return "node: " + index + taskNo + "\ne = " + e + "\nenv = " + env + //"\nbase_envC = "+base_envC+
-            "\nenvC = " + envC + "\neLambda = " + eLambda + "\nenvLambda = " + envLambda + "\nresponsibleELambda = " + responsibleELambda
-            + "\nresponsibleEnvLambda = " + responsibleEnvLambda;
-    }
+  public String toString() {
+    String taskNo = task != null ? "\ntask = " + task.index : "";
+    return "node: "
+        + index
+        + taskNo
+        + "\ne = "
+        + e
+        + "\nenv = "
+        + env
+        + // "\nbase_envC = "+base_envC+
+        "\nenvC = "
+        + envC
+        + "\neLambda = "
+        + eLambda
+        + "\nenvLambda = "
+        + envLambda
+        + "\nresponsibleELambda = "
+        + responsibleELambda
+        + "\nresponsibleEnvLambda = "
+        + responsibleEnvLambda;
+  }
 }

@@ -30,114 +30,108 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Arrays;
+import java.util.stream.Stream;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.Arrays;
-import java.util.stream.Stream;
-
 /**
- * EquationSystem constraint implements the multivariate interval
- * Newton method for pruning domains of variables in a system of
- * non-linear equations.
+ * EquationSystem constraint implements the multivariate interval Newton method for pruning domains
+ * of variables in a system of non-linear equations.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class EquationSystem extends Constraint {
 
-    final static boolean debug = false;
+  static final boolean debug = false;
 
-    // variables defining eqations
-    FloatVar[] f;
+  // variables defining eqations
+  FloatVar[] f;
 
-    // variables of the eqation system
-    FloatVar[] x;
+  // variables of the eqation system
+  FloatVar[] x;
 
-    MultivariateIntervalNewton newton;
+  MultivariateIntervalNewton newton;
 
-    /**
-     * It constructs the constraint EquationSystem.
-     *
-     * @param store current store
-     * @param f     a variable that defines an eqation
-     * @param x     variables of eqation system
-     */
-    public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
+  /**
+   * It constructs the constraint EquationSystem.
+   *
+   * @param store current store
+   * @param f a variable that defines an eqation
+   * @param x variables of eqation system
+   */
+  public EquationSystem(Store store, FloatVar[] f, FloatVar[] x) {
 
-        checkInputForNullness(new String[] {"f", "x"}, new Object[] {f, x});
+    checkInputForNullness(new String[] {"f", "x"}, new Object[] {f, x});
 
-        this.f = Arrays.copyOf(f, f.length);
-        this.x = Arrays.copyOf(x, x.length);
+    this.f = Arrays.copyOf(f, f.length);
+    this.x = Arrays.copyOf(x, x.length);
 
-        queueIndex = 4;
+    queueIndex = 4;
 
-        newton = new MultivariateIntervalNewton(store, f, x);
+    newton = new MultivariateIntervalNewton(store, f, x);
 
-        setScope(Stream.concat(Arrays.stream(f), Arrays.stream(x)));
+    setScope(Stream.concat(Arrays.stream(f), Arrays.stream(x)));
+  }
 
+  @Override
+  public void consistency(Store store) {
+
+    FloatInterval[] xs = newton.solve();
+
+    if (xs != null)
+      for (int i = 0; i < xs.length; i++) {
+        if (debug)
+          if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max())
+            System.out.println("*** " + x[i] + " in " + xs[i]);
+
+        if (!xs[i].singleton()) x[i].domain.in(store.level, x[i], xs[i].min(), xs[i].max());
+      }
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    if (f == null) return;
+
+    super.impose(store);
+
+    // TODO, why do we call consistency of the whole store inside impose function of the
+    // constraint???
+    if (!store.consistency()) throw Store.failException;
+
+    store.addChanged(this);
+    store.countConstraint();
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+    result.append(" : EquationSystem( [ ");
+
+    for (int i = 0; i < f.length; i++) {
+      result.append(f[i]);
+      if (i < f.length - 1) result.append(", ");
+    }
+    result.append("], [");
+
+    for (int i = 0; i < x.length; i++) {
+      result.append(x[i]);
+      if (i < x.length - 1) result.append(", ");
     }
 
-    @Override public void consistency(Store store) {
+    result.append("], ").append(" )");
 
-        FloatInterval[] xs = newton.solve();
-
-        if (xs != null)
-            for (int i = 0; i < xs.length; i++) {
-                if (debug)
-                    if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max())
-                        System.out.println("*** " + x[i] + " in " + xs[i]);
-
-                if (!xs[i].singleton())
-                    x[i].domain.in(store.level, x[i], xs[i].min(), xs[i].max());
-            }
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-
-        if (f == null)
-            return;
-
-        super.impose(store);
-
-        // TODO, why do we call consistency of the whole store inside impose function of the constraint???
-        if (!store.consistency())
-            throw Store.failException;
-
-        store.addChanged(this);
-        store.countConstraint();
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : EquationSystem( [ ");
-
-        for (int i = 0; i < f.length; i++) {
-            result.append(f[i]);
-            if (i < f.length - 1)
-                result.append(", ");
-        }
-        result.append("], [");
-
-        for (int i = 0; i < x.length; i++) {
-            result.append(x[i]);
-            if (i < x.length - 1)
-                result.append(", ");
-        }
-
-        result.append("], ").append(" )");
-
-        return result.toString();
-
-    }
-
+    return result.toString();
+  }
 }

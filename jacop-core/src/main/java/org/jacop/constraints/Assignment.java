@@ -30,345 +30,320 @@
 
 package org.jacop.constraints;
 
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
-
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.*;
 
 /**
- * Assignment constraint implements facility to improve channeling constraints
- * between dual viewpoints of permutation models.
- * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
+ * Assignment constraint implements facility to improve channeling constraints between dual
+ * viewpoints of permutation models. It enforces the relationship x[d[i]-shiftX]=i+shiftD and
+ * d[x[i]-shiftD]=i+shiftX.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+public class Assignment extends Constraint
+    implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-public class Assignment extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  /** It specifies a list of variables d. */
+  public final IntVar d[];
 
-    /**
-     * It specifies a list of variables d.
-     */
-    final public IntVar d[];
+  /** It specifies a shift applied to variables d. */
+  public int shiftD = 0;
 
-    /**
-     * It specifies a shift applied to variables d.
-     */
-    public int shiftD = 0;
+  Map<IntVar, Integer> ds;
 
-    Map<IntVar, Integer> ds;
+  /** It specifies a list of variables x. */
+  public IntVar x[];
 
-    /**
-     * It specifies a list of variables x.
-     */
-    public IntVar x[];
-    /**
-     * It specifies a shift applied to variables x.
-     */
-    public int shiftX = 0;
+  /** It specifies a shift applied to variables x. */
+  public int shiftX = 0;
 
-    Map<IntVar, Integer> xs;
+  Map<IntVar, Integer> xs;
 
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
 
-    LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
-    boolean firstConsistencyCheck = true;
-    int firstConsistencyLevel;
+  /**
+   * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
+   *
+   * @param xs array of variables x
+   * @param ds array of variables d
+   * @param shiftX a shift of indexes in X array.
+   * @param shiftD a shift of indexes in D array.
+   */
+  public Assignment(IntVar[] xs, IntVar[] ds, int shiftX, int shiftD) {
 
-    /**
-     * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
-     * d[x[i]-shiftD]=i+shiftX.
-     *
-     * @param xs     array of variables x
-     * @param ds     array of variables d
-     * @param shiftX a shift of indexes in X array.
-     * @param shiftD a shift of indexes in D array.
-     */
-    public Assignment(IntVar[] xs, IntVar[] ds, int shiftX, int shiftD) {
+    checkInputForNullness(new String[] {"xs", "ds"}, xs, ds);
 
-        checkInputForNullness(new String[] {"xs", "ds"}, xs, ds);
+    numberId = idNumber.incrementAndGet();
 
-        numberId = idNumber.incrementAndGet();
+    this.shiftX = shiftX;
+    this.shiftD = shiftD;
+    this.x = Arrays.copyOf(xs, xs.length);
+    this.d = Arrays.copyOf(ds, ds.length);
+    this.queueIndex = 1;
 
-        this.shiftX = shiftX;
-        this.shiftD = shiftD;
-        this.x = Arrays.copyOf(xs, xs.length);
-        this.d = Arrays.copyOf(ds, ds.length);
-        this.queueIndex = 1;
+    this.xs = Var.createEmptyPositioning();
+    this.ds = Var.createEmptyPositioning();
 
-        this.xs = Var.createEmptyPositioning();
-        this.ds = Var.createEmptyPositioning();
+    for (int i = 0; i < xs.length; i++) {
+      this.xs.put(x[i], i + shiftX);
+      this.ds.put(d[i], i + shiftD);
+    }
 
-        for (int i = 0; i < xs.length; i++) {
-            this.xs.put(x[i], i + shiftX);
-            this.ds.put(d[i], i + shiftD);
+    setScope(Stream.concat(Arrays.stream(xs), Arrays.stream(ds)));
+  }
+
+  /**
+   * It enforces the relationship x[d[i]-shiftX]=i+shiftD and d[x[i]-shiftD]=i+shiftX.
+   *
+   * @param xs arraylist of variables x
+   * @param ds arraylist of variables d
+   * @param shiftX shift for parameter xs
+   * @param shiftD shift for parameter ds
+   */
+  public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds, int shiftX, int shiftD) {
+    this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), shiftX, shiftD);
+  }
+
+  /**
+   * It constructs an Assignment constraint with shift equal 0. It enforces relation - d[x[j]] = i
+   * and x[d[i]] = j.
+   *
+   * @param xs arraylist of x variables
+   * @param ds arraylist of d variables
+   */
+  public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds) {
+    this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), 0, 0);
+  }
+
+  /**
+   * It enforces the relationship x[d[i]-min]=i+min and d[x[i]-min]=i+min.
+   *
+   * @param xs arraylist of variables x
+   * @param ds arraylist of variables d
+   * @param min shift
+   */
+  public Assignment(List<? extends Var> xs, List<? extends Var> ds, int min) {
+    this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), min, min);
+  }
+
+  /**
+   * It constructs an Assignment constraint with shift equal 0. It enforces relation - d[x[i]] = i
+   * and x[d[i]] = i.
+   *
+   * @param xs array of x variables
+   * @param ds array of d variables
+   */
+  public Assignment(IntVar[] xs, IntVar[] ds) {
+    this(xs, ds, 0, 0);
+  }
+
+  /**
+   * It enforces the relationship x[d[i]-min]=i+min and d[x[i]-min]=i+min.
+   *
+   * @param xs array of variables x
+   * @param ds array of variables d
+   * @param min shift
+   */
+  public Assignment(IntVar[] xs, IntVar[] ds, int min) {
+    this(xs, ds, min, min);
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    variableQueue.clear();
+    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+  }
+
+  IntervalDomain rangeX;
+  IntervalDomain rangeD;
+
+  @Override
+  public void consistency(Store store) {
+
+    if (firstConsistencyCheck) {
+
+      rangeX = new IntervalDomain(0 + shiftX, x.length - 1 + shiftX);
+
+      rangeD = new IntervalDomain(0 + shiftD, x.length - 1 + shiftD);
+
+      for (int i = 0; i < x.length; i++) {
+
+        IntDomain alreadyRemoved = rangeD.subtract(x[i].domain);
+
+        x[i].domain.in(store.level, x[i], shiftD, x.length - 1 + shiftD);
+
+        if (!alreadyRemoved.isEmpty())
+          for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
+              enumer.hasMoreElements(); ) {
+
+            int xValue = enumer.nextElement();
+
+            d[xValue - shiftD].domain.inComplement(store.level, d[xValue - shiftD], i + shiftX);
+          }
+
+        if (x[i].singleton()) {
+          int position = x[i].value() - shiftD;
+          d[position].domain.in(store.level, d[position], i + shiftX, i + shiftX);
         }
+      }
 
-        setScope(Stream.concat(Arrays.stream(xs), Arrays.stream(ds)));
+      for (int i = 0; i < d.length; i++) {
 
+        IntDomain alreadyRemoved = rangeX.subtract(d[i].domain);
+
+        d[i].domain.in(store.level, d[i], shiftX, x.length - 1 + shiftX);
+
+        if (!alreadyRemoved.isEmpty())
+          for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
+              enumer.hasMoreElements(); ) {
+
+            int dValue = enumer.nextElement();
+
+            x[dValue - shiftX].domain.inComplement(store.level, x[dValue - shiftX], i + shiftD);
+          }
+
+        if (d[i].singleton()) {
+
+          x[d[i].value() - shiftX].domain.in(
+              store.level, x[d[i].value() - shiftX], i + shiftD, i + shiftD);
+        }
+      }
+
+      firstConsistencyCheck = false;
+      firstConsistencyLevel = store.level;
     }
 
-    /**
-     * It enforces the relationship x[d[i]-shiftX]=i+shiftD and
-     * d[x[i]-shiftD]=i+shiftX.
-     *
-     * @param xs     arraylist of variables x
-     * @param ds     arraylist of variables d
-     * @param shiftX shift for parameter xs
-     * @param shiftD shift for parameter ds
-     */
-    public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds, int shiftX, int shiftD) {
-        this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), shiftX, shiftD);
-    }
+    while (!variableQueue.isEmpty()) {
 
+      LinkedHashSet<IntVar> fdvs = variableQueue;
 
-    /**
-     * It constructs an Assignment constraint with shift equal 0. It
-     * enforces relation - d[x[j]] = i and x[d[i]] = j.
-     *
-     * @param xs arraylist of x variables
-     * @param ds arraylist of d variables
-     */
-    public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds) {
-        this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), 0, 0);
-    }
+      variableQueue = new LinkedHashSet<IntVar>();
 
-    /**
-     * It enforces the relationship x[d[i]-min]=i+min and
-     * d[x[i]-min]=i+min.
-     *
-     * @param xs  arraylist of variables x
-     * @param ds  arraylist of variables d
-     * @param min shift
-     */
-    public Assignment(List<? extends Var> xs, List<? extends Var> ds, int min) {
-        this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), min, min);
-    }
+      for (IntVar V : fdvs) {
 
+        IntDomain vPrunedDomain = V.recentDomainPruning();
 
-    /**
-     * It constructs an Assignment constraint with shift equal 0. It
-     * enforces relation - d[x[i]] = i and x[d[i]] = i.
-     *
-     * @param xs array of x variables
-     * @param ds array of d variables
-     */
-    public Assignment(IntVar[] xs, IntVar[] ds) {
-        this(xs, ds, 0, 0);
-    }
+        if (!vPrunedDomain.isEmpty()) {
 
-    /**
-     * It enforces the relationship x[d[i]-min]=i+min and
-     * d[x[i]-min]=i+min.
-     *
-     * @param xs  array of variables x
-     * @param ds  array of variables d
-     * @param min shift
-     */
-    public Assignment(IntVar[] xs, IntVar[] ds, int min) {
-        this(xs, ds, min, min);
-    }
+          Integer position = xs.get(V);
+          if (position == null) {
+            // d variable has been changed
+            position = ds.get(V);
 
-    @Override public void removeLevel(int level) {
-        variableQueue.clear();
-        if (level == firstConsistencyLevel)
-            firstConsistencyCheck = true;
-    }
+            vPrunedDomain = vPrunedDomain.intersect(rangeX);
 
+            if (vPrunedDomain.isEmpty()) continue;
 
-    IntervalDomain rangeX;
-    IntervalDomain rangeD;
+            for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
+                enumer.hasMoreElements(); ) {
 
-    @Override public void consistency(Store store) {
+              int dValue = enumer.nextElement() - shiftX;
 
-        if (firstConsistencyCheck) {
-
-            rangeX = new IntervalDomain(0 + shiftX, x.length - 1 + shiftX);
-
-            rangeD = new IntervalDomain(0 + shiftD, x.length - 1 + shiftD);
-
-            for (int i = 0; i < x.length; i++) {
-
-                IntDomain alreadyRemoved = rangeD.subtract(x[i].domain);
-
-                x[i].domain.in(store.level, x[i], shiftD, x.length - 1 + shiftD);
-
-                if (!alreadyRemoved.isEmpty())
-                    for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration(); enumer.hasMoreElements(); ) {
-
-                        int xValue = enumer.nextElement();
-
-                        d[xValue - shiftD].domain.inComplement(store.level, d[xValue - shiftD], i + shiftX);
-
-                    }
-
-                if (x[i].singleton()) {
-                    int position = x[i].value() - shiftD;
-                    d[position].domain.in(store.level, d[position], i + shiftX, i + shiftX);
-                }
-
+              if (dValue >= 0 && dValue < x.length)
+                x[dValue].domain.inComplement(store.level, x[dValue], position);
             }
 
-            for (int i = 0; i < d.length; i++) {
+            if (V.singleton())
+              x[V.value() - shiftX].domain.in(
+                  store.level, x[V.value() - shiftX], position, position);
 
-                IntDomain alreadyRemoved = rangeX.subtract(d[i].domain);
+          } else {
+            // x variable has been changed
 
-                d[i].domain.in(store.level, d[i], shiftX, x.length - 1 + shiftX);
+            vPrunedDomain = vPrunedDomain.intersect(rangeD);
 
-                if (!alreadyRemoved.isEmpty())
-                    for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration(); enumer.hasMoreElements(); ) {
+            if (vPrunedDomain.isEmpty()) continue;
 
-                        int dValue = enumer.nextElement();
+            for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
+                enumer.hasMoreElements(); ) {
 
-                        x[dValue - shiftX].domain.inComplement(store.level, x[dValue - shiftX], i + shiftD);
+              int xValue = enumer.nextElement() - shiftD;
 
-                    }
+              if (xValue >= 0 && xValue < d.length)
+                d[xValue].domain.inComplement(store.level, d[xValue], position);
 
-                if (d[i].singleton()) {
-
-                    x[d[i].value() - shiftX].domain.in(store.level, x[d[i].value() - shiftX], i + shiftD, i + shiftD);
-                }
-
+              if (V.singleton())
+                d[V.value() - shiftD].domain.in(
+                    store.level, d[V.value() - shiftD], position, position);
             }
-
-            firstConsistencyCheck = false;
-            firstConsistencyLevel = store.level;
-
+          }
         }
+      }
+    }
+  }
 
-        while (!variableQueue.isEmpty()) {
+  @Override
+  public boolean satisfied() {
 
-            LinkedHashSet<IntVar> fdvs = variableQueue;
+    if (!grounded()) return false;
 
-            variableQueue = new LinkedHashSet<IntVar>();
-
-            for (IntVar V : fdvs) {
-
-                IntDomain vPrunedDomain = V.recentDomainPruning();
-
-                if (!vPrunedDomain.isEmpty()) {
-
-                    Integer position = xs.get(V);
-                    if (position == null) {
-                        // d variable has been changed
-                        position = ds.get(V);
-
-                        vPrunedDomain = vPrunedDomain.intersect(rangeX);
-
-                        if (vPrunedDomain.isEmpty())
-                            continue;
-
-                        for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
-
-                            int dValue = enumer.nextElement() - shiftX;
-
-                            if (dValue >= 0 && dValue < x.length)
-                                x[dValue].domain.inComplement(store.level, x[dValue], position);
-                        }
-
-                        if (V.singleton())
-                            x[V.value() - shiftX].domain.in(store.level, x[V.value() - shiftX], position, position);
-
-                    } else {
-                        // x variable has been changed
-
-                        vPrunedDomain = vPrunedDomain.intersect(rangeD);
-
-                        if (vPrunedDomain.isEmpty())
-                            continue;
-
-                        for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
-
-                            int xValue = enumer.nextElement() - shiftD;
-
-                            if (xValue >= 0 && xValue < d.length)
-                                d[xValue].domain.inComplement(store.level, d[xValue], position);
-
-                            if (V.singleton())
-                                d[V.value() - shiftD].domain.in(store.level, d[V.value() - shiftD], position, position);
-
-                        }
-
-                    }
-
-                }
-
-            }
-
-        }
-
+    for (int i = 0; i < x.length; i++) {
+      int position = x[i].value() - shiftD;
+      if (d[position].value() != i + shiftX) {
+        return false;
+      }
     }
 
-    @Override public boolean satisfied() {
-
-        if (!grounded())
-            return false;
-
-        for (int i = 0; i < x.length; i++) {
-            int position = x[i].value() - shiftD;
-            if (d[position].value() != i + shiftX) {
-                return false;
-            }
-        }
-
-        for (int i = 0; i < d.length; i++) {
-            if (x[d[i].value() - shiftX].value() != i + shiftD) {
-                return false;
-            }
-        }
-
-        return true;
-
+    for (int i = 0; i < d.length; i++) {
+      if (x[d[i].value() - shiftX].value() != i + shiftD) {
+        return false;
+      }
     }
 
+    return true;
+  }
 
-    public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  // registers the constraint in the constraint store
+  @Override
+  public void impose(Store store) {
+
+    super.impose(store);
+
+    store.raiseLevelBeforeConsistency = true;
+  }
+
+  @Override
+  public void queueVariable(int level, Var var) {
+    variableQueue.add((IntVar) var);
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+
+    result.append(" : assignment([");
+
+    for (int i = 0; i < x.length; i++) {
+      result.append(x[i]);
+      if (i < x.length - 1) result.append(", ");
     }
+    result.append("], [");
 
-    // registers the constraint in the constraint store
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-        store.raiseLevelBeforeConsistency = true;
-
+    for (int i = 0; i < d.length; i++) {
+      result.append(d[i]);
+      if (i < d.length - 1) result.append(", ");
     }
+    result.append("], ");
+    result.append(shiftX + ", " + shiftD + ")");
 
-    @Override public void queueVariable(int level, Var var) {
-        variableQueue.add((IntVar) var);
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : assignment([");
-
-        for (int i = 0; i < x.length; i++) {
-            result.append(x[i]);
-            if (i < x.length - 1)
-                result.append(", ");
-        }
-        result.append("], [");
-
-        for (int i = 0; i < d.length; i++) {
-            result.append(d[i]);
-            if (i < d.length - 1)
-                result.append(", ");
-        }
-        result.append("], ");
-        result.append(shiftX + ", " + shiftD + ")");
-
-        return result.toString();
-    }
-
+    return result.toString();
+  }
 }

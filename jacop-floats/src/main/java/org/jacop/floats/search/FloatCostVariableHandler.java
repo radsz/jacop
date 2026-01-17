@@ -39,78 +39,77 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.search.CostVariableHandler;
 
 /**
- * Handler for FloatVar cost variable operations in search algorithms.
- * This implementation handles floating-point cost variables with proper
- * precision handling.
+ * Handler for FloatVar cost variable operations in search algorithms. This implementation handles
+ * floating-point cost variables with proper precision handling.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public class FloatCostVariableHandler implements CostVariableHandler {
 
-    @Override
-    public boolean isApplicable(Var var) {
-        return var instanceof FloatVar;
-    }
+  @Override
+  public boolean isApplicable(Var var) {
+    return var instanceof FloatVar;
+  }
 
-    @Override
-    public double getCostValue(Var var) {
-        if (!(var instanceof FloatVar)) {
-            throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
-        }
-        FloatVar floatVar = (FloatVar) var;
-        return floatVar.dom().max();
+  @Override
+  public double getCostValue(Var var) {
+    if (!(var instanceof FloatVar)) {
+      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
+    FloatVar floatVar = (FloatVar) var;
+    return floatVar.dom().max();
+  }
 
-    @Override
-    public Constraint createCostConstraint(Var var, double costValue) {
-        if (!(var instanceof FloatVar)) {
-            throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
-        }
-        FloatVar floatVar = (FloatVar) var;
-        double previousCost = FloatDomain.previousForMinimization(costValue);
-        return new PlteqC(floatVar, previousCost);
+  @Override
+  public Constraint createCostConstraint(Var var, double costValue) {
+    if (!(var instanceof FloatVar)) {
+      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
+    FloatVar floatVar = (FloatVar) var;
+    double previousCost = FloatDomain.previousForMinimization(costValue);
+    return new PlteqC(floatVar, previousCost);
+  }
 
-    @Override
-    public void updateCostDomain(Store store, Var var, double costValue) {
-        if (!(var instanceof FloatVar)) {
-            throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
-        }
-        FloatVar floatVar = (FloatVar) var;
-        double previousCost = FloatDomain.previous(costValue);
-        floatVar.domain.inMax(store.level, floatVar, previousCost);
+  @Override
+  public void updateCostDomain(Store store, Var var, double costValue) {
+    if (!(var instanceof FloatVar)) {
+      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
+    FloatVar floatVar = (FloatVar) var;
+    double previousCost = FloatDomain.previous(costValue);
+    floatVar.domain.inMax(store.level, floatVar, previousCost);
+  }
 
-    @Override
-    public double getMinCostValue(Var var) {
-        if (!(var instanceof FloatVar)) {
-            throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
-        }
-        FloatVar floatVar = (FloatVar) var;
-        return floatVar.dom().min();
+  @Override
+  public double getMinCostValue(Var var) {
+    if (!(var instanceof FloatVar)) {
+      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
+    FloatVar floatVar = (FloatVar) var;
+    return floatVar.dom().min();
+  }
 
-    @Override
-    public double getMaxCostValue(Var var) {
-        if (!(var instanceof FloatVar)) {
-            throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
-        }
-        FloatVar floatVar = (FloatVar) var;
-        return floatVar.dom().max();
+  @Override
+  public double getMaxCostValue(Var var) {
+    if (!(var instanceof FloatVar)) {
+      throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
     }
+    FloatVar floatVar = (FloatVar) var;
+    return floatVar.dom().max();
+  }
 
-    @Override
-    public boolean isBetterCost(double currentCost, double newCost, boolean minimize) {
-        if (minimize) {
-            return newCost < currentCost;
-        } else {
-            return newCost > currentCost;
-        }
+  @Override
+  public boolean isBetterCost(double currentCost, double newCost, boolean minimize) {
+    if (minimize) {
+      return newCost < currentCost;
+    } else {
+      return newCost > currentCost;
     }
+  }
 
-    @Override
-    public double getPreviousCostValue(double costValue) {
-        return FloatDomain.previousForMinimization(costValue);
-    }
+  @Override
+  public double getPreviousCostValue(double costValue) {
+    return FloatDomain.previousForMinimization(costValue);
+  }
 }

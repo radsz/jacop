@@ -30,21 +30,21 @@
 
 package org.jacop.search.restart;
 
+import java.util.Random;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltC;
-import org.jacop.core.Store;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CostVariableHandler;
-import org.jacop.search.SearchHandlerRegistry;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
+import org.jacop.search.SearchHandlerRegistry;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SolutionListener;
-import org.jacop.search.ConsistencyListener;
-import org.jacop.search.PrioritySearch;
-import java.util.Random;
 
 /**
  * Implements restart search. Only cost as IntVar is possible.
@@ -53,285 +53,269 @@ import java.util.Random;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class RestartSearch<T extends Var> {
 
-    Store store;
-    DepthFirstSearch<T> search;
-    SelectChoicePoint<T> select;
-    Calculator calculator;
-    SolutionListener<T> lastSolutionListener;
-    CustomReport reportSolution = null;
+  Store store;
+  DepthFirstSearch<T> search;
+  SelectChoicePoint<T> select;
+  Calculator calculator;
+  SolutionListener<T> lastSolutionListener;
+  CustomReport reportSolution = null;
 
-    Search<T> lastNotNullSearch;
-    
-    Var cost;
-    int intCostValue = Integer.MAX_VALUE;
-    double floatCostValue = Double.MAX_VALUE;
+  Search<T> lastNotNullSearch;
 
-    int numberRestarts = 0;
+  Var cost;
+  int intCostValue = Integer.MAX_VALUE;
+  double floatCostValue = Double.MAX_VALUE;
 
-    boolean atLeastOneSolution = false;
+  int numberRestarts = 0;
 
-    boolean timeOutCheck = false;
-    long timeOut;
+  boolean atLeastOneSolution = false;
 
-    // relax and reconstruct
-    private final Random generator;
-    IntVar[] rarVars;
-    int probability;
-    int[] values;
-    int restartsLimit = 0; // no limit
+  boolean timeOutCheck = false;
+  long timeOut;
 
-    @SuppressWarnings("unchecked")
-    public RestartSearch(Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, T cost) {
-        this.search = s;
-        this.calculator = calculator;
-        this.cost = cost;
-        this.select = sel;
-        this.store = store;
+  // relax and reconstruct
+  private final Random generator;
+  IntVar[] rarVars;
+  int probability;
+  int[] values;
+  int restartsLimit = 0; // no limit
 
-        DepthFirstSearch<T> ns = search;
-        lastNotNullSearch = ns;
+  @SuppressWarnings("unchecked")
+  public RestartSearch(
+      Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, T cost) {
+    this.search = s;
+    this.calculator = calculator;
+    this.cost = cost;
+    this.select = sel;
+    this.store = store;
 
-        do {
-            // ns.setCostVar(null); // cost is handled internally by restart search
+    DepthFirstSearch<T> ns = search;
+    lastNotNullSearch = ns;
 
-            if (ns instanceof PrioritySearch) {
-                ((PrioritySearch)ns).addRestartCalculator((PrioritySearch)ns, calculator);
-            }
+    do {
+      // ns.setCostVar(null); // cost is handled internally by restart search
 
-            // add calculator & do not assign solutions
-            ConsistencyListener cs = ns.getConsistencyListener();
-            ns.setConsistencyListener(calculator);
-            ns.consistencyListener.setChildrenListeners(cs);
-            ns.setAssignSolution(false);
-            ns.setPrintInfo(false);
-            lastNotNullSearch = ns;
+      if (ns instanceof PrioritySearch) {
+        ((PrioritySearch) ns).addRestartCalculator((PrioritySearch) ns, calculator);
+      }
 
-            // find next search
-            if (ns.childSearches == null) {
-                ns = null;
-            } else
-                ns = (DepthFirstSearch<T>)ns.childSearches[0];
-        } while (ns != null);
+      // add calculator & do not assign solutions
+      ConsistencyListener cs = ns.getConsistencyListener();
+      ns.setConsistencyListener(calculator);
+      ns.consistencyListener.setChildrenListeners(cs);
+      ns.setAssignSolution(false);
+      ns.setPrintInfo(false);
+      lastNotNullSearch = ns;
 
-        if (cost != null) {
-            lastSolutionListener = lastNotNullSearch.getSolutionListener();
-            lastSolutionListener.setChildrenListeners(new CostListener<T>());
-        }
+      // find next search
+      if (ns.childSearches == null) {
+        ns = null;
+      } else ns = (DepthFirstSearch<T>) ns.childSearches[0];
+    } while (ns != null);
 
-        generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-
+    if (cost != null) {
+      lastSolutionListener = lastNotNullSearch.getSolutionListener();
+      lastSolutionListener.setChildrenListeners(new CostListener<T>());
     }
 
-    public RestartSearch(Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator) {
-        this(store, s, sel, calculator, null);
-    }
+    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  }
 
-    public boolean labeling() {
+  public RestartSearch(
+      Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator) {
+    this(store, s, sel, calculator, null);
+  }
+
+  public boolean labeling() {
+
+    store.setLevel(store.level + 1);
+    boolean result = true;
+    while (result) {
+
+      if (rarVars != null) {
 
         store.setLevel(store.level + 1);
-        boolean result = true;
-        while (result) {
 
-            if (rarVars != null) {
+        if (values != null) assignRelaxedVariables();
+      }
 
-                store.setLevel(store.level + 1);
+      if (cost == null) result = search.labeling(store, select);
+      else result = search.labeling(store, select, cost);
 
-                if (values != null)
-                    assignRelaxedVariables();
-            }
-
-            if (cost == null)
-                result = search.labeling(store, select);
-            else
-                result = search.labeling(store, select, cost);
-
-            if (rarVars != null) {
-                store.removeLevel(store.level);
-                store.setLevel(store.level - 1);
-            }
-
-            if (restartsLimit > 0 && numberRestarts > restartsLimit) {
-                break;
-            }
-
-            atLeastOneSolution |= result;
-
-            int sl = ((SimpleSolutionListener)lastNotNullSearch.getSolutionListener()).solutionLimit;
-            if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl)
-                return false;
-
-            if (timeOutCheck && System.currentTimeMillis() > timeOut) {
-                search.timeOutOccured = true;
-                System.out.println("%% =====TIME-OUT=====");
-                return false;
-            }
-
-            if (result)
-                if (cost != null) {
-                    if (!calculator.pointsExhausted())
-                        // optimization solution found and no better exists
-		        result = false;
-                    else
-                        boundCost();
-                } else
-                    break; // single solution for satisfy search found
-            else { // no result
-                result = true;
-                if (calculator.pointsExhausted()) {
-                    if (cost != null) {
-                        boundCost();
-                    } else
-                        result = !atLeastOneSolution;
-                } else // fail before points are exhausted
-                    if (rarVars == null)
-                        // restart search fails
-                        result = false;
-                    else if (cost != null)
-                        boundCost();
-            }
-
-            calculator.newLimit();
-
-            if (result)
-                numberRestarts++;
-        }
-
+      if (rarVars != null) {
         store.removeLevel(store.level);
         store.setLevel(store.level - 1);
+      }
 
-        return true;
+      if (restartsLimit > 0 && numberRestarts > restartsLimit) {
+        break;
+      }
+
+      atLeastOneSolution |= result;
+
+      int sl = ((SimpleSolutionListener) lastNotNullSearch.getSolutionListener()).solutionLimit;
+      if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) return false;
+
+      if (timeOutCheck && System.currentTimeMillis() > timeOut) {
+        search.timeOutOccured = true;
+        System.out.println("%% =====TIME-OUT=====");
+        return false;
+      }
+
+      if (result)
+        if (cost != null) {
+          if (!calculator.pointsExhausted())
+            // optimization solution found and no better exists
+            result = false;
+          else boundCost();
+        } else break; // single solution for satisfy search found
+      else { // no result
+        result = true;
+        if (calculator.pointsExhausted()) {
+          if (cost != null) {
+            boundCost();
+          } else result = !atLeastOneSolution;
+        } else // fail before points are exhausted
+        if (rarVars == null)
+          // restart search fails
+          result = false;
+        else if (cost != null) boundCost();
+      }
+
+      calculator.newLimit();
+
+      if (result) numberRestarts++;
     }
 
-    void boundCost() {
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
 
-        if (cost instanceof IntVar)
-            store.impose(new XltC((IntVar)cost, intCostValue));
-        else {
-            CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
-            if (costHandler != null) {
-                Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
-                store.impose(costConstraint);
-            }
+    return true;
+  }
+
+  void boundCost() {
+
+    if (cost instanceof IntVar) store.impose(new XltC((IntVar) cost, intCostValue));
+    else {
+      CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
+      if (costHandler != null) {
+        Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
+        store.impose(costConstraint);
+      }
+    }
+  }
+
+  public int getIntCost() {
+    return intCostValue;
+  }
+
+  public double getFloatCost() {
+    return floatCostValue;
+  }
+
+  public void addReporter(CustomReport r) {
+    reportSolution = r;
+  }
+
+  public int restarts() {
+    return numberRestarts;
+  }
+
+  public void setTimeOut(long tOut) {
+    timeOutCheck = true;
+    timeOut = System.currentTimeMillis() + tOut * 1000;
+  }
+
+  public void setTimeOutMilliseconds(long tOut) {
+    timeOutCheck = true;
+    timeOut = System.currentTimeMillis() + tOut;
+  }
+
+  @SuppressWarnings("unchecked")
+  void searchSingleSolution(DepthFirstSearch<T> label) {
+
+    DepthFirstSearch<T> s = label;
+    DepthFirstSearch<T> parentSearch = null;
+    do {
+      s.getSolutionListener().recordSolutions(false);
+      s.getSolutionListener().searchAll(false);
+
+      if (parentSearch != null)
+        s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
+
+      parentSearch = s;
+      // find next search
+      if (s.childSearches == null) s = null;
+      else s = (DepthFirstSearch<T>) s.childSearches[0];
+    } while (s != null);
+  }
+
+  public void setRelaxAndReconstruct(IntVar[] vs, int p) {
+
+    rarVars = new IntVar[vs.length];
+    for (int i = 0; i < vs.length; i++) {
+      rarVars[i] = vs[i];
+    }
+    probability = p;
+  }
+
+  public void assignRelaxedVariables() {
+
+    for (int i = 0; i < rarVars.length; i++) {
+      IntVar var = rarVars[i];
+      int rn = generator.nextInt(101);
+      if (rn <= probability) {
+        var.domain.inValue(store.level, var, values[i]);
+      }
+    }
+  }
+
+  public int[] getLastSolution() {
+    return values;
+  }
+
+  public IntVar[] getRelaxedVariables() {
+    return rarVars;
+  }
+
+  public int getProbability() {
+    return probability;
+  }
+
+  public void setRestartsLimit(int l) {
+    restartsLimit = l;
+  }
+
+  public boolean atLeastOneSolution() {
+    return atLeastOneSolution;
+  }
+
+  public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
+
+    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+      boolean returnCode = super.executeAfterSolution(search, select);
+
+      if (reportSolution != null) reportSolution.report();
+
+      if (cost instanceof IntVar) intCostValue = ((IntVar) cost).value();
+      else {
+        CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
+        if (costHandler != null) {
+          floatCostValue = costHandler.getCostValue(cost);
         }
-    }
+      }
 
-    public int getIntCost() {
-        return intCostValue;
-    }
-
-    public double getFloatCost() {
-        return floatCostValue;
-    }
-
-    public void addReporter(CustomReport r) {
-        reportSolution = r;
-    }
-
-
-    public int restarts() {
-        return numberRestarts;
-    }
-
-    public void setTimeOut(long tOut) {
-        timeOutCheck = true;
-        timeOut = System.currentTimeMillis() + tOut * 1000;
-    }
-
-    public void setTimeOutMilliseconds(long tOut) {
-        timeOutCheck = true;
-        timeOut = System.currentTimeMillis() + tOut;
-    }
-
-    @SuppressWarnings("unchecked")
-    void searchSingleSolution(DepthFirstSearch<T> label) {
-
-        DepthFirstSearch<T> s = label;
-        DepthFirstSearch<T> parentSearch = null;
-        do {
-            s.getSolutionListener().recordSolutions(false);
-            s.getSolutionListener().searchAll(false);
-
-            if (parentSearch != null)
-                s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
-
-            parentSearch = s;
-            // find next search
-            if (s.childSearches == null)
-                s = null;
-            else
-                s = (DepthFirstSearch<T>)s.childSearches[0];
-        } while (s != null);
-    }
-
-    public void setRelaxAndReconstruct(IntVar[] vs, int p) {
-
-        rarVars = new IntVar[vs.length];
-        for (int i = 0; i < vs.length; i++) {
-            rarVars[i] = vs[i];
-        }
-        probability = p;
-    }
-
-    public void assignRelaxedVariables() {
-
+      if (rarVars != null) {
+        values = new int[rarVars.length];
         for (int i = 0; i < rarVars.length; i++) {
-            IntVar var = rarVars[i];
-            int rn = generator.nextInt(101);
-            if (rn <= probability) {
-                var.domain.inValue(store.level, var, values[i]);
-            }
+          values[i] = rarVars[i].value();
         }
+      }
+
+      return returnCode;
     }
-
-    public int[] getLastSolution() {
-        return values;
-    }
-
-    public IntVar[] getRelaxedVariables() {
-        return rarVars;
-    }
-
-    public int getProbability() {
-        return probability;
-    }
-
-    public void setRestartsLimit(int l) {
-        restartsLimit = l;
-    }
-
-    public boolean atLeastOneSolution() {
-        return atLeastOneSolution;
-    }
-
-    public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
- 
-        public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
-
-            boolean returnCode = super.executeAfterSolution(search, select);
-
-            if (reportSolution != null)
-                reportSolution.report();
-
-            if (cost instanceof IntVar)
-                intCostValue = ((IntVar)cost).value();
-            else {
-                CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
-                if (costHandler != null) {
-                    floatCostValue = costHandler.getCostValue(cost);
-                }
-            }
-
-            if (rarVars != null) {
-                values = new int[rarVars.length];
-                for (int i = 0; i < rarVars.length; i++) {
-                    values[i] = rarVars[i].value();
-                }
-            }
-
-            return returnCode;
-        }
-    }
+  }
 }

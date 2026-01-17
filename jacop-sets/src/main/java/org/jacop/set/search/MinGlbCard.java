@@ -35,63 +35,48 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * Defines a minimum cardinality, of the greatest lowest bound, variable comparator. The variable with the minimum
- * cardinality for the greatest lower bound has the priority.
+ * Defines a minimum cardinality, of the greatest lowest bound, variable comparator. The variable
+ * with the minimum cardinality for the greatest lower bound has the priority.
  *
  * @param <T> type of variable
  * @author Krzysztof Kuchcinski and Robert Åkemalm
  * @version 4.10
  */
-
 public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs a minimum cardinality, of the greatest lowest bound, variable comparator.
-     */
-    public MinGlbCard() {
-    }
+  /** It constructs a minimum cardinality, of the greatest lowest bound, variable comparator. */
+  public MinGlbCard() {}
 
-    /**
-     * Compares the cardinality of the variables glb to the float value.
-     */
-    public int compare(double left, T var) {
+  /** Compares the cardinality of the variables glb to the float value. */
+  public int compare(double left, T var) {
 
-        SetDomain SD = var.dom();
+    SetDomain SD = var.dom();
 
-        int right = SD.glb().getSize();
+    int right = SD.glb().getSize();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    /**
-     * Compares the cardinality of the variables glbs.
-     */
-    public int compare(T leftVar, T rightVar) {
+  /** Compares the cardinality of the variables glbs. */
+  public int compare(T leftVar, T rightVar) {
 
-        SetDomain leftSD = leftVar.dom();
-        SetDomain rightSD = rightVar.dom();
+    SetDomain leftSD = leftVar.dom();
+    SetDomain rightSD = rightVar.dom();
 
-        int left = leftSD.glb().getSize();
-        int right = rightSD.glb().getSize();
+    int left = leftSD.glb().getSize();
+    int right = rightSD.glb().getSize();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    /**
-     * Returns the cardinality of the glb.
-     */
-    public double metric(T var) {
+  /** Returns the cardinality of the glb. */
+  public double metric(T var) {
 
-        SetDomain SD = var.dom();
-        return SD.glb().getSize();
-    }
-
+    SetDomain SD = var.dom();
+    return SD.glb().getSize();
+  }
 }

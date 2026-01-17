@@ -35,45 +35,36 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 
 /**
- * Defines LargestDomainFloat comparator for Variables. Variable with the largest
- * domain has the priority.
+ * Defines LargestDomainFloat comparator for Variables. Variable with the largest domain has the
+ * priority.
  *
  * @param <T> it specifies the class of the variable being used in this variable selection method.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs variable comparator based on the largest domain priority.
-     */
-    public LargestDomainFloat() {
-    }
+  /** It constructs variable comparator based on the largest domain priority. */
+  public LargestDomainFloat() {}
 
-    public int compare(double left, T var) {
-        double right = ((FloatVar) var).getSizeFloat();
+  public int compare(double left, T var) {
+    double right = ((FloatVar) var).getSizeFloat();
 
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        double left = ((FloatVar) leftVar).getSizeFloat();
-        double right = ((FloatVar) rightVar).getSizeFloat();
+  public int compare(T leftVar, T rightVar) {
+    double left = ((FloatVar) leftVar).getSizeFloat();
+    double right = ((FloatVar) rightVar).getSizeFloat();
 
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return ((FloatVar) var).getSizeFloat();
-    }
-
+  public double metric(T var) {
+    return ((FloatVar) var).getSizeFloat();
+  }
 }

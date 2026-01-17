@@ -30,16 +30,15 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 /**
  * Member constraint implements the membership of element e on list x.
@@ -47,219 +46,209 @@ import java.util.stream.Stream;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class Member extends PrimitiveConstraint {
 
-    Store store;
+  Store store;
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    boolean reified = true;
+  boolean reified = true;
 
-    /**
-     * It specifies a list of variables being summed.
-     */
-    IntVar[] x;
+  /** It specifies a list of variables being summed. */
+  IntVar[] x;
 
-    /**
-     * It specifies variable for the overall sum.
-     */
-    IntVar e;
+  /** It specifies variable for the overall sum. */
+  IntVar e;
 
-    /**
-     * It specifies the number of variables on the list.
-     */
-    int l;
+  /** It specifies the number of variables on the list. */
+  int l;
 
+  /*
+   * Defines first position of the variable that might equal e
+   */
+  private TimeStamp<Integer> position;
 
-    /*
-     * Defines first position of the variable that might equal e
-     */
-    private TimeStamp<Integer> position;
+  /**
+   * @param list list of variables.
+   * @param e variable to be checkd on the list.
+   */
+  public Member(IntVar[] list, IntVar e) {
 
-    /**
-     * @param list  list of variables.
-     * @param e     variable to be checkd on the list.
-     */
-    public Member(IntVar[] list, IntVar e) {
+    checkInputForNullness(new String[] {"list", "e"}, new Object[][] {list, {e}});
 
-        checkInputForNullness(new String[] {"list", "e"}, new Object[][] {list, {e}});
+    this.e = e;
 
-        this.e = e;
+    x = Arrays.copyOf(list, list.length);
+    numberId = idNumber.incrementAndGet();
 
-        x = Arrays.copyOf(list, list.length);
-        numberId = idNumber.incrementAndGet();
+    this.l = x.length;
 
-        this.l = x.length;
+    queueIndex = 1;
 
-	queueIndex = 1;
+    setScope(Stream.concat(Arrays.stream(x), Stream.of(this.e)));
+  }
 
-        setScope(Stream.concat(Arrays.stream(x), Stream.of(this.e)));
+  /**
+   * It constructs the constraint Member.
+   *
+   * @param list list of variables.
+   * @param e variable to be checkd on the list.
+   */
+  public Member(List<? extends IntVar> list, IntVar e) {
+    this(list.toArray(new IntVar[list.size()]), e);
+  }
 
+  @Override
+  public void consistency(Store store) {
+
+    int start = position.value();
+
+    IntDomain d = new IntervalDomain();
+    boolean eGround = e.singleton();
+    int numberGround = 0;
+    for (int i = start; i < l; i++) {
+
+      if (eGround && x[i].singleton() && x[i].value() == e.value()) {
+        removeConstraint();
+        return;
+      }
+
+      if (!x[i].domain.isIntersecting(e.domain)) {
+        swap(start, i);
+        start++;
+      } else {
+        if (x[i].singleton()) numberGround++;
+        d.unionAdapt(x[i].domain);
+      }
     }
 
-    /**
-     * It constructs the constraint Member.
-     *
-     * @param list  list of variables.
-     * @param e     variable to be checkd on the list.
-     */
-    public Member(List<? extends IntVar> list, IntVar e) {
-        this(list.toArray(new IntVar[list.size()]), e);
+    if (start == l) throw Store.failException;
+
+    e.domain.in(store.level, e, d);
+
+    if (l - start == numberGround && !e.singleton()) {
+      removeConstraint();
+      return;
     }
 
-    @Override public void consistency(Store store) {
+    if (start == l - 1) {
+      x[l - 1].domain.in(store.level, x[l - 1], e.domain);
+      e.domain.in(store.level, e, x[l - 1].domain);
+    }
 
-	int start = position.value();
+    position.update(start);
+  }
 
-	IntDomain d = new IntervalDomain();
-	boolean eGround = e.singleton();
-        int numberGround = 0;
-	for (int i = start; i < l; i++) {
+  @Override
+  public void notConsistency(Store store) {
 
-	    if (eGround && x[i].singleton() && x[i].value() == e.value()) {
-		removeConstraint();
-		return;
-	    }
-	    
-	    if (!x[i].domain.isIntersecting(e.domain)) {
-		swap(start, i);
-		start++;
-	    } else {
-                if (x[i].singleton())
-                    numberGround++;
-		d.unionAdapt(x[i].domain);
-            }
-	}
+    int start = position.value();
 
-	if (start == l)
-	    throw Store.failException;
+    do {
 
-	e.domain.in(store.level, e, d);
+      store.propagationHasOccurred = false;
 
-        if (l - start == numberGround && !e.singleton()) {
-            removeConstraint();
-            return;
+      boolean eGround = e.singleton();
+      for (int i = start; i < l; i++) {
+        if (eGround) x[i].domain.inComplement(store.level, x[i], e.value());
+
+        if (x[i].singleton()) e.domain.inComplement(store.level, e, x[i].value());
+
+        if (!x[i].domain.isIntersecting(e.domain)) {
+          swap(start, i);
+          start++;
+        }
+      }
+
+      if (start == l) removeConstraint();
+
+      if (start == l - 1)
+        if (e.singleton()) {
+          x[l - 1].domain.inComplement(store.level, x[l - 1], e.value());
+        } else if (x[l - 1].singleton()) {
+          e.domain.inComplement(store.level, e, x[l - 1].value());
         }
 
-	if (start == l - 1) {
-	    x[l-1].domain.in(store.level, x[l-1], e.domain);
-	    e.domain.in(store.level, e, x[l-1].domain);
-	}
+    } while (store.propagationHasOccurred);
 
-	position.update(start);
+    position.update(start);
+  }
+
+  private void swap(int i, int j) {
+    if (i != j) {
+      IntVar tmp = x[i];
+      x[i] = x[j];
+      x[j] = tmp;
     }
+  }
 
-    @Override public void notConsistency(Store store) {
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-	int start = position.value();
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-	do {
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-            store.propagationHasOccurred = false;
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-	    boolean eGround = e.singleton();
-	    for (int i = start; i < l; i++) {
-		if (eGround)
-		    x[i].domain.inComplement(store.level, x[i], e.value());
+  @Override
+  public void include(Store store) {
+    position = new TimeStamp<Integer>(store, 0);
+  }
 
-		if (x[i].singleton())
-		    e.domain.inComplement(store.level, e, x[i].value());
+  @Override
+  public void impose(Store store) {
 
-		if (!x[i].domain.isIntersecting(e.domain)) {
-		    swap(start, i);
-		    start++;
-		}
-	    }
+    if (x == null) return;
 
-	    if (start == l)
-		removeConstraint();
+    reified = false;
 
-	    if (start == l - 1)
-		if (e.singleton()) {
-		    x[l-1].domain.inComplement(store.level, x[l-1], e.value());
-		}
-		else if (x[l-1].singleton()) {
-		    e.domain.inComplement(store.level, e, x[l-1].value());
-		}
+    super.impose(store);
+  }
 
-	} while (store.propagationHasOccurred);
+  @Override
+  public boolean satisfied() {
 
-	position.update(start);
+    if (e.singleton())
+      for (int i = 0; i < l; i++) {
+        if (x[i].singleton() && x[i].value() == e.value()) return true;
+      }
+    return false;
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    for (int i = 0; i < l; i++) {
+      if (x[i].domain.isIntersecting(e.domain)) return false;
     }
+    return true;
+  }
 
-    private void swap(int i, int j) {
-        if (i != j) {
-            IntVar tmp = x[i];
-            x[i] = x[j];
-            x[j] = tmp;
-        }
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+    result.append(" : Member([");
+
+    for (int i = 0; i < l; i++) {
+      result.append(x[i]);
+      if (i < l - 1) result.append(", ");
     }
+    result.append("], ");
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+    result.append(e).append(" )");
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override public void include(Store store) {
-        position = new TimeStamp<Integer>(store, 0);
-    }
-
-    @Override public void impose(Store store) {
-
-        if (x == null)
-            return;
-
-        reified = false;
-
-        super.impose(store);
-
-    }
-
-    @Override public boolean satisfied() {
-
-	if (e.singleton())
-	    for (int i = 0; i < l; i++) {
-		if (x[i].singleton() && x[i].value() == e.value())
-		    return true;
-	    }
-        return false;
-    }
-
-    @Override public boolean notSatisfied() {
-	for (int i = 0; i < l; i++) {
-	    if (x[i].domain.isIntersecting(e.domain))
-		return false;
-	}
-        return true;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : Member([");
-
-        for (int i = 0; i < l; i++) {
-            result.append(x[i]);
-            if (i < l - 1)
-                result.append(", ");
-        }
-        result.append("], ");
-
-        result.append(e).append(" )");
-
-        return result.toString();
-
-    }
+    return result.toString();
+  }
 }

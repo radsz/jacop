@@ -34,30 +34,28 @@ import org.jacop.floats.core.FloatVar;
 
 /**
  * Constraint P - C = R
- * <p>
- * Bound consistency is used.
+ *
+ * <p>Bound consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PminusCeqR extends PplusCeqR {
 
+  /**
+   * It constructs constraint P-Q=R.
+   *
+   * @param p variable p.
+   * @param c constant c.
+   * @param r variable r.
+   */
+  public PminusCeqR(FloatVar p, double c, FloatVar r) {
+    super(r, c, p);
+  }
 
-    /**
-     * It constructs constraint P-Q=R.
-     *
-     * @param p variable p.
-     * @param c constant c.
-     * @param r variable r.
-     */
-    public PminusCeqR(FloatVar p, double c, FloatVar r) {
-        super(r, c, p);
-    }
+  @Override
+  public String toString() {
 
-    @Override public String toString() {
-
-        return id() + " : PminusCeqR(" + r + ", " + c + ", " + p + " )";
-    }
-
+    return id() + " : PminusCeqR(" + r + ", " + c + ", " + p + " )";
+  }
 }

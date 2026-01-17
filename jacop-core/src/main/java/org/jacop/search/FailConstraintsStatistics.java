@@ -30,102 +30,88 @@
 
 package org.jacop.search;
 
-import org.jacop.constraints.Constraint;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-
 import java.util.*;
 import java.util.Map.Entry;
-
+import org.jacop.constraints.Constraint;
+import org.jacop.core.Store;
 
 /**
- * Defines functionality for FailConstraintsStatistics plug-in, that
- * collects statistics on the failed constraints; both for each
- * individual constraint as well as a class of constraints.
+ * Defines functionality for FailConstraintsStatistics plug-in, that collects statistics on the
+ * failed constraints; both for each individual constraint as well as a class of constraints.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class FailConstraintsStatistics implements ConsistencyListener {
 
-    // data structures to collect fail constraint statistics
-    public Map<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();
-    public Map<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
-    public long otherFails;
+  // data structures to collect fail constraint statistics
+  public Map<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();
+  public Map<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
+  public long otherFails;
 
-    Store store;
+  Store store;
 
-    public FailConstraintsStatistics(Store s) {
-        store = s;
+  public FailConstraintsStatistics(Store s) {
+    store = s;
+  }
+
+  /*
+   * Listener for failers
+   */
+  public boolean executeAfterConsistency(boolean consistent) {
+
+    if (consistent) return true;
+    else { // consistency failed
+      if (store.recentlyFailedConstraint != null)
+        collectFailStatistics(store.recentlyFailedConstraint);
+      else otherFails++;
+      return false;
     }
+  }
 
-    /*
-     * Listener for failers
-     */
-    public boolean executeAfterConsistency(boolean consistent) {
+  public void setChildrenListeners(ConsistencyListener[] children) {}
 
-        if (consistent)
-            return true;
-        else { // consistency failed
-            if (store.recentlyFailedConstraint != null)
-                collectFailStatistics(store.recentlyFailedConstraint);
-            else
-                otherFails++;
-            return false;
-        }
-    }
+  public void setChildrenListeners(ConsistencyListener child) {}
 
-    public void setChildrenListeners(ConsistencyListener[] children) {
-    }
+  void collectFailStatistics(Constraint currentConstraint) {
 
-    public void setChildrenListeners(ConsistencyListener child) {
-    }
+    // ======== add fail constraints classes to list of fails
+    String cName = currentConstraint.getClass().getSimpleName();
+    if (cName == "") cName = currentConstraint.getClass().getTypeName();
+    Integer n = failConstraintsStatistics.get(cName);
+    if (n != null) {
+      failConstraintsStatistics.put(cName, ++n);
+    } else failConstraintsStatistics.put(cName, 1);
 
-    void collectFailStatistics(Constraint currentConstraint) {
+    // ======== add fail constraints id's to list of fails
+    Integer k = failConstraintsIdStatistics.get(currentConstraint.id());
+    if (k != null) {
+      failConstraintsIdStatistics.put(currentConstraint.id(), ++k);
+    } else failConstraintsIdStatistics.put(currentConstraint.id(), 1);
+    // ========
+  }
 
-        //======== add fail constraints classes to list of fails
-        String cName = currentConstraint.getClass().getSimpleName();
-        if (cName == "")
-            cName = currentConstraint.getClass().getTypeName();
-        Integer n = failConstraintsStatistics.get(cName);
-        if (n != null) {
-            failConstraintsStatistics.put(cName, ++n);
-        } else
-            failConstraintsStatistics.put(cName, 1);
+  public String toString() {
 
-        //======== add fail constraints id's to list of fails
-        Integer k = failConstraintsIdStatistics.get(currentConstraint.id());
-        if (k != null) {
-            failConstraintsIdStatistics.put(currentConstraint.id(), ++k);
-        } else
-            failConstraintsIdStatistics.put(currentConstraint.id(), 1);
-        //========
-    }
+    StringBuffer c = new StringBuffer();
 
-    public String toString() {
+    c.append("*** Failed classes of constraints ***\n");
+    for (Entry<String, Integer> cls : sortByValues(failConstraintsStatistics))
+      c.append(cls.getKey() + "\t" + cls.getValue() + "\n");
+    c.append("*** Failed constraints ***\n");
+    for (Entry<String, Integer> constraint : sortByValues(failConstraintsIdStatistics))
+      c.append(constraint.getKey() + "\t" + constraint.getValue() + "\n");
+    c.append("*** Fails not caused by constraints " + otherFails + "\n");
 
-        StringBuffer c = new StringBuffer();
+    return c.toString();
+  }
 
-        c.append("*** Failed classes of constraints ***\n");
-        for (Entry<String, Integer> cls : sortByValues(failConstraintsStatistics))
-            c.append(cls.getKey() + "\t" + cls.getValue() + "\n");
-        c.append("*** Failed constraints ***\n");
-        for (Entry<String, Integer> constraint : sortByValues(failConstraintsIdStatistics))
-            c.append(constraint.getKey() + "\t" + constraint.getValue() + "\n");
-        c.append("*** Fails not caused by constraints " + otherFails + "\n");
+  private static List<Entry<String, Integer>> sortByValues(Map<String, Integer> map) {
+    List<Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
 
-        return c.toString();
+    // Sorting
+    Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
 
-    }
-
-    private static List<Entry<String, Integer>> sortByValues(Map<String, Integer> map) {
-        List<Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
-
-        // Sorting
-        Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
-
-        return list;
-    }
-
+    return list;
+  }
 }

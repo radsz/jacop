@@ -30,334 +30,297 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Stateful;
 import org.jacop.core.*;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints |X| #= Y
- * <p>
- * Domain and bounds consistency can be used; third parameter of constructor controls this.
+ *
+ * <p>Domain and bounds consistency can be used; third parameter of constructor controls this.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    static final boolean debugAll = false;
+  static final boolean debugAll = false;
 
-    boolean firstConsistencyCheck = true;
+  boolean firstConsistencyCheck = true;
 
-    boolean domainConsistent = false;
+  boolean domainConsistent = false;
 
-    int firstConsistencyLevel;
+  int firstConsistencyLevel;
 
-    /**
-     * It contains variable x.
-     */
-    final public IntVar x;
+  /** It contains variable x. */
+  public final IntVar x;
 
-    /**
-     * It contains variable y.
-     */
-    final public IntVar y;
+  /** It contains variable y. */
+  public final IntVar y;
 
-    /**
-     * It constructs |X| = Y constraints.
-     *
-     * @param x variable X1
-     * @param y variable Y
-     */
-    public AbsXeqY(IntVar x, IntVar y) {
+  /**
+   * It constructs |X| = Y constraints.
+   *
+   * @param x variable X1
+   * @param y variable Y
+   */
+  public AbsXeqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.queueIndex = 0;
-        this.x = x;
-        this.y = y;
+    this.queueIndex = 0;
+    this.x = x;
+    this.y = y;
 
-        setScope(x, y);
+    setScope(x, y);
+  }
+
+  /**
+   * It constructs |X| = Y constraints.
+   *
+   * @param x variable X1
+   * @param y variable Y
+   * @param domConsistency controls which consistency method is used; true = domain, false = bound
+   */
+  public AbsXeqY(IntVar x, IntVar y, boolean domConsistency) {
+    this(x, y);
+
+    domainConsistent = domConsistency;
+
+    if (domainConsistent) this.queueIndex = 1;
+    else this.queueIndex = 0;
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+  }
+
+  @Override
+  public void consistency(final Store store) {
+
+    if (firstConsistencyCheck) {
+      y.domain.inMin(store.level, y, 0);
+      firstConsistencyCheck = false;
+      firstConsistencyLevel = store.level;
     }
 
-    /**
-     * It constructs |X| = Y constraints.
-     *
-     * @param x              variable X1
-     * @param y              variable Y
-     * @param domConsistency controls which consistency method is used; true = domain, false = bound
-     */
-    public AbsXeqY(IntVar x, IntVar y, boolean domConsistency) {
-        this(x, y);
+    if (domainConsistent) domainConsistency(store);
+    else boundConsistency(store);
+  }
 
-        domainConsistent = domConsistency;
+  void domainConsistency(final Store store) {
 
-        if (domainConsistent)
-            this.queueIndex = 1;
-        else
-            this.queueIndex = 0;
-    }
+    do {
 
+      store.propagationHasOccurred = false;
 
-    @Override public void removeLevel(int level) {
-        if (level == firstConsistencyLevel)
-            firstConsistencyCheck = true;
-    }
+      if (debugAll) System.out.println("X " + x + " Y " + y);
 
-    @Override public void consistency(final Store store) {
+      IntervalDomain xDom;
 
-        if (firstConsistencyCheck) {
-            y.domain.inMin(store.level, y, 0);
-            firstConsistencyCheck = false;
-            firstConsistencyLevel = store.level;
+      if (x.domain.domainID() == IntDomain.IntervalDomainID) xDom = (IntervalDomain) x.domain;
+      else {
+
+        if (x.domain.domainID() == IntDomain.SmallDenseDomainID)
+          xDom = ((SmallDenseDomain) x.domain).toIntervalDomain();
+        else {
+
+          xDom = new IntervalDomain();
+          IntervalEnumeration enumer = x.domain.intervalEnumeration();
+          while (enumer.hasMoreElements()) {
+            Interval next = enumer.nextElement();
+            xDom.unionAdapt(next);
+          }
+        }
+      }
+
+      IntervalDomain yDom1 = new IntervalDomain(xDom.size + 1);
+
+      int i = 0;
+      Interval[] intervals = xDom.intervals;
+      for (; i < xDom.size; i++) if (intervals[i].max > 0) break;
+
+      int j = i;
+      if (j == xDom.size) j--;
+
+      for (; j >= 0; j--)
+        if (intervals[j].max <= 0) yDom1.unionAdapt(-intervals[j].max, -intervals[j].min);
+
+      if (i < xDom.size && intervals[i].min < 0 && intervals[i].max > 0) {
+
+        if (-intervals[i].min > intervals[i].max) yDom1.unionAdapt(0, -intervals[i].min);
+        else yDom1.unionAdapt(0, intervals[i].max);
+      }
+
+      IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
+
+      for (; i < xDom.size; i++) yDom.unionAdapt(intervals[i]);
+
+      yDom.addDom(yDom1);
+
+      if (debugAll) System.out.println("new Ydom " + yDom);
+
+      // @todo, test more the change from yDom1 to yDom.
+      y.domain.in(store.level, y, yDom);
+
+      xDom = new IntervalDomain(xDom.size + 1);
+
+      if (y.domain.domainID() == IntDomain.IntervalDomainID) yDom = (IntervalDomain) y.domain;
+      else {
+
+        if (y.domain.domainID() == IntDomain.SmallDenseDomainID)
+          yDom = ((SmallDenseDomain) y.domain).toIntervalDomain();
+        else {
+
+          yDom = new IntervalDomain();
+          IntervalEnumeration enumer = y.domain.intervalEnumeration();
+          while (enumer.hasMoreElements()) {
+            Interval next = enumer.nextElement();
+            yDom.unionAdapt(next);
+          }
+        }
+      }
+
+      for (i = yDom.size - 1; i >= 0; i--)
+        xDom.unionAdapt(-yDom.intervals[i].max, -yDom.intervals[i].min);
+
+      xDom.addDom(yDom);
+
+      if (debugAll) System.out.println("new Xdom " + xDom);
+
+      x.domain.in(store.level, x, xDom);
+
+    } while (store.propagationHasOccurred);
+  }
+
+  void boundConsistency(final Store store) {
+
+    do {
+
+      if (x.min() >= 0) {
+        // possible domain consistecny for this case
+        // x.domain.in(store.level, x, y.domain);
+        // store.propagationHasOccurred = false;
+        // y.domain.in(store.level, y, x.domain);
+
+        // bounds consistency
+        x.domain.in(store.level, x, y.min(), y.max());
+
+        store.propagationHasOccurred = false;
+
+        y.domain.in(store.level, y, x.min(), x.max());
+      } else if (x.max() < 0) {
+        x.domain.in(store.level, x, -y.max(), -y.min());
+
+        store.propagationHasOccurred = false;
+
+        y.domain.in(store.level, y, -x.max(), -x.min());
+      } else { // x.min() < 0 && x.max() >= 0
+        IntervalDomain xBound;
+        if (y.min() == 0) xBound = new IntervalDomain(-y.max(), y.max());
+        else {
+          xBound = new IntervalDomain(-y.max(), -y.min());
+          xBound.unionAdapt(new Interval(y.min(), y.max()));
         }
 
-        if (domainConsistent)
-            domainConsistency(store);
-        else
-            boundConsistency(store);
+        x.domain.in(store.level, x, xBound);
 
-    }
+        store.propagationHasOccurred = false;
 
-    void domainConsistency(final Store store) {
+        y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));
+      }
 
-        do {
+    } while (store.propagationHasOccurred);
+  }
 
-            store.propagationHasOccurred = false;
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    if (domainConsistent) return IntDomain.ANY;
+    else return IntDomain.BOUND;
+  }
 
-            if (debugAll)
-                System.out.println("X " + x + " Y " + y);
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-            IntervalDomain xDom;
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-            if (x.domain.domainID() == IntDomain.IntervalDomainID)
-                xDom = (IntervalDomain) x.domain;
-            else {
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    if (domainConsistent) return IntDomain.ANY;
+    else return IntDomain.BOUND;
+  }
 
-                if (x.domain.domainID() == IntDomain.SmallDenseDomainID)
-                    xDom = ((SmallDenseDomain) x.domain).toIntervalDomain();
-                else {
+  @Override
+  public void notConsistency(final Store store) {
 
-                    xDom = new IntervalDomain();
-                    IntervalEnumeration enumer = x.domain.intervalEnumeration();
-                    while (enumer.hasMoreElements()) {
-                        Interval next = enumer.nextElement();
-                        xDom.unionAdapt(next);
-                    }
-                }
-            }
+    do {
+      store.propagationHasOccurred = false;
 
-            IntervalDomain yDom1 = new IntervalDomain(xDom.size + 1);
+      if (y.singleton()) {
 
-            int i = 0;
-            Interval[] intervals = xDom.intervals;
-            for (; i < xDom.size; i++)
-                if (intervals[i].max > 0)
-                    break;
+        x.domain.inComplement(store.level, x, y.value());
+        x.domain.inComplement(store.level, x, -y.value());
+      }
 
-            int j = i;
-            if (j == xDom.size)
-                j--;
+      if (x.singleton()) {
 
-            for (; j >= 0; j--)
-                if (intervals[j].max <= 0)
-                    yDom1.unionAdapt(-intervals[j].max, -intervals[j].min);
+        if (x.value() >= 0) y.domain.inComplement(store.level, y, x.value());
+        else y.domain.inComplement(store.level, y, -x.value());
+      }
 
-            if (i < xDom.size && intervals[i].min < 0 && intervals[i].max > 0) {
+    } while (store.propagationHasOccurred);
+  }
 
-                if (-intervals[i].min > intervals[i].max)
-                    yDom1.unionAdapt(0, -intervals[i].min);
-                else
-                    yDom1.unionAdapt(0, intervals[i].max);
+  @Override
+  public boolean notSatisfied() {
 
-            }
+    IntDomain xDom = x.domain;
+    IntDomain yDom = y.domain;
+    int xSize = xDom.noIntervals();
+    for (int i = 0; i < xSize; i++) {
 
-            IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
+      int right = xDom.rightElement(i);
 
-            for (; i < xDom.size; i++)
-                yDom.unionAdapt(intervals[i]);
+      if (right <= 0) {
+        if (yDom.isIntersecting(-right, -xDom.leftElement(i))) return false;
+      } else {
 
-            yDom.addDom(yDom1);
+        int left = xDom.leftElement(i);
+        if (left >= 0) {
+          if (yDom.isIntersecting(left, right)) return false;
+        } else {
 
-            if (debugAll)
-                System.out.println("new Ydom " + yDom);
-
-            // @todo, test more the change from yDom1 to yDom.
-            y.domain.in(store.level, y, yDom);
-
-            xDom = new IntervalDomain(xDom.size + 1);
-
-
-            if (y.domain.domainID() == IntDomain.IntervalDomainID)
-                yDom = (IntervalDomain) y.domain;
-            else {
-
-                if (y.domain.domainID() == IntDomain.SmallDenseDomainID)
-                    yDom = ((SmallDenseDomain) y.domain).toIntervalDomain();
-                else {
-
-                    yDom = new IntervalDomain();
-                    IntervalEnumeration enumer = y.domain.intervalEnumeration();
-                    while (enumer.hasMoreElements()) {
-                        Interval next = enumer.nextElement();
-                        yDom.unionAdapt(next);
-                    }
-                }
-            }
-
-            for (i = yDom.size - 1; i >= 0; i--)
-                xDom.unionAdapt(-yDom.intervals[i].max, -yDom.intervals[i].min);
-
-            xDom.addDom(yDom);
-
-            if (debugAll)
-                System.out.println("new Xdom " + xDom);
-
-            x.domain.in(store.level, x, xDom);
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    void boundConsistency(final Store store) {
-
-        do {
-
-            if (x.min() >= 0) {
-                // possible domain consistecny for this case
-                // x.domain.in(store.level, x, y.domain);
-                // store.propagationHasOccurred = false;
-                // y.domain.in(store.level, y, x.domain);
-
-                // bounds consistency
-                x.domain.in(store.level, x, y.min(), y.max());
-
-                store.propagationHasOccurred = false;
-
-                y.domain.in(store.level, y, x.min(), x.max());
-            } else if (x.max() < 0) {
-                x.domain.in(store.level, x, -y.max(), -y.min());
-
-                store.propagationHasOccurred = false;
-
-                y.domain.in(store.level, y, -x.max(), -x.min());
-            } else { // x.min() < 0 && x.max() >= 0
-                IntervalDomain xBound;
-                if (y.min() == 0)
-                    xBound = new IntervalDomain(-y.max(), y.max());
-                else {
-                    xBound = new IntervalDomain(-y.max(), -y.min());
-                    xBound.unionAdapt(new Interval(y.min(), y.max()));
-                }
-
-                x.domain.in(store.level, x, xBound);
-
-                store.propagationHasOccurred = false;
-
-                y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));
-            }
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        if (domainConsistent)
-            return IntDomain.ANY;
-        else
-            return IntDomain.BOUND;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        if (domainConsistent)
-            return IntDomain.ANY;
-        else
-            return IntDomain.BOUND;
-    }
-
-    @Override public void notConsistency(final Store store) {
-
-        do {
-            store.propagationHasOccurred = false;
-
-            if (y.singleton()) {
-
-                x.domain.inComplement(store.level, x, y.value());
-                x.domain.inComplement(store.level, x, -y.value());
-
-            }
-
-            if (x.singleton()) {
-
-                if (x.value() >= 0)
-                    y.domain.inComplement(store.level, y, x.value());
-                else
-                    y.domain.inComplement(store.level, y, -x.value());
-            }
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public boolean notSatisfied() {
-
-        IntDomain xDom = x.domain;
-        IntDomain yDom = y.domain;
-        int xSize = xDom.noIntervals();
-        for (int i = 0; i < xSize; i++) {
-
-            int right = xDom.rightElement(i);
-
-            if (right <= 0) {
-                if (yDom.isIntersecting(-right, -xDom.leftElement(i)))
-                    return false;
-            } else {
-
-                int left = xDom.leftElement(i);
-                if (left >= 0) {
-                    if (yDom.isIntersecting(left, right))
-                        return false;
-                } else {
-
-                    if (yDom.isIntersecting(0, -left))
-                        return false;
-                    if (yDom.isIntersecting(0, right))
-                        return false;
-                }
-
-            }
-
+          if (yDom.isIntersecting(0, -left)) return false;
+          if (yDom.isIntersecting(0, right)) return false;
         }
-
-        return true;
-
+      }
     }
 
-    @Override public boolean satisfied() {
-        return grounded() && (x.min() == y.min() || -x.min() == y.min());
-    }
+    return true;
+  }
 
-    @Override public String toString() {
+  @Override
+  public boolean satisfied() {
+    return grounded() && (x.min() == y.min() || -x.min() == y.min());
+  }
 
-        StringBuilder result = new StringBuilder(id());
+  @Override
+  public String toString() {
 
-        result.append(" : absXeqY(").append(x).append(", ").append(y).append(" )");
+    StringBuilder result = new StringBuilder(id());
 
-        return result.toString();
+    result.append(" : absXeqY(").append(x).append(", ").append(y).append(" )");
 
-    }
-
+    return result.toString();
+  }
 }

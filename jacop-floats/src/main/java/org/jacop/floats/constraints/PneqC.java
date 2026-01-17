@@ -30,104 +30,104 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints P != C
- * <p>
- * Domain consistency is used.
+ *
+ * <p>Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PneqC extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies the constant to which a specified variable should be equal to.
-     */
-    public double c;
+  /** It specifies the constant to which a specified variable should be equal to. */
+  public double c;
 
-    /**
-     * It specifies the variable which is constrained to be equal to the specified value.
-     */
-    public FloatVar p;
+  /** It specifies the variable which is constrained to be equal to the specified value. */
+  public FloatVar p;
 
-    /**
-     * It constructs the constraint P = C.
-     *
-     * @param p variable p.
-     * @param c constant c.
-     */
-    public PneqC(FloatVar p, double c) {
+  /**
+   * It constructs the constraint P = C.
+   *
+   * @param p variable p.
+   * @param c constant c.
+   */
+  public PneqC(FloatVar p, double c) {
 
-        checkInputForNullness(new String[] {"p"}, new Object[][] {{p}});
-        if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt))
-            throw new IllegalArgumentException("PneqC constraint has constant c " + c + " in the not allowed range.");
+    checkInputForNullness(new String[] {"p"}, new Object[][] {{p}});
+    if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt))
+      throw new IllegalArgumentException(
+          "PneqC constraint has constant c " + c + " in the not allowed range.");
 
-        numberId = idNumber.incrementAndGet();
-        this.p = p;
-        this.c = c;
+    numberId = idNumber.incrementAndGet();
+    this.p = p;
+    this.c = c;
 
-        setScope(p);
+    setScope(p);
+  }
 
-    }
+  @Override
+  public void notConsistency(Store store) {
 
-    @Override public void notConsistency(Store store) {
+    p.domain.in(store.level, p, c, c);
+  }
 
-        p.domain.in(store.level, p, c, c);
+  @Override
+  public void consistency(Store store) {
 
-    }
+    p.domain.inComplement(store.level, p, c);
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public boolean notSatisfied() {
+    return p.singleton(c);
+  }
 
-        p.domain.inComplement(store.level, p, c);
+  @Override
+  public boolean satisfied() {
+    return !p.domain.contains(c);
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public boolean notSatisfied() {
-        return p.singleton(c);
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public boolean satisfied() {
-        return !p.domain.contains(c);
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public String toString() {
+    return id() + " : PneqC(" + p + ", " + c + " )";
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
-
-    @Override public String toString() {
-        return id() + " : PneqC(" + p + ", " + c + " )";
-    }
-
-    /**
-     * It returns the constant to which a given variable should be equal to.
-     *
-     * @return the constant to which the variable should be equal to.
-     */
-    public double getC() {
-        return c;
-    }
-
+  /**
+   * It returns the constant to which a given variable should be equal to.
+   *
+   * @return the constant to which the variable should be equal to.
+   */
+  public double getC() {
+    return c;
+  }
 }

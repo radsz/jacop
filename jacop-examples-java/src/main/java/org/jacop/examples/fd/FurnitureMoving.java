@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
@@ -40,159 +41,158 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.search.*;
 
-import java.util.ArrayList;
-
 /**
  * It is a simple logic puzzle about furniture moving.
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
- *          <p>
- *          Feature: testing cumulative.
- *          <p>
- *          Also see http://www.hakank.org/JaCoP/
+ *     <p>Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
+ *     <p>Feature: testing cumulative.
+ *     <p>Also see http://www.hakank.org/JaCoP/
  */
-
 public class FurnitureMoving extends ExampleFD {
 
-    private static final boolean generateAll = true;
+  private static final boolean generateAll = true;
 
-    IntVar[] starts;
-    IntVar[] endTimes;
+  IntVar[] starts;
+  IntVar[] endTimes;
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        store = new Store();
+    store = new Store();
 
-        IntVar numPersons = new IntVar(store, "numPersons", 2, 5); // will be minimized
-        IntVar maxTime = new IntVar(store, "maxTime", 60, 60);
+    IntVar numPersons = new IntVar(store, "numPersons", 2, 5); // will be minimized
+    IntVar maxTime = new IntVar(store, "maxTime", 60, 60);
 
-        // Start times
-        IntVar Sp = new IntVar(store, "Sp", 0, 60); // Piano
-        IntVar Sc = new IntVar(store, "Sc", 0, 60); // Chair
-        IntVar Sb = new IntVar(store, "Sb", 0, 60); // Bed
-        IntVar St = new IntVar(store, "St", 0, 60); // Table
-        IntVar sumStartTimes = new IntVar(store, "SumStartTimes", 0, 1000);
+    // Start times
+    IntVar Sp = new IntVar(store, "Sp", 0, 60); // Piano
+    IntVar Sc = new IntVar(store, "Sc", 0, 60); // Chair
+    IntVar Sb = new IntVar(store, "Sb", 0, 60); // Bed
+    IntVar St = new IntVar(store, "St", 0, 60); // Table
+    IntVar sumStartTimes = new IntVar(store, "SumStartTimes", 0, 1000);
 
-        starts = new IntVar[4];
-        starts[0] = Sp;
-        starts[1] = Sc;
-        starts[2] = Sb;
-        starts[3] = St;
+    starts = new IntVar[4];
+    starts[0] = Sp;
+    starts[1] = Sc;
+    starts[2] = Sb;
+    starts[3] = St;
 
-        store.impose(new SumInt(starts, "==", sumStartTimes));
+    store.impose(new SumInt(starts, "==", sumStartTimes));
 
-        IntVar[] durations = new IntVar[4];
-        IntVar[] resources = new IntVar[4];
-        endTimes = new IntVar[4];
+    IntVar[] durations = new IntVar[4];
+    IntVar[] resources = new IntVar[4];
+    endTimes = new IntVar[4];
 
-        int durationsInts[] = {30, 10, 15, 15}; // duration of task
-        int resourcesInts[] = {3, 1, 3, 2};     // resources: num persons required for each task
-        for (int i = 0; i < durationsInts.length; i++) {
-            // converts to FDV
-            durations[i] = new IntVar(store, "dur_" + i, durationsInts[i], durationsInts[i]);
-            // converts to FDV
-            resources[i] = new IntVar(store, "res_" + i, resourcesInts[i], resourcesInts[i]);
+    int durationsInts[] = {30, 10, 15, 15}; // duration of task
+    int resourcesInts[] = {3, 1, 3, 2}; // resources: num persons required for each task
+    for (int i = 0; i < durationsInts.length; i++) {
+      // converts to FDV
+      durations[i] = new IntVar(store, "dur_" + i, durationsInts[i], durationsInts[i]);
+      // converts to FDV
+      resources[i] = new IntVar(store, "res_" + i, resourcesInts[i], resourcesInts[i]);
 
-            // all tasks must be finished in 60 minutes
-            endTimes[i] = new IntVar(store, "end_" + i, 0, 120);
-            store.impose(new XplusYeqZ(starts[i], durations[i], endTimes[i]));
-            store.impose(new XlteqY(endTimes[i], maxTime));
-
-        }
-
-        store.impose(new Cumulative(starts, durations, resources, numPersons));
-
-
-        if (generateAll) {
-            // generate all optimal solutions
-            store.impose(new XeqC(numPersons, 3));
-        }
-
-        vars = new ArrayList<IntVar>();
-
-        for (IntVar s : starts)
-            vars.add(s);
-
-        for (IntVar e : endTimes)
-            vars.add(e);
-
-        vars.add(numPersons);
-
-        cost = numPersons;
-
+      // all tasks must be finished in 60 minutes
+      endTimes[i] = new IntVar(store, "end_" + i, 0, 120);
+      store.impose(new XplusYeqZ(starts[i], durations[i], endTimes[i]));
+      store.impose(new XlteqY(endTimes[i], maxTime));
     }
 
+    store.impose(new Cumulative(starts, durations, resources, numPersons));
 
-    /**
-     * It executes the program which solves this logic puzzle.
-     *
-     * @param args command arguments (none)
-     */
-    public static void main(String args[]) {
-
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
-
-        FurnitureMoving example = new FurnitureMoving();
-        example.model();
-
-        example.searchSpecific();
-
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
-        System.out.println("\n\t*** Execution time = " + T + " ms");
+    if (generateAll) {
+      // generate all optimal solutions
+      store.impose(new XeqC(numPersons, 3));
     }
 
+    vars = new ArrayList<IntVar>();
 
-    /**
-     * It specifies search for that logic puzzle.
-     *
-     * @return true when solution is found false otherwise
-     */
-    public boolean searchSpecific() {
+    for (IntVar s : starts) vars.add(s);
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+    for (IntVar e : endTimes) vars.add(e);
 
-        search = new DepthFirstSearch<IntVar>();
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
+    vars.add(numPersons);
 
-        boolean result;
-        if (generateAll) {
-            // Generate all optimal solutions. 
-            // Note: Gives null pointer exception when searchAll(true)
-            result = search.labeling(store, select);
-        } else {
-            // minimize over numPersons
-            result = search.labeling(store, select, cost);
-        }
+    cost = numPersons;
+  }
 
-        Var[] variables = search.getSolutionListener().getVariables();
-        for (int i = 0; i < variables.length; i++) {
-            System.out.println("Variable " + i + " " + variables[i]);
-        }
+  /**
+   * It executes the program which solves this logic puzzle.
+   *
+   * @param args command arguments (none)
+   */
+  public static void main(String args[]) {
 
-        if (result) {
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-            search.printAllSolutions();
+    FurnitureMoving example = new FurnitureMoving();
+    example.model();
 
-            System.out.println("\nNumber of persons needed: " + cost.value());
-            System.out.println(
-                "Piano: " + starts[0].value() + " .. " + endTimes[0].value() + "\n" + "Chair: " + starts[1].value() + " .. " + endTimes[1]
-                    .value() + "\n" + "Bed  : " + starts[2].value() + " .. " + endTimes[2].value() + "\n" + "Table: " + starts[3].value()
-                    + " .. " + endTimes[3].value());
+    example.searchSpecific();
 
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
 
+  /**
+   * It specifies search for that logic puzzle.
+   *
+   * @return true when solution is found false otherwise
+   */
+  public boolean searchSpecific() {
 
-        } // end if result
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<IntVar>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
-        return result;
+    search = new DepthFirstSearch<IntVar>();
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
 
-    } // end main
+    boolean result;
+    if (generateAll) {
+      // Generate all optimal solutions.
+      // Note: Gives null pointer exception when searchAll(true)
+      result = search.labeling(store, select);
+    } else {
+      // minimize over numPersons
+      result = search.labeling(store, select, cost);
+    }
 
+    Var[] variables = search.getSolutionListener().getVariables();
+    for (int i = 0; i < variables.length; i++) {
+      System.out.println("Variable " + i + " " + variables[i]);
+    }
 
+    if (result) {
+
+      search.printAllSolutions();
+
+      System.out.println("\nNumber of persons needed: " + cost.value());
+      System.out.println(
+          "Piano: "
+              + starts[0].value()
+              + " .. "
+              + endTimes[0].value()
+              + "\n"
+              + "Chair: "
+              + starts[1].value()
+              + " .. "
+              + endTimes[1].value()
+              + "\n"
+              + "Bed  : "
+              + starts[2].value()
+              + " .. "
+              + endTimes[2].value()
+              + "\n"
+              + "Table: "
+              + starts[3].value()
+              + " .. "
+              + endTimes[3].value());
+    } // end if result
+
+    return result;
+  } // end main
 } // end class FurnitureMoving

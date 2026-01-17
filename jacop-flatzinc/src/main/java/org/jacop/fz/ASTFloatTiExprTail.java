@@ -3,53 +3,53 @@
 package org.jacop.fz;
 
 public class ASTFloatTiExprTail extends SimpleNode {
-    public ASTFloatTiExprTail(int id) {
-        super(id);
-    }
+  public ASTFloatTiExprTail(int id) {
+    super(id);
+  }
 
-    public ASTFloatTiExprTail(Parser p, int id) {
-        super(p, id);
-    }
+  public ASTFloatTiExprTail(Parser p, int id) {
+    super(p, id);
+  }
 
-    //type 0=int; 1=interval; 2=list
-    int type = -1;
-    double low, high;
+  // type 0=int; 1=interval; 2=list
+  int type = -1;
+  double low, high;
 
-    public void setType(int t) {
-        type = t;
-    }
+  public void setType(int t) {
+    type = t;
+  }
 
-    public int getType() {
-        return type;
-    }
+  public int getType() {
+    return type;
+  }
 
-    public void setLowHigh(double l, double h) {
-        low = l;
-        high = h;
-    }
+  public void setLowHigh(double l, double h) {
+    low = l;
+    high = h;
+  }
 
-    public double getLow() {
-        return low;
-    }
+  public double getLow() {
+    return low;
+  }
 
-    public double getHigh() {
-        return high;
-    }
+  public double getHigh() {
+    return high;
+  }
 
-    public String toString() {
-        String limits = type == 1 ? "" + low + ".." + high : "";
-        String typeS = null;
-        switch (type) {
-            case 0:
-                typeS = "(float): ";
-                break;
-            case 1:
-                typeS = "(interval): ";
-                break;
-            default:
-                throw new RuntimeException("Internal parsing error; " + getClass().getName());
-        }
-        return super.toString() + typeS + limits;
+  public String toString() {
+    String limits = type == 1 ? "" + low + ".." + high : "";
+    String typeS = null;
+    switch (type) {
+      case 0:
+        typeS = "(float): ";
+        break;
+      case 1:
+        typeS = "(interval): ";
+        break;
+      default:
+        throw new RuntimeException("Internal parsing error; " + getClass().getName());
     }
+    return super.toString() + typeS + limits;
+  }
 }
 /* JavaCC - OriginalChecksum=6b664abb52817035d6bd3249c03b8eb4 (do not edit this line) */

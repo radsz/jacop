@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X + C #= Z.
@@ -42,123 +41,118 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XplusCeqZ extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x+c=z.
-     */
-    final public IntVar x;
+  /** It specifies variable x in constraint x+c=z. */
+  public final IntVar x;
 
-    /**
-     * It specifies constant c in constraint x+c=z.
-     */
-    final public int c;
+  /** It specifies constant c in constraint x+c=z. */
+  public final int c;
 
-    /**
-     * It specifies variable z in constraint x+c=z.
-     */
-    final public IntVar z;
+  /** It specifies variable z in constraint x+c=z. */
+  public final IntVar z;
 
-    /**
-     * It constructs a constraint x+c=z.
-     *
-     * @param x variable x.
-     * @param c constant c.
-     * @param z variable z.
-     */
-    public XplusCeqZ(IntVar x, int c, IntVar z) {
+  /**
+   * It constructs a constraint x+c=z.
+   *
+   * @param x variable x.
+   * @param c constant c.
+   * @param z variable z.
+   */
+  public XplusCeqZ(IntVar x, int c, IntVar z) {
 
-        checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
+    checkInputForNullness(new String[] {"x", "z"}, new Object[] {x, z});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.c = c;
-        this.z = z;
+    this.x = x;
+    this.c = c;
+    this.z = z;
 
-	checkForOverflow();
+    checkForOverflow();
 
-        setScope(x, z);
+    setScope(x, z);
+  }
 
-    }
+  void checkForOverflow() {
 
-    void checkForOverflow() {
+    int sumMin = 0, sumMax = 0;
 
-        int sumMin = 0, sumMax = 0;
+    sumMin = Math.addExact(sumMin, x.min());
+    sumMax = Math.addExact(sumMax, x.max());
 
-        sumMin = Math.addExact(sumMin, x.min());
-        sumMax = Math.addExact(sumMax, x.max());
+    sumMin = Math.addExact(sumMin, c);
+    sumMax = Math.addExact(sumMax, c);
 
-        sumMin = Math.addExact(sumMin, c);
-        sumMax = Math.addExact(sumMax, c);
+    Math.subtractExact(sumMin, z.max());
+    Math.subtractExact(sumMax, z.min());
+  }
 
-        Math.subtractExact(sumMin, z.max());
-        Math.subtractExact(sumMax, z.min());
-    }
+  @Override
+  public void consistency(final Store store) {
 
-    @Override public void consistency(final Store store) {
+    do {
 
-        do {
+      x.domain.inShift(store.level, x, z.domain, -c);
 
-            x.domain.inShift(store.level, x, z.domain, -c);
+      store.propagationHasOccurred = false;
 
-            store.propagationHasOccurred = false;
+      z.domain.inShift(store.level, z, x.domain, c);
 
-            z.domain.inShift(store.level, z, x.domain, c);
+    } while (store.propagationHasOccurred);
+  }
 
-        } while (store.propagationHasOccurred);
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+  @Override
+  public void notConsistency(final Store store) {
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+    do {
 
-    @Override public void notConsistency(final Store store) {
+      store.propagationHasOccurred = false;
 
-        do {
+      if (x.singleton()) z.domain.inComplement(store.level, z, x.min() + c);
 
-            store.propagationHasOccurred = false;
+      if (z.singleton()) x.domain.inComplement(store.level, x, z.min() - c);
 
-            if (x.singleton())
-                z.domain.inComplement(store.level, z, x.min() + c);
+    } while (store.propagationHasOccurred);
+  }
 
-            if (z.singleton())
-                x.domain.inComplement(store.level, x, z.min() - c);
+  @Override
+  public boolean notSatisfied() {
+    return (x.max() + c < z.min() || x.min() + c > z.max());
+  }
 
-        } while (store.propagationHasOccurred);
+  @Override
+  public boolean satisfied() {
+    // return grounded() && x.min() + c == z.min();
+    int xMin = x.min(), zMin = z.min();
+    return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
+  }
 
-    }
+  @Override
+  public String toString() {
 
-    @Override public boolean notSatisfied() {
-        return (x.max() + c < z.min() || x.min() + c > z.max());
-
-    }
-
-    @Override public boolean satisfied() {
-        // return grounded() && x.min() + c == z.min();
-        int xMin = x.min(), zMin = z.min();
-        return x.singleton(xMin) && z.singleton(zMin) && xMin + c == zMin;
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XplusCeqZ(" + x + ", " + c + ", " + z + " )";
-    }
-
+    return id() + " : XplusCeqZ(" + x + ", " + c + ", " + z + " )";
+  }
 }

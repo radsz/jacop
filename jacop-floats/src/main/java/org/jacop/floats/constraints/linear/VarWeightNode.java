@@ -36,7 +36,6 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
@@ -44,143 +43,141 @@ import org.jacop.floats.core.FloatVar;
 
 public class VarWeightNode extends VariableNode {
 
-    double weight;
+  double weight;
 
-    // bounds for this node
-    BoundsVar bound;
+  // bounds for this node
+  BoundsVar bound;
 
-    public VarWeightNode(Store store, FloatVar v, double w) {
+  public VarWeightNode(Store store, FloatVar v, double w) {
 
-        id = n.incrementAndGet();
-        this.store = store;
-        bound = new BoundsVar(store);
+    id = n.incrementAndGet();
+    this.store = store;
+    bound = new BoundsVar(store);
 
-        var = v;
-        weight = w;
+    var = v;
+    weight = w;
 
-        bound.value.setValue(FloatDomain.MinFloat, FloatDomain.MaxFloat, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    bound.value.setValue(
+        FloatDomain.MinFloat, FloatDomain.MaxFloat, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+  }
 
+  void propagate() {
+
+    FloatIntervalDomain mul = FloatDomain.mulBounds(var.min(), var.max(), weight, weight);
+    double min = mul.min();
+    double max = mul.max();
+
+    double lb = min;
+    double ub = max;
+
+    double node_min = min();
+    double node_max = max();
+
+    if (min > node_min)
+      if (max < node_max) {
+
+        updateBounds(min, max, lb, ub);
+
+        parent.propagate();
+
+      } else {
+
+        if (min > node_max) throw Store.failException;
+
+        updateBounds(min, node_max, lb, ub);
+
+        parent.propagate();
+      }
+    else if (max < node_max) {
+
+      if (node_min > max) throw Store.failException;
+
+      updateBounds(node_min, max, lb, ub);
+
+      parent.propagate();
     }
+  }
 
+  void propagateAndPrune() {
 
-    void propagate() {
+    FloatIntervalDomain mul = FloatDomain.mulBounds(var.min(), var.max(), weight, weight);
+    double min = mul.min();
+    double max = mul.max();
 
-        FloatIntervalDomain mul = FloatDomain.mulBounds(var.min(), var.max(), weight, weight);
-        double min = mul.min();
-        double max = mul.max();
+    double lb = min;
+    double ub = max;
 
-        double lb = min;
-        double ub = max;
+    double node_min = min();
+    double node_max = max();
 
-        double node_min = min();
-        double node_max = max();
+    if (min > node_min)
+      if (max < node_max) {
 
-        if (min > node_min)
-            if (max < node_max) {
+        updateBounds(min, max, lb, ub);
 
-                updateBounds(min, max, lb, ub);
+        parent.propagateAndPrune();
 
-                parent.propagate();
+      } else {
+        if (min > node_max) throw Store.failException;
 
-            } else {
+        updateBounds(min, node_max, lb, ub);
 
-                if (min > node_max)
-                    throw Store.failException;
+        parent.propagateAndPrune();
+      }
+    else if (max < node_max) {
 
-                updateBounds(min, node_max, lb, ub);
+      if (node_min > max) throw Store.failException;
 
-                parent.propagate();
+      updateBounds(node_min, max, lb, ub);
 
-            }
-        else if (max < node_max) {
-
-            if (node_min > max)
-                throw Store.failException;
-
-            updateBounds(node_min, max, lb, ub);
-
-            parent.propagate();
-
-        }
+      parent.propagateAndPrune();
     }
+  }
 
+  void prune() {
 
-    void propagateAndPrune() {
+    double lMin = min();
+    double lMax = max();
 
-        FloatIntervalDomain mul = FloatDomain.mulBounds(var.min(), var.max(), weight, weight);
-        double min = mul.min();
-        double max = mul.max();
+    FloatIntervalDomain d = FloatDomain.divBounds(lMin, lMax, weight, weight);
+    double divMin = d.min();
+    double divMax = d.max();
 
-        double lb = min;
-        double ub = max;
+    var.domain.in(store.level, var, divMin, divMax);
+  }
 
-        double node_min = min();
-        double node_max = max();
+  double min() {
+    return ((BoundsVarValue) bound.value()).min;
+  }
 
-        if (min > node_min)
-            if (max < node_max) {
+  double max() {
+    return ((BoundsVarValue) bound.value()).max;
+  }
 
-                updateBounds(min, max, lb, ub);
+  double lb() {
+    return ((BoundsVarValue) bound.value()).lb;
+  }
 
-                parent.propagateAndPrune();
+  double ub() {
+    return ((BoundsVarValue) bound.value()).ub;
+  }
 
-            } else {
-                if (min > node_max)
-                    throw Store.failException;
+  void updateBounds(double min, double max, double lb, double ub) {
 
-                updateBounds(min, node_max, lb, ub);
+    bound.update(min, max, lb, ub);
+  }
 
-                parent.propagateAndPrune();
-
-            }
-        else if (max < node_max) {
-
-            if (node_min > max)
-                throw Store.failException;
-
-            updateBounds(node_min, max, lb, ub);
-
-            parent.propagateAndPrune();
-
-        }
-
-    }
-
-    void prune() {
-
-        double lMin = min();
-        double lMax = max();
-
-        FloatIntervalDomain d = FloatDomain.divBounds(lMin, lMax, weight, weight);
-        double divMin = d.min();
-        double divMax = d.max();
-
-        var.domain.in(store.level, var, divMin, divMax);
-
-    }
-
-    double min() {
-        return ((BoundsVarValue) bound.value()).min;
-    }
-
-    double max() {
-        return ((BoundsVarValue) bound.value()).max;
-    }
-
-    double lb() {
-        return ((BoundsVarValue) bound.value()).lb;
-    }
-
-    double ub() {
-        return ((BoundsVarValue) bound.value()).ub;
-    }
-
-    void updateBounds(double min, double max, double lb, double ub) {
-
-        bound.update(min, max, lb, ub);
-    }
-
-    public String toString() {
-        return super.toString() + " (rel = " + rel + ", " + var + " * " + weight + ")" + ", (" + bound + ")";
-    }
+  public String toString() {
+    return super.toString()
+        + " (rel = "
+        + rel
+        + ", "
+        + var
+        + " * "
+        + weight
+        + ")"
+        + ", ("
+        + bound
+        + ")";
+  }
 }

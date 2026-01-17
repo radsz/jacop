@@ -30,51 +30,44 @@
 
 package org.jacop.set.search;
 
+import java.util.Random;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.search.Indomain;
 import org.jacop.set.core.SetVar;
-import java.util.Random;
 
 /**
- * IndomainMin - implements enumeration method based on the selection of the
- * maximal value in the domain of variable.
+ * IndomainMin - implements enumeration method based on the selection of the maximal value in the
+ * domain of variable.
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
 
-    /**
-     * It creates random indomain heuristic with randomly generated seed for
-     * random generated.
-     */
-    public IndomainSetRandom() {
-        seed = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-    }
+  /** It creates random indomain heuristic with randomly generated seed for random generated. */
+  public IndomainSetRandom() {
+    seed = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  }
 
-    /**
-     * It creates random indomain heuristic according to the provided random
-     * generator.
-     *
-     * @param seed seed for random number genrator
-     */
-    public IndomainSetRandom(Random seed) {
-        this.seed = seed;
-    }
+  /**
+   * It creates random indomain heuristic according to the provided random generator.
+   *
+   * @param seed seed for random number genrator
+   */
+  public IndomainSetRandom(Random seed) {
+    this.seed = seed;
+  }
 
-    Random seed;
+  Random seed;
 
-    public int indomain(T var) {
+  public int indomain(T var) {
 
-        IntDomain difference = var.domain.lub().subtract(var.domain.glb());
+    IntDomain difference = var.domain.lub().subtract(var.domain.glb());
 
-        int no = seed.nextInt(difference.getSize());
+    int no = seed.nextInt(difference.getSize());
 
-        return difference.getElementAt(no);
-
-    }
-
+    return difference.getElementAt(no);
+  }
 }

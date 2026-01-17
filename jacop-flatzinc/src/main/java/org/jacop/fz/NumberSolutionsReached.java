@@ -31,16 +31,13 @@
 package org.jacop.fz;
 
 /**
- * It is thrown in flazinc when search reaches a number of specified
- * solutions using option -n.
+ * It is thrown in flazinc when search reaches a number of specified solutions using option -n.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 @SuppressWarnings("serial")
 public class NumberSolutionsReached extends RuntimeException {
 
-    public NumberSolutionsReached() {
-    }
+  public NumberSolutionsReached() {}
 }

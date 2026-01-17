@@ -38,54 +38,53 @@ import org.jacop.core.MutableVarValue;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class CircuitVarValue implements MutableVarValue, Cloneable {
 
-    int next = 0, previous = 0;
+  int next = 0, previous = 0;
 
-    CircuitVarValue nextCircuitVarValue = null;
+  CircuitVarValue nextCircuitVarValue = null;
 
-    int stamp = 0;
+  int stamp = 0;
 
-    CircuitVarValue() {
-    }
+  CircuitVarValue() {}
 
-    CircuitVarValue(int n, int p) {
-        next = n;
-        previous = p;
-    }
+  CircuitVarValue(int n, int p) {
+    next = n;
+    previous = p;
+  }
 
-    @Override public Object clone() {
+  @Override
+  public Object clone() {
 
-        CircuitVarValue val = new CircuitVarValue(next, previous);
-        val.stamp = stamp;
-        val.nextCircuitVarValue = nextCircuitVarValue;
-        return val;
-    }
+    CircuitVarValue val = new CircuitVarValue(next, previous);
+    val.stamp = stamp;
+    val.nextCircuitVarValue = nextCircuitVarValue;
+    return val;
+  }
 
-    public MutableVarValue previous() {
-        return nextCircuitVarValue;
-    }
+  public MutableVarValue previous() {
+    return nextCircuitVarValue;
+  }
 
-    public void setPrevious(MutableVarValue nn) {
-        nextCircuitVarValue = (CircuitVarValue) nn;
-    }
+  public void setPrevious(MutableVarValue nn) {
+    nextCircuitVarValue = (CircuitVarValue) nn;
+  }
 
-    public void setStamp(int stamp) {
-        this.stamp = stamp;
-    }
+  public void setStamp(int stamp) {
+    this.stamp = stamp;
+  }
 
-    void setValue(int n, int p) {
-        next = n;
-        previous = p;
-    }
+  void setValue(int n, int p) {
+    next = n;
+    previous = p;
+  }
 
-    public int stamp() {
-        return stamp;
-    }
+  public int stamp() {
+    return stamp;
+  }
 
-    @Override public String toString() {
-        return "[" + next + ", " + previous + "]";
-    }
-
+  @Override
+  public String toString() {
+    return "[" + next + ", " + previous + "]";
+  }
 }

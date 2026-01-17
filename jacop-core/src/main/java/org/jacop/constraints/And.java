@@ -30,14 +30,13 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint c1 /\ c2 ... /\ cn
@@ -47,155 +46,154 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a list of constraints which must be satisfied to keep And constraint satisfied.
-     */
-    protected final PrimitiveConstraint listOfC[];
+  /**
+   * It specifies a list of constraints which must be satisfied to keep And constraint satisfied.
+   */
+  protected final PrimitiveConstraint listOfC[];
 
-    private final QueueForward<PrimitiveConstraint> queueForward;
+  private final QueueForward<PrimitiveConstraint> queueForward;
 
-    /**
-     * It constructs an And constraint based on primitive constraints. The
-     * constraint is satisfied if all constraints are satisfied.
-     *
-     * @param listOfC arraylist of constraints
-     */
-    public And(List<PrimitiveConstraint> listOfC) {
-        this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
+  /**
+   * It constructs an And constraint based on primitive constraints. The constraint is satisfied if
+   * all constraints are satisfied.
+   *
+   * @param listOfC arraylist of constraints
+   */
+  public And(List<PrimitiveConstraint> listOfC) {
+    this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
+  }
+
+  /**
+   * It constructs a simple And constraint based on two primitive constraints.
+   *
+   * @param c1 the first primitive constraint
+   * @param c2 the second primitive constraint
+   */
+  public And(PrimitiveConstraint c1, PrimitiveConstraint c2) {
+    this(new PrimitiveConstraint[] {c1, c2});
+  }
+
+  /**
+   * It constructs an And constraint over an array of primitive constraints.
+   *
+   * @param c an array of primitive constraints constituting the And constraint.
+   */
+  public And(PrimitiveConstraint[] c) {
+
+    checkInputForNullness("c", c);
+    this.queueIndex = 1;
+    this.numberId = idNumber.incrementAndGet();
+    this.listOfC = Arrays.copyOf(c, c.length);
+    setScope(listOfC);
+    setConstraintScope(listOfC);
+    queueForward = new QueueForward<>(listOfC, arguments());
+    // KKU, 2019-01-30; next line is wrong! it will always give queueIndex = 0 since primitive
+    // constraints have queueIndex = 0
+    // Then... if this constraint is reified, the reified will get queueIndex = 0 as well.
+    // this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex,
+    // b.queueIndex)).map(a -> a.queueIndex).orElse(0);
+
+  }
+
+  private boolean propagation;
+
+  @Override
+  public void consistency(Store store) {
+
+    propagation = true;
+
+    do {
+
+      // Variable propagation can be set to true again if queueVariable function is being called.
+      propagation = false;
+
+      for (Constraint cc : listOfC) cc.consistency(store);
+
+    } while (propagation);
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
+    return getConsistencyPruningEvent(var);
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise version exists.");
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise version exists.");
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+
+    int numberCertainNotSat = 0;
+    int numberCertainSat = 0;
+    int j = 0;
+    int i = 0;
+
+    while (numberCertainNotSat == 0 && i < listOfC.length) {
+      if (listOfC[i].notSatisfied()) {
+        numberCertainNotSat++;
+        removeConstraint();
+      } else {
+        if (listOfC[i].satisfied()) numberCertainSat++;
+        else j = i;
+      }
+      i++;
     }
 
-    /**
-     * It constructs a simple And constraint based on two primitive constraints.
-     *
-     * @param c1 the first primitive constraint
-     * @param c2 the second primitive constraint
-     */
-    public And(PrimitiveConstraint c1, PrimitiveConstraint c2) {
-        this(new PrimitiveConstraint[] {c1, c2});
+    if (numberCertainNotSat == 0) {
+      if (numberCertainSat == listOfC.length - 1) {
+        listOfC[j].notConsistency(store);
+      } else if (numberCertainSat == listOfC.length) throw Store.failException;
     }
+  }
 
-    /**
-     * It constructs an And constraint over an array of primitive constraints.
-     *
-     * @param c an array of primitive constraints constituting the And constraint.
-     */
-    public And(PrimitiveConstraint[] c) {
+  @Override
+  public void queueVariable(int level, Var variable) {
 
-        checkInputForNullness("c", c);
-        this.queueIndex = 1;
-        this.numberId = idNumber.incrementAndGet();
-        this.listOfC = Arrays.copyOf(c, c.length);
-        setScope(listOfC);
-        setConstraintScope(listOfC);
-        queueForward = new QueueForward<>(listOfC, arguments());
-	// KKU, 2019-01-30; next line is wrong! it will always give queueIndex = 0 since primitive constraints have queueIndex = 0
-	// Then... if this constraint is reified, the reified will get queueIndex = 0 as well.
-        //this.queueIndex = Arrays.stream(c).max((a, b) -> Integer.max(a.queueIndex, b.queueIndex)).map(a -> a.queueIndex).orElse(0);
+    propagation = true;
+    queueForward.queueForward(level, variable);
+  }
 
+  @Override
+  public boolean notSatisfied() {
+    boolean notSat = false;
+
+    int i = 0;
+    while (!notSat && i < listOfC.length) {
+      notSat = listOfC[i].notSatisfied();
+      i++;
     }
+    return notSat;
+  }
 
-    private boolean propagation;
+  @Override
+  public boolean satisfied() {
 
-    @Override public void consistency(Store store) {
+    for (PrimitiveConstraint c : listOfC) if (!c.satisfied()) return false;
 
-        propagation = true;
+    return true;
+  }
 
-        do {
+  @Override
+  public String toString() {
 
-            // Variable propagation can be set to true again if queueVariable function is being called.
-            propagation = false;
+    StringBuilder result = new StringBuilder(id());
 
-            for (Constraint cc : listOfC)
-                cc.consistency(store);
+    result.append(" : And(");
 
-        } while (propagation);
-
+    for (int i = 0; i < listOfC.length; i++) {
+      result.append(listOfC[i]);
+      if (i != listOfC.length - 1) result.append(", ");
     }
-
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
-        return getConsistencyPruningEvent(var);
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise version exists.");
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise version exists.");
-    }
-
-    @Override public void notConsistency(Store store) {
-
-        int numberCertainNotSat = 0;
-        int numberCertainSat = 0;
-        int j = 0;
-        int i = 0;
-
-        while (numberCertainNotSat == 0 && i < listOfC.length) {
-            if (listOfC[i].notSatisfied()) {
-                numberCertainNotSat++;
-		removeConstraint();
-	    }
-            else {
-                if (listOfC[i].satisfied())
-                    numberCertainSat++;
-                else
-                    j = i;
-            }
-            i++;
-        }
-
-        if (numberCertainNotSat == 0) {
-            if (numberCertainSat == listOfC.length - 1) {
-                listOfC[j].notConsistency(store);
-            } else if (numberCertainSat == listOfC.length)
-                throw Store.failException;
-        }
-    }
-
-    @Override public void queueVariable(int level, Var variable) {
-
-        propagation = true;
-        queueForward.queueForward(level, variable);
-
-    }
-
-    @Override public boolean notSatisfied() {
-        boolean notSat = false;
-
-        int i = 0;
-        while (!notSat && i < listOfC.length) {
-            notSat = listOfC[i].notSatisfied();
-            i++;
-        }
-        return notSat;
-    }
-
-    @Override public boolean satisfied() {
-
-        for (PrimitiveConstraint c : listOfC)
-            if (!c.satisfied())
-                return false;
-
-        return true;
-
-    }
-
-    @Override public String toString() {
-
-        StringBuilder result = new StringBuilder(id());
-
-        result.append(" : And(");
-
-        for (int i = 0; i < listOfC.length; i++) {
-            result.append(listOfC[i]);
-            if (i != listOfC.length - 1)
-                result.append(", ");
-        }
-	result.append(")");
-        return result.toString();
-    }
-
+    result.append(")");
+    return result.toString();
+  }
 }

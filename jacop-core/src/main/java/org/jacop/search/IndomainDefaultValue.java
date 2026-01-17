@@ -30,64 +30,52 @@
 
 package org.jacop.search;
 
+import java.util.Map;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
-import java.util.Map;
-
 /**
- * IndomainDefaultValue - implements enumeration method based on the
- * selection of the default value for each variable first. If
- * selection of this value will not succeed it will try to assign
- * values with the default indomain method.
- * <p>
- * This method works only for IntVar.
+ * IndomainDefaultValue - implements enumeration method based on the selection of the default value
+ * for each variable first. If selection of this value will not succeed it will try to assign values
+ * with the default indomain method.
+ *
+ * <p>This method works only for IntVar.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
 
-    /**
-     * It defines the default indomain if there is no mapping provided.
-     */
-    private Indomain<T> defIndomain;
+  /** It defines the default indomain if there is no mapping provided. */
+  private Indomain<T> defIndomain;
 
-    /**
-     * It defines for each variable and a value which should be used.
-     */
-    private Map<T, Integer> defValue;
+  /** It defines for each variable and a value which should be used. */
+  private Map<T, Integer> defValue;
 
-    /**
-     * Constructor which specifies default values to be used
-     * if values are not in the domain a defualt indomain is used.
-     *
-     * @param defaultIndomain default indomain heuristic used.
-     * @param defaultValue    default value used for each variable.
-     */
+  /**
+   * Constructor which specifies default values to be used if values are not in the domain a defualt
+   * indomain is used.
+   *
+   * @param defaultIndomain default indomain heuristic used.
+   * @param defaultValue default value used for each variable.
+   */
+  public IndomainDefaultValue(Map<T, Integer> defaultValue, Indomain<T> defaultIndomain) {
 
-    public IndomainDefaultValue(Map<T, Integer> defaultValue, Indomain<T> defaultIndomain) {
+    this.defIndomain = defaultIndomain;
+    this.defValue = defaultValue;
+  }
 
-        this.defIndomain = defaultIndomain;
-        this.defValue = defaultValue;
+  /*
+   * indomain method
+   */
+  public int indomain(T v) {
+    if (defValue.containsKey(v)) {
+      int value = defValue.get(v);
 
+      if (((IntVar) v).dom().contains(value)) return value;
     }
 
-    /*
-     * indomain method
-     */
-    public int indomain(T v) {
-        if (defValue.containsKey(v)) {
-            int value = defValue.get(v);
-
-            if (((IntVar) v).dom().contains(value))
-                return value;
-        }
-
-        return defIndomain.indomain(v);
-
-    }
-
+    return defIndomain.indomain(v);
+  }
 }

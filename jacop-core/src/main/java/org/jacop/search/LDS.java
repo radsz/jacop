@@ -34,171 +34,155 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
 /**
- * Defines functionality of limited discrepancy search. Plugin in this object to
- * search to change your depth first search into limited discrepancy search.
+ * Defines functionality of limited discrepancy search. Plugin in this object to search to change
+ * your depth first search into limited discrepancy search.
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class LDS<T extends Var> implements ExitChildListener<T> {
 
-    boolean timeOut = false;
+  boolean timeOut = false;
 
-    int noDiscrepancies;
+  int noDiscrepancies;
 
-    int maxNoDiscrepancies;
+  int maxNoDiscrepancies;
 
-    boolean recentExitingLeftChildGoingForDiscrepancy = false;
+  boolean recentExitingLeftChildGoingForDiscrepancy = false;
 
-    boolean recentExitingRightChild = false;
+  boolean recentExitingRightChild = false;
 
-    ExitChildListener<T>[] exitChildListeners;
+  ExitChildListener<T>[] exitChildListeners;
 
-    /**
-     * The search will not be allowed to deviate more than maxDiscrepancies
-     * times from the heuristic (e.g. variable and value ordering) in the
-     * search.
-     *
-     * @param maxDiscrepancies maximal number of discrepancies allowed.
-     */
+  /**
+   * The search will not be allowed to deviate more than maxDiscrepancies times from the heuristic
+   * (e.g. variable and value ordering) in the search.
+   *
+   * @param maxDiscrepancies maximal number of discrepancies allowed.
+   */
+  public LDS(int maxDiscrepancies) {
 
-    public LDS(int maxDiscrepancies) {
+    assert (maxDiscrepancies >= 0);
 
-        assert (maxDiscrepancies >= 0);
+    this.maxNoDiscrepancies = maxDiscrepancies;
+  }
 
-        this.maxNoDiscrepancies = maxDiscrepancies;
+  /**
+   * It is executed after exiting the left child. The parameters specify the variable and value used
+   * in the choice point. The parameter status specifies the return code from the child. The return
+   * parameter of this function specifies if the search should continue undisturbed or exit the
+   * current search node with value false.
+   */
+  public boolean leftChild(T var, int value, boolean status) {
 
-    }
+    if (!status) {
+      // we will enter right node if we can, thus increasing the
+      // discrepancy.
+      noDiscrepancies++;
 
-    /**
-     * It is executed after exiting the left child. The parameters specify the
-     * variable and value used in the choice point. The parameter status
-     * specifies the return code from the child. The return parameter of this
-     * function specifies if the search should continue undisturbed or exit the
-     * current search node with value false.
-     */
+      if (noDiscrepancies >= maxNoDiscrepancies) {
 
-    public boolean leftChild(T var, int value, boolean status) {
-
-        if (!status) {
-            // we will enter right node if we can, thus increasing the
-            // discrepancy.
-            noDiscrepancies++;
-
-            if (noDiscrepancies >= maxNoDiscrepancies) {
-
-                // maximum number of discrepancies reached, returning false
-                // since we do not want to
-                if (exitChildListeners != null) {
-                    for (int i = 0; i < exitChildListeners.length; i++)
-                        exitChildListeners[i].leftChild(var, value, status);
-                }
-
-                noDiscrepancies--;
-                return false;
-
-            } else {
-
-                if (exitChildListeners != null) {
-                    boolean code = false;
-                    for (int i = 0; i < exitChildListeners.length; i++)
-                        code |= exitChildListeners[i].leftChild(var, value, status);
-
-                    // the children listeners disallow entering the right child
-                    // so there will be no disrepancy as counted.
-                    if (!code)
-                        noDiscrepancies--;
-                    return code;
-                }
-
-                return true;
-
-            }
+        // maximum number of discrepancies reached, returning false
+        // since we do not want to
+        if (exitChildListeners != null) {
+          for (int i = 0; i < exitChildListeners.length; i++)
+            exitChildListeners[i].leftChild(var, value, status);
         }
 
-        // the search exits with the solution, so no discrepancy is required.
-        return status;
+        noDiscrepancies--;
+        return false;
 
-    }
+      } else {
 
-    /**
-     * It is executed after exiting the left child. The parameters specify the
-     * choice point. The parameter status specifies the return code from the
-     * child. The return parameter of this function specifies if the search
-     * should continue undisturbed or exit the current search node with false.
-     * If the continuing to the right child will exceed the number of allowed
-     * discrepancies then this function will return false so the right child
-     * will not be explored.
-     */
+        if (exitChildListeners != null) {
+          boolean code = false;
+          for (int i = 0; i < exitChildListeners.length; i++)
+            code |= exitChildListeners[i].leftChild(var, value, status);
 
-    public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-
-        if (!status) {
-            // we will enter right node if we can, thus increasing the
-            // discrepancy.
-            noDiscrepancies++;
-
-            if (noDiscrepancies >= maxNoDiscrepancies) {
-
-                // maximum number of discrepancies reached, returning false
-                // since we do not want to
-                if (exitChildListeners != null) {
-                    for (int i = 0; i < exitChildListeners.length; i++)
-                        exitChildListeners[i].leftChild(choice, status);
-                }
-
-                noDiscrepancies--;
-                return false;
-
-            } else {
-
-                if (exitChildListeners != null) {
-                    boolean code = false;
-                    for (int i = 0; i < exitChildListeners.length; i++)
-                        code |= exitChildListeners[i].leftChild(choice, status);
-
-                    // the children listeners disallow entering the right child
-                    // so there will be no disrepancy as counted.
-                    if (!code)
-                        noDiscrepancies--;
-                    return code;
-                }
-
-                return true;
-            }
+          // the children listeners disallow entering the right child
+          // so there will be no disrepancy as counted.
+          if (!code) noDiscrepancies--;
+          return code;
         }
 
-        // solution was found, no discrepancy calculation needed.
-        return status;
+        return true;
+      }
     }
 
-    /**
-     * Exiting the right children requires reduction of the current
-     * number of discrepancies being used.
-     */
+    // the search exits with the solution, so no discrepancy is required.
+    return status;
+  }
 
-    public void rightChild(T var, int value, boolean status) {
+  /**
+   * It is executed after exiting the left child. The parameters specify the choice point. The
+   * parameter status specifies the return code from the child. The return parameter of this
+   * function specifies if the search should continue undisturbed or exit the current search node
+   * with false. If the continuing to the right child will exceed the number of allowed
+   * discrepancies then this function will return false so the right child will not be explored.
+   */
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+
+    if (!status) {
+      // we will enter right node if we can, thus increasing the
+      // discrepancy.
+      noDiscrepancies++;
+
+      if (noDiscrepancies >= maxNoDiscrepancies) {
+
+        // maximum number of discrepancies reached, returning false
+        // since we do not want to
+        if (exitChildListeners != null) {
+          for (int i = 0; i < exitChildListeners.length; i++)
+            exitChildListeners[i].leftChild(choice, status);
+        }
 
         noDiscrepancies--;
+        return false;
 
+      } else {
+
+        if (exitChildListeners != null) {
+          boolean code = false;
+          for (int i = 0; i < exitChildListeners.length; i++)
+            code |= exitChildListeners[i].leftChild(choice, status);
+
+          // the children listeners disallow entering the right child
+          // so there will be no disrepancy as counted.
+          if (!code) noDiscrepancies--;
+          return code;
+        }
+
+        return true;
+      }
     }
 
-    public void rightChild(PrimitiveConstraint choice, boolean status) {
+    // solution was found, no discrepancy calculation needed.
+    return status;
+  }
 
-        noDiscrepancies--;
+  /**
+   * Exiting the right children requires reduction of the current number of discrepancies being
+   * used.
+   */
+  public void rightChild(T var, int value, boolean status) {
 
-    }
+    noDiscrepancies--;
+  }
 
-    public void setChildrenListeners(ExitChildListener<T>[] children) {
+  public void rightChild(PrimitiveConstraint choice, boolean status) {
 
-        exitChildListeners = children;
-    }
+    noDiscrepancies--;
+  }
 
-    @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T> child) {
-        exitChildListeners = new ExitChildListener[1];
-        exitChildListeners[0] = child;
-    }
+  public void setChildrenListeners(ExitChildListener<T>[] children) {
 
+    exitChildListeners = children;
+  }
+
+  @SuppressWarnings("unchecked")
+  public void setChildrenListeners(ExitChildListener<T> child) {
+    exitChildListeners = new ExitChildListener[1];
+    exitChildListeners[0] = child;
+  }
 }

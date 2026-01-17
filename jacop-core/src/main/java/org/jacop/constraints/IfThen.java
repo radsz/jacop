@@ -30,13 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint if constraint1 then constraint2
@@ -44,261 +43,235 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies constraint condC in the IfThen constraint.
-     */
-    public PrimitiveConstraint condC;
+  /** It specifies constraint condC in the IfThen constraint. */
+  public PrimitiveConstraint condC;
 
-    /**
-     * It specifies constraint condC in the IfThen constraint.
-     */
-    public PrimitiveConstraint thenC;
+  /** It specifies constraint condC in the IfThen constraint. */
+  public PrimitiveConstraint thenC;
 
-    boolean imposed = false;
+  boolean imposed = false;
 
-    Store store;
+  Store store;
 
-    final public QueueForward<PrimitiveConstraint> queueForward;
+  public final QueueForward<PrimitiveConstraint> queueForward;
 
-    /**
-     * It constructs ifthen constraint.
-     *
-     * @param condC the condition of the ifthen constraint.
-     * @param thenC the constraint which must hold if the condition holds.
-     */
-    public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
+  /**
+   * It constructs ifthen constraint.
+   *
+   * @param condC the condition of the ifthen constraint.
+   * @param thenC the constraint which must hold if the condition holds.
+   */
+  public IfThen(PrimitiveConstraint condC, PrimitiveConstraint thenC) {
 
-        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {condC, thenC};
-        checkInputForNullness(new String[] {"condC", "thenC"}, scope);
-        numberId = idNumber.incrementAndGet();
-        this.condC = condC;
-        this.thenC = thenC;
-        setScope(scope);
-        setConstraintScope(scope);
-        queueForward = new QueueForward<>(new PrimitiveConstraint[] {condC, thenC}, arguments());
-        this.queueIndex = Integer.max(condC.queueIndex, thenC.queueIndex);
+    PrimitiveConstraint[] scope = new PrimitiveConstraint[] {condC, thenC};
+    checkInputForNullness(new String[] {"condC", "thenC"}, scope);
+    numberId = idNumber.incrementAndGet();
+    this.condC = condC;
+    this.thenC = thenC;
+    setScope(scope);
+    setConstraintScope(scope);
+    queueForward = new QueueForward<>(new PrimitiveConstraint[] {condC, thenC}, arguments());
+    this.queueIndex = Integer.max(condC.queueIndex, thenC.queueIndex);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (condC.satisfied()) {
+      if (imposed) {
+        this.removeConstraint();
+        store.impose(thenC);
+        return;
+      } else {
+        thenC.consistency(store);
+      }
     }
 
-    @Override public void consistency(Store store) {
+    if (thenC.notSatisfied()) {
+      if (imposed) {
+        this.removeConstraint();
+        store.impose(new Not(condC));
+        return;
+      } else {
+        condC.notConsistency(store);
+      }
+    }
+  }
 
-        if (condC.satisfied()) {
-            if (imposed) {
-                this.removeConstraint();
-                store.impose(thenC);
-                return;
-            } else {
-                thenC.consistency(store);
-	    }
-        }
+  @Override
+  public boolean notSatisfied() {
+    return condC.satisfied() && thenC.notSatisfied();
+  }
 
-        if (thenC.notSatisfied()) {
-            if (imposed) {
-             this.removeConstraint();
-             store.impose(new Not(condC));
-             return;
-            } else {
-                condC.notConsistency(store);
-            }
-        }
+  @Override
+  public void notConsistency(Store store) {
 
+    thenC.notConsistency(store);
+    condC.consistency(store);
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public boolean notSatisfied() {
-        return condC.satisfied() && thenC.notSatisfied();
+    int eventAcross = -1;
+
+    if (condC.arguments().contains(var)) {
+      int event = condC.getNestedPruningEvent(var, true);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public void notConsistency(Store store) {
-
-        thenC.notConsistency(store);
-        condC.consistency(store);
-
+    if (condC.arguments().contains(var)) {
+      int event = condC.getNestedPruningEvent(var, false);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-
-        int eventAcross = -1;
-
-        if (condC.arguments().contains(var)) {
-            int event = condC.getNestedPruningEvent(var, true);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (condC.arguments().contains(var)) {
-            int event = condC.getNestedPruningEvent(var, false);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (thenC.arguments().contains(var)) {
-            int event = thenC.getNestedPruningEvent(var, true);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (thenC.arguments().contains(var)) {
-            int event = thenC.getNestedPruningEvent(var, false);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
-
+    if (thenC.arguments().contains(var)) {
+      int event = thenC.getNestedPruningEvent(var, true);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("It should not be called as overrides exist.");
+    if (thenC.arguments().contains(var)) {
+      int event = thenC.getNestedPruningEvent(var, false);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public int getNotConsistencyPruningEvent(Var var) {
+    if (eventAcross == -1) return Domain.NONE;
+    else return eventAcross;
+  }
 
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("It should not be called as overrides exist.");
+  }
 
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
+  @Override
+  public int getNotConsistencyPruningEvent(Var var) {
 
-        int eventAcross = -1;
-
-        if (condC.arguments().contains(var)) {
-            int event = condC.getNestedPruningEvent(var, true);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (condC.arguments().contains(var)) {
-            int event = condC.getNestedPruningEvent(var, false);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (thenC.arguments().contains(var)) {
-            int event = thenC.getNestedPruningEvent(var, true);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (thenC.arguments().contains(var)) {
-            int event = thenC.getNestedPruningEvent(var, false);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
-
+    // If notConsistency function mode
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
+    int eventAcross = -1;
 
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-        }
-        // If notConsistency function mode
-        else {
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-        }
-
-        int eventAcross = -1;
-
-        if (condC.arguments().contains(var)) {
-            int event = condC.getNestedPruningEvent(var, true);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (condC.arguments().contains(var)) {
-            int event = condC.getNestedPruningEvent(var, false);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (thenC.arguments().contains(var)) {
-            int event = thenC.getNestedPruningEvent(var, true);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (thenC.arguments().contains(var)) {
-            int event = thenC.getNestedPruningEvent(var, false);
-            if (event > eventAcross)
-                eventAcross = event;
-        }
-
-        if (eventAcross == -1)
-            return Domain.NONE;
-        else
-            return eventAcross;
-
+    if (condC.arguments().contains(var)) {
+      int event = condC.getNestedPruningEvent(var, true);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        throw new IllegalStateException("It should not be called as overrides exist.");
+    if (condC.arguments().contains(var)) {
+      int event = condC.getNestedPruningEvent(var, false);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public void impose(Store store) {
-
-        this.store = store;
-        super.impose(store);
-        imposed = true;
-
+    if (thenC.arguments().contains(var)) {
+      int event = thenC.getNestedPruningEvent(var, true);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public void include(Store store) {
-        this.store = store;
+    if (thenC.arguments().contains(var)) {
+      int event = thenC.getNestedPruningEvent(var, false);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public boolean satisfied() {
+    if (eventAcross == -1) return Domain.NONE;
+    else return eventAcross;
+  }
 
-        if (imposed) {
-            return condC.notSatisfied();
-        } else
-            return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
 
+    // If consistency function mode
+    if (mode) {
+      if (consistencyPruningEvents != null) {
+        Integer possibleEvent = consistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
+    }
+    // If notConsistency function mode
+    else {
+      if (notConsistencyPruningEvents != null) {
+        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
     }
 
-    @Override public String toString() {
+    int eventAcross = -1;
 
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : IfThen(").append(condC).append(", ").append(thenC).append(" )\n");
-
-        return result.toString();
-
+    if (condC.arguments().contains(var)) {
+      int event = condC.getNestedPruningEvent(var, true);
+      if (event > eventAcross) eventAcross = event;
     }
 
-    @Override public void queueVariable(int level, Var variable) {
-
-        queueForward.queueForward(level, variable);
-
+    if (condC.arguments().contains(var)) {
+      int event = condC.getNestedPruningEvent(var, false);
+      if (event > eventAcross) eventAcross = event;
     }
 
+    if (thenC.arguments().contains(var)) {
+      int event = thenC.getNestedPruningEvent(var, true);
+      if (event > eventAcross) eventAcross = event;
+    }
+
+    if (thenC.arguments().contains(var)) {
+      int event = thenC.getNestedPruningEvent(var, false);
+      if (event > eventAcross) eventAcross = event;
+    }
+
+    if (eventAcross == -1) return Domain.NONE;
+    else return eventAcross;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("It should not be called as overrides exist.");
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    this.store = store;
+    super.impose(store);
+    imposed = true;
+  }
+
+  @Override
+  public void include(Store store) {
+    this.store = store;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    if (imposed) {
+      return condC.notSatisfied();
+    } else return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+
+    result.append(" : IfThen(").append(condC).append(", ").append(thenC).append(" )\n");
+
+    return result.toString();
+  }
+
+  @Override
+  public void queueVariable(int level, Var variable) {
+
+    queueForward.queueForward(level, variable);
+  }
 }

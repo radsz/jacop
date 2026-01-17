@@ -33,92 +33,77 @@ package org.jacop.search;
 import org.jacop.core.*;
 
 /**
- * IndomainMedian - implements enumeration method based on the selection of the
- * median value in the domain of FD variable and then right and left values.
+ * IndomainMedian - implements enumeration method based on the selection of the median value in the
+ * domain of FD variable and then right and left values.
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
-    /**
-     * It creates Indomain heuristic which chooses the middle value.
-     */
-    public IndomainMedian() {
+  /** It creates Indomain heuristic which chooses the middle value. */
+  public IndomainMedian() {}
+
+  /** It requires IntVar variable. */
+  public int indomain(IntVar var) {
+
+    assert (!var.singleton()) : "indomain does not work with singleton variables.";
+
+    assert (var.dom().domainID() != IntDomain.BoundDomainID)
+        : "It is not possible to use BoundDomain";
+
+    int position = var.getSize();
+
+    if (position % 2 == 0) position = (position >> 1) - 1;
+    else position = position >> 1;
+
+    if (var.domain.domainID() == IntDomain.IntervalDomainID) {
+
+      IntervalDomain domain = (IntervalDomain) var.domain;
+
+      for (int i = 0; i < domain.size; i++) {
+
+        int intervalSize = domain.intervals[i].max - domain.intervals[i].min + 1;
+        if (intervalSize <= position) {
+          position -= intervalSize;
+        } else return domain.intervals[i].min + position;
+      }
+
+      assert false : "Indomain Median does not work properly.";
     }
 
-    /**
-     * It requires IntVar variable.
-     */
+    IntDomain dom = var.dom();
 
-    public int indomain(IntVar var) {
+    if (dom.isSparseRepresentation()) {
 
-        assert (!var.singleton()) : "indomain does not work with singleton variables.";
+      ValueEnumeration enumer = dom.valueEnumeration();
 
-        assert (var.dom().domainID() != IntDomain.BoundDomainID) : "It is not possible to use BoundDomain";
+      while (enumer.hasMoreElements() && position > 0) {
+        enumer.nextElement();
+        position--;
+      }
 
-        int position = var.getSize();
+      return enumer.nextElement();
 
-        if (position % 2 == 0)
-            position = (position >> 1) - 1;
-        else
-            position = position >> 1;
+    } else {
 
-        if (var.domain.domainID() == IntDomain.IntervalDomainID) {
+      IntervalEnumeration enumer = dom.intervalEnumeration();
 
-            IntervalDomain domain = (IntervalDomain) var.domain;
+      while (enumer.hasMoreElements()) {
 
-            for (int i = 0; i < domain.size; i++) {
+        Interval next = enumer.nextElement();
 
-                int intervalSize = domain.intervals[i].max - domain.intervals[i].min + 1;
-                if (intervalSize <= position) {
-                    position -= intervalSize;
-                } else
-                    return domain.intervals[i].min + position;
-            }
+        int intervalSize = next.max - next.min + 1;
 
-            assert false : "Indomain Median does not work properly.";
-
-        }
-
-        IntDomain dom = var.dom();
-
-        if (dom.isSparseRepresentation()) {
-
-            ValueEnumeration enumer = dom.valueEnumeration();
-
-            while (enumer.hasMoreElements() && position > 0) {
-                enumer.nextElement();
-                position--;
-            }
-
-            return enumer.nextElement();
-
-        } else {
-
-            IntervalEnumeration enumer = dom.intervalEnumeration();
-
-            while (enumer.hasMoreElements()) {
-
-                Interval next = enumer.nextElement();
-
-                int intervalSize = next.max - next.min + 1;
-
-                if (intervalSize <= position) {
-                    position -= intervalSize;
-                } else
-                    return next.min + position;
-
-            }
-
-        }
-
-        assert false : "Indomain Median does not work properly.";
-
-        return 0;
-
+        if (intervalSize <= position) {
+          position -= intervalSize;
+        } else return next.min + position;
+      }
     }
 
+    assert false : "Indomain Median does not work properly.";
+
+    return 0;
+  }
 }

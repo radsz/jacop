@@ -39,36 +39,27 @@ import org.jacop.core.IntVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LargestMin<T extends IntVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs variable comparator with priority based on the largest minimal value.
-     */
-    public LargestMin() {
-    }
+  /** It constructs variable comparator with priority based on the largest minimal value. */
+  public LargestMin() {}
 
-    public int compare(double left, T var) {
-        int right = var.dom().min();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(double left, T var) {
+    int right = var.dom().min();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.dom().min();
-        int right = rightVar.dom().min();
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.dom().min();
+    int right = rightVar.dom().min();
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.dom().min();
-    }
-
+  public double metric(T var) {
+    return var.dom().min();
+  }
 }

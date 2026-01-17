@@ -36,18 +36,17 @@ package org.jacop.search.restart;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class ConstantCalculator extends Calculator {
 
-    public ConstantCalculator(int scale) {
-        failLimit = scale;
-    }
+  public ConstantCalculator(int scale) {
+    failLimit = scale;
+  }
 
-    public void newLimit() {
-        numberFails = 0;
-    }
-    
-    public String toString() {
-        return "constantCalculator(" + failLimit + ")";
-    }
+  public void newLimit() {
+    numberFails = 0;
+  }
+
+  public String toString() {
+    return "constantCalculator(" + failLimit + ")";
+  }
 }

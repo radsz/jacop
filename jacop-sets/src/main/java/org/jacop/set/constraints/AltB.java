@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -38,196 +39,178 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates a {@literal <} b constraint on two set variables. The
- * set variables are constrained to be lexicographically ordered.
- * <p>
- * For example,
- * {}{@literal <}lex {1}
- * {1, 2}{@literal <}lex {1, 2, 3}
- * {1, 3}{@literal <}lex {2}
+ * It creates a {@literal <} b constraint on two set variables. The set variables are constrained to
+ * be lexicographically ordered.
+ *
+ * <p>For example, {}{@literal <}lex {1} {1, 2}{@literal <}lex {1, 2, 3} {1, 3}{@literal <}lex {2}
  * {1}{@literal <} {2}
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AltB extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies the first variable of the constraint
-     */
-    public SetVar a;
+  /** It specifies the first variable of the constraint */
+  public SetVar a;
 
-    /**
-     * It specifies the second variable of the constraint
-     */
-    public SetVar b;
+  /** It specifies the second variable of the constraint */
+  public SetVar b;
 
-    /**
-     * Negated constraint
-     */
-    AleB aGEb;
+  /** Negated constraint */
+  AleB aGEb;
 
-    /**
-     * It constructs an Lexical ordering constraint to restrict the domain of the variables a and b.
-     * It is strict by default.
-     *
-     * @param a variable that is restricted to be less than b with lexical order.
-     * @param b variable that is restricted to be greater than a with lexical order.
-     */
-    public AltB(SetVar a, SetVar b) {
+  /**
+   * It constructs an Lexical ordering constraint to restrict the domain of the variables a and b.
+   * It is strict by default.
+   *
+   * @param a variable that is restricted to be less than b with lexical order.
+   * @param b variable that is restricted to be greater than a with lexical order.
+   */
+  public AltB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.a = a;
-        this.b = b;
-        aGEb = new AleB(b, a, true);
+    this.a = a;
+    this.b = b;
+    aGEb = new AleB(b, a, true);
 
-        setScope(a, b);
+    setScope(a, b);
+  }
 
+  /**
+   * It constructs an Lexical ordering to be used in negated constrained. Not to be used for
+   * imposing constraints.
+   *
+   * @param a variable that is restricted to be less than b with lexical order.
+   * @param b variable that is restricted to be greater than a with lexical order.
+   * @param negated used to distinguish constructors only.
+   */
+  AltB(SetVar a, SetVar b, boolean negated) {
+
+    this.a = a;
+    this.b = b;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    b.domain.inCardinality(store.level, b, 1, IntDomain.MaxInt);
+
+    if (a.domain.card().min() > 0)
+      b.domain.inLUB(store.level, b, new IntervalDomain(a.domain.lub().min(), IntDomain.MaxInt));
+    else return; // any b with cardinalirty > 0 is fine since a = {}
+
+    // case for ground domains; check for < domains
+    if (a.domain.singleton() && b.domain.singleton())
+      if (!setLexLT(a.domain.glb(), b.domain.glb())) throw Store.failException;
+
+    if (b.domain.glb().getSize() > 0) {
+      ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
+      ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
+      int be = bGlbEnum.nextElement();
+      int ae = Integer.MIN_VALUE;
+      do {
+        if (aLubEnum.hasMoreElements()) {
+          ae = aLubEnum.nextElement();
+
+          if (ae == be) {
+            if (bGlbEnum.hasMoreElements()) {
+              be = bGlbEnum.nextElement();
+              if (!aLubEnum.hasMoreElements()) return; // b has more elements than a
+            } else break;
+          } else if (ae < be) {
+            return; // b already greater
+          } else { // ae > be
+            throw Store.failException;
+          }
+        } else // b has more elements and up to now all exqual
+        return;
+      } while (true);
+
+      if (a.domain.lub().getSize() > b.domain.glb().getSize()) {
+        // a and b are equal to some point
+        int nextA = a.domain.lub().nextValue(ae);
+        if (b.domain.lub().max() <= nextA) throw Store.failException;
+      }
     }
+  }
 
-    /**
-     * It constructs an Lexical ordering to be used in negated
-     * constrained. Not to be used for imposing constraints.
-     *
-     * @param a       variable that is restricted to be less than b with lexical order.
-     * @param b       variable that is restricted to be greater than a with lexical order.
-     * @param negated used to distinguish constructors only.
-     */
-    AltB(SetVar a, SetVar b, boolean negated) {
+  boolean setLexLT(IntDomain x, IntDomain y) {
 
-        this.a = a;
-        this.b = b;
+    if (x.getSize() == 0 && y.getSize() > 0) return true;
+
+    ValueEnumeration xe = x.valueEnumeration();
+    ValueEnumeration ye = y.valueEnumeration();
+
+    boolean lt = false;
+
+    while (xe.hasMoreElements() && ye.hasMoreElements()) {
+      int xv = xe.nextElement();
+      int yv = ye.nextElement();
+
+      if (xv < yv) return true;
+      else if (xv > yv) return false;
     }
+    if (ye.hasMoreElements()) return true;
 
-    @Override public void consistency(Store store) {
+    return lt;
+  }
 
-        b.domain.inCardinality(store.level, b, 1, IntDomain.MaxInt);
+  @Override
+  public void notConsistency(Store store) {
+    aGEb.consistency(store);
+  }
 
-        if (a.domain.card().min() > 0)
-            b.domain.inLUB(store.level, b, new IntervalDomain(a.domain.lub().min(), IntDomain.MaxInt));
-        else
-            return;  // any b with cardinalirty > 0 is fine since a = {}
+  @Override
+  public boolean satisfied() {
+    if (a.domain.singleton() && b.domain.singleton())
+      if (setLexLT(a.domain.glb(), b.domain.glb())) return true;
+    return false;
+  }
 
-        // case for ground domains; check for < domains
-        if (a.domain.singleton() && b.domain.singleton())
-            if (!setLexLT(a.domain.glb(), b.domain.glb()))
-                throw Store.failException;
+  @Override
+  public boolean notSatisfied() {
+    return aGEb.satisfied();
+  }
 
-        if (b.domain.glb().getSize() > 0) {
-            ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
-            ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
-            int be = bGlbEnum.nextElement();
-            int ae = Integer.MIN_VALUE;
-            do {
-                if (aLubEnum.hasMoreElements()) {
-                    ae = aLubEnum.nextElement();
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-                    if (ae == be) {
-                        if (bGlbEnum.hasMoreElements()) {
-                            be = bGlbEnum.nextElement();
-                            if (!aLubEnum.hasMoreElements())
-                                return; // b has more elements than a
-                        } else
-                            break;
-                    } else if (ae < be) {
-                        return; // b already greater
-                    } else { // ae > be
-                        throw Store.failException;
-                    }
-                } else // b has more elements and up to now all exqual
-                    return;
-            } while (true);
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-            if (a.domain.lub().getSize() > b.domain.glb().getSize()) {
-                // a and b are equal to some point
-                int nextA = a.domain.lub().nextValue(ae);
-                if (b.domain.lub().max() <= nextA)
-                    throw Store.failException;
-            }
-        }
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    boolean setLexLT(IntDomain x, IntDomain y) {
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        if (x.getSize() == 0 && y.getSize() > 0)
-            return true;
+  @Override
+  public void impose(Store store) {
 
-        ValueEnumeration xe = x.valueEnumeration();
-        ValueEnumeration ye = y.valueEnumeration();
+    super.impose(store);
+  }
 
-        boolean lt = false;
+  @Override
+  public String toString() {
 
-        while (xe.hasMoreElements() && ye.hasMoreElements()) {
-            int xv = xe.nextElement();
-            int yv = ye.nextElement();
-
-            if (xv < yv)
-                return true;
-            else if (xv > yv)
-                return false;
-
-        }
-        if (ye.hasMoreElements())
-            return true;
-
-        return lt;
-    }
-
-    @Override public void notConsistency(Store store) {
-        aGEb.consistency(store);
-    }
-
-    @Override public boolean satisfied() {
-        if (a.domain.singleton() && b.domain.singleton())
-            if (setLexLT(a.domain.glb(), b.domain.glb()))
-                return true;
-        return false;
-    }
-
-    @Override public boolean notSatisfied() {
-        return aGEb.satisfied();
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-
-    @Override public void impose(Store store) {
-
-        super.impose(store);
-
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer();
-        result.append(id() + " : AltB(");
-        result.append(a).append(", ").append(b);
-        result.append(")");
-        return result.toString();
-
-    }
-
+    StringBuffer result = new StringBuffer();
+    result.append(id() + " : AltB(");
+    result.append(a).append(", ").append(b);
+    result.append(")");
+    return result.toString();
+  }
 }

@@ -38,93 +38,88 @@ import java.io.StringReader;
  * @author Polina Maakeva and Radoslaw Szymanek
  * @version 4.10
  */
-
 class LexicalAnalyzer {
 
-    private StreamTokenizer input;
+  private StreamTokenizer input;
 
-    // constants to identify the type of the last recognized token.
-    static final int INVALID_CHAR = -1;// unexpected character found.
-    static final int NO_TOKEN = 0;// No tokens recognized yet.
+  // constants to identify the type of the last recognized token.
+  static final int INVALID_CHAR = -1; // unexpected character found.
+  static final int NO_TOKEN = 0; // No tokens recognized yet.
 
-    static final int PLUS = 3;
-    static final int DOT = 4;
-    static final int WORD = 5;
-    static final int LEFT_PAREN = 6;
-    static final int RIGHT_PAREN = 7;
-    static final int STAR = 8;
-    static final int EOF = 9;
+  static final int PLUS = 3;
+  static final int DOT = 4;
+  static final int WORD = 5;
+  static final int LEFT_PAREN = 6;
+  static final int RIGHT_PAREN = 7;
+  static final int STAR = 8;
+  static final int EOF = 9;
 
-    static final int Operator = 10;
-    static final int Beginning = 11;
+  static final int Operator = 10;
+  static final int Beginning = 11;
 
-    /**
-     * Constructor creating a Lexical Analyzer.
-     *
-     * @param in the StringReader providing the characters which are being analyzed.
-     */
-    LexicalAnalyzer(StringReader in) {
+  /**
+   * Constructor creating a Lexical Analyzer.
+   *
+   * @param in the StringReader providing the characters which are being analyzed.
+   */
+  LexicalAnalyzer(StringReader in) {
 
-        input = new StreamTokenizer(in);
-        input.resetSyntax();
-        input.eolIsSignificant(false);
-        input.wordChars('a', 'z');
-        input.wordChars('A', 'Z');
-        input.wordChars('0', '9');
-        input.wordChars('\u0000', ' ' - 1);
-        input.ordinaryChar('(');
-        input.ordinaryChar(')');
-        input.quoteChar('"');
+    input = new StreamTokenizer(in);
+    input.resetSyntax();
+    input.eolIsSignificant(false);
+    input.wordChars('a', 'z');
+    input.wordChars('A', 'Z');
+    input.wordChars('0', '9');
+    input.wordChars('\u0000', ' ' - 1);
+    input.ordinaryChar('(');
+    input.ordinaryChar(')');
+    input.quoteChar('"');
+  }
+
+  /** Return the string recognized as word token or the body of a quoted string. */
+  String getString() {
+    return input.sval;
+  }
+
+  /**
+   * Return the type of the next token. For word and quoted string tokens, the string that the token
+   * represents can be fetched by calling the getString method.
+   */
+  int nextToken() {
+
+    int token;
+
+    try {
+      switch (input.nextToken()) {
+        case StreamTokenizer.TT_EOF:
+          token = EOF;
+          break;
+        case StreamTokenizer.TT_WORD:
+          token = WORD;
+          break;
+        case '(':
+          token = LEFT_PAREN;
+          break;
+        case ')':
+          token = RIGHT_PAREN;
+          break;
+        case '*':
+          token = STAR;
+          break;
+        case '+':
+          token = PLUS;
+          break;
+        case '.':
+          token = DOT;
+          break;
+        default:
+          token = INVALID_CHAR;
+          break;
+      } // switch
+    } catch (IOException e) {
+      // Treat an IOException as an end of file
+      token = EOF;
     }
-
-    /**
-     * Return the string recognized as word token or the body of a
-     * quoted string.
-     */
-    String getString() {
-        return input.sval;
-    }
-
-    /**
-     * Return the type of the next token.  For word and quoted string
-     * tokens, the string that the token represents can be fetched by
-     * calling the getString method.
-     */
-    int nextToken() {
-
-        int token;
-
-        try {
-            switch (input.nextToken()) {
-                case StreamTokenizer.TT_EOF:
-                    token = EOF;
-                    break;
-                case StreamTokenizer.TT_WORD:
-                    token = WORD;
-                    break;
-                case '(':
-                    token = LEFT_PAREN;
-                    break;
-                case ')':
-                    token = RIGHT_PAREN;
-                    break;
-                case '*':
-                    token = STAR;
-                    break;
-                case '+':
-                    token = PLUS;
-                    break;
-                case '.':
-                    token = DOT;
-                    break;
-                default:
-                    token = INVALID_CHAR;
-                    break;
-            } // switch
-        } catch (IOException e) {
-            // Treat an IOException as an end of file
-            token = EOF;
-        }
-        return token;
-    }
-} 
+    return token;
+  }
+}

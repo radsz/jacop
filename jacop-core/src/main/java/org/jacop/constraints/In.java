@@ -30,113 +30,113 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.*;
-
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.core.*;
 
 /**
  * Constraints X to belong to a specified domain.
- * <p>
- * Domain consistency is used.
+ *
+ * <p>Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class In extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x whose domain must lie within a specified domain.
-     */
-    public IntVar x;
+  /** It specifies variable x whose domain must lie within a specified domain. */
+  public IntVar x;
 
-    /**
-     * It specifies domain d which restricts the possible value of the specified variable.
-     */
-    public IntDomain dom;
+  /** It specifies domain d which restricts the possible value of the specified variable. */
+  public IntDomain dom;
 
-    /**
-     * It specifies all the values which can not be taken by a variable.
-     */
-    private IntDomain DomComplement;
+  /** It specifies all the values which can not be taken by a variable. */
+  private IntDomain DomComplement;
 
-    /**
-     * It constructs an In constraint to restrict the domain of the variable.
-     *
-     * @param x   variable x for which the restriction is applied.
-     * @param dom the domain to which the variables domain is restricted.
-     */
-    public In(IntVar x, IntDomain dom) {
+  /**
+   * It constructs an In constraint to restrict the domain of the variable.
+   *
+   * @param x variable x for which the restriction is applied.
+   * @param dom the domain to which the variables domain is restricted.
+   */
+  public In(IntVar x, IntDomain dom) {
 
-        checkInputForNullness(new String[] {"x", "dom"}, new Object[] {x, dom});
+    checkInputForNullness(new String[] {"x", "dom"}, new Object[] {x, dom});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.dom = dom;
-        this.DomComplement = dom.complement();
+    this.x = x;
+    this.dom = dom;
+    this.DomComplement = dom.complement();
 
-        setScope(x);
+    setScope(x);
+  }
 
-    }
+  @Override
+  public void consistency(Store store) {
+    x.domain.in(store.level, x, dom);
 
-    @Override public void consistency(Store store) {
-        x.domain.in(store.level, x, dom);
+    removeConstraint();
+  }
 
-        removeConstraint();
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
+  @Override
+  public void notConsistency(Store store) {
+    x.domain.in(store.level, x, DomComplement);
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return !x.domain.isIntersecting(dom);
+    // !dom.contains(x.domain);
+  }
 
-    @Override public void notConsistency(Store store) {
-        x.domain.in(store.level, x, DomComplement);
-    }
+  @Override
+  public boolean satisfied() {
+    return // x.singleton() &&
+    dom.contains(x.domain);
+  }
 
-    @Override public boolean notSatisfied() {
-        return !x.domain.isIntersecting(dom);
-        // !dom.contains(x.domain);
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public boolean satisfied() {
-        return //x.singleton() &&
-            dom.contains(x.domain);
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public String toString() {
+    return id() + " : In(" + x + ", " + dom + " )";
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return Domain.NONE;
-    }
+  @Override
+  public Constraint getGuideConstraint() {
+    return new XeqC(x, x.min());
+  }
 
-    @Override public String toString() {
-        return id() + " : In(" + x + ", " + dom + " )";
-    }
+  @Override
+  public int getGuideValue() {
+    return x.min();
+  }
 
+  @Override
+  public Var getGuideVariable() {
+    return x;
+  }
 
-    @Override public Constraint getGuideConstraint() {
-        return new XeqC(x, x.min());
-    }
-
-    @Override public int getGuideValue() {
-        return x.min();
-    }
-
-    @Override public Var getGuideVariable() {
-        return x;
-    }
-
-    @Override public void supplyGuideFeedback(boolean feedback) {
-    }
-
+  @Override
+  public void supplyGuideFeedback(boolean feedback) {}
 }

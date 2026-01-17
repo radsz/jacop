@@ -38,48 +38,44 @@ import java.text.DecimalFormat;
  */
 public class StatisticsBase {
 
-    protected static final DecimalFormat DF = new DecimalFormat("0.###");
+  protected static final DecimalFormat DF = new DecimalFormat("0.###");
 
-    public int arcsExamined = 0;
-    public int arcsPruned = 0;
-    public int amountPruned = 0;
-    public long maxScoreSum = 0L;
-    public long minScoreSum = 0L;
+  public int arcsExamined = 0;
+  public int arcsPruned = 0;
+  public int amountPruned = 0;
+  public long maxScoreSum = 0L;
+  public long minScoreSum = 0L;
 
-    public int consistencyCalls = 0;
-    public int consistencyIterations = 0;
+  public int consistencyCalls = 0;
+  public int consistencyIterations = 0;
 
-    protected void toString(StringBuilder str) {
+  protected void toString(StringBuilder str) {
 
-        str.append("\t# arcs examined : ");
-        str.append(arcsExamined);
-        str.append("\t(avg ");
-        str.append(DF.format((double) arcsExamined / consistencyIterations));
+    str.append("\t# arcs examined : ");
+    str.append(arcsExamined);
+    str.append("\t(avg ");
+    str.append(DF.format((double) arcsExamined / consistencyIterations));
 
-        str.append(")\n\t# arcs pruned   : ");
-        str.append(arcsPruned);
-        str.append("\t(avg ");
-        str.append(DF.format((double) arcsPruned / arcsExamined));
+    str.append(")\n\t# arcs pruned   : ");
+    str.append(arcsPruned);
+    str.append("\t(avg ");
+    str.append(DF.format((double) arcsPruned / arcsExamined));
 
-        str.append(")\n\tAmount pruned   : ");
-        str.append(amountPruned);
-        str.append("\t(avg ");
-        str.append(DF.format((double) amountPruned / arcsPruned));
+    str.append(")\n\tAmount pruned   : ");
+    str.append(amountPruned);
+    str.append("\t(avg ");
+    str.append(DF.format((double) amountPruned / arcsPruned));
 
-        str.append(")\n\tAvg max score   : ");
-        str.append(DF.format((double) maxScoreSum / consistencyIterations));
-        str.append("\n\tAvg min score   : ");
-        str.append(DF.format((double) minScoreSum / consistencyIterations));
+    str.append(")\n\tAvg max score   : ");
+    str.append(DF.format((double) maxScoreSum / consistencyIterations));
+    str.append("\n\tAvg min score   : ");
+    str.append(DF.format((double) minScoreSum / consistencyIterations));
+  }
 
-    }
+  public String toString() {
 
-    public String toString() {
-
-        StringBuilder str = new StringBuilder();
-        toString(str);
-        return str.toString();
-
-    }
-
-
+    StringBuilder str = new StringBuilder();
+    toString(str);
+    return str.toString();
+  }
 }

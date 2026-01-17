@@ -31,13 +31,13 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 /**
  * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
@@ -45,216 +45,182 @@ import java.util.stream.Stream;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XorBool extends PrimitiveConstraint {
 
-        /*
+  /*
    * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
-         * is True, and the rest are False. It gives False if an even number of its arguments is True, 
-         * and the rest are False.
-         *
-         * For two arguments the truth table is
-         *
-         * X | Y | Z
-         * 0   0   0
-         * 0   1   1
-         * 1   0   1
-         * 1   1   0
-         */
+   * is True, and the rest are False. It gives False if an even number of its arguments is True,
+   * and the rest are False.
+   *
+   * For two arguments the truth table is
+   *
+   * X | Y | Z
+   * 0   0   0
+   * 0   1   1
+   * 1   0   1
+   * 1   1   0
+   */
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variables x for the constraint.
-     */
-    public final IntVar[] x;
+  /** It specifies variables x for the constraint. */
+  public final IntVar[] x;
 
-    public final IntVar y;
+  public final IntVar y;
 
-    /**
-     * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
-     *
-     * @param x variables x.
-     * @param y variable y.
-     */
-    public XorBool(IntVar[] x, IntVar y) {
+  /**
+   * It constructs constraint (x_0 xor x_1 xor ... xor x_n ) {@literal <=>} y.
+   *
+   * @param x variables x.
+   * @param y variable y.
+   */
+  public XorBool(IntVar[] x, IntVar y) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[][] {x, {y}});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[][] {x, {y}});
 
-        queueIndex = 0;
-        numberId = idNumber.incrementAndGet();
+    queueIndex = 0;
+    numberId = idNumber.incrementAndGet();
 
-        this.x = Arrays.copyOf(x, x.length);
-        this.y = y;
+    this.x = Arrays.copyOf(x, x.length);
+    this.y = y;
 
-        assert (checkInvariants() == null) : checkInvariants();
+    assert (checkInvariants() == null) : checkInvariants();
 
-        if (x.length > 2)
-            queueIndex = 1;
-        else
-            queueIndex = 0;
+    if (x.length > 2) queueIndex = 1;
+    else queueIndex = 0;
 
-        setScope(Stream.concat(Arrays.stream(x), Stream.of(y)));
+    setScope(Stream.concat(Arrays.stream(x), Stream.of(y)));
+  }
+
+  /**
+   * It checks invariants required by the constraint. Namely that boolean variables have boolean
+   * domain.
+   *
+   * @return the string describing the violation of the invariant, null otherwise.
+   */
+  public String checkInvariants() {
+
+    for (IntVar e : x)
+      if (e.min() < 0 || e.max() > 1) return "Variable " + e + " does not have boolean domain";
+
+    if (y.min() < 0 || y.max() > 1) return "Variable " + y + " does not have boolean domain";
+
+    return null;
+  }
+
+  @Override
+  public void consistency(final Store store) {
+
+    IntVar nonGround = null;
+
+    int numberOnes = 0;
+    int numberZeros = 0;
+
+    for (IntVar e : x) {
+      if (e.min() == 1) numberOnes++;
+      else if (e.max() == 0) numberZeros++;
+      else nonGround = e;
     }
 
-    /**
-     * It checks invariants required by the constraint. Namely that
-     * boolean variables have boolean domain.
-     *
-     * @return the string describing the violation of the invariant, null otherwise.
-     */
-    public String checkInvariants() {
+    if (numberOnes + numberZeros == x.length)
+      if ((numberOnes & 1) == 1) y.domain.inValue(store.level, y, 1);
+      else y.domain.inValue(store.level, y, 0);
+    else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
+      if (y.min() == 1)
+        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 0);
+        else nonGround.domain.inValue(store.level, nonGround, 1);
+      else if (y.max() == 0)
+        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 1);
+        else nonGround.domain.inValue(store.level, nonGround, 0);
+  }
 
-        for (IntVar e : x)
-            if (e.min() < 0 || e.max() > 1)
-                return "Variable " + e + " does not have boolean domain";
+  @Override
+  public void notConsistency(final Store store) {
 
-        if (y.min() < 0 || y.max() > 1)
-            return "Variable " + y + " does not have boolean domain";
+    IntVar nonGround = null;
 
-        return null;
+    int numberOnes = 0;
+    int numberZeros = 0;
+
+    for (IntVar e : x) {
+      if (e.min() == 1) numberOnes++;
+      else if (e.max() == 0) numberZeros++;
+      else nonGround = e;
     }
 
-    @Override public void consistency(final Store store) {
+    if (numberOnes + numberZeros == x.length)
+      if ((numberOnes & 1) == 1) y.domain.inValue(store.level, y, 0);
+      else y.domain.inValue(store.level, y, 1);
+    else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
+      if (y.min() == 1)
+        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 1);
+        else nonGround.domain.inValue(store.level, nonGround, 0);
+      else if (y.max() == 0)
+        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 0);
+        else nonGround.domain.inValue(store.level, nonGround, 1);
+  }
 
-        IntVar nonGround = null;
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
 
-        int numberOnes = 0;
-        int numberZeros = 0;
-
-        for (IntVar e : x) {
-            if (e.min() == 1)
-                numberOnes++;
-            else if (e.max() == 0)
-                numberZeros++;
-            else
-                nonGround = e;
-        }
-
-        if (numberOnes + numberZeros == x.length)
-            if ((numberOnes & 1) == 1)
-                y.domain.inValue(store.level, y, 1);
-            else
-                y.domain.inValue(store.level, y, 0);
-        else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
-            if (y.min() == 1)
-                if ((numberOnes & 1) == 1)
-                    nonGround.domain.inValue(store.level, nonGround, 0);
-                else
-                    nonGround.domain.inValue(store.level, nonGround, 1);
-            else if (y.max() == 0)
-                if ((numberOnes & 1) == 1)
-                    nonGround.domain.inValue(store.level, nonGround, 1);
-                else
-                    nonGround.domain.inValue(store.level, nonGround, 0);
-
+    // If consistency function mode
+    if (mode) {
+      if (consistencyPruningEvents != null) {
+        Integer possibleEvent = consistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
+      return IntDomain.GROUND;
+    } else { // If notConsistency function mode
+      if (notConsistencyPruningEvents != null) {
+        Integer possibleEvent = notConsistencyPruningEvents.get(var);
+        if (possibleEvent != null) return possibleEvent;
+      }
+      return IntDomain.BOUND;
     }
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-        IntVar nonGround = null;
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-        int numberOnes = 0;
-        int numberZeros = 0;
+  @Override
+  public boolean satisfied() {
 
-        for (IntVar e : x) {
-            if (e.min() == 1)
-                numberOnes++;
-            else if (e.max() == 0)
-                numberZeros++;
-            else
-                nonGround = e;
-        }
+    if (!grounded()) return false;
 
-        if (numberOnes + numberZeros == x.length)
-            if ((numberOnes & 1) == 1)
-                y.domain.inValue(store.level, y, 0);
-            else
-                y.domain.inValue(store.level, y, 1);
-        else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
-            if (y.min() == 1)
-                if ((numberOnes & 1) == 1)
-                    nonGround.domain.inValue(store.level, nonGround, 1);
-                else
-                    nonGround.domain.inValue(store.level, nonGround, 0);
-            else if (y.max() == 0)
-                if ((numberOnes & 1) == 1)
-                    nonGround.domain.inValue(store.level, nonGround, 0);
-                else
-                    nonGround.domain.inValue(store.level, nonGround, 1);
+    int sum = 0;
+    for (IntVar e : x) sum += e.value();
 
-    }
+    if ((sum & 1) == 1 && y.min() == 1) return true;
+    else if ((sum & 1) == 0 && y.max() == 0) return true;
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
+    return false;
+  }
 
-        // If consistency function mode
-        if (mode) {
-            if (consistencyPruningEvents != null) {
-                Integer possibleEvent = consistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.GROUND;
-        } else { // If notConsistency function mode
-            if (notConsistencyPruningEvents != null) {
-                Integer possibleEvent = notConsistencyPruningEvents.get(var);
-                if (possibleEvent != null)
-                    return possibleEvent;
-            }
-            return IntDomain.BOUND;
-        }
-    }
+  @Override
+  public boolean notSatisfied() {
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+    if (!y.singleton()) return false;
+    else for (IntVar e : x) if (!e.singleton()) return false;
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+    int sum = 0;
+    for (IntVar e : x) sum += e.value();
 
-    @Override public boolean satisfied() {
+    if ((sum & 1) == 1 && y.min() == 0) return true;
+    else if ((sum & 1) == 0 && y.min() == 1) return true;
 
-        if (!grounded())
-            return false;
+    return false;
+  }
 
-        int sum = 0;
-        for (IntVar e : x)
-            sum += e.value();
+  @Override
+  public String toString() {
 
-        if ((sum & 1) == 1 && y.min() == 1)
-            return true;
-        else if ((sum & 1) == 0 && y.max() == 0)
-            return true;
-
-        return false;
-
-    }
-
-    @Override public boolean notSatisfied() {
-
-        if (!y.singleton())
-            return false;
-        else
-            for (IntVar e : x)
-                if (!e.singleton())
-                    return false;
-
-        int sum = 0;
-        for (IntVar e : x)
-            sum += e.value();
-
-        if ((sum & 1) == 1 && y.min() == 0)
-            return true;
-        else if ((sum & 1) == 0 && y.min() == 1)
-            return true;
-
-        return false;
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XorBool( (" + Arrays.asList(x) + ") <=>  " + y + ")";
-    }
-
+    return id() + " : XorBool( (" + Arrays.asList(x) + ") <=>  " + y + ")";
+  }
 }

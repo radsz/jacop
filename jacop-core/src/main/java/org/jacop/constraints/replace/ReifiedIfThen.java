@@ -30,50 +30,52 @@
 
 package org.jacop.constraints.replace;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.api.Replaceable;
 import org.jacop.constraints.*;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Replacement of Reified with IfThen. It should only be used
- * for the test purposes as this replacement reduces efficiency
- * of the solver.
+ * Replacement of Reified with IfThen. It should only be used for the test purposes as this
+ * replacement reduces efficiency of the solver.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
 public class ReifiedIfThen implements Replaceable<Reified> {
 
-    @Override public Class<Reified> forClass() {
-        return Reified.class;
-    }
+  @Override
+  public Class<Reified> forClass() {
+    return Reified.class;
+  }
 
-    @Override public boolean isReplaceable(Reified constraint) {
-        return true;
-    }
+  @Override
+  public boolean isReplaceable(Reified constraint) {
+    return true;
+  }
 
-    @Override public DecomposedConstraint<Constraint> replace(Reified constraint) {
+  @Override
+  public DecomposedConstraint<Constraint> replace(Reified constraint) {
 
-        return new DecomposedConstraint<Constraint>() {
-            @Override public void imposeDecomposition(Store store) {
-                decompose(store).forEach(store::impose);
-            }
+    return new DecomposedConstraint<Constraint>() {
+      @Override
+      public void imposeDecomposition(Store store) {
+        decompose(store).forEach(store::impose);
+      }
 
-            @Override public List<Constraint> decompose(Store store) {
+      @Override
+      public List<Constraint> decompose(Store store) {
 
-                List<Constraint> result = new ArrayList<>();
+        List<Constraint> result = new ArrayList<>();
 
-                result.add(new IfThen(new XeqC(constraint.b, 1), constraint.c));
-                result.add(new IfThen(new XeqC(constraint.b, 0), new Not(constraint.c)));
-                result.add(new IfThen(constraint.c, new XeqC(constraint.b, 1)));
-                result.add(new IfThen(new Not(constraint.c), new XeqC(constraint.b, 0)));
+        result.add(new IfThen(new XeqC(constraint.b, 1), constraint.c));
+        result.add(new IfThen(new XeqC(constraint.b, 0), new Not(constraint.c)));
+        result.add(new IfThen(constraint.c, new XeqC(constraint.b, 1)));
+        result.add(new IfThen(new Not(constraint.c), new XeqC(constraint.b, 0)));
 
-                return result;
-
-            }
-        };
-    }
+        return result;
+      }
+    };
+  }
 }

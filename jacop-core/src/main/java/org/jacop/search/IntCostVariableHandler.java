@@ -32,84 +32,83 @@ package org.jacop.search;
 
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltC;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
- * Handler for IntVar cost variable operations in search algorithms.
- * This is the default implementation for integer cost variables.
+ * Handler for IntVar cost variable operations in search algorithms. This is the default
+ * implementation for integer cost variables.
  *
  * @author Generated for multi-module refactoring
  * @version 4.11
  */
 public class IntCostVariableHandler implements CostVariableHandler {
 
-    @Override
-    public boolean isApplicable(Var var) {
-        return var instanceof IntVar;
-    }
+  @Override
+  public boolean isApplicable(Var var) {
+    return var instanceof IntVar;
+  }
 
-    @Override
-    public double getCostValue(Var var) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        return intVar.dom().min();
+  @Override
+  public double getCostValue(Var var) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    return intVar.dom().min();
+  }
 
-    @Override
-    public Constraint createCostConstraint(Var var, double costValue) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        int intCostValue = (int) costValue;
-        return new XltC(intVar, intCostValue);
+  @Override
+  public Constraint createCostConstraint(Var var, double costValue) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    int intCostValue = (int) costValue;
+    return new XltC(intVar, intCostValue);
+  }
 
-    @Override
-    public void updateCostDomain(Store store, Var var, double costValue) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        int intCostValue = (int) costValue;
-        intVar.domain.inMax(store.level, intVar, intCostValue - 1);
+  @Override
+  public void updateCostDomain(Store store, Var var, double costValue) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    int intCostValue = (int) costValue;
+    intVar.domain.inMax(store.level, intVar, intCostValue - 1);
+  }
 
-    @Override
-    public double getMinCostValue(Var var) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        return intVar.dom().min();
+  @Override
+  public double getMinCostValue(Var var) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    return intVar.dom().min();
+  }
 
-    @Override
-    public double getMaxCostValue(Var var) {
-        if (!(var instanceof IntVar)) {
-            throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
-        }
-        IntVar intVar = (IntVar) var;
-        return intVar.dom().max();
+  @Override
+  public double getMaxCostValue(Var var) {
+    if (!(var instanceof IntVar)) {
+      throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
+    IntVar intVar = (IntVar) var;
+    return intVar.dom().max();
+  }
 
-    @Override
-    public boolean isBetterCost(double currentCost, double newCost, boolean minimize) {
-        if (minimize) {
-            return newCost < currentCost;
-        } else {
-            return newCost > currentCost;
-        }
+  @Override
+  public boolean isBetterCost(double currentCost, double newCost, boolean minimize) {
+    if (minimize) {
+      return newCost < currentCost;
+    } else {
+      return newCost > currentCost;
     }
+  }
 
-    @Override
-    public double getPreviousCostValue(double costValue) {
-        // For IntVar, previous value is simply costValue - 1
-        return costValue - 1.0;
-    }
+  @Override
+  public double getPreviousCostValue(double costValue) {
+    // For IntVar, previous value is simply costValue - 1
+    return costValue - 1.0;
+  }
 }

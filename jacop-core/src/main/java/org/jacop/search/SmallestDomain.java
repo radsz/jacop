@@ -33,45 +33,36 @@ package org.jacop.search;
 import org.jacop.core.Var;
 
 /**
- * Defines a Smallest Domain comparator for Variables. The variable with the smallest
- * domain has the priority.
+ * Defines a Smallest Domain comparator for Variables. The variable with the smallest domain has the
+ * priority.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs a smallest domain variable comparator.
-     */
-    public SmallestDomain() {
-    }
+  /** It constructs a smallest domain variable comparator. */
+  public SmallestDomain() {}
 
-    public int compare(double left, T var) {
-        int right = var.getSize();
+  public int compare(double left, T var) {
+    int right = var.getSize();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.getSize();
-        int right = rightVar.getSize();
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.getSize();
+    int right = rightVar.getSize();
 
-        if (left < right)
-            return 1;
-        if (left > right)
-            return -1;
-        return 0;
-    }
+    if (left < right) return 1;
+    if (left > right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.getSize();
-    }
-
+  public double metric(T var) {
+    return var.getSize();
+  }
 }

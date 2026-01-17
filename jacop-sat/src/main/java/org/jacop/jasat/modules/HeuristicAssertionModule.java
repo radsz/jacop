@@ -30,7 +30,6 @@
  */
 package org.jacop.jasat.modules;
 
-
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.Trail;
@@ -43,57 +42,51 @@ import org.jacop.jasat.core.Trail;
  */
 public final class HeuristicAssertionModule implements SolverComponent {
 
-    // solver instance
-    private Core core;
+  // solver instance
+  private Core core;
 
-    // trail instance (from the solver)
-    private Trail trail;
+  // trail instance (from the solver)
+  private Trail trail;
 
-    // the activity count
-    private ActivityModule activity;
+  // the activity count
+  private ActivityModule activity;
 
-    /**
-     * this is the main heuristic function, which tries to guess which
-     * literal is the most interesting to set now.
-     * Can trigger SAT if no unset variable is found.
-     *
-     * @return a literal with no current value. Polarity counts.
-     */
-    public int findNextVar() {
+  /**
+   * this is the main heuristic function, which tries to guess which literal is the most interesting
+   * to set now. Can trigger SAT if no unset variable is found.
+   *
+   * @return a literal with no current value. Polarity counts.
+   */
+  public int findNextVar() {
 
-        int answer = 0;
+    int answer = 0;
 
-        // using activity
-        int var = activity.getLiteralToAssert();
-        if (var != 0)
-            return var;
+    // using activity
+    int var = activity.getLiteralToAssert();
+    if (var != 0) return var;
 
-        // the basic way, for remaining vars
-        int maxVariable = core.getMaxVariable();
-        for (var = 1; var <= maxVariable; ++var) {
-            if (!trail.isSet(var)) {
-                answer = var;
-                break;
-            }
-        }
-
-        if (answer == 0) {
-            assert trail.size() == core.getMaxVariable();
-            core.triggerSatEvent();
-        }
-        return answer;
+    // the basic way, for remaining vars
+    int maxVariable = core.getMaxVariable();
+    for (var = 1; var <= maxVariable; ++var) {
+      if (!trail.isSet(var)) {
+        answer = var;
+        break;
+      }
     }
 
-
-
-    public void initialize(Core core) {
-        this.core = core;
-        this.trail = core.trail;
+    if (answer == 0) {
+      assert trail.size() == core.getMaxVariable();
+      core.triggerSatEvent();
     }
+    return answer;
+  }
 
+  public void initialize(Core core) {
+    this.core = core;
+    this.trail = core.trail;
+  }
 
-    public HeuristicAssertionModule(ActivityModule activity) {
-        this.activity = activity;
-    }
-
+  public HeuristicAssertionModule(ActivityModule activity) {
+    this.activity = activity;
+  }
 }

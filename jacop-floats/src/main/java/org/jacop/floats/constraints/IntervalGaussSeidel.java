@@ -30,252 +30,223 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Arrays;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.util.Matrix;
 
-import java.util.Arrays;
-
-
 /**
- * IntervalGaussSeidel implements Gauss-Seidel method for solving a
- * system of linear equations Ax = b with interval matrix A of
- * coefficients.
+ * IntervalGaussSeidel implements Gauss-Seidel method for solving a system of linear equations Ax =
+ * b with interval matrix A of coefficients.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IntervalGaussSeidel {
 
-    final static boolean debug = false;
+  static final boolean debug = false;
 
-    int MaxIterations = 100;
+  int MaxIterations = 100;
 
-    FloatInterval[][] A;
-    double[] b;
+  FloatInterval[][] A;
+  double[] b;
 
-    public IntervalGaussSeidel(FloatInterval[][] A, double[] b) {
+  public IntervalGaussSeidel(FloatInterval[][] A, double[] b) {
 
-        this.A = new FloatInterval[A.length][];
-        for (int i = 0; i < A.length; i++) {
-            this.A[i] = new FloatInterval[A[i].length];
-            System.arraycopy(A[i], 0, this.A[i], 0, A[i].length);
+    this.A = new FloatInterval[A.length][];
+    for (int i = 0; i < A.length; i++) {
+      this.A[i] = new FloatInterval[A[i].length];
+      System.arraycopy(A[i], 0, this.A[i], 0, A[i].length);
+    }
+    this.b = new double[b.length];
+    System.arraycopy(b, 0, this.b, 0, b.length);
+  }
+
+  double minAbs(FloatInterval v) {
+
+    if (v.min() <= 0 && v.max() >= 0) return 0;
+
+    double vMin = Math.abs(v.min());
+    double vMax = Math.abs(v.max());
+
+    return (vMax < vMin) ? vMax : vMin;
+  }
+
+  double maxAbs(FloatInterval v) {
+
+    double vMin = Math.abs(v.min());
+    double vMax = Math.abs(v.max());
+
+    return (vMax > vMin) ? vMax : vMin;
+  }
+
+  public boolean restructure(int currentRow, boolean[] done, int[] row) {
+
+    if (currentRow == A.length) {
+      FloatInterval[][] tempA = new FloatInterval[A.length][A.length];
+      double[] tempb = new double[A.length];
+      for (int i = 0; i < A.length; i++) {
+        tempb[i] = b[row[i]];
+        for (int j = 0; j < A[i].length; j++) {
+          tempA[i][j] = A[row[i]][j];
         }
-        this.b = new double[b.length];
-        System.arraycopy(b, 0, this.b, 0, b.length);
+      }
+
+      A = tempA;
+      b = tempb;
+
+      return true;
     }
 
-    double minAbs(FloatInterval v) {
+    for (int i = 0; i < A.length; i++) {
+      if (done[i]) continue;
 
-        if (v.min() <= 0 && v.max() >= 0)
-            return 0;
+      double sumMax = 0;
 
-        double vMin = Math.abs(v.min());
-        double vMax = Math.abs(v.max());
+      for (int j = 0; j < A.length; j++) if (j != currentRow) sumMax += maxAbs(A[i][j]);
 
-        return (vMax < vMin) ? vMax : vMin;
+      if (minAbs(A[i][currentRow]) > sumMax) { // interval version of diagonal dominance
+        done[i] = true;
+        row[currentRow] = i;
+
+        if (restructure(currentRow + 1, done, row)) return true;
+
+        done[i] = false;
+      }
+    }
+    return false;
+  }
+
+  public FloatInterval[] solve() {
+    int N = 0;
+    FloatInterval[] x = new FloatInterval[b.length];
+    ;
+    FloatInterval[] previousX = new FloatInterval[x.length];
+    for (int i = 0; i < x.length; i++) x[i] = new FloatInterval(0.0, 0.0);
+
+    boolean[] d = new boolean[A.length];
+    Arrays.fill(d, false);
+    int[] r = new int[A.length];
+    boolean dominant = restructure(0, d, r);
+
+    if (!dominant) {
+
+      // try to precondition to make it non-dominant
+      // current method for computing preconditioner is far too slow
+      // and need to be improved.
+
+      precondition(A, b);
+
+      d = new boolean[A.length];
+      Arrays.fill(d, false);
+      r = new int[A.length];
+      dominant = restructure(0, d, r);
+
+      if (!dominant) return null;
     }
 
-    double maxAbs(FloatInterval v) {
-
-        double vMin = Math.abs(v.min());
-        double vMax = Math.abs(v.max());
-
-        return (vMax > vMin) ? vMax : vMin;
+    if (debug) {
+      System.out.println("dominant = " + dominant + " ===================================");
+      for (int i = 0; i < A.length; i++) {
+        for (int j = 0; j < A[i].length; j++) {
+          if (A[i][j].min <= 0 && A[i][j].max() >= 0) System.out.print("0 ");
+          else if (A[i][j].min() > 0) System.out.print("+ ");
+          else if (A[i][j].min() < 0) System.out.print("- ");
+          else System.out.print("? ");
+        }
+        System.out.println();
+      }
     }
 
-    public boolean restructure(int currentRow, boolean[] done, int[] row) {
+    while (true) {
 
-        if (currentRow == A.length) {
-            FloatInterval[][] tempA = new FloatInterval[A.length][A.length];
-            double[] tempb = new double[A.length];
-            for (int i = 0; i < A.length; i++) {
-                tempb[i] = b[row[i]];
-                for (int j = 0; j < A[i].length; j++) {
-                    tempA[i][j] = A[row[i]][j];
-                }
-            }
+      for (int i = 0; i < b.length; i++) {
+        FloatIntervalDomain sum = new FloatIntervalDomain(b[i], b[i]);
 
-            A = tempA;
-            b = tempb;
+        for (int j = 0; j < A[i].length; j++)
+          if (j != i) {
+            FloatIntervalDomain v1 =
+                FloatDomain.mulBounds(A[i][j].min(), A[i][j].max(), x[j].min(), x[j].max());
+            sum = FloatDomain.subBounds(sum.min(), sum.max(), v1.min(), v1.max());
+          }
 
-            return true;
+        FloatIntervalDomain w =
+            FloatDomain.divBounds(sum.min(), sum.max(), A[i][i].min(), A[i][i].max());
+        x[i] = new FloatInterval(w.min(), w.max());
+      }
+
+      if (debug) {
+        System.out.print("iteration " + N + ": {");
+        for (int i = 0; i < x.length; i++) {
+          if (i == x.length - 1) System.out.print(x[i]);
+          else System.out.print(x[i] + ", ");
         }
+        System.out.println("}");
+      }
 
-        for (int i = 0; i < A.length; i++) {
-            if (done[i])
-                continue;
+      if (N == 0) {
+        N++;
+        for (int i = 0; i < x.length; i++) previousX[i] = (FloatInterval) x[i].clone();
 
-            double sumMax = 0;
+        continue;
+      } else {
+        N++;
+        if (N == MaxIterations) break;
+      }
 
-            for (int j = 0; j < A.length; j++)
-                if (j != currentRow)
-                    sumMax += maxAbs(A[i][j]);
+      boolean converged = true;
+      for (int i = 0; i < x.length; i++) if (!x[i].eq(previousX[i])) converged = false;
 
-            if (minAbs(A[i][currentRow]) > sumMax) { // interval version of diagonal dominance
-                done[i] = true;
-                row[currentRow] = i;
+      if (converged) break;
 
-                if (restructure(currentRow + 1, done, row))
-                    return true;
-
-                done[i] = false;
-            }
-        }
-        return false;
+      for (int i = 0; i < x.length; i++) previousX[i] = (FloatInterval) x[i].clone();
     }
 
+    return x;
+  }
 
-    public FloatInterval[] solve() {
-        int N = 0;
-        FloatInterval[] x = new FloatInterval[b.length];
-        ;
-        FloatInterval[] previousX = new FloatInterval[x.length];
-        for (int i = 0; i < x.length; i++)
-            x[i] = new FloatInterval(0.0, 0.0);
+  void precondition(FloatInterval[][] AA, double[] bb) {
 
-        boolean[] d = new boolean[A.length];
-        Arrays.fill(d, false);
-        int[] r = new int[A.length];
-        boolean dominant = restructure(0, d, r);
+    if (debug) System.out.println("Before preconditioning\n" + this);
 
-        if (!dominant) {
+    double[][] midPoint = new double[AA.length][AA[0].length];
 
-            // try to precondition to make it non-dominant
-            // current method for computing preconditioner is far too slow
-            // and need to be improved.
+    for (int i = 0; i < midPoint.length; i++)
+      for (int j = 0; j < midPoint[i].length; j++)
+        midPoint[i][j] = (AA[i][j].min() + AA[i][j].max()) / 2;
 
-            precondition(A, b);
+    Matrix m = new Matrix(midPoint);
 
-            d = new boolean[A.length];
-            Arrays.fill(d, false);
-            r = new int[A.length];
-            dominant = restructure(0, d, r);
+    double[][] inv = m.inverse();
 
-            if (!dominant)
-                return null;
-        }
+    FloatInterval[][] F = new FloatInterval[AA.length][A[0].length];
+    for (int i = 0; i < F.length; i++)
+      for (int j = 0; j < F[0].length; j++)
+        F[i][j] = new FloatInterval(AA[i][j].min(), AA[i][j].max());
 
-        if (debug) {
-            System.out.println("dominant = " + dominant + " ===================================");
-            for (int i = 0; i < A.length; i++) {
-                for (int j = 0; j < A[i].length; j++) {
-                    if (A[i][j].min <= 0 && A[i][j].max() >= 0)
-                        System.out.print("0 ");
-                    else if (A[i][j].min() > 0)
-                        System.out.print("+ ");
-                    else if (A[i][j].min() < 0)
-                        System.out.print("- ");
-                    else
-                        System.out.print("? ");
-                }
-                System.out.println();
-            }
-        }
+    FloatIntervalDomain[][] newA = Matrix.mult(F, inv);
+    Matrix comp = new Matrix(inv);
+    double[] newB = comp.mult(bb);
 
-        while (true) {
+    A = new FloatInterval[newA.length][newA[0].length];
+    for (int i = 0; i < newA.length; i++)
+      for (int j = 0; j < newA[i].length; j++)
+        A[i][j] = new FloatInterval(newA[i][j].min(), newA[i][j].max());
+    b = newB;
 
-            for (int i = 0; i < b.length; i++) {
-                FloatIntervalDomain sum = new FloatIntervalDomain(b[i], b[i]);
+    if (debug) System.out.println("After preconditioning\n" + this);
+  }
 
-                for (int j = 0; j < A[i].length; j++)
-                    if (j != i) {
-                        FloatIntervalDomain v1 = FloatDomain.mulBounds(A[i][j].min(), A[i][j].max(), x[j].min(), x[j].max());
-                        sum = FloatDomain.subBounds(sum.min(), sum.max(), v1.min(), v1.max());
-                    }
+  public String toString() {
 
+    StringBuffer s = new StringBuffer();
 
-                FloatIntervalDomain w = FloatDomain.divBounds(sum.min(), sum.max(), A[i][i].min(), A[i][i].max());
-                x[i] = new FloatInterval(w.min(), w.max());
-            }
-
-            if (debug) {
-                System.out.print("iteration " + N + ": {");
-                for (int i = 0; i < x.length; i++) {
-                    if (i == x.length - 1)
-                        System.out.print(x[i]);
-                    else
-                        System.out.print(x[i] + ", ");
-                }
-                System.out.println("}");
-            }
-
-            if (N == 0) {
-                N++;
-                for (int i = 0; i < x.length; i++)
-                    previousX[i] = (FloatInterval) x[i].clone();
-
-                continue;
-            } else {
-                N++;
-                if (N == MaxIterations)
-                    break;
-            }
-
-            boolean converged = true;
-            for (int i = 0; i < x.length; i++)
-                if (!x[i].eq(previousX[i]))
-                    converged = false;
-
-            if (converged)
-                break;
-
-            for (int i = 0; i < x.length; i++)
-                previousX[i] = (FloatInterval) x[i].clone();
-
-        }
-
-        return x;
+    for (int i = 0; i < A.length; i++) {
+      for (int j = 0; j < A[i].length; j++) s.append(A[i][j] + " ");
+      s.append(" = " + b[i] + "\n");
     }
 
-    void precondition(FloatInterval[][] AA, double[] bb) {
-
-        if (debug)
-            System.out.println("Before preconditioning\n" + this);
-
-        double[][] midPoint = new double[AA.length][AA[0].length];
-
-        for (int i = 0; i < midPoint.length; i++)
-            for (int j = 0; j < midPoint[i].length; j++)
-                midPoint[i][j] = (AA[i][j].min() + AA[i][j].max()) / 2;
-
-        Matrix m = new Matrix(midPoint);
-
-        double[][] inv = m.inverse();
-
-        FloatInterval[][] F = new FloatInterval[AA.length][A[0].length];
-        for (int i = 0; i < F.length; i++)
-            for (int j = 0; j < F[0].length; j++)
-                F[i][j] = new FloatInterval(AA[i][j].min(), AA[i][j].max());
-
-        FloatIntervalDomain[][] newA = Matrix.mult(F, inv);
-        Matrix comp = new Matrix(inv);
-        double[] newB = comp.mult(bb);
-
-        A = new FloatInterval[newA.length][newA[0].length];
-        for (int i = 0; i < newA.length; i++)
-            for (int j = 0; j < newA[i].length; j++)
-                A[i][j] = new FloatInterval(newA[i][j].min(), newA[i][j].max());
-        b = newB;
-
-        if (debug)
-            System.out.println("After preconditioning\n" + this);
-
-    }
-
-    public String toString() {
-
-        StringBuffer s = new StringBuffer();
-
-        for (int i = 0; i < A.length; i++) {
-            for (int j = 0; j < A[i].length; j++)
-                s.append(A[i][j] + " ");
-            s.append(" = " + b[i] + "\n");
-        }
-
-        return s.toString();
-    }
-
+    return s.toString();
+  }
 }

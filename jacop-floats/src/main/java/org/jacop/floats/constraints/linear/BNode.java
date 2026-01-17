@@ -36,230 +36,212 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
 public class BNode extends BinaryNode {
 
-    // bounds for this node
-    BoundsVar bound;
+  // bounds for this node
+  BoundsVar bound;
 
-    public BNode(Store store) {
-        id = n.incrementAndGet();
-        bound = new BoundsVar(store);
+  public BNode(Store store) {
+    id = n.incrementAndGet();
+    bound = new BoundsVar(store);
+  }
+
+  public BNode(Store store, double min, double max) {
+    id = n.incrementAndGet();
+    bound = new BoundsVar(store, min, max);
+  }
+
+  public BNode(Store store, double min, double max, double lb, double ub) {
+    id = n.incrementAndGet();
+    bound = new BoundsVar(store, min, max, lb, ub);
+  }
+
+  void propagate() {
+
+    FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
+    double min = d.min();
+    double max = d.max();
+
+    d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = d.min();
+    double ub = d.max();
+
+    double node_min = min();
+    double node_max = max();
+
+    if (min > node_min)
+      if (max < node_max) {
+
+        if (min > max) throw Store.failException;
+
+        updateBounds(min, max, lb, ub);
+
+        parent.propagate();
+
+      } else {
+
+        if (min > node_max) throw Store.failException;
+
+        updateBounds(min, node_max, lb, ub);
+
+        parent.propagate();
+      }
+    else if (max < node_max) {
+
+      if (node_min > max) throw Store.failException;
+
+      updateBounds(node_min, max, lb, ub);
+
+      parent.propagate();
+
+    } else { // no change in the domain but it was called since the children have been changed;
+      // do prune and do not contine to propagate
+
+      return;
     }
+  }
 
-    public BNode(Store store, double min, double max) {
-        id = n.incrementAndGet();
-        bound = new BoundsVar(store, min, max);
-    }
+  void propagateAndPrune() {
 
-    public BNode(Store store, double min, double max, double lb, double ub) {
-        id = n.incrementAndGet();
-        bound = new BoundsVar(store, min, max, lb, ub);
-    }
+    FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
+    double min = d.min();
+    double max = d.max();
 
+    double node_min = min();
+    double node_max = max();
 
-    void propagate() {
+    d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = d.min();
+    double ub = d.max();
 
-        FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
-        double min = d.min();
-        double max = d.max();
+    if (min > node_min)
+      if (max < node_max) {
 
-        d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
-        double lb = d.min();
-        double ub = d.max();
+        if (min > max) throw Store.failException;
 
-        double node_min = min();
-        double node_max = max();
-
-        if (min > node_min)
-            if (max < node_max) {
-
-                if (min > max)
-                    throw Store.failException;
-
-                updateBounds(min, max, lb, ub);
-
-                parent.propagate();
-
-            } else {
-
-                if (min > node_max)
-                    throw Store.failException;
-
-                updateBounds(min, node_max, lb, ub);
-
-                parent.propagate();
-
-            }
-        else if (max < node_max) {
-
-            if (node_min > max)
-                throw Store.failException;
-
-            updateBounds(node_min, max, lb, ub);
-
-            parent.propagate();
-
-        } else {  // no change in the domain but it was called since the children have been changed;
-            // do prune and do not contine to propagate
-
-            return;
-        }
-    }
-
-    void propagateAndPrune() {
-
-        FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
-        double min = d.min();
-        double max = d.max();
-
-        double node_min = min();
-        double node_max = max();
-
-        d = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
-        double lb = d.min();
-        double ub = d.max();
-
-        if (min > node_min)
-            if (max < node_max) {
-
-                if (min > max)
-                    throw Store.failException;
-
-                updateBounds(min, max, lb, ub);
-
-                prune(min, max);
-
-                parent.propagateAndPrune();
-
-            } else {
-
-                if (min > node_max)
-                    throw Store.failException;
-
-                updateBounds(min, node_max, lb, ub);
-
-                prune(min, node_max);
-
-                parent.propagateAndPrune();
-
-            }
-        else if (max < node_max) {
-
-            if (node_min > max)
-                throw Store.failException;
-
-            updateBounds(node_min, max, lb, ub);
-
-            prune(node_min, max);
-
-            parent.propagateAndPrune();
-
-        } else {  // no change in the domain but it was called since the children have been changed;
-            // do prune and do not contine to propagate
-
-            prune(node_min, node_max);
-
-            return;
-        }
-
-    }
-
-    void prune() {
-
-        double min = min();
-        double max = max();
+        updateBounds(min, max, lb, ub);
 
         prune(min, max);
 
+        parent.propagateAndPrune();
+
+      } else {
+
+        if (min > node_max) throw Store.failException;
+
+        updateBounds(min, node_max, lb, ub);
+
+        prune(min, node_max);
+
+        parent.propagateAndPrune();
+      }
+    else if (max < node_max) {
+
+      if (node_min > max) throw Store.failException;
+
+      updateBounds(node_min, max, lb, ub);
+
+      prune(node_min, max);
+
+      parent.propagateAndPrune();
+
+    } else { // no change in the domain but it was called since the children have been changed;
+      // do prune and do not contine to propagate
+
+      prune(node_min, node_max);
+
+      return;
     }
+  }
 
-    void prune(double min, double max) {
+  void prune() {
 
-        boolean left_changed = false, right_changed = false;
+    double min = min();
+    double max = max();
 
-        left_changed = pruneNode(min, max, left, right);
+    prune(min, max);
+  }
 
-        right_changed = pruneNode(min, max, right, left);
+  void prune(double min, double max) {
 
-        if (left_changed)
-            left.prune();
-        if (right_changed)
-            right.prune();
+    boolean left_changed = false, right_changed = false;
+
+    left_changed = pruneNode(min, max, left, right);
+
+    right_changed = pruneNode(min, max, right, left);
+
+    if (left_changed) left.prune();
+    if (right_changed) right.prune();
+  }
+
+  boolean pruneNode(double min, double max, BinaryNode node, BinaryNode sibling) {
+
+    double node_min = node.min();
+    double node_max = node.max();
+
+    double sibling_min = sibling.min();
+    double sibling_max = sibling.max();
+
+    FloatDomain bound = FloatDomain.subBounds(min, max, sibling_min, sibling_max);
+    double new_node_min = bound.min();
+    double new_node_max = bound.max();
+
+    double lb = node.lb();
+    double ub = node.ub();
+
+    if (new_node_min > node_min)
+      if (new_node_max < node_max) {
+
+        if (new_node_min > new_node_max) throw Store.failException;
+
+        node.updateBounds(new_node_min, new_node_max, lb, ub);
+
+        return true;
+      } else {
+
+        if (new_node_min > node_max) throw Store.failException;
+
+        node.updateBounds(new_node_min, node_max, lb, ub);
+
+        return true;
+      }
+    else if (new_node_max < node_max) {
+
+      if (node_min > new_node_max) throw Store.failException;
+
+      node.updateBounds(node_min, new_node_max, lb, ub);
+
+      return true;
+    } else {
+
+      return false;
     }
+  }
 
-    boolean pruneNode(double min, double max, BinaryNode node, BinaryNode sibling) {
+  double min() {
+    return ((BoundsVarValue) bound.value()).min;
+  }
 
-        double node_min = node.min();
-        double node_max = node.max();
+  double max() {
+    return ((BoundsVarValue) bound.value()).max;
+  }
 
-        double sibling_min = sibling.min();
-        double sibling_max = sibling.max();
+  double lb() {
+    return ((BoundsVarValue) bound.value()).lb;
+  }
 
-        FloatDomain bound = FloatDomain.subBounds(min, max, sibling_min, sibling_max);
-        double new_node_min = bound.min();
-        double new_node_max = bound.max();
+  double ub() {
+    return ((BoundsVarValue) bound.value()).ub;
+  }
 
-        double lb = node.lb();
-        double ub = node.ub();
+  void updateBounds(double min, double max, double lb, double ub) {
+    bound.update(min, max, lb, ub);
+  }
 
-        if (new_node_min > node_min)
-            if (new_node_max < node_max) {
-
-                if (new_node_min > new_node_max)
-                    throw Store.failException;
-
-                node.updateBounds(new_node_min, new_node_max, lb, ub);
-
-                return true;
-            } else {
-
-                if (new_node_min > node_max)
-                    throw Store.failException;
-
-                node.updateBounds(new_node_min, node_max, lb, ub);
-
-                return true;
-            }
-        else if (new_node_max < node_max) {
-
-            if (node_min > new_node_max)
-                throw Store.failException;
-
-            node.updateBounds(node_min, new_node_max, lb, ub);
-
-            return true;
-        } else {
-
-            return false;
-        }
-    }
-
-    double min() {
-        return ((BoundsVarValue) bound.value()).min;
-    }
-
-    double max() {
-        return ((BoundsVarValue) bound.value()).max;
-    }
-
-    double lb() {
-        return ((BoundsVarValue) bound.value()).lb;
-    }
-
-    double ub() {
-        return ((BoundsVarValue) bound.value()).ub;
-    }
-
-    void updateBounds(double min, double max, double lb, double ub) {
-        bound.update(min, max, lb, ub);
-    }
-
-    public String toString() {
-        return super.toString() + "(" + bound.stamp() + ")" + " : " + bound;
-    }
-
+  public String toString() {
+    return super.toString() + "(" + bound.stamp() + ")" + " : " + bound;
+  }
 }

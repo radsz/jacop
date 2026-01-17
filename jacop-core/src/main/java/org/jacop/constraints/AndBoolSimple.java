@@ -36,129 +36,124 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable
- * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
+ * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable is
+ * equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AndBoolSimple extends PrimitiveConstraint {
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variables which all must be equal to 1 to set result variable to 1.
-     */
-    public final IntVar a;
-    public final IntVar b;
+  /** It specifies variables which all must be equal to 1 to set result variable to 1. */
+  public final IntVar a;
 
-    /**
-     * It specifies variable result, storing the result of and function performed a list of variables.
-     */
-    public final IntVar result;
+  public final IntVar b;
 
-    /**
-     * It constructs AndBoolSimple.
-     *
-     * @param a      parameter to predicate.
-     * @param b      parameter to predicate.
-     * @param result variable which is equal 0 if any of x is equal to zero.
-     */
-    public AndBoolSimple(IntVar a, IntVar b, IntVar result) {
+  /**
+   * It specifies variable result, storing the result of and function performed a list of variables.
+   */
+  public final IntVar result;
 
-        checkInputForNullness(new String[] {"a", "b", "result"}, new Object[] {a, b, result});
+  /**
+   * It constructs AndBoolSimple.
+   *
+   * @param a parameter to predicate.
+   * @param b parameter to predicate.
+   * @param result variable which is equal 0 if any of x is equal to zero.
+   */
+  public AndBoolSimple(IntVar a, IntVar b, IntVar result) {
 
-        this.numberId = idNumber.incrementAndGet();
+    checkInputForNullness(new String[] {"a", "b", "result"}, new Object[] {a, b, result});
 
-        this.a = a;
-        this.b = b;
-        this.result = result;
+    this.numberId = idNumber.incrementAndGet();
 
-        assert (checkInvariants() == null) : checkInvariants();
+    this.a = a;
+    this.b = b;
+    this.result = result;
 
-        queueIndex = 0;
+    assert (checkInvariants() == null) : checkInvariants();
 
-        setScope(a, b, result);
+    queueIndex = 0;
 
-    }
+    setScope(a, b, result);
+  }
 
-    public void consistency(final Store store) {
+  public void consistency(final Store store) {
 
-        if (a.max() == 0 || b.max() == 0) {
-            result.domain.inValue(store.level, result, 0);
-            removeConstraint();
-        } else if (a.min() == 1 && b.min() == 1)
-            result.domain.inValue(store.level, result, 1);
-        else if (result.min() == 1) {
-            a.domain.inValue(store.level, a, 1);
-            b.domain.inValue(store.level, b, 1);
-        } else if (result.max() == 0)
-            if (a.min() == 1)
-                b.domain.inValue(store.level, b, 0);
-            else if (b.min() == 1)
-                a.domain.inValue(store.level, a, 0);
+    if (a.max() == 0 || b.max() == 0) {
+      result.domain.inValue(store.level, result, 0);
+      removeConstraint();
+    } else if (a.min() == 1 && b.min() == 1) result.domain.inValue(store.level, result, 1);
+    else if (result.min() == 1) {
+      a.domain.inValue(store.level, a, 1);
+      b.domain.inValue(store.level, b, 1);
+    } else if (result.max() == 0)
+      if (a.min() == 1) b.domain.inValue(store.level, b, 0);
+      else if (b.min() == 1) a.domain.inValue(store.level, a, 0);
+  }
 
-    }
+  @Override
+  public void notConsistency(final Store store) {
 
-    @Override public void notConsistency(final Store store) {
+    // result = not a OR not b
+    if (a.max() == 0 || b.max() == 0) {
+      result.domain.inValue(store.level, result, 1);
+      removeConstraint();
+    } else if (a.min() == 1 && b.min() == 1) result.domain.inValue(store.level, result, 0);
+    else if (result.max() == 0) {
+      a.domain.inValue(store.level, a, 1);
+      b.domain.inValue(store.level, b, 1);
+    } else if (result.min() == 1)
+      if (a.min() == 1) b.domain.inValue(store.level, b, 0);
+      else if (b.min() == 1) a.domain.inValue(store.level, a, 0);
+  }
 
-        // result = not a OR not b
-        if (a.max() == 0 || b.max() == 0) {
-            result.domain.inValue(store.level, result, 1);
-            removeConstraint();
-        } else if (a.min() == 1 && b.min() == 1)
-            result.domain.inValue(store.level, result, 0);
-        else if (result.max() == 0) {
-            a.domain.inValue(store.level, a, 1);
-            b.domain.inValue(store.level, b, 1);
-        } else if (result.min() == 1)
-            if (a.min() == 1)
-                b.domain.inValue(store.level, b, 0);
-            else if (b.min() == 1)
-                a.domain.inValue(store.level, a, 0);
+  @Override
+  public boolean satisfied() {
+    return (result.min() == 1 && a.min() == 1 && b.min() == 1)
+        || (result.max() == 0 && (a.max() == 0 || b.max() == 0));
+  }
 
-    }
+  @Override
+  public boolean notSatisfied() {
+    return ((result.min() == 1 && (a.max() == 0 || b.max() == 0))
+        || (result.max() == 0 && a.min() == 1 && b.min() == 1));
+  }
 
-    @Override public boolean satisfied() {
-        return (result.min() == 1 && a.min() == 1 && b.min() == 1) || (result.max() == 0 && (a.max() == 0 || b.max() == 0));
-    }
+  @Override
+  public String toString() {
 
-    @Override public boolean notSatisfied() {
-        return ((result.min() == 1 && (a.max() == 0 || b.max() == 0)) || (result.max() == 0 && a.min() == 1 && b.min() == 1));
-    }
+    return id() + " : andBoolSimple([ " + a + ", " + b + "], " + result + ")";
+  }
 
-    @Override public String toString() {
+  public String checkInvariants() {
 
-        return id() + " : andBoolSimple([ " + a + ", " + b + "], " + result + ")";
+    if (a.min() < 0 || a.max() > 1) return "Variable " + a + " does not have boolean domain";
 
-    }
+    if (b.min() < 0 || b.max() > 1) return "Variable " + b + " does not have boolean domain";
 
-    public String checkInvariants() {
+    return null;
+  }
 
-        if (a.min() < 0 || a.max() > 1)
-            return "Variable " + a + " does not have boolean domain";
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-        if (b.min() < 0 || b.max() > 1)
-            return "Variable " + b + " does not have boolean domain";
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-        return null;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
-
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 }

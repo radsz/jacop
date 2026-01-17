@@ -40,20 +40,19 @@ import org.jacop.jasat.core.SolverComponent;
  */
 public interface ClauseListener extends SolverComponent {
 
-    /**
-     * called when the given clause is added.
-     *
-     * @param clause        the clause
-     * @param clauseId      the clause's unique Id
-     * @param isModelClause is this clause a model clause ?
-     */
-    void onClauseAdd(int[] clause, int clauseId, boolean isModelClause);
+  /**
+   * called when the given clause is added.
+   *
+   * @param clause the clause
+   * @param clauseId the clause's unique Id
+   * @param isModelClause is this clause a model clause ?
+   */
+  void onClauseAdd(int[] clause, int clauseId, boolean isModelClause);
 
-    /**
-     * called when the clause with unique Id @param clauseId is removed
-     *
-     * @param clauseId the id
-     */
-    void onClauseRemoval(int clauseId);
-
+  /**
+   * called when the clause with unique Id @param clauseId is removed
+   *
+   * @param clauseId the id
+   */
+  void onClauseRemoval(int clauseId);
 }

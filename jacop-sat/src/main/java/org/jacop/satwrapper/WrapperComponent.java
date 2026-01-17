@@ -39,11 +39,10 @@ package org.jacop.satwrapper;
  */
 public interface WrapperComponent {
 
-    /**
-     * connect the component to the wrapper
-     *
-     * @param wrapper the wrapper
-     */
-    void initialize(SatWrapper wrapper);
-
+  /**
+   * connect the component to the wrapper
+   *
+   * @param wrapper the wrapper
+   */
+  void initialize(SatWrapper wrapper);
 }

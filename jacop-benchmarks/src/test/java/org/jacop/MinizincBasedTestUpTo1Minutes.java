@@ -30,43 +30,43 @@
 
 package org.jacop;
 
+import java.io.IOException;
+import java.util.Collection;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
-import java.util.Collection;
-
 /**
- * Minizinc based tests for problems that run upTo1minute and do not belong
- * to other shorter time category.
+ * Minizinc based tests for problems that run upTo1minute and do not belong to other shorter time
+ * category.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.10
  */
-@RunWith(Parameterized.class) public class MinizincBasedTestUpTo1Minutes extends MinizincBasedTestsHelper {
-    protected static final String timeCategory = "upTo1min/";
+@RunWith(Parameterized.class)
+public class MinizincBasedTestUpTo1Minutes extends MinizincBasedTestsHelper {
+  protected static final String timeCategory = "upTo1min/";
 
-    @Rule public Timeout globalTimeout = Timeout.seconds(180); //The test will be completed within 3 minutes
+  @Rule
+  public Timeout globalTimeout =
+      Timeout.seconds(180); // The test will be completed within 3 minutes
 
-    public MinizincBasedTestUpTo1Minutes(String testFilename) {
-        super(timeCategory);
-        this.testFilename = testFilename;
+  public MinizincBasedTestUpTo1Minutes(String testFilename) {
+    super(timeCategory);
+    this.testFilename = testFilename;
+  }
 
-    }
+  @Parameterized.Parameters
+  public static Collection<String> parametricTest() throws IOException {
 
-    @Parameterized.Parameters public static Collection<String> parametricTest() throws IOException {
+    return fileReader(timeCategory);
+  }
 
-        return fileReader(timeCategory);
-    }
+  @Test
+  public void testMinizinc() throws IOException {
 
-    @Test public void testMinizinc() throws IOException {
-
-        testExecution(timeCategory);
-    }
-
-
-
+    testExecution(timeCategory);
+  }
 }

@@ -31,25 +31,23 @@
 package org.jacop.api;
 
 /**
- * Interface to mark the need (PrimitiveConstraint) or extra functionality
- * (Constraint) to compute if the constraint is satisfied.
+ * Interface to mark the need (PrimitiveConstraint) or extra functionality (Constraint) to compute
+ * if the constraint is satisfied.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
 public interface SatisfiedPresent {
 
-    /**
-     * It checks if the constraint is satisfied. It can return false even if constraint
-     * is satisfied but not all variables in its scope are grounded. It needs to return
-     * true if all variables in its scope are grounded and constraint is satisfied.
-     * <p>
-     * Implementations of this interface for constraints that are not PrimitiveConstraint
-     * may require constraint imposition and consistency check as a requirement to work
-     * correctly.
-     *
-     * @return true if constraint is possible to verify that it is satisfied.
-     */
-    boolean satisfied();
-
+  /**
+   * It checks if the constraint is satisfied. It can return false even if constraint is satisfied
+   * but not all variables in its scope are grounded. It needs to return true if all variables in
+   * its scope are grounded and constraint is satisfied.
+   *
+   * <p>Implementations of this interface for constraints that are not PrimitiveConstraint may
+   * require constraint imposition and consistency check as a requirement to work correctly.
+   *
+   * @return true if constraint is possible to verify that it is satisfied.
+   */
+  boolean satisfied();
 }

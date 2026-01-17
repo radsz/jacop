@@ -28,67 +28,70 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
 /**
- * Defines a basic data structure to keep two profiles for the cumulative
- * constraints. It consists of ordered pair of time points and the current
- * value.
+ * Defines a basic data structure to keep two profiles for the cumulative constraints. It consists
+ * of ordered pair of time points and the current value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class CumulativeProfiles {
 
-    static final boolean trace = false;
+  static final boolean trace = false;
 
-    Profile maxProfile = null;
+  Profile maxProfile = null;
 
-    Profile minProfile = null;
+  Profile minProfile = null;
 
-    CumulativeProfiles() {
-    }
+  CumulativeProfiles() {}
 
-    void make(Task[] Ts, boolean doMaxProfile) {
-        Task t;
-        IntTask iTask = new IntTask();
-        int strt, stp, value;
-        int tDurMin, tResMin;
+  void make(Task[] Ts, boolean doMaxProfile) {
+    Task t;
+    IntTask iTask = new IntTask();
+    int strt, stp, value;
+    int tDurMin, tResMin;
 
-        minProfile = new Profile();
-        maxProfile = new Profile();
-        for (int i = 0; i < Ts.length; i++) {
-            t = Ts[i];
+    minProfile = new Profile();
+    maxProfile = new Profile();
+    for (int i = 0; i < Ts.length; i++) {
+      t = Ts[i];
 
-            tDurMin = t.dur.min();
-            tResMin = t.res.min();
+      tDurMin = t.dur.min();
+      tResMin = t.res.min();
 
-            if (doMaxProfile) {
-                strt = t.est();
-                stp = t.lastCT();
-                value = t.res.max();
-                if (trace)
-                    System.out.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
-                maxProfile.addToProfile(strt, stp, value);
-            }
+      if (doMaxProfile) {
+        strt = t.est();
+        stp = t.lastCT();
+        value = t.res.max();
+        if (trace) System.out.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
+        maxProfile.addToProfile(strt, stp, value);
+      }
 
-            if (tDurMin > 0 && tResMin > 0) {
-                if (t.minUse(iTask)) {
-                    if (trace)
-                        System.out.println("Update profile " + t + " [" + iTask.start() + ".." + iTask.stop() + ")=" + tResMin);
-                    minProfile.addToProfile(iTask.start(), iTask.stop(), tResMin);
-                }
-            }
+      if (tDurMin > 0 && tResMin > 0) {
+        if (t.minUse(iTask)) {
+          if (trace)
+            System.out.println(
+                "Update profile "
+                    + t
+                    + " ["
+                    + iTask.start()
+                    + ".."
+                    + iTask.stop()
+                    + ")="
+                    + tResMin);
+          minProfile.addToProfile(iTask.start(), iTask.stop(), tResMin);
         }
+      }
     }
+  }
 
-    Profile maxProfile() {
-        return maxProfile;
-    }
+  Profile maxProfile() {
+    return maxProfile;
+  }
 
-    Profile minProfile() {
-        return minProfile;
-    }
+  Profile minProfile() {
+    return minProfile;
+  }
 }

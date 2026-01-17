@@ -36,14 +36,12 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 public abstract class VariableNode extends BinaryNode {
 
-    Store store;
-    FloatVar var = null;
-    byte rel;
-
+  Store store;
+  FloatVar var = null;
+  byte rel;
 }

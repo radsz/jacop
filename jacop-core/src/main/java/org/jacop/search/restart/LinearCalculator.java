@@ -36,24 +36,23 @@ package org.jacop.search.restart;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class LinearCalculator extends Calculator {
 
-    long increment;
-    long n;
-    
-    public LinearCalculator(int scale) {
-        n = 1;
-        failLimit = scale;
-        increment = (long)scale;
-    }
+  long increment;
+  long n;
 
-    public void newLimit() {
-        numberFails = 0;
-        failLimit = ++n * increment;
-    }
-    
-    public String toString() {
-        return "constantCalculator: " + numberFails + "(" + failLimit + ")";
-    }
+  public LinearCalculator(int scale) {
+    n = 1;
+    failLimit = scale;
+    increment = (long) scale;
+  }
+
+  public void newLimit() {
+    numberFails = 0;
+    failLimit = ++n * increment;
+  }
+
+  public String toString() {
+    return "constantCalculator: " + numberFails + "(" + failLimit + ")";
+  }
 }

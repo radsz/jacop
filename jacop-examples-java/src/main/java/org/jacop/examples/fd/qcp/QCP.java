@@ -30,6 +30,10 @@
 
 package org.jacop.examples.fd.qcp;
 
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
@@ -37,280 +41,250 @@ import org.jacop.core.Store;
 import org.jacop.examples.fd.ExampleFD;
 import org.jacop.search.*;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
-
 /**
  * It solves QuasiGroup Completion Problem (QCP).
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-
 public class QCP extends ExampleFD {
 
-    // It uses correct InputOrder tie breaking (lex)
+  // It uses correct InputOrder tie breaking (lex)
 
-    /**
-     * It specifies the file containing the description of the problem.
-     */
-    public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
+  /** It specifies the file containing the description of the problem. */
+  public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
 
-    /**
-     * It contains constraints which can be used to guide shaving.
-     */
-    public List<Constraint> shavingConstraints = new ArrayList<Constraint>();
+  /** It contains constraints which can be used to guide shaving. */
+  public List<Constraint> shavingConstraints = new ArrayList<Constraint>();
 
+  /** It contains the order of the QCP being solved. */
+  public int n = 0;
 
+  @Override
+  public void model() {
 
-    /**
-     * It contains the order of the QCP being solved.
-     */
-    public int n = 0;
+    String lines[] = new String[100];
 
-    @Override public void model() {
+    /* read from file args[0] or qcp.txt */
+    try {
 
-        String lines[] = new String[100];
+      BufferedReader in =
+          new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
+      String str;
 
-		/* read from file args[0] or qcp.txt */
-        try {
+      while ((str = in.readLine()) != null) {
+        lines[n] = str;
+        n++;
+      }
+      // in.close(); not needed; aouto close
+    } catch (FileNotFoundException e) {
+      System.err.println(
+          "You need to run this program in a directory that contains the required file.");
+      System.err.println("I can not find file " + filename);
+      throw new RuntimeException(
+          "You need to run this program in a directory that contains the required file : "
+              + filename);
+    } catch (IOException e) {
+      System.err.println("Something is wrong with file" + filename);
+    }
 
-            BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
-            String str;
-
-            while ((str = in.readLine()) != null) {
-                lines[n] = str;
-                n++;
-            }
-            // in.close(); not needed; aouto close
-        } catch (FileNotFoundException e) {
-            System.err.println("You need to run this program in a directory that contains the required file.");
-            System.err.println("I can not find file " + filename);
-            throw new RuntimeException("You need to run this program in a directory that contains the required file : " + filename);
-        } catch (IOException e) {
-            System.err.println("Something is wrong with file" + filename);
-        }
-
-        n = n - 1;
+    n = n - 1;
     /* Creating constraint store */
-        int numbers[][] = new int[n][n];
+    int numbers[][] = new int[n][n];
 
-        // Transforms strings into ints
-        for (int i = 1; i < n + 1; i++) {
-            Pattern pat = Pattern.compile(" ");
-            String[] result = pat.split(lines[i]);
+    // Transforms strings into ints
+    for (int i = 1; i < n + 1; i++) {
+      Pattern pat = Pattern.compile(" ");
+      String[] result = pat.split(lines[i]);
 
-            int current = 0;
-            for (int j = 0; j < result.length; j++)
-                try {
-                    int currentNo = Integer.parseInt(result[j]);
-                    numbers[i - 1][current++] = currentNo;
-                } catch (Exception ex) {
-
-                }
-        }
-
-        store = new Store();
-        store.queueNo = 4;
-
-        vars = new ArrayList<IntVar>();
-
-        // Get problem size n from second program argument.
-        IntVar[][] x = new IntVar[n][n];
-
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++) {
-                if (numbers[i][j] == -1) {
-                    x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, n - 1);
-                    vars.add(x[i][j]);
-                } else
-                    x[i][j] = new IntVar(store, "x" + i + "_" + j, numbers[i][j], numbers[i][j]);
-                vars.add(x[i][j]);
-            }
-
-        // Create variables and state constraints.
-        for (int i = 0; i < n; i++) {
-            Constraint cx = new Alldistinct(x[i]);
-
-            store.impose(cx);
-            shavingConstraints.add(cx);
-
-            IntVar[] y = new IntVar[n];
-            for (int j = 0; j < n; j++)
-                y[j] = x[j][i];
-
-            Constraint cy = new Alldistinct(y);
-            store.impose(cy);
-            shavingConstraints.add(cy);
+      int current = 0;
+      for (int j = 0; j < result.length; j++)
+        try {
+          int currentNo = Integer.parseInt(result[j]);
+          numbers[i - 1][current++] = currentNo;
+        } catch (Exception ex) {
 
         }
-
     }
 
-    /**
-     * It performs search with shaving guided by constraints.
-     *
-     * @return true if there is a solution, false otherwise.
-     */
-    public boolean searchWithShaving() {
+    store = new Store();
+    store.queueNo = 4;
 
-        Shaving<IntVar> shaving = new Shaving<IntVar>();
-        shaving.setStore(store);
-        shaving.quickShave = true;
+    vars = new ArrayList<IntVar>();
 
-        for (Constraint c : shavingConstraints)
-            shaving.addShavingConstraint(c);
+    // Get problem size n from second program argument.
+    IntVar[][] x = new IntVar[n][n];
 
-        long begin = System.currentTimeMillis();
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++) {
+        if (numbers[i][j] == -1) {
+          x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, n - 1);
+          vars.add(x[i][j]);
+        } else x[i][j] = new IntVar(store, "x" + i + "_" + j, numbers[i][j], numbers[i][j]);
+        vars.add(x[i][j]);
+      }
 
-        search = new DepthFirstSearch<IntVar>();
-        search.setPrintInfo(true);
+    // Create variables and state constraints.
+    for (int i = 0; i < n; i++) {
+      Constraint cx = new Alldistinct(x[i]);
 
-        SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<IntVar>());
+      store.impose(cx);
+      shavingConstraints.add(cx);
 
-        search.setConsistencyListener(shaving);
-        search.setExitChildListener(shaving);
+      IntVar[] y = new IntVar[n];
+      for (int j = 0; j < n; j++) y[j] = x[j][i];
 
-        boolean result = search.labeling(store, select);
-
-        long end = System.currentTimeMillis();
-
-        System.out.println("Number of milliseconds " + (end - begin));
-        System.out.println("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
-
-        return result;
-
+      Constraint cy = new Alldistinct(y);
+      store.impose(cy);
+      shavingConstraints.add(cy);
     }
+  }
 
-    /**
-     * It transforms part of the problem into an extensional costraint to
-     * improve propagation and search process.
-     *
-     * @return true if there is a solution, false otherwise.
-     */
-    public boolean searchAllTransform() {
+  /**
+   * It performs search with shaving guided by constraints.
+   *
+   * @return true if there is a solution, false otherwise.
+   */
+  public boolean searchWithShaving() {
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    Shaving<IntVar> shaving = new Shaving<IntVar>();
+    shaving.setStore(store);
+    shaving.quickShave = true;
 
-        TransformExtensional transform = new TransformExtensional();
+    for (Constraint c : shavingConstraints) shaving.addShavingConstraint(c);
 
-        store.consistency();
+    long begin = System.currentTimeMillis();
 
-        for (int i = 7; i < 16; i++)
-            for (int j = 14; j < 22; j++)
-                if (!vars.get(i * n + j).singleton())
-                    transform.variablesTransformationScope.add(vars.get(i * n + j));
+    search = new DepthFirstSearch<IntVar>();
+    search.setPrintInfo(true);
 
-        System.out.println(transform.variablesTransformationScope);
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<IntVar>());
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+    search.setConsistencyListener(shaving);
+    search.setExitChildListener(shaving);
 
-        search = new DepthFirstSearch<IntVar>();
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
+    boolean result = search.labeling(store, select);
 
-        search.setInitializeListener(transform);
-        transform.solutionLimit = 50000;
+    long end = System.currentTimeMillis();
 
-        boolean result = search.labeling(store, select);
+    System.out.println("Number of milliseconds " + (end - begin));
+    System.out.println(
+        "Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
 
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
-        System.out.println("\n\t*** Execution time = " + T + " ms");
+    return result;
+  }
 
-        return result;
+  /**
+   * It transforms part of the problem into an extensional costraint to improve propagation and
+   * search process.
+   *
+   * @return true if there is a solution, false otherwise.
+   */
+  public boolean searchAllTransform() {
 
-    }
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-    /**
-     * It executes the program which solves the QCP in multiple different ways.
-     *
-     * @param args the first argument is the name of the file containing the problem.
-     */
-    public static void test(String[] args) {
+    TransformExtensional transform = new TransformExtensional();
 
+    store.consistency();
 
-        QCP example = new QCP();
+    for (int i = 7; i < 16; i++)
+      for (int j = 14; j < 22; j++)
+        if (!vars.get(i * n + j).singleton())
+          transform.variablesTransformationScope.add(vars.get(i * n + j));
 
-        if (args.length > 0)
-            example.filename = args[0];
+    System.out.println(transform.variablesTransformationScope);
 
-        example.model();
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<IntVar>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
 
-        if (example.searchSmallestDomain(false))
-            System.out.print(" Solution(s) found ");
+    search = new DepthFirstSearch<IntVar>();
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
 
-        example = new QCP();
+    search.setInitializeListener(transform);
+    transform.solutionLimit = 50000;
 
-        if (args.length > 0)
-            example.filename = args[0];
+    boolean result = search.labeling(store, select);
 
-        example.model();
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
+    System.out.println("\n\t*** Execution time = " + T + " ms");
 
-        if (example.searchWithRestarts())
-            System.out.print(" Solution(s) found ");
+    return result;
+  }
 
-        example = new QCP();
+  /**
+   * It executes the program which solves the QCP in multiple different ways.
+   *
+   * @param args the first argument is the name of the file containing the problem.
+   */
+  public static void test(String[] args) {
 
+    QCP example = new QCP();
 
-        if (args.length > 0)
-            example.filename = args[0];
+    if (args.length > 0) example.filename = args[0];
 
-        example.model();
+    example.model();
 
-        if (example.searchWithShaving())
-            System.out.print(" Solution(s) found ");
+    if (example.searchSmallestDomain(false)) System.out.print(" Solution(s) found ");
 
-		/*
-		// TODO, Why it is no longer efficient? It takes too long now.
-		example = new QCP();
-		
-		if (args.length > 0)
-			example.filename = args[0];	
-		
-		example.model();
-		
-		if (example.searchAllTransform())
-			System.out.print(" Solution(s) found ");		
-		*/
+    example = new QCP();
 
-        example = new QCP();
+    if (args.length > 0) example.filename = args[0];
 
-        if (args.length > 0)
-            example.filename = args[0];
+    example.model();
 
-        example.model();
-        example.store.variableWeightManagement = true;
+    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
 
-        if (example.searchWeightedDegree())
-            System.out.print(" Solution(s) found ");
+    example = new QCP();
 
-    }
+    if (args.length > 0) example.filename = args[0];
 
+    example.model();
 
-    /**
-     * It executes the program which solves the QCP in multiple different ways.
-     *
-     * @param args the first argument is the name of the file containing the problem.
-     */
-    public static void main(String[] args) {
+    if (example.searchWithShaving()) System.out.print(" Solution(s) found ");
 
-        QCP example = new QCP();
+    /*
+    // TODO, Why it is no longer efficient? It takes too long now.
+    example = new QCP();
 
-        if (args.length > 0)
-            example.filename = args[0];
+    if (args.length > 0)
+    	example.filename = args[0];
 
-        System.out.println("Solving QCP with restart search.");
-        example.model();
+    example.model();
 
-        if (example.searchWithRestarts())
-            System.out.print(" Solution(s) found ");
+    if (example.searchAllTransform())
+    	System.out.print(" Solution(s) found ");
+    */
 
-    }
+    example = new QCP();
 
+    if (args.length > 0) example.filename = args[0];
 
+    example.model();
+    example.store.variableWeightManagement = true;
+
+    if (example.searchWeightedDegree()) System.out.print(" Solution(s) found ");
+  }
+
+  /**
+   * It executes the program which solves the QCP in multiple different ways.
+   *
+   * @param args the first argument is the name of the file containing the problem.
+   */
+  public static void main(String[] args) {
+
+    QCP example = new QCP();
+
+    if (args.length > 0) example.filename = args[0];
+
+    System.out.println("Solving QCP with restart search.");
+    example.model();
+
+    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
+  }
 }

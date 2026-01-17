@@ -32,24 +32,20 @@ package org.jacop.examples.floats;
 
 /**
  * It models min-cost flow for floating solver.
- * <p>
- * Minimum Cost Flow problem.
- * One of the most classic OR problems known: Find the minimum cost
- * flow in a network, while satisfying the demands in the nodes,
- * and not violating the capacities of the arcs.
- * <p>
- * Testdata available at:
- * http://elib.zib.de/pub/Packages/mp-testdata/mincost/
- * <p>
- * Based on minizinc model
- * min_cost_flow.mzn
- * Jakob Puchinger <jakobp@cs.mu.oz.au>
- * Wed Jun 14
+ *
+ * <p>Minimum Cost Flow problem. One of the most classic OR problems known: Find the minimum cost
+ * flow in a network, while satisfying the demands in the nodes, and not violating the capacities of
+ * the arcs.
+ *
+ * <p>Testdata available at: http://elib.zib.de/pub/Packages/mp-testdata/mincost/
+ *
+ * <p>Based on minizinc model min_cost_flow.mzn Jakob Puchinger <jakobp@cs.mu.oz.au> Wed Jun 14
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PplusCeqR;
@@ -59,129 +55,125 @@ import org.jacop.floats.search.SmallestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class MinCostFlow {
 
-    double MIN_FLOAT = -1e+150;
-    double MAX_FLOAT = 1e+150;
+  double MIN_FLOAT = -1e+150;
+  double MAX_FLOAT = 1e+150;
 
-    void min_cost_flow() {
+  void min_cost_flow() {
 
-        System.out.println("========= min_cost_flow =========");
+    System.out.println("========= min_cost_flow =========");
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatDomain.setPrecision(1e-3);
-        FloatDomain.intervalPrint(true);
+    FloatDomain.setPrecision(1e-3);
+    FloatDomain.intervalPrint(true);
 
-        int n = 5;
-        int m = 10;
+    int n = 5;
+    int m = 10;
 
-        double[] demand = {-10.0, 0.0, 0.0, 0.0, 10.0};
+    double[] demand = {-10.0, 0.0, 0.0, 0.0, 10.0};
 
-        double[] costs = {10.0, 6.0, 10.0, 20.0, 2.0, 4.0, 10.0, 2.0, 10.0, 2.0};
-        double[] capacity = {6.0, 4.0, 4.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0, 4.0};
-        double[] capacity_lb = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double[] costs = {10.0, 6.0, 10.0, 20.0, 2.0, 4.0, 10.0, 2.0, 10.0, 2.0};
+    double[] capacity = {6.0, 4.0, 4.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0, 4.0};
+    double[] capacity_lb = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-        int[][] arcs = {{1, 2}, {1, 3}, {1, 4}, {1, 5}, {2, 3}, {2, 4}, {2, 5}, {3, 4}, {3, 5}, {4, 5}};
+    int[][] arcs = {{1, 2}, {1, 3}, {1, 4}, {1, 5}, {2, 3}, {2, 4}, {2, 5}, {3, 4}, {3, 5}, {4, 5}};
 
-        FloatVar cost = new FloatVar(store, "cost", 0.0, MAX_FLOAT);
+    FloatVar cost = new FloatVar(store, "cost", 0.0, MAX_FLOAT);
 
-        FloatVar[] X = new FloatVar[m];
+    FloatVar[] X = new FloatVar[m];
 
-        for (int i = 0; i < m; i++)
-            X[i] = new FloatVar(store, "X[" + i + "]", capacity_lb[i], capacity[i]);
+    for (int i = 0; i < m; i++)
+      X[i] = new FloatVar(store, "X[" + i + "]", capacity_lb[i], capacity[i]);
 
-        for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
 
-            List<FloatVar> outFlow = new ArrayList<FloatVar>();
-            List<Double> outFlowWeights = new ArrayList<Double>();
-            for (int j = 0; j < m; j++)
-                if (arcs[j][1] == i + 1) {
-                    outFlow.add(X[j]);
-                    outFlowWeights.add(1.0);
-                }
-
-            List<FloatVar> inFlow = new ArrayList<FloatVar>();
-            List<Double> inFlowWeights = new ArrayList<Double>();
-            for (int j = 0; j < m; j++)
-                if (arcs[j][0] == i + 1) {
-                    inFlow.add(X[j]);
-                    inFlowWeights.add(1.0);
-                }
-
-            FloatVar outResult = new FloatVar(store, "outResult_" + i, MIN_FLOAT, MAX_FLOAT);
-            outFlow.add(outResult);
-            outFlowWeights.add(-1.0);
-            store.impose(new LinearFloat(outFlow, outFlowWeights, "==", 0.0));
-
-            FloatVar inResult = new FloatVar(store, "inResult_" + i, MIN_FLOAT, MAX_FLOAT);
-            inFlow.add(inResult);
-            inFlowWeights.add(-1.0);
-            store.impose(new LinearFloat(inFlow, inFlowWeights, "==", 0.0));
-
-            store.impose(new PplusCeqR(inResult, demand[i], outResult));
+      List<FloatVar> outFlow = new ArrayList<FloatVar>();
+      List<Double> outFlowWeights = new ArrayList<Double>();
+      for (int j = 0; j < m; j++)
+        if (arcs[j][1] == i + 1) {
+          outFlow.add(X[j]);
+          outFlowWeights.add(1.0);
         }
 
-        FloatVar[] vars = new FloatVar[X.length + 1];
-        double[] nCosts = new double[costs.length + 1];
-        for (int i = 0; i < vars.length - 1; i++) {
-            vars[i] = X[i];
-            nCosts[i] = costs[i];
+      List<FloatVar> inFlow = new ArrayList<FloatVar>();
+      List<Double> inFlowWeights = new ArrayList<Double>();
+      for (int j = 0; j < m; j++)
+        if (arcs[j][0] == i + 1) {
+          inFlow.add(X[j]);
+          inFlowWeights.add(1.0);
         }
-        vars[X.length] = cost;
-        nCosts[costs.length] = -1.0;
 
-        store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
+      FloatVar outResult = new FloatVar(store, "outResult_" + i, MIN_FLOAT, MAX_FLOAT);
+      outFlow.add(outResult);
+      outFlowWeights.add(-1.0);
+      store.impose(new LinearFloat(outFlow, outFlowWeights, "==", 0.0));
 
-        // solve minimize cost;
-        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
-        label.setAssignSolution(true);
-        // s.leftFirst = false;
-        label.setTimeOut(1);
-        // label.setSolutionListener(new PrintOutListener<FloatVar>());
+      FloatVar inResult = new FloatVar(store, "inResult_" + i, MIN_FLOAT, MAX_FLOAT);
+      inFlow.add(inResult);
+      inFlowWeights.add(-1.0);
+      store.impose(new LinearFloat(inFlow, inFlowWeights, "==", 0.0));
 
-        label.labeling(store, s, cost);
-
-	/*
-  DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-	SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
-	// s.roundRobin = false;
-	// s.leftFirst = false;
-
-	Optimize opt = new Optimize(store, label, s, cost);
-	opt.minimize();
-	*/
-
-        System.out.println(cost);
-        // System.out.printf ("cost = %.2f\n", cost.value());
-
-        for (int i = 0; i < X.length; i++)
-            System.out.printf("%.2f, ", X[i].value());
-        System.out.println();
-        // for (int i = 0; i < X.length; i++) {
-        //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
-        //     System.out.println ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + " result =" +
-        // 			(double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
-        // }
-
-        System.out.println("\nPrecision = " + FloatDomain.precision());
-
+      store.impose(new PplusCeqR(inResult, demand[i], outResult));
     }
 
-    /**
-     * It executes the program. 
-     *
-     * @param args no arguments
-     */
-    public static void main(String args[]) {
-
-        MinCostFlow example = new MinCostFlow();
-
-        example.min_cost_flow();
-
+    FloatVar[] vars = new FloatVar[X.length + 1];
+    double[] nCosts = new double[costs.length + 1];
+    for (int i = 0; i < vars.length - 1; i++) {
+      vars[i] = X[i];
+      nCosts[i] = costs[i];
     }
+    vars[X.length] = cost;
+    nCosts[costs.length] = -1.0;
+
+    store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
+
+    // solve minimize cost;
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s =
+        new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
+    label.setAssignSolution(true);
+    // s.leftFirst = false;
+    label.setTimeOut(1);
+    // label.setSolutionListener(new PrintOutListener<FloatVar>());
+
+    label.labeling(store, s, cost);
+
+    /*
+     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
+    // s.roundRobin = false;
+    // s.leftFirst = false;
+
+    Optimize opt = new Optimize(store, label, s, cost);
+    opt.minimize();
+    */
+
+    System.out.println(cost);
+    // System.out.printf ("cost = %.2f\n", cost.value());
+
+    for (int i = 0; i < X.length; i++) System.out.printf("%.2f, ", X[i].value());
+    System.out.println();
+    // for (int i = 0; i < X.length; i++) {
+    //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
+    //     System.out.println ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + "
+    // result =" +
+    // 			(double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
+    // }
+
+    System.out.println("\nPrecision = " + FloatDomain.precision());
+  }
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
+
+    MinCostFlow example = new MinCostFlow();
+
+    example.min_cost_flow();
+  }
 }

@@ -34,27 +34,22 @@ import org.jacop.search.Indomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * IndomainMin - implements enumeration method based on the selection of the
- * minimal value in the domain of variable
+ * IndomainMin - implements enumeration method based on the selection of the minimal value in the
+ * domain of variable
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class IndomainSetMin<T extends SetVar> implements Indomain<T> {
 
-    /**
-     * It creates Indomain heuristic, which will choose the minimal value
-     * from the variable domain.
-     */
-    public IndomainSetMin() {
-    }
+  /**
+   * It creates Indomain heuristic, which will choose the minimal value from the variable domain.
+   */
+  public IndomainSetMin() {}
 
-    public int indomain(T var) {
+  public int indomain(T var) {
 
-        return var.domain.lub().subtract(var.domain.glb()).min();
-
-    }
-
+    return var.domain.lub().subtract(var.domain.glb()).min();
+  }
 }

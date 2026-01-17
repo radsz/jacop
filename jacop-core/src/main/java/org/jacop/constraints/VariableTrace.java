@@ -28,17 +28,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * VariableTrace is a daemon that prints information on variables whenever they are changed.
@@ -46,110 +44,107 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class VariableTrace extends Constraint implements UsesQueueVariable, RemoveLevelLate {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    Var[] vars;
-    Store store;
+  Var[] vars;
+  Store store;
 
-    /**
-     * It constructs trace daemon for variable v
-     *
-     * @param v variable to be traced
-     */
-    public VariableTrace(Var v) {
-        this(new Var[] {v});
+  /**
+   * It constructs trace daemon for variable v
+   *
+   * @param v variable to be traced
+   */
+  public VariableTrace(Var v) {
+    this(new Var[] {v});
+  }
+
+  /**
+   * It constructs trace daemon for variables vs
+   *
+   * @param vs variables to be traced
+   */
+  public VariableTrace(Var[] vs) {
+
+    numberId = idNumber.incrementAndGet();
+
+    vars = new Var[vs.length];
+    for (int i = 0; i < vs.length; i++) {
+      vars[i] = vs[i];
     }
 
-    /**
-     * It constructs trace daemon for variables vs
-     *
-     * @param vs variables to be traced
-     */
-    public VariableTrace(Var[] vs) {
+    setScope(vars);
+  }
 
-        numberId = idNumber.incrementAndGet();
+  /**
+   * It constructs trace daemon for variables vs
+   *
+   * @param vs variables to be traced
+   */
+  public VariableTrace(List<Var> vs) {
+    this(vs.toArray(new Var[vs.size()]));
+  }
 
-        vars = new Var[vs.length];
-        for (int i = 0; i < vs.length; i++) {
-            vars[i] = vs[i];
-        }
+  public void impose(Store store) {
 
-        setScope(vars);
+    this.store = store;
+
+    store.registerRemoveLevelLateListener(this);
+
+    for (Var v : vars) {
+      v.putModelConstraint(this, getConsistencyPruningEvent(v));
+      // we do not want to print initial values
+      // queueVariable(store.level, v);
     }
 
-    /**
-     * It constructs trace daemon for variables vs
-     *
-     * @param vs variables to be traced
-     */
-    public VariableTrace(List<Var> vs) {
-        this(vs.toArray(new Var[vs.size()]));
+    store.countConstraint();
+  }
+
+  public void consistency(Store store) {}
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  public void queueVariable(int level, Var var) {
+    System.out.println(
+        "Var: " + var + ", level: " + level + ", constraint: " + store.currentConstraint);
+  }
+
+  @Override
+  public void removeLevelLate(int level) {
+
+    System.out.print("Restore level: " + level + ", vars: ");
+
+    for (Var v : vars) {
+      System.out.print(v + " ");
     }
+    System.out.println();
+  }
 
-    public void impose(Store store) {
+  public void removeConstraint() {}
 
-        this.store = store;
+  public boolean satisfied() {
+    return false;
+  }
 
-        store.registerRemoveLevelLateListener(this);
+  @Override
+  public String toString() {
 
-        for (Var v : vars) {
-            v.putModelConstraint(this, getConsistencyPruningEvent(v));
-            // we do not want to print initial values
-            // queueVariable(store.level, v);
-        }
+    StringBuffer result = new StringBuffer(id());
 
-        store.countConstraint();
+    result.append(" : variableTrace([");
+
+    for (int i = 0; i < vars.length; i++) {
+      result.append(vars[i]);
+      if (i < vars.length - 1) result.append(", ");
     }
+    result.append("])");
 
-    public void consistency(Store store) {
-    }
+    return result.toString();
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
-
-    public void queueVariable(int level, Var var) {
-        System.out.println("Var: " + var + ", level: " + level + ", constraint: " + store.currentConstraint);
-    }
-
-    @Override public void removeLevelLate(int level) {
-
-        System.out.print("Restore level: " + level + ", vars: ");
-
-        for (Var v : vars) {
-            System.out.print(v + " ");
-        }
-        System.out.println();
-    }
-
-    public void removeConstraint() {
-    }
-
-    public boolean satisfied() {
-        return false;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-
-        result.append(" : variableTrace([");
-
-        for (int i = 0; i < vars.length; i++) {
-            result.append(vars[i]);
-            if (i < vars.length - 1)
-                result.append(", ");
-        }
-        result.append("])");
-
-        return result.toString();
-
-    }
-
-    public void increaseWeight() {
-    }
-
+  public void increaseWeight() {}
 }

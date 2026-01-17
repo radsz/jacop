@@ -30,76 +30,77 @@
 
 package org.jacop;
 
+import java.util.Arrays;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.*;
 
-import java.util.Arrays;
-
 /**
  * It is helper class that allows perform quickly operation to setup tests.
- * <p>
- * Note: This is a local copy for jacop-core tests. The main TestHelper is in jacop-benchmarks module.
+ *
+ * <p>Note: This is a local copy for jacop-core tests. The main TestHelper is in jacop-benchmarks
+ * module.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
 public class TestHelper {
 
-    protected IntVar[] getIntVars(Store store, String idPrefix, int xLength, int xSize) {
-        IntVar[] y = new IntVar[xLength];
+  protected IntVar[] getIntVars(Store store, String idPrefix, int xLength, int xSize) {
+    IntVar[] y = new IntVar[xLength];
 
-        for (int i = 0; i < y.length; i++) {
-            y[i] = new IntVar(store, idPrefix + i, 0, xSize - 1);
-        }
-        return y;
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, idPrefix + i, 0, xSize - 1);
     }
+    return y;
+  }
 
-    protected IntVar[] getShiftedIntVars(Store store, String idPrefix, int xLength, int xSize) {
+  protected IntVar[] getShiftedIntVars(Store store, String idPrefix, int xLength, int xSize) {
 
-        IntVar[] x = new IntVar[xLength];
-        for (int i = 0; i < x.length; i++) {
-            x[i] = new IntVar(store, idPrefix + i, i, i + xSize - 1);
-        }
-        return x;
+    IntVar[] x = new IntVar[xLength];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, idPrefix + i, i, i + xSize - 1);
     }
+    return x;
+  }
 
-    protected int noOfAllSolutions(Store store, IntVar[]... variables) {
+  protected int noOfAllSolutions(Store store, IntVar[]... variables) {
 
-        SelectChoicePoint<IntVar> select =
-                new SimpleSelect<>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
-                        new MostConstrainedStatic<>(), new IndomainMin<>());
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(
+            Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>());
 
-        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
-        search.setAssignSolution(true);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    search.setAssignSolution(true);
 
-        boolean result = search.labeling(store, select);
+    boolean result = search.labeling(store, select);
 
-        //search.printAllSolutions();
-        return search.getSolutionListener().solutionsNo();
+    // search.printAllSolutions();
+    return search.getSolutionListener().solutionsNo();
+  }
 
-    }
+  protected int noOfAllSolutionsNoRecord(Store store, IntVar[]... variables) {
 
-    protected int noOfAllSolutionsNoRecord(Store store, IntVar[]... variables) {
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(
+            Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>());
 
-        SelectChoicePoint<IntVar> select =
-                new SimpleSelect<>(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i).toArray(IntVar[]::new),
-                        new MostConstrainedStatic<>(), new IndomainMin<>());
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
-        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.setAssignSolution(true);
 
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(false);
-        search.setAssignSolution(true);
+    boolean result = search.labeling(store, select);
 
-        boolean result = search.labeling(store, select);
-
-        //search.printAllSolutions();
-        return search.getSolutionListener().solutionsNo();
-
-    }
-
+    // search.printAllSolutions();
+    return search.getSolutionListener().solutionsNo();
+  }
 }

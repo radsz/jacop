@@ -36,80 +36,79 @@ package org.jacop.core;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
-    int current;
+  int current;
 
-    IntervalDomain domain;
+  IntervalDomain domain;
 
-    Interval i = null;
+  Interval i = null;
 
-    int intervalNo = 0;
+  int intervalNo = 0;
 
-    int maxIntervalNo = 0;
+  int maxIntervalNo = 0;
 
-    /**
-     * It create an enumeration for a given domain.
-     *
-     * @param dom domain for which value enumeration is created.
-     */
-    public IntervalDomainValueEnumeration(IntervalDomain dom) {
-        domain = dom;
-        maxIntervalNo = domain.size - 1;
-        if (maxIntervalNo >= 0) {
-            i = domain.intervals[intervalNo];
-            current = i.min;
+  /**
+   * It create an enumeration for a given domain.
+   *
+   * @param dom domain for which value enumeration is created.
+   */
+  public IntervalDomainValueEnumeration(IntervalDomain dom) {
+    domain = dom;
+    maxIntervalNo = domain.size - 1;
+    if (maxIntervalNo >= 0) {
+      i = domain.intervals[intervalNo];
+      current = i.min;
+    }
+  }
+
+  @Override
+  public boolean hasMoreElements() {
+    return (i != null);
+  }
+
+  @Override
+  public int nextElement() {
+
+    int v;
+
+    if (current < i.max) {
+      v = current;
+      current++;
+      return v;
+    } else {
+
+      if (intervalNo < maxIntervalNo) {
+        intervalNo++;
+        v = current;
+        i = domain.intervals[intervalNo];
+        current = i.min;
+        return v;
+      } else {
+        i = null;
+        return current;
+      }
+    }
+  }
+
+  @Override
+  public void domainHasChanged() {
+    intervalNo = domain.intervalNo(current);
+    maxIntervalNo = domain.size - 1;
+    if (intervalNo == -1) {
+
+      for (int j = 0; j < maxIntervalNo; j++)
+        if (domain.intervals[j].min > current) {
+          current = domain.intervals[j].min;
+          intervalNo = j;
+          i = domain.intervals[j];
+          return;
         }
 
+      i = null;
+      return;
     }
 
-    @Override public boolean hasMoreElements() {
-        return (i != null);
-    }
-
-    @Override public int nextElement() {
-
-        int v;
-
-        if (current < i.max) {
-            v = current;
-            current++;
-            return v;
-        } else {
-
-            if (intervalNo < maxIntervalNo) {
-                intervalNo++;
-                v = current;
-                i = domain.intervals[intervalNo];
-                current = i.min;
-                return v;
-            } else {
-                i = null;
-                return current;
-            }
-        }
-    }
-
-    @Override public void domainHasChanged() {
-        intervalNo = domain.intervalNo(current);
-        maxIntervalNo = domain.size - 1;
-        if (intervalNo == -1) {
-
-            for (int j = 0; j < maxIntervalNo; j++)
-                if (domain.intervals[j].min > current) {
-                    current = domain.intervals[j].min;
-                    intervalNo = j;
-                    i = domain.intervals[j];
-                    return;
-                }
-
-            i = null;
-            return;
-        }
-
-        if (i != null)
-            i = domain.intervals[intervalNo];
-    }
-
+    if (i != null) i = domain.intervals[intervalNo];
+  }
 }

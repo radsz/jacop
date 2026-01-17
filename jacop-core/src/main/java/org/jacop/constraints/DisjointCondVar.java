@@ -28,99 +28,97 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
+import java.util.List;
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
 
-import java.util.List;
-
 /**
- * Defines a Variable for Diff2 constraints and related operations on it. It
- * keeps current recatngles for evaluation ([[R2, R3], [R1, R3], ...]
+ * Defines a Variable for Diff2 constraints and related operations on it. It keeps current
+ * recatngles for evaluation ([[R2, R3], [R1, R3], ...]
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class DisjointCondVar implements MutableVar {
 
-    int index;
+  int index;
 
-    Store store;
+  Store store;
 
-    DisjointCondVarValue value = null;
+  DisjointCondVarValue value = null;
 
-    DisjointCondVar(Store S) {
-        DisjointCondVarValue val = new DisjointCondVarValue();
-        value = val;
-        index = S.putMutableVar(this);
-        store = S;
+  DisjointCondVar(Store S) {
+    DisjointCondVarValue val = new DisjointCondVarValue();
+    value = val;
+    index = S.putMutableVar(this);
+    store = S;
+  }
+
+  DisjointCondVar(Store S, RectangleWithCondition[] R) {
+    value = new DisjointCondVarValue(R);
+    index = S.putMutableVar(this);
+    store = S;
+  }
+
+  DisjointCondVar(Store S, List<RectangleWithCondition> R) {
+    value = new DisjointCondVarValue();
+    value.setValue(R);
+    index = S.putMutableVar(this);
+    store = S;
+  }
+
+  int index() {
+    return index;
+  }
+
+  public MutableVarValue previous() {
+    return value.previousDisjointCondVarValue;
+  }
+
+  public void removeLevel(int removeLevel) {
+    if (value.stamp == removeLevel) {
+      value = value.previousDisjointCondVarValue;
     }
+  }
 
-    DisjointCondVar(Store S, RectangleWithCondition[] R) {
-        value = new DisjointCondVarValue(R);
-        index = S.putMutableVar(this);
-        store = S;
+  public void setCurrent(MutableVarValue o) {
+    value = (DisjointCondVarValue) o;
+  }
+
+  int stamp() {
+    return value.stamp;
+  }
+
+  @Override
+  public String toString() {
+    String S = "DisjointCondVar[" + index + "] = [";
+    DisjointCondVarValue val = value;
+    S = S + val + "]";
+    return S;
+  }
+
+  public void update(MutableVarValue val) {
+    // DisjointCondVarValue VarValue = (DisjointCondVarValue)value();
+    if (value.stamp == store.level) {
+      // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
+      // New " + val);
+      value.setValue(((DisjointCondVarValue) val).Rects);
+      // System.out.println(", OUT "+ value);
+    } else if (value.stamp < store.level) {
+      // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
+      // + val);
+      val.setStamp(store.level);
+      val.setPrevious(value);
+      value = (DisjointCondVarValue) val;
+
+      // System.out.println("\n=> OUT "+ this+ "\nOLD "+ value().next());
     }
+  }
 
-    DisjointCondVar(Store S, List<RectangleWithCondition> R) {
-        value = new DisjointCondVarValue();
-        value.setValue(R);
-        index = S.putMutableVar(this);
-        store = S;
-    }
-
-    int index() {
-        return index;
-    }
-
-    public MutableVarValue previous() {
-        return value.previousDisjointCondVarValue;
-    }
-
-    public void removeLevel(int removeLevel) {
-        if (value.stamp == removeLevel) {
-            value = value.previousDisjointCondVarValue;
-        }
-    }
-
-    public void setCurrent(MutableVarValue o) {
-        value = (DisjointCondVarValue) o;
-    }
-
-    int stamp() {
-        return value.stamp;
-    }
-
-    @Override public String toString() {
-        String S = "DisjointCondVar[" + index + "] = [";
-        DisjointCondVarValue val = value;
-        S = S + val + "]";
-        return S;
-    }
-
-    public void update(MutableVarValue val) {
-        // DisjointCondVarValue VarValue = (DisjointCondVarValue)value();
-        if (value.stamp == store.level) {
-            // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
-            // New " + val);
-            value.setValue(((DisjointCondVarValue) val).Rects);
-            // System.out.println(", OUT "+ value);
-        } else if (value.stamp < store.level) {
-            // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
-            // + val);
-            val.setStamp(store.level);
-            val.setPrevious(value);
-            value = (DisjointCondVarValue) val;
-
-            // System.out.println("\n=> OUT "+ this+ "\nOLD "+ value().next());
-        }
-    }
-
-    public MutableVarValue value() {
-        return value;
-    }
+  public MutableVarValue value() {
+    return value;
+  }
 }

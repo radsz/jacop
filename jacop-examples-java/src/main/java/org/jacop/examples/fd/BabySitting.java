@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -37,103 +38,85 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-
 /**
  * It is a simple logic puzzle about babysitting.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          Each weekday, Bonnie takes care of five of the neighbors'
- *          children. The children's names are Keith, Libby, Margo, Nora, and
- *          Otto; last names are Fell, Grant, Hall, Ivey, and Jule. Each is a
- *          different number of years old, from two to six. Can you find each
- *          child's full name and age?
- *          <p>
- *          1. One child is named Libby Jule.
- *          2. Keith is one year older than the Ivey child, who is one year older than Nora.
- *          3. The Fell child is three years older than Margo.
- *          4. Otto is twice as many years old as the Hall child.
- *          <p>
- *          Determine: First name - Last name - Age
- *          <p>
- *          Given solution :
- *          <p>
- *          Keith Fell, five years old
- *          Libby Jule, six years old
- *          Margo Hall, two years old
- *          Nora Grant, three years old
- *          Otto Ivey, four years old
+ *     <p>Each weekday, Bonnie takes care of five of the neighbors' children. The children's names
+ *     are Keith, Libby, Margo, Nora, and Otto; last names are Fell, Grant, Hall, Ivey, and Jule.
+ *     Each is a different number of years old, from two to six. Can you find each child's full name
+ *     and age?
+ *     <p>1. One child is named Libby Jule. 2. Keith is one year older than the Ivey child, who is
+ *     one year older than Nora. 3. The Fell child is three years older than Margo. 4. Otto is twice
+ *     as many years old as the Hall child.
+ *     <p>Determine: First name - Last name - Age
+ *     <p>Given solution :
+ *     <p>Keith Fell, five years old Libby Jule, six years old Margo Hall, two years old Nora Grant,
+ *     three years old Otto Ivey, four years old
  */
-
 public class BabySitting extends ExampleFD {
 
-    @Override public void model() {
+  @Override
+  public void model() {
 
-        vars = new ArrayList<IntVar>();
-        store = new Store();
+    vars = new ArrayList<IntVar>();
+    store = new Store();
 
-        System.out.println("Program to solve Babysitting problem ");
+    System.out.println("Program to solve Babysitting problem ");
 
-        // arrays with surnames
-        String[] surnameNames = {"Fell", "Grant", "Hall", "Ivey", "Jule"};
+    // arrays with surnames
+    String[] surnameNames = {"Fell", "Grant", "Hall", "Ivey", "Jule"};
 
-        int ifell = 0, /* igrant = 1, */ ihall = 2, iivey = 3, ijule = 4;
+    int ifell = 0, /* igrant = 1, */ ihall = 2, iivey = 3, ijule = 4;
 
-        // arrays with names
-        String[] nameNames = {"Keith", "Libby", "Margo", "Nora", "Otto"};
+    // arrays with names
+    String[] nameNames = {"Keith", "Libby", "Margo", "Nora", "Otto"};
 
-        int ikeith = 0, ilibby = 1, imargo = 2, inora = 3, iotto = 4;
+    int ikeith = 0, ilibby = 1, imargo = 2, inora = 3, iotto = 4;
 
-        // FDV's in the model
-        IntVar surname[] = new IntVar[5];
-        IntVar name[] = new IntVar[5];
+    // FDV's in the model
+    IntVar surname[] = new IntVar[5];
+    IntVar name[] = new IntVar[5];
 
-        for (int i = 0; i < 5; i++) {
-            // Values encode actual age of the child.
-            surname[i] = new IntVar(store, surnameNames[i], 2, 6);
-            name[i] = new IntVar(store, nameNames[i], 2, 6);
-            vars.add(surname[i]);
-            vars.add(name[i]);
-        }
-
-
-        // Each person has to have a different surname and different name.
-        store.impose(new Alldifferent(surname));
-        store.impose(new Alldifferent(name));
-
-        // 1. One child is named Libby Jule.
-        store.impose(new XeqY(name[ilibby], surname[ijule]));
-
-        // 2. Keith is one year older than the Ivey child.....
-        store.impose(new XplusCeqZ(surname[iivey], 1, name[ikeith]));
-        // ..... who is one year older than Nora.
-        store.impose(new XplusCeqZ(name[inora], 1, surname[iivey]));
-
-        // 3. The Fell child is three years older than Margo
-        store.impose(new XplusCeqZ(name[imargo], 3, surname[ifell]));
-
-        // 4. Otto is twice as many years old as the Hall child.
-        store.impose(new XmulCeqZ(surname[ihall], 2, name[iotto]));
-
+    for (int i = 0; i < 5; i++) {
+      // Values encode actual age of the child.
+      surname[i] = new IntVar(store, surnameNames[i], 2, 6);
+      name[i] = new IntVar(store, nameNames[i], 2, 6);
+      vars.add(surname[i]);
+      vars.add(name[i]);
     }
 
+    // Each person has to have a different surname and different name.
+    store.impose(new Alldifferent(surname));
+    store.impose(new Alldifferent(name));
 
-    /**
-     * It runs the program solving this puzzle.
-     *
-     * @param args no arguments are read.
-     */
-    public static void main(String args[]) {
+    // 1. One child is named Libby Jule.
+    store.impose(new XeqY(name[ilibby], surname[ijule]));
 
-        BabySitting example = new BabySitting();
+    // 2. Keith is one year older than the Ivey child.....
+    store.impose(new XplusCeqZ(surname[iivey], 1, name[ikeith]));
+    // ..... who is one year older than Nora.
+    store.impose(new XplusCeqZ(name[inora], 1, surname[iivey]));
 
-        example.model();
+    // 3. The Fell child is three years older than Margo
+    store.impose(new XplusCeqZ(name[imargo], 3, surname[ifell]));
 
-        if (example.search())
-            System.out.println("Solution(s) found");
+    // 4. Otto is twice as many years old as the Hall child.
+    store.impose(new XmulCeqZ(surname[ihall], 2, name[iotto]));
+  }
 
-    }
+  /**
+   * It runs the program solving this puzzle.
+   *
+   * @param args no arguments are read.
+   */
+  public static void main(String args[]) {
 
+    BabySitting example = new BabySitting();
+
+    example.model();
+
+    if (example.search()) System.out.println("Solution(s) found");
+  }
 }

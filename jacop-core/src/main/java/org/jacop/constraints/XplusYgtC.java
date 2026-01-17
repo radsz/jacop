@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X + Y{@literal >} C
@@ -42,102 +41,102 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XplusYgtC extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x in constraint x + y{@literal >} c.
-     */
-    final public IntVar x;
+  /** It specifies variable x in constraint x + y{@literal >} c. */
+  public final IntVar x;
 
-    /**
-     * It specifies variable y in constraint x + y{@literal >} c.
-     */
-    final public IntVar y;
+  /** It specifies variable y in constraint x + y{@literal >} c. */
+  public final IntVar y;
 
-    /**
-     * It specifies constant c in constraint x + y{@literal >} c.
-     */
-    final public int c;
+  /** It specifies constant c in constraint x + y{@literal >} c. */
+  public final int c;
 
-    /**
-     * It constructs X+Y{@literal >} C constraint.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     * @param c variable c.
-     */
-    public XplusYgtC(IntVar x, IntVar y, int c) {
+  /**
+   * It constructs X+Y{@literal >} C constraint.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param c variable c.
+   */
+  public XplusYgtC(IntVar x, IntVar y, int c) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
-        this.c = c;
+    this.x = x;
+    this.y = y;
+    this.c = c;
 
-	checkForOverflow();
+    checkForOverflow();
 
-        setScope(x, y);
-    }
+    setScope(x, y);
+  }
 
-    void checkForOverflow() {
+  void checkForOverflow() {
 
-        int sumMin = 0, sumMax = 0;
+    int sumMin = 0, sumMax = 0;
 
-        sumMin = Math.addExact(sumMin, x.min());
-        sumMax = Math.addExact(sumMax, x.max());
+    sumMin = Math.addExact(sumMin, x.min());
+    sumMax = Math.addExact(sumMax, x.max());
 
-        sumMin = Math.addExact(sumMin, y.min());
-        sumMax = Math.addExact(sumMax, y.max());
+    sumMin = Math.addExact(sumMin, y.min());
+    sumMax = Math.addExact(sumMax, y.max());
 
-        Math.subtractExact(sumMin, c);
-        Math.subtractExact(sumMax, c);
-    }
+    Math.subtractExact(sumMin, c);
+    Math.subtractExact(sumMax, c);
+  }
 
-    
-    @Override public void consistency(final Store store) {
+  @Override
+  public void consistency(final Store store) {
 
-        x.domain.inMin(store.level, x, c - y.max() + 1);
-        y.domain.inMin(store.level, y, c - x.max() + 1);
-    }
+    x.domain.inMin(store.level, x, c - y.max() + 1);
+    y.domain.inMin(store.level, y, c - x.max() + 1);
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public void notConsistency(final Store store) {
 
-        x.domain.inMax(store.level, x, c - y.min());
-        y.domain.inMax(store.level, y, c - x.min());
-    }
+    x.domain.inMax(store.level, x, c - y.min());
+    y.domain.inMax(store.level, y, c - x.min());
+  }
 
-    @Override public boolean notSatisfied() {
-        return x.max() + y.max() <= c;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return x.max() + y.max() <= c;
+  }
 
-    @Override public boolean satisfied() {
-        return x.min() + y.min() > c;
-    }
+  @Override
+  public boolean satisfied() {
+    return x.min() + y.min() > c;
+  }
 
-    @Override public String toString() {
+  @Override
+  public String toString() {
 
-        return id() + " : XplusYgtC(" + x + ", " + y + ", " + c + " )";
-    }
-
+    return id() + " : XplusYgtC(" + x + ", " + y + ", " + c + " )";
+  }
 }

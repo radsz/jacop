@@ -35,109 +35,108 @@ import java.util.List;
 
 /**
  * It specifies DOT benchmark.
- * <p>
- * Source:
- * <p>
- * Raghunathan, A. and Jha, N. K. "An Iterative Improvement Algorithm for Low
- * Power Data Path Synthesis" ICCAD 1995
+ *
+ * <p>Source:
+ *
+ * <p>Raghunathan, A. and Jha, N. K. "An Iterative Improvement Algorithm for Low Power Data Path
+ * Synthesis" ICCAD 1995
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class DOT extends Filter {
 
+  /** It constructs a simple DOT filter. */
+  public DOT() {
+    this(1, 2);
+  }
 
-    /**
-     * It constructs a simple DOT filter.
-     */
-    public DOT() {
-        this(1, 2);
-    }
+  /**
+   * It constructs a DOT filter with the specified delay for the addition and multiplication
+   * operation.
+   *
+   * @param addDel the delay of the addition operation.
+   * @param mulDel the delay of the multiplication operation.
+   */
+  public DOT(int addDel, int mulDel) {
 
+    this.addDel = addDel;
 
-    /**
-     * It constructs a DOT filter with the specified delay
-     * for the addition and multiplication operation.
-     *
-     * @param addDel the delay of the addition operation.
-     * @param mulDel the delay of the multiplication operation.
-     */
-    public DOT(int addDel, int mulDel) {
+    this.mulDel = mulDel;
 
-        this.addDel = addDel;
+    name = "DOT";
 
-        this.mulDel = mulDel;
+    int dependencies[][] = {
+      {0, 6}, {1, 6}, {2, 7}, {3, 7}, {4, 8}, {5, 8}, {6, 9}, {7, 9}, {9, 10}, {8, 10}
+    };
+    this.dependencies = dependencies;
 
-        name = "DOT";
+    int ids[] = {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
+    this.ids = ids;
 
-        int dependencies[][] = {{0, 6}, {1, 6}, {2, 7}, {3, 7}, {4, 8}, {5, 8}, {6, 9}, {7, 9}, {9, 10}, {8, 10}};
-        this.dependencies = dependencies;
+    int last[] = {10};
+    this.last = last;
+  }
 
-        int ids[] = {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
-        this.ids = ids;
+  @Override
+  public List<String> names() {
+    List<String> names = new ArrayList<String>(34);
 
-        int last[] = {10};
-        this.last = last;
-    }
+    names.add("*0");
+    names.add("*1");
+    names.add("*2");
+    names.add("*3");
+    names.add("*4");
+    names.add("*5");
+    names.add("+6");
+    names.add("+7");
+    names.add("+8");
+    names.add("+9");
+    names.add("+10");
 
-    @Override public List<String> names() {
-        List<String> names = new ArrayList<String>(34);
+    return names;
+  }
 
-        names.add("*0");
-        names.add("*1");
-        names.add("*2");
-        names.add("*3");
-        names.add("*4");
-        names.add("*5");
-        names.add("+6");
-        names.add("+7");
-        names.add("+8");
-        names.add("+9");
-        names.add("+10");
+  @Override
+  public List<String> namesPipeline() {
+    List<String> names = new ArrayList<String>(34);
 
-        return names;
-    }
+    names.add("*0");
+    names.add("*1");
+    names.add("*2");
+    names.add("*3");
+    names.add("*4");
+    names.add("*5");
+    names.add("+6");
+    names.add("+7");
+    names.add("+8");
+    names.add("+9");
+    names.add("+10");
 
-    @Override public List<String> namesPipeline() {
-        List<String> names = new ArrayList<String>(34);
+    names.add("*0a");
+    names.add("*1a");
+    names.add("*2a");
+    names.add("*3a");
+    names.add("*4a");
+    names.add("*5a");
+    names.add("+6a");
+    names.add("+7a");
+    names.add("+8a");
+    names.add("+9a");
+    names.add("+10a");
 
-        names.add("*0");
-        names.add("*1");
-        names.add("*2");
-        names.add("*3");
-        names.add("*4");
-        names.add("*5");
-        names.add("+6");
-        names.add("+7");
-        names.add("+8");
-        names.add("+9");
-        names.add("+10");
+    names.add("*0b");
+    names.add("*1b");
+    names.add("*2b");
+    names.add("*3b");
+    names.add("*4b");
+    names.add("*5b");
+    names.add("+6b");
+    names.add("+7b");
+    names.add("+8b");
+    names.add("+9b");
+    names.add("+10b");
 
-        names.add("*0a");
-        names.add("*1a");
-        names.add("*2a");
-        names.add("*3a");
-        names.add("*4a");
-        names.add("*5a");
-        names.add("+6a");
-        names.add("+7a");
-        names.add("+8a");
-        names.add("+9a");
-        names.add("+10a");
-
-        names.add("*0b");
-        names.add("*1b");
-        names.add("*2b");
-        names.add("*3b");
-        names.add("*4b");
-        names.add("*5b");
-        names.add("+6b");
-        names.add("+7b");
-        names.add("+8b");
-        names.add("+9b");
-        names.add("+10b");
-
-        return names;
-    }
+    return names;
+  }
 }

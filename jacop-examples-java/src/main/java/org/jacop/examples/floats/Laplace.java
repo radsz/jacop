@@ -32,16 +32,15 @@ package org.jacop.examples.floats;
 
 /**
  * From the CLP(R) laplace example:
- * <p>
- * Solves the Dirichlet problem for Laplace's equation using
- * Leibman's five-point finite-difference approximation.
- * <p>
- * Based on minizinc program written by Håkan Kjellerstrand
+ *
+ * <p>Solves the Dirichlet problem for Laplace's equation using Leibman's five-point
+ * finite-difference approximation.
+ *
+ * <p>Based on minizinc program written by Håkan Kjellerstrand
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
@@ -51,79 +50,72 @@ import org.jacop.search.DepthFirstSearch;
 
 public class Laplace {
 
-    void laplace() {
+  void laplace() {
 
-        System.out.println("========= laplace =========");
-        System.out
-            .println("Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
+    System.out.println("========= laplace =========");
+    System.out.println(
+        "Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatDomain.setPrecision(1e-3);
+    FloatDomain.setPrecision(1e-3);
 
-        int r = 10;
-        int c = 10;
+    int r = 10;
+    int c = 10;
 
+    double Z = 0.0;
+    double M = 100.0;
 
-        double Z = 0.0;
-        double M = 100.0;
+    FloatVar[][] x = new FloatVar[r + 1][c + 1];
 
-        FloatVar[][] x = new FloatVar[r + 1][c + 1];
+    for (int i = 0; i < r + 1; i++)
+      for (int j = 0; j < c + 1; j++)
+        if (i == 0) x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
+        else if (i == r || j == 0 || j == c)
+          x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", M, M);
+        else x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
 
-        for (int i = 0; i < r + 1; i++)
-            for (int j = 0; j < c + 1; j++)
-                if (i == 0)
-                    x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
-                else if (i == r || j == 0 || j == c)
-                    x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", M, M);
-                else
-                    x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
+    for (int i = 1; i < r; i++)
+      for (int j = 1; j < c; j++)
+        store.impose(
+            new LinearFloat(
+                new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
+                new double[] {-4.0, 1.0, 1.0, 1.0, 1.0},
+                "==",
+                0.0));
 
-        for (int i = 1; i < r; i++)
-            for (int j = 1; j < c; j++)
-                store.impose(new LinearFloat(new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
-                    new double[] {-4.0, 1.0, 1.0, 1.0, 1.0}, "==", 0.0));
+    FloatVar[] xs = new FloatVar[(r + 1) * (c + 1)];
+    int n = 0;
+    for (int i = 0; i < r + 1; i++) for (int j = 0; j < c + 1; j++) xs[n++] = x[i][j];
 
+    // solve minimize cost;
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, xs, null);
+    label.setAssignSolution(true);
+    s.leftFirst = false;
 
-        FloatVar[] xs = new FloatVar[(r + 1) * (c + 1)];
-        int n = 0;
-        for (int i = 0; i < r + 1; i++)
-            for (int j = 0; j < c + 1; j++)
-                xs[n++] = x[i][j];
+    // label.setSolutionListener(new PrintOutListener<FloatVar>());
 
-        // solve minimize cost;
-        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, xs, null);
-        label.setAssignSolution(true);
-        s.leftFirst = false;
+    label.labeling(store, s);
 
-        // label.setSolutionListener(new PrintOutListener<FloatVar>());
-
-        label.labeling(store, s);
-
-        for (int i = 0; i < r + 1; i++) {
-            for (int j = 0; j < c + 1; j++)
-                System.out.printf("%.2f\t", x[i][j].value());
-            System.out.println();
-        }
-
-        System.out.println();
-        System.out.println("Precision = " + FloatDomain.precision());
-
+    for (int i = 0; i < r + 1; i++) {
+      for (int j = 0; j < c + 1; j++) System.out.printf("%.2f\t", x[i][j].value());
+      System.out.println();
     }
 
-    /**
-     * It executes the program which computes warm distribution. 
-     *
-     * @param args no arguments
-     */
-    public static void main(String args[]) {
+    System.out.println();
+    System.out.println("Precision = " + FloatDomain.precision());
+  }
 
-        Laplace example = new Laplace();
+  /**
+   * It executes the program which computes warm distribution.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
 
-        example.laplace();
+    Laplace example = new Laplace();
 
-    }
-
-
+    example.laplace();
+  }
 }

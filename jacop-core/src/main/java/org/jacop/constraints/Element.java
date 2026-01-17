@@ -30,217 +30,229 @@
 
 package org.jacop.constraints;
 
+import java.util.List;
+import java.util.Set;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
-import java.util.List;
-import java.util.Set;
-
 /**
- * Element constraint implements the element/4 constraint (both with integer
- * list and variables list). It defines a following relation
- * variables[index  + shift] = value. The default shift value is equal to zero.
- * The first index in the variables list is equal to 1.
+ * Element constraint implements the element/4 constraint (both with integer list and variables
+ * list). It defines a following relation variables[index + shift] = value. The default shift value
+ * is equal to zero. The first index in the variables list is equal to 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Element extends Constraint implements UsesQueueVariable {
 
-    Constraint c = null;
+  Constraint c = null;
 
-    /**
-     * It constructs element constraint based on variables. The default shift value is equal 0.
-     *
-     * @param index     index variable.
-     * @param variables list of variables.
-     * @param value     variable to which index variable is equal to.
-     */
-    @Deprecated public Element(IntVar index, List<? extends IntVar> variables, IntVar value) {
-        queueIndex = 1;
-        c = new ElementVariable(index, variables, value);
-    }
+  /**
+   * It constructs element constraint based on variables. The default shift value is equal 0.
+   *
+   * @param index index variable.
+   * @param variables list of variables.
+   * @param value variable to which index variable is equal to.
+   */
+  @Deprecated
+  public Element(IntVar index, List<? extends IntVar> variables, IntVar value) {
+    queueIndex = 1;
+    c = new ElementVariable(index, variables, value);
+  }
 
-    /**
-     * It constructs element constraint based on variables.
-     *
-     * @param index     index variable.
-     * @param variables variables list.
-     * @param value     value variable.
-     * @param shift     shift by which the index value is moved to the left.
-     */
-    @Deprecated public Element(IntVar index, List<? extends IntVar> variables, IntVar value, int shift) {
-        queueIndex = 1;
-        c = new ElementVariable(index, variables, value, shift);
-    }
+  /**
+   * It constructs element constraint based on variables.
+   *
+   * @param index index variable.
+   * @param variables variables list.
+   * @param value value variable.
+   * @param shift shift by which the index value is moved to the left.
+   */
+  @Deprecated
+  public Element(IntVar index, List<? extends IntVar> variables, IntVar value, int shift) {
+    queueIndex = 1;
+    c = new ElementVariable(index, variables, value, shift);
+  }
 
-    /**
-     * It constructs element constraint based on variables. The default shift value is equal 0.
-     *
-     * @param index  index variable.
-     * @param values list of integers.
-     * @param value  variable to which index variable is equal to.
-     */
-    @Deprecated public Element(IntVar index, int[] values, IntVar value) {
-        queueIndex = 0;
-        c = new ElementInteger(index, values, value);
-    }
+  /**
+   * It constructs element constraint based on variables. The default shift value is equal 0.
+   *
+   * @param index index variable.
+   * @param values list of integers.
+   * @param value variable to which index variable is equal to.
+   */
+  @Deprecated
+  public Element(IntVar index, int[] values, IntVar value) {
+    queueIndex = 0;
+    c = new ElementInteger(index, values, value);
+  }
 
-    /**
-     * It constructs element constraint based on variables.
-     *
-     * @param index  index variable.
-     * @param values integer list.
-     * @param value  value variable.
-     * @param shift  shift by which the index value is moved to the left.
-     */
-    @Deprecated public Element(IntVar index, int[] values, IntVar value, int shift) {
-        queueIndex = 0;
-        c = new ElementInteger(index, values, value, shift);
-    }
+  /**
+   * It constructs element constraint based on variables.
+   *
+   * @param index index variable.
+   * @param values integer list.
+   * @param value value variable.
+   * @param shift shift by which the index value is moved to the left.
+   */
+  @Deprecated
+  public Element(IntVar index, int[] values, IntVar value, int shift) {
+    queueIndex = 0;
+    c = new ElementInteger(index, values, value, shift);
+  }
 
-    /**
-     * It constructs element constraint based on variables. The default shift value is equal 0.
-     *
-     * @param index     index variable.
-     * @param variables list of integers.
-     * @param value     variable to which index variable is equal to.
-     */
-    @Deprecated public Element(IntVar index, IntVar[] variables, IntVar value) {
-        queueIndex = 1;
-        c = new ElementVariable(index, variables, value);
-    }
+  /**
+   * It constructs element constraint based on variables. The default shift value is equal 0.
+   *
+   * @param index index variable.
+   * @param variables list of integers.
+   * @param value variable to which index variable is equal to.
+   */
+  @Deprecated
+  public Element(IntVar index, IntVar[] variables, IntVar value) {
+    queueIndex = 1;
+    c = new ElementVariable(index, variables, value);
+  }
 
-    /**
-     * It constructs element constraint based on variables.
-     *
-     * @param index     index variable.
-     * @param variables variables list.
-     * @param value     value variable.
-     * @param shift     shift by which the index value is moved to the left.
-     */
-    @Deprecated public Element(IntVar index, IntVar[] variables, IntVar value, int shift) {
-        queueIndex = 1;
-        c = new ElementVariable(index, variables, value, shift);
-    }
+  /**
+   * It constructs element constraint based on variables.
+   *
+   * @param index index variable.
+   * @param variables variables list.
+   * @param value value variable.
+   * @param shift shift by which the index value is moved to the left.
+   */
+  @Deprecated
+  public Element(IntVar index, IntVar[] variables, IntVar value, int shift) {
+    queueIndex = 1;
+    c = new ElementVariable(index, variables, value, shift);
+  }
 
-    @Override public Set<Var> arguments() {
-        return c.arguments();
-    }
+  @Override
+  public Set<Var> arguments() {
+    return c.arguments();
+  }
 
-    @Override public void consistency(Store store) {
-        c.consistency(store);
-    }
+  @Override
+  public void consistency(Store store) {
+    c.consistency(store);
+  }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-        return c.getConsistencyPruningEvent(var);
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+    return c.getConsistencyPruningEvent(var);
+  }
 
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise method exists..");
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as more precise method exists..");
-    }
+  @Override
+  public String id() {
+    return c.id();
+  }
 
-    @Override public String id() {
-        return c.id();
-    }
+  @Override
+  public void impose(Store store) {
+    c.impose(store);
+  }
 
-    @Override public void impose(Store store) {
-        c.impose(store);
-    }
+  @Override
+  public void queueVariable(int level, Var V) {
+    c.queueVariable(level, V);
+  }
 
-    @Override public void queueVariable(int level, Var V) {
-        c.queueVariable(level, V);
-    }
+  @Override
+  public void removeConstraint() {
+    c.removeConstraint();
+  }
 
-    @Override public void removeConstraint() {
-        c.removeConstraint();
-    }
+  @Override
+  public String toString() {
+    return c.toString();
+  }
 
-    @Override public String toString() {
-        return c.toString();
-    }
+  @Override
+  public void increaseWeight() {
+    c.increaseWeight();
+  }
 
-    @Override public void increaseWeight() {
-        c.increaseWeight();
-    }
+  /**
+   * It constructs element constraint based on variables. The default shift value is equal 0.
+   *
+   * @param index index variable.
+   * @param variables list of variables.
+   * @param value variable to which index variable is equal to.
+   * @return constraint that encodes the desired logic.
+   */
+  public static Constraint choose(IntVar index, List<? extends IntVar> variables, IntVar value) {
+    return new ElementVariableFast(index, variables, value);
+  }
 
-    /**
-     * It constructs element constraint based on variables. The default shift value is equal 0.
-     *
-     * @param index     index variable.
-     * @param variables list of variables.
-     * @param value     variable to which index variable is equal to.
-     * @return constraint that encodes the desired logic.
-     */
-    public static Constraint choose(IntVar index, List<? extends IntVar> variables, IntVar value) {
-        return new ElementVariableFast(index, variables, value);
-    }
+  /**
+   * It constructs element constraint based on variables.
+   *
+   * @param index index variable.
+   * @param variables variables list.
+   * @param value value variable.
+   * @param shift shift by which the index value is moved to the left.
+   * @return constraint that encodes the desired logic.
+   */
+  public static Constraint choose(
+      IntVar index, List<? extends IntVar> variables, IntVar value, int shift) {
+    return new ElementVariableFast(index, variables, value, shift);
+  }
 
-    /**
-     * It constructs element constraint based on variables.
-     *
-     * @param index     index variable.
-     * @param variables variables list.
-     * @param value     value variable.
-     * @param shift     shift by which the index value is moved to the left.
-     * @return constraint that encodes the desired logic.
-     */
-    public static Constraint choose(IntVar index, List<? extends IntVar> variables, IntVar value, int shift) {
-        return new ElementVariableFast(index, variables, value, shift);
-    }
+  /**
+   * It constructs element constraint based on variables. The default shift value is equal 0.
+   *
+   * @param index index variable.
+   * @param values list of integers.
+   * @param value variable to which index variable is equal to.
+   * @return constraint that encodes the desired logic.
+   */
+  public static Constraint choose(IntVar index, int[] values, IntVar value) {
+    return new ElementInteger(index, values, value);
+  }
 
-    /**
-     * It constructs element constraint based on variables. The default shift value is equal 0.
-     *
-     * @param index  index variable.
-     * @param values list of integers.
-     * @param value  variable to which index variable is equal to.
-     * @return constraint that encodes the desired logic.
-     */
-    public static Constraint choose(IntVar index, int[] values, IntVar value) {
-        return new ElementInteger(index, values, value);
-    }
+  /**
+   * It constructs element constraint based on variables.
+   *
+   * @param index index variable.
+   * @param values integer list.
+   * @param value value variable.
+   * @param shift shift by which the index value is moved to the left.
+   * @return constraint that encodes the desired logic.
+   */
+  public static Constraint choose(IntVar index, int[] values, IntVar value, int shift) {
+    return new ElementInteger(index, values, value, shift);
+  }
 
-    /**
-     * It constructs element constraint based on variables.
-     *
-     * @param index  index variable.
-     * @param values integer list.
-     * @param value  value variable.
-     * @param shift  shift by which the index value is moved to the left.
-     * @return constraint that encodes the desired logic.
-     */
-    public static Constraint choose(IntVar index, int[] values, IntVar value, int shift) {
-        return new ElementInteger(index, values, value, shift);
-    }
+  /**
+   * It constructs element constraint based on variables. The default shift value is equal 0.
+   *
+   * @param index index variable.
+   * @param variables list of integers.
+   * @param value variable to which index variable is equal to.
+   * @return constraint that encodes the desired logic.
+   */
+  public static Constraint choose(IntVar index, IntVar[] variables, IntVar value) {
+    return new ElementVariableFast(index, variables, value);
+  }
 
-    /**
-     * It constructs element constraint based on variables. The default shift value is equal 0.
-     *
-     * @param index     index variable.
-     * @param variables list of integers.
-     * @param value     variable to which index variable is equal to.
-     * @return constraint that encodes the desired logic.
-     */
-    public static Constraint choose(IntVar index, IntVar[] variables, IntVar value) {
-        return new ElementVariableFast(index, variables, value);
-    }
-
-    /**
-     * It constructs element constraint based on variables.
-     *
-     * @param index     index variable.
-     * @param variables variables list.
-     * @param value     value variable.
-     * @param shift     shift by which the index value is moved to the left.
-     * @return constraint that encodes the desired logic.
-     */
-    public static Constraint choose(IntVar index, IntVar[] variables, IntVar value, int shift) {
-        return new ElementVariableFast(index, variables, value, shift);
-    }
-
+  /**
+   * It constructs element constraint based on variables.
+   *
+   * @param index index variable.
+   * @param variables variables list.
+   * @param value value variable.
+   * @param shift shift by which the index value is moved to the left.
+   * @return constraint that encodes the desired logic.
+   */
+  public static Constraint choose(IntVar index, IntVar[] variables, IntVar value, int shift) {
+    return new ElementVariableFast(index, variables, value, shift);
+  }
 }

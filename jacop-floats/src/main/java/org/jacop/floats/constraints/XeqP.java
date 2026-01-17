@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -37,92 +38,85 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints X #= P for X and P floats
- * <p>
- * Domain consistency is used.
+ *
+ * <p>Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XeqP extends Constraint implements SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a left hand variable in equality constraint.
-     */
-    public IntVar x;
+  /** It specifies a left hand variable in equality constraint. */
+  public IntVar x;
 
-    /**
-     * It specifies a right hand variable in equality constraint.
-     */
-    public FloatVar p;
+  /** It specifies a right hand variable in equality constraint. */
+  public FloatVar p;
 
-    /**
-     * It constructs constraint X = P.
-     *
-     * @param x variable x.
-     * @param p variable p.
-     */
-    public XeqP(IntVar x, FloatVar p) {
+  /**
+   * It constructs constraint X = P.
+   *
+   * @param x variable x.
+   * @param p variable p.
+   */
+  public XeqP(IntVar x, FloatVar p) {
 
-        checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
+    checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.p = p;
+    this.x = x;
+    this.p = p;
 
-        setScope(x, p);
-    }
+    setScope(x, p);
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  public void consistency(Store store) {
 
-        do {
+    do {
 
-            // domain consistency
-            int xMin;
-            if (Math.abs(p.min()) < (double) IntDomain.MaxInt)
-                xMin = (int) (Math.round(Math.ceil(p.min())));
-            else
-                xMin = IntDomain.MinInt;
+      // domain consistency
+      int xMin;
+      if (Math.abs(p.min()) < (double) IntDomain.MaxInt)
+        xMin = (int) (Math.round(Math.ceil(p.min())));
+      else xMin = IntDomain.MinInt;
 
-            int xMax;
-            if (Math.abs(p.max()) < (double) IntDomain.MaxInt)
-                xMax = (int) (Math.round(Math.floor(p.max())));
-            else
-                xMax = IntDomain.MaxInt;
+      int xMax;
+      if (Math.abs(p.max()) < (double) IntDomain.MaxInt)
+        xMax = (int) (Math.round(Math.floor(p.max())));
+      else xMax = IntDomain.MaxInt;
 
-            if (xMin > xMax) {
-                int t = xMax;
-                xMax = xMin;
-                xMin = t;
-            }
+      if (xMin > xMax) {
+        int t = xMax;
+        xMax = xMin;
+        xMin = t;
+      }
 
-            x.domain.in(store.level, x, xMin, xMax);
+      x.domain.in(store.level, x, xMin, xMax);
 
-            store.propagationHasOccurred = false;
+      store.propagationHasOccurred = false;
 
-            p.domain.in(store.level, p, x.min(), x.max());
+      p.domain.in(store.level, p, x.min(), x.max());
 
-        } while (store.propagationHasOccurred);
+    } while (store.propagationHasOccurred);
+  }
 
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public boolean satisfied() {
+    return grounded() && x.min() <= p.max() && x.max() >= p.min();
+  }
 
-    @Override public boolean satisfied() {
-        return grounded() && x.min() <= p.max() && x.max() >= p.min();
-    }
-
-    @Override public String toString() {
-        return id() + " : XeqP(" + x + ", " + p + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XeqP(" + x + ", " + p + " )";
+  }
 }

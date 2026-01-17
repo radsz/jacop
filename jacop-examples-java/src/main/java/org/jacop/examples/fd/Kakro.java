@@ -30,113 +30,110 @@
 
 package org.jacop.examples.fd;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * It is program to solve Kakro puzzles.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
- *          <p>
- *          This is a program which uses Constraint Programming to find the solution to a
- *          simple Kakro puzzle. For a moment the problem representation does not allow
- *          to model the problems with fields which are both origins of the row and column word.
+ *     <p>This is a program which uses Constraint Programming to find the solution to a simple Kakro
+ *     puzzle. For a moment the problem representation does not allow to model the problems with
+ *     fields which are both origins of the row and column word.
  */
-
 public class Kakro extends ExampleFD {
 
-    public IntVar[][] elements;
+  public IntVar[][] elements;
 
-    public int noRows = 4;
+  public int noRows = 4;
 
-    public int noColumns = 4;
+  public int noColumns = 4;
 
-    // >1 - wall with row sum
-    // <0 - wall with column sum
-    // 1 - field
-    // 0 - clean wall.
-    int[][] rowDescription = {{0, 0, 0, 0}, {3, 1, 1, 0}, {6, 1, 1, 1}, {0, 5, 1, 1}};
+  // >1 - wall with row sum
+  // <0 - wall with column sum
+  // 1 - field
+  // 0 - clean wall.
+  int[][] rowDescription = {{0, 0, 0, 0}, {3, 1, 1, 0}, {6, 1, 1, 1}, {0, 5, 1, 1}};
 
+  int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
 
-    int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
+  @Override
+  public void model() {
 
-    @Override public void model() {
+    store = new Store();
+    vars = new ArrayList<IntVar>();
 
-        store = new Store();
-        vars = new ArrayList<IntVar>();
+    elements = new IntVar[noRows][noColumns];
 
-        elements = new IntVar[noRows][noColumns];
+    IntVar zero = new IntVar(store, "0", 0, 0);
 
-        IntVar zero = new IntVar(store, "0", 0, 0);
+    // Creating variables.
+    for (int i = 0; i < noRows; i++)
+      for (int j = 0; j < noColumns; j++)
+        if (rowDescription[i][j] == 1) {
+          assert (columnDescription[i][j] == 1)
+              : "Contradiction between row and column descriptions.";
+          elements[i][j] = new IntVar(store, "f" + i + "-" + j, 1, 9);
+          vars.add(elements[i][j]);
+        } else elements[i][j] = zero;
 
-        // Creating variables.
-        for (int i = 0; i < noRows; i++)
-            for (int j = 0; j < noColumns; j++)
-                if (rowDescription[i][j] == 1) {
-                    assert (columnDescription[i][j] == 1) : "Contradiction between row and column descriptions.";
-                    elements[i][j] = new IntVar(store, "f" + i + "-" + j, 1, 9);
-                    vars.add(elements[i][j]);
-                } else
-                    elements[i][j] = zero;
+    // Creating constraints for rows.
+    for (int i = 0; i < noRows; i++)
+      for (int j = 0; j < noColumns; j++)
+        if (rowDescription[i][j] > 1) {
+          IntVar sum =
+              new IntVar(store, "sumAt" + i + "-" + j, rowDescription[i][j], rowDescription[i][j]);
 
-        // Creating constraints for rows.
-        for (int i = 0; i < noRows; i++)
-            for (int j = 0; j < noColumns; j++)
-                if (rowDescription[i][j] > 1) {
-                    IntVar sum = new IntVar(store, "sumAt" + i + "-" + j, rowDescription[i][j], rowDescription[i][j]);
+          List<IntVar> row = new ArrayList<IntVar>();
 
-                    List<IntVar> row = new ArrayList<IntVar>();
+          for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++)
+            row.add(elements[i][m]);
 
-                    for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++)
-                        row.add(elements[i][m]);
-
-                    store.impose(new SumInt(row, "==", sum));
-                    store.impose(new Alldiff(row));
-                }
-
-        // Creating constraints for columns.
-        for (int i = 0; i < noRows; i++)
-            for (int j = 0; j < noColumns; j++)
-                if (columnDescription[i][j] < 0) {
-                    IntVar sum = new IntVar(store, "sumCol" + i + "-" + j, -columnDescription[i][j], -columnDescription[i][j]);
-
-                    List<IntVar> column = new ArrayList<IntVar>();
-
-                    for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++)
-                        column.add(elements[m][j]);
-
-                    store.impose(new SumInt(column, "==", sum));
-                    store.impose(new Alldiff(column));
-                }
-
-    }
-
-
-    /**
-     * It executes the program to solve simple Kakro puzzle.
-     *
-     * @param args no parameters
-     */
-    public static void main(String args[]) {
-
-        Kakro example = new Kakro();
-
-        example.model();
-
-        if (example.search()) {
-            System.out.println("Solution(s) found");
-
-            ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
-
+          store.impose(new SumInt(row, "==", sum));
+          store.impose(new Alldiff(row));
         }
 
+    // Creating constraints for columns.
+    for (int i = 0; i < noRows; i++)
+      for (int j = 0; j < noColumns; j++)
+        if (columnDescription[i][j] < 0) {
+          IntVar sum =
+              new IntVar(
+                  store,
+                  "sumCol" + i + "-" + j,
+                  -columnDescription[i][j],
+                  -columnDescription[i][j]);
+
+          List<IntVar> column = new ArrayList<IntVar>();
+
+          for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++)
+            column.add(elements[m][j]);
+
+          store.impose(new SumInt(column, "==", sum));
+          store.impose(new Alldiff(column));
+        }
+  }
+
+  /**
+   * It executes the program to solve simple Kakro puzzle.
+   *
+   * @param args no parameters
+   */
+  public static void main(String args[]) {
+
+    Kakro example = new Kakro();
+
+    example.model();
+
+    if (example.search()) {
+      System.out.println("Solution(s) found");
+
+      ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
     }
-
-
+  }
 }

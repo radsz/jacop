@@ -28,21 +28,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-
 public enum ViolationMeasure {
-    // violation measure based on how many variable would have to
-    // change their value in order to satisfy the constraint if
-    // it was possible.
-    VARIABLE_BASED, // How many constraints in the constraint decomposition are being
-    // not satisfied.
-    DECOMPOSITION_BASED, // How many values are not correct.
-    VALUE_BASED
-
+  // violation measure based on how many variable would have to
+  // change their value in order to satisfy the constraint if
+  // it was possible.
+  VARIABLE_BASED, // How many constraints in the constraint decomposition are being
+  // not satisfied.
+  DECOMPOSITION_BASED, // How many values are not correct.
+  VALUE_BASED
 }

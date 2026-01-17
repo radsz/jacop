@@ -31,15 +31,13 @@
 package org.jacop.examples.floats;
 
 /**
- * From Hamdy Taha "Operations Research" (8th edition), page 649ff.
- * Fertilizer example.
- * <p>
- * Based on minizinc model by Håkan Kjellerstrand.
+ * From Hamdy Taha "Operations Research" (8th edition), page 649ff. Fertilizer example.
+ *
+ * <p>Based on minizinc model by Håkan Kjellerstrand.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.core.FloatDomain;
@@ -49,81 +47,99 @@ import org.jacop.search.DepthFirstSearch;
 
 public class Markov {
 
-    void markov_chains_taha() {
+  void markov_chains_taha() {
 
-        long T1, T2, T;
-        T1 = System.currentTimeMillis();
+    long T1, T2, T;
+    T1 = System.currentTimeMillis();
 
-        System.out.println("========= markov_chains_taha =========");
+    System.out.println("========= markov_chains_taha =========");
 
-        Store store = new Store();
+    Store store = new Store();
 
-        FloatDomain.setPrecision(1.0e-13);
-        FloatDomain.intervalPrint(false);
+    FloatDomain.setPrecision(1.0e-13);
+    FloatDomain.intervalPrint(false);
 
-        FloatVar[] mean_first_return_time = new FloatVar[3];
-        for (int i = 0; i < 3; i++)
-            mean_first_return_time[i] = new FloatVar(store, "mean_first_return_time[" + i + "]", 0.0, 1.0);
+    FloatVar[] mean_first_return_time = new FloatVar[3];
+    for (int i = 0; i < 3; i++)
+      mean_first_return_time[i] =
+          new FloatVar(store, "mean_first_return_time[" + i + "]", 0.0, 1.0);
 
-        FloatVar[] p = new FloatVar[3];
-        for (int i = 0; i < 3; i++)
-            p[i] = new FloatVar(store, "p[" + i + "]", 0.0, 1.0);
+    FloatVar[] p = new FloatVar[3];
+    for (int i = 0; i < 3; i++) p[i] = new FloatVar(store, "p[" + i + "]", 0.0, 1.0);
 
-        FloatVar tot_cost = new FloatVar(store, "tot_cost", 0.0, 385.0);
+    FloatVar tot_cost = new FloatVar(store, "tot_cost", 0.0, 385.0);
 
-        store.impose(new LinearFloat(new FloatVar[] {p[2], p[0], p[1], p[2]}, new double[] {-1.0, 0.1, 0.3, 0.55}, "==", 0.0));
-        store.impose(new LinearFloat(new FloatVar[] {p[0], p[0], p[1], p[2]}, new double[] {-1.0, 0.3, 0.1, 0.05}, "==", 0.0));
-        store.impose(new LinearFloat(new FloatVar[] {p[1], p[0], p[1], p[2]}, new double[] {-1.0, 0.6, 0.6, 0.4}, "==", 0.0));
-        FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
-        store.impose(new LinearFloat(new FloatVar[] {one, p[0], p[1], p[2]}, new double[] {-1.0, 1.0, 1.0, 1.0}, "==", 0.0));
-        store.impose(new LinearFloat(new FloatVar[] {tot_cost, p[0], p[1], p[2]}, new double[] {-1.0, 100.0, 125.0, 160.0}, "==", 0.0));
+    store.impose(
+        new LinearFloat(
+            new FloatVar[] {p[2], p[0], p[1], p[2]},
+            new double[] {-1.0, 0.1, 0.3, 0.55},
+            "==",
+            0.0));
+    store.impose(
+        new LinearFloat(
+            new FloatVar[] {p[0], p[0], p[1], p[2]},
+            new double[] {-1.0, 0.3, 0.1, 0.05},
+            "==",
+            0.0));
+    store.impose(
+        new LinearFloat(
+            new FloatVar[] {p[1], p[0], p[1], p[2]},
+            new double[] {-1.0, 0.6, 0.6, 0.4},
+            "==",
+            0.0));
+    FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
+    store.impose(
+        new LinearFloat(
+            new FloatVar[] {one, p[0], p[1], p[2]}, new double[] {-1.0, 1.0, 1.0, 1.0}, "==", 0.0));
+    store.impose(
+        new LinearFloat(
+            new FloatVar[] {tot_cost, p[0], p[1], p[2]},
+            new double[] {-1.0, 100.0, 125.0, 160.0},
+            "==",
+            0.0));
 
+    FloatVar[] vars = new FloatVar[7];
+    for (int i = 0; i < 3; i++) vars[i] = p[i];
+    for (int i = 0; i < 3; i++) vars[i + 3] = mean_first_return_time[i];
+    vars[6] = tot_cost;
 
-        FloatVar[] vars = new FloatVar[7];
-        for (int i = 0; i < 3; i++)
-            vars[i] = p[i];
-        for (int i = 0; i < 3; i++)
-            vars[i + 3] = mean_first_return_time[i];
-        vars[6] = tot_cost;
+    System.out.println(
+        "\bVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
 
-        System.out.println("\bVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    SplitSelectFloat<FloatVar> s =
+        new SplitSelectFloat<FloatVar>(store, vars, null); // new SmallestDomainFloat<FloatVar>());
+    label.setAssignSolution(true);
+    // label.setSolutionListener(new PrintOutListener<FloatVar>());
+    label.getSolutionListener().recordSolutions(true);
+    // label.getSolutionListener().searchAll(true);
+    // s.leftFirst = false;
 
-        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, null); //new SmallestDomainFloat<FloatVar>());
-        label.setAssignSolution(true);
-        // label.setSolutionListener(new PrintOutListener<FloatVar>());
-        label.getSolutionListener().recordSolutions(true);
-        // label.getSolutionListener().searchAll(true);
-        //s.leftFirst = false;
+    boolean result = label.labeling(store, s, tot_cost);
 
-        boolean result = label.labeling(store, s, tot_cost);
+    if (result) System.out.println(tot_cost);
+    else System.out.println("NO SOLUTION");
 
+    System.out.println("\nPrecision = " + FloatDomain.precision());
 
-        if (result)
-            System.out.println(tot_cost);
-        else
-            System.out.println("NO SOLUTION");
+    T2 = System.currentTimeMillis();
+    T = T2 - T1;
 
-        System.out.println("\nPrecision = " + FloatDomain.precision());
+    System.out.println("\n\t*** Execution time = " + T + " ms");
+  }
 
-        T2 = System.currentTimeMillis();
-        T = T2 - T1;
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  public static void main(String args[]) {
 
-        System.out.println("\n\t*** Execution time = " + T + " ms");
+    Markov example = new Markov();
 
-
-    }
-
-    /**
-     * It executes the program. 
-     *
-     * @param args no arguments
-     */
-    public static void main(String args[]) {
-
-        Markov example = new Markov();
-
-        example.markov_chains_taha();
-
-    }
+    example.markov_chains_taha();
+  }
 }

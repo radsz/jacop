@@ -41,47 +41,43 @@ import org.jacop.core.IntVar;
 
 class TaskReversedView extends TaskView {
 
-    TaskReversedView(IntVar start, IntVar dur, IntVar res) {
-        super(start, dur, res);
-    }
+  TaskReversedView(IntVar start, IntVar dur, IntVar res) {
+    super(start, dur, res);
+  }
 
-    int lct() {
-        return -start.min();
-    }
+  int lct() {
+    return -start.min();
+  }
 
-    int ect() {
-        return est() + dur.min();
-    }
+  int ect() {
+    return est() + dur.min();
+  }
 
-    int est() {
-        return -start.max() - dur.max();
-    }
+  int est() {
+    return -start.max() - dur.max();
+  }
 
-    // last start time
-    int lst() {
-        return lct() - dur.min();
-    }
+  // last start time
+  int lst() {
+    return lct() - dur.min();
+  }
 
-    long env(long c) {
-        return c * (long) est() + e();
-    }
+  long env(long c) {
+    return c * (long) est() + e();
+  }
 
-    void updateEdgeFind(int storeLevel, int lct) {
-        int max = -lct - dur.min();
-        if (max < start.max())
-            start.domain.inMax(storeLevel, start, max);
-    }
+  void updateEdgeFind(int storeLevel, int lct) {
+    int max = -lct - dur.min();
+    if (max < start.max()) start.domain.inMax(storeLevel, start, max);
+  }
 
-    void updateNotFirstNotLast(int storeLevel, int lct) {
-        int min = -lct;
-        if (min > start.min())
-            start.domain.inMin(storeLevel, start, min);
-    }
+  void updateNotFirstNotLast(int storeLevel, int lct) {
+    int min = -lct;
+    if (min > start.min()) start.domain.inMin(storeLevel, start, min);
+  }
 
-    void updateDetectable(int storeLevel, int lct) {
-        int max = -lct - dur.min();
-        if (max < start.max())
-            start.domain.inMax(storeLevel, start, max);
-    }
-
+  void updateDetectable(int storeLevel, int lct) {
+    int max = -lct - dur.min();
+    if (max < start.max()) start.domain.inMax(storeLevel, start, max);
+  }
 }

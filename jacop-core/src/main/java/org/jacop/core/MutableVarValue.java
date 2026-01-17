@@ -36,49 +36,44 @@ package org.jacop.core;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public interface MutableVarValue {
 
-    /**
-     * It clones the value of mutable variable. It includes the stamp, pointer
-     * to earlier value, and current value of variable.
-     *
-     * @return clone of the mutable variable value.
-     */
-    Object clone();
+  /**
+   * It clones the value of mutable variable. It includes the stamp, pointer to earlier value, and
+   * current value of variable.
+   *
+   * @return clone of the mutable variable value.
+   */
+  Object clone();
 
-    /**
-     * It returns the earlier value of mutable variable.
-     *
-     * @return earlier value of mutable variable.
-     */
-    MutableVarValue previous();
+  /**
+   * It returns the earlier value of mutable variable.
+   *
+   * @return earlier value of mutable variable.
+   */
+  MutableVarValue previous();
 
-    /**
-     * It replaces the earlier value of a mutable variable with value passed as
-     * parameter.
-     *
-     * @param o the previous value for this mutable variable.
-     */
-    void setPrevious(MutableVarValue o);
+  /**
+   * It replaces the earlier value of a mutable variable with value passed as parameter.
+   *
+   * @param o the previous value for this mutable variable.
+   */
+  void setPrevious(MutableVarValue o);
 
-    /**
-     * It sets the stamp of value of mutable variable.
-     *
-     * @param stamp the new stamp of value of mutable variable
-     */
-    void setStamp(int stamp);
+  /**
+   * It sets the stamp of value of mutable variable.
+   *
+   * @param stamp the new stamp of value of mutable variable
+   */
+  void setStamp(int stamp);
 
-    /**
-     * It returns the stamp value of value of mutable variable.
-     *
-     * @return the current stamp of value of mutable variable.
-     */
-    int stamp();
+  /**
+   * It returns the stamp value of value of mutable variable.
+   *
+   * @return the current stamp of value of mutable variable.
+   */
+  int stamp();
 
-    /**
-     * It returns string representation of the current value of mutable
-     * variable.
-     */
-    String toString();
+  /** It returns string representation of the current value of mutable variable. */
+  String toString();
 }

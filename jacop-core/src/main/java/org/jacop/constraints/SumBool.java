@@ -30,14 +30,14 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 
 /*
  * SumBool constraint implements the summation over several
@@ -53,372 +53,344 @@ import java.util.stream.Stream;
 
 public class SumBool extends PrimitiveConstraint {
 
-    Store store;
+  Store store;
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    boolean reified = true;
+  boolean reified = true;
 
-    /*
-     * Defines relations
-     */
-    static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
+  /*
+   * Defines relations
+   */
+  static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
 
-    /*
-     * Defines negated relations
-     */
-    static final byte[] negRel = {ne, //eq=0,
-        gt, //le=1,
-        ge, //lt=2,
-        eq, //ne=3,
-        le, //gt=4,
-        lt  //ge=5;
-    };
+  /*
+   * Defines negated relations
+   */
+  static final byte[] negRel = {
+    ne, // eq=0,
+    gt, // le=1,
+    ge, // lt=2,
+    eq, // ne=3,
+    le, // gt=4,
+    lt // ge=5;
+  };
 
-    /*
-     * It specifies what relations is used by this constraint
-     */
-    public byte relationType;
+  /*
+   * It specifies what relations is used by this constraint
+   */
+  public byte relationType;
 
-    /*
-     * It specifies a list of variables being summed.
-     */
-    IntVar[] x;
+  /*
+   * It specifies a list of variables being summed.
+   */
+  IntVar[] x;
 
-    /*
-     * It specifies variable for the overall sum.
-     */
-    IntVar sum;
+  /*
+   * It specifies variable for the overall sum.
+   */
+  IntVar sum;
 
-    /*
-     * It specifies the number of variables.
-     */
-    int l;
+  /*
+   * It specifies the number of variables.
+   */
+  int l;
 
-    /*
-     * @param store current store
-     * @param list  variables which are being multiplied by weights.
-     * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum   variable containing the sum of weighted variables.
-     * @deprecated SumBool constraint does not use Store parameter any longer.
-     */
-    @Deprecated public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
+  /*
+   * @param store current store
+   * @param list  variables which are being multiplied by weights.
+   * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+   * @param sum   variable containing the sum of weighted variables.
+   * @deprecated SumBool constraint does not use Store parameter any longer.
+   */
+  @Deprecated
+  public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
 
-        checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
-        checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain");
+    checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
+    checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain");
 
-        numberId = idNumber.incrementAndGet();
-        this.relationType = relation(rel);
-        this.store = store;
-        this.sum = sum;
-        x = filterAndOverflow(list); //Arrays.copyOf(list, list.length);
-        this.l = x.length;
+    numberId = idNumber.incrementAndGet();
+    this.relationType = relation(rel);
+    this.store = store;
+    this.sum = sum;
+    x = filterAndOverflow(list); // Arrays.copyOf(list, list.length);
+    this.l = x.length;
 
-        if (l <= 2)
-            queueIndex = 0;
-        else
-            queueIndex = 1;
+    if (l <= 2) queueIndex = 0;
+    else queueIndex = 1;
 
-        setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
+    setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
+  }
+
+  /*
+   * It constructs the constraint SumBool.
+   *
+   * @param store     current store
+   * @param variables variables which are being multiplied by weights.
+   * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+   * @param sum       variable containing the sum of weighted variables.
+   * @deprecated SumBool constraint does not use Store parameter any longer.
+   */
+  @Deprecated
+  public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
+    this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
+  }
+
+  /*
+   * @param list variables which are being multiplied by weights.
+   * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+   * @param sum  variable containing the sum of weighted variables.
+   */
+  public SumBool(IntVar[] list, String rel, IntVar sum) {
+    this(sum.getStore(), list, rel, sum);
+  }
+
+  /*
+   * It constructs the constraint SumBool.
+   *
+   * @param variables variables which are being multiplied by weights.
+   * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+   * @param sum       variable containing the sum of weighted variables.
+   */
+  public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
+    this(variables.toArray(new IntVar[variables.size()]), rel, sum);
+  }
+
+  @Override
+  public void consistency(Store store) {
+    prune(relationType);
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+    prune(negRel[relationType]);
+  }
+
+  private void prune(byte rel) {
+
+    int min = 0;
+    int max = 0;
+
+    for (int i = 0; i < l; i++) {
+      IntDomain xd = x[i].dom();
+      min += xd.min();
+      max += xd.max();
     }
 
-    /*
-     * It constructs the constraint SumBool.
-     *
-     * @param store     current store
-     * @param variables variables which are being multiplied by weights.
-     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum       variable containing the sum of weighted variables.
-     * @deprecated SumBool constraint does not use Store parameter any longer.
-     */
-    @Deprecated public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
-        this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
-    }
+    switch (rel) {
+      case eq:
+        sum.domain.in(store.level, sum, min, max);
 
-    /*
-     * @param list variables which are being multiplied by weights.
-     * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum  variable containing the sum of weighted variables.
-     */
-    public SumBool(IntVar[] list, String rel, IntVar sum) {
-        this(sum.getStore(), list, rel, sum);
-    }
+        if (sum.singleton() && min != max) {
+          int sumValue = sum.value();
+          if (sumValue == min)
+            for (int i = 0; i < l; i++)
+              if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 0);
 
-    /*
-     * It constructs the constraint SumBool.
-     *
-     * @param variables variables which are being multiplied by weights.
-     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum       variable containing the sum of weighted variables.
-     */
-    public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
-        this(variables.toArray(new IntVar[variables.size()]), rel, sum);
-    }
-
-    @Override public void consistency(Store store) {
-        prune(relationType);
-    }
-
-    @Override public void notConsistency(Store store) {
-        prune(negRel[relationType]);
-    }
-
-    private void prune(byte rel) {
-
-        int min = 0;
-        int max = 0;
-
-        for (int i = 0; i < l; i++) {
-            IntDomain xd = x[i].dom();
-            min += xd.min();
-            max += xd.max();
+          if (sumValue == max)
+            for (int i = 0; i < l; i++)
+              if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 1);
         }
+        break;
+      case le:
+        sum.domain.inMin(store.level, sum, min);
 
-        switch (rel) {
-            case eq:
+        if (!reified) if (max <= sum.min()) removeConstraint();
 
-                sum.domain.in(store.level, sum, min, max);
+        if (sum.singleton(min) && min != max) {
 
-                if (sum.singleton() && min != max) {
-                    int sumValue = sum.value();
-                    if (sumValue == min)
-                        for (int i = 0; i < l; i++)
-                            if (!x[i].singleton())
-                                x[i].domain.inValue(store.level, x[i], 0);
-
-                    if (sumValue == max)
-                        for (int i = 0; i < l; i++)
-                            if (!x[i].singleton())
-                                x[i].domain.inValue(store.level, x[i], 1);
-                }
-                break;
-            case le:
-
-                sum.domain.inMin(store.level, sum, min);
-
-                if (!reified)
-                    if (max <= sum.min())
-                        removeConstraint();
-
-                if (sum.singleton(min) && min != max) {
-
-                    for (int i = 0; i < l; i++)
-                        if (!x[i].singleton())
-                            x[i].domain.inValue(store.level, x[i], 0);
-                }
-                break;
-            case lt:
-
-                sum.domain.inMin(store.level, sum, min + 1);
-
-                if (!reified)
-                    if (max < sum.min())
-                        removeConstraint();
-
-                if (sum.singleton(min + 1) && min != max) {
-
-                    for (int i = 0; i < l; i++)
-                        if (!x[i].singleton())
-                            x[i].domain.inValue(store.level, x[i], 0);
-
-                }
-                break;
-            case ne:
-
-                if (min == max)
-                    sum.domain.inComplement(store.level, sum, min);
-
-                int sumMin = sum.min() - max;
-                int sumMax = sum.max() - min;
-                if (sumMax - sumMin == 1)
-                    for (int i = 0; i < l; i++)
-                        if (!x[i].singleton())
-                            x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
-                break;
-            case gt:
-
-                sum.domain.inMax(store.level, sum, max - 1);
-
-                if (!reified)
-                    if (min > sum.max())
-                        removeConstraint();
-
-                if (sum.singleton(max - 1) && min != max) {
-
-                    for (int i = 0; i < l; i++)
-                        if (!x[i].singleton())
-                            x[i].domain.inValue(store.level, x[i], 1);
-                }
-                break;
-            case ge:
-
-                sum.domain.inMax(store.level, sum, max);
-
-                if (!reified)
-                    if (min >= sum.max())
-                        removeConstraint();
-
-                if (sum.singleton(max) && min != max) {
-
-                    for (int i = 0; i < l; i++)
-                        if (!x[i].singleton())
-                            x[i].domain.inValue(store.level, x[i], 1);
-                }
-                break;
-
-            default:
-                throw new RuntimeException("Internal error in SumBool");
+          for (int i = 0; i < l; i++)
+            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 0);
         }
-    }
+        break;
+      case lt:
+        sum.domain.inMin(store.level, sum, min + 1);
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+        if (!reified) if (max < sum.min()) removeConstraint();
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+        if (sum.singleton(min + 1) && min != max) {
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public void impose(Store store) {
-
-        if (x == null)
-            return;
-
-        reified = false;
-
-        super.impose(store);
-
-    }
-
-    @Override public boolean satisfied() {
-
-        return entailed(relationType);
-
-    }
-
-    @Override public boolean notSatisfied() {
-
-        return entailed(negRel[relationType]);
-
-    }
-
-    private boolean entailed(byte rel) {
-
-        int min = 0;
-        int max = 0;
-
-        for (int i = 0; i < l; i++) {
-            IntDomain xd = x[i].dom();
-            min += xd.min();
-            max += xd.max();
+          for (int i = 0; i < l; i++)
+            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 0);
         }
+        break;
+      case ne:
+        if (min == max) sum.domain.inComplement(store.level, sum, min);
 
-        switch (rel) {
-            case eq:
-                return sum.singleton(min) && min == max;
-            case lt:
-                return max < sum.min();
-            case le:
-                return max <= sum.min();
-            case ne:
-                return sum.min() > max || sum.max() < min; //sum.singleton() && min == max && sum.min() != min;
-            case gt:
-                return min > sum.max();
-            case ge:
-                return min >= sum.max();
-            default:
-                return false;
+        int sumMin = sum.min() - max;
+        int sumMax = sum.max() - min;
+        if (sumMax - sumMin == 1)
+          for (int i = 0; i < l; i++)
+            if (!x[i].singleton()) x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
+        break;
+      case gt:
+        sum.domain.inMax(store.level, sum, max - 1);
+
+        if (!reified) if (min > sum.max()) removeConstraint();
+
+        if (sum.singleton(max - 1) && min != max) {
+
+          for (int i = 0; i < l; i++)
+            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 1);
         }
+        break;
+      case ge:
+        sum.domain.inMax(store.level, sum, max);
+
+        if (!reified) if (min >= sum.max()) removeConstraint();
+
+        if (sum.singleton(max) && min != max) {
+
+          for (int i = 0; i < l; i++)
+            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 1);
+        }
+        break;
+
+      default:
+        throw new RuntimeException("Internal error in SumBool");
+    }
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    if (x == null) return;
+
+    reified = false;
+
+    super.impose(store);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    return entailed(relationType);
+  }
+
+  @Override
+  public boolean notSatisfied() {
+
+    return entailed(negRel[relationType]);
+  }
+
+  private boolean entailed(byte rel) {
+
+    int min = 0;
+    int max = 0;
+
+    for (int i = 0; i < l; i++) {
+      IntDomain xd = x[i].dom();
+      min += xd.min();
+      max += xd.max();
     }
 
-    public byte relation(String r) {
-        if (r.equals("=="))
-            return eq;
-        else if (r.equals("="))
-            return eq;
-        else if (r.equals("<"))
-            return lt;
-        else if (r.equals("<="))
-            return le;
-        else if (r.equals("=<"))
-            return le;
-        else if (r.equals("!="))
-            return ne;
-        else if (r.equals(">"))
-            return gt;
-        else if (r.equals(">="))
-            return ge;
-        else if (r.equals("=>"))
-            return ge;
-        else {
-            System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
-            return eq;
-        }
+    switch (rel) {
+      case eq:
+        return sum.singleton(min) && min == max;
+      case lt:
+        return max < sum.min();
+      case le:
+        return max <= sum.min();
+      case ne:
+        return sum.min() > max
+            || sum.max() < min; // sum.singleton() && min == max && sum.min() != min;
+      case gt:
+        return min > sum.max();
+      case ge:
+        return min >= sum.max();
+      default:
+        return false;
+    }
+  }
+
+  public byte relation(String r) {
+    if (r.equals("==")) return eq;
+    else if (r.equals("=")) return eq;
+    else if (r.equals("<")) return lt;
+    else if (r.equals("<=")) return le;
+    else if (r.equals("=<")) return le;
+    else if (r.equals("!=")) return ne;
+    else if (r.equals(">")) return gt;
+    else if (r.equals(">=")) return ge;
+    else if (r.equals("=>")) return ge;
+    else {
+      System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
+      return eq;
+    }
+  }
+
+  public String rel2String() {
+    switch (relationType) {
+      case eq:
+        return "==";
+      case lt:
+        return "<";
+      case le:
+        return "<=";
+      case ne:
+        return "!=";
+      case gt:
+        return ">";
+      case ge:
+        return ">=";
+      default:
+        return "??";
+    }
+  }
+
+  IntVar[] filterAndOverflow(IntVar[] x) {
+
+    List<IntVar> ls = new ArrayList<>();
+
+    int sMin = 0;
+    int sMax = 0;
+    for (int i = 0; i < x.length; i++) {
+      int n1 = x[i].min();
+      int n2 = x[i].max();
+
+      sMin = Math.addExact(sMin, n1);
+      sMax = Math.addExact(sMax, n2);
+
+      if (x[i].max() != 0) ls.add(x[i]);
     }
 
-    public String rel2String() {
-        switch (relationType) {
-            case eq:
-                return "==";
-            case lt:
-                return "<";
-            case le:
-                return "<=";
-            case ne:
-                return "!=";
-            case gt:
-                return ">";
-            case ge:
-                return ">=";
-            default:
-                return "??";
-        }
+    return ls.toArray(new IntVar[ls.size()]);
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer(id());
+    result.append(" : SumBool( [ ");
+
+    for (int i = 0; i < l; i++) {
+      result.append(x[i]);
+      if (i < l - 1) result.append(", ");
     }
+    result.append("], ");
 
-    IntVar[] filterAndOverflow(IntVar[] x) {
+    result.append(rel2String()).append(", ").append(sum).append(" )");
 
-        List<IntVar> ls = new ArrayList<>();
-
-        int sMin = 0;
-        int sMax = 0;
-        for (int i = 0; i < x.length; i++) {
-            int n1 = x[i].min();
-            int n2 = x[i].max();
-
-            sMin = Math.addExact(sMin, n1);
-            sMax = Math.addExact(sMax, n2);
-
-            if (x[i].max() != 0)
-                ls.add(x[i]);
-        }
-
-        return ls.toArray(new IntVar[ls.size()]);
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer(id());
-        result.append(" : SumBool( [ ");
-
-        for (int i = 0; i < l; i++) {
-            result.append(x[i]);
-            if (i < l - 1)
-                result.append(", ");
-        }
-        result.append("], ");
-
-        result.append(rel2String()).append(", ").append(sum).append(" )");
-
-        return result.toString();
-
-    }
-
+    return result.toString();
+  }
 }

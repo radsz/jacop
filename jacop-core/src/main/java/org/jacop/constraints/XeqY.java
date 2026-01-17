@@ -30,117 +30,115 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Constraints X #= Y
- * <p>
- * Domain consistency is used.
+ *
+ * <p>Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XeqY extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies a left hand variable in equality constraint.
-     */
-    final public IntVar x;
+  /** It specifies a left hand variable in equality constraint. */
+  public final IntVar x;
 
-    /**
-     * It specifies a right hand variable in equality constraint.
-     */
-    final public IntVar y;
+  /** It specifies a right hand variable in equality constraint. */
+  public final IntVar y;
 
-    /**
-     * It constructs constraint X = Y.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     */
-    public XeqY(IntVar x, IntVar y) {
+  /**
+   * It constructs constraint X = Y.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   */
+  public XeqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
+    this.x = x;
+    this.y = y;
 
-        setScope(x, y);
+    setScope(x, y);
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    if (x == y) {
+      // If x and y are the same, XeqY is trivially consistent.
+      return;
     }
 
-    @Override public void impose(Store store) {
+    super.impose(store);
+  }
 
-        if (x == y) {
-            // If x and y are the same, XeqY is trivially consistent.
-            return;
-        }
+  @Override
+  public void consistency(final Store store) {
 
-        super.impose(store);
+    do {
 
-    }
+      // domain consistency
+      x.domain.in(store.level, x, y.domain);
 
-    @Override public void consistency(final Store store) {
+      store.propagationHasOccurred = false;
 
-        do {
+      y.domain.in(store.level, y, x.domain);
 
-            // domain consistency
-            x.domain.in(store.level, x, y.domain);
+    } while (store.propagationHasOccurred);
+  }
 
-            store.propagationHasOccurred = false;
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-            y.domain.in(store.level, y, x.domain);
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-        } while (store.propagationHasOccurred);
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public void notConsistency(final Store store) {
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+    if (y.singleton()) x.domain.inComplement(store.level, x, y.value());
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.GROUND;
-    }
+    if (x.singleton()) y.domain.inComplement(store.level, y, x.value());
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return !x.domain.isIntersecting(y.domain);
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public boolean satisfied() {
+    // return grounded() && x.min() == y.min();  // inefficient grounded() :(
+    int xMin = x.min();
+    return x == y || x.singleton(xMin) && y.singleton(xMin);
+  }
 
-        if (y.singleton())
-            x.domain.inComplement(store.level, x, y.value());
-
-        if (x.singleton())
-            y.domain.inComplement(store.level, y, x.value());
-
-    }
-
-    @Override public boolean notSatisfied() {
-        return !x.domain.isIntersecting(y.domain);
-    }
-
-    @Override public boolean satisfied() {
-        // return grounded() && x.min() == y.min();  // inefficient grounded() :(
-        int xMin = x.min();
-        return x == y || x.singleton(xMin) && y.singleton(xMin);
-    }
-
-    @Override public String toString() {
-        return id() + " : XeqY(" + x + ", " + y + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XeqY(" + x + ", " + y + " )";
+  }
 }

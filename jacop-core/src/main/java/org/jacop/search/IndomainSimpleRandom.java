@@ -34,30 +34,22 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
- * IndomainRandom - implements enumeration method based on the selection of the
- * random value in the domain of FD variable. Can split domains into multiple
- * intervals
+ * IndomainRandom - implements enumeration method based on the selection of the random value in the
+ * domain of FD variable. Can split domains into multiple intervals
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class IndomainSimpleRandom<T extends IntVar> implements Indomain<T> {
 
-    /**
-     * It does not achieve uniform probability but it does work faster than
-     * IndomainRandom.
-     */
-    public IndomainSimpleRandom() {
-    }
+  /** It does not achieve uniform probability but it does work faster than IndomainRandom. */
+  public IndomainSimpleRandom() {}
 
-    public int indomain(IntVar var) {
+  public int indomain(IntVar var) {
 
-        IntDomain dom = var.domain;
+    IntDomain dom = var.domain;
 
-        return dom.getRandomValue();
-
-    }
-
+    return dom.getRandomValue();
+  }
 }

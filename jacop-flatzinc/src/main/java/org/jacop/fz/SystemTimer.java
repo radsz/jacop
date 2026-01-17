@@ -31,7 +31,7 @@ package org.jacop.fz;
 
 public class SystemTimer implements Timer {
 
-    public long getCPUTime() {
-	return System.nanoTime();
-    }
+  public long getCPUTime() {
+    return System.nanoTime();
+  }
 }

@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.fz;
 
 import org.jacop.core.FailException;
@@ -43,93 +42,89 @@ import org.jacop.search.SelectChoicePoint;
  * @author Krzysztof Kuchcinki
  * @version 4.10
  */
-
 public class FlatzincLoader {
 
-    Options opt;
+  Options opt;
 
-    Parser parser;
+  Parser parser;
 
-    /**
-     * It parses the provided file and parsing parameters and creates the JaCoP model..
-     *
-     * @param args parameters describing the flatzinc file containing the problem to be solved as well as options for problem solving.
-     *             <p>
-     *             TODO what are the conditions for different exceptions being thrown? Write little info below.
-     */
+  /**
+   * It parses the provided file and parsing parameters and creates the JaCoP model..
+   *
+   * @param args parameters describing the flatzinc file containing the problem to be solved as well
+   *     as options for problem solving.
+   *     <p>TODO what are the conditions for different exceptions being thrown? Write little info
+   *     below.
+   */
+  public FlatzincLoader(String[] args) {
 
+    opt = new Options(args);
+    opt.doNotRunSearch();
+  }
 
-    public FlatzincLoader(String[] args) {
+  public void load() {
 
-        opt = new Options(args);
-        opt.doNotRunSearch();
+    if (opt.getVerbose())
+      System.out.println("%% Flatzinc2JaCoP: compiling and executing " + opt.getFileName());
 
+    parser = new Parser(opt.getFile());
+    parser.setOptions(opt);
+
+    try {
+
+      parser.model();
+
+    } catch (FailException e) {
+      System.out.println(
+          "=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+      // } catch (ArithmeticException e) {
+      //     System.err.println("%% Evaluation of model resulted in an overflow.");
+    } catch (ParseException e) {
+      System.out.println("%% Parser exception " + e);
+    } catch (TokenMgrError e) {
+      System.out.println("%% Parser exception " + e);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      System.out.println("%% JaCoP internal error. Array out of bound exception " + e);
+      if (e.getStackTrace().length > 0) System.out.println("%%\t" + e.getStackTrace()[0]);
+    } catch (OutOfMemoryError e) {
+      System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
+    } catch (StackOverflowError e) {
+      System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
     }
+  }
 
-    public void load() {
+  public Store getStore() {
+    return parser.store;
+  }
 
-        if (opt.getVerbose())
-            System.out.println("%% Flatzinc2JaCoP: compiling and executing " + opt.getFileName());
+  @SuppressWarnings("unchecked")
+  public DepthFirstSearch<Var> getDFS() {
+    return parser.solver.flatzincDFS;
+  }
 
-        parser = new Parser(opt.getFile());
-        parser.setOptions(opt);
+  @SuppressWarnings("unchecked")
+  public SelectChoicePoint<Var> getSelectChoicePoint() {
+    return parser.solver.flatzincVariableSelection;
+  }
 
-        try {
+  public Var getCost() {
+    return parser.solver.flatzincCost;
+  }
 
-            parser.model();
+  @SuppressWarnings("unchecked")
+  public Solve<Var> getSolve() {
+    return parser.solver;
+  }
 
-        } catch (FailException e) {
-            System.out.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
-            // } catch (ArithmeticException e) {
-            //     System.err.println("%% Evaluation of model resulted in an overflow.");
-        } catch (ParseException e) {
-            System.out.println("%% Parser exception " + e);
-        } catch (TokenMgrError e) {
-            System.out.println("%% Parser exception " + e);
-        } catch (ArrayIndexOutOfBoundsException e) {
-            System.out.println("%% JaCoP internal error. Array out of bound exception " + e);
-            if (e.getStackTrace().length > 0)
-                System.out.println("%%\t" + e.getStackTrace()[0]);
-        } catch (OutOfMemoryError e) {
-            System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
-        } catch (StackOverflowError e) {
-            System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
-        }
+  public Tables getTables() {
+    return parser.dict;
+  }
 
-    }
+  public SearchItem<Var> getSearch() {
+    return getSolve().getSearch();
+  }
 
-    public Store getStore() {
-        return parser.store;
-    }
-
-    @SuppressWarnings("unchecked")
-    public DepthFirstSearch<Var> getDFS() {
-        return parser.solver.flatzincDFS;
-    }
-
-    @SuppressWarnings("unchecked")
-    public SelectChoicePoint<Var> getSelectChoicePoint() {
-        return parser.solver.flatzincVariableSelection;
-    }
-
-    public Var getCost() {
-        return parser.solver.flatzincCost;
-    }
-
-    @SuppressWarnings("unchecked")
-    public Solve<Var> getSolve() {
-        return parser.solver;
-    }
-
-    public Tables getTables() {
-        return parser.dict;
-    }
-
-    public SearchItem<Var> getSearch() {
-        return getSolve().getSearch();
-    }
-
-    public Options getOptions() {
-        return opt;
-    }
+  public Options getOptions() {
+    return opt;
+  }
 }

@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.*;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -39,152 +40,138 @@ import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
 import org.jacop.util.fsm.FSMTransition;
 
-import java.util.*;
-
 /**
- * It constructs a Sequence constraint. The sequence constraint
- * establishes the following relationship: For a given list of
- * variables (list) and the length of each sequence (q) it makes
- * sure that each subsequence of consecutive variables from the list
- * contains between min and max values from the given set.
+ * It constructs a Sequence constraint. The sequence constraint establishes the following
+ * relationship: For a given list of variables (list) and the length of each sequence (q) it makes
+ * sure that each subsequence of consecutive variables from the list contains between min and max
+ * values from the given set.
  *
  * @author Radoslaw Szymanek and Polina Makeeva
  * @version 4.10
  */
-
 public class Sequence extends DecomposedConstraint<Constraint> {
 
-    IntervalDomain set;
-    int min;
-    int max;
-    int q;
-    IntVar[] list;
-    List<Constraint> constraints;
+  IntervalDomain set;
+  int min;
+  int max;
+  int q;
+  IntVar[] list;
+  List<Constraint> constraints;
 
-    /**
-     * It creates a Sequence constraint.
-     *
-     * @param list variables which assignment is constrained by Sequence constraint.
-     * @param set  set of values which occurrence is counted within each sequence.
-     * @param q    the length of the sequence
-     * @param min  the minimal occurrences of values from set within a sequence.
-     * @param max  the maximal occurrences of values from set within a sequence.
-     */
-    public Sequence(IntVar[] list, IntervalDomain set, int q, int min, int max) {
+  /**
+   * It creates a Sequence constraint.
+   *
+   * @param list variables which assignment is constrained by Sequence constraint.
+   * @param set set of values which occurrence is counted within each sequence.
+   * @param q the length of the sequence
+   * @param min the minimal occurrences of values from set within a sequence.
+   * @param max the maximal occurrences of values from set within a sequence.
+   */
+  public Sequence(IntVar[] list, IntervalDomain set, int q, int min, int max) {
 
-        checkInputForNullness("list", list);
-        checkInputForNullness("set", new Object[] {set});
+    checkInputForNullness("list", list);
+    checkInputForNullness("set", new Object[] {set});
 
-        this.min = min;
-        this.max = max;
+    this.min = min;
+    this.max = max;
 
-        this.list = Arrays.copyOf(list, list.length);
-        this.set = set.clone();
-        this.q = q;
+    this.list = Arrays.copyOf(list, list.length);
+    this.set = set.clone();
+    this.q = q;
+  }
 
-    }
+  @Override
+  public void imposeDecomposition(Store store) {
 
-    @Override public void imposeDecomposition(Store store) {
+    if (constraints == null) constraints = decompose(store);
 
-        if (constraints == null)
-            constraints = decompose(store);
+    for (Constraint c : constraints) store.impose(c, queueIndex);
+  }
 
-        for (Constraint c : constraints)
-            store.impose(c, queueIndex);
+  /**
+   * Preferred and default option of decomposing Sequence constraint.
+   *
+   * @param sequence sequence constraint to be decomposed by regular.
+   * @return a list of constraints that are used to decompose the sequence constraints.
+   */
+  public static List<Constraint> decomposeByRegular(Sequence sequence) {
 
-    }
+    IntDomain setComplement = new IntervalDomain();
+    for (IntVar var : sequence.list) setComplement.addDom(var.domain);
+    setComplement = setComplement.subtract(sequence.set);
 
-    /**
-     * Preferred and default option of decomposing Sequence constraint.
-     *
-     * @param sequence sequence constraint to be decomposed by regular.
-     * @return a list of constraints that are used to decompose the sequence constraints.
-     */
-    public static List<Constraint> decomposeByRegular(Sequence sequence) {
+    FSM fsm = new FSM();
 
-        IntDomain setComplement = new IntervalDomain();
-        for (IntVar var : sequence.list)
-            setComplement.addDom(var.domain);
-        setComplement = setComplement.subtract(sequence.set);
+    fsm.initState = new FSMState();
+    fsm.allStates.add(fsm.initState);
 
-        FSM fsm = new FSM();
+    Map<FSMState, Integer> mappingQuantity = new HashMap<FSMState, Integer>();
+    Map<String, FSMState> mappingString = new HashMap<String, FSMState>();
 
-        fsm.initState = new FSMState();
-        fsm.allStates.add(fsm.initState);
+    mappingQuantity.put(fsm.initState, 0);
+    mappingString.put("", fsm.initState);
 
-        Map<FSMState, Integer> mappingQuantity = new HashMap<FSMState, Integer>();
-        Map<String, FSMState> mappingString = new HashMap<String, FSMState>();
+    for (int i = 0; i < sequence.q; i++) {
+      Map<String, FSMState> mappingStringNext = new HashMap<String, FSMState>();
 
-        mappingQuantity.put(fsm.initState, 0);
-        mappingString.put("", fsm.initState);
+      for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+        String stateString = entry.getKey();
+        FSMState state = entry.getValue();
 
-        for (int i = 0; i < sequence.q; i++) {
-            Map<String, FSMState> mappingStringNext = new HashMap<String, FSMState>();
-
-            for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
-                String stateString = entry.getKey();
-                FSMState state = entry.getValue();
-
-                if (mappingQuantity.get(state) < sequence.max) {
-                    // transition 1 (within a set) is allowed
-                    FSMState nextState = new FSMState();
-                    state.addTransition(new FSMTransition(sequence.set, nextState));
-                    mappingStringNext.put(stateString + "1", nextState);
-                    mappingQuantity.put(nextState, mappingQuantity.get(state) + 1);
-                }
-
-                if (mappingQuantity.get(state) + (sequence.q - i) > sequence.min) {
-                    // transition 0 (outside set) is allowed
-                    FSMState nextState = new FSMState();
-                    state.addTransition(new FSMTransition(setComplement, nextState));
-                    mappingStringNext.put(stateString + "0", nextState);
-                    mappingQuantity.put(nextState, mappingQuantity.get(state));
-                }
-            }
-
-            fsm.allStates.addAll(mappingString.values());
-            mappingString = mappingStringNext;
-
+        if (mappingQuantity.get(state) < sequence.max) {
+          // transition 1 (within a set) is allowed
+          FSMState nextState = new FSMState();
+          state.addTransition(new FSMTransition(sequence.set, nextState));
+          mappingStringNext.put(stateString + "1", nextState);
+          mappingQuantity.put(nextState, mappingQuantity.get(state) + 1);
         }
 
-        fsm.allStates.addAll(mappingString.values());
-        fsm.finalStates.addAll(mappingString.values());
-
-        for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
-            String description = entry.getKey();
-            FSMState state = entry.getValue();
-
-            String one = description.substring(1) + "1";
-
-            FSMState predecessor = state;
-            FSMState successor = mappingString.get(one);
-            if (successor != null)
-                predecessor.addTransition(new FSMTransition(sequence.set, successor));
-
-            String zero = description.substring(1) + "0";
-            successor = mappingString.get(zero);
-            if (successor != null)
-                predecessor.addTransition(new FSMTransition(setComplement, successor));
+        if (mappingQuantity.get(state) + (sequence.q - i) > sequence.min) {
+          // transition 0 (outside set) is allowed
+          FSMState nextState = new FSMState();
+          state.addTransition(new FSMTransition(setComplement, nextState));
+          mappingStringNext.put(stateString + "0", nextState);
+          mappingQuantity.put(nextState, mappingQuantity.get(state));
         }
+      }
 
-        fsm.resize();
-
-        List<Constraint> constraints = new ArrayList<Constraint>();
-        constraints.add(new Regular(fsm, sequence.list));
-
-        return constraints;
-
+      fsm.allStates.addAll(mappingString.values());
+      mappingString = mappingStringNext;
     }
 
-    @Override public List<Constraint> decompose(Store store) {
+    fsm.allStates.addAll(mappingString.values());
+    fsm.finalStates.addAll(mappingString.values());
 
-        if (constraints == null) {
-            constraints = decomposeByRegular(this);
-        }
+    for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+      String description = entry.getKey();
+      FSMState state = entry.getValue();
 
-        return constraints;
+      String one = description.substring(1) + "1";
 
+      FSMState predecessor = state;
+      FSMState successor = mappingString.get(one);
+      if (successor != null) predecessor.addTransition(new FSMTransition(sequence.set, successor));
+
+      String zero = description.substring(1) + "0";
+      successor = mappingString.get(zero);
+      if (successor != null) predecessor.addTransition(new FSMTransition(setComplement, successor));
     }
 
+    fsm.resize();
 
+    List<Constraint> constraints = new ArrayList<Constraint>();
+    constraints.add(new Regular(fsm, sequence.list));
+
+    return constraints;
+  }
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    if (constraints == null) {
+      constraints = decomposeByRegular(this);
+    }
+
+    return constraints;
+  }
 }

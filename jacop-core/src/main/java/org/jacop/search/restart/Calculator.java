@@ -38,59 +38,52 @@ import org.jacop.search.ConsistencyListener;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public abstract class Calculator implements ConsistencyListener {
 
-    long numberFails = 0;
+  long numberFails = 0;
 
-    long failLimit;
+  long failLimit;
 
-    ConsistencyListener child;
+  ConsistencyListener child;
 
-    public abstract void newLimit();
+  public abstract void newLimit();
 
-    /**
-     * It is executed right after consistency of the current search node. The
-     * return code specifies if the search should continue with or exit the
-     * current search node.
-     */
-    public boolean executeAfterConsistency(boolean consistent) {
+  /**
+   * It is executed right after consistency of the current search node. The return code specifies if
+   * the search should continue with or exit the current search node.
+   */
+  public boolean executeAfterConsistency(boolean consistent) {
 
-        if (child != null)
-            child.executeAfterConsistency(consistent);
+    if (child != null) child.executeAfterConsistency(consistent);
 
-        if (numberFails >= failLimit)
-            return false;
-        else if (!consistent)
-            numberFails++;
+    if (numberFails >= failLimit) return false;
+    else if (!consistent) numberFails++;
 
-        return consistent;
-    }
+    return consistent;
+  }
 
-    public void setFailLimit(int limit) {
+  public void setFailLimit(int limit) {
 
-        failLimit = limit;
-    }
+    failLimit = limit;
+  }
 
-    public boolean pointsExhausted() {
-        return numberFails >= failLimit;
-    }
+  public boolean pointsExhausted() {
+    return numberFails >= failLimit;
+  }
 
-    public long getFailLimit() {
+  public long getFailLimit() {
 
-        return failLimit;
-    }
+    return failLimit;
+  }
 
-    public long getNumberFails() {
+  public long getNumberFails() {
 
-        return numberFails;
-    }
+    return numberFails;
+  }
 
-    public void setChildrenListeners(ConsistencyListener[] children) {
-    }
+  public void setChildrenListeners(ConsistencyListener[] children) {}
 
-    public void setChildrenListeners(ConsistencyListener child) {
-        this.child = child;
-    }
-
+  public void setChildrenListeners(ConsistencyListener child) {
+    this.child = child;
+  }
 }

@@ -28,15 +28,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
-import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 
 /*
  * CumulativeUnaryOptional implements the scheduling constraint for
@@ -48,169 +46,201 @@ import java.util.stream.Stream;
 
 public class CumulativeUnaryOptional extends CumulativeUnary {
 
-    IntVar[] opt;
+  IntVar[] opt;
 
-    ProfileOptional up;
+  ProfileOptional up;
 
-    /**
-     * It creates a cumulative constraint.
-     *
-     * @param starts    variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit     the overall limit of resources which has to be used.
-     * @param opt       variables informing whether the tasks is present or not.
-     */
-    public CumulativeUnaryOptional(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, IntVar[] opt) {
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   * @param opt variables informing whether the tasks is present or not.
+   */
+  public CumulativeUnaryOptional(
+      IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, IntVar[] opt) {
 
-        super(starts, durations, resources, limit);
+    super(starts, durations, resources, limit);
 
-        this.opt = opt;
+    this.opt = opt;
 
-        up = new ProfileOptional(limit);
+    up = new ProfileOptional(limit);
 
-        setScope(Stream.concat(
-                               Stream.concat(
-                                             Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
-                                             Stream.concat(Arrays.stream(resources), Stream.of(limit))),
-                               Arrays.stream(opt)));
-    }
+    setScope(
+        Stream.concat(
+            Stream.concat(
+                Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
+                Stream.concat(Arrays.stream(resources), Stream.of(limit))),
+            Arrays.stream(opt)));
+  }
 
-    /**
-     * It creates a cumulative constraint.
-     *
-     * @param starts    variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit     the overall limit of resources which has to be used.
-     * @param opt       variables informing whether the tasks is present or not.
-     * @param doProfile defines whether to do profile-based propagation (true) or not (false); default is false
-     */
-    public CumulativeUnaryOptional(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit, IntVar[] opt, boolean doProfile) {
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   * @param opt variables informing whether the tasks is present or not.
+   * @param doProfile defines whether to do profile-based propagation (true) or not (false); default
+   *     is false
+   */
+  public CumulativeUnaryOptional(
+      IntVar[] starts,
+      IntVar[] durations,
+      IntVar[] resources,
+      IntVar limit,
+      IntVar[] opt,
+      boolean doProfile) {
 
-        this(starts, durations, resources, limit, opt);
+    this(starts, durations, resources, limit, opt);
 
-        this.doProfile = doProfile;
-    }
+    this.doProfile = doProfile;
+  }
 
-    /**
-     * It creates a cumulative constraint.
-     *
-     * @param starts    variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit     the overall limit of resources which has to be used.
-     * @param opt       variables informing whether the tasks is present or not.
-     * @param doProfile defines whether to do profile-based propagation (true) or not (false); 
-     * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false); default is true
-     */
-    public CumulativeUnaryOptional(IntVar[] starts, IntVar[] durations, IntVar[] resources, IntVar limit,
-                                   IntVar[] opt, boolean doProfile, boolean doEdgeFind) {
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   * @param opt variables informing whether the tasks is present or not.
+   * @param doProfile defines whether to do profile-based propagation (true) or not (false);
+   * @param doEdgeFind defines whether to do edge finding propagation (true) or not (false); default
+   *     is true
+   */
+  public CumulativeUnaryOptional(
+      IntVar[] starts,
+      IntVar[] durations,
+      IntVar[] resources,
+      IntVar limit,
+      IntVar[] opt,
+      boolean doProfile,
+      boolean doEdgeFind) {
 
-        this(starts, durations, resources, limit, opt);
+    this(starts, durations, resources, limit, opt);
 
-        this.doProfile = doProfile;
-        this.doEdgeFind = doEdgeFind;
-    }
+    this.doProfile = doProfile;
+    this.doEdgeFind = doEdgeFind;
+  }
 
-    /**
-     * It creates a cumulative constraint.
-     *
-     * @param starts    variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit     the overall limit of resources which has to be used.
-     * @param opt       variables informing whether the tasks is present or not.
-     */
-    public CumulativeUnaryOptional(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources,
-                                   IntVar limit, List<? extends IntVar> opt) {
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   * @param opt variables informing whether the tasks is present or not.
+   */
+  public CumulativeUnaryOptional(
+      List<? extends IntVar> starts,
+      List<? extends IntVar> durations,
+      List<? extends IntVar> resources,
+      IntVar limit,
+      List<? extends IntVar> opt) {
 
-        this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
-             resources.toArray(new IntVar[resources.size()]), limit, opt.toArray(new IntVar[opt.size()]));
+    this(
+        starts.toArray(new IntVar[starts.size()]),
+        durations.toArray(new IntVar[durations.size()]),
+        resources.toArray(new IntVar[resources.size()]),
+        limit,
+        opt.toArray(new IntVar[opt.size()]));
+  }
 
-    }
+  /**
+   * It creates a cumulative constraint.
+   *
+   * @param starts variables denoting starts of the tasks.
+   * @param durations variables denoting durations of the tasks.
+   * @param resources variables denoting resource usage of the tasks.
+   * @param limit the overall limit of resources which has to be used.
+   * @param opt variables informing whether the tasks is present or not.
+   * @param doProfile defines whether to do profile-based propagation (true) or not (false); default
+   *     is false
+   */
+  public CumulativeUnaryOptional(
+      List<? extends IntVar> starts,
+      List<? extends IntVar> durations,
+      List<? extends IntVar> resources,
+      IntVar limit,
+      List<? extends IntVar> opt,
+      boolean doProfile) {
 
-    /**
-     * It creates a cumulative constraint.
-     *
-     * @param starts    variables denoting starts of the tasks.
-     * @param durations variables denoting durations of the tasks.
-     * @param resources variables denoting resource usage of the tasks.
-     * @param limit     the overall limit of resources which has to be used.
-     * @param opt       variables informing whether the tasks is present or not.
-     * @param doProfile defines whether to do profile-based propagation (true) or not (false); default is false
-     */
-    public CumulativeUnaryOptional(List<? extends IntVar> starts, List<? extends IntVar> durations, List<? extends IntVar> resources, IntVar limit,
-                                    List<? extends IntVar> opt, boolean doProfile) {
+    this(
+        starts.toArray(new IntVar[starts.size()]),
+        durations.toArray(new IntVar[durations.size()]),
+        resources.toArray(new IntVar[resources.size()]),
+        limit,
+        opt.toArray(new IntVar[opt.size()]),
+        doProfile);
+  }
 
-        this(starts.toArray(new IntVar[starts.size()]), durations.toArray(new IntVar[durations.size()]),
-             resources.toArray(new IntVar[resources.size()]), limit, opt.toArray(new IntVar[opt.size()]), doProfile);
+  @Override
+  public void consistency(Store store) {
 
-    }
+    do {
 
-    @Override public void consistency(Store store) {
+      store.propagationHasOccurred = false;
 
+      if (doProfile) {
 
-        do {
+        up.sweepPruning(store, tvn, opt);
+        // up.updateTasksRes(store, ts);
+      }
 
-            store.propagationHasOccurred = false;
+      if (doEdgeFind && !store.propagationHasOccurred) {
 
-            if (doProfile) {
+        TaskView[] tn = filterZeroTasks(tvn);
+        if (tn == null) return;
+        TaskView[] tr = filterZeroTasks(tvr);
 
-                up.sweepPruning(store, tvn, opt);
-                // up.updateTasksRes(store, ts);
-            }
+        if (!doProfile) overload(tn);
+        detectable(store, tn, tr);
+        notFirstNotLast(store, tn, tr);
+        edgeFind(store, tn, tr);
+      }
 
-            if (doEdgeFind && !store.propagationHasOccurred) {
+    } while (store.propagationHasOccurred);
+  }
 
-                TaskView[] tn = filterZeroTasks(tvn);
-                if (tn == null)
-                    return;
-                TaskView[] tr = filterZeroTasks(tvr);
+  TaskView[] filterZeroTasks(TaskView[] ts) {
 
-                if (!doProfile)
-                    overload(tn);
-                detectable(store, tn, tr);
-                notFirstNotLast(store, tn, tr);
-                edgeFind(store, tn, tr);
-            }
+    TaskView[] nonZeroTasks = new TaskView[ts.length];
+    int k = 0;
 
-        } while (store.propagationHasOccurred);
-    }
+    for (int i = 0; i < ts.length; i++)
+      if (ts[i].exists() && opt[i].min() != 0) {
+        nonZeroTasks[k] = ts[i];
+        ts[i].index = k++;
+      }
 
-    TaskView[] filterZeroTasks(TaskView[] ts) {
+    if (k == 0) return null;
+    TaskView[] t = new TaskView[k];
+    System.arraycopy(nonZeroTasks, 0, t, 0, k);
+    return t;
+  }
 
-        TaskView[] nonZeroTasks = new TaskView[ts.length];
-        int k = 0;
+  @Override
+  public String toString() {
 
-        for (int i = 0; i < ts.length; i++)
-            if (ts[i].exists() && opt[i].min() != 0) {
-                nonZeroTasks[k] = ts[i];
-                ts[i].index = k++;
-            }
+    StringBuilder result = new StringBuilder(id());
 
-        if (k == 0)
-            return null;
-        TaskView[] t = new TaskView[k];
-        System.arraycopy(nonZeroTasks, 0, t, 0, k);
-        return t;
-    }
+    result.append(" : cumulativeUnaryOptional([ ");
+    for (int i = 0; i < taskNormal.length - 1; i++) result.append(taskNormal[i]).append(", ");
 
-    @Override public String toString() {
+    result.append(taskNormal[taskNormal.length - 1]);
 
-        StringBuilder result = new StringBuilder(id());
+    result
+        .append(" ]")
+        .append(", limit = ")
+        .append(limit)
+        .append(", " + Arrays.asList(opt))
+        .append(" )");
 
-        result.append(" : cumulativeUnaryOptional([ ");
-        for (int i = 0; i < taskNormal.length - 1; i++)
-            result.append(taskNormal[i]).append(", ");
-
-        result.append(taskNormal[taskNormal.length - 1]);
-
-        result.append(" ]").append(", limit = ").append(limit).append(", " + Arrays.asList(opt)).append(" )");
-
-        return result.toString();
-
-    }
-
+    return result.toString();
+  }
 }
-

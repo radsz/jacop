@@ -30,158 +30,145 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates a constraint that makes sure that value of the variable A is included within
- * a provided set.
+ * It creates a constraint that makes sure that value of the variable A is included within a
+ * provided set.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class AinS extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies set variable a. */
+  public SetVar a;
+
+  /** It specifies set which must contain the value of set variable A. */
+  public IntDomain set;
+
+  /** It specifies if the inclusion relation is strict. */
+  public boolean strict;
+
+  /**
+   * It constructs a constraint that makes sure that value of set variable a is contained within a
+   * provided set.
+   *
+   * @param a variable that is restricted to be included within a provided set.
+   * @param set set that is restricted to contain the value of set variable a.
+   */
+  public AinS(SetVar a, IntDomain set) {
+    this(a, set, false);
+  }
+
+  /**
+   * It constructs a constraint that makes sure that value of set variable a is contained within a
+   * provided set.
+   *
+   * @param a variable that is restricted to be included within a provided set.
+   * @param set set that is restricted to contain the value of set variable a.
+   * @param strict strict inclusion (true)
+   */
+  public AinS(SetVar a, IntDomain set, boolean strict) {
+
+    checkInputForNullness(new String[] {"a", "set"}, new Object[] {a, set});
+
+    numberId = idNumber.incrementAndGet();
+
+    this.a = a;
+    this.set = set;
+    this.strict = strict;
+
+    setScope(a);
+  }
+
+  @Override
+  public void consistency(Store store) {
 
     /**
-     * It specifies set variable a.
-     */
-    public SetVar a;
-
-    /**
-     * It specifies set which must contain the value of set variable A.
-     */
-    public IntDomain set;
-
-    /**
-     * It specifies if the inclusion relation is strict.
-     */
-    public boolean strict;
-
-    /**
-     * It constructs a constraint that makes sure that value of set variable a is contained
-     * within a provided set.
+     * Consistency of the constraint A in B.
      *
-     * @param a   variable that is restricted to be included within a provided set.
-     * @param set set that is restricted to contain the value of set variable a.
-     */
-    public AinS(SetVar a, IntDomain set) {
-        this(a, set, false);
-    }
-
-    /**
-     * It constructs a constraint that makes sure that value of set variable a is contained
-     * within a provided set.
+     * <p>B can not be an empty set.
      *
-     * @param a      variable that is restricted to be included within a provided set.
-     * @param set    set that is restricted to contain the value of set variable a.
-     * @param strict strict inclusion (true)
+     * <p>T1. glbA = glbA lubA = lubA /\ S
      */
-    public AinS(SetVar a, IntDomain set, boolean strict) {
+    a.domain.inLUB(store.level, a, set);
 
-        checkInputForNullness(new String[] {"a", "set"}, new Object[] {a, set});
+    if (strict && set.getSize() - 1 == a.domain.glb().getSize())
+      a.domain.inLUBComplement(store.level, a, set.subtract(a.domain.glb()).value());
+  }
 
-        numberId = idNumber.incrementAndGet();
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        this.a = a;
-        this.set = set;
-        this.strict = strict;
+  @Override
+  public boolean satisfied() {
 
-        setScope(a);
+    return grounded() && a.domain.lub().lex(set) < 0;
+  }
 
-    }
+  @Override
+  public String toString() {
+    return id() + " : AinS(" + a + " '< " + set + ")";
+  }
 
-    @Override public void consistency(Store store) {
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        /**
-         * Consistency of the constraint A in B.
-         *
-         * B can not be an empty set.
-         *
-         * T1.
-         * glbA = glbA
-         * lubA = lubA /\ S
-         *
-         */
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        a.domain.inLUB(store.level, a, set);
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
 
-        if (strict && set.getSize() - 1 == a.domain.glb().getSize())
-            a.domain.inLUBComplement(store.level, a, set.subtract(a.domain.glb()).value());
+  @Override
+  public void notConsistency(Store store) {
 
-    }
+    // TODO, test it properly.
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
+    if (a.domain.lub().getSize() > set.getSize() + 1) return;
 
-    @Override public boolean satisfied() {
+    if (!set.contains(a.domain.glb())) return;
 
-        return grounded() && a.domain.lub().lex(set) < 0;
+    IntDomain result = a.domain.lub().subtract(set);
 
-    }
-
-    @Override public String toString() {
-        return id() + " : AinS(" + a + " '< " + set + ")";
-    }
-
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public void notConsistency(Store store) {
-
-        // TODO, test it properly.
-
-        if (a.domain.lub().getSize() > set.getSize() + 1)
-            return;
-
-        if (!set.contains(a.domain.glb()))
-            return;
-
-        IntDomain result = a.domain.lub().subtract(set);
-
-        if (result.isEmpty())
-            if (strict) {
-                if (a.domain.lub().getSize() < set.getSize())
-                    throw Store.failException;
-                else {
-                    a.domain.inGLB(store.level, a, a.domain.lub());
-                }
-            } else
-                throw Store.failException;
-
-        if (!strict && result.getSize() == 1) {
-            // to remain inconsistency the last value which can make this constraint
-            // inconsistent must be added to GLB so it becomes notSatisfied.
-            a.domain.inGLB(store.level, a, result.value());
+    if (result.isEmpty())
+      if (strict) {
+        if (a.domain.lub().getSize() < set.getSize()) throw Store.failException;
+        else {
+          a.domain.inGLB(store.level, a, a.domain.lub());
         }
+      } else throw Store.failException;
 
-        if (strict && result.getSize() == 1 && a.domain.lub().getSize() - 1 < set.getSize()) {
-            a.domain.inGLB(store.level, a, result.value());
-        }
-
+    if (!strict && result.getSize() == 1) {
+      // to remain inconsistency the last value which can make this constraint
+      // inconsistent must be added to GLB so it becomes notSatisfied.
+      a.domain.inGLB(store.level, a, result.value());
     }
 
-    @Override public boolean notSatisfied() {
-
-        return !set.contains(a.domain.glb()) || (strict && a.domain.glb().eq(set));
-
+    if (strict && result.getSize() == 1 && a.domain.lub().getSize() - 1 < set.getSize()) {
+      a.domain.inGLB(store.level, a, result.value());
     }
+  }
 
+  @Override
+  public boolean notSatisfied() {
+
+    return !set.contains(a.domain.glb()) || (strict && a.domain.glb().eq(set));
+  }
 }

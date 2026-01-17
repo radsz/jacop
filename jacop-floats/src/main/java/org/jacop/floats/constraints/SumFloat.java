@@ -30,51 +30,49 @@
 
 package org.jacop.floats.constraints;
 
-
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * SumFloat constraint implements the weighted summation over several
- * Variable's . It provides the weighted sum from all Variable's on the list.
- * <p>
- * This version works as argument to Reified and Xor constraints.  For
- * other constraints And, Or, Not, Eq, IfThen, IfThenElse it does not
- * work currently.
+ * SumFloat constraint implements the weighted summation over several Variable's . It provides the
+ * weighted sum from all Variable's on the list.
+ *
+ * <p>This version works as argument to Reified and Xor constraints. For other constraints And, Or,
+ * Not, Eq, IfThen, IfThenElse it does not work currently.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class SumFloat extends LinearFloat {
 
+  /**
+   * @param store current store
+   * @param list variables which are being multiplied by weights.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum variable containing the sum of weighted variables.
+   * @deprecated SumFloat constraint does not use Store parameter any longer.
+   */
+  @Deprecated
+  public SumFloat(Store store, FloatVar[] list, String rel, FloatVar sum) {
 
-    /**
-     * @param store current store
-     * @param list  variables which are being multiplied by weights.
-     * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum   variable containing the sum of weighted variables.
-     * @deprecated SumFloat constraint does not use Store parameter any longer.
-     */
-    @Deprecated public SumFloat(Store store, FloatVar[] list, String rel, FloatVar sum) {
+    super(store, list, getFilledArray(list.length), rel, sum);
+  }
 
-        super(store, list, getFilledArray(list.length), rel, sum);
-    }
+  /**
+   * @param list variables which are being multiplied by weights.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum variable containing the sum of weighted variables.
+   */
+  public SumFloat(FloatVar[] list, String rel, FloatVar sum) {
 
-    /**
-     * @param list variables which are being multiplied by weights.
-     * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum  variable containing the sum of weighted variables.
-     */
-    public SumFloat(FloatVar[] list, String rel, FloatVar sum) {
+    super(list, getFilledArray(list.length), rel, sum);
+  }
 
-        super(list, getFilledArray(list.length), rel, sum);
-    }
-
-
-    private static double[] getFilledArray(int n) {
-        double[] a = new double[n];
-        java.util.Arrays.fill(a, 1);
-        return a;
-    }
+  private static double[] getFilledArray(int n) {
+    double[] a = new double[n];
+    java.util.Arrays.fill(a, 1);
+    return a;
+  }
 }

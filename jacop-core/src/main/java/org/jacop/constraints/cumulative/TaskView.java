@@ -41,23 +41,23 @@ import org.jacop.core.IntVar;
 
 abstract class TaskView extends Task {
 
-    TaskView(IntVar start, IntVar dur, IntVar res) {
-        super(start, dur, res);
-    }
+  TaskView(IntVar start, IntVar dur, IntVar res) {
+    super(start, dur, res);
+  }
 
-    abstract int lct();
+  abstract int lct();
 
-    abstract int ect();
+  abstract int ect();
 
-    abstract int est();
+  abstract int est();
 
-    abstract int lst();
+  abstract int lst();
 
-    abstract long env(long c);
+  abstract long env(long c);
 
-    abstract void updateEdgeFind(int storeLevel, int upd);
+  abstract void updateEdgeFind(int storeLevel, int upd);
 
-    abstract void updateNotFirstNotLast(int storeLevel, int upd);
+  abstract void updateNotFirstNotLast(int storeLevel, int upd);
 
-    abstract void updateDetectable(int storeLevel, int est);
+  abstract void updateDetectable(int storeLevel, int est);
 }

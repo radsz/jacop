@@ -41,11 +41,10 @@ import org.jacop.jasat.core.clauses.MapClause;
  */
 public interface ExplanationListener extends SolverComponent {
 
-    /**
-     * called when the conflict clause is explained
-     *
-     * @param explanation the explanation clause
-     */
-    void onExplain(MapClause explanation);
-
+  /**
+   * called when the conflict clause is explained
+   *
+   * @param explanation the explanation clause
+   */
+  void onExplain(MapClause explanation);
 }

@@ -35,96 +35,93 @@ import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
 
 /**
- * Defines a Variable for Circuit constraints and related operations on it. It
- * keeps current next node and previous node for the circuit
+ * Defines a Variable for Circuit constraints and related operations on it. It keeps current next
+ * node and previous node for the circuit
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class CircuitVar implements MutableVar {
 
-    int index;
+  int index;
 
-    Store store;
+  Store store;
 
-    CircuitVarValue value = null;
+  CircuitVarValue value = null;
 
-    CircuitVar(Store store) {
-        CircuitVarValue val = new CircuitVarValue();
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
+  CircuitVar(Store store) {
+    CircuitVarValue val = new CircuitVarValue();
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  CircuitVar(Store store, int next, int previous) {
+    CircuitVarValue val = new CircuitVarValue();
+    val.next = next;
+    val.previous = previous;
+    value = val;
+    index = store.putMutableVar(this);
+    this.store = store;
+  }
+
+  int index() {
+    return index;
+  }
+
+  public MutableVarValue previous() {
+    return value.nextCircuitVarValue;
+  }
+
+  public void removeLevel(int removeLevel) {
+    if (value.stamp == removeLevel) value = value.nextCircuitVarValue;
+  }
+
+  public void setCurrent(MutableVarValue o) {
+    value = (CircuitVarValue) o;
+  }
+
+  int stamp() {
+    return value.stamp;
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuffer result = new StringBuffer();
+
+    result.append("CircuitVar[").append((index + 1)).append("] = ");
+
+    result.append(value);
+
+    return result.toString();
+  }
+
+  public void update(MutableVarValue val) {
+
+    // if ( value.stamp > store.level ) {
+    // System.out.println("Warning old stamps not removed");
+    // System.exit(-1);
+    // }
+
+    if (value.stamp == store.level) {
+      // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
+      // New " + val);
+      value.setValue(((CircuitVarValue) val).next, ((CircuitVarValue) val).previous);
+      // System.out.println(", OUT "+ VarValue);
+    } else if (value.stamp < store.level) {
+      // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
+      // + val);
+
+      val.setStamp(store.level);
+      val.setPrevious(value);
+      value = (CircuitVarValue) val;
+
+      // System.out.println("\n=> OUT "+ this+"\nOLD "+ value().next());
     }
+  }
 
-    CircuitVar(Store store, int next, int previous) {
-        CircuitVarValue val = new CircuitVarValue();
-        val.next = next;
-        val.previous = previous;
-        value = val;
-        index = store.putMutableVar(this);
-        this.store = store;
-    }
-
-    int index() {
-        return index;
-    }
-
-    public MutableVarValue previous() {
-        return value.nextCircuitVarValue;
-    }
-
-    public void removeLevel(int removeLevel) {
-        if (value.stamp == removeLevel)
-            value = value.nextCircuitVarValue;
-    }
-
-    public void setCurrent(MutableVarValue o) {
-        value = (CircuitVarValue) o;
-    }
-
-    int stamp() {
-        return value.stamp;
-    }
-
-    @Override public String toString() {
-
-        StringBuffer result = new StringBuffer();
-
-        result.append("CircuitVar[").append((index + 1)).append("] = ");
-
-        result.append(value);
-
-        return result.toString();
-
-    }
-
-    public void update(MutableVarValue val) {
-
-        // if ( value.stamp > store.level ) {
-        // System.out.println("Warning old stamps not removed");
-        // System.exit(-1);
-        // }
-
-        if (value.stamp == store.level) {
-            // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
-            // New " + val);
-            value.setValue(((CircuitVarValue) val).next, ((CircuitVarValue) val).previous);
-            // System.out.println(", OUT "+ VarValue);
-        } else if (value.stamp < store.level) {
-            // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
-            // + val);
-
-            val.setStamp(store.level);
-            val.setPrevious(value);
-            value = (CircuitVarValue) val;
-
-            // System.out.println("\n=> OUT "+ this+"\nOLD "+ value().next());
-        }
-    }
-
-    public MutableVarValue value() {
-        return value;
-    }
-
+  public MutableVarValue value() {
+    return value;
+  }
 }

@@ -28,7 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.constraints.cumulative;
 
 /**
@@ -37,27 +36,25 @@ package org.jacop.constraints.cumulative;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 class ThetaNode extends TreeNode {
 
-    // Theta parameters
-    int ect;  // erliest complition time
-    int p;    // processing time /duration)
+  // Theta parameters
+  int ect; // erliest complition time
+  int p; // processing time /duration)
 
-    // values of ect and p that are stored here all the time, even when node is not enabled
-    int ectT;
-    int pT;
+  // values of ect and p that are stored here all the time, even when node is not enabled
+  int ectT;
+  int pT;
 
-    ThetaNode() {
-    }
+  ThetaNode() {}
 
-    void assignValues() {
-        ect = ectT;
-        p = pT;
-    }
+  void assignValues() {
+    ect = ectT;
+    p = pT;
+  }
 
-    public String toString() {
-        String taskNo = task != null ? "\ntask = " + task.index : "";
-        return "node: " + index + taskNo + "\nect = " + ect + "\np = " + p;
-    }
+  public String toString() {
+    String taskNo = task != null ? "\ntask = " + task.index : "";
+    return "node: " + index + taskNo + "\nect = " + ect + "\np = " + p;
+  }
 }

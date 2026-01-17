@@ -33,45 +33,36 @@ package org.jacop.search;
 import org.jacop.core.Var;
 
 /**
- * Defines LargestDomain comparator for Variables. Variable with the largest
- * domain has the priority.
+ * Defines LargestDomain comparator for Variables. Variable with the largest domain has the
+ * priority.
  *
  * @param <T> it specifies the class of the variable being used in this variable selection method.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LargestDomain<T extends Var> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs variable comparator based on the largest domain priority.
-     */
-    public LargestDomain() {
-    }
+  /** It constructs variable comparator based on the largest domain priority. */
+  public LargestDomain() {}
 
-    public int compare(double left, T var) {
-        int right = var.getSize();
+  public int compare(double left, T var) {
+    int right = var.getSize();
 
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public int compare(T leftVar, T rightVar) {
-        int left = leftVar.getSize();
-        int right = rightVar.getSize();
+  public int compare(T leftVar, T rightVar) {
+    int left = leftVar.getSize();
+    int right = rightVar.getSize();
 
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
-        return 0;
-    }
+    if (left > right) return 1;
+    if (left < right) return -1;
+    return 0;
+  }
 
-    public double metric(T var) {
-        return var.getSize();
-    }
-
+  public double metric(T var) {
+    return var.getSize();
+  }
 }

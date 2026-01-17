@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -39,246 +40,230 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * It creates a constraint that makes sure that A union B is equal to C.
- * A \/ B = C.
+ * It creates a constraint that makes sure that A union B is equal to C. A \/ B = C.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class AunionBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies set variable a.
-     */
-    public SetVar a;
+  /** It specifies set variable a. */
+  public SetVar a;
 
-    /**
-     * It specifies set variable b.
-     */
-    public SetVar b;
+  /** It specifies set variable b. */
+  public SetVar b;
 
-    /**
-     * It specifies set variable c.
-     */
-    public SetVar c;
+  /** It specifies set variable c. */
+  public SetVar c;
 
-    /**
-     * It specifies if the constrain attempts to perform expensive and yet
-     * unlikely propagation due to cardinality information.
-     */
-    public boolean performCardinalityReasoning = false;
+  /**
+   * It specifies if the constrain attempts to perform expensive and yet unlikely propagation due to
+   * cardinality information.
+   */
+  public boolean performCardinalityReasoning = false;
 
-    private boolean aHasChanged = true;
+  private boolean aHasChanged = true;
 
-    private boolean bHasChanged = true;
+  private boolean bHasChanged = true;
 
-    private boolean cHasChanged = true;
+  private boolean cHasChanged = true;
 
-    /**
-     * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
-     *
-     * @param a variable representing the first parameter
-     * @param b variable representing the second parameter
-     * @param c variable that is restricted to be the union of a and b.
-     */
+  /**
+   * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
+   *
+   * @param a variable representing the first parameter
+   * @param b variable representing the second parameter
+   * @param c variable that is restricted to be the union of a and b.
+   */
+  public AunionBeqC(SetVar a, SetVar b, SetVar c) {
 
-    public AunionBeqC(SetVar a, SetVar b, SetVar c) {
+    checkInputForNullness(new String[] {"a", "b", "c"}, new Object[] {a, b, c});
 
-        checkInputForNullness(new String[] {"a", "b", "c"}, new Object[] {a, b, c});
+    numberId = idNumber.incrementAndGet();
 
-        numberId = idNumber.incrementAndGet();
+    this.a = a;
+    this.b = b;
+    this.c = c;
 
-        this.a = a;
-        this.b = b;
-        this.c = c;
+    setScope(a, b, c);
+  }
 
-        setScope(a, b, c);
+  @Override
+  public void consistency(Store store) {
 
-    }
+    do {
 
-    @Override public void consistency(Store store) {
+      store.propagationHasOccurred = false;
 
-        do {
+      boolean aHasChanged = this.aHasChanged;
+      boolean bHasChanged = this.bHasChanged;
+      boolean cHasChanged = this.cHasChanged;
 
-            store.propagationHasOccurred = false;
+      this.aHasChanged = false;
+      this.bHasChanged = false;
+      this.cHasChanged = false;
 
-            boolean aHasChanged = this.aHasChanged;
-            boolean bHasChanged = this.bHasChanged;
-            boolean cHasChanged = this.cHasChanged;
+      SetDomain aDom = a.dom();
+      SetDomain bDom = b.dom();
+      SetDomain cDom = c.dom();
 
-            this.aHasChanged = false;
-            this.bHasChanged = false;
-            this.cHasChanged = false;
-
-            SetDomain aDom = a.dom();
-            SetDomain bDom = b.dom();
-            SetDomain cDom = c.dom();
-
-            /**
-             * It computes the consistency of the constraint.
-             *
-             * A \/ B = C
-             *
-             * The list of rules to use.
-             *
-             * T5.
-             *
-             * glbA = glbA \/ ( glbC \ lubB )
-             * lubA = lubA /\ lubC
-             *
-             * glbB = glbB \/ ( glbC \ lubA )
-             * lubB = lubB /\ lubC
-             */
-
-            if (cHasChanged || bHasChanged)
-                if (cDom.lub().getSize() > 0) {
-                    IntDomain glbA = cDom.glb().subtract(bDom.lub());
-                    if (glbA.getSize() > 0)
-                        a.domain.inGLB(store.level, a, glbA);
-                }
-
-            if (cHasChanged)
-                a.domain.inLUB(store.level, a, cDom.lub());
-
-            if (aHasChanged || cHasChanged)
-                if (cDom.lub().getSize() > 0) {
-                    IntDomain glbB = cDom.glb().subtract(aDom.lub());
-                    if (glbB.getSize() > 0)
-                        b.domain.inGLB(store.level, b, glbB);
-                }
-
-            if (cHasChanged)
-                b.domain.inLUB(store.level, b, cDom.lub());
-
-            /**
-             *
-             * T6.
-             *
-             * glbC = glbC \/ glbA \/ glbB
-             * lubC = lubC /\ ( lubA \/ lubB )
-             */
-
-            if (aHasChanged)
-                c.domain.inGLB(store.level, c, aDom.glb());
-            if (bHasChanged)
-                c.domain.inGLB(store.level, c, bDom.glb());
-            if (aHasChanged || bHasChanged)
-                c.domain.inLUB(store.level, c, aDom.lub().union(bDom.lub()));
-
-            /**
-             * For all sets, A, B, C apply the rules as specified for A below.
-             *
-             * #A.in(#glbA, #lubA).
-             *
-             * If #glb is already equal to maximum allowed cardinality then set is specified by glb.
-             * if (#glbA == #A.max()) then A = glbA
-             * If #lub is already equal to minimum allowed cardinality then set is specified by lub.
-             * if (#lubA == #A.min()) then A = lubA
-             */
-
-            if (performCardinalityReasoning) {
-                /** Cardinality reasoning
-                 *
-                 * For C)
-                 *
-                 * (4) + (8) - elements already in union
-                 *
-                 * max ( #A.min - (4), #B.min() - (8) ) - the minimum number of elements which have to be added to A or B which will end up in the union.
-                 * #A.min - (4) + #B.min() - (8) - (2+5+6+7) - the elements which have to be added minus what can be added at the same time to both sets.
-                 * (4+5+6) + (6+7+8) - 6 - this is already taken care of as it does not contain other cardinalities only set operations.
-                 *
-                 * #C.inMin( max ( #A.min - (4), #B.min() - (8) ) )
-                 * #C.inMin( #A.min - (4) + #B.min() - (8) - (2+5+6+7) )
-                 */
-
-                int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
-                int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
-                int maxLeft = a.domain.card().min() - sizeOf_4;
-                int maxRight = b.domain.card().min() - sizeOf_8;
-
-                c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
-
-                int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
-
-                c.domain.inCardinality(store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
-
-                /** Cardinality reasoning
-                 * for A)
-                 *
-                 * #C.min() - (2, 3, 7, 8) - elements required by C which can not be contributed by B without contributing to A.
-                 *
-                 * #A.inMin( #C.min() - (2, 3, 7, 8) )
-                 *
-                 * #C.max() - (8)
-                 *
-                 * #A.inMax( #C.max() - (8) );
-                 *
-                 */
-
-                int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
-
-                a.domain.inCardinality(store.level, a, c.domain.card().min() - sizeOf_2_3_7_8, c.domain.card().max() - sizeOf_8);
-
-                /** Cardinality reasoning
-                 * for B)
-                 *
-                 * #C.min() - (4) - (1) - elements required by C which can not be contributed by A without contributing to B.
-                 *
-                 * #B.inMin( #C.min() - (4) - (1) )
-                 *
-                 * #C.max() - (4)
-                 *
-                 * #B.inMax( #C.max() - (4) );
-                 *
-                 */
-
-                int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
-
-                b.domain.inCardinality(store.level, b, c.domain.card().min() - sizeOf_1_2_4_5, c.domain.card().max() - sizeOf_4);
-
-
-                // FIXME, implement the cardinality based reasoning.
-
-            }
-
-        } while (store.propagationHasOccurred);
-
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
-
-    @Override public boolean satisfied() {
-        return grounded() && a.domain.union(b.domain).eq(c.domain);
-    }
-
-    @Override public String toString() {
-        return id() + " : AunionBeqC(" + a + ", " + b + ", " + c + " )";
-    }
-
-    @Override public void queueVariable(int level, Var variable) {
-
-        if (variable == a) {
-            aHasChanged = true;
-            return;
+      /**
+       * It computes the consistency of the constraint.
+       *
+       * <p>A \/ B = C
+       *
+       * <p>The list of rules to use.
+       *
+       * <p>T5.
+       *
+       * <p>glbA = glbA \/ ( glbC \ lubB ) lubA = lubA /\ lubC
+       *
+       * <p>glbB = glbB \/ ( glbC \ lubA ) lubB = lubB /\ lubC
+       */
+      if (cHasChanged || bHasChanged)
+        if (cDom.lub().getSize() > 0) {
+          IntDomain glbA = cDom.glb().subtract(bDom.lub());
+          if (glbA.getSize() > 0) a.domain.inGLB(store.level, a, glbA);
         }
 
-        if (variable == b) {
-            bHasChanged = true;
-            return;
+      if (cHasChanged) a.domain.inLUB(store.level, a, cDom.lub());
+
+      if (aHasChanged || cHasChanged)
+        if (cDom.lub().getSize() > 0) {
+          IntDomain glbB = cDom.glb().subtract(aDom.lub());
+          if (glbB.getSize() > 0) b.domain.inGLB(store.level, b, glbB);
         }
 
-        if (variable == c) {
-            cHasChanged = true;
-            return;
-        }
+      if (cHasChanged) b.domain.inLUB(store.level, b, cDom.lub());
 
+      /**
+       * T6.
+       *
+       * <p>glbC = glbC \/ glbA \/ glbB lubC = lubC /\ ( lubA \/ lubB )
+       */
+      if (aHasChanged) c.domain.inGLB(store.level, c, aDom.glb());
+      if (bHasChanged) c.domain.inGLB(store.level, c, bDom.glb());
+      if (aHasChanged || bHasChanged) c.domain.inLUB(store.level, c, aDom.lub().union(bDom.lub()));
+
+      /**
+       * For all sets, A, B, C apply the rules as specified for A below.
+       *
+       * <p>#A.in(#glbA, #lubA).
+       *
+       * <p>If #glb is already equal to maximum allowed cardinality then set is specified by glb. if
+       * (#glbA == #A.max()) then A = glbA If #lub is already equal to minimum allowed cardinality
+       * then set is specified by lub. if (#lubA == #A.min()) then A = lubA
+       */
+      if (performCardinalityReasoning) {
+        /**
+         * Cardinality reasoning
+         *
+         * <p>For C)
+         *
+         * <p>(4) + (8) - elements already in union
+         *
+         * <p>max ( #A.min - (4), #B.min() - (8) ) - the minimum number of elements which have to be
+         * added to A or B which will end up in the union. #A.min - (4) + #B.min() - (8) - (2+5+6+7)
+         * - the elements which have to be added minus what can be added at the same time to both
+         * sets. (4+5+6) + (6+7+8) - 6 - this is already taken care of as it does not contain other
+         * cardinalities only set operations.
+         *
+         * <p>#C.inMin( max ( #A.min - (4), #B.min() - (8) ) ) #C.inMin( #A.min - (4) + #B.min() -
+         * (8) - (2+5+6+7) )
+         */
+        int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
+        int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
+        int maxLeft = a.domain.card().min() - sizeOf_4;
+        int maxRight = b.domain.card().min() - sizeOf_8;
+
+        c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
+
+        int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
+
+        c.domain.inCardinality(
+            store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
+
+        /**
+         * Cardinality reasoning for A)
+         *
+         * <p>#C.min() - (2, 3, 7, 8) - elements required by C which can not be contributed by B
+         * without contributing to A.
+         *
+         * <p>#A.inMin( #C.min() - (2, 3, 7, 8) )
+         *
+         * <p>#C.max() - (8)
+         *
+         * <p>#A.inMax( #C.max() - (8) );
+         */
+        int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
+
+        a.domain.inCardinality(
+            store.level,
+            a,
+            c.domain.card().min() - sizeOf_2_3_7_8,
+            c.domain.card().max() - sizeOf_8);
+
+        /**
+         * Cardinality reasoning for B)
+         *
+         * <p>#C.min() - (4) - (1) - elements required by C which can not be contributed by A
+         * without contributing to B.
+         *
+         * <p>#B.inMin( #C.min() - (4) - (1) )
+         *
+         * <p>#C.max() - (4)
+         *
+         * <p>#B.inMax( #C.max() - (4) );
+         */
+        int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
+
+        b.domain.inCardinality(
+            store.level,
+            b,
+            c.domain.card().min() - sizeOf_1_2_4_5,
+            c.domain.card().max() - sizeOf_4);
+
+        // FIXME, implement the cardinality based reasoning.
+
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return grounded() && a.domain.union(b.domain).eq(c.domain);
+  }
+
+  @Override
+  public String toString() {
+    return id() + " : AunionBeqC(" + a + ", " + b + ", " + c + " )";
+  }
+
+  @Override
+  public void queueVariable(int level, Var variable) {
+
+    if (variable == a) {
+      aHasChanged = true;
+      return;
     }
+
+    if (variable == b) {
+      bHasChanged = true;
+      return;
+    }
+
+    if (variable == c) {
+      cHasChanged = true;
+      return;
+    }
+  }
 }

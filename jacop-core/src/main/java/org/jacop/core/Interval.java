@@ -31,105 +31,96 @@
 package org.jacop.core;
 
 /**
- * Defines interval of numbers which is part of FDV definition which consist of
- * one or several intervals.
+ * Defines interval of numbers which is part of FDV definition which consist of one or several
+ * intervals.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public final class Interval implements Cloneable {
 
-    /**
-     * It specifies the minimal value in the interval.
-     */
-    public final int min;
+  /** It specifies the minimal value in the interval. */
+  public final int min;
 
-    /**
-     * It specifies the maximal value in the interval.
-     */
-    public final int max;
+  /** It specifies the maximal value in the interval. */
+  public final int max;
 
-    /**
-     * It creates the largest possible interval.
-     */
-    public Interval() {
-        min = IntDomain.MinInt;
-        max = IntDomain.MaxInt;
-    }
+  /** It creates the largest possible interval. */
+  public Interval() {
+    min = IntDomain.MinInt;
+    max = IntDomain.MaxInt;
+  }
 
-    /**
-     * It creates an interval with a given minimum and maximal value.
-     *
-     * @param min the minimal value in the interval (the left bound).
-     * @param max the maximal value in the interval (the right bound).
-     */
-    public Interval(int min, int max) {
+  /**
+   * It creates an interval with a given minimum and maximal value.
+   *
+   * @param min the minimal value in the interval (the left bound).
+   * @param max the maximal value in the interval (the right bound).
+   */
+  public Interval(int min, int max) {
 
-        assert (min <= max) : "min value " + min + " is larger than max value " + max;
+    assert (min <= max) : "min value " + min + " is larger than max value " + max;
 
-        this.min = min;
-        this.max = max;
+    this.min = min;
+    this.max = max;
+  }
 
-    }
+  @Override
+  public Object clone() {
+    return new Interval(min, max);
+  }
 
-    @Override public Object clone() {
-        return new Interval(min, max);
-    }
+  /**
+   * It checks equality between intervals.
+   *
+   * @param interval the inerval to which the comparison is made.
+   * @return true if an input interval is equal to this one.
+   */
+  public boolean eq(Interval interval) {
+    return min == interval.min && max == interval.max;
+  }
 
-    /**
-     * It checks equality between intervals.
-     *
-     * @param interval the inerval to which the comparison is made.
-     * @return true if an input interval is equal to this one.
-     */
-    public boolean eq(Interval interval) {
-        return min == interval.min && max == interval.max;
-    }
+  /**
+   * It returns the right bound of the interval (maximum value).
+   *
+   * @return the maximal value from the interval.
+   */
+  public int max() {
+    return max;
+  }
 
-    /**
-     * It returns the right bound of the interval (maximum value).
-     *
-     * @return the maximal value from the interval.
-     */
-    public int max() {
-        return max;
-    }
+  /**
+   * It returns the left range of the interval (minimum value).
+   *
+   * @return the minimal value from the interval.
+   */
+  public int min() {
+    return min;
+  }
 
-    /**
-     * It returns the left range of the interval (minimum value).
-     *
-     * @return the minimal value from the interval.
-     */
-    public int min() {
-        return min;
-    }
+  /**
+   * It checks if an intervals contains only one value (singleton).
+   *
+   * @return true if domain has only one value.
+   */
+  public boolean singleton() {
+    return (min == max);
+  }
 
-    /**
-     * It checks if an intervals contains only one value (singleton).
-     *
-     * @return true if domain has only one value.
-     */
-    public boolean singleton() {
-        return (min == max);
-    }
+  /**
+   * It checks if an intervals contains only value c.
+   *
+   * @param c integer value to which the singleton is compared to.
+   * @return true if variable has a singleton domain and it is equal to value c.
+   */
+  public boolean singleton(int c) {
+    return (min == max && min == c);
+  }
 
-    /**
-     * It checks if an intervals contains only value c.
-     *
-     * @param c integer value to which the singleton is compared to.
-     * @return true if variable has a singleton domain and it is equal to value c.
-     */
-
-    public boolean singleton(int c) {
-        return (min == max && min == c);
-    }
-
-    @Override public String toString() {
-        String result = String.valueOf(min);
-        if (max != min)
-            result += ".." + max;
-        return result;
-    }
-
+  @Override
+  public String toString() {
+    String result = String.valueOf(min);
+    if (max != min) result += ".." + max;
+    return result;
+  }
 }

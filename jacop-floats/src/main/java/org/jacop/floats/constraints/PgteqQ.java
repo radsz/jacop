@@ -30,12 +30,11 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints P {@literal >=} Q for floats
@@ -43,78 +42,79 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class PgteqQ extends PrimitiveConstraint {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variables p which must be greater or equal to a given varibale.
-     */
-    public FloatVar p;
+  /** It specifies variables p which must be greater or equal to a given varibale. */
+  public FloatVar p;
 
-    /**
-     * It specifies variablw q from which a given variable must be greater or equal.
-     */
-    public FloatVar q;
+  /** It specifies variablw q from which a given variable must be greater or equal. */
+  public FloatVar q;
 
-    /**
-     * It constructs constraint P {@literal >=} Q.
-     *
-     * @param p variable p.
-     * @param q variable q.
-     */
-    public PgteqQ(FloatVar p, FloatVar q) {
+  /**
+   * It constructs constraint P {@literal >=} Q.
+   *
+   * @param p variable p.
+   * @param q variable q.
+   */
+  public PgteqQ(FloatVar p, FloatVar q) {
 
-        checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
+    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.p = p;
-        this.q = q;
+    this.p = p;
+    this.q = q;
 
-        setScope(p, q);
+    setScope(p, q);
+  }
 
-    }
+  @Override
+  public void consistency(Store store) {
 
-    @Override public void consistency(Store store) {
+    p.domain.inMin(store.level, p, q.min());
+    q.domain.inMax(store.level, q, p.max());
+  }
 
-        p.domain.inMin(store.level, p, q.min());
-        q.domain.inMax(store.level, q, p.max());
+  @Override
+  public void notConsistency(Store store) {
+    p.domain.inMax(store.level, p, FloatDomain.previous(q.max()));
+    q.domain.inMin(store.level, q, FloatDomain.next(p.min()));
+  }
 
-    }
+  @Override
+  public boolean satisfied() {
+    return p.min() >= q.max();
+  }
 
-    @Override public void notConsistency(Store store) {
-        p.domain.inMax(store.level, p, FloatDomain.previous(q.max()));
-        q.domain.inMin(store.level, q, FloatDomain.next(p.min()));
-    }
+  @Override
+  public boolean notSatisfied() {
+    return p.max() < q.min();
+  }
 
-    @Override public boolean satisfied() {
-        return p.min() >= q.max();
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return FloatDomain.BOUND;
+  }
 
-    @Override public boolean notSatisfied() {
-        return p.max() < q.min();
-    }
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return FloatDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return FloatDomain.BOUND;
-    }
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return FloatDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return FloatDomain.BOUND;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return FloatDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return FloatDomain.BOUND;
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return FloatDomain.BOUND;
-    }
-
-    @Override public String toString() {
-        return id() + " : PgteqQ(" + p + ", " + q + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : PgteqQ(" + p + ", " + q + " )";
+  }
 }

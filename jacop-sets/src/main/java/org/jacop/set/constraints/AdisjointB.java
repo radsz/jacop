@@ -30,6 +30,7 @@
 
 package org.jacop.set.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -38,194 +39,184 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
- * The disjoint set constraint makes sure that two set variables
- * do not contain any common element.
+ * The disjoint set constraint makes sure that two set variables do not contain any common element.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
-    static AtomicInteger idNumber = new AtomicInteger(0);
+  static AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies set variable a. */
+  public SetVar a;
+
+  /** It specifies set variable b. */
+  public SetVar b;
+
+  /**
+   * It specifies if the constrain attempts to perform expensive and yet unlikely propagation due to
+   * cardinality information.
+   */
+  public boolean performCardinalityReasoning = false;
+
+  private boolean aHasChanged = true;
+  private boolean bHasChanged = true;
+
+  /**
+   * It constructs a disjont set constraint to restrict the domains of the variables A and B.
+   *
+   * @param a variable that is restricted to not have any element in common with b.
+   * @param b variable that is restricted to not have any element in common with a.
+   */
+  public AdisjointB(SetVar a, SetVar b) {
+
+    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+
+    numberId = idNumber.incrementAndGet();
+
+    this.a = a;
+    this.b = b;
+
+    setScope(a, b);
+  }
+
+  @Override
+  public void consistency(Store store) {
 
     /**
-     * It specifies set variable a.
-     */
-    public SetVar a;
-
-    /**
-     * It specifies set variable b.
-     */
-    public SetVar b;
-
-    /**
-     * It specifies if the constrain attempts to perform expensive and yet
-     * unlikely propagation due to cardinality information.
-     */
-    public boolean performCardinalityReasoning = false;
-
-    private boolean aHasChanged = true;
-    private boolean bHasChanged = true;
-
-    /**
-     * It constructs a disjont set constraint to restrict the domains of the variables A and B.
+     * Consistency of the constraint A disjoint with B.
      *
-     * @param a variable that is restricted to not have any element in common with b.
-     * @param b variable that is restricted to not have any element in common with a.
+     * <p>lubA = lubA \ glbB
+     *
+     * <p>lubB = lubB \ glbA
      */
-    public AdisjointB(SetVar a, SetVar b) {
 
-        checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
+    /**
+     * For all sets, A, B apply the rules as specified for A below.
+     *
+     * <p>inLUB() functions update cardinalities too if lub has changed. #A.in(#glbA, #lubA).
+     *
+     * <p>If #glb is already equal to maximum allowed cardinality then set is specified by glb. if
+     * (#glbA == #A.max()) then A = glbA
+     *
+     * <p>If #lub is already equal to minimum allowed cardinality then set is specified by lub. if
+     * (#lubA == #A.min()) then A = lubA
+     */
 
-        numberId = idNumber.incrementAndGet();
+    // A.lub = 1+2+4+5, A.glb = 4+5
+    if (bHasChanged) a.domain.inLUB(store.level, a, a.domain.lub().subtract(b.domain.glb()));
 
-        this.a = a;
-        this.b = b;
+    // B.lub = 2+3+7+8, B.glb = 7+8
+    if (aHasChanged) b.domain.inLUB(store.level, b, b.domain.lub().subtract(a.domain.glb()));
 
-        setScope(a, b);
+    if (performCardinalityReasoning) {
+      // TODO implement cardinality reasoning.
+      /**
+       * Cardinality reasoning.
+       *
+       * <p>Note : that rules above ensure that (6) is empty. Only 1, 2, 3, 4, and 8 are not empty.
+       *
+       * <p>For B)
+       *
+       * <p>B.min() - (7+8+3 =(here) #glbB + (3) ) - how many elements from B restricts what can be
+       * used by A.
+       *
+       * <p>(1+4) + (2+5) - max (0, B.min() - (7+8+3) ) #A.inMax( (1+4) + (2+5) - max (0, B.min() -
+       * (7+8+3) ) )
+       */
+      int maxSizeOfIntersection = -1;
 
-    }
+      int elementsReservedForB = b.domain.card().min();
 
-    @Override public void consistency(Store store) {
+      if (elementsReservedForB > 0) {
+        // how many still do we need to reserve after removing what is already within B.
+        elementsReservedForB -= b.domain.glb().getSize();
 
-        /**
-         * Consistency of the constraint A disjoint with B.
-         *
-         * lubA = lubA \ glbB
-         *
-         * lubB = lubB \ glbA
-         */
+        if (elementsReservedForB > 0) {
+          maxSizeOfIntersection = a.domain.lub().sizeOfIntersection(b.domain.lub());
+          assert (maxSizeOfIntersection == a.domain.lub().intersect(b.domain.lub()).getSize())
+              : "sizeOfIntersection not properly implemented";
 
-        /** For all sets, A, B apply the rules as specified for A below.
-         *
-         * inLUB() functions update cardinalities too if lub has changed.
-         * #A.in(#glbA, #lubA).
-         *
-         * If #glb is already equal to maximum allowed cardinality then set is specified by glb.
-         * if (#glbA == #A.max()) then A = glbA
+          // how many elements can be added to B without affecting the cardinality of A = #(3).
+          // subtract from elementsReservedForB
+          elementsReservedForB -=
+              (b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection);
 
-         * If #lub is already equal to minimum allowed cardinality then set is specified by lub.
-         * if (#lubA == #A.min()) then A = lubA
-         */
+          // now elementsReservedForB hold number of elements required for B from aLUB /\ bLUB
 
-        // A.lub = 1+2+4+5, A.glb = 4+5
-        if (bHasChanged)
-            a.domain.inLUB(store.level, a, a.domain.lub().subtract(b.domain.glb()));
-
-        // B.lub = 2+3+7+8, B.glb = 7+8
-        if (aHasChanged)
-            b.domain.inLUB(store.level, b, b.domain.lub().subtract(a.domain.glb()));
-
-
-        if (performCardinalityReasoning) {
-            // TODO implement cardinality reasoning.
-            /**
-             *  Cardinality reasoning.
-             *
-             * Note : that rules above ensure that (6) is empty. Only 1, 2, 3, 4, and 8
-             * are not empty.
-             *
-             * For B)
-             *
-             * B.min() - (7+8+3 =(here) #glbB + (3) ) - how many elements from B restricts what can be used by A.
-             *
-             * (1+4) + (2+5) - max (0, B.min() - (7+8+3) )
-             * #A.inMax( (1+4) + (2+5) - max (0, B.min() - (7+8+3) ) )
-             */
-
-            int maxSizeOfIntersection = -1;
-
-            int elementsReservedForB = b.domain.card().min();
-
-            if (elementsReservedForB > 0) {
-                // how many still do we need to reserve after removing what is already within B.
-                elementsReservedForB -= b.domain.glb().getSize();
-
-                if (elementsReservedForB > 0) {
-                    maxSizeOfIntersection = a.domain.lub().sizeOfIntersection(b.domain.lub());
-                    assert (maxSizeOfIntersection == a.domain.lub().intersect(b.domain.lub())
-                        .getSize()) : "sizeOfIntersection not properly implemented";
-
-                    // how many elements can be added to B without affecting the cardinality of A = #(3).
-                    // subtract from elementsReservedForB
-                    elementsReservedForB -= (b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection);
-
-                    // now elementsReservedForB hold number of elements required for B from aLUB /\ bLUB
-
-                    // TODO, check if that actually does any propagation, under what conditions?
-                    a.domain.inCardinality(store.level, a, 0, a.domain.lub().getSize() - elementsReservedForB);
-                }
-            }
-
-            /** For A)
-             *
-             * (8+3) + (2+7) - max(0, A.min() - (1+4+5))
-             * #B.inMax( (8+3) + (2+7) - max(0, A.min() - (1+4+5)) )
-             *
-             */
-
-            int elementsReservedForA = a.domain.card().min();
-
-            if (elementsReservedForA > 0) {
-                // how many still do we need to reserve after removing what is already within B.
-                elementsReservedForA -= a.domain.glb().getSize();
-
-                if (elementsReservedForA > 0) {
-
-                    if (maxSizeOfIntersection == -1) {
-                        maxSizeOfIntersection = b.domain.lub().sizeOfIntersection(a.domain.lub());
-                        assert (maxSizeOfIntersection == b.domain.lub().intersect(a.domain.lub())
-                            .getSize()) : "sizeOfIntersection not properly implemented";
-                    }
-
-                    // how many elements can be added to A without affecting the cardinality of B = #(1).
-                    // subtract from elementsReservedForA
-                    elementsReservedForA -= (a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection);
-
-                    // now elementsReservedForA hold number of elements required for A from aLUB /\ bLUB
-
-                    // TODO, check if that actually does any propagation, under what conditions?
-                    b.domain.inCardinality(store.level, b, 0, b.domain.lub().getSize() - elementsReservedForA);
-                }
-            }
-
+          // TODO, check if that actually does any propagation, under what conditions?
+          a.domain.inCardinality(
+              store.level, a, 0, a.domain.lub().getSize() - elementsReservedForB);
         }
+      }
 
-        aHasChanged = false;
-        bHasChanged = false;
+      /**
+       * For A)
+       *
+       * <p>(8+3) + (2+7) - max(0, A.min() - (1+4+5)) #B.inMax( (8+3) + (2+7) - max(0, A.min() -
+       * (1+4+5)) )
+       */
+      int elementsReservedForA = a.domain.card().min();
 
-    }
+      if (elementsReservedForA > 0) {
+        // how many still do we need to reserve after removing what is already within B.
+        elementsReservedForA -= a.domain.glb().getSize();
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return SetDomain.ANY;
-    }
+        if (elementsReservedForA > 0) {
 
-    @Override public boolean satisfied() {
+          if (maxSizeOfIntersection == -1) {
+            maxSizeOfIntersection = b.domain.lub().sizeOfIntersection(a.domain.lub());
+            assert (maxSizeOfIntersection == b.domain.lub().intersect(a.domain.lub()).getSize())
+                : "sizeOfIntersection not properly implemented";
+          }
 
-        return !a.domain.lub().isIntersecting(b.domain.lub());
+          // how many elements can be added to A without affecting the cardinality of B = #(1).
+          // subtract from elementsReservedForA
+          elementsReservedForA -=
+              (a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection);
 
-    }
+          // now elementsReservedForA hold number of elements required for A from aLUB /\ bLUB
 
-    @Override public String toString() {
-        return id() + " : AdisjointB(" + a + ", " + b + " )";
-    }
-
-    @Override public void queueVariable(int level, Var variable) {
-
-        if (variable == a) {
-            aHasChanged = true;
-            return;
+          // TODO, check if that actually does any propagation, under what conditions?
+          b.domain.inCardinality(
+              store.level, b, 0, b.domain.lub().getSize() - elementsReservedForA);
         }
-
-        if (variable == b) {
-            bHasChanged = true;
-            return;
-        }
-
+      }
     }
 
+    aHasChanged = false;
+    bHasChanged = false;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return SetDomain.ANY;
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    return !a.domain.lub().isIntersecting(b.domain.lub());
+  }
+
+  @Override
+  public String toString() {
+    return id() + " : AdisjointB(" + a + ", " + b + " )";
+  }
+
+  @Override
+  public void queueVariable(int level, Var variable) {
+
+    if (variable == a) {
+      aHasChanged = true;
+      return;
+    }
+
+    if (variable == b) {
+      bHasChanged = true;
+      return;
+    }
+  }
 }

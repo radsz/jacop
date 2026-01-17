@@ -30,9 +30,8 @@
 
 package org.jacop.constraints;
 
-import org.jacop.core.MutableVarValue;
-
 import java.util.List;
+import org.jacop.core.MutableVarValue;
 
 /**
  * Defines a current value of the Diff2Var and related operations on it.
@@ -40,75 +39,72 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 class Diff2VarValue implements MutableVarValue, Cloneable {
 
-    Diff2VarValue previousDiff2VarValue = null;
+  Diff2VarValue previousDiff2VarValue = null;
 
-    Rectangle[] Rects;
+  Rectangle[] Rects;
 
-    int stamp = 0;
+  int stamp = 0;
 
-    // Constructors for temporary Duff2VarValue
-    Diff2VarValue() {
-    }
+  // Constructors for temporary Duff2VarValue
+  Diff2VarValue() {}
 
-    Diff2VarValue(Rectangle[] R) {
-        Rects = R;
-    }
+  Diff2VarValue(Rectangle[] R) {
+    Rects = R;
+  }
 
-    // Methods
+  // Methods
 
-    @Override public Object clone() {
+  @Override
+  public Object clone() {
 
-        // Diff2VarValue Val = new Diff2VarValue();
-        // Val.Rects = new Rectangle[Rects.length];
-        // for (int i = 0; i < Rects.length; i++) {
-        // Val.Rects[i] = Rects[i];
-        // }
+    // Diff2VarValue Val = new Diff2VarValue();
+    // Val.Rects = new Rectangle[Rects.length];
+    // for (int i = 0; i < Rects.length; i++) {
+    // Val.Rects[i] = Rects[i];
+    // }
 
-        Diff2VarValue Val = new Diff2VarValue(Rects);
-        Val.stamp = stamp;
-        Val.previousDiff2VarValue = previousDiff2VarValue;
-        return Val;
-    }
+    Diff2VarValue Val = new Diff2VarValue(Rects);
+    Val.stamp = stamp;
+    Val.previousDiff2VarValue = previousDiff2VarValue;
+    return Val;
+  }
 
-    public MutableVarValue previous() {
-        return previousDiff2VarValue;
-    }
+  public MutableVarValue previous() {
+    return previousDiff2VarValue;
+  }
 
-    public void setPrevious(MutableVarValue n) {
-        previousDiff2VarValue = (Diff2VarValue) n;
-    }
+  public void setPrevious(MutableVarValue n) {
+    previousDiff2VarValue = (Diff2VarValue) n;
+  }
 
-    public void setStamp(int s) {
-        stamp = s;
-    }
+  public void setStamp(int s) {
+    stamp = s;
+  }
 
-    void setValue(List<Rectangle> VR) {
-        Rects = new Rectangle[VR.size()];
-        for (int i = 0; i < Rects.length; i++)
-            Rects[i] = VR.get(i);
-        // System.arraycopy(VR.toArray(),0,Rects,0,Rects.length);
-    }
+  void setValue(List<Rectangle> VR) {
+    Rects = new Rectangle[VR.size()];
+    for (int i = 0; i < Rects.length; i++) Rects[i] = VR.get(i);
+    // System.arraycopy(VR.toArray(),0,Rects,0,Rects.length);
+  }
 
-    void setValue(Rectangle[] R) {
-        Rects = R;
-    }
+  void setValue(Rectangle[] R) {
+    Rects = R;
+  }
 
-    public int stamp() {
-        return stamp;
-    }
+  public int stamp() {
+    return stamp;
+  }
 
-    @Override public String toString() {
+  @Override
+  public String toString() {
 
-        StringBuffer s = new StringBuffer();
+    StringBuffer s = new StringBuffer();
 
-        for (int i = 0; i < Rects.length; i++)
-            if (i == Rects.length - 1)
-                s.append(Rects[i]);
-            else
-                s.append(Rects[i] + ",");
-        return s.toString();
-    }
+    for (int i = 0; i < Rects.length; i++)
+      if (i == Rects.length - 1) s.append(Rects[i]);
+      else s.append(Rects[i] + ",");
+    return s.toString();
+  }
 }

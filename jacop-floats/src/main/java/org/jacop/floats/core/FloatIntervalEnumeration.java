@@ -32,25 +32,18 @@ package org.jacop.floats.core;
 
 import java.util.Enumeration;
 
-
 /**
- * Defines a methods for enumerating values contain in the intersal domain. It
- * implements the interface Enumeration.
+ * Defines a methods for enumerating values contain in the intersal domain. It implements the
+ * interface Enumeration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public abstract class FloatIntervalEnumeration implements Enumeration<FloatInterval> {
 
-    /**
-     * @return true if there are more elements to enumerate.
-     */
-    public abstract boolean hasMoreElements();
+  /** @return true if there are more elements to enumerate. */
+  public abstract boolean hasMoreElements();
 
-    /**
-     * @return next interval.
-     */
-    public abstract FloatInterval nextElement();
-
+  /** @return next interval. */
+  public abstract FloatInterval nextElement();
 }

@@ -33,22 +33,19 @@ package org.jacop.jasat.modules.interfaces;
 import org.jacop.jasat.core.SolverComponent;
 
 /**
- * A class that can register to the Solver, to be notified when some events
- * occur. Allows one to add modules to the Solver.
+ * A class that can register to the Solver, to be notified when some events occur. Allows one to add
+ * modules to the Solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
 public interface AssertionListener extends SolverComponent {
 
-    /**
-     * Called when a variable is set
-     *
-     * @param literal the literal that is set
-     *                propagation, false otherwise
-     * @param level   the search level
-     */
-    void onAssertion(int literal, int level);
-
-
+  /**
+   * Called when a variable is set
+   *
+   * @param literal the literal that is set propagation, false otherwise
+   * @param level the search level
+   */
+  void onAssertion(int literal, int level);
 }

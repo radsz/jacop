@@ -30,150 +30,157 @@
 
 package org.jacop.floats.constraints;
 
-
+import java.util.List;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
 import org.jacop.floats.core.FloatVar;
 
-import java.util.List;
-
 /**
- * LinearFloat constraint implements the weighted summation over several
- * Variable's . It provides the weighted sum from all Variable's on the list.
- * <p>
- * This version works as argument to Reified and Xor constraints.  For
- * other constraints And, Or, Not, Eq, IfThen, IfThenElse it does not
- * work currently.
+ * LinearFloat constraint implements the weighted summation over several Variable's . It provides
+ * the weighted sum from all Variable's on the list.
+ *
+ * <p>This version works as argument to Reified and Xor constraints. For other constraints And, Or,
+ * Not, Eq, IfThen, IfThenElse it does not work currently.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class LinearFloat extends Linear implements UsesQueueVariable, FloatDerivableConstraint {
 
-    /**
-     * @param store   current store
-     * @param list    variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum     the sum of weighted variables.
-     * @deprecated LinearFloat constraint does not use Store parameter any longer.
-     */
-    @Deprecated public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
+  /**
+   * @param store current store
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the sum of weighted variables.
+   * @deprecated LinearFloat constraint does not use Store parameter any longer.
+   */
+  @Deprecated
+  public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, double sum) {
 
-        super(store, list, weights, rel, sum);
+    super(store, list, weights, rel, sum);
+  }
+
+  /**
+   * @param store current store
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum variable containing the sum of weighted variables.
+   * @deprecated LinearFloat constraint does not use Store parameter any longer.
+   */
+  @Deprecated
+  public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+
+    super(store, list, weights, rel, sum);
+  }
+
+  /**
+   * It constructs the constraint LinearFloat.
+   *
+   * @param store current store
+   * @param variables variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}"
+   * @param sum variable containing the sum of weighted variables.
+   * @deprecated LinearFloat constraint does not use Store parameter any longer.
+   */
+  @Deprecated
+  public LinearFloat(
+      Store store,
+      List<? extends FloatVar> variables,
+      List<Double> weights,
+      String rel,
+      double sum) {
+
+    super(store, variables, weights, rel, sum);
+  }
+
+  // =================== new constructors ========================
+
+  /**
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the sum of weighted variables.
+   */
+  public LinearFloat(FloatVar[] list, double[] weights, String rel, double sum) {
+
+    super(list[0].getStore(), list, weights, rel, sum);
+  }
+
+  /**
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum variable containing the sum of weighted variables.
+   */
+  public LinearFloat(FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+
+    super(sum.getStore(), list, weights, rel, sum);
+  }
+
+  /**
+   * It constructs the constraint LinearFloat.
+   *
+   * @param variables variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}"
+   * @param sum variable containing the sum of weighted variables.
+   */
+  public LinearFloat(
+      List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
+
+    super(variables.get(0).getStore(), variables, weights, rel, sum);
+  }
+
+  @Override
+  public void queueVariable(int level, Var var) {
+    super.queueVariable(level, var);
+  }
+
+  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+
+    // System.out.println ("FloatLinear of " + f + " on " + x);
+
+    int fIndex = 0;
+    while (list[fIndex] != f) fIndex++;
+
+    if (fIndex == list.length) {
+      throw new RuntimeException("Wrong variable in derivative of " + this);
     }
 
-    /**
-     * @param store   current store
-     * @param list    variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum     variable containing the sum of weighted variables.
-     * @deprecated LinearFloat constraint does not use Store parameter any longer.
-     */
-    @Deprecated public LinearFloat(Store store, FloatVar[] list, double[] weights, String rel, FloatVar sum) {
+    FloatVar[] df = new FloatVar[list.length];
+    double[] ww = new double[list.length];
+    FloatVar v = null;
 
-        super(store, list, weights, rel, sum);
+    for (int i = 0; i < list.length; i++) {
+      if (i != fIndex) {
+        df[i] = Derivative.getDerivative(store, list[i], vars, x);
+
+        // System.out.println ("derivate of " + list[i] + " = " + df[i]);
+
+        ww[i] = weights[i] / (-weights[fIndex]);
+      } else {
+        v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+        df[i] = v;
+        ww[i] = -1.0;
+      }
     }
 
+    org.jacop.constraints.Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
+    Derivative.poseDerivativeConstraint(c);
 
-    /**
-     * It constructs the constraint LinearFloat.
-     *
-     * @param store     current store
-     * @param variables variables which are being multiplied by weights.
-     * @param weights   weight for each variable.
-     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
-     * @param sum       variable containing the sum of weighted variables.
-     * @deprecated LinearFloat constraint does not use Store parameter any longer.
-     */
-    @Deprecated public LinearFloat(Store store, List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
+    // System.out.println ("Derivative of " + f + " over " + x + " is " + c);
 
-        super(store, variables, weights, rel, sum);
-    }
-
-    // =================== new constructors ========================
-
-    /**
-     * @param list    variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum     the sum of weighted variables.
-     */
-    public LinearFloat(FloatVar[] list, double[] weights, String rel, double sum) {
-
-        super(list[0].getStore(), list, weights, rel, sum);
-    }
-
-    /**
-     * @param list    variables which are being multiplied by weights.
-     * @param weights weight for each variable.
-     * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-     * @param sum     variable containing the sum of weighted variables.
-     */
-    public LinearFloat(FloatVar[] list, double[] weights, String rel, FloatVar sum) {
-
-        super(sum.getStore(), list, weights, rel, sum);
-    }
-
-
-    /**
-     * It constructs the constraint LinearFloat.
-     *
-     * @param variables variables which are being multiplied by weights.
-     * @param weights   weight for each variable.
-     * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}"
-     * @param sum       variable containing the sum of weighted variables.
-     */
-    public LinearFloat(List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
-
-        super(variables.get(0).getStore(), variables, weights, rel, sum);
-    }
-
-
-
-    @Override public void queueVariable(int level, Var var) {
-        super.queueVariable(level, var);
-    }
-
-    public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
-
-        // System.out.println ("FloatLinear of " + f + " on " + x);
-
-        int fIndex = 0;
-        while (list[fIndex] != f)
-            fIndex++;
-
-        if (fIndex == list.length) {
-            throw new RuntimeException("Wrong variable in derivative of " + this);
-        }
-
-        FloatVar[] df = new FloatVar[list.length];
-        double[] ww = new double[list.length];
-        FloatVar v = null;
-
-        for (int i = 0; i < list.length; i++) {
-            if (i != fIndex) {
-                df[i] = Derivative.getDerivative(store, list[i], vars, x);
-
-                // System.out.println ("derivate of " + list[i] + " = " + df[i]);
-
-                ww[i] = weights[i] / (-weights[fIndex]);
-            } else {
-                v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-                df[i] = v;
-                ww[i] = -1.0;
-            }
-        }
-
-        org.jacop.constraints.Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
-        Derivative.poseDerivativeConstraint(c);
-
-        // System.out.println ("Derivative of " + f + " over " + x + " is " + c);
-
-        return v;
-    }
+    return v;
+  }
 }

@@ -30,12 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint "not costraint"
@@ -43,93 +42,96 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class Not extends PrimitiveConstraint implements UsesQueueVariable {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies the constraint which negation is being created.
-     */
-    final public PrimitiveConstraint c;
+  /** It specifies the constraint which negation is being created. */
+  public final PrimitiveConstraint c;
 
-    private final QueueForward<PrimitiveConstraint> queueForward;
+  private final QueueForward<PrimitiveConstraint> queueForward;
 
-    /**
-     * It constructs not constraint.
-     *
-     * @param c primitive constraint which is being negated.
-     */
-    public Not(PrimitiveConstraint c) {
-        PrimitiveConstraint[] scope = new PrimitiveConstraint[] {c};
-        checkInputForNullness("c", scope);
-        numberId = idNumber.incrementAndGet();
-        this.c = c;
-        setScope(scope);
-        setConstraintScope(scope);
-        this.queueForward = new QueueForward<>(c, arguments());
-        this.queueIndex = c.queueIndex;
+  /**
+   * It constructs not constraint.
+   *
+   * @param c primitive constraint which is being negated.
+   */
+  public Not(PrimitiveConstraint c) {
+    PrimitiveConstraint[] scope = new PrimitiveConstraint[] {c};
+    checkInputForNullness("c", scope);
+    numberId = idNumber.incrementAndGet();
+    this.c = c;
+    setScope(scope);
+    setConstraintScope(scope);
+    this.queueForward = new QueueForward<>(c, arguments());
+    this.queueIndex = c.queueIndex;
+  }
+
+  @Override
+  public void consistency(final Store store) {
+    c.notConsistency(store);
+  }
+
+  @Override
+  public int getNestedPruningEvent(Var var, boolean mode) {
+
+    return getConsistencyPruningEvent(var);
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as it delegates to internal constraint.");
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var var) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
+    return c.getNestedPruningEvent(var, false);
+  }
 
-    @Override public void consistency(final Store store) {
-        c.notConsistency(store);
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as it delegates to internal constraint.");
+  }
+
+  @Override
+  public int getNotConsistencyPruningEvent(Var var) {
+
+    // If notConsistency function mode
+    if (notConsistencyPruningEvents != null) {
+      Integer possibleEvent = notConsistencyPruningEvents.get(var);
+      if (possibleEvent != null) return possibleEvent;
     }
+    return c.getNestedPruningEvent(var, true);
+  }
 
-    @Override public int getNestedPruningEvent(Var var, boolean mode) {
+  @Override
+  public void notConsistency(final Store store) {
+    c.consistency(store);
+  }
 
-        return getConsistencyPruningEvent(var);
+  @Override
+  public boolean notSatisfied() {
+    return c.satisfied();
+  }
 
-    }
+  @Override
+  public boolean satisfied() {
+    return c.notSatisfied();
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as it delegates to internal constraint.");
-    }
+  @Override
+  public String toString() {
+    return id() + " : Not( " + c + ")";
+  }
 
-    @Override public int getConsistencyPruningEvent(Var var) {
-
-        // If consistency function mode
-        if (consistencyPruningEvents != null) {
-            Integer possibleEvent = consistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return c.getNestedPruningEvent(var, false);
-    }
-
-    @Override public int getDefaultConsistencyPruningEvent() {
-        throw new IllegalStateException("Not implemented as it delegates to internal constraint.");
-    }
-
-
-    @Override public int getNotConsistencyPruningEvent(Var var) {
-
-        // If notConsistency function mode
-        if (notConsistencyPruningEvents != null) {
-            Integer possibleEvent = notConsistencyPruningEvents.get(var);
-            if (possibleEvent != null)
-                return possibleEvent;
-        }
-        return c.getNestedPruningEvent(var, true);
-    }
-
-    @Override public void notConsistency(final Store store) {
-        c.consistency(store);
-    }
-
-    @Override public boolean notSatisfied() {
-        return c.satisfied();
-    }
-
-    @Override public boolean satisfied() {
-        return c.notSatisfied();
-    }
-
-    @Override public String toString() {
-        return id() + " : Not( " + c + ")";
-    }
-
-    @Override public void queueVariable(int level, Var variable) {
-        queueForward.queueForward(level, variable);
-    }
-
+  @Override
+  public void queueVariable(int level, Var variable) {
+    queueForward.queueForward(level, variable);
+  }
 }

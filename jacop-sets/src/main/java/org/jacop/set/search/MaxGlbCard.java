@@ -34,59 +34,43 @@ import org.jacop.search.ComparatorVariable;
 import org.jacop.set.core.SetVar;
 
 /**
- * Defines a maximum cardinality, of the greatest lowest bound, variable comparator. The variable with the maximum
- * cardinality for the greatest lower bound has the priority.
+ * Defines a maximum cardinality, of the greatest lowest bound, variable comparator. The variable
+ * with the maximum cardinality for the greatest lower bound has the priority.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski, Robert Åkemalm, and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class MaxGlbCard<T extends SetVar> implements ComparatorVariable<T> {
 
-    /**
-     * It constructs a maximum cardinality, of the greatest lowest bound, variable comparator.
-     */
-    public MaxGlbCard() {
-    }
+  /** It constructs a maximum cardinality, of the greatest lowest bound, variable comparator. */
+  public MaxGlbCard() {}
 
-    /**
-     * Compares the cardinality of the variables glb to the float value.
-     */
-    public int compare(double left, T var) {
+  /** Compares the cardinality of the variables glb to the float value. */
+  public int compare(double left, T var) {
 
-        int right = var.dom().glb().getSize();
+    int right = var.dom().glb().getSize();
 
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
+    if (left > right) return 1;
+    if (left < right) return -1;
 
-        return 0;
+    return 0;
+  }
 
-    }
+  /** Compares the cardinality of the variables glbs. */
+  public int compare(T leftVar, T rightVar) {
 
-    /**
-     * Compares the cardinality of the variables glbs.
-     */
-    public int compare(T leftVar, T rightVar) {
+    int left = leftVar.domain.glb().getSize();
+    int right = rightVar.domain.glb().getSize();
 
-        int left = leftVar.domain.glb().getSize();
-        int right = rightVar.domain.glb().getSize();
+    if (left > right) return 1;
+    if (left < right) return -1;
 
-        if (left > right)
-            return 1;
-        if (left < right)
-            return -1;
+    return 0;
+  }
 
-        return 0;
-    }
-
-    /**
-     * Returns the cardinality of the glb.
-     */
-    public double metric(T var) {
-        return var.dom().glb().getSize();
-    }
-
+  /** Returns the cardinality of the glb. */
+  public double metric(T var) {
+    return var.dom().glb().getSize();
+  }
 }

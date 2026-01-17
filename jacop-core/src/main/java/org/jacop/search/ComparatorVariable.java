@@ -39,33 +39,31 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public interface ComparatorVariable<T extends Var> {
 
-    /**
-     * It compares the baseline metric to the variable metric.
-     *
-     * @param metric the baseline for comparison.
-     * @param var    variable which is compared to baseline.
-     * @return 1 if metric is larger than variable, 0 if equal, -1 if baseline is smaller.
-     */
-    int compare(double metric, T var);
+  /**
+   * It compares the baseline metric to the variable metric.
+   *
+   * @param metric the baseline for comparison.
+   * @param var variable which is compared to baseline.
+   * @return 1 if metric is larger than variable, 0 if equal, -1 if baseline is smaller.
+   */
+  int compare(double metric, T var);
 
-    /**
-     * It compares the metric of the left variable against the right one.
-     *
-     * @param leftVar  left variable
-     * @param rightVar right variable
-     * @return 1 if metric for left variable is greater, 0 is they are equal, -1 if smaller.
-     */
-    int compare(T leftVar, T rightVar);
+  /**
+   * It compares the metric of the left variable against the right one.
+   *
+   * @param leftVar left variable
+   * @param rightVar right variable
+   * @return 1 if metric for left variable is greater, 0 is they are equal, -1 if smaller.
+   */
+  int compare(T leftVar, T rightVar);
 
-    /**
-     * It returns the metric of the variable given according to the comparator.
-     *
-     * @param var variable for which metric is computed.
-     * @return the metric of the variable according to the comparator.
-     */
-    double metric(T var);
-
+  /**
+   * It returns the metric of the variable given according to the comparator.
+   *
+   * @param var variable for which metric is computed.
+   * @return the metric of the variable according to the comparator.
+   */
+  double metric(T var);
 }

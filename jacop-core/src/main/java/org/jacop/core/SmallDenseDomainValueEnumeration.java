@@ -36,60 +36,59 @@ package org.jacop.core;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 
-    int current;
+  int current;
 
-    SmallDenseDomain domain;
+  SmallDenseDomain domain;
 
-    long bits;
+  long bits;
 
-    /**
-     * It create an enumeration for a given domain.
-     *
-     * @param dom domain for which value enumeration is created.
-     */
-    public SmallDenseDomainValueEnumeration(SmallDenseDomain dom) {
+  /**
+   * It create an enumeration for a given domain.
+   *
+   * @param dom domain for which value enumeration is created.
+   */
+  public SmallDenseDomainValueEnumeration(SmallDenseDomain dom) {
 
-        domain = dom;
-        current = dom.min;
-        bits = dom.bits;
+    domain = dom;
+    current = dom.min;
+    bits = dom.bits;
+  }
 
+  @Override
+  public boolean hasMoreElements() {
+    return (bits != 0);
+  }
+
+  @Override
+  public int nextElement() {
+
+    if (bits == 0) throw new IllegalStateException("No more elements");
+
+    while (bits > 0) {
+      current++;
+      bits = bits << 1;
     }
 
-    @Override public boolean hasMoreElements() {
-        return (bits != 0);
+    int next = current;
+
+    current++;
+    bits = bits << 1;
+
+    return next;
+  }
+
+  @Override
+  public void domainHasChanged() {
+
+    // current, denotes the last element which has been returned.
+    if (domain.min + 63 < current) {
+      bits = 0;
+      // no more elements.
+      return;
     }
 
-    @Override public int nextElement() {
-
-        if (bits == 0)
-            throw new IllegalStateException("No more elements");
-
-        while (bits > 0) {
-            current++;
-            bits = bits << 1;
-        }
-
-        int next = current;
-
-        current++;
-        bits = bits << 1;
-
-        return next;
-    }
-
-    @Override public void domainHasChanged() {
-
-        // current, denotes the last element which has been returned.
-        if (domain.min + 63 < current) {
-            bits = 0;
-            // no more elements.
-            return;
-        }
-
-        bits = domain.bits << (current - domain.min);
-    }
-
+    bits = domain.bits << (current - domain.min);
+  }
 }

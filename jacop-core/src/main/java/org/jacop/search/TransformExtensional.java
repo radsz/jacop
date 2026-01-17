@@ -30,129 +30,119 @@
 
 package org.jacop.search;
 
-import org.jacop.constraints.Constraint;
-import org.jacop.constraints.ExtensionalSupportVA;
-import org.jacop.core.*;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.core.*;
 
 /**
- * It defines an intialize listener which transforms part of the problem
- * into an extensional constraint by searching for all partial solutions
- * given the scope of the variables of interest.
+ * It defines an intialize listener which transforms part of the problem into an extensional
+ * constraint by searching for all partial solutions given the scope of the variables of interest.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class TransformExtensional implements InitializeListener {
 
-    InitializeListener[] initializeChildListeners;
+  InitializeListener[] initializeChildListeners;
 
-    /**
-     * It contains all the information which will become variables in
-     * the scope of the extensional constraint produced by this search
-     * listener.
-     */
-    public List<IntVar> variablesTransformationScope = new ArrayList<IntVar>();
+  /**
+   * It contains all the information which will become variables in the scope of the extensional
+   * constraint produced by this search listener.
+   */
+  public List<IntVar> variablesTransformationScope = new ArrayList<IntVar>();
 
-    /**
-     * The limit of solutions upon reaching the transformation is abandoned and solution
-     * progress normally without any transformation.
-     */
-    public int solutionLimit = 10000;
+  /**
+   * The limit of solutions upon reaching the transformation is abandoned and solution progress
+   * normally without any transformation.
+   */
+  public int solutionLimit = 10000;
 
-    static final boolean debug = false;
+  static final boolean debug = false;
 
-    public void executedAtInitialize(Store store) {
+  public void executedAtInitialize(Store store) {
 
-        // @todo methods to suggest the interesting scope of the transformation.
-        // Search for all solutions given set of variables V
-        // Set of variables V should be chosen in such a way that
-        // a) the set of solutions is not huge
-        // b) many constraints scope falls within set V
-        // c) constraints are not well communicating/propagating on its own
-        //    but are rather tight together.
+    // @todo methods to suggest the interesting scope of the transformation.
+    // Search for all solutions given set of variables V
+    // Set of variables V should be chosen in such a way that
+    // a) the set of solutions is not huge
+    // b) many constraints scope falls within set V
+    // c) constraints are not well communicating/propagating on its own
+    //    but are rather tight together.
 
-        SelectChoicePoint<IntVar> select =
-            new SimpleSelect<IntVar>(variablesTransformationScope.toArray(new IntVar[1]), new MostConstrainedStatic<IntVar>(),
-                new IndomainMin<IntVar>());
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<IntVar>(
+            variablesTransformationScope.toArray(new IntVar[1]),
+            new MostConstrainedStatic<IntVar>(),
+            new IndomainMin<IntVar>());
 
-        Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<IntVar>();
 
-        search.getSolutionListener().searchAll(true);
-        search.getSolutionListener().recordSolutions(true);
-        search.getSolutionListener().setSolutionLimit(solutionLimit);
-        search.setAssignSolution(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    search.getSolutionListener().setSolutionLimit(solutionLimit);
+    search.setAssignSolution(false);
 
-        boolean searchResult = search.labeling(store, select);
+    boolean searchResult = search.labeling(store, select);
 
-        // If solution limit has been reached then no transformation.
-        searchResult &= !search.getSolutionListener().solutionLimitReached();
+    // If solution limit has been reached then no transformation.
+    searchResult &= !search.getSolutionListener().solutionLimitReached();
 
-        // Create for all solutions an extensional constraints
-        if (searchResult) {
+    // Create for all solutions an extensional constraints
+    if (searchResult) {
 
-            // All constraint which have scope within set V are removed
+      // All constraint which have scope within set V are removed
 
-            for (Var v : variablesTransformationScope) {
+      for (Var v : variablesTransformationScope) {
 
-                Constraint[][] varConstraints = v.dom().modelConstraints;
-                int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
+        Constraint[][] varConstraints = v.dom().modelConstraints;
+        int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
 
-                Set<Constraint> constraintsInQuestion = new HashSet<Constraint>();
+        Set<Constraint> constraintsInQuestion = new HashSet<Constraint>();
 
-                for (int i = 0; i < toEvaluate.length; i++)
-                    for (int j = 0; j < toEvaluate[i]; j++)
-                        constraintsInQuestion.add(varConstraints[i][j]);
+        for (int i = 0; i < toEvaluate.length; i++)
+          for (int j = 0; j < toEvaluate[i]; j++) constraintsInQuestion.add(varConstraints[i][j]);
 
-                for (Constraint checkConstraint : constraintsInQuestion) {
+        for (Constraint checkConstraint : constraintsInQuestion) {
 
-                    boolean toBeRemoved = true;
+          boolean toBeRemoved = true;
 
-                    for (Var m : checkConstraint.arguments())
-                        if (!variablesTransformationScope.contains(m))
-                            toBeRemoved = false;
+          for (Var m : checkConstraint.arguments())
+            if (!variablesTransformationScope.contains(m)) toBeRemoved = false;
 
-                    if (toBeRemoved)
-                        checkConstraint.removeConstraint();
-
-                }
-
-            }
-
-            // Obtaining all solutions and creating an extensional constraint.
-
-            int[][] solutions = new int[search.getSolutionListener().solutionsNo()][];
-            for (int i = 1; i <= solutions.length; i++) {
-                Domain[] currentSolution = search.getSolution(i);
-                solutions[i - 1] = new int[currentSolution.length];
-                for (int j = 0; j < currentSolution.length; j++)
-                    solutions[i - 1][j] = ((IntDomain) currentSolution[j]).min();
-            }
-
-            IntVar[] vars = search.getSolutionListener().getVariables();
-
-            ExtensionalSupportVA transformationIntoExtensionalConstraint = new ExtensionalSupportVA(vars, solutions);
-            store.impose(transformationIntoExtensionalConstraint);
-
-            if (debug)
-                System.out.println(transformationIntoExtensionalConstraint);
-
+          if (toBeRemoved) checkConstraint.removeConstraint();
         }
+      }
 
+      // Obtaining all solutions and creating an extensional constraint.
+
+      int[][] solutions = new int[search.getSolutionListener().solutionsNo()][];
+      for (int i = 1; i <= solutions.length; i++) {
+        Domain[] currentSolution = search.getSolution(i);
+        solutions[i - 1] = new int[currentSolution.length];
+        for (int j = 0; j < currentSolution.length; j++)
+          solutions[i - 1][j] = ((IntDomain) currentSolution[j]).min();
+      }
+
+      IntVar[] vars = search.getSolutionListener().getVariables();
+
+      ExtensionalSupportVA transformationIntoExtensionalConstraint =
+          new ExtensionalSupportVA(vars, solutions);
+      store.impose(transformationIntoExtensionalConstraint);
+
+      if (debug) System.out.println(transformationIntoExtensionalConstraint);
     }
+  }
 
-    public void setChildrenListeners(InitializeListener[] children) {
-        initializeChildListeners = children;
-    }
+  public void setChildrenListeners(InitializeListener[] children) {
+    initializeChildListeners = children;
+  }
 
-    public void setChildrenListeners(InitializeListener child) {
-        initializeChildListeners = new InitializeListener[1];
-        initializeChildListeners[0] = child;
-    }
-
+  public void setChildrenListeners(InitializeListener child) {
+    initializeChildListeners = new InitializeListener[1];
+    initializeChildListeners[0] = child;
+  }
 }

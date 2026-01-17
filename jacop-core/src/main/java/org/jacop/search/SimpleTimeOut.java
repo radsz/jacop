@@ -28,54 +28,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.jacop.search;
 
 /**
- * It defines a simple time out listener. It only records the fact
- * that timeout listener occurred as well as number of solutions found
- * before the timeout.
+ * It defines a simple time out listener. It only records the fact that timeout listener occurred as
+ * well as number of solutions found before the timeout.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class SimpleTimeOut implements TimeOutListener {
 
-    /**
-     * It specifies if the timeout has already occurred.
-     */
-    public boolean timeOutOccurred = false;
+  /** It specifies if the timeout has already occurred. */
+  public boolean timeOutOccurred = false;
 
-    /**
-     * It records number of found solutions.
-     */
-    public int solutionsNo = 0;
+  /** It records number of found solutions. */
+  public int solutionsNo = 0;
 
-    /**
-     * It contains child(ren) of this timeout listener.
-     */
-    public TimeOutListener[] timeOutListeners;
+  /** It contains child(ren) of this timeout listener. */
+  public TimeOutListener[] timeOutListeners;
 
-    public void executedAtTimeOut(int solutionsNo) {
-        this.solutionsNo = solutionsNo;
-        this.timeOutOccurred = true;
+  public void executedAtTimeOut(int solutionsNo) {
+    this.solutionsNo = solutionsNo;
+    this.timeOutOccurred = true;
 
-        if (timeOutListeners != null) {
-            for (int i = 0; i < timeOutListeners.length; i++)
-                timeOutListeners[i].executedAtTimeOut(solutionsNo);
-        }
-
+    if (timeOutListeners != null) {
+      for (int i = 0; i < timeOutListeners.length; i++)
+        timeOutListeners[i].executedAtTimeOut(solutionsNo);
     }
+  }
 
-    public void setChildrenListeners(TimeOutListener[] children) {
-        timeOutListeners = children;
-    }
+  public void setChildrenListeners(TimeOutListener[] children) {
+    timeOutListeners = children;
+  }
 
-    public void setChildrenListeners(TimeOutListener child) {
-        timeOutListeners = new TimeOutListener[1];
-        timeOutListeners[0] = child;
-
-    }
-
+  public void setChildrenListeners(TimeOutListener child) {
+    timeOutListeners = new TimeOutListener[1];
+    timeOutListeners[0] = child;
+  }
 }

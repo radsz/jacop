@@ -30,179 +30,163 @@
 
 package org.jacop.search;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * NoGoodCollector collects no-goods from search when timeout has occurred. As
- * time-out is executed the search will exit from deeper search levels and
- * no-goods collector will collect neccessary information to create no-goods
- * when finally exiting the search. The no-goods will be immmediately imposed
- * when collector is informed about exiting the search.
+ * NoGoodCollector collects no-goods from search when timeout has occurred. As time-out is executed
+ * the search will exit from deeper search levels and no-goods collector will collect neccessary
+ * information to create no-goods when finally exiting the search. The no-goods will be immmediately
+ * imposed when collector is informed about exiting the search.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+public class NoGoodsCollector<T extends IntVar>
+    implements ExitChildListener<T>, TimeOutListener, ExitListener {
 
-public class NoGoodsCollector<T extends IntVar> implements ExitChildListener<T>, TimeOutListener, ExitListener {
+  List<List<T>> noGoodsVariables;
 
-    List<List<T>> noGoodsVariables;
+  List<List<Integer>> noGoodsValues;
 
-    List<List<Integer>> noGoodsValues;
+  /** It specifies if the timeout has occurred and search is being terminated. */
+  public boolean timeOut = false;
 
-    /**
-     * It specifies if the timeout has occurred and search is being terminated.
-     */
-    public boolean timeOut = false;
+  ExitChildListener<T>[] exitChildListeners;
 
-    ExitChildListener<T>[] exitChildListeners;
+  TimeOutListener[] timeOutListeners;
 
-    TimeOutListener[] timeOutListeners;
+  ExitListener[] exitListeners;
 
-    ExitListener[] exitListeners;
+  /** It is executed right after time out is determined. */
+  public void executedAtTimeOut(int noSolutions) {
 
-    /**
-     * It is executed right after time out is determined.
-     */
-
-    public void executedAtTimeOut(int noSolutions) {
-
-        if (noSolutions == 0) {
-            timeOut = true;
-            noGoodsVariables = new ArrayList<List<T>>();
-            noGoodsValues = new ArrayList<List<Integer>>();
-        }
-
-        if (timeOutListeners != null)
-            for (int i = 0; i < timeOutListeners.length; i++)
-                timeOutListeners[i].executedAtTimeOut(noSolutions);
+    if (noSolutions == 0) {
+      timeOut = true;
+      noGoodsVariables = new ArrayList<List<T>>();
+      noGoodsValues = new ArrayList<List<Integer>>();
     }
 
-    /**
-     * It is executed after exiting left child. Status specifies if the solution
-     * is found or not. The return parameter specifies if the search should
-     * continue according to its course or be forced to exit the parent node of
-     * the left child.
-     */
+    if (timeOutListeners != null)
+      for (int i = 0; i < timeOutListeners.length; i++)
+        timeOutListeners[i].executedAtTimeOut(noSolutions);
+  }
 
-    public boolean leftChild(T var, int value, boolean status) {
+  /**
+   * It is executed after exiting left child. Status specifies if the solution is found or not. The
+   * return parameter specifies if the search should continue according to its course or be forced
+   * to exit the parent node of the left child.
+   */
+  public boolean leftChild(T var, int value, boolean status) {
 
-        if (timeOut) {
-            for (List<T> noGood : noGoodsVariables)
-                noGood.add(var);
+    if (timeOut) {
+      for (List<T> noGood : noGoodsVariables) noGood.add(var);
 
-            for (List<Integer> noGood : noGoodsValues)
-                noGood.add(value);
+      for (List<Integer> noGood : noGoodsValues) noGood.add(value);
 
-            if (exitChildListeners != null)
-                for (int i = 0; i < exitChildListeners.length; i++)
-                    exitChildListeners[i].leftChild(var, value, status);
+      if (exitChildListeners != null)
+        for (int i = 0; i < exitChildListeners.length; i++)
+          exitChildListeners[i].leftChild(var, value, status);
 
-            return false;
-        } else {
-            if (exitChildListeners == null)
-                return true;
-            else {
-                boolean code = false;
-                for (int i = 0; i < exitChildListeners.length; i++)
-                    code |= exitChildListeners[i].leftChild(var, value, status);
-                return code;
-            }
-        }
+      return false;
+    } else {
+      if (exitChildListeners == null) return true;
+      else {
+        boolean code = false;
+        for (int i = 0; i < exitChildListeners.length; i++)
+          code |= exitChildListeners[i].leftChild(var, value, status);
+        return code;
+      }
+    }
+  }
+
+  public boolean leftChild(PrimitiveConstraint choice, boolean status) {
+    if (exitChildListeners == null) return true;
+    else {
+      boolean code = false;
+      for (int i = 0; i < exitChildListeners.length; i++)
+        code |= exitChildListeners[i].leftChild(choice, status);
+      return code;
+    }
+  }
+
+  public void rightChild(T var, int value, boolean status) {
+
+    if (timeOut) {
+      List<T> newNoGoodVar = new ArrayList<T>();
+      newNoGoodVar.add(var);
+      List<Integer> newNoGoodVal = new ArrayList<Integer>();
+      newNoGoodVal.add(value);
+
+      noGoodsVariables.add(newNoGoodVar);
+      noGoodsValues.add(newNoGoodVal);
     }
 
-    public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-        if (exitChildListeners == null)
-            return true;
-        else {
-            boolean code = false;
-            for (int i = 0; i < exitChildListeners.length; i++)
-                code |= exitChildListeners[i].leftChild(choice, status);
-            return code;
-        }
+    if (exitChildListeners != null)
+      for (int i = 0; i < exitChildListeners.length; i++)
+        exitChildListeners[i].rightChild(var, value, status);
+  }
+
+  public void rightChild(PrimitiveConstraint choice, boolean status) {
+    if (exitChildListeners != null)
+      for (int i = 0; i < exitChildListeners.length; i++)
+        exitChildListeners[i].rightChild(choice, status);
+    return;
+  }
+
+  public void executedAtExit(Store store, int solutionsNo) {
+
+    if (timeOut && solutionsNo == 0) {
+      for (int i = 0; i < noGoodsVariables.size(); i++)
+        store.impose(new NoGood(noGoodsVariables.get(i), noGoodsValues.get(i)));
     }
 
-    public void rightChild(T var, int value, boolean status) {
+    if (exitListeners != null)
+      for (int i = 0; i < exitChildListeners.length; i++)
+        exitListeners[i].executedAtExit(store, solutionsNo);
+  }
 
-        if (timeOut) {
-            List<T> newNoGoodVar = new ArrayList<T>();
-            newNoGoodVar.add(var);
-            List<Integer> newNoGoodVal = new ArrayList<Integer>();
-            newNoGoodVal.add(value);
+  public void setChildrenListeners(ExitChildListener<T>[] children) {
+    exitChildListeners = children;
+  }
 
-            noGoodsVariables.add(newNoGoodVar);
-            noGoodsValues.add(newNoGoodVal);
-        }
+  public void setChildrenListeners(ExitListener[] children) {
 
-        if (exitChildListeners != null)
-            for (int i = 0; i < exitChildListeners.length; i++)
-                exitChildListeners[i].rightChild(var, value, status);
+    exitListeners = children;
+  }
 
-    }
+  public void setChildrenListeners(TimeOutListener[] children) {
 
-    public void rightChild(PrimitiveConstraint choice, boolean status) {
-        if (exitChildListeners != null)
-            for (int i = 0; i < exitChildListeners.length; i++)
-                exitChildListeners[i].rightChild(choice, status);
-        return;
-    }
+    timeOutListeners = children;
+  }
 
-    public void executedAtExit(Store store, int solutionsNo) {
+  public void setChildrenListeners(TimeOutListener child) {
+    timeOutListeners = new TimeOutListener[1];
+    timeOutListeners[0] = child;
+  }
 
-        if (timeOut && solutionsNo == 0) {
-            for (int i = 0; i < noGoodsVariables.size(); i++)
-                store.impose(new NoGood(noGoodsVariables.get(i), noGoodsValues.get(i)));
+  public void setChildrenListeners(ExitListener child) {
+    exitListeners = new ExitListener[1];
+    exitListeners[0] = child;
+  }
 
-        }
+  @SuppressWarnings("unchecked")
+  public void setChildrenListeners(ExitChildListener<T> child) {
+    exitChildListeners = new ExitChildListener[1];
+    exitChildListeners[0] = child;
+  }
 
-        if (exitListeners != null)
-            for (int i = 0; i < exitChildListeners.length; i++)
-                exitListeners[i].executedAtExit(store, solutionsNo);
-    }
+  @Override
+  public String toString() {
 
-    public void setChildrenListeners(ExitChildListener<T>[] children) {
-        exitChildListeners = children;
-    }
-
-    public void setChildrenListeners(ExitListener[] children) {
-
-        exitListeners = children;
-    }
-
-    public void setChildrenListeners(TimeOutListener[] children) {
-
-        timeOutListeners = children;
-
-    }
-
-    public void setChildrenListeners(TimeOutListener child) {
-        timeOutListeners = new TimeOutListener[1];
-        timeOutListeners[0] = child;
-    }
-
-    public void setChildrenListeners(ExitListener child) {
-        exitListeners = new ExitListener[1];
-        exitListeners[0] = child;
-    }
-
-    @SuppressWarnings("unchecked") public void setChildrenListeners(ExitChildListener<T> child) {
-        exitChildListeners = new ExitChildListener[1];
-        exitChildListeners[0] = child;
-    }
-
-    @Override public String toString() {
-
-        if (noGoodsVariables != null) {
-            StringBuffer sb = new StringBuffer(noGoodsVariables.toString());
-            sb.append(noGoodsValues.toString());
-            return sb.toString();
-        } else
-            return "[]";
-
-    }
+    if (noGoodsVariables != null) {
+      StringBuffer sb = new StringBuffer(noGoodsVariables.toString());
+      sb.append(noGoodsValues.toString());
+      return sb.toString();
+    } else return "[]";
+  }
 }
