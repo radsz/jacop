@@ -46,6 +46,16 @@ import java.util.ArrayList;
 
 public class FloatVar extends Var {
 
+    // Ensure search handlers are registered when FloatVar is first used
+    static {
+        try {
+            Class.forName("org.jacop.floats.search.FloatSearchSupport");
+        } catch (ClassNotFoundException e) {
+            // FloatSearchSupport not available - handlers won't be registered
+            // This is OK if jacop-floats search package is not on classpath
+        }
+    }
+
     /**
      * It stores pointer to a current domain, which has stamp equal to store
      * stamp.

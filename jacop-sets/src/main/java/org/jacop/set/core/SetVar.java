@@ -46,6 +46,16 @@ import java.util.ArrayList;
 
 public class SetVar extends Var {
 
+    // Ensure search handlers are registered when SetVar is first used
+    static {
+        try {
+            Class.forName("org.jacop.set.search.SetSearchSupport");
+        } catch (ClassNotFoundException e) {
+            // SetSearchSupport not available - handlers won't be registered
+            // This is OK if jacop-sets search package is not on classpath
+        }
+    }
+
     /**
      * It specifies the current domain associated with this set variable.
      */

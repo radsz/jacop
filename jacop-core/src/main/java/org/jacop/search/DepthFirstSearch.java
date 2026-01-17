@@ -35,11 +35,6 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XltC;
 import org.jacop.core.*;
-import org.jacop.floats.constraints.PlteqC;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.set.core.SetDomain;
-import org.jacop.set.core.SetVar;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -114,7 +109,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     /**
      * It represents the cost value of currently best solution for FloatVar cost.
      */
-    public double costValueFloat = FloatDomain.MaxFloat;
+    public double costValueFloat = Double.MAX_VALUE;
 
     /**
      * It represents the cost variable.
@@ -510,26 +505,35 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         // -1 since costValue is the cost of last solution
         if (optimize && cost != null)
             try {
-                // cost IntVar
-                if (costVariable instanceof IntVar) {
+                CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                if (costHandler != null) {
+                    double minCost = costHandler.getMinCostValue(costVariable);
+                    double currentBestCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+                    double previousCost = costHandler.getPreviousCostValue(currentBestCost);
+                    
+                    // Check if we can still improve
+                    // For IntVar: minCost <= previousCost (which is costValue - 1)
+                    // For FloatVar: minCost < previousCost (which accounts for floating-point precision)
+                    boolean canImprove = costVariable instanceof IntVar 
+                        ? minCost <= previousCost 
+                        : minCost < previousCost;
+                    
+                    if (canImprove) {
+                        // Can improve: restrict domain to exclude values worse than previous best
+                        costHandler.updateCostDomain(store, costVariable, currentBestCost);
+                    } else {
+                        // Cannot improve: no better solutions possible
+                        if (consistencyListener != null)
+                            consistencyListener.executeAfterConsistency(false);
+                        return false;
+                    }
+                } else if (costVariable instanceof IntVar) {
+                    // Fallback for IntVar (should always have handler, but just in case)
                     if (((IntVar) costVariable).min() <= costValue - 1)
                         ((IntVar) costVariable).domain.in(store.level, (IntVar) costVariable, ((IntVar) costVariable).min(), costValue - 1);
                     else {
                         if (consistencyListener != null)
                             consistencyListener.executeAfterConsistency(false);
-
-                        return false;
-                    }
-                }
-                // cost FloatVar
-                else if (costVariable instanceof FloatVar) {
-                    if (((FloatVar) costVariable).min() < FloatDomain.previousForMinimization(costValueFloat))
-                        ((FloatVar) costVariable).domain.in(store.level, (FloatVar) costVariable, ((FloatVar) costVariable).min(),
-                            FloatDomain.previousForMinimization(costValueFloat));
-                    else {
-                        if (consistencyListener != null)
-                            consistencyListener.executeAfterConsistency(false);
-
                         return false;
                     }
                 }
@@ -579,14 +583,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                  * non grounding of values even in case of var,value pair.
                  */
 
-                if (fdv instanceof IntVar)
+                DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
+                if (domainHandler != null) {
+                    domainHandler.inValue(store, fdv, val, einAinleftTree);
+                } else if (fdv instanceof IntVar) {
+                    // Fallback for IntVar (should always have handler, but just in case)
                     ((IntDomain) fdv.dom()).inValue(store.level, (IntVar) fdv, val);
-
-                if (fdv instanceof SetVar)
-                    if (einAinleftTree)
-                        ((SetDomain) fdv.dom()).inGLB(store.level, (SetVar) fdv, val);
-                    else
-                        ((SetDomain) fdv.dom()).inLUBComplement(store.level, (SetVar) fdv, val);
+                }
 
                 decisions++;
 
@@ -626,49 +629,74 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                                 break;
 
                             if (costVariable != null) {
-                                if (costVariable instanceof IntVar) {
+                                CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                                if (costHandler != null) {
+                                    double childCostValue;
+                                    if (costVariable instanceof IntVar) {
+                                        childCostValue = childSearches[currentChildSearch].getCostValue();
+                                    } else {
+                                        childCostValue = childSearches[currentChildSearch].getCostValueFloat();
+                                    }
+                                    
+                                    double currentBestCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+                                    if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
+                                        if (costVariable instanceof IntVar) {
+                                            costValue = (int) childCostValue;
+                                        } else {
+                                            costValueFloat = childCostValue;
+                                        }
+                                        cost = costHandler.createCostConstraint(costVariable, childCostValue);
+                                    }
+                                    
+                                    double minCost = costHandler.getMinCostValue(costVariable);
+                                    if (childCostValue <= minCost) {
+                                        // other child searches will not be able to find any solutions.
+                                        break;
+                                    } else {
+                                        costHandler.updateCostDomain(store, costVariable, childCostValue);
+                                    }
+                                } else if (costVariable instanceof IntVar) {
+                                    // Fallback for IntVar
                                     int childCostValue = childSearches[currentChildSearch].getCostValue();
                                     if (childCostValue < costValue) {
                                         costValue = childCostValue;
                                         cost = new XltC((IntVar) costVariable, costValue);
                                     }
                                     if (childCostValue <= ((IntVar) costVariable).min())
-                                        // other child searches will not be able to find any solutions.
                                         break;
                                     else {
                                         ((IntVar) costVariable).domain.inMax(store.level, (IntVar) costVariable, childCostValue - 1);
-                                    }
-                                } else if (costVariable instanceof FloatVar) {
-                                    double childCostValue = childSearches[currentChildSearch].getCostValueFloat();
-                                    if (childCostValue < costValueFloat) {
-                                        costValueFloat = childCostValue;
-                                        cost = new PlteqC((FloatVar) costVariable,
-                                            FloatDomain.previousForMinimization(costValueFloat)); //costValueFloat - FloatDomain.epsilon(costValueFloat));
-                                    }
-                                    if (childCostValue <= ((FloatVar) costVariable).min())
-                                        // other child searches will not be able to find any solutions.
-                                        break;
-                                    else {
-                                        ((FloatVar) costVariable).domain
-                                            .inMax(store.level, (FloatVar) costVariable, FloatDomain.previous(childCostValue));
                                     }
                                 }
                             }
                         }
 
                         if (childResult && costVariable != null) {
-                            if (costVariable instanceof IntVar) {
+                            CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                            if (costHandler != null) {
+                                double childCostValue;
+                                if (costVariable instanceof IntVar) {
+                                    childCostValue = childSearches[currentChildSearch].getCostValue();
+                                } else {
+                                    childCostValue = childSearches[currentChildSearch].getCostValueFloat();
+                                }
+                                
+                                double currentBestCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+                                if (costHandler.isBetterCost(currentBestCost, childCostValue, true)) {
+                                    if (costVariable instanceof IntVar) {
+                                        costValue = (int) childCostValue;
+                                    } else {
+                                        costValueFloat = childCostValue;
+                                    }
+                                    cost = costHandler.createCostConstraint(costVariable, childCostValue);
+                                }
+                            } else if (costVariable instanceof IntVar) {
+                                // Fallback for IntVar
                                 int childCostValue = childSearches[currentChildSearch].getCostValue();
                                 if (childCostValue < costValue)
                                     costValue = childCostValue;
                                 cost = new XltC((IntVar) costVariable, costValue);
-                            } else if (costVariable instanceof FloatVar) {
-                                double childCostValue = childSearches[currentChildSearch].getCostValueFloat();
-                                if (childCostValue < costValueFloat)
-                                    costValueFloat = childCostValue;
-                                cost = new PlteqC((FloatVar) costVariable, FloatDomain.previousForMinimization(costValueFloat));
                             }
-
                         }
 
                         boolean stopMasterSearch = false;
@@ -700,14 +728,20 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                     if (costVariable != null) {
                         // it does not mean there is an optimization, only that we want to remember the value
                         // of the costVariable
-                        if (costVariable instanceof IntVar) {
+                        CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                        if (costHandler != null) {
+                            double currentCost = costHandler.getCostValue(costVariable);
+                            if (costVariable instanceof IntVar) {
+                                costValue = (int) currentCost;
+                            } else {
+                                costValueFloat = currentCost;
+                            }
+                            cost = costHandler.createCostConstraint(costVariable, currentCost);
+                        } else if (costVariable instanceof IntVar) {
+                            // Fallback for IntVar
                             costValue = ((IntVar) costVariable).dom().min();
                             cost = new XltC((IntVar) costVariable, costValue);
-                        } else if (costVariable instanceof FloatVar) {
-                            costValueFloat = ((FloatVar) costVariable).dom().max();
-                            cost = new PlteqC((FloatVar) costVariable, FloatDomain.previousForMinimization(costValueFloat));
                         }
-
                     }
 
                     if (!respectSolutionListenerAdvice && optimize) {
@@ -804,14 +838,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
                     store.setLevel(store.level);
 
-                    if (fdv instanceof IntVar)
+                    DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
+                    if (domainHandler != null) {
+                        domainHandler.inComplement(store, fdv, val, einAinleftTree);
+                    } else if (fdv instanceof IntVar) {
+                        // Fallback for IntVar (should always have handler, but just in case)
                         ((IntDomain) fdv.dom()).inComplement(store.level, (IntVar) fdv, val);
-
-                    if (fdv instanceof SetVar)
-                        if (einAinleftTree)
-                            ((SetDomain) fdv.dom()).inLUBComplement(store.level, (SetVar) fdv, val);
-                        else
-                            ((SetDomain) fdv.dom()).inGLB(store.level, (SetVar) fdv, val);
+                    }
 
                     consistent = label(firstVariable);
 
@@ -915,11 +948,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
 
             if (printInfo) {
-                if (costVariable != null)
-                    if (costVariable instanceof IntVar)
+                if (costVariable != null) {
+                    CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                    if (costHandler != null) {
+                        double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
+                        System.out.println("Solution cost is " + cost);
+                    } else if (costVariable instanceof IntVar) {
                         System.out.println("Solution cost is " + costValue);
-                    else if (costVariable instanceof FloatVar)
-                        System.out.println("Solution cost is " + costValueFloat);
+                    }
+                }
 
                 System.out.println(this);
             }
@@ -1146,11 +1183,22 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             if (assignSolution)
                 assignSolution();
 
-            if (printInfo)
-                if (costVariable instanceof IntVar)
-                    System.out.println("Solution cost is " + costValue);
-                else if (costVariable instanceof FloatVar)
-                    System.out.println("Solution cost is " + costVariable.dom());
+            if (printInfo) {
+                if (costVariable != null) {
+                    CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                    if (costHandler != null) {
+                        DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
+                        if (domainHandler != null) {
+                            System.out.println("Solution cost is " + domainHandler.getDomainString(costVariable));
+                        } else {
+                            double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
+                            System.out.println("Solution cost is " + cost);
+                        }
+                    } else if (costVariable instanceof IntVar) {
+                        System.out.println("Solution cost is " + costValue);
+                    }
+                }
+            }
 
             if (printInfo)
                 System.out.println(this);
@@ -1293,11 +1341,20 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         buf.append("\n" + solutionListener.toString());
 
-        if (costVariable != null)
-            if (costVariable instanceof IntVar)
+        if (costVariable != null) {
+            CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+            if (costHandler != null) {
+                DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
+                if (domainHandler != null) {
+                    buf.append("Cost " + domainHandler.getDomainString(costVariable) + "\n");
+                } else {
+                    double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
+                    buf.append("Cost " + cost + "\n");
+                }
+            } else if (costVariable instanceof IntVar) {
                 buf.append("Cost " + costValue + "\n");
-            else if (costVariable instanceof FloatVar)
-                buf.append("Cost " + costVariable.dom() + "\n");
+            }
+        }
 
         buf.append("Nodes : ").append(nodes).append("\n");
         buf.append("Decisions : ").append(decisions).append("\n");
