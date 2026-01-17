@@ -72,7 +72,7 @@ public final class DomainTranslator implements WrapperComponent {
             translatedVars.add(variable);
 
             // the domain for the variable
-            SatCPBridge domain = variable.satBridge;
+            SatCPBridge domain = wrapper.getSatBridge(variable);
             // the clause
             LinkedList<Integer> clause = new LinkedList<Integer>();
 

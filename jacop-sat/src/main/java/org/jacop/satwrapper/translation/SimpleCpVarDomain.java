@@ -214,11 +214,9 @@ public class SimpleCpVarDomain extends SatCPBridge {
     }
 
     @Override public void initialize(SatWrapper wrapper) {
-
-        this.wrapper = wrapper;
+        super.initialize(wrapper);
         assert wrapper.domainDatabase != null : "DomainClausesDatabase is needed";
         this.clauseDatabase = wrapper.domainDatabase;
-
     }
 
 }

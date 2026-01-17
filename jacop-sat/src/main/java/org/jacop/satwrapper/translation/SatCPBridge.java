@@ -168,14 +168,28 @@ public abstract class SatCPBridge implements WrapperComponent {
     public SatCPBridge(IntVar variable) {
         this.variable = variable;
         this.initialDomain = variable.domain;
-        variable.satBridge = this;
+        // Note: satBridge registration is now done via SatWrapper.setSatBridge()
+        // This will be called by the wrapper after construction
+    }
+
+    /**
+     * Registers this bridge with the wrapper for the associated variable.
+     * This should be called after the wrapper field is set.
+     */
+    protected void registerWithWrapper() {
+        if (wrapper != null) {
+            wrapper.setSatBridge(variable, this);
+        }
+    }
+
+    @Override
+    public void initialize(SatWrapper wrapper) {
+        this.wrapper = wrapper;
+        registerWithWrapper();
     }
 
     @Override public String toString() {
         return getClass().getSimpleName() + " for " + variable;
     }
-
-
-    public abstract void initialize(SatWrapper wrapper);
 
 }

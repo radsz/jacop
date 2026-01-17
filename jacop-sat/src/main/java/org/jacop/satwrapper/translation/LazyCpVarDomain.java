@@ -122,7 +122,7 @@ public final class LazyCpVarDomain<E extends IntVar> extends SatCPBridge {
 
     @Override public void initialize(SatWrapper wrapper) {
         // the wrapper must be a SmartSatWrapper
-        this.wrapper = wrapper;
+        super.initialize(wrapper);
         assert wrapper.domainDatabase != null : "DomainClausesDatabase is needed";
         this.database = wrapper.domainDatabase;
     }
