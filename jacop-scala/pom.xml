@@ -23,6 +23,16 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-floats</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-sets</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>

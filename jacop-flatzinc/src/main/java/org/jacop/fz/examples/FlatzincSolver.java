@@ -1,5 +1,5 @@
 /*
- * FlatzincSGMPCS.java
+ * FlatzincSolver.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -28,12 +28,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jacop.examples.flatzinc;
+package org.jacop.fz.examples;
 
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.fz.FlatzincLoader;
-import org.jacop.search.sgmpcs.SGMPCSearch;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.SelectChoicePoint;
 
 
 /**
@@ -43,17 +44,17 @@ import org.jacop.search.sgmpcs.SGMPCSearch;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class FlatzincSGMPCS {
+public class FlatzincSolver {
 
     public static void main(String args[]) {
 
-        FlatzincSGMPCS run = new FlatzincSGMPCS();
+        FlatzincSolver run = new FlatzincSolver();
 
         run.ex(args);
 
     }
 
-    FlatzincSGMPCS() {
+    FlatzincSolver() {
     }
 
     void ex(String[] args) {
@@ -64,7 +65,7 @@ public class FlatzincSGMPCS {
         if (args.length == 0) {
             args = new String[2];
             args[0] = "-s";
-            args[1] = "jobshop.fzn";
+            args[1] = "wilkinson.fzn";
         }
         FlatzincLoader fl = new FlatzincLoader(args);
         fl.load();
@@ -79,42 +80,31 @@ public class FlatzincSGMPCS {
 
         System.out.println("\nIntVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
-        if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("int_search"))) {
-            throw new RuntimeException("The problem is not of type int_search and cannot be handled by this method");
-        }
+        DepthFirstSearch<Var> label = fl.getDFS();
+        SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
+        Var cost = fl.getCost();
 
-        if (fl.getSolve().getSolveKind() != 1) {
-            throw new RuntimeException("The problem is not minimization problem and cannot be handled by this method");
-        }
+        boolean result = false;
+        if (cost != null)
+            result = label.labeling(fl.getStore(), select, cost);
+        else
+            result = label.labeling(fl.getStore(), select);
 
-        int timeOut = fl.getOptions().getTimeOut();
-        if (timeOut == 0)
-            timeOut = 900;     // default time-out 900s=15min
+        if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
+            System.out.print(fl.getSolve().lastSolution);
 
-        IntVar[] vars = (IntVar[]) fl.getSearch().vars();
-        IntVar cost = (IntVar) fl.getCost();
+        fl.getSolve().statistics(result);
 
-        SGMPCSearch label = new SGMPCSearch(store, vars, cost);
-        label.setFailStrategy(SGMPCSearch.luby);  // luby or poly
-        label.setProbability(0.25);         // limit for probability of selecting search from empty
-        label.setEliteSize(4);              // size of the set of reference solutions
-        label.setTimeOut(timeOut);          // time-out in seconds
-        label.setInitialSolutionsSize(10);  // size of the random initial solutions
+        // System.out.println(fl.getTables());
 
-        label.setPrintInfo(true);
+        // System.out.println(fl.getSearch());
 
-        boolean Result = label.search();
+        // System.out.println("cost: " + fl.getCost());
 
-        if (Result) {
-            int[] sol = label.lastSolution();
-            if (sol != null) {
-                System.out.println("\n%%% Last found solution with cost " + label.lastCost());
-                for (int i = 0; i < sol.length; i++) {
-                    System.out.print(sol[i] + " ");
-                }
-            } else
-                System.out.println("\n%%% No solution found with this method");
-        }
+        if (result)
+            System.out.println("*** Yes");
+        else
+            System.out.println("*** No");
 
         T2 = System.currentTimeMillis();
         T = T2 - T1;

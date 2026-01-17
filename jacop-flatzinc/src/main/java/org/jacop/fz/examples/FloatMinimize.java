@@ -1,5 +1,5 @@
 /*
- * FlatzincSolver.java
+ * FloatMinimize.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -28,14 +28,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.jacop.examples.flatzinc;
+package org.jacop.fz.examples;
 
 import org.jacop.core.Store;
-import org.jacop.core.Var;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.FlatzincLoader;
 import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.SelectChoicePoint;
 
+import java.util.Arrays;
 
 /**
  * The class Run is used to run test programs for JaCoP package.
@@ -44,17 +48,17 @@ import org.jacop.search.SelectChoicePoint;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class FlatzincSolver {
+public class FloatMinimize {
 
     public static void main(String args[]) {
 
-        FlatzincSolver run = new FlatzincSolver();
+        FloatMinimize run = new FloatMinimize();
 
         run.ex(args);
 
     }
 
-    FlatzincSolver() {
+    FloatMinimize() {
     }
 
     void ex(String[] args) {
@@ -65,8 +69,11 @@ public class FlatzincSolver {
         if (args.length == 0) {
             args = new String[2];
             args[0] = "-s";
-            args[1] = "wilkinson.fzn";
+            args[1] = "camel6.fzn";
         }
+
+        FloatDomain.setPrecision(1E-4);
+
         FlatzincLoader fl = new FlatzincLoader(args);
         fl.load();
 
@@ -74,36 +81,34 @@ public class FlatzincSolver {
 
         // System.out.println (store);
 
-        // System.out.println("============================================");
-        // System.out.println(fl.getTables());
-        // System.out.println("============================================");
+        System.out.println("\nVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
-        System.out.println("\nIntVar store size: " + store.size() + "\nNumber of constraints: " + store.numberConstraints());
 
-        DepthFirstSearch<Var> label = fl.getDFS();
-        SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
-        Var cost = fl.getCost();
+        if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("float_search"))) {
+            throw new RuntimeException("The problem is not of type float_search and cannot be handled by this method");
+        }
+        if (fl.getSolve().getSolveKind() != 1) {
+            throw new RuntimeException("The problem is not minimization problem and cannot be handled by this method");
+        }
 
-        boolean result = false;
-        if (cost != null)
-            result = label.labeling(fl.getStore(), select, cost);
-        else
-            result = label.labeling(fl.getStore(), select);
+        FloatVar[] vars = (FloatVar[]) fl.getSearch().vars();
 
-        if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
-            System.out.print(fl.getSolve().lastSolution);
+        System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
 
-        fl.getSolve().statistics(result);
+        DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+        SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect().getVarSel());
 
-        // System.out.println(fl.getTables());
+        Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, (FloatVar) fl.getCost());
+        boolean result = min.minimize();
 
-        // System.out.println(fl.getSearch());
-
-        // System.out.println("cost: " + fl.getCost());
-
-        if (result)
-            System.out.println("*** Yes");
-        else
+        if (result) {
+            System.out.println("Final cost = " + min.getFinalCost());
+            System.out.println("Variables: ");
+            FloatInterval[] values = min.getFinalVarValues();
+            for (int i = 0; i < vars.length; i++)
+                System.out.println(vars[i].id() + " = " + values[i]);
+            System.out.println("Yes");
+        } else
             System.out.println("*** No");
 
         T2 = System.currentTimeMillis();
