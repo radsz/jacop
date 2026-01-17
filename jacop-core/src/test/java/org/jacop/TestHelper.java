@@ -32,7 +32,6 @@ package org.jacop;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.search.*;
 
 import java.util.Arrays;
@@ -59,15 +58,6 @@ public class TestHelper {
         IntVar[] x = new IntVar[xLength];
         for (int i = 0; i < x.length; i++) {
             x[i] = new IntVar(store, idPrefix + i, i, i + xSize - 1);
-        }
-        return x;
-    }
-
-    private FloatVar[] getShiftedFloatVars(Store store, String idPrefix, int xLength, int xSize) {
-
-        FloatVar[] x = new FloatVar[xLength];
-        for (int i = 0; i < x.length; i++) {
-            x[i] = new FloatVar(store, idPrefix + i, i, i + xSize - 1);
         }
         return x;
     }

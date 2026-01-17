@@ -31,7 +31,6 @@
 package org.jacop.core;
 
 import org.jacop.constraints.Constraint;
-import org.jacop.satwrapper.translation.SatCPBridge;
 
 import java.util.ArrayList;
 
@@ -53,7 +52,9 @@ public class IntVar extends Var {
     /**
      * It stores information about the variable in SAT domain.
      */
+    /*
     public SatCPBridge satBridge;
+    */
 
     /**
      * It creates a variable in a given store, with a given name and

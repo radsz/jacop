@@ -34,9 +34,6 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.core.IntVar;
 import org.jacop.constraints.XltC;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.PlteqC;
 import org.jacop.search.restart.Calculator;
 
 import java.util.BitSet;
@@ -336,11 +333,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             if (assignSolution)
                 assignSolution();
 
-            if (printInfo)
-                if (costVariable instanceof IntVar)
+            if (printInfo) {
+                CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+                if (costHandler != null) {
+                    double costValue = costHandler.getCostValue(costVariable);
+                    System.out.println("Solution cost is " + costValue);
+                } else if (costVariable instanceof IntVar) {
                     System.out.println("Solution cost is " + search[0].costValue);
-                else if (costVariable instanceof FloatVar)
-                    System.out.println("Solution cost is " + search[0].costValueFloat);
+                }
+            }
 
             if (printInfo)
 		System.out.println(statistics());
@@ -721,17 +722,20 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		    }
 		}
 
-	    } else if (costVariable instanceof FloatVar) {
-		double newCost = ((FloatVar) costVariable).dom().max();
+	    } else {
+		CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+		if (costHandler != null) {
+		    double newCost = costHandler.getCostValue(costVariable);
 
-		if (newCost < costValueFloat) {
-		    costValueFloat = newCost;
-		    master.costValueFloat = newCost;
+		    if (costHandler.isBetterCost(costValueFloat, newCost, true)) {
+			costValueFloat = newCost;
+			master.costValueFloat = newCost;
 
-		    for (int i = 0; i < n; i++) {
-			DepthFirstSearch ls = lastSearch(search[2*i]);
-			ls.costValueFloat = ((FloatVar) costVariable).dom().max();
-			ls.cost = new PlteqC((FloatVar) search[2*i].costVariable, FloatDomain.previousForMinimization(newCost));
+			for (int i = 0; i < n; i++) {
+			    DepthFirstSearch ls = lastSearch(search[2*i]);
+			    ls.costValueFloat = costHandler.getCostValue(search[2*i].costVariable);
+			    ls.cost = costHandler.createCostConstraint(search[2*i].costVariable, newCost);
+			}
 		    }
 		}
 	    }
@@ -752,17 +756,20 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 		    }
 		}
 
-	    } else if (costVariable instanceof FloatVar) {
-		double newCost = child.costValueFloat;
+	    } else {
+		CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+		if (costHandler != null) {
+		    double newCost = child.costValueFloat;
 
-		if (newCost < costValueFloat) {
-		    costValueFloat = newCost;
-		    master.costValueFloat = newCost;
+		    if (costHandler.isBetterCost(costValueFloat, newCost, true)) {
+			costValueFloat = newCost;
+			master.costValueFloat = newCost;
 
-		    for (int i = 0; i < n; i++) {
-			DepthFirstSearch ls = lastSearch(search[2*i]);
-			ls.costValueFloat = newCost;
-			ls.cost = new PlteqC((FloatVar) search[2*i].costVariable, FloatDomain.previousForMinimization(newCost));
+			for (int i = 0; i < n; i++) {
+			    DepthFirstSearch ls = lastSearch(search[2*i]);
+			    ls.costValueFloat = newCost;
+			    ls.cost = costHandler.createCostConstraint(search[2*i].costVariable, newCost);
+			}
 		    }
 		}
 	    }

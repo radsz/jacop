@@ -30,14 +30,14 @@
 
 package org.jacop.search.restart;
 
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.XltC;
 import org.jacop.core.Store;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
-import org.jacop.constraints.XltC;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.constraints.PlteqC;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.CostVariableHandler;
+import org.jacop.search.SearchHandlerRegistry;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
@@ -209,8 +209,13 @@ public class RestartSearch<T extends Var> {
 
         if (cost instanceof IntVar)
             store.impose(new XltC((IntVar)cost, intCostValue));
-        else if (cost instanceof FloatVar)
-            store.impose(new PlteqC((FloatVar)cost, FloatDomain.previousForMinimization(floatCostValue)));
+        else {
+            CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
+            if (costHandler != null) {
+                Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
+                store.impose(costConstraint);
+            }
+        }
     }
 
     public int getIntCost() {
@@ -312,8 +317,12 @@ public class RestartSearch<T extends Var> {
 
             if (cost instanceof IntVar)
                 intCostValue = ((IntVar)cost).value();
-            else if (cost instanceof FloatVar)
-                floatCostValue = ((FloatVar)cost).value();
+            else {
+                CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
+                if (costHandler != null) {
+                    floatCostValue = costHandler.getCostValue(cost);
+                }
+            }
 
             if (rarVars != null) {
                 values = new int[rarVars.length];

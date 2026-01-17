@@ -33,9 +33,8 @@ package org.jacop.search;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.*;
-import org.jacop.floats.core.FloatVar;
-import org.jacop.set.core.SetVar;
 
+import java.lang.reflect.Array;
 import java.util.Map;
 
 /**
@@ -251,12 +250,11 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
                 Integer value = entry.getValue();
                 // Use the key and the value
                 if (vars == null) {
-                    if (current instanceof IntVar)
-                        vars = (T[]) new IntVar[position.size()];
-                    if (current instanceof SetVar)
-                        vars = (T[]) new SetVar[position.size()];
-                    if (current instanceof FloatVar)
-                        vars = (T[]) new FloatVar[position.size()];
+                    // Create array of the same type as the first variable using reflection
+                    // This avoids needing to import FloatVar or SetVar
+                    @SuppressWarnings("unchecked")
+                    T[] array = (T[]) Array.newInstance(current.getClass(), position.size());
+                    vars = array;
                 }
                 vars[value] = current;
             }

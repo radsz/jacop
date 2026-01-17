@@ -35,7 +35,6 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.*;
-import org.jacop.examples.fd.PerfectSquare;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -201,10 +200,10 @@ public class SingleConstraintTest extends TestHelper {
 
     }
 
-    @Test public void testGeost() {
-
-        assertThat(PerfectSquare.testUsingGeost(new String[] {"1"}), is(true));
-
+    @Test @Ignore("Requires org.jacop.examples.fd.PerfectSquare - moved to examples module")
+    public void testGeost() {
+        // This test requires PerfectSquare from examples module
+        // Moved to jacop-examples-java module
     }
 
     @Test public void testCheckForInputDuplicationSkippsingSingletons2() {

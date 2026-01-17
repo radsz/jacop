@@ -33,8 +33,8 @@ package org.jacop.search;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.*;
-import org.jacop.set.core.SetDomain;
-import org.jacop.set.core.SetVar;
+import org.jacop.search.DomainOperationHandler;
+import org.jacop.search.SearchHandlerRegistry;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
@@ -434,8 +434,18 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
 
             if (previousSearchNode.dom instanceof IntDomain)
                 currentSearchNode.dom = ((IntDomain) previousSearchNode.dom).subtract(value);
-            else if (previousSearchNode.dom instanceof SetDomain)
-                currentSearchNode.dom = ((SetDomain) previousSearchNode.dom).subtract(value, value);
+            else {
+                // Handle SetDomain using reflection to avoid import
+                try {
+                    Class<?> setDomainClass = Class.forName("org.jacop.set.core.SetDomain");
+                    if (setDomainClass.isInstance(previousSearchNode.dom)) {
+                        java.lang.reflect.Method subtractMethod = setDomainClass.getMethod("subtract", int.class, int.class);
+                        currentSearchNode.dom = (Domain) subtractMethod.invoke(previousSearchNode.dom, value, value);
+                    }
+                } catch (Exception e) {
+                    // SetDomain not available - skip this operation
+                }
+            }
 
             currentSearchNode.val = value;
             currentSearchNode.id = searchNodeId++;
@@ -742,8 +752,17 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
             atts.addAttribute("", "", "size", "CDATA", "" + size);
             if (dom instanceof IntDomain)
                 atts.addAttribute("", "", "choice", "CDATA", "" + intDomainToString((IntDomain) dom));
-            if (dom instanceof SetDomain) {
-                atts.addAttribute("", "", "choice", "CDATA", "" + setDomainToString((SetDomain) dom));
+            else {
+                // Handle SetDomain using reflection to avoid import
+                try {
+                    Class<?> setDomainClass = Class.forName("org.jacop.set.core.SetDomain");
+                    if (setDomainClass.isInstance(dom)) {
+                        String domainStr = setDomainToStringReflective(dom);
+                        atts.addAttribute("", "", "choice", "CDATA", domainStr);
+                    }
+                } catch (Exception e) {
+                    // SetDomain not available - skip this operation
+                }
             }
             hdTree.startElement("", "", "tryc", atts);
             hdTree.endElement("", "", "tryc");
@@ -840,18 +859,31 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
                             hdVis.startElement("", "", "dvar", vAtts);
                             hdVis.endElement("", "", "dvar");
                         }
-                    } else { // setVar
-                        SetVar v = (SetVar) tracedVar.get(i);
-                        if (v.singleton()) { // IntVar
-                            vAtts.addAttribute("", "", "value", "CDATA", "" + setDomainToString(v.dom()));
-                            hdVis.startElement("", "", "sinteger", vAtts);
-                            hdVis.endElement("", "", "sinteger");
-                        } else {
-                            // TODO, BUG? Why the same thing is written to low and high attribute?
-                            vAtts.addAttribute("", "", "low", "CDATA", setDomainToString(v.dom()));
-                            vAtts.addAttribute("", "", "high", "CDATA", setDomainToString(v.dom()));
-                            hdVis.startElement("", "", "svar", vAtts);
-                            hdVis.endElement("", "", "svar");
+                    } else { // setVar or other variable types
+                        Var v = tracedVar.get(i);
+                        DomainOperationHandler domainHandler = SearchHandlerRegistry.getInstance().findDomainHandler(v);
+                        if (domainHandler != null) {
+                            String domainStr = domainHandler.getDomainString(v);
+                            // Check if singleton using reflection to avoid SetVar import
+                            boolean isSingleton = false;
+                            try {
+                                java.lang.reflect.Method singletonMethod = v.getClass().getMethod("singleton");
+                                isSingleton = (Boolean) singletonMethod.invoke(v);
+                            } catch (Exception e) {
+                                // Method not available - assume not singleton
+                            }
+                            
+                            if (isSingleton) {
+                                vAtts.addAttribute("", "", "value", "CDATA", domainStr);
+                                hdVis.startElement("", "", "sinteger", vAtts);
+                                hdVis.endElement("", "", "sinteger");
+                            } else {
+                                // TODO, BUG? Why the same thing is written to low and high attribute?
+                                vAtts.addAttribute("", "", "low", "CDATA", domainStr);
+                                vAtts.addAttribute("", "", "high", "CDATA", domainStr);
+                                hdVis.startElement("", "", "svar", vAtts);
+                                hdVis.endElement("", "", "svar");
+                            }
                         }
                     }
 
@@ -907,19 +939,31 @@ public class TraceGenerator<T extends Var> implements SelectChoicePoint<T>, Cons
     }
 
     // Remove the need for this function by incorporating it and domain type check in the function above.
-    String setDomainToString(SetDomain domain) {
-
-        if (domain.singleton())
-            return intDomainToString(domain.lub());
-
-        StringBuffer result = new StringBuffer();
-
-        result.append("( ");
-        result.append(intDomainToString(domain.glb())).append(" ) .. ( ");
-        result.append(intDomainToString(domain.lub())).append(" )");
-
-        return result.toString();
-
+    // Uses reflection to avoid SetDomain import
+    String setDomainToStringReflective(Domain domain) {
+        try {
+            Class<?> setDomainClass = Class.forName("org.jacop.set.core.SetDomain");
+            java.lang.reflect.Method singletonMethod = setDomainClass.getMethod("singleton");
+            java.lang.reflect.Method lubMethod = setDomainClass.getMethod("lub");
+            java.lang.reflect.Method glbMethod = setDomainClass.getMethod("glb");
+            
+            boolean isSingleton = (Boolean) singletonMethod.invoke(domain);
+            if (isSingleton) {
+                IntDomain lub = (IntDomain) lubMethod.invoke(domain);
+                return intDomainToString(lub);
+            }
+            
+            StringBuffer result = new StringBuffer();
+            IntDomain glb = (IntDomain) glbMethod.invoke(domain);
+            IntDomain lub = (IntDomain) lubMethod.invoke(domain);
+            result.append("( ");
+            result.append(intDomainToString(glb)).append(" ) .. ( ");
+            result.append(intDomainToString(lub)).append(" )");
+            return result.toString();
+        } catch (Exception e) {
+            // SetDomain not available - return empty string
+            return "";
+        }
     }
 
     // TODO, what happens if DepthFirstSearch first evaluates x != v branch before evaluating x = v branch?
