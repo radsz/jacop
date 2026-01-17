@@ -144,7 +144,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
       assert (rectangle.get(i) != null) : i + "-th rectangle in the list is null";
       assert (rectangle.get(i).size() != 4) : "The rectangle has to have exactly two dimensions";
 
-      x[i] = rectangle.get(i).get(0);
+      x[i] = rectangle.get(i).getFirst();
       y[i] = rectangle.get(i).get(1);
       lx[i] = rectangle.get(i).get(2);
       ly[i] = rectangle.get(i).get(3);

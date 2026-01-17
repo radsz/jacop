@@ -255,9 +255,9 @@ public class NetworkBuilder {
       if (in.size() == 0 || out.size() == 0) continue;
 
       if (in.size() == 1) {
-        sumC(result, store, out, in.iterator().next());
+        sumC(result, store, out, in.getFirst());
       } else if (out.size() == 1) {
-        sumC(result, store, in, out.iterator().next());
+        sumC(result, store, in, out.getFirst());
       } else {
         IntVar sum = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
         sumC(result, store, in, sum);
@@ -267,8 +267,7 @@ public class NetworkBuilder {
 
     for (VarHandler handler : handlerList) {
 
-      if (handler instanceof DomainStructure) {
-        DomainStructure structure = (DomainStructure) handler;
+      if (handler instanceof DomainStructure structure) {
 
         for (int i = 0; i < structure.arcs.length; i++) {
 
@@ -338,7 +337,7 @@ public class NetworkBuilder {
     if (vars.size() == 0) {
       list.add(new XeqY(result, new IntVar(store, 0, 0)));
     } else if (vars.size() == 1) {
-      list.add(new XeqY(result, vars.iterator().next()));
+      list.add(new XeqY(result, vars.getFirst()));
     } else {
       list.add(new SumInt(vars, "==", result));
       // list.add(new Sum(vars, result)); deprecated

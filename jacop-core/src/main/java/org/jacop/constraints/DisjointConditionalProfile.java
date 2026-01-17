@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.io.Serial;
 import java.util.List;
 import org.jacop.core.IntDomain;
 
@@ -43,7 +44,7 @@ import org.jacop.core.IntDomain;
 class DisjointConditionalProfile extends ProfileConditional {
 
   static final boolean trace = false;
-  private static final long serialVersionUID = 8683452581100000008L;
+  @Serial private static final long serialVersionUID = 8683452581100000008L;
 
   DisjointConditionalProfile() {}
 
@@ -74,7 +75,7 @@ class DisjointConditionalProfile extends ProfileConditional {
         R.dim = 0;
         if (t.minUse(i, R)) {
           if (trace)
-            System.out.println(
+            IO.println(
                 "Update profile "
                     + "["
                     + R.origin[j]

@@ -99,7 +99,7 @@ public class Derivative {
 
     if (constraints.size() == 1) {
 
-      Constraint currentConstraint = constraints.get(0);
+      Constraint currentConstraint = constraints.getFirst();
 
       // System.out.println ("Evaluate " + currentConstraint);
 
@@ -129,7 +129,7 @@ public class Derivative {
         return v;
       }
 
-      System.out.println(
+      IO.println(
           "!!! "
               + constraints.size()
               + " constraints define a function for variable "
@@ -161,23 +161,23 @@ public class Derivative {
     List<Constraint> resolved = new ArrayList<Constraint>();
     if (c == null)
       for (Constraint cc : cs) {
-        if (cc instanceof PmulQeqR) {
-          if (f.equals(((PmulQeqR) cc).r)) resolved.add(cc);
+        if (cc instanceof PmulQeqR qeqR) {
+          if (f.equals(qeqR.r)) resolved.add(cc);
         }
-        if (cc instanceof PmulCeqR) {
-          if (f.equals(((PmulCeqR) cc).r)) resolved.add(cc);
-        } else if (cc instanceof PplusQeqR) {
-          if (f.equals(((PplusQeqR) cc).r)) resolved.add(cc);
-        } else if (cc instanceof PplusCeqR) {
-          if (f.equals(((PplusCeqR) cc).r)) resolved.add(cc);
-        } else if (cc instanceof PminusQeqR) {
-          if (f.equals(((PminusQeqR) cc).p)) resolved.add(cc);
-        } else if (cc instanceof PdivQeqR) {
-          if (f.equals(((PdivQeqR) cc).p)) resolved.add(cc);
-        } else if (cc instanceof LinearFloat) {
-          if (((LinearFloat) cc).relationType == LinearFloat.eq) {
-            double[] ws = ((LinearFloat) cc).weights;
-            FloatVar[] ls = ((LinearFloat) cc).list;
+        if (cc instanceof PmulCeqR ceqR1) {
+          if (f.equals(ceqR1.r)) resolved.add(cc);
+        } else if (cc instanceof PplusQeqR qeqR2) {
+          if (f.equals(qeqR2.r)) resolved.add(cc);
+        } else if (cc instanceof PplusCeqR ceqR) {
+          if (f.equals(ceqR.r)) resolved.add(cc);
+        } else if (cc instanceof PminusQeqR qeqR1) {
+          if (f.equals(qeqR1.p)) resolved.add(cc);
+        } else if (cc instanceof PdivQeqR qeqR) {
+          if (f.equals(qeqR.p)) resolved.add(cc);
+        } else if (cc instanceof LinearFloat float1) {
+          if (float1.relationType == LinearFloat.eq) {
+            double[] ws = float1.weights;
+            FloatVar[] ls = float1.list;
             for (int i = 0; i < ls.length; i++) {
               if (f.equals(ls[i]) && ws[i] == -1.0) resolved.add(cc);
             }
@@ -186,7 +186,7 @@ public class Derivative {
         // ;
       }
 
-    if (resolved.size() == 1) return resolved.get(0);
+    if (resolved.size() == 1) return resolved.getFirst();
 
     return c;
   }

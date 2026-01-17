@@ -56,7 +56,7 @@ public class Parcel extends ExampleFD {
 
     example.model();
 
-    if (example.searchMaxRegretOptimal()) System.out.println("Solution(s) found");
+    if (example.searchMaxRegretOptimal()) IO.println("Solution(s) found");
   }
 
   @Override

@@ -994,7 +994,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       try {
         temp = domain.getClass().getConstructor().newInstance();
       } catch (Exception ex) {
-        System.out.println(ex.getMessage());
+        IO.println(ex.getMessage());
       }
 
       ValueEnumeration enumer = domain.valueEnumeration();
@@ -1605,8 +1605,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       }
 
       // TODO, remove later, or move to other place, SmallDenseDomain section.
-      if (domain instanceof SmallDenseDomain) {
-        assert result.eq(this.subtract(((SmallDenseDomain) domain).toIntervalDomain()))
+      if (domain instanceof SmallDenseDomain denseDomain) {
+        assert result.eq(this.subtract(denseDomain.toIntervalDomain()))
             : "Subtract function is not working" + this + "d:" + domain + "r:" + result;
       }
 
@@ -2060,8 +2060,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         result.unionAdapt(next, next);
       }
 
-      if (domain instanceof SmallDenseDomain) {
-        assert (result.eq(this.union(((SmallDenseDomain) domain).toIntervalDomain())))
+      if (domain instanceof SmallDenseDomain denseDomain) {
+        assert (result.eq(this.union(denseDomain.toIntervalDomain())))
             : "Basic union function not working properly " + this + "d: " + domain + "r:" + result;
       }
 

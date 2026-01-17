@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import java.io.Serial;
+
 /**
  * It is thrown when search has encountered a dead end and backtracking must occurr.
  *
@@ -38,7 +40,7 @@ package org.jacop.core;
  */
 public final class FailException extends RuntimeException {
 
-  private static final long serialVersionUID = 8683452581100000007L;
+  @Serial private static final long serialVersionUID = 8683452581100000007L;
 
   FailException() {}
 

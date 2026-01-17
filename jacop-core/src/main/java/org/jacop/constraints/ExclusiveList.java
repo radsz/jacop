@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.core.IntVar;
@@ -42,7 +43,7 @@ import org.jacop.core.IntVar;
  */
 class ExclusiveList extends ArrayList<ExclusiveItem> {
 
-  private static final long serialVersionUID = 8683452581100000004L;
+  @Serial private static final long serialVersionUID = 8683452581100000004L;
 
   ExclusiveList() {
     super();

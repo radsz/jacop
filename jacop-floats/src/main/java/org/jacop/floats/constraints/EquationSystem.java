@@ -87,7 +87,7 @@ public class EquationSystem extends Constraint {
       for (int i = 0; i < xs.length; i++) {
         if (debug)
           if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max())
-            System.out.println("*** " + x[i] + " in " + xs[i]);
+            IO.println("*** " + x[i] + " in " + xs[i]);
 
         if (!xs[i].singleton()) x[i].domain.in(store.level, x[i], xs[i].min(), xs[i].max());
       }

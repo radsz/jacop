@@ -73,7 +73,7 @@ public class Gardner extends ExampleSet {
     int num_persons_per_meeting = 3;
     int persons = 15;
 
-    System.out.println("Gardner dinner problem ");
+    IO.println("Gardner dinner problem ");
     store = new Store();
 
     SetVar[] days = new SetVar[num_days];
@@ -101,7 +101,7 @@ public class Gardner extends ExampleSet {
         store.impose(new CardAeqX(intersect, card));
       }
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -117,7 +117,7 @@ public class Gardner extends ExampleSet {
     long startUser = b.getThreadUserTime(tread.getId());
 
     boolean result = store.consistency();
-    System.out.println("*** consistency = " + result);
+    IO.println("*** consistency = " + result);
 
     Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
@@ -132,15 +132,15 @@ public class Gardner extends ExampleSet {
     result = label.labeling(store, select);
 
     if (result) {
-      System.out.println("*** Yes");
+      IO.println("*** Yes");
       for (SetVar var : vars) {
-        System.out.println(var);
+        IO.println(var);
       }
-    } else System.out.println("*** No");
+    } else IO.println("*** No");
 
-    System.out.println(
+    IO.println(
         "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
-    System.out.println(
+    IO.println(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6
             + "ms");

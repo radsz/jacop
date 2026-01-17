@@ -476,15 +476,14 @@ public class MDD {
     int position = (left + right) >> 1;
 
     if (debugAll) {
-      System.out.println("Looking for " + value);
-      for (int v : values) System.out.print("val " + v);
-      System.out.println("");
+      IO.println("Looking for " + value);
+      for (int v : values) IO.print("val " + v);
+      IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll)
-        System.out.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
 
       if (values[position] > value) {
         right = position;
@@ -510,15 +509,14 @@ public class MDD {
     int position = (left + right) >> 1;
 
     if (debugAll) {
-      System.out.println("Looking for " + value);
-      for (int v : values) System.out.print("val " + v);
-      System.out.println("");
+      IO.println("Looking for " + value);
+      for (int v : values) IO.print("val " + v);
+      IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll)
-        System.out.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
 
       if (values[position] > value) {
         right = position;

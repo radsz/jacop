@@ -63,7 +63,7 @@ public class ArchFriends extends ExampleFD {
 
     example.model();
 
-    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
+    if (example.searchAllAtOnce()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -72,7 +72,7 @@ public class ArchFriends extends ExampleFD {
     vars = new ArrayList<IntVar>();
     store = new Store();
 
-    System.out.println("Program to solve ArchFriends problem ");
+    IO.println("Program to solve ArchFriends problem ");
 
     // Declaration of constants (names, variables' indexes
 

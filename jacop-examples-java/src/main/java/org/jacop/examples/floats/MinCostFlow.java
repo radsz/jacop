@@ -60,7 +60,7 @@ public class MinCostFlow {
 
   void min_cost_flow() {
 
-    System.out.println("========= min_cost_flow =========");
+    IO.println("========= min_cost_flow =========");
 
     Store store = new Store();
 
@@ -148,11 +148,11 @@ public class MinCostFlow {
     opt.minimize();
     */
 
-    System.out.println(cost);
+    IO.println(cost);
     // System.out.printf ("cost = %.2f\n", cost.value());
 
     for (FloatVar x : X) System.out.printf("%.2f, ", x.value());
-    System.out.println();
+    IO.println();
     // for (int i = 0; i < X.length; i++) {
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
     //     System.out.println ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + "
@@ -160,6 +160,6 @@ public class MinCostFlow {
     // 			(double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
     // }
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
   }
 }

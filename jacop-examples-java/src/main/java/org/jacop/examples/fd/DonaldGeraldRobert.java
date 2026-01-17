@@ -62,13 +62,13 @@ public class DonaldGeraldRobert extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
   }
 
   @Override
   public void model() {
 
-    System.out.println("Program to solve Donald+Gerald=Robert problem ");
+    IO.println("Program to solve Donald+Gerald=Robert problem ");
 
     // Creating constraint store
     store = new Store();

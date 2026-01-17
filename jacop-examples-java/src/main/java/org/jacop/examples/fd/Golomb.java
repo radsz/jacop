@@ -75,7 +75,7 @@ public class Golomb extends ExampleFD {
 
     example.model();
 
-    if (example.searchOptimalInfo()) System.out.println("Solution(s) found");
+    if (example.searchOptimalInfo()) IO.println("Solution(s) found");
   }
 
   /**
@@ -96,7 +96,7 @@ public class Golomb extends ExampleFD {
 
     example.model();
 
-    if (example.searchOptimalInfo()) System.out.println("Solution(s) found");
+    if (example.searchOptimalInfo()) IO.println("Solution(s) found");
 
     Golomb exampleAll = new Golomb();
 
@@ -106,13 +106,13 @@ public class Golomb extends ExampleFD {
 
     exampleAll.model();
 
-    if (exampleAll.searchAllOptimal()) System.out.println("Solution(s) found");
+    if (exampleAll.searchAllOptimal()) IO.println("Solution(s) found");
   }
 
   @Override
   public void model() {
 
-    System.out.println("Program to solve Golomb mark problem - length " + noMarks);
+    IO.println("Program to solve Golomb mark problem - length " + noMarks);
 
     store = new Store();
     vars = new ArrayList<IntVar>();
@@ -168,7 +168,7 @@ public class Golomb extends ExampleFD {
     // symmetry breaking constraint
     // important constraint to reduce search space since
     // interested in proving the optimality
-    store.impose(new XltY(subs.get(0), subs.get(subs.size() - 1)));
+    store.impose(new XltY(subs.getFirst(), subs.getLast()));
 
     // All differences have to have unique values
     store.impose(new Alldiff(subs), 1);
@@ -201,7 +201,7 @@ public class Golomb extends ExampleFD {
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }

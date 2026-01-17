@@ -62,7 +62,7 @@ public class BuildingBlocks extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
   }
 
   @Override
@@ -71,7 +71,7 @@ public class BuildingBlocks extends ExampleFD {
     vars = new ArrayList<IntVar>();
     store = new Store();
 
-    System.out.println("Building Blocks");
+    IO.println("Building Blocks");
 
     IntVar A = new IntVar(store, "A", 1, 4);
     IntVar B = new IntVar(store, "B", 1, 4);

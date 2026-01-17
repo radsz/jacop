@@ -58,7 +58,7 @@ public class Sudoku extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
 
     ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
@@ -74,7 +74,7 @@ public class Sudoku extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
 
     ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
 
@@ -82,7 +82,7 @@ public class Sudoku extends ExampleFD {
 
     example.modelBasic();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
 
     ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }

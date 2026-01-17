@@ -104,8 +104,8 @@ public class NetworkFlow extends Constraint
         VarHandler handler = map.get(var);
         if (handler == null) {
           map.put(var, ds);
-        } else if (handler instanceof MultiVarHandler) {
-          ((MultiVarHandler) handler).add(ds);
+        } else if (handler instanceof MultiVarHandler varHandler) {
+          varHandler.add(ds);
         } else {
           map.put(var, new MultiVarHandler(var, handler, ds));
         }
@@ -213,9 +213,9 @@ public class NetworkFlow extends Constraint
   public void consistency(Store store) {
 
     if (SHOW_LEVEL) {
-      System.out.println();
-      System.out.println("--------- Level " + store.level);
-      System.out.println();
+      IO.println();
+      IO.println("--------- Level " + store.level);
+      IO.println();
     }
 
     if (DO_INSTRUMENTATION) {
@@ -237,7 +237,7 @@ public class NetworkFlow extends Constraint
 
       iteration++;
       if (SHOW_LEVEL) {
-        System.out.println("--------- => Iteration " + iteration);
+        IO.println("--------- => Iteration " + iteration);
       }
 
       // recompute flow
@@ -304,9 +304,9 @@ public class NetworkFlow extends Constraint
   public void removeLevelLate(int level) {
 
     if (SHOW_LEVEL) {
-      System.out.println();
-      System.out.println("######### Level " + level);
-      System.out.println();
+      IO.println();
+      IO.println("######### Level " + level);
+      IO.println();
     }
 
     network.backtrack();

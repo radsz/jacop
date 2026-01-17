@@ -60,7 +60,7 @@ public class Conference extends ExampleFD {
 
     example.model();
 
-    if (example.searchAllAtOnce()) System.out.println("Solution(s) found");
+    if (example.searchAllAtOnce()) IO.println("Solution(s) found");
   }
 
   @Override

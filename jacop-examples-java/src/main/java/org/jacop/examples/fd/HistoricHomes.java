@@ -66,7 +66,7 @@ public class HistoricHomes extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -75,7 +75,7 @@ public class HistoricHomes extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Historic Homes logic puzzle");
+    IO.println("Program to solve Historic Homes logic puzzle");
 
     String streetName[] = {
       "street_Azalea_Drive",

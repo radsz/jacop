@@ -85,7 +85,7 @@ public class Exodus extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override

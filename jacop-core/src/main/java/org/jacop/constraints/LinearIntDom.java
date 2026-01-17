@@ -175,7 +175,7 @@ public class LinearIntDom extends LinearInt {
   public LinearIntDom(
       List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
     commonInitialization(
-        variables.get(0).getStore(),
+        variables.getFirst().getStore(),
         variables.toArray(new IntVar[variables.size()]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
@@ -220,7 +220,7 @@ public class LinearIntDom extends LinearInt {
         break;
 
       default:
-        System.out.println("Not implemented relation in LinearIntDom; implemented == and != only.");
+        IO.println("Not implemented relation in LinearIntDom; implemented == and != only.");
         break;
     }
   }

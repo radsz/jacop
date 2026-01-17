@@ -113,7 +113,7 @@ class LexicalAnalyzer {
           token = INVALID_CHAR;
           break;
       } // switch
-    } catch (IOException e) {
+    } catch (IOException _) {
       // Treat an IOException as an end of file
       token = EOF;
     }

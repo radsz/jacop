@@ -38,8 +38,8 @@ public class ConstraintStatusKnownAtImposition {
 
     store.impose(cons);
 
-    System.out.println(cons);
-    System.out.println(store);
+    IO.println(cons);
+    IO.println(store);
 
     store.consistency();
   }

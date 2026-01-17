@@ -64,13 +64,13 @@ public class SendMoreMoney extends ExampleFD {
 
     exampleBasic.modelBasic();
 
-    if (exampleBasic.search()) System.out.println("Solution found.");
+    if (exampleBasic.search()) IO.println("Solution found.");
 
     SendMoreMoney exampleGlobal = new SendMoreMoney();
 
     exampleGlobal.model();
 
-    if (exampleGlobal.search()) System.out.println("Solution found.");
+    if (exampleGlobal.search()) IO.println("Solution found.");
   }
 
   /**

@@ -171,9 +171,9 @@ public class ProfileOptional {
     Arrays.sort(es, 0, N, eventComparator);
 
     if (debugNarr) {
-      System.out.println(Arrays.asList(es));
-      System.out.println("limit.max() = " + limitMax);
-      System.out.println("===========================");
+      IO.println(Arrays.asList(es));
+      IO.println("limit.max() = " + limitMax);
+      IO.println("===========================");
     }
 
     BitSet tasksToPrune = new BitSet(ts.length);
@@ -235,7 +235,7 @@ public class ProfileOptional {
           if (ne == null || ne.type() != profile || e.date < ne.date()) {
             // check the tasks for pruning only at the end of all profile events
 
-            if (debug) System.out.println("Profile at " + e.date() + ": " + curProfile);
+            if (debug) IO.println("Profile at " + e.date() + ": " + curProfile);
 
             // prune limit variable
             if (curProfile > limit.min()) limit.domain.inMin(store.level, limit, curProfile);
@@ -261,7 +261,7 @@ public class ProfileOptional {
                   // end of excluded interval
 
                   if (debugNarr)
-                    System.out.print(
+                    IO.print(
                         ">>> CumulativeBasic Profile 1. Narrowed "
                             + t.start
                             + " \\ "
@@ -270,7 +270,7 @@ public class ProfileOptional {
                   t.start.domain.inComplement(
                       store.level, t.start, startExcluded[ti], e.date() - 1);
 
-                  if (debugNarr) System.out.println(" => " + t.start);
+                  if (debugNarr) IO.println(" => " + t.start);
 
                   startConsidered[ti] = false;
                 }
@@ -342,7 +342,7 @@ public class ProfileOptional {
               // task ends and we remove forbidden area
 
               if (debugNarr)
-                System.out.print(
+                IO.print(
                     ">>> CumulativeBasic Profile 2. Narrowed "
                         + t.start
                         + " inMax "
@@ -350,7 +350,7 @@ public class ProfileOptional {
 
               t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 
-              if (debugNarr) System.out.println(" => " + t.start);
+              if (debugNarr) IO.println(" => " + t.start);
             }
 
           startConsidered[ti] = false;
@@ -368,12 +368,12 @@ public class ProfileOptional {
 
           if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
             if (debugNarr)
-              System.out.print(
+              IO.print(
                   ">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration[ti]);
 
             t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
 
-            if (debugNarr) System.out.println(" => " + t.dur);
+            if (debugNarr) IO.println(" => " + t.dur);
           }
 
           tasksToPrune.set(ti, false);

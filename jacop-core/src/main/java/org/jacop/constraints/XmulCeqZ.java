@@ -109,7 +109,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
 
         try {
           xBounds = IntDomain.divIntBounds(z.min(), z.max(), c, c);
-        } catch (FailException e) {
+        } catch (FailException _) {
           // z/c does not produce integer value; nothing to do since inequality holds
           return;
         }

@@ -82,13 +82,13 @@ public class Flowers extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
   public void model() {
 
-    System.out.println("Program to solve Flower logic puzzle");
+    IO.println("Program to solve Flower logic puzzle");
 
     store = new Store();
     vars = new ArrayList<IntVar>();

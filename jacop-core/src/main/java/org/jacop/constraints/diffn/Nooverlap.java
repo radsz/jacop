@@ -175,7 +175,7 @@ public class Nooverlap extends Constraint {
       if (r.size() == 4) {
         this.rectangle[i] =
             new Rectangle(
-                rectangle.get(i).get(0),
+                rectangle.get(i).getFirst(),
                 rectangle.get(i).get(1),
                 rectangle.get(i).get(2),
                 rectangle.get(i).get(3));

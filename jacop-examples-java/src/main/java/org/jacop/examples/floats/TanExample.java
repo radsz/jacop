@@ -54,7 +54,7 @@ public class TanExample {
 
   public void model() {
 
-    System.out.println("\nProgram to solve tan(x) = -x problem in interval -4*pi..4*pi");
+    IO.println("\nProgram to solve tan(x) = -x problem in interval -4*pi..4*pi");
 
     long T1, T2;
     T1 = System.currentTimeMillis();
@@ -70,7 +70,7 @@ public class TanExample {
     store.impose(new TanPeqR(p, q));
     store.impose(new PplusQeqR(p, q, new FloatVar(store, 0.0, 0.0)));
 
-    System.out.println(
+    IO.println(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -90,12 +90,12 @@ public class TanExample {
     boolean result = label.labeling(store, s);
 
     if (result) label.printAllSolutions();
-    else System.out.println("NO SOLUTION");
+    else IO.println("NO SOLUTION");
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
   }
 }

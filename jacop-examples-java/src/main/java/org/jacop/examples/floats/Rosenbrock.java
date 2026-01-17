@@ -62,7 +62,7 @@ public class Rosenbrock {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("========= rosenbrock =========");
+    IO.println("========= rosenbrock =========");
 
     Store store = new Store();
 
@@ -89,7 +89,7 @@ public class Rosenbrock {
     store.impose(
         new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
 
-    System.out.println(
+    IO.println(
         "\bFloatVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -113,12 +113,12 @@ public class Rosenbrock {
     boolean result = min.minimize();
 
     if (result) {
-      System.out.println("\nPrecision = " + FloatDomain.precision());
+      IO.println("\nPrecision = " + FloatDomain.precision());
 
       T2 = System.currentTimeMillis();
       T = T2 - T1;
 
-      System.out.println("\n\t*** Execution time = " + T + " ms");
+      IO.println("\n\t*** Execution time = " + T + " ms");
     }
   }
 }

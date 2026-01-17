@@ -76,7 +76,7 @@ public class SimpleNode implements Node {
   out its children. */
 
   public void dump(String prefix) {
-    System.out.println(toString(prefix));
+    IO.println(toString(prefix));
     if (children != null) {
       for (Node child : children) {
         SimpleNode n = (SimpleNode) child;

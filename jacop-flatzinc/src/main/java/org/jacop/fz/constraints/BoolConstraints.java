@@ -268,7 +268,7 @@ class BoolConstraints implements ParserTreeConstants {
 
       PrimitiveConstraint c;
       if (a1reduced.size() == 0) {
-        c = new AndBool(a2reduced, support.dictionary.getConstant(0)).decompose(store).get(0);
+        c = new AndBool(a2reduced, support.dictionary.getConstant(0)).decompose(store).getFirst();
       } else if (a2reduced.size() == 0) {
         if (reified) {
           IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
@@ -276,10 +276,10 @@ class BoolConstraints implements ParserTreeConstants {
           return;
         } else {
           IntVar r = support.dictionary.getConstant(1);
-          c = new OrBool(a1reduced, r).decompose(store).get(0);
+          c = new OrBool(a1reduced, r).decompose(store).getFirst();
         }
       } else if (a1reduced.size() == 1 && a2reduced.size() == 1)
-        c = new XlteqY(a2reduced.get(0), a1reduced.get(0));
+        c = new XlteqY(a2reduced.getFirst(), a1reduced.getFirst());
       else c = new BoolClause(a1reduced, a2reduced);
 
       // bool_clause_reif/3 defined in redefinitions-2.0.

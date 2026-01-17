@@ -125,7 +125,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
    */
   public void addChanged(int index) {
 
-    if (debug) System.out.println(this + "Add item " + index + "max reached " + currentLevelMax);
+    if (debug) IO.println(this + "Add item " + index + "max reached " + currentLevelMax);
 
     if (currentLevelMax) return;
 
@@ -133,12 +133,12 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
       trailContainsAllChanges = false;
       currentlyChanged.clear();
 
-      int lastLevel = levelInfo.remove(levelInfo.size() - 1);
+      int lastLevel = levelInfo.removeLast();
 
       assert (lastLevel == currentLevel);
       // currentLevel = lastLevel;
 
-      int[] lastTrail = trail.remove(trail.size() - 1);
+      int[] lastTrail = trail.removeLast();
 
       if (lastTrail == fullLevel) {
         currentLevelMax = true;
@@ -162,16 +162,15 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
   public void removeLevel(int removedLevel) {
 
     if (debug)
-      System.out.println(
-          ">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
+      IO.println(">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
 
     if (currentLevel == removedLevel) {
 
       if (trailContainsAllChanges) {
-        int lastLevel = levelInfo.remove(levelInfo.size() - 1);
+        int lastLevel = levelInfo.removeLast();
         assert (lastLevel == removedLevel) : "It is only possible to remove recently added level";
 
-        int[] lastTrail = trail.remove(trail.size() - 1);
+        int[] lastTrail = trail.removeLast();
 
         if (lastTrail != emptyLevel && lastTrail != fullLevel)
           for (int i : lastTrail) objects[i].remove(removedLevel);
@@ -193,17 +192,17 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         currentlyChanged.clear();
       }
 
-      if (!levelInfo.isEmpty()) currentLevel = levelInfo.get(levelInfo.size() - 1);
+      if (!levelInfo.isEmpty()) currentLevel = levelInfo.getLast();
       else currentLevel = 0;
 
       currentLevelMax = false;
       if (!trail.isEmpty())
-        if (trail.get(trail.size() - 1) == fullLevel) {
+        if (trail.getLast() == fullLevel) {
           currentLevelMax = true;
         }
     }
 
-    if (debug) System.out.println("<" + this + "Remove level " + removedLevel + "\n");
+    if (debug) IO.println("<" + this + "Remove level " + removedLevel + "\n");
 
     assert (removedLevel >= currentLevel)
         : "It is only possible to remove the most recent not removed level";
@@ -232,10 +231,9 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     result.append("Last trail").append(currentlyChanged).append("\n");
     result.append("Last stored trail ");
 
-    if (levelInfo.size() > 0)
-      result.append("stored for ").append(levelInfo.get(levelInfo.size() - 1)).append(" ");
+    if (levelInfo.size() > 0) result.append("stored for ").append(levelInfo.getLast()).append(" ");
     if (trail.size() > 0) {
-      int[] lastTrail = trail.get(trail.size() - 1);
+      int[] lastTrail = trail.getLast();
       if (lastTrail == emptyLevel) result.append(" Empty ");
       if (lastTrail == fullLevel) result.append(" Full ");
       for (int i : lastTrail) result.append(i).append(" ");
@@ -258,7 +256,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
     if (trailContainsAllChanges) {
 
-      int[] trailLevel = trail.get(trail.size() - 1);
+      int[] trailLevel = trail.getLast();
 
       for (int i : trailLevel) if (i == index) return true;
 
@@ -284,7 +282,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
     if (currentLevel == level) return;
 
-    if (debug) System.out.println(">" + this + "Add level " + level);
+    if (debug) IO.println(">" + this + "Add level " + level);
 
     assert (level > currentLevel) : "It is possible only to add higher levels";
 
@@ -310,7 +308,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     currentLevelMax = false;
     currentLevel = level;
 
-    if (debug) System.out.println("<" + this + "Add level " + level + "\n");
+    if (debug) IO.println("<" + this + "Add level " + level + "\n");
   }
 
   public void update(Backtrackable[] objects, int noOfObjects) {

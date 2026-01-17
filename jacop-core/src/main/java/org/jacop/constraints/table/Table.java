@@ -381,7 +381,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
           s.append(" " + e.getKey() + "= [");
           long[] mask = e.getValue();
           for (long l : mask) {
-            s.append(String.format("0x%08X", l) + " ");
+            s.append("0x%08X".formatted(l) + " ");
           }
           s.append("]");
         }

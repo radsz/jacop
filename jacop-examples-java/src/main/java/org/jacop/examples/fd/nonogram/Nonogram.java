@@ -149,7 +149,7 @@ public class Nonogram extends ExampleFD {
     Nonogram example = new Nonogram();
 
     example.model();
-    if (example.searchAll()) System.out.println("Solution(s) found");
+    if (example.searchAll()) IO.println("Solution(s) found");
 
     example.printMatrix(example.board);
   }
@@ -164,7 +164,7 @@ public class Nonogram extends ExampleFD {
     Nonogram example = new Nonogram();
 
     example.model();
-    if (example.searchAll()) System.out.println("Solution(s) found");
+    if (example.searchAll()) IO.println("Solution(s) found");
     example.printMatrix(example.board);
 
     for (int i = 0; i <= 150; i++) {
@@ -172,11 +172,11 @@ public class Nonogram extends ExampleFD {
       String no = String.valueOf(i);
       while (no.length() < 3) no = "0" + no;
 
-      System.out.println("Problem file data" + no + ".nin");
+      IO.println("Problem file data" + no + ".nin");
       example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
       example.model();
 
-      if (example.searchAll()) System.out.println("Solution(s) found");
+      if (example.searchAll()) IO.println("Solution(s) found");
 
       example.printMatrix(example.board);
     }
@@ -204,7 +204,7 @@ public class Nonogram extends ExampleFD {
         try {
           int currentNo = Integer.parseInt(s);
           dimensions[current++] = currentNo;
-        } catch (Exception ex) {
+        } catch (Exception _) {
 
         }
 
@@ -217,9 +217,9 @@ public class Nonogram extends ExampleFD {
         n++;
       }
       // in.close(); not needed; auto close
-    } catch (FileNotFoundException e) {
+    } catch (FileNotFoundException _) {
       System.err.println("I can not find file " + filename);
-    } catch (IOException e) {
+    } catch (IOException _) {
       System.err.println("Something is wrong with file" + filename);
     }
 
@@ -238,7 +238,7 @@ public class Nonogram extends ExampleFD {
       for (String s : result)
         try {
           sequence[current++] = Integer.parseInt(s);
-        } catch (Exception ex) {
+        } catch (Exception _) {
         }
 
       if (i < row_rules.length) row_rules[i] = sequence;
@@ -324,7 +324,7 @@ public class Nonogram extends ExampleFD {
       }
     }
 
-    System.out.println("Size " + vars.size());
+    IO.println("Size " + vars.size());
 
     // Making sure that rows respect the rules.
     for (int i = 0; i < row_rules.length; i++) {
@@ -378,7 +378,7 @@ public class Nonogram extends ExampleFD {
     search.getSolutionListener().recordSolutions(false);
     search.setAssignSolution(true);
 
-    System.out.println("Search has begun ...");
+    IO.println("Search has begun ...");
 
     T1 = System.currentTimeMillis();
 
@@ -387,11 +387,11 @@ public class Nonogram extends ExampleFD {
     T2 = System.currentTimeMillis();
 
     if (result) {
-      System.out.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       search.printAllSolutions();
-    } else System.out.println("Failed to find any solution");
+    } else IO.println("Failed to find any solution");
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }
@@ -405,10 +405,10 @@ public class Nonogram extends ExampleFD {
 
     for (IntVar[] intVars : matrix) {
       for (int j = 0; j < intVars.length; j++) {
-        if (intVars[j].value() == black) System.out.print("0");
-        else System.out.print(" ");
+        if (intVars[j].value() == black) IO.print("0");
+        else IO.print(" ");
       }
-      System.out.println();
+      IO.println();
     }
   }
 

@@ -266,8 +266,8 @@ public class Knapsack extends Constraint
 
       if (countRemoveLevel >= REMOVE_INFO_FROM) {
 
-        System.out.println("Removelevel for " + level + " is called.");
-        System.out.println(displayQuantitiesInEfficiencyOrder());
+        IO.println("Removelevel for " + level + " is called.");
+        IO.println(displayQuantitiesInEfficiencyOrder());
       }
     }
 
@@ -401,7 +401,7 @@ public class Knapsack extends Constraint
         tree.alreadyUsedCapacity,
         tree.alreadyUsedCapacity + tree.root.getWSum());
 
-    if (debugAll) System.out.println("Capacity after potential update : " + knapsackCapacity);
+    if (debugAll) IO.println("Capacity after potential update : " + knapsackCapacity);
 
     // It computes based on the minimum required capacity the minimum possible profit obtained if
     // that capacity is being used.
@@ -427,7 +427,7 @@ public class Knapsack extends Constraint
         tree.alreadyObtainedProfit,
         tree.alreadyObtainedProfit + (int) Math.ceil(tree.optimalProfit));
 
-    if (debugAll) System.out.println("Profit after potential update : " + knapsackProfit);
+    if (debugAll) IO.println("Profit after potential update : " + knapsackProfit);
   }
 
   @Override
@@ -439,7 +439,7 @@ public class Knapsack extends Constraint
 
     if (impositionFailure) throw Store.failException;
 
-    if (debugAll) System.out.println("Entering consistency " + this);
+    if (debugAll) IO.println("Entering consistency " + this);
 
     currentLevel = store.level;
     countConsistency++;
@@ -450,12 +450,12 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
       if (countConsistency >= CONSISTENCY_INFO_FROM)
-        System.out.println(displayQuantitiesInEfficiencyOrder());
+        IO.println(displayQuantitiesInEfficiencyOrder());
     }
 
     assert (sliceInvariant());
 
-    if (debugAll) System.out.println("Tree root \n" + tree.root);
+    if (debugAll) IO.println("Tree root \n" + tree.root);
 
     // it checks if not too many items exceeding the capacity constraints
     // have been put in knapsack.
@@ -470,9 +470,9 @@ public class Knapsack extends Constraint
       assert (sliceInvariant());
     }
 
-    if (debugAll) System.out.println("After single item restrictions " + this);
+    if (debugAll) IO.println("After single item restrictions " + this);
 
-    if (debugAll) System.out.println("Tree root \n" + tree.root);
+    if (debugAll) IO.println("Tree root \n" + tree.root);
 
     assert (checkInvariants());
 
@@ -498,7 +498,7 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
       if (countConsistency >= CONSISTENCY_INFO_FROM)
-        System.out.println(displayQuantitiesInEfficiencyOrder());
+        IO.println(displayQuantitiesInEfficiencyOrder());
     }
 
     inConsistency = false;
@@ -549,7 +549,7 @@ public class Knapsack extends Constraint
       }
 
       if (debugAll)
-        System.out.println(
+        IO.println(
             "Forbidden check for " + leaf + " finished. Intrusion weight = " + intrusionWeight);
 
       leaf = tree.findPreviousLeafAtLeastOfWeight(leaf, tree.currentWeight);
@@ -603,8 +603,7 @@ public class Knapsack extends Constraint
       }
 
       if (debugAll)
-        System.out.println(
-            "Mandatory check for " + leaf + " finished. MaxWeight = " + replacableWeight);
+        IO.println("Mandatory check for " + leaf + " finished. MaxWeight = " + replacableWeight);
 
       leaf = tree.findNextLeafAtLeastOfWeight(leaf, tree.currentWeight);
 
@@ -650,11 +649,11 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
 
-      if (!impositionFailure) System.out.println("The impose function is completed. ");
-      else System.out.println("The impose function has already detected inconsistency.");
+      if (!impositionFailure) IO.println("The impose function is completed. ");
+      else IO.println("The impose function has already detected inconsistency.");
 
-      System.out.println(this);
-      System.out.println(tree.toString());
+      IO.println(this);
+      IO.println(tree.toString());
     }
 
     super.impose(store);
@@ -670,8 +669,8 @@ public class Knapsack extends Constraint
     if (debugAll) {
       if (countQueueVariable >= QUEUE_INFO_FROM) {
 
-        System.out.println("queueVariable is executed for the " + countQueueVariable + "-th time");
-        System.out.println(displayQuantitiesInEfficiencyOrder());
+        IO.println("queueVariable is executed for the " + countQueueVariable + "-th time");
+        IO.println(displayQuantitiesInEfficiencyOrder());
       }
     }
 

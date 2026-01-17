@@ -64,13 +64,13 @@ public class CalendarMen extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
 
     CalendarMen exampleBasic = new CalendarMen();
 
     exampleBasic.modelBasic();
 
-    if (exampleBasic.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (exampleBasic.searchSmallestDomain(false)) IO.println("Solution(s) found");
   }
 
   /**
@@ -84,7 +84,7 @@ public class CalendarMen extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
   }
 
   @Override
@@ -93,7 +93,7 @@ public class CalendarMen extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("This program solves logic puzzle Calendar Men");
+    IO.println("This program solves logic puzzle Calendar Men");
 
     // Firstnames of people involved
 
@@ -473,7 +473,7 @@ public class CalendarMen extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("This program solves logic puzzle Calendar Men");
+    IO.println("This program solves logic puzzle Calendar Men");
 
     String[] firstnameID = {
       "Antonio",

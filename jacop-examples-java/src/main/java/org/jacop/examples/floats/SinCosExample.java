@@ -57,7 +57,7 @@ public class SinCosExample {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
+    IO.println("\nProgram to solve sin(x) = cos(x) problem in interval -4*pi..4*pi");
 
     Store store = new Store();
 
@@ -70,7 +70,7 @@ public class SinCosExample {
     store.impose(new SinPeqR(p, q));
     store.impose(new CosPeqR(p, q));
 
-    System.out.println(
+    IO.println(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -90,13 +90,13 @@ public class SinCosExample {
     boolean result = label.labeling(store, s);
 
     if (result) label.printAllSolutions();
-    else System.out.println("NO SOLUTION");
+    else IO.println("NO SOLUTION");
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

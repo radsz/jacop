@@ -65,14 +65,14 @@ class CumulativeProfiles {
         strt = t.est();
         stp = t.lastCT();
         value = t.res.max();
-        if (trace) System.out.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
+        if (trace) IO.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
         maxProfile.addToProfile(strt, stp, value);
       }
 
       if (tDurMin > 0 && tResMin > 0) {
         if (t.minUse(iTask)) {
           if (trace)
-            System.out.println(
+            IO.println(
                 "Update profile "
                     + t
                     + " ["

@@ -403,21 +403,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             if (consistencyListener != null) consistencyListener.executeAfterConsistency(false);
             return false;
           }
-        } else if (costVariable instanceof IntVar) {
+        } else if (costVariable instanceof IntVar var) {
           // Fallback for IntVar (should always have handler, but just in case)
-          if (((IntVar) costVariable).min() <= costValue - 1)
-            ((IntVar) costVariable)
-                .domain.in(
-                    store.level,
-                    (IntVar) costVariable,
-                    ((IntVar) costVariable).min(),
-                    costValue - 1);
+          if (var.min() <= costValue - 1) var.domain.in(store.level, var, var.min(), costValue - 1);
           else {
             if (consistencyListener != null) consistencyListener.executeAfterConsistency(false);
             return false;
           }
         }
-      } catch (FailException f) {
+      } catch (FailException _) {
         if (consistencyListener != null) consistencyListener.executeAfterConsistency(false);
         return false;
       }
@@ -456,9 +450,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
         if (domainHandler != null) {
           domainHandler.inValue(store, fdv, val, einAinleftTree);
-        } else if (fdv instanceof IntVar) {
+        } else if (fdv instanceof IntVar var) {
           // Fallback for IntVar (should always have handler, but just in case)
-          ((IntDomain) fdv.dom()).inValue(store.level, (IntVar) fdv, val);
+          ((IntDomain) fdv.dom()).inValue(store.level, var, val);
         }
 
         decisions++;
@@ -529,17 +523,16 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                   } else {
                     costHandler.updateCostDomain(store, costVariable, childCostValue);
                   }
-                } else if (costVariable instanceof IntVar) {
+                } else if (costVariable instanceof IntVar var) {
                   // Fallback for IntVar
                   int childCostValue = childSearches[currentChildSearch].getCostValue();
                   if (childCostValue < costValue) {
                     costValue = childCostValue;
-                    cost = new XltC((IntVar) costVariable, costValue);
+                    cost = new XltC(var, costValue);
                   }
-                  if (childCostValue <= ((IntVar) costVariable).min()) break;
+                  if (childCostValue <= var.min()) break;
                   else {
-                    ((IntVar) costVariable)
-                        .domain.inMax(store.level, (IntVar) costVariable, childCostValue - 1);
+                    var.domain.inMax(store.level, var, childCostValue - 1);
                   }
                 }
               }
@@ -566,11 +559,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                   }
                   cost = costHandler.createCostConstraint(costVariable, childCostValue);
                 }
-              } else if (costVariable instanceof IntVar) {
+              } else if (costVariable instanceof IntVar var) {
                 // Fallback for IntVar
                 int childCostValue = childSearches[currentChildSearch].getCostValue();
                 if (childCostValue < costValue) costValue = childCostValue;
-                cost = new XltC((IntVar) costVariable, costValue);
+                cost = new XltC(var, costValue);
               }
             }
 
@@ -611,10 +604,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
                 costValueFloat = currentCost;
               }
               cost = costHandler.createCostConstraint(costVariable, currentCost);
-            } else if (costVariable instanceof IntVar) {
+            } else if (costVariable instanceof IntVar var) {
               // Fallback for IntVar
-              costValue = ((IntVar) costVariable).dom().min();
-              cost = new XltC((IntVar) costVariable, costValue);
+              costValue = var.dom().min();
+              cost = new XltC(var, costValue);
             }
           }
 
@@ -719,9 +712,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
               SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
           if (domainHandler != null) {
             domainHandler.inComplement(store, fdv, val, einAinleftTree);
-          } else if (fdv instanceof IntVar) {
+          } else if (fdv instanceof IntVar var) {
             // Fallback for IntVar (should always have handler, but just in case)
-            ((IntDomain) fdv.dom()).inComplement(store.level, (IntVar) fdv, val);
+            ((IntDomain) fdv.dom()).inComplement(store.level, var, val);
           }
 
           consistent = label(firstVariable);
@@ -825,13 +818,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
               SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
           if (costHandler != null) {
             double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-            System.out.println("Solution cost is " + cost);
+            IO.println("Solution cost is " + cost);
           } else if (costVariable instanceof IntVar) {
-            System.out.println("Solution cost is " + costValue);
+            IO.println("Solution cost is " + costValue);
           }
         }
 
-        System.out.println(this);
+        IO.println(this);
       }
 
       if (raisedLevel) {
@@ -842,7 +835,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
         timeOutOccured = true;
 
-        if (printInfo) System.out.println("Time-out " + tOut + "s");
+        if (printInfo) IO.println("Time-out " + tOut + "s");
 
         return false;
       } else if (masterSearch == null) return true;
@@ -852,7 +845,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
       if (printInfo) {
 
-        System.out.println("No solution found.");
+        IO.println("No solution found.");
 
         StringBuffer buf = new StringBuffer();
 
@@ -864,7 +857,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         buf.append("Backtracks : ").append(numberBacktracks).append("\n");
         buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-        System.out.println(buf.toString());
+        IO.println(buf.toString());
       }
 
       if (raisedLevel) {
@@ -875,7 +868,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       if (timeOutCheck && (timeOutOccured || System.currentTimeMillis() > timeOut)) {
         timeOutOccured = true;
 
-        if (printInfo) System.out.println("Time-out " + tOut + "s");
+        if (printInfo) IO.println("Time-out " + tOut + "s");
       }
 
       return false;
@@ -918,7 +911,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (result) {
       result = label(0);
-      if (printInfo) System.out.println("Labeling has finished with return value of " + result);
+      if (printInfo) IO.println("Labeling has finished with return value of " + result);
     }
     store.removeLevel(store.level);
     store.setLevel(store.level - 1);
@@ -929,21 +922,21 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (timeOutOccured) {
 
-      if (printInfo) System.out.println("Time-out " + tOut + "s");
+      if (printInfo) IO.println("Time-out " + tOut + "s");
     }
 
     if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
 
       if (assignSolution) assignSolution();
 
-      if (printInfo) System.out.println(this);
+      if (printInfo) IO.println(this);
 
       return true;
     } else {
 
       if (printInfo) {
 
-        System.out.println("No solution found.");
+        IO.println("No solution found.");
 
         StringBuffer buf = new StringBuffer();
 
@@ -955,7 +948,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         buf.append("Backtracks : ").append(numberBacktracks).append("\n");
         buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-        System.out.println(buf.toString());
+        IO.println(buf.toString());
       }
       return false;
     }
@@ -1020,7 +1013,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (result) {
       result = label(0);
-      if (printInfo) System.out.println("Labeling has finished with return value of " + result);
+      if (printInfo) IO.println("Labeling has finished with return value of " + result);
     }
     store.removeLevel(store.level);
     store.setLevel(store.level - 1);
@@ -1030,7 +1023,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (timeOutOccured) {
 
-      if (printInfo) System.out.println("Time-out " + tOut + "s");
+      if (printInfo) IO.println("Time-out " + tOut + "s");
     }
 
     if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
@@ -1045,18 +1038,18 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             DomainOperationHandler domainHandler =
                 SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
             if (domainHandler != null) {
-              System.out.println("Solution cost is " + domainHandler.getDomainString(costVariable));
+              IO.println("Solution cost is " + domainHandler.getDomainString(costVariable));
             } else {
               double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-              System.out.println("Solution cost is " + cost);
+              IO.println("Solution cost is " + cost);
             }
           } else if (costVariable instanceof IntVar) {
-            System.out.println("Solution cost is " + costValue);
+            IO.println("Solution cost is " + costValue);
           }
         }
       }
 
-      if (printInfo) System.out.println(this);
+      if (printInfo) IO.println(this);
 
       return true;
 
@@ -1064,7 +1057,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
       if (printInfo) {
 
-        System.out.println("No solution found.");
+        IO.println("No solution found.");
 
         StringBuffer buf = new StringBuffer();
 
@@ -1076,7 +1069,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         buf.append("Backtracks : ").append(numberBacktracks).append("\n");
         buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-        System.out.println(buf.toString());
+        IO.println(buf.toString());
       }
       return false;
     }

@@ -73,7 +73,7 @@ public class QCP extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.print(" Solution(s) found ");
+    if (example.searchSmallestDomain(false)) IO.print(" Solution(s) found ");
 
     example = new QCP();
 
@@ -81,7 +81,7 @@ public class QCP extends ExampleFD {
 
     example.model();
 
-    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
+    if (example.searchWithRestarts()) IO.print(" Solution(s) found ");
 
     example = new QCP();
 
@@ -89,7 +89,7 @@ public class QCP extends ExampleFD {
 
     example.model();
 
-    if (example.searchWithShaving()) System.out.print(" Solution(s) found ");
+    if (example.searchWithShaving()) IO.print(" Solution(s) found ");
 
     /*
     // TODO, Why it is no longer efficient? It takes too long now.
@@ -111,7 +111,7 @@ public class QCP extends ExampleFD {
     example.model();
     example.store.variableWeightManagement = true;
 
-    if (example.searchWeightedDegree()) System.out.print(" Solution(s) found ");
+    if (example.searchWeightedDegree()) IO.print(" Solution(s) found ");
   }
 
   /**
@@ -119,16 +119,16 @@ public class QCP extends ExampleFD {
    *
    * @param args the first argument is the name of the file containing the problem.
    */
-  public static void main(String[] args) {
+  void main(String[] args) {
 
     QCP example = new QCP();
 
     if (args.length > 0) example.filename = args[0];
 
-    System.out.println("Solving QCP with restart search.");
+    IO.println("Solving QCP with restart search.");
     example.model();
 
-    if (example.searchWithRestarts()) System.out.print(" Solution(s) found ");
+    if (example.searchWithRestarts()) IO.print(" Solution(s) found ");
   }
 
   @Override
@@ -148,14 +148,14 @@ public class QCP extends ExampleFD {
         n++;
       }
       // in.close(); not needed; aouto close
-    } catch (FileNotFoundException e) {
+    } catch (FileNotFoundException _) {
       System.err.println(
           "You need to run this program in a directory that contains the required file.");
       System.err.println("I can not find file " + filename);
       throw new RuntimeException(
           "You need to run this program in a directory that contains the required file : "
               + filename);
-    } catch (IOException e) {
+    } catch (IOException _) {
       System.err.println("Something is wrong with file" + filename);
     }
 
@@ -173,7 +173,7 @@ public class QCP extends ExampleFD {
         try {
           int currentNo = Integer.parseInt(s);
           numbers[i - 1][current++] = currentNo;
-        } catch (Exception ex) {
+        } catch (Exception _) {
 
         }
     }
@@ -239,9 +239,8 @@ public class QCP extends ExampleFD {
 
     long end = System.currentTimeMillis();
 
-    System.out.println("Number of milliseconds " + (end - begin));
-    System.out.println(
-        "Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
+    IO.println("Number of milliseconds " + (end - begin));
+    IO.println("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
 
     return result;
   }
@@ -266,7 +265,7 @@ public class QCP extends ExampleFD {
         if (!vars.get(i * n + j).singleton())
           transform.variablesTransformationScope.add(vars.get(i * n + j));
 
-    System.out.println(transform.variablesTransformationScope);
+    IO.println(transform.variablesTransformationScope);
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<IntVar>(
@@ -283,7 +282,7 @@ public class QCP extends ExampleFD {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
   }

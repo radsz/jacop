@@ -77,45 +77,46 @@ public class Options {
   public Options(String[] args) {
 
     if (args.length == 0) {
-      System.out.println("fz2jacop: no model file specified");
-      System.out.println("fz2jacop: use --help for more information.");
+      IO.println("fz2jacop: no model file specified");
+      IO.println("fz2jacop: use --help for more information.");
       System.exit(0);
     } else if (args.length == 1) {
       String arg = args[0];
       if (arg.equals("-h") || arg.equals("--help")) {
-        System.out.println(
-            "Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn\n"
-                + "Options:\n"
-                + "    -h, --help\n"
-                + "        Print this message.\n"
-                + "    -a, --all, --all-solutions\n"
-                + "    -v, --verbose\n"
-                + "    -t <value>, --time-out <value>\n"
-                + "        <value> - time in milisecond.\n"
-                + "    -s, --statistics\n"
-                + "    -n <value>, --num-solutions <value>\n"
-                + "        <value> - limit on solution number.\n"
-                + "    -f free search; no need to follow search annotations.\n"
-                + "    -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.\n"
-                + "    -b, --bound - use bounds consistency whenever possible;\n"
-                + "        overrides annotation \":: domain\" and selects constraints\n"
-                + "        implementing bounds consistency (default false).\n"
-                + "    -sat use SAT solver for boolean constraints.\n"
-                + "    -cs, --complementary-search - gathers all model, non-defined\n"
-                + "         variables to create the final search\n"
-                + "    -i, --interval print intervals instead of values for floating variables\n"
-                + "    --precision <value> defines precision for floating operations\n"
-                + "        overrides precision definition in search annotation.\n"
-                + "    --format <value> defines print-out format (uses precision method)\n"
-                + "        for floating-point variables.\n"
-                + "    -o, --outputfile defines file for solver output\n"
-                + "    -d, --decay decay factor for accumulated failure count (afc)\n"
-                + "         and activity-based variable selection heuristic\n"
-                + "    --step <value> distance step for cost function for floating-point optimization\n"
-                + "    --restart <value> defines restart search; one of \"none\", \"constant\", \"linear\", \"luby\", \"geometric\"\n"
-                + "    --restart-base <value> base for geomteric restart search\n"
-                + "    --restart-scale <value> scale for restart search\n"
-                + "    --restart-limit <value> limits number of restarts in restart search");
+        IO.println(
+            """
+            Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn
+            Options:
+                -h, --help
+                    Print this message.
+                -a, --all, --all-solutions
+                -v, --verbose
+                -t <value>, --time-out <value>
+                    <value> - time in milisecond.
+                -s, --statistics
+                -n <value>, --num-solutions <value>
+                    <value> - limit on solution number.
+                -f free search; no need to follow search annotations.
+                -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
+                -b, --bound - use bounds consistency whenever possible;
+                    overrides annotation ":: domain" and selects constraints
+                    implementing bounds consistency (default false).
+                -sat use SAT solver for boolean constraints.
+                -cs, --complementary-search - gathers all model, non-defined
+                     variables to create the final search
+                -i, --interval print intervals instead of values for floating variables
+                --precision <value> defines precision for floating operations
+                    overrides precision definition in search annotation.
+                --format <value> defines print-out format (uses precision method)
+                    for floating-point variables.
+                -o, --outputfile defines file for solver output
+                -d, --decay decay factor for accumulated failure count (afc)
+                     and activity-based variable selection heuristic
+                --step <value> distance step for cost function for floating-point optimization
+                --restart <value> defines restart search; one of "none", "constant", "linear", "luby", "geometric"
+                --restart-base <value> base for geomteric restart search
+                --restart-scale <value> scale for restart search
+                --restart-limit <value> limits number of restarts in restart search""");
         System.exit(0);
       } else { // input file
         fileName = args[0];
@@ -238,7 +239,7 @@ public class Options {
           restartLimit = Integer.parseInt(args[++i]);
           i++;
         } else {
-          System.out.println("%% fz2jacop: not recognized option " + args[i] + "; ignored");
+          IO.println("%% fz2jacop: not recognized option " + args[i] + "; ignored");
           i++;
         }
       }
@@ -255,8 +256,8 @@ public class Options {
   public FileInputStream getFile() {
     try {
       file = new FileInputStream(fileName);
-    } catch (java.io.FileNotFoundException e) {
-      System.out.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
+    } catch (java.io.FileNotFoundException _) {
+      IO.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
       System.exit(0);
     }
 

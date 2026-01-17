@@ -85,7 +85,7 @@ public class Constraints implements ParserTreeConstants {
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
     if (support.options.debug())
-      System.out.println(
+      IO.println(
           "% bool constraints = "
               + boolClauses
               + " of "
@@ -148,13 +148,13 @@ public class Constraints implements ParserTreeConstants {
         java.lang.reflect.Method method = cf.getClass().getMethod(p, SimpleNode.class);
         method.invoke(cf, node);
 
-      } catch (NoSuchMethodException e) {
+      } catch (NoSuchMethodException _) {
         throw new RuntimeException(
             "%% JaCoP flatzinc back-end: constraint " + p + " is not supported.");
       } catch (IllegalAccessException e) {
-        System.out.println(e);
+        IO.println(e);
       } catch (java.lang.reflect.InvocationTargetException e) {
-        System.out.println("%% problem detected for " + p);
+        IO.println("%% problem detected for " + p);
 
         try {
           throw e.getCause();
@@ -210,7 +210,7 @@ public class Constraints implements ParserTreeConstants {
           v2.domain.in(store.level, v2, v1.domain);
         }
 
-        if (debug) System.out.println("% Alias: " + v1 + " == " + v2);
+        if (debug) IO.println("% Alias: " + v1 + " == " + v2);
       } else if (p.startsWith("int_eq_reif")) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);

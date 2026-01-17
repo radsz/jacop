@@ -134,7 +134,7 @@ public class SGMPCSearch {
 
     int bestCostSolution = bestCostSolution();
     if (trace)
-      System.out.println(
+      IO.println(
           "%% Best Cost elite solution is "
               + bestCostSolution
               + " with cost "
@@ -183,12 +183,12 @@ public class SGMPCSearch {
     }
 
     if (trace) {
-      System.out.println("%% Initial pool of solutions");
+      IO.println("%% Initial pool of solutions");
 
       for (int i = 0; i < solutionPool.length; i++) {
-        System.out.print("%% Solution " + (i + 1) + ": ");
-        for (int j = 0; j < v.length; j++) System.out.print(solutionPool[i][j] + " ");
-        System.out.println();
+        IO.print("%% Solution " + (i + 1) + ": ");
+        for (int j = 0; j < v.length; j++) IO.print(solutionPool[i][j] + " ");
+        IO.println();
       }
     }
 
@@ -201,12 +201,12 @@ public class SGMPCSearch {
     }
 
     if (trace) {
-      System.out.println("%% Selected best " + e + " solutions");
+      IO.println("%% Selected best " + e + " solutions");
 
       for (int i = 0; i < e; i++) {
-        System.out.print("%% Solution " + (i + 1) + ": ");
-        for (int j = 0; j < v.length; j++) System.out.print(elite[i][j] + " ");
-        System.out.println();
+        IO.print("%% Solution " + (i + 1) + ": ");
+        for (int j = 0; j < v.length; j++) IO.print(elite[i][j] + " ");
+        IO.println();
       }
     }
   }
@@ -244,13 +244,12 @@ public class SGMPCSearch {
           updateFailLimit(true);
         } else {
           if (printInfo)
-            System.out.println(
-                "%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
+            IO.println("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
           solution = search.getSolution();
 
           if (printInfo) {
-            System.out.println("%% Solution starting from empty ");
+            IO.println("%% Solution starting from empty ");
             printSolution(solution);
           }
 
@@ -277,14 +276,12 @@ public class SGMPCSearch {
         } else {
 
           if (printInfo)
-            System.out.println(
-                "%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
+            IO.println("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
 
           solution = search.getSolution();
 
           if (printInfo) {
-            System.out.println(
-                "%% Solution starting from reference with cost " + elite[n][costPosition]);
+            IO.println("%% Solution starting from reference with cost " + elite[n][costPosition]);
             printSolution(solution);
           }
 
@@ -313,7 +310,7 @@ public class SGMPCSearch {
             || (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
     if (printInfo && termination) {
-      System.out.println(
+      IO.println(
           "%% Termination search fails "
               + search.getNumberFails()
               + "("
@@ -402,7 +399,7 @@ public class SGMPCSearch {
 
   public void setEliteSolutions(int[][] solutions) {
     if (solutions.length != e) {
-      System.out.println(
+      IO.println(
           "Number of initial siolutions not correct; it is "
               + solutions.length
               + "and should be "
@@ -438,7 +435,7 @@ public class SGMPCSearch {
   public void setFailStrategy(int strategy) {
     if (strategy == poly || strategy == luby) this.strategy = strategy;
     else {
-      System.out.println("Wrong fail strategy limit; assumed poly");
+      IO.println("Wrong fail strategy limit; assumed poly");
 
       this.strategy = poly;
     }
@@ -451,9 +448,9 @@ public class SGMPCSearch {
   public void printSolution(int[] solution) {
 
     for (int j : solution) {
-      System.out.print(j + " ");
+      IO.print(j + " ");
     }
-    System.out.println();
+    IO.println();
   }
 
   public int[] lastSolution() {

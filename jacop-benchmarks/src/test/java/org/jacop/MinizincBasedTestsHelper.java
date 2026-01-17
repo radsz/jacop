@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,12 +77,12 @@ public class MinizincBasedTestsHelper {
   protected static List<String> expected(String filename) throws IOException {
 
     String filePath = new File(relativePath + filename).getAbsolutePath();
-    return Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
+    return Files.readAllLines(Path.of(filePath), StandardCharsets.UTF_8);
   }
 
   protected static Collection<String> fileReader(String timeCategory) throws IOException {
 
-    System.out.println("timeCategory" + timeCategory);
+    IO.println("timeCategory" + timeCategory);
     try (FileReader file = new FileReader(relativePath + timeCategory + listFileName);
         BufferedReader br = new BufferedReader(file)) {
 
@@ -102,8 +102,8 @@ public class MinizincBasedTestsHelper {
   public void cleanUp() {
     String outputFilename = relativePath + timeCategory + testFilename + ".fzn" + ".out";
     try {
-      Files.delete(Paths.get(outputFilename));
-    } catch (IOException e) {
+      Files.delete(Path.of(outputFilename));
+    } catch (IOException _) {
       // e.printStackTrace(); // can be helpful when updating code and/or tests instances.
       // File was not created (because the test timeout before it was created so deleting it failed.
     }
@@ -122,18 +122,18 @@ public class MinizincBasedTestsHelper {
     String foo = outputFilename.substring(0, outputFilename.lastIndexOf('/'));
 
     // If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
-    if (Files.exists(Paths.get(foo + "/options.opt"))) {
+    if (Files.exists(Path.of(foo + "/options.opt"))) {
       try (BufferedReader reader =
-          Files.newBufferedReader(Paths.get(foo + "/options.opt"), Charset.defaultCharset())) {
+          Files.newBufferedReader(Path.of(foo + "/options.opt"), Charset.defaultCharset())) {
         String line;
         List<String> options = new ArrayList<String>();
         while ((line = reader.readLine()) != null) {
           options.add(line);
         }
         // fz2jacop compute result with options
-        fz2jacop.main(
+        fz2jacop.callMain(
             new String[] {
-              options.get(0),
+              options.getFirst(),
               options.get(1),
               "--outputfile",
               outputFilename,
@@ -143,12 +143,12 @@ public class MinizincBasedTestsHelper {
       }
     } else
       // fz2jacop compute result
-      fz2jacop.main(new String[] {"--outputfile", outputFilename, relativePath + filename});
+      fz2jacop.callMain(new String[] {"--outputfile", outputFilename, relativePath + filename});
 
-    String result = new String(Files.readAllBytes(Paths.get(outputFilename)));
+    String result = new String(Files.readAllBytes(Path.of(outputFilename)));
 
     if (printInfo) {
-      System.out.println(filename + "\n" + result);
+      IO.println(filename + "\n" + result);
     }
 
     return Arrays.asList(result.split("\n"));
@@ -156,14 +156,14 @@ public class MinizincBasedTestsHelper {
 
   protected void testExecution(String timeCategory) throws IOException {
 
-    System.out.println("Test file: " + timeCategory + testFilename);
+    IO.println("Test file: " + timeCategory + testFilename);
     List<String> result = new ArrayList<String>();
     List<String> expectedResult =
         expected(timeCategory + testFilename + ".out"); // path to file name *.out
     List<String> res =
         computeResult(timeCategory + testFilename + ".fzn"); // path to file name *.fzn
 
-    if (expectedResult.get(expectedResult.size() - 1).equals("==========")) {
+    if (expectedResult.getLast().equals("==========")) {
       int i;
       for (i = 0; i < res.size(); i++) {
         result.add(res.get(i));

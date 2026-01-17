@@ -377,8 +377,8 @@ public class TraceGenerator<T extends Var>
       currentSearchNode = new SearchNode();
       currentSearchNode.v = var;
 
-      if (previousSearchNode.dom instanceof IntDomain)
-        currentSearchNode.dom = ((IntDomain) previousSearchNode.dom).subtract(value);
+      if (previousSearchNode.dom instanceof IntDomain domain)
+        currentSearchNode.dom = domain.subtract(value);
       else {
         // Handle SetDomain using reflection to avoid import
         try {
@@ -389,7 +389,7 @@ public class TraceGenerator<T extends Var>
             currentSearchNode.dom =
                 (Domain) subtractMethod.invoke(previousSearchNode.dom, value, value);
           }
-        } catch (Exception e) {
+        } catch (Exception _) {
           // SetDomain not available - skip this operation
         }
       }
@@ -616,7 +616,7 @@ public class TraceGenerator<T extends Var>
 
   private int minValue(List<Var> vars) {
     int min = IntDomain.MaxInt;
-    if (vars.get(0) instanceof IntVar)
+    if (vars.getFirst() instanceof IntVar)
       for (Var v : vars) min = (min < ((IntVar) v).min()) ? min : ((IntVar) v).min();
 
     return min;
@@ -624,7 +624,7 @@ public class TraceGenerator<T extends Var>
 
   private int maxValue(List<Var> vars) {
     int max = IntDomain.MinInt;
-    if (vars.get(0) instanceof IntVar)
+    if (vars.getFirst() instanceof IntVar)
       for (Var v : vars) max = (max > ((IntVar) v).max()) ? max : ((IntVar) v).max();
 
     return max;
@@ -690,8 +690,8 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", "parent", "CDATA", "" + parentNode);
       atts.addAttribute("", "", "name", "CDATA", name);
       atts.addAttribute("", "", "size", "CDATA", "" + size);
-      if (dom instanceof IntDomain)
-        atts.addAttribute("", "", "choice", "CDATA", "" + intDomainToString((IntDomain) dom));
+      if (dom instanceof IntDomain domain)
+        atts.addAttribute("", "", "choice", "CDATA", "" + intDomainToString(domain));
       else {
         // Handle SetDomain using reflection to avoid import
         try {
@@ -700,7 +700,7 @@ public class TraceGenerator<T extends Var>
             String domainStr = setDomainToStringReflective(dom);
             atts.addAttribute("", "", "choice", "CDATA", domainStr);
           }
-        } catch (Exception e) {
+        } catch (Exception _) {
           // SetDomain not available - skip this operation
         }
       }
@@ -807,7 +807,7 @@ public class TraceGenerator<T extends Var>
               try {
                 java.lang.reflect.Method singletonMethod = v.getClass().getMethod("singleton");
                 isSingleton = (Boolean) singletonMethod.invoke(v);
-              } catch (Exception e) {
+              } catch (Exception _) {
                 // Method not available - assume not singleton
               }
 
@@ -895,7 +895,7 @@ public class TraceGenerator<T extends Var>
       result.append(intDomainToString(glb)).append(" ) .. ( ");
       result.append(intDomainToString(lub)).append(" )");
       return result.toString();
-    } catch (Exception e) {
+    } catch (Exception _) {
       // SetDomain not available - return empty string
       return "";
     }

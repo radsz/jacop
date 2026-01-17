@@ -53,8 +53,8 @@ public class Laplace {
 
   void laplace() {
 
-    System.out.println("========= laplace =========");
-    System.out.println(
+    IO.println("========= laplace =========");
+    IO.println(
         "Solves the Dirichlet problem for Laplace's equation using\nLeibman's five-point finite-difference approximation");
 
     Store store = new Store();
@@ -101,10 +101,10 @@ public class Laplace {
 
     for (int i = 0; i < r + 1; i++) {
       for (int j = 0; j < c + 1; j++) System.out.printf("%.2f\t", x[i][j].value());
-      System.out.println();
+      IO.println();
     }
 
-    System.out.println();
-    System.out.println("Precision = " + FloatDomain.precision());
+    IO.println();
+    IO.println("Precision = " + FloatDomain.precision());
   }
 }

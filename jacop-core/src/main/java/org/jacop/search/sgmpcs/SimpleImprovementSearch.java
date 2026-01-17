@@ -169,7 +169,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
       searchCost = cost.value();
 
-      if (printInfo) System.out.println("----------\nCost = " + searchCost);
+      if (printInfo) IO.println("----------\nCost = " + searchCost);
 
       return returnCode;
     }

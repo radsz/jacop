@@ -292,7 +292,7 @@ public class LexOrder extends Constraint
 
     while (a < n && eqSingletons(x[a], y[a])) a++;
 
-    if (debug) System.out.println("INIT entry: a = " + a);
+    if (debug) IO.println("INIT entry: a = " + a);
 
     if (a == n) {
       if (!lexLT) {
@@ -328,7 +328,7 @@ public class LexOrder extends Constraint
       reestablishGAC(a);
     }
 
-    if (debug) System.out.println("INIT exit: a = " + a + ", b = " + b);
+    if (debug) IO.println("INIT exit: a = " + a + ", b = " + b);
   }
 
   void reestablishGAC(int i) {
@@ -337,8 +337,8 @@ public class LexOrder extends Constraint
     int b = betaValue;
 
     if (debug) {
-      System.out.println("reestablishGAC entry for " + i + ", alpha = " + a + ", beta = " + b);
-      System.out.println(this);
+      IO.println("reestablishGAC entry for " + i + ", alpha = " + a + ", beta = " + b);
+      IO.println(this);
     }
 
     if (a > b || satisfied) {
@@ -357,8 +357,8 @@ public class LexOrder extends Constraint
       if ((i == (b - 1) && x[i].min() == y[i].max()) || x[i].min() > y[i].max()) updateBeta(i - 1);
 
     if (debug) {
-      System.out.println("reestablishGAC exit for " + i + ", alpha = " + a + ", beta = " + b);
-      System.out.println(this);
+      IO.println("reestablishGAC exit for " + i + ", alpha = " + a + ", beta = " + b);
+      IO.println(this);
     }
   }
 
@@ -367,7 +367,7 @@ public class LexOrder extends Constraint
     int a = alphaValue + 1;
     int b = betaValue;
 
-    if (debug) System.out.println("updateAlpha entry: a = " + a + ", b = " + b);
+    if (debug) IO.println("updateAlpha entry: a = " + a + ", b = " + b);
 
     if (a == n)
       if (lexLT) throw Store.failException; // fail
@@ -388,7 +388,7 @@ public class LexOrder extends Constraint
       updateAlpha();
     }
 
-    if (debug) System.out.println("updateAlfa exit: a = " + a + ", b = " + b);
+    if (debug) IO.println("updateAlfa exit: a = " + a + ", b = " + b);
   }
 
   public void updateBeta(int i) {
@@ -397,7 +397,7 @@ public class LexOrder extends Constraint
     int b = i + 1;
     betaValue = b;
 
-    if (debug) System.out.println("updateBeta entry: a = " + a + ", b = " + b);
+    if (debug) IO.println("updateBeta entry: a = " + a + ", b = " + b);
 
     if (a == b) throw Store.failException; // fail
 
@@ -406,7 +406,7 @@ public class LexOrder extends Constraint
     } else // if (x[i].min() == y[i].max()) // ???
     updateBeta(i - 1);
 
-    if (debug) System.out.println("updateBeta exit: a = " + a + ", b = " + b);
+    if (debug) IO.println("updateBeta exit: a = " + a + ", b = " + b);
   }
 
   private boolean eqSingletons(IntVar x, IntVar y) {

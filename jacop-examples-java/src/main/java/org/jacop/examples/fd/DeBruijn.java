@@ -105,25 +105,25 @@ public class DeBruijn extends ExampleFD {
     if (result) {
 
       // prints then de Bruijn sequences
-      System.out.print("de Bruijn sequence:");
+      IO.print("de Bruijn sequence:");
 
-      System.out.print("decimal values: ");
+      IO.print("decimal values: ");
       for (int i = 0; i < m; i++) {
-        System.out.print(debruijn.x[i].value() + " ");
+        IO.print(debruijn.x[i].value() + " ");
       }
-      System.out.println();
+      IO.println();
 
-      System.out.println("\nbinary:");
+      IO.println("\nbinary:");
 
       for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-          System.out.print(debruijn.binary[i][j].value() + " ");
+          IO.print(debruijn.binary[i][j].value() + " ");
         }
-        System.out.println(" : " + debruijn.x[i].value());
+        IO.println(" : " + debruijn.x[i].value());
       }
 
     } else {
-      System.out.println("No solutions.");
+      IO.println("No solutions.");
     } // end if result
   } // end main
 
@@ -146,7 +146,7 @@ public class DeBruijn extends ExampleFD {
       }
     }
 
-    System.out.println("Using base: " + base + " n: " + n + " m: " + m);
+    IO.println("Using base: " + base + " n: " + n + " m: " + m);
 
     // decimal representation, ranges from 0..base^n-1
     x = new IntVar[m];

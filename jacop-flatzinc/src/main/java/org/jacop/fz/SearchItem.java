@@ -164,7 +164,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       int[] values = null;
       try {
         values = getIntArray(expr2);
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         throw new IllegalArgumentException(
             "%Not supported types of values in warm_start; compilation aborted");
       }
@@ -181,7 +181,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
         if (var.domain.contains(val))
           if (preferedValues.get(var) != null && preferedValues.get(var) != val)
-            System.out.println(
+            IO.println(
                 "% Warning: Double defintion on warm_start for variable "
                     + var
                     + "("
@@ -195,7 +195,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             preferedValues.put(var, val);
           }
         else
-          System.out.println(
+          IO.println(
               "% Warning: warm_start value " + val + " is not in domain of " + var + "; ignored");
       }
 
@@ -249,7 +249,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       ASTAnnExpr expr2 = (ASTAnnExpr) ann.jjtGetChild(1).jjtGetChild(0);
       probability = ((ASTScalarFlatExpr) expr2.jjtGetChild(0)).getInt();
 
-    } else System.out.println("% Warning: Ignored search annotation " + search_type);
+    } else IO.println("% Warning: Ignored search annotation " + search_type);
 
     //      throw new IllegalArgumentException("Not supported search annotation "+search_type+";
     // compilation aborted.");
@@ -344,7 +344,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       subSearch.searchParameters(node, i);
 
       if (search_type == null && subSearch.search_type.equals("warm_start"))
-        search_seq.add(0, subSearch);
+        search_seq.addFirst(subSearch);
       else search_seq.add(subSearch);
     }
 

@@ -209,7 +209,7 @@ public class DomainHoles extends InternalConstraint {
           assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
               : "current point not located in a domain hole";
 
-          if (debug) System.out.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
+          if (debug) IO.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
 
           /*
            * we found a hole, the infeasible slice is the whole domain, except in the
@@ -226,7 +226,7 @@ public class DomainHoles extends InternalConstraint {
           }
 
           if (debug) {
-            System.out.println("forbidden domain: " + forbiddenRegion);
+            IO.println("forbidden domain: " + forbiddenRegion);
           }
 
           assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
@@ -236,7 +236,7 @@ public class DomainHoles extends InternalConstraint {
           return forbiddenRegion;
         }
         if (debug) {
-          System.out.println(Arrays.toString(c) + " is not in a hole of " + o.coords[d]);
+          IO.println(Arrays.toString(c) + " is not in a hole of " + o.coords[d]);
         }
       }
     }

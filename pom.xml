@@ -326,7 +326,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>3.14.1</version>
                 </plugin>
 
                 <plugin>
@@ -380,7 +380,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
                     <artifactId>spotbugs-maven-plugin</artifactId>
-                    <version>4.1.4</version>
+                    <version>4.9.8.2</version>
                 </plugin>
 
                 <plugin>
@@ -418,17 +418,36 @@ setup to run configuration. -->
 
         <plugins>
 
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>6.27.0</version>
+                <configuration>
+                    <exportDatatables>true</exportDatatables>
+                    <activeRecipes>
+                        <recipe>org.openrewrite.java.migrate.UpgradeToJava25</recipe>
+                    </activeRecipes>
+                    <checkstyleConfigFile>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</checkstyleConfigFile>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-migrate-java</artifactId>
+                        <version>3.25.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
             <!-- Java plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.14.1</version>
                 <configuration>
-                    <source>25</source>
-                    <target>25</target>
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <showWarnings>false</showWarnings>
                     <!--  <showDeprecation>true</showDeprecation>  -->
+          <release>25</release>
                 </configuration>
             </plugin>
 
@@ -630,7 +649,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.7.3.2</version>
+                <version>4.9.8.2</version>
                 <configuration>
                     <effort>Max</effort>      <!-- Other working value is Min -->
                     <threshold>Medium</threshold>  <!-- Other working value is Low, High -->

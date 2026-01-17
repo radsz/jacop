@@ -71,7 +71,7 @@ public class WolfGoatCabbage extends ExampleFD {
       example.model();
 
       if (!example.searchMostConstrainedStatic())
-        System.out.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
+        IO.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
       else result = true;
 
       numberInnerMoves++;
@@ -81,8 +81,7 @@ public class WolfGoatCabbage extends ExampleFD {
   @Override
   public void model() {
 
-    System.out.println(
-        "Creating model for solution with " + numberInnerMoves + " intermediate steps");
+    IO.println("Creating model for solution with " + numberInnerMoves + " intermediate steps");
     // Creating constraint store
     store = new Store();
     vars = new ArrayList<IntVar>();

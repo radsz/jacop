@@ -62,7 +62,7 @@ public class Langford extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
 
     Langford exampleBound = new Langford();
     if (args.length > 1) {
@@ -77,7 +77,7 @@ public class Langford extends ExampleFD {
     }
     exampleDual.modelDual();
 
-    if (exampleDual.search()) System.out.println("Solution(s) found");
+    if (exampleDual.search()) IO.println("Solution(s) found");
   }
 
   /**
@@ -95,7 +95,7 @@ public class Langford extends ExampleFD {
     }
     exampleDual.modelDual();
 
-    if (exampleDual.search()) System.out.println("Solution(s) found");
+    if (exampleDual.search()) IO.println("Solution(s) found");
   }
 
   @Override

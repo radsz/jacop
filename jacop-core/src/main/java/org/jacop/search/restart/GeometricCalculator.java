@@ -51,7 +51,7 @@ public class GeometricCalculator extends Calculator {
 
   public void newLimit() {
     numberFails = 0;
-    double p = Double.valueOf(Math.pow(base, ++n));
+    double p = Math.pow(base, ++n);
     failLimit = (long) p * scale;
   }
 

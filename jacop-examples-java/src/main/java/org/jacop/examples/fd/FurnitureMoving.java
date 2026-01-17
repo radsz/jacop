@@ -74,7 +74,7 @@ public class FurnitureMoving extends ExampleFD {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
   @Override
@@ -163,15 +163,15 @@ public class FurnitureMoving extends ExampleFD {
 
     Var[] variables = search.getSolutionListener().getVariables();
     for (int i = 0; i < variables.length; i++) {
-      System.out.println("Variable " + i + " " + variables[i]);
+      IO.println("Variable " + i + " " + variables[i]);
     }
 
     if (result) {
 
       search.printAllSolutions();
 
-      System.out.println("\nNumber of persons needed: " + cost.value());
-      System.out.println(
+      IO.println("\nNumber of persons needed: " + cost.value());
+      IO.println(
           "Piano: "
               + starts[0].value()
               + " .. "

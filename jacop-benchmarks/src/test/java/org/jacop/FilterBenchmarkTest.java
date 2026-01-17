@@ -186,7 +186,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
   public void testFilter()
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
 
-    Class cls = this.getClass();
+    Class<? extends FilterBenchmarkTest> cls = this.getClass();
     Method exp = cls.getMethod(experiment, Store.class, Filter.class, int[].class);
 
     int costFound = (Integer) exp.invoke(this, new Store(), filter, resourcesConfiguration);

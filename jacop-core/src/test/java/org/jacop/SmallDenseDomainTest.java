@@ -44,7 +44,7 @@ public class SmallDenseDomainTest {
   @Test
   public void testContains() throws Exception {
 
-    System.out.println("Contains function test");
+    IO.println("Contains function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
 
@@ -54,14 +54,14 @@ public class SmallDenseDomainTest {
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-3, 4, 5, 5, 9, 10}});
 
-    System.out.println("Test Complement function");
+    IO.println("Test Complement function");
     assertEquals(
         false, testedDomain.contains(createDomain(new Interval(1, 2), new Interval(6, 6))));
   }
 
   @Test
   public void testComplement() throws Exception {
-    System.out.println("Complement function test");
+    IO.println("Complement function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertEquals(
@@ -71,7 +71,7 @@ public class SmallDenseDomainTest {
 
   @Test
   public void testGetElementAt() throws Exception {
-    System.out.println("GetElementAt function test");
+    IO.println("GetElementAt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     assertEquals(1, testedDomain.getElementAt(0));
@@ -80,7 +80,7 @@ public class SmallDenseDomainTest {
 
   @Test
   public void testIntersect() throws Exception {
-    System.out.println("Intersect function test");
+    IO.println("Intersect function test");
 
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -113,7 +113,7 @@ public class SmallDenseDomainTest {
   @Test
   public void testIntersectAdapt() throws Exception {
 
-    System.out.println("IntersectAdapt function test");
+    IO.println("IntersectAdapt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     assertEquals(0, testedDomain.intersectAdapt(createDomain(new Interval(2, 4))));
@@ -217,7 +217,7 @@ public class SmallDenseDomainTest {
   @Test
   public void testIsIntersecting() throws Exception {
 
-    System.out.println("IsIntersecting function test");
+    IO.println("IsIntersecting function test");
     IntDomain testedDomain =
         (IntDomain)
             prepareMethod.invoke(
@@ -230,7 +230,7 @@ public class SmallDenseDomainTest {
   @Test
   public void testSubtract() throws Exception {
 
-    System.out.println("Subtract function test");
+    IO.println("Subtract function test");
     IntDomain testedDomain =
         (IntDomain)
             prepareMethod.invoke(
@@ -257,7 +257,7 @@ public class SmallDenseDomainTest {
   @Test
   public void testNextValue() throws Exception {
 
-    System.out.println("NextValue function test");
+    IO.println("NextValue function test");
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -267,7 +267,7 @@ public class SmallDenseDomainTest {
   @Test
   public void testPreviousValue() throws Exception {
 
-    System.out.println("previousValue function test");
+    IO.println("previousValue function test");
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});

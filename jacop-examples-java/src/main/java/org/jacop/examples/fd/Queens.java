@@ -79,7 +79,7 @@ public class Queens extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
+    if (example.searchSmallestMiddle()) IO.println("Solution(s) found");
   }
 
   /**
@@ -97,7 +97,7 @@ public class Queens extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
+    if (example.searchSmallestMiddle()) IO.println("Solution(s) found");
 
     example = new Queens();
 
@@ -107,7 +107,7 @@ public class Queens extends ExampleFD {
 
     example.modelBasic();
 
-    if (example.searchLDS(3)) System.out.println("Solution(s) found");
+    if (example.searchLDS(3)) IO.println("Solution(s) found");
 
     example = new Queens();
 
@@ -117,7 +117,7 @@ public class Queens extends ExampleFD {
 
     example.modelChanneling();
 
-    if (example.searchSmallestMiddle()) System.out.println("Solution(s) found");
+    if (example.searchSmallestMiddle()) IO.println("Solution(s) found");
   }
 
   /** This model uses only primitive constraints. */

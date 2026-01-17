@@ -73,7 +73,7 @@ public class LectureSeries extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -82,7 +82,7 @@ public class LectureSeries extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Lecture Series ");
+    IO.println("Program to solve Lecture Series ");
 
     String[] firstNames = {"Alice", "Bernadette", "Charles", "Duane", "Eddie"};
     int iAlice = 0, iBernadette = 1, iCharles = 2, iDuane = 3, iEddie = 4;

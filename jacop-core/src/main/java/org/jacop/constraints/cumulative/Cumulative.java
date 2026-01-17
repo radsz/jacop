@@ -315,8 +315,7 @@ public class Cumulative extends CumulativeBasic {
 
     Integer[] precTaskOrder = new Integer[n];
     for (int i = 0; i < n; i++) precTaskOrder[i] = i;
-    Arrays.sort(
-        precTaskOrder, (Integer o1, Integer o2) -> prec[o2.intValue()] - prec[o1.intValue()]);
+    Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> prec[o2] - prec[o1]);
 
     int j = 0;
     outer:
@@ -374,9 +373,9 @@ public class Cumulative extends CumulativeBasic {
     System.arraycopy(t1, 0, t2, 0, n);
 
     // tasks t1 sorted by non-incereasing relese dates (est)
-    Arrays.sort(t1, (Integer o1, Integer o2) -> ts[o2.intValue()].est() - ts[o1.intValue()].est());
+    Arrays.sort(t1, (Integer o1, Integer o2) -> ts[o2].est() - ts[o1].est());
     // tasks t2 sorted by non-decreasing relese dates (est)
-    Arrays.sort(t2, (Integer o1, Integer o2) -> ts[o1.intValue()].est() - ts[o2.intValue()].est());
+    Arrays.sort(t2, (Integer o1, Integer o2) -> ts[o1].est() - ts[o2].est());
 
     for (TaskView u : ts) {
 

@@ -73,7 +73,7 @@ public class MasterClass extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -82,7 +82,7 @@ public class MasterClass extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Solution to problem Master Class");
+    IO.println("Solution to problem Master Class");
 
     // voice names
     String[] glos = {"mezzosoprano", "soprano", "bass", "tenor_1", "tenor_2"};

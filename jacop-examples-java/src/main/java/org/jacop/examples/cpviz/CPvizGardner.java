@@ -78,7 +78,7 @@ public class CPvizGardner {
     int num_persons_per_meeting = 3;
     int persons = 15;
 
-    System.out.println("Gardner dinner problem ");
+    IO.println("Gardner dinner problem ");
     store = new Store();
 
     SetVar[] days = new SetVar[35];
@@ -100,14 +100,14 @@ public class CPvizGardner {
         store.impose(new CardAeqX(intersect, card));
       }
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
     boolean Result = store.consistency();
-    System.out.println("*** consistency = " + Result);
+    IO.println("*** consistency = " + Result);
 
     Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
@@ -128,19 +128,19 @@ public class CPvizGardner {
     Result = label.labeling(store, select);
 
     if (Result) {
-      System.out.println("*** Yes");
+      IO.println("*** Yes");
       for (SetVar day : days) {
-        System.out.println(day);
+        IO.println(day);
       }
-    } else System.out.println("*** No");
+    } else IO.println("*** No");
 
     //       T2 = System.currentTimeMillis();
     //       T = T2 - T1;
     //       System.out.println("\n\t*** Execution time = "+ T + " ms");
 
-    System.out.println(
+    IO.println(
         "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
-    System.out.println(
+    IO.println(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6
             + "ms");

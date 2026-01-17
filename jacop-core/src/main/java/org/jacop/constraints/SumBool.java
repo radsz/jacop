@@ -298,23 +298,16 @@ public class SumBool extends PrimitiveConstraint {
       max += xd.max();
     }
 
-    switch (rel) {
-      case eq:
-        return sum.singleton(min) && min == max;
-      case lt:
-        return max < sum.min();
-      case le:
-        return max <= sum.min();
-      case ne:
-        return sum.min() > max
-            || sum.max() < min; // sum.singleton() && min == max && sum.min() != min;
-      case gt:
-        return min > sum.max();
-      case ge:
-        return min >= sum.max();
-      default:
-        return false;
-    }
+    return switch (rel) {
+      case eq -> sum.singleton(min) && min == max;
+      case lt -> max < sum.min();
+      case le -> max <= sum.min();
+      case ne ->
+          sum.min() > max || sum.max() < min; // sum.singleton() && min == max && sum.min() != min;
+      case gt -> min > sum.max();
+      case ge -> min >= sum.max();
+      default -> false;
+    };
   }
 
   public byte relation(String r) {
@@ -334,22 +327,15 @@ public class SumBool extends PrimitiveConstraint {
   }
 
   public String rel2String() {
-    switch (relationType) {
-      case eq:
-        return "==";
-      case lt:
-        return "<";
-      case le:
-        return "<=";
-      case ne:
-        return "!=";
-      case gt:
-        return ">";
-      case ge:
-        return ">=";
-      default:
-        return "??";
-    }
+    return switch (relationType) {
+      case eq -> "==";
+      case lt -> "<";
+      case le -> "<=";
+      case ne -> "!=";
+      case gt -> ">";
+      case ge -> ">=";
+      default -> "??";
+    };
   }
 
   IntVar[] filterAndOverflow(IntVar[] x) {

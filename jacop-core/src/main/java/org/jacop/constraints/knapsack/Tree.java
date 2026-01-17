@@ -574,7 +574,7 @@ public class Tree {
 
     if (!exhaustedRightItems) {
 
-      if (currentNode.rightNeighbor == null) System.out.println("Problem " + toString());
+      if (currentNode.rightNeighbor == null) IO.println("Problem " + toString());
 
       double efficiencyLoss =
           profitOfItemChecked / (double) weightOfItemChecked

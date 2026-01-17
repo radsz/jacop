@@ -64,8 +64,8 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
   int removeCount = 0;
   boolean addingToIntervals;
-  Boolean valueFalse = Boolean.valueOf(false);
-  Boolean valueTrue = Boolean.valueOf(true);
+  Boolean valueFalse = Boolean.FALSE;
+  Boolean valueTrue = Boolean.TRUE;
 
   /**
    * It creates a interval based backtrackable manager. At some point, instead of storing a list of
@@ -96,7 +96,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   @Override
   public void addChanged(int index) {
 
-    if (debug) System.out.println(this + "Add item " + index + "max reached " + currentLevelMax);
+    if (debug) IO.println(this + "Add item " + index + "max reached " + currentLevelMax);
 
     if (currentLevelMax) return;
 
@@ -104,19 +104,19 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
       if (debug) {
 
-        System.out.println("Level info " + levelInfo);
-        System.out.println("Intervals? " + intervalBasedTrail);
-        System.out.println("LastTrail " + trail.get(trail.size() - 1));
-        System.out.println(super.toString());
+        IO.println("Level info " + levelInfo);
+        IO.println("Intervals? " + intervalBasedTrail);
+        IO.println("LastTrail " + trail.getLast());
+        IO.println(super.toString());
       }
 
       trailContainsAllChanges = false;
       currentlyChanged.clear();
 
-      levelInfo.remove(levelInfo.size() - 1);
-      addingToIntervals = intervalBasedTrail.remove(intervalBasedTrail.size() - 1);
+      levelInfo.removeLast();
+      addingToIntervals = intervalBasedTrail.removeLast();
 
-      int[] lastTrail = trail.remove(trail.size() - 1);
+      int[] lastTrail = trail.removeLast();
 
       if (lastTrail == fullLevel) {
         currentLevelMax = true;
@@ -156,14 +156,14 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     if (debug) {
 
-      System.out.println("Level being set" + level);
-      System.out.println("Last Level info " + levelInfo);
-      System.out.println("Intervals? " + intervalBasedTrail);
-      if (trail.size() != 0) System.out.println("LastTrail " + trail.get(trail.size() - 1));
-      System.out.println(super.toString());
+      IO.println("Level being set" + level);
+      IO.println("Last Level info " + levelInfo);
+      IO.println("Intervals? " + intervalBasedTrail);
+      if (trail.size() != 0) IO.println("LastTrail " + trail.getLast());
+      IO.println(super.toString());
     }
 
-    if (debug) System.out.println(">" + this + "Add level " + level);
+    if (debug) IO.println(">" + this + "Add level " + level);
 
     assert (level > currentLevel) : "It is possible only to add higher levels";
 
@@ -203,7 +203,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     currentLevelMax = false;
     currentLevel = level;
 
-    if (debug) System.out.println("<" + this + "Add level " + level + "\n");
+    if (debug) IO.println("<" + this + "Add level " + level + "\n");
   }
 
   private int[] computeIntervals() {
@@ -259,22 +259,21 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     removeCount++;
 
-    if (debug) System.out.println("Remove level count " + removeCount);
+    if (debug) IO.println("Remove level count " + removeCount);
 
     if (debug)
-      System.out.println(
-          ">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
+      IO.println(">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
 
     if (currentLevel == removedLevel) {
 
       if (trailContainsAllChanges) {
-        int lastLevel = levelInfo.remove(levelInfo.size() - 1);
+        int lastLevel = levelInfo.removeLast();
 
         assert (lastLevel == removedLevel) : "It is only possible to remove recently added level";
 
-        int[] lastTrail = trail.remove(trail.size() - 1);
+        int[] lastTrail = trail.removeLast();
 
-        if (intervalBasedTrail.remove(intervalBasedTrail.size() - 1)) {
+        if (intervalBasedTrail.removeLast()) {
 
           // interval based representation for removed level.
           int currentPositionInHoles = 0;
@@ -348,19 +347,19 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
         currentlyChanged.clear();
       }
 
-      if (!levelInfo.isEmpty()) currentLevel = levelInfo.get(levelInfo.size() - 1);
+      if (!levelInfo.isEmpty()) currentLevel = levelInfo.getLast();
       else currentLevel = 0;
 
       currentLevelMax = false;
       if (!trail.isEmpty())
-        if (trail.get(trail.size() - 1) == fullLevel) {
+        if (trail.getLast() == fullLevel) {
           currentLevelMax = true;
         }
 
       addingToIntervals = false;
     }
 
-    if (debug) System.out.println("<" + this + "Remove level " + removedLevel + "\n");
+    if (debug) IO.println("<" + this + "Remove level " + removedLevel + "\n");
 
     assert (removedLevel >= currentLevel)
         : "It is only possible to remove the most recent not removed level";
@@ -460,7 +459,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       if (addingToIntervals) {
 
         // trail used interval description.
-        int[] trailLevel = trail.get(trail.size() - 1);
+        int[] trailLevel = trail.getLast();
 
         for (int i = 0; i < trailLevel.length; ) {
           if (trailLevel[i] <= index && index <= trailLevel[i + 1])
@@ -476,7 +475,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       }
 
       // number of changes was too small to use intervals, just a list is used.
-      int[] trailLevel = trail.get(trail.size() - 1);
+      int[] trailLevel = trail.getLast();
 
       for (int i : trailLevel) if (i == index) return true;
 

@@ -77,7 +77,7 @@ public class WordGame {
         new ExtensionalSupportMDD(readDictionaryFor5LetterWords(defaultDictionary, unknownWord)));
 
     for (int attempt = 1; attempt <= 8; attempt++) {
-      System.out.println("Attempt " + attempt);
+      IO.println("Attempt " + attempt);
 
       // Set up search
       SelectChoicePoint<IntVar> select =
@@ -160,7 +160,7 @@ public class WordGame {
       } // end while
 
     } catch (IOException e) {
-      System.out.println(e);
+      IO.println(e);
     }
 
     resultForWordSize.reduce();
@@ -169,20 +169,18 @@ public class WordGame {
 
   private static char[] getUserGuessQuality() {
     Scanner scanner = new Scanner(System.in);
-    System.out.println("Enter the quality of your guess:");
-    System.out.println("! : The letter is not present in the unknown word.");
-    System.out.println(
-        "+ : The letter is present and in the correct position in the unknown word.");
-    System.out.println(
-        "- : The letter is present but not in the correct position in the unknown word.");
-    System.out.print("Quality: ");
+    IO.println("Enter the quality of your guess:");
+    IO.println("! : The letter is not present in the unknown word.");
+    IO.println("+ : The letter is present and in the correct position in the unknown word.");
+    IO.println("- : The letter is present but not in the correct position in the unknown word.");
+    IO.print("Quality: ");
     String input = scanner.nextLine();
     return input.toCharArray();
   }
 
   private static char[] getUserGuess() {
     Scanner scanner = new Scanner(System.in);
-    System.out.print("Enter your guess word: ");
+    IO.print("Enter your guess word: ");
     String input = scanner.nextLine();
     return input.toCharArray();
   }
@@ -196,9 +194,9 @@ public class WordGame {
       boolean returnCode = super.executeAfterSolution(search, select);
 
       for (T var : vars) {
-        System.out.print((char) ((IntVar) var).dom().min());
+        IO.print((char) ((IntVar) var).dom().min());
       }
-      System.out.println(" ");
+      IO.println(" ");
 
       return returnCode;
     }

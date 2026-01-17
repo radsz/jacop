@@ -65,7 +65,7 @@ public class FlatzincLoader {
   public void load() {
 
     if (opt.getVerbose())
-      System.out.println("%% Flatzinc2JaCoP: compiling and executing " + opt.getFileName());
+      IO.println("%% Flatzinc2JaCoP: compiling and executing " + opt.getFileName());
 
     parser = new Parser(opt.getFile());
     parser.setOptions(opt);
@@ -74,22 +74,21 @@ public class FlatzincLoader {
 
       parser.model();
 
-    } catch (FailException e) {
-      System.out.println(
-          "=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+    } catch (FailException _) {
+      IO.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
       // } catch (ArithmeticException e) {
       //     System.err.println("%% Evaluation of model resulted in an overflow.");
     } catch (ParseException e) {
-      System.out.println("%% Parser exception " + e);
+      IO.println("%% Parser exception " + e);
     } catch (TokenMgrError e) {
-      System.out.println("%% Parser exception " + e);
+      IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
-      System.out.println("%% JaCoP internal error. Array out of bound exception " + e);
-      if (e.getStackTrace().length > 0) System.out.println("%%\t" + e.getStackTrace()[0]);
-    } catch (OutOfMemoryError e) {
-      System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
-    } catch (StackOverflowError e) {
-      System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
+      IO.println("%% JaCoP internal error. Array out of bound exception " + e);
+      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.getStackTrace()[0]);
+    } catch (OutOfMemoryError _) {
+      IO.println("%% Out of memory error; consider option -Xmx... for JVM");
+    } catch (StackOverflowError _) {
+      IO.println("%% Stack overflow exception error; consider option -Xss... for JVM");
     }
   }
 

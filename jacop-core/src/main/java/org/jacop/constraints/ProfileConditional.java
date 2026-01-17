@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -42,7 +43,7 @@ import java.util.Iterator;
 class ProfileConditional extends ArrayList<ProfileItemCondition> {
 
   static final boolean trace = false;
-  private static final long serialVersionUID = 8683452581100000010L;
+  @Serial private static final long serialVersionUID = 8683452581100000010L;
   int MaxProfile = 0;
 
   ProfileConditional() {}
@@ -53,13 +54,12 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     boolean notFound = true;
 
     if (trace) {
-      System.out.println(index + "  --------------------------");
-      System.out.println(exList);
+      IO.println(index + "  --------------------------");
+      IO.println(exList);
     }
 
     if (size() == 0) {
-      if (trace)
-        System.out.println("1. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position 0");
+      if (trace) IO.println("1. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position 0");
       int[] r = {index, val};
       add(new ProfileItemCondition(a, b, val, r));
       if (MaxProfile < val) MaxProfile = val;
@@ -70,7 +70,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
           if (a != b) {
             if (b == p.min && val == p.value) {
               if (trace)
-                System.out.println(
+                IO.println(
                     "2a. Change " + "[" + a + ".." + p.max + ")" + "=" + val + " at position " + i);
               // !!!! b==p.Min
               // p.Min = a;
@@ -91,7 +91,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 }
               } else {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "2b. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + i);
                 int[] r = {index, val}; // OK
                 add(i, new ProfileItemCondition(a, b, val, r));
@@ -107,7 +107,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
             if (i == size() - 1) {
               if (a != b) {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "3. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + (i + 1));
                 int[] r = {index, val}; // OK
                 add(i + 1, new ProfileItemCondition(a, b, val, r));
@@ -123,7 +123,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
             int[] r = {index, val};
 
             if (trace)
-              System.out.println(
+              IO.println(
                   "Overlap of "
                       + "["
                       + a
@@ -139,7 +139,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                       + p);
 
             p.overlap(new ProfileItemCondition(a, b, val, r), new1, new2, new3, exList, r);
-            if (trace) System.out.println("Result = " + new1 + ", " + new2 + ", " + new3);
+            if (trace) IO.println("Result = " + new1 + ", " + new2 + ", " + new3);
 
             remove(i);
             // left
@@ -149,7 +149,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
               else previous = new ProfileItemCondition();
               if (previous.max == new1.min && previous.value == new1.value) {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "4a. Change "
                           + "["
                           + previous.min
@@ -170,7 +170,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                   i++;
                 }
               } else {
-                if (trace) System.out.println("4b. Adding " + new1);
+                if (trace) IO.println("4b. Adding " + new1);
                 // !!!
                 new1.rectangles = p.rectangles;
                 add(i, new1);
@@ -185,7 +185,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
               else previous = new ProfileItemCondition();
               if (previous.max == new2.min && previous.value == new2.value) {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "5a. Change "
                           + "["
                           + new2.min
@@ -206,7 +206,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                   i++;
                 }
               } else {
-                if (trace) System.out.println("5b. Adding " + new2);
+                if (trace) IO.println("5b. Adding " + new2);
                 // !!!
                 add(i, new2);
                 if (MaxProfile < new2.value) MaxProfile = new2.value;
@@ -233,7 +233,7 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
         }
       }
     }
-    if (trace) System.out.println("########\n" + this);
+    if (trace) IO.println("########\n" + this);
   }
 
   int max() {

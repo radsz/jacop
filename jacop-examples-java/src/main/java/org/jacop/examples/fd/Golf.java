@@ -69,7 +69,7 @@ public class Golf extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -78,7 +78,7 @@ public class Golf extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Golf problem ");
+    IO.println("Program to solve Golf problem ");
 
     // First names of golf players.
     String[] FNNames = {"Bill", "Paul", "Frank", "Jack"};

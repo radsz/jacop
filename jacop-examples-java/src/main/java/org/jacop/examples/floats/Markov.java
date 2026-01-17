@@ -56,7 +56,7 @@ public class Markov {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("========= markov_chains_taha =========");
+    IO.println("========= markov_chains_taha =========");
 
     Store store = new Store();
 
@@ -107,7 +107,7 @@ public class Markov {
     for (int i = 0; i < 3; i++) vars[i + 3] = mean_first_return_time[i];
     vars[6] = tot_cost;
 
-    System.out.println(
+    IO.println(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -124,14 +124,14 @@ public class Markov {
 
     boolean result = label.labeling(store, s, tot_cost);
 
-    if (result) System.out.println(tot_cost);
-    else System.out.println("NO SOLUTION");
+    if (result) IO.println(tot_cost);
+    else IO.println("NO SOLUTION");
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

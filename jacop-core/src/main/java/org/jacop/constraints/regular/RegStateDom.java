@@ -76,7 +76,7 @@ public class RegStateDom extends RegState {
 
     if (pos < outDegree) {
       if (debugAll)
-        System.out.println(
+        IO.println(
             "remove the SUC arc q_"
                 + level
                 + id

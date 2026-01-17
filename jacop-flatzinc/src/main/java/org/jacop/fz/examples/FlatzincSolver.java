@@ -74,7 +74,7 @@ public class FlatzincSolver {
     // System.out.println(fl.getTables());
     // System.out.println("============================================");
 
-    System.out.println(
+    IO.println(
         "\nIntVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -89,7 +89,7 @@ public class FlatzincSolver {
     else result = label.labeling(fl.getStore(), select);
 
     if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
-      System.out.print(fl.getSolve().lastSolution);
+      IO.print(fl.getSolve().lastSolution);
 
     fl.getSolve().statistics(result);
 
@@ -99,11 +99,11 @@ public class FlatzincSolver {
 
     // System.out.println("cost: " + fl.getCost());
 
-    if (result) System.out.println("*** Yes");
-    else System.out.println("*** No");
+    if (result) IO.println("*** Yes");
+    else IO.println("*** No");
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

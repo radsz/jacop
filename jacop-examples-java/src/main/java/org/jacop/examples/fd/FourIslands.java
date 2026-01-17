@@ -73,7 +73,7 @@ public class FourIslands extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -82,7 +82,7 @@ public class FourIslands extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Four Islands problem ");
+    IO.println("Program to solve Four Islands problem ");
 
     // names of islands
     String[] islandNames = {"Pwana", "Quero", "Rayou", "Skern"};

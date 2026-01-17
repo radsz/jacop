@@ -263,7 +263,7 @@ public class PrintSchedule {
       for (List<Integer> integers : Line) {
         int sp = result.length();
         for (int ri = 0; ri < integers.size(); ri++)
-          result.append("[").append(TaskArr[integers.get(ri)].get(0)).append("]");
+          result.append("[").append(TaskArr[integers.get(ri)].getFirst()).append("]");
 
         if (integers.size() == 0) result.append("-");
         //		s = s + "-";

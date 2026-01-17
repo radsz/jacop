@@ -74,7 +74,7 @@ public class Kakro extends ExampleFD {
     example.model();
 
     if (example.search()) {
-      System.out.println("Solution(s) found");
+      IO.println("Solution(s) found");
 
       ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
     }

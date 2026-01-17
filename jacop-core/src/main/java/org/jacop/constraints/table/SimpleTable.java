@@ -234,7 +234,7 @@ public class SimpleTable extends Constraint
         ValueEnumeration e = rp.valueEnumeration();
         while (e.hasMoreElements()) {
           Long bs = xSupport.get(e.nextElement());
-          if (bs != null) mask |= (bs.longValue());
+          if (bs != null) mask |= (bs);
         }
         mask = ~mask;
       } else { // reset-based update
@@ -244,7 +244,7 @@ public class SimpleTable extends Constraint
           ValueEnumeration e = cd.valueEnumeration();
           while (e.hasMoreElements()) {
             Long bs = xSupport.get(e.nextElement());
-            if (bs != null) mask |= (bs.longValue());
+            if (bs != null) mask |= (bs);
           }
         } else {
           // updates based on table values
@@ -296,7 +296,7 @@ public class SimpleTable extends Constraint
 
             Long bs = xSupport.get(el);
             if (bs != null) {
-              if ((wrds & bs.longValue()) == 0L) {
+              if ((wrds & bs) == 0L) {
                 xi.domain.inComplement(store.level, xi, el);
               }
             } else xi.domain.inComplement(store.level, xi, el);
@@ -307,7 +307,7 @@ public class SimpleTable extends Constraint
           for (Map.Entry<Integer, Long> e : xsEntry) {
             Integer val = e.getKey();
             Long bits = e.getValue();
-            if (xi.domain.contains(val) && (wrds & bits.longValue()) != 0L) xDom.unionAdapt(val);
+            if (xi.domain.contains(val) && (wrds & bits) != 0L) xDom.unionAdapt(val);
           }
           xi.domain.in(store.level, xi, xDom);
         }
@@ -330,7 +330,7 @@ public class SimpleTable extends Constraint
       int el = x[i].value();
       Long bs = supports[i].get(el);
       if (bs != null) {
-        if ((wrds & bs.longValue()) == 0L) {
+        if ((wrds & bs) == 0L) {
           return false;
         }
       } else {
@@ -366,7 +366,7 @@ public class SimpleTable extends Constraint
     s.append("])");
 
     if (debug) {
-      s.append("\n0:" + String.format("0x%08X", words.value()));
+      s.append("\n0:" + "0x%08X".formatted(words.value()));
 
       s.append("\nsupports: [");
       for (int i = 0; i < supports.length; i++) {
@@ -375,7 +375,7 @@ public class SimpleTable extends Constraint
         for (Map.Entry<Integer, Long> e : supi.entrySet()) {
           s.append(" " + e.getKey() + "= [");
           Long mask = e.getValue();
-          s.append(String.format("0x%08X", mask.longValue()) + " ");
+          s.append("0x%08X".formatted(mask) + " ");
           s.append("]");
         }
         s.append("} ");

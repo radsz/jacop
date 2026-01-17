@@ -68,7 +68,7 @@ public final class RunSolver {
           try {
             int i = Integer.parseInt(arg);
             e.verbosity = i;
-          } catch (Exception ex) {
+          } catch (Exception _) {
             e.verbosity = 1;
             return e;
           }
@@ -136,7 +136,7 @@ public final class RunSolver {
    *
    * @param args command line arguments
    */
-  public static void main(String[] args) {
+  void main(String[] args) {
 
     if (args.length == 0) {
       parser.printHelp();
@@ -150,15 +150,15 @@ public final class RunSolver {
     // input stream
     InputStream input;
     if (parser.realArgs.length == 0) {
-      System.out.println("c no filename provided, reading from stdin");
+      IO.println("c no filename provided, reading from stdin");
       input = System.in;
     } else {
       filename = parser.realArgs[0];
       if (filename.equals("-")) {
-        System.out.println("c read from stdin");
+        IO.println("c read from stdin");
         input = System.in;
       } else {
-        System.out.println("c read file " + filename);
+        IO.println("c read file " + filename);
         input = readFile();
       }
     }
@@ -242,7 +242,7 @@ public final class RunSolver {
       }
       return new BufferedInputStream(new FileInputStream(file));
     } catch (FileNotFoundException e) {
-      System.out.println(e.getMessage());
+      IO.println(e.getMessage());
       System.exit(42);
       return null; // never reached
     }

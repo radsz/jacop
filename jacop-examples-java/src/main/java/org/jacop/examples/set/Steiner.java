@@ -77,7 +77,7 @@ public class Steiner extends ExampleSet {
 
     int t = n * (n - 1) / 6;
 
-    System.out.println("Steiner problem with n = " + n + " and T = " + t);
+    IO.println("Steiner problem with n = " + n + " and T = " + t);
 
     int r = n % 6;
 
@@ -141,16 +141,16 @@ public class Steiner extends ExampleSet {
       result = label.labeling(store, select);
 
       if (result) {
-        System.out.println("*** Yes");
+        IO.println("*** Yes");
         label.getSolutionListener().printAllSolutions();
-      } else System.out.println("*** No");
+      } else IO.println("*** No");
 
       T2 = System.currentTimeMillis();
       T = T2 - T1;
-      System.out.println("\n\t*** Execution time = " + T + " ms");
+      IO.println("\n\t*** Execution time = " + T + " ms");
       return result;
     } else {
-      System.out.println("Problem has no solution");
+      IO.println("Problem has no solution");
       return false;
     }
   }

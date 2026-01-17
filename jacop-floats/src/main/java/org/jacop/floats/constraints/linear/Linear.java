@@ -378,7 +378,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
       try {
         propagate(variableQueue);
-      } catch (FailException e) {
+      } catch (FailException _) {
         noSat.update(true);
         return false;
       }
@@ -399,7 +399,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
       try {
         propagate(variableQueue);
-      } catch (FailException e) {
+      } catch (FailException _) {
         noSat.update(true);
         return true;
       }

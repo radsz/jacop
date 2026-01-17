@@ -187,13 +187,13 @@ public class GeostExample extends ExampleFD {
     //      Result = label.labeling(store, select);
 
     if (result) {
-      System.out.println("*** Yes");
-      System.out.println(store);
-    } else System.out.println("*** No");
+      IO.println("*** Yes");
+      IO.println(store);
+    } else IO.println("*** No");
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
   }

@@ -62,11 +62,11 @@ public class Gates extends ExampleFD {
     Gates example = new Gates();
     example.model();
 
-    if (example.searchSpecific()) System.out.println("Solution found.");
+    if (example.searchSpecific()) IO.println("Solution found.");
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
   public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
@@ -113,7 +113,7 @@ public class Gates extends ExampleFD {
     and(c, nca, t[1], tableConstraintProvider);
     and(a, b, t[0], tableConstraintProvider);
 
-    System.out.println(
+    IO.println(
         "\nBooleanVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -223,18 +223,18 @@ public class Gates extends ExampleFD {
     boolean searchResult = search.labeling(store, select);
 
     if (searchResult) {
-      System.out.println("\nYes");
+      IO.println("\nYes");
       Domain[][] solutions = new Domain[search.getSolutionListener().solutionsNo()][];
       for (int i = 1; i <= solutions.length; i++) solutions[i - 1] = search.getSolution(i);
 
-      System.out.println("\nAll solutions:\n");
-      for (IntVar v : vars) System.out.print(v.id() + "\t");
-      System.out.println("\n-------------------------------------");
+      IO.println("\nAll solutions:\n");
+      for (IntVar v : vars) IO.print(v.id() + "\t");
+      IO.println("\n-------------------------------------");
       for (Domain[] solution : solutions) {
-        for (int i = 0; i < solutions[0].length; i++) System.out.print(solution[i] + "\t");
-        System.out.println();
+        for (int i = 0; i < solutions[0].length; i++) IO.print(solution[i] + "\t");
+        IO.println();
       }
-    } else System.out.println("\nNo");
+    } else IO.println("\nNo");
 
     return searchResult;
   }

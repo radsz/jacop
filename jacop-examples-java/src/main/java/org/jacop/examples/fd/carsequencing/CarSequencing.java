@@ -374,7 +374,7 @@ public class CarSequencing extends ExampleFD {
 
     List<String> result = new ArrayList<String>();
 
-    System.out.println("readFile(" + file + ")");
+    IO.println("readFile(" + file + ")");
 
     try (BufferedReader inr =
         new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
@@ -396,7 +396,7 @@ public class CarSequencing extends ExampleFD {
       // inr.close(); not needed; auto close
 
     } catch (IOException e) {
-      System.out.println(e);
+      IO.println(e);
     }
 
     return result.toArray(new String[result.size()]);
@@ -417,7 +417,7 @@ public class CarSequencing extends ExampleFD {
 
     String[] description = toStringArray(example);
 
-    for (String line : description) System.out.println(line);
+    for (String line : description) IO.println(line);
 
     example.searchAllAtOnce();
   }
@@ -437,7 +437,7 @@ public class CarSequencing extends ExampleFD {
 
     String[] description = toStringArray(example);
 
-    for (String line : description) System.out.println(line);
+    for (String line : description) IO.println(line);
 
     example.searchAllAtOnce();
 

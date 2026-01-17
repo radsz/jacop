@@ -87,7 +87,7 @@ public class Cryptogram extends ExampleFD {
 
     example.model();
 
-    if (example.searchMostConstrainedStatic()) System.out.println("\nSolution(s) found");
+    if (example.searchMostConstrainedStatic()) IO.println("\nSolution(s) found");
   }
 
   @Override
@@ -113,9 +113,9 @@ public class Cryptogram extends ExampleFD {
             noLines++;
           }
         // in.close(); not needed; aouto close
-      } catch (FileNotFoundException e) {
+      } catch (FileNotFoundException _) {
         System.err.println("File " + filename + " could not be found");
-      } catch (IOException e) {
+      } catch (IOException _) {
         System.err.println("Something is wrong with the file" + filename);
       }
     } else {
@@ -141,8 +141,8 @@ public class Cryptogram extends ExampleFD {
         noLines = 1;
       }
 
-      System.out.println("No input file was supplied, using lines : ");
-      for (int i = 0; i < noLines; i++) System.out.println(lines[0]);
+      IO.println("No input file was supplied, using lines : ");
+      for (int i = 0; i < noLines; i++) IO.println(lines[0]);
     }
 
     /* Creating constraint store */
@@ -178,11 +178,10 @@ public class Cryptogram extends ExampleFD {
         }
 
     if (letters.size() > base) {
-      System.out.println(
-          "Expressions contain more than letters than base of the number system used ");
-      System.out.println("Base " + base);
-      System.out.println("Letters " + letters);
-      System.out.println("There can not be any solution");
+      IO.println("Expressions contain more than letters than base of the number system used ");
+      IO.println("Base " + base);
+      IO.println("Letters " + letters);
+      IO.println("There can not be any solution");
     }
 
     store.impose(new Alldistinct(vars.toArray(new IntVar[0])));

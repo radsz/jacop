@@ -297,11 +297,11 @@ public class Diffn extends Nooverlap {
     // Arrays.parallelSort(es, 0, N, new EventIncComparator<Event>());
 
     if (debugNarr) {
-      System.out.println("===========================");
-      System.out.println("Profile in dimension " + dim);
-      System.out.println(Arrays.asList(es));
-      System.out.println("limit = " + limit);
-      System.out.println("===========================");
+      IO.println("===========================");
+      IO.println("Profile in dimension " + dim);
+      IO.println(Arrays.asList(es));
+      IO.println("limit = " + limit);
+      IO.println("===========================");
     }
 
     boolean considerR = false;
@@ -338,7 +338,7 @@ public class Diffn extends Nooverlap {
               || e.date < ne.date()) { // check the tasks for pruning only at the end of all profile
             // events
 
-            if (debug) System.out.println("Profile at " + e.date() + ": " + curProfile);
+            if (debug) IO.println("Profile at " + e.date() + ": " + curProfile);
 
             // fail if we go over limit limit variable
             if (curProfile > limit) throw Store.failException;
@@ -370,7 +370,7 @@ public class Diffn extends Nooverlap {
                   if (startExcluded <= r.lst(dim)) {
 
                     if (debugNarr)
-                      System.out.print(
+                      IO.print(
                           ">>> Diffn ("
                               + dim
                               + ") Profile 1. Narrowed "
@@ -385,7 +385,7 @@ public class Diffn extends Nooverlap {
                     // r.origin(dim).domain.inComplement(store.level, r.origin(dim), startExcluded,
                     // e.date() - 1);
 
-                    if (debugNarr) System.out.println(" => " + r.origin(dim));
+                    if (debugNarr) IO.println(" => " + r.origin(dim));
                   }
                   startExcluded = Integer.MAX_VALUE;
                 }
@@ -450,7 +450,7 @@ public class Diffn extends Nooverlap {
 
               if (startExcluded - 1 <= rr.lst(dim)) {
                 if (debugNarr)
-                  System.out.print(
+                  IO.print(
                       ">>> Diffn Profile 2. Narrowed "
                           + rr.origin(dim)
                           + " \\ "
@@ -460,7 +460,7 @@ public class Diffn extends Nooverlap {
                 // rr.origin(dim).domain.inComplement(store.level, rr.origin(dim), startExcluded,
                 // e.date());
 
-                if (debugNarr) System.out.println(" => " + rr.origin(dim));
+                if (debugNarr) IO.println(" => " + rr.origin(dim));
               }
             }
 
@@ -477,20 +477,20 @@ public class Diffn extends Nooverlap {
 
           if (maxDuration < rr.length(dim).max()) {
             if (debugNarr) {
-              System.out.println(
+              IO.println(
                   ">>> "
                       + rr.origin(dim)
                       + ", lastBarier = "
                       + lastBarier
                       + ", e.date() = "
                       + e.date());
-              System.out.print(
+              IO.print(
                   ">>> Diffn Profile 3. Narrowed " + rr.length(dim) + " in -inf.." + maxDuration);
             }
 
             rr.length(dim).domain.inMax(store.level, rr.length(dim), maxDuration);
 
-            if (debugNarr) System.out.println(" => " + rr.length(dim));
+            if (debugNarr) IO.println(" => " + rr.length(dim));
           }
 
           break;
@@ -525,7 +525,7 @@ public class Diffn extends Nooverlap {
       }
 
       // add at the end
-      if (sweepLine.get(sweepLine.size() - 1).max() <= eBlock.min()) sweepLine.add(eBlock);
+      if (sweepLine.getLast().max() <= eBlock.min()) sweepLine.add(eBlock);
     } else // e.type() == profileSubtract; remove
     for (int i = 0; i < sweepLine.size(); i++) {
         Interval sweepLineElement = sweepLine.get(i);

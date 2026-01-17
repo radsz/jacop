@@ -33,7 +33,7 @@ package org.jacop.fz;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -104,7 +104,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   int solveKind = -1;
   SatTranslation sat;
   FailConstraintsStatistics failStatistics;
-  NumberFormat nf = NumberFormat.getInstance(new Locale("en"));
+  NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   int numberSolutions;
   // relax and reconstruct
   IntVar[] relaxVars;
@@ -185,7 +185,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // if (opt.getVerbose())
     if (opt.debug())
-      System.out.println(
+      IO.println(
           "%% Model constraints defined.\n%% Variables = "
               + store.size()
               + " and  Bool variables = "
@@ -260,7 +260,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (nsi.size() == 1) { // single search (int, set, float, seq or priority) + other annotations
         // (restart_*)
-        SearchItem<T> fs = nsi.get(0);
+        SearchItem<T> fs = nsi.getFirst();
 
         kind = (ASTSolveKind) node.jjtGetChild(si.search_seqSize());
         solveKind = getKind(kind.getKind());
@@ -300,7 +300,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         probability = s.probability;
       } else if (s.search_type.endsWith("_search")) ns.add(s);
       else if (s.search_type.endsWith("warm_start")) {
-        ns.add(0, s);
+        ns.addFirst(s);
       } else
         System.err.println(
             "%% Warning: Not supported search annotation: " + s.search_type + "; ignored.");
@@ -342,7 +342,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
       }
-      System.out.println(solve + " : " + si);
+      IO.println(solve + " : " + si);
     }
 
     Var cost = null;
@@ -477,7 +477,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       for (DepthFirstSearch<T> s : final_search) if (s != null) list_seq_searches.add(s);
     }
-    last_search = list_seq_searches.get(list_seq_searches.size() - 1);
+    last_search = list_seq_searches.getLast();
 
     // LDS & Credit heuristic search
     if (si.exploration().equals("lds")) lds_search(label, si.ldsValue);
@@ -515,9 +515,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             try {
               if (restartCalculator != null) {
                 if (options.debug()) {
-                  System.out.print("% RestartSearch(" + restartCalculator + "), ");
+                  IO.print("% RestartSearch(" + restartCalculator + "), ");
                   label.setSelectChoicePoint(variable_selection);
-                  System.out.print(" satisfy ");
+                  IO.print(" satisfy ");
                   printSearch(label);
                 }
 
@@ -532,13 +532,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               } else {
                 if (options.debug()) {
                   label.setSelectChoicePoint(variable_selection);
-                  System.out.print("% satisfy ");
+                  IO.print("% satisfy ");
                   printSearch(label);
                 }
 
                 result = label.labeling(store, variable_selection);
               }
-            } catch (NumberSolutionsReached e) {
+            } catch (NumberSolutionsReached _) {
               result = numberSolutions > 0;
             }
           } else {
@@ -559,9 +559,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             try {
               if (restartCalculator != null) {
                 if (options.debug()) {
-                  System.out.print("% RestartSearch(" + restartCalculator + "), ");
+                  IO.print("% RestartSearch(" + restartCalculator + "), ");
                   label.setSelectChoicePoint(variable_selection);
-                  System.out.print(" minimize (" + cost + ") ");
+                  IO.print(" minimize (" + cost + ") ");
                   printSearch(label);
                 }
 
@@ -578,12 +578,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               } else {
                 if (options.debug()) {
                   label.setSelectChoicePoint(variable_selection);
-                  System.out.print("% minimize (" + cost + ") ");
+                  IO.print("% minimize (" + cost + ") ");
                   printSearch(label);
                 }
                 result = label.labeling(store, variable_selection, cost);
               }
-            } catch (NumberSolutionsReached e) {
+            } catch (NumberSolutionsReached _) {
               result = numberSolutions > 0;
             }
           } else {
@@ -609,9 +609,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             try {
               if (restartCalculator != null) {
                 if (options.debug()) {
-                  System.out.print("% RestartSearch(" + restartCalculator + "), ");
+                  IO.print("% RestartSearch(" + restartCalculator + "), ");
                   label.setSelectChoicePoint(variable_selection);
-                  System.out.print("% maximize (" + cost + ") ");
+                  IO.print("% maximize (" + cost + ") ");
                   printSearch(label);
                 }
 
@@ -628,13 +628,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               } else {
                 if (options.debug()) {
                   label.setSelectChoicePoint(variable_selection);
-                  System.out.print("% maximize (" + cost + ") ");
+                  IO.print("% maximize (" + cost + ") ");
                   printSearch(label);
                 }
 
                 result = label.labeling(store, variable_selection, max_cost);
               }
-            } catch (NumberSolutionsReached e) {
+            } catch (NumberSolutionsReached _) {
               result = numberSolutions > 0;
             }
           } else {
@@ -699,7 +699,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
 
     if (label == null) {
-      System.out.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+      IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
       return;
     }
 
@@ -710,34 +710,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             if (!label.timeOutOccured) {
               if ((options.getNumberSolutions() == -1
                       || options.getNumberSolutions() > numberSolutions)
-                  && relaxVars == null) System.out.println("==========");
-            } else System.out.println("%% =====TIME-OUT=====");
-          else if (label.timeOutOccured) System.out.println("%% =====TIME-OUT=====");
+                  && relaxVars == null) IO.println("==========");
+            } else IO.println("%% =====TIME-OUT=====");
+          else if (label.timeOutOccured) IO.println("%% =====TIME-OUT=====");
       } else if (optimization) {
         if (!interrupted && si.exploration().equals("complete"))
           if (!label.timeOutOccured) {
             if ((options.getNumberSolutions() == -1
                     || options.getNumberSolutions() > numberSolutions)
-                && relaxVars == null) System.out.println("==========");
-          } else System.out.println("%% =====TIME-OUT=====");
-        else if (label.timeOutOccured) System.out.println("%% =====TIME-OUT=====");
+                && relaxVars == null) IO.println("==========");
+          } else IO.println("%% =====TIME-OUT=====");
+        else if (label.timeOutOccured) IO.println("%% =====TIME-OUT=====");
       }
     } else if (label.timeOutOccured) {
-      System.out.println("=====UNKNOWN=====");
-      System.out.println("%% =====TIME-OUT=====");
-    } else if (interrupted) System.out.println("%% =====INTERRUPTED=====");
+      IO.println("=====UNKNOWN=====");
+      IO.println("%% =====TIME-OUT=====");
+    } else if (interrupted) IO.println("%% =====INTERRUPTED=====");
     else if (si.exploration().equals("complete")) {
-      System.out.println("=====UNSATISFIABLE=====");
+      IO.println("=====UNSATISFIABLE=====");
       if (!options.getOutputFilename().equals("")) {
         String st = "=====UNSATISFIABLE=====";
         try {
-          Files.write(
-              Paths.get(options.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
+          Files.write(Path.of(options.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
         } catch (IOException e1) {
           e1.printStackTrace();
         }
       }
-    } else System.out.println("=====UNKNOWN=====");
+    } else IO.println("=====UNKNOWN=====");
 
     if (options.getStatistics()) {
 
@@ -773,7 +772,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       int restarts = (rs != null) ? rs.restarts() : 0;
 
-      System.out.println(
+      IO.println(
           "%%%mzn-stat: variables="
               + nf.format(
                   store.size()
@@ -807,7 +806,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (options.debug()) {
         String s = "% " + failStatistics.toString();
-        System.out.println(s.replaceAll("\n", "\n% "));
+        IO.println(s.replaceAll("\n", "\n% "));
       }
     }
   }
@@ -848,7 +847,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (opt.debug()) {
-      System.out.println(searchVars);
+      IO.println(searchVars);
       // System.out.println ("cost = " + costVariable);
     }
 
@@ -995,10 +994,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (lastSolution != null) helperSolutionPrinter(lastSolution.toString());
 
-      if (options.getAll() || costVariable != null) System.out.println("==========");
+      if (options.getAll() || costVariable != null) IO.println("==========");
 
       if (options.getStatistics()) {
-        System.out.println(
+        IO.println(
             "%%%mzn-stat: variables="
                 + (store.size()
                     + dictionary.getNumberBoolVariables()
@@ -1072,7 +1071,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
       }
-      System.out.println(solve + " : " + si);
+      IO.println(solve + " : " + si);
     }
 
     DepthFirstSearch<T> masterLabel = null;
@@ -1107,7 +1106,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Var max_cost = null;
     optimization = false;
 
-    final_search_seq = list_seq_searches.get(list_seq_searches.size() - 1);
+    final_search_seq = list_seq_searches.getLast();
 
     long currentTime = timer.getCPUTime();
     initTime = currentTime - startCPU;
@@ -1136,9 +1135,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 label = masterLabel;
 
                 if (options.debug()) {
-                  System.out.print("% RestartSearch(" + restartCalculator + "), ");
+                  IO.print("% RestartSearch(" + restartCalculator + "), ");
                   label.setSelectChoicePoint(masterSelect);
-                  System.out.print(" satisfy ");
+                  IO.print(" satisfy ");
                   printSearch(label);
                 }
 
@@ -1151,14 +1150,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               } else {
                 if (options.debug()) {
                   masterLabel.setSelectChoicePoint(masterSelect);
-                  System.out.print("% satisfy ");
+                  IO.print("% satisfy ");
                   printSearch(masterLabel);
                 }
 
                 label = masterLabel;
                 result = masterLabel.labeling(store, masterSelect);
               }
-            } catch (NumberSolutionsReached e) {
+            } catch (NumberSolutionsReached _) {
               result = numberSolutions > 0;
             }
           } else {
@@ -1195,9 +1194,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 label = masterLabel;
 
                 if (options.debug()) {
-                  System.out.print("% RestartSearch(" + restartCalculator + "), ");
+                  IO.print("% RestartSearch(" + restartCalculator + "), ");
                   label.setSelectChoicePoint(masterSelect);
-                  System.out.print(" minimize (" + cost + ") ");
+                  IO.print(" minimize (" + cost + ") ");
                   printSearch(label);
                 }
 
@@ -1214,13 +1213,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
                 if (options.debug()) {
                   masterLabel.setSelectChoicePoint(masterSelect);
-                  System.out.print("% minimize (" + cost + ") ");
+                  IO.print("% minimize (" + cost + ") ");
                   printSearch(masterLabel);
                 }
 
                 result = masterLabel.labeling(store, masterSelect, cost);
               }
-            } catch (NumberSolutionsReached e) {
+            } catch (NumberSolutionsReached _) {
               result = numberSolutions > 0;
             }
           } else {
@@ -1267,9 +1266,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 label = masterLabel;
 
                 if (options.debug()) {
-                  System.out.print("% RestartSearch(" + restartCalculator + "), ");
+                  IO.print("% RestartSearch(" + restartCalculator + "), ");
                   label.setSelectChoicePoint(masterSelect);
-                  System.out.print(" maximize (" + cost + ") ");
+                  IO.print(" maximize (" + cost + ") ");
                   printSearch(label);
                 }
 
@@ -1284,14 +1283,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               } else {
                 if (options.debug()) {
                   masterLabel.setSelectChoicePoint(masterSelect);
-                  System.out.print("% maximize (" + cost + ") ");
+                  IO.print("% maximize (" + cost + ") ");
                   printSearch(masterLabel);
                 }
 
                 label = masterLabel;
                 result = masterLabel.labeling(store, masterSelect, max_cost);
               }
-            } catch (NumberSolutionsReached e) {
+            } catch (NumberSolutionsReached _) {
               result = numberSolutions > 0;
             }
           } else {
@@ -1339,7 +1338,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
     if (list_seq_searches == null) {
-      System.out.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
+      IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
       return;
     }
 
@@ -1349,23 +1348,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           if (!anyTimeOutOccured(list_seq_searches)) {
             if ((options.getNumberSolutions() == -1
                     || options.getNumberSolutions() > numberSolutions)
-                && relaxVars == null) System.out.println("==========");
-          } else System.out.println("%% =====TIME-OUT=====");
-        else if (anyTimeOutOccured(list_seq_searches)) System.out.println("%% =====TIME-OUT=====");
+                && relaxVars == null) IO.println("==========");
+          } else IO.println("%% =====TIME-OUT=====");
+        else if (anyTimeOutOccured(list_seq_searches)) IO.println("%% =====TIME-OUT=====");
       } else if (optimization) {
         if (!heuristicSeqSearch)
           if (!anyTimeOutOccured(list_seq_searches)) {
             if ((options.getNumberSolutions() == -1
                     || options.getNumberSolutions() > numberSolutions)
-                && relaxVars == null) System.out.println("==========");
-          } else System.out.println("%% =====TIME-OUT=====");
-        else if (anyTimeOutOccured(list_seq_searches)) System.out.println("%% =====TIME-OUT=====");
+                && relaxVars == null) IO.println("==========");
+          } else IO.println("%% =====TIME-OUT=====");
+        else if (anyTimeOutOccured(list_seq_searches)) IO.println("%% =====TIME-OUT=====");
       }
     } else if (anyTimeOutOccured(list_seq_searches)) {
-      System.out.println("=====UNKNOWN=====");
-      System.out.println("%% =====TIME-OUT=====");
-    } else if (interrupted) System.out.println("%% =====INTERRUPTED=====");
-    else System.out.println("=====UNSATISFIABLE=====");
+      IO.println("=====UNKNOWN=====");
+      IO.println("%% =====TIME-OUT=====");
+    } else if (interrupted) IO.println("%% =====INTERRUPTED=====");
+    else IO.println("=====UNSATISFIABLE=====");
 
     if (options.getStatistics()) {
       int nodes = 0;
@@ -1385,7 +1384,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       int restarts = (rs != null) ? rs.restarts() : 0;
 
-      System.out.println(
+      IO.println(
           "%%%mzn-stat: variables="
               + nf.format(
                   store.size()
@@ -1420,7 +1419,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.debug()) {
       String s = "% " + failStatistics.toString();
-      System.out.println(s.replaceAll("\n", "\n% "));
+      IO.println(s.replaceAll("\n", "\n% "));
     }
   }
 
@@ -1677,11 +1676,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       for (int i = 0; i < dictionary.outputVariables.size(); i++) {
         Var v = dictionary.outputVariables.get(i);
 
-        if (v instanceof BooleanVar) {
+        if (v instanceof BooleanVar var1) {
           // print boolean variables
           printBuffer.append(v.id() + " = ");
           if (v.singleton())
-            switch (((BooleanVar) v).value()) {
+            switch (var1.value()) {
               case 0:
                 printBuffer.append("false");
                 break;
@@ -1694,11 +1693,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           else printBuffer.append("false..true");
 
           printBuffer.append(";\n");
-        } else if (v instanceof SetVar) {
+        } else if (v instanceof SetVar var) {
           // print set variables
           printBuffer.append(v.id() + " = ");
           if (v.singleton()) {
-            IntDomain glb = ((SetVar) v).dom().glb();
+            IntDomain glb = var.dom().glb();
             if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
               printBuffer.append(glb.min() + ".." + glb.max());
             } else {
@@ -1733,18 +1732,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (costVariable != null)
         if (minimize) {
-          if (costVariable instanceof org.jacop.core.IntVar)
-            printBuffer.append("%%%mzn-stat: objective=" + ((IntVar) costVariable).value() + "\n");
-          else if (costVariable instanceof org.jacop.floats.core.FloatVar)
-            printBuffer.append(
-                "%%%mzn-stat: objective=" + ((FloatVar) costVariable).value() + "\n");
+          if (costVariable instanceof IntVar var1)
+            printBuffer.append("%%%mzn-stat: objective=" + var1.value() + "\n");
+          else if (costVariable instanceof FloatVar var)
+            printBuffer.append("%%%mzn-stat: objective=" + var.value() + "\n");
         } else {
-          if (costVariable instanceof org.jacop.core.IntVar)
-            printBuffer.append(
-                "%%%mzn-stat: objective=" + (-((IntVar) costVariable).value()) + "\n");
-          else if (costVariable instanceof org.jacop.floats.core.FloatVar)
-            printBuffer.append(
-                "%%%mzn-stat: objective=" + (-((FloatVar) costVariable).value()) + "\n");
+          if (costVariable instanceof IntVar var1)
+            printBuffer.append("%%%mzn-stat: objective=" + (-var1.value()) + "\n");
+          else if (costVariable instanceof FloatVar var)
+            printBuffer.append("%%%mzn-stat: objective=" + (-var.value()) + "\n");
         }
       double cpuTime = getSearchTime_ms();
       printBuffer.append("%%%mzn-stat: nodes=" + nf.format(nodes) + "\n");
@@ -1761,7 +1757,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printBuffer.append("----------\n");
 
     if (options.getAll()) {
-      System.out.print(printBuffer.toString());
+      IO.print(printBuffer.toString());
       // String s = "% " + store.toString();
       // System.out.println(s.replaceAll("\n", "\n% "));
     } else { // store the print-out
@@ -1861,7 +1857,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   void pose(Constraint c) {
     store.impose(c);
-    if (debug) System.out.println(c);
+    if (debug) IO.println(c);
   }
 
   void lds_search(DepthFirstSearch<T> label, int lds_value) {
@@ -1890,16 +1886,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     do {
 
-      System.out.print(s);
+      IO.print(s);
 
       // find next search
       if (s.childSearches == null) s = null;
       else {
         s = (DepthFirstSearch<T>) s.childSearches[0];
-        System.out.print(", ");
+        IO.print(", ");
       }
     } while (s != null);
-    System.out.println();
+    IO.println();
   }
 
   public SearchItem<T> getSearch() {
@@ -1912,13 +1908,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   void helperSolutionPrinter(String lastSolution) {
 
-    System.out.print(lastSolution);
+    IO.print(lastSolution);
 
     if (!options.getOutputFilename().equals("") && !lastSolution.isEmpty()) {
       try {
-        System.out.println("%%Output filename " + options.getOutputFilename());
+        IO.println("%%Output filename " + options.getOutputFilename());
         Files.write(
-            Paths.get(options.getOutputFilename()),
+            Path.of(options.getOutputFilename()),
             lastSolution.getBytes(Charset.forName("UTF-8")),
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING);

@@ -82,7 +82,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 
       // prepare the first clause
       parseNextClause();
-    } catch (IOException e) {
+    } catch (IOException _) {
       System.err.println("error while reading: unable to parse problem");
       throw new ParseException("unable to parse problem");
     }
@@ -179,7 +179,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     try {
       // maybe we just read a clause, so we must discard the 0
       if (c == '0') c = stream.read();
-    } catch (IOException e1) {
+    } catch (IOException _) {
       return;
     }
 
@@ -189,7 +189,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
         int curInt = parseInt();
         if (curInt == 0) break;
         else answer.add(curInt);
-      } catch (IOException e) {
+      } catch (IOException _) {
         break;
       }
     }

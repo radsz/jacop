@@ -161,7 +161,7 @@ public final class SatWrapper extends Constraint
     // be *SURE* the constraint db is at first position
     domainDatabase = new DomainClausesDatabase();
     domainDatabase.initialize(this);
-    config.clausesDatabases.add(0, domainDatabase);
+    config.clausesDatabases.addFirst(domainDatabase);
 
     // many detail
     config.timeout = 0;
@@ -764,7 +764,7 @@ public final class SatWrapper extends Constraint
    */
   public boolean log(Object o, String format, Object... args) {
     if (verbosity >= 1) {
-      String msg = String.format(format, args);
+      String msg = format.formatted(args);
       System.out.printf("[%s] %s%n", o, msg);
     }
     return true;

@@ -59,7 +59,7 @@ public class CurveFitting {
 
   void curve_fitting3() {
 
-    System.out.println("========= curve_fitting3 =========");
+    IO.println("========= curve_fitting3 =========");
 
     Store store = new Store();
 
@@ -138,7 +138,7 @@ public class CurveFitting {
     for (int i = n; i < 2 * n; i++) vars[i] = Ey[i - n];
     vars[2 * n] = b1;
 
-    System.out.println(
+    IO.println(
         "\bFloatVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -155,8 +155,8 @@ public class CurveFitting {
 
     label.labeling(store, s);
 
-    System.out.println(X + "\n" + Y + "\n" + b1);
+    IO.println(X + "\n" + Y + "\n" + b1);
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
   }
 }

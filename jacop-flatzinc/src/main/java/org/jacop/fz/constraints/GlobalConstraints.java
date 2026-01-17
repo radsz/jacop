@@ -596,7 +596,7 @@ class GlobalConstraints implements ParserTreeConstants {
     if (z == m && z == lb.length) {
       if (support.options.debug()) {
         String s = "% SKIPPED " + new CountValuesBounds(x, lb, ub, values);
-        System.out.println(s.replaceAll("\n", "\n% "));
+        IO.println(s.replaceAll("\n", "\n% "));
       }
       return;
     }
@@ -839,7 +839,7 @@ class GlobalConstraints implements ParserTreeConstants {
         IntervalDomain d = new IntervalDomain();
         for (int[] ints : tt) d.addDom(new IntervalDomain(ints[0], ints[0]));
         nv[0].domain.in(store.level, nv[0], d);
-        if (support.options.debug()) System.out.println("% " + nv[0] + " in " + d);
+        if (support.options.debug()) IO.println("% " + nv[0] + " in " + d);
 
       } else if (tt.length <= 64) {
         generateTableConstraints(nv, tt);
@@ -882,7 +882,7 @@ class GlobalConstraints implements ParserTreeConstants {
           for (int[] ints : c) {
             // support.pose(new XneqC(v[0], c[i][0]));
             v[0].domain.inComplement(store.level, v[0], ints[0]);
-            if (support.options.debug()) System.out.println("% " + v[0] + " \\ " + ints[0]);
+            if (support.options.debug()) IO.println("% " + v[0] + " \\ " + ints[0]);
           }
         } else {
           for (int[] ints : c) {

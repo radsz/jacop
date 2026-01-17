@@ -109,19 +109,18 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   public void queueVariable(int level, Var var) {
-    System.out.println(
-        "Var: " + var + ", level: " + level + ", constraint: " + store.currentConstraint);
+    IO.println("Var: " + var + ", level: " + level + ", constraint: " + store.currentConstraint);
   }
 
   @Override
   public void removeLevelLate(int level) {
 
-    System.out.print("Restore level: " + level + ", vars: ");
+    IO.print("Restore level: " + level + ", vars: ");
 
     for (Var v : vars) {
-      System.out.print(v + " ");
+      IO.print(v + " ");
     }
-    System.out.println();
+    IO.println();
   }
 
   public void removeConstraint() {}

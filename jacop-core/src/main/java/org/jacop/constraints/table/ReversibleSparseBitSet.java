@@ -180,14 +180,14 @@ public class ReversibleSparseBitSet {
     for (int i = 0; i < n; i++) {
       int offset = index[i];
       s.append(offset + ": ");
-      s.append(String.format("0x%08X", wrds[offset]));
+      s.append("0x%08X".formatted(wrds[offset]));
       if (i < n - 1) s.append(", ");
     }
 
     s.append("\nmask: ");
     for (int i = 0; i < mask.length; i++) {
       s.append(i + ": ");
-      s.append(String.format("0x%08X", mask[i]) + ", ");
+      s.append("0x%08X".formatted(mask[i]) + ", ");
     }
     return s.toString();
   }

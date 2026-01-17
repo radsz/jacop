@@ -122,7 +122,7 @@ public class MUCA extends ExampleFD {
    * @param args the first argument specifies the name of the file containing the problem
    *     description.
    */
-  public static void main(String[] args) {
+  void main(String[] args) {
 
     MUCA problem = new MUCA();
 
@@ -1076,19 +1076,19 @@ public class MUCA extends ExampleFD {
 
     boolean result = search1.labeling(store, select1, cost);
 
-    System.out.print("\t");
+    IO.print("\t");
 
     for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++)
-      System.out.print(transitions[i] + "\t");
-    System.out.println();
+      IO.print(transitions[i] + "\t");
+    IO.println();
 
     for (int g = 0; g < noGoods; g++) {
 
-      System.out.print(initialQuantity.get(g) + "\t");
+      IO.print(initialQuantity.get(g) + "\t");
       for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++)
-        System.out.print(deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
+        IO.print(deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
 
-      System.out.println(sum[g].value() + ">=" + finalQuantity.get(g));
+      IO.println(sum[g].value() + ">=" + finalQuantity.get(g));
     }
 
     return result;
@@ -1149,7 +1149,7 @@ public class MUCA extends ExampleFD {
 
       bids.add(new ArrayList<List<Transformation>>());
 
-      (bids.get(0)).add(new ArrayList<Transformation>());
+      (bids.getFirst()).add(new ArrayList<Transformation>());
 
       while (!line.equals("price")) {
         tk = new StringTokenizer(line, "():, ");
@@ -1221,7 +1221,7 @@ public class MUCA extends ExampleFD {
                 .add(new Delta(input[i], output[i]));
           }
         }
-        System.out.print("\n");
+        IO.print("\n");
 
         line = br.readLine();
       }
@@ -1270,9 +1270,9 @@ public class MUCA extends ExampleFD {
         }
     }
 
-    System.out.println(this.maxCost);
-    System.out.println(this.maxDelta);
-    System.out.println(this.minDelta);
+    IO.println(this.maxCost);
+    IO.println(this.maxDelta);
+    IO.println(this.minDelta);
   }
 
   static class Delta {

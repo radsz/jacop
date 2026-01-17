@@ -66,7 +66,7 @@ public class SixHumpCamelFunction {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("========= Six Hump Camel Function =========");
+    IO.println("========= Six Hump Camel Function =========");
 
     Store store = new Store();
 
@@ -120,15 +120,15 @@ public class SixHumpCamelFunction {
     // Derivative.defineConstraint(x1x1x1x1, c2);
     // Derivative.defineConstraint(x2x2x2x2, c3);
 
-    System.out.println("================== fx1 =================");
+    IO.println("================== fx1 =================");
     FloatVar fx1 = Derivative.getDerivative(store, f, vars, x1);
 
-    System.out.println("================== fx2 =================");
+    IO.println("================== fx2 =================");
     FloatVar fx2 = Derivative.getDerivative(store, f, vars, x2);
     store.impose(new PeqC(fx1, 0.0));
     store.impose(new PeqC(fx2, 0.0));
 
-    System.out.println(
+    IO.println(
         "Var store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -142,13 +142,13 @@ public class SixHumpCamelFunction {
     Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, f);
     boolean result = min.minimize();
 
-    if (!result) System.out.println("NO SOLUTION");
+    if (!result) IO.println("NO SOLUTION");
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

@@ -65,7 +65,7 @@ public class DollarAndTicket extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -74,7 +74,7 @@ public class DollarAndTicket extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve DollarATicket Solve problem ");
+    IO.println("Program to solve DollarATicket Solve problem ");
 
     String[] firstnames = {"Diane", "Jenny", "Maggie", "Greg", "Kevin"};
 

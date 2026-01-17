@@ -80,12 +80,11 @@ public class MultivariateIntervalNewton {
       for (int j = 0; j < x.length; j++) {
 
         if (debug)
-          System.out.println(
-              "Derivative of " + f[i] + " on " + x[j] + " primitive variables = " + vars);
+          IO.println("Derivative of " + f[i] + " on " + x[j] + " primitive variables = " + vars);
 
         fprime[i][j] = Derivative.getDerivative(store, f[i], vars, x[j]);
 
-        if (debug) System.out.println("\t derivate = " + fprime[i][j]);
+        if (debug) IO.println("\t derivate = " + fprime[i][j]);
       }
   }
 
@@ -105,18 +104,18 @@ public class MultivariateIntervalNewton {
     b = values();
 
     if (debug) {
-      System.out.println("Middle values for x");
-      for (double value : xInit) System.out.print(value + " ");
-      System.out.println();
+      IO.println("Middle values for x");
+      for (double value : xInit) IO.print(value + " ");
+      IO.println();
 
-      System.out.println("Middle values for f");
-      for (double v : b) System.out.print(v + ", ");
-      System.out.println();
+      IO.println("Middle values for f");
+      for (double v : b) IO.print(v + ", ");
+      IO.println();
     }
 
     IntervalGaussSeidel igs = new IntervalGaussSeidel(A, b);
 
-    if (debug) System.out.println(igs);
+    if (debug) IO.println(igs);
 
     FloatInterval[] v = igs.solve();
 
@@ -170,9 +169,9 @@ public class MultivariateIntervalNewton {
 
     double result = 0.0;
 
-    if (c instanceof PmulQeqR) {
-      if (f.equals(((PmulQeqR) c).r)) {
-        result = value(((PmulQeqR) c).p) * value(((PmulQeqR) c).q);
+    if (c instanceof PmulQeqR qeqR3) {
+      if (f.equals(qeqR3.r)) {
+        result = value(qeqR3.p) * value(qeqR3.q);
       } else {
         throw new RuntimeException(
             "!!! Anable to compute middle value for "
@@ -181,8 +180,8 @@ public class MultivariateIntervalNewton {
                 + c
                 + " does not define a function for variable\n");
       }
-    } else if (c instanceof PmulCeqR) {
-      if (f.equals(((PmulCeqR) c).r)) result = value(((PmulCeqR) c).p) * ((PmulCeqR) c).c;
+    } else if (c instanceof PmulCeqR ceqR1) {
+      if (f.equals(ceqR1.r)) result = value(ceqR1.p) * ceqR1.c;
       else {
         throw new RuntimeException(
             "!!! Anable to compute middle value for "
@@ -191,9 +190,9 @@ public class MultivariateIntervalNewton {
                 + c
                 + " does not define a function for variable\n");
       }
-    } else if (c instanceof PdivQeqR) {
-      if (f.equals(((PdivQeqR) c).r)) {
-        result = value(((PdivQeqR) c).p) / value(((PdivQeqR) c).q);
+    } else if (c instanceof PdivQeqR qeqR2) {
+      if (f.equals(qeqR2.r)) {
+        result = value(qeqR2.p) / value(qeqR2.q);
       } else {
         throw new RuntimeException(
             "!!! Anable to compute middle value for "
@@ -202,8 +201,8 @@ public class MultivariateIntervalNewton {
                 + c
                 + " does not define a function for variable\n");
       }
-    } else if (c instanceof PplusQeqR) {
-      if (f.equals(((PplusQeqR) c).r)) result = value(((PplusQeqR) c).p) + value(((PplusQeqR) c).q);
+    } else if (c instanceof PplusQeqR qeqR1) {
+      if (f.equals(qeqR1.r)) result = value(qeqR1.p) + value(qeqR1.q);
       else {
         throw new RuntimeException(
             "!!! Anable to compute middle value for "
@@ -212,8 +211,8 @@ public class MultivariateIntervalNewton {
                 + c
                 + " does not define a function for variable\n");
       }
-    } else if (c instanceof PplusCeqR) {
-      if (f.equals(((PplusCeqR) c).r)) result = value(((PplusCeqR) c).p) + ((PplusCeqR) c).c;
+    } else if (c instanceof PplusCeqR ceqR) {
+      if (f.equals(ceqR.r)) result = value(ceqR.p) + ceqR.c;
       else {
         throw new RuntimeException(
             "!!! Anable to compute middle value for "
@@ -222,9 +221,8 @@ public class MultivariateIntervalNewton {
                 + c
                 + " does not define a function for variable\n");
       }
-    } else if (c instanceof PminusQeqR) {
-      if (f.equals(((PminusQeqR) c).r))
-        result = value(((PminusQeqR) c).p) - value(((PminusQeqR) c).q);
+    } else if (c instanceof PminusQeqR qeqR) {
+      if (f.equals(qeqR.r)) result = value(qeqR.p) - value(qeqR.q);
       else {
         throw new RuntimeException(
             "!!! Anable to compute middle value for "
@@ -233,11 +231,11 @@ public class MultivariateIntervalNewton {
                 + c
                 + " does not define a function for variable\n");
       }
-    } else if (c instanceof LinearFloat) {
+    } else if (c instanceof LinearFloat float1) {
 
-      FloatVar[] v = ((LinearFloat) c).list;
-      double[] w = ((LinearFloat) c).weights;
-      double sum = ((LinearFloat) c).sum;
+      FloatVar[] v = float1.list;
+      double[] w = float1.weights;
+      double sum = float1.sum;
 
       FloatVar vOut = null;
       double wOut = 1000.0;
@@ -295,7 +293,7 @@ public class MultivariateIntervalNewton {
     //     System.out.println ("Possible constraints for variable " + v + " are " + list);
 
     Constraint c;
-    if (list.size() == 1) c = list.get(0);
+    if (list.size() == 1) c = list.getFirst();
     else c = Derivative.resolveConstraint(v, list);
 
     return c;

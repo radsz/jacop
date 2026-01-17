@@ -133,7 +133,7 @@ public class TransformExtensional implements InitializeListener {
           new ExtensionalSupportVA(vars, solutions);
       store.impose(transformationIntoExtensionalConstraint);
 
-      if (debug) System.out.println(transformationIntoExtensionalConstraint);
+      if (debug) IO.println(transformationIntoExtensionalConstraint);
     }
   }
 

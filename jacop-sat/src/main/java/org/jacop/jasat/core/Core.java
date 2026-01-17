@@ -639,7 +639,7 @@ public final class Core implements SolverComponent {
     // TODO : clean it (factor code, avoid repetition)
 
     assert hasSolution();
-    System.out.println("s " + SolverState.show(currentState));
+    IO.println("s " + SolverState.show(currentState));
 
     // for satisfiable instances, print certificate
     if (currentState == SolverState.SATISFIABLE) {
@@ -652,14 +652,14 @@ public final class Core implements SolverComponent {
         sb.append(' ');
         // if line is full, print it and begin another
         if (++count > 20) {
-          System.out.println(sb.toString());
+          IO.println(sb.toString());
           sb = new StringBuilder();
           sb.append("v ");
           count = 0;
         }
       }
       sb.append(0);
-      System.out.println(sb.toString());
+      IO.println(sb.toString());
     }
   }
 
@@ -669,14 +669,11 @@ public final class Core implements SolverComponent {
    * @return the return code to exit with
    */
   public final int getReturnCode() {
-    switch (currentState) {
-      case SolverState.UNSATISFIABLE:
-        return 20;
-      case SolverState.SATISFIABLE:
-        return 10;
-      default:
-        return 0;
-    }
+    return switch (currentState) {
+      case SolverState.UNSATISFIABLE -> 20;
+      case SolverState.SATISFIABLE -> 10;
+      default -> 0;
+    };
   }
 
   @Override

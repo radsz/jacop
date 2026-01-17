@@ -76,7 +76,7 @@ public class StonesOfHeaven extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -85,7 +85,7 @@ public class StonesOfHeaven extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Solution for problem Stones of Heaven");
+    IO.println("Solution for problem Stones of Heaven");
 
     String[] ColorNames = {"red", "lightgreen", "white", "darkgreen"};
     int /* ired = 0, */ iLgreen = 1, iwhite = 2, iDgreen = 3;

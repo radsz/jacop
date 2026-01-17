@@ -82,9 +82,9 @@ public class SurvoPuzzle extends ExampleFD {
 
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        System.out.print(matrix[i][j].value() + " ");
+        IO.print(matrix[i][j].value() + " ");
       }
-      System.out.println();
+      IO.println();
     }
   }
 
@@ -98,7 +98,7 @@ public class SurvoPuzzle extends ExampleFD {
     String filename = "";
     if (args.length == 1) {
       filename = args[0];
-      System.out.println("Using file " + filename);
+      IO.println("Using file " + filename);
     }
 
     SurvoPuzzle m = new SurvoPuzzle();
@@ -115,13 +115,13 @@ public class SurvoPuzzle extends ExampleFD {
 
     if (result) {
       int numSolutions = m.search.getSolutionListener().solutionsNo();
-      System.out.println("Number of solutions: " + numSolutions);
+      IO.println("Number of solutions: " + numSolutions);
       printMatrix(m.x, m.r, m.c);
     }
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
   } // end main
 
   /** model() */
@@ -132,7 +132,7 @@ public class SurvoPuzzle extends ExampleFD {
 
     if (matrix == null) {
 
-      System.out.println("Using the default problem.");
+      IO.println("Using the default problem.");
 
       /* Default problem:
        *
@@ -210,7 +210,7 @@ public class SurvoPuzzle extends ExampleFD {
    */
   public void readFile(String file) {
 
-    System.out.println("readFile(" + file + ")");
+    IO.println("readFile(" + file + ")");
 
     try (BufferedReader inr =
         new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
@@ -230,7 +230,7 @@ public class SurvoPuzzle extends ExampleFD {
 
         str = str.replace("_", "");
         String row[] = str.split("\\s+");
-        System.out.println(str);
+        IO.println(str);
 
         // first line: column names: Ignore but count them
         if (lineCount == 0) {
@@ -244,7 +244,7 @@ public class SurvoPuzzle extends ExampleFD {
             for (int j = 0; j < row.length; j++) {
               colsums[j] = Integer.parseInt(row[j]);
             }
-            System.out.println();
+            IO.println();
           } else {
             // Otherwise:
             // The problem matrix: index 1 .. row.length-1
@@ -282,7 +282,7 @@ public class SurvoPuzzle extends ExampleFD {
       }
 
     } catch (IOException e) {
-      System.out.println(e);
+      IO.println(e);
     }
   } // end readFile
 } // end class

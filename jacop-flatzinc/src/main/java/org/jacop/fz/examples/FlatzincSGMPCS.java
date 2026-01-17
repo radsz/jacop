@@ -73,7 +73,7 @@ public class FlatzincSGMPCS {
     // System.out.println(fl.getTables());
     // System.out.println("============================================");
 
-    System.out.println(
+    IO.println(
         "\nIntVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -109,15 +109,15 @@ public class FlatzincSGMPCS {
     if (Result) {
       int[] sol = label.lastSolution();
       if (sol != null) {
-        System.out.println("\n%%% Last found solution with cost " + label.lastCost());
+        IO.println("\n%%% Last found solution with cost " + label.lastCost());
         for (int j : sol) {
-          System.out.print(j + " ");
+          IO.print(j + " ");
         }
-      } else System.out.println("\n%%% No solution found with this method");
+      } else IO.println("\n%%% No solution found with this method");
     }
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

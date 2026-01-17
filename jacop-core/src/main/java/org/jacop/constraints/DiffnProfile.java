@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.io.Serial;
 import java.util.List;
 import org.jacop.core.IntDomain;
 
@@ -43,7 +44,7 @@ import org.jacop.core.IntDomain;
 class DiffnProfile extends Profile {
 
   static final boolean trace = false;
-  private static final long serialVersionUID = 8683452581100000011L;
+  @Serial private static final long serialVersionUID = 8683452581100000011L;
 
   DiffnProfile() {}
 
@@ -66,7 +67,7 @@ class DiffnProfile extends Profile {
         iR.dim = 0;
         if (t.minUse(i, iR)) {
           if (trace)
-            System.out.println(
+            IO.println(
                 "Update profile "
                     + "["
                     + iR.origin[j]

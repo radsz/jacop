@@ -197,7 +197,7 @@ public class LinearInt extends PrimitiveConstraint {
   public LinearInt(List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
     checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
     commonInitialization(
-        list.get(0).getStore(),
+        list.getFirst().getStore(),
         list.toArray(new IntVar[list.size()]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
@@ -616,23 +616,16 @@ public class LinearInt extends PrimitiveConstraint {
 
   private boolean entailed(int rel) {
 
-    switch (rel) {
-      case eq:
-        return satisfiedEq();
-      case le:
-        return satisfiedLtEq(b);
-      case lt:
-        return satisfiedLtEq(b - 1);
-      case ne:
-        return satisfiedNeq();
-      case gt:
-        return satisfiedGtEq(b + 1);
-      case ge:
-        return satisfiedGtEq(b);
-      default:
-        return false;
+    return switch (rel) {
+      case eq -> satisfiedEq();
+      case le -> satisfiedLtEq(b);
+      case lt -> satisfiedLtEq(b - 1);
+      case ne -> satisfiedNeq();
+      case gt -> satisfiedGtEq(b + 1);
+      case ge -> satisfiedGtEq(b);
+      default -> false;
         // throw new RuntimeException("Internal error in " + getClass().getName());
-    }
+    };
   }
 
   public byte relation(String r) {
@@ -652,22 +645,15 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   public String rel2String() {
-    switch (relationType) {
-      case eq:
-        return "==";
-      case lt:
-        return "<";
-      case le:
-        return "<=";
-      case ne:
-        return "!=";
-      case gt:
-        return ">";
-      case ge:
-        return ">=";
-      default:
-        return "?";
-    }
+    return switch (relationType) {
+      case eq -> "==";
+      case lt -> "<";
+      case le -> "<=";
+      case ne -> "!=";
+      case gt -> ">";
+      case ge -> ">=";
+      default -> "?";
+    };
   }
 
   void checkForOverflow() {

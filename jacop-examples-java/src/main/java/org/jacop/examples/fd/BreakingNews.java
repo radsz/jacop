@@ -68,7 +68,7 @@ public class BreakingNews extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -77,7 +77,7 @@ public class BreakingNews extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Breaking News ");
+    IO.println("Program to solve Breaking News ");
 
     // String arrays with reporters names.
     String[] ReporterName = {"Corey", "Jimmy", "Lous", "Perry"};

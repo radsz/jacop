@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -45,7 +46,7 @@ public class Profile extends ArrayList<ProfileItem> {
   static final boolean trace = false;
   static final int cumul = 0;
   static final int diffn = 1;
-  private static final long serialVersionUID = 8683452581100000012L;
+  @Serial private static final long serialVersionUID = 8683452581100000012L;
   protected int maxProfileItemHeight = 0;
 
   short type = cumul;
@@ -75,8 +76,7 @@ public class Profile extends ArrayList<ProfileItem> {
     boolean notFound = true;
 
     if (size() == 0) {
-      if (trace)
-        System.out.println("1. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position 0");
+      if (trace) IO.println("1. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position 0");
       add(new ProfileItem(type, a, b, val));
       if (maxProfileItemHeight < val) maxProfileItemHeight = val;
     } else {
@@ -86,7 +86,7 @@ public class Profile extends ArrayList<ProfileItem> {
           if (a != b) {
             if (b == p.min && val == p.value) {
               if (trace)
-                System.out.println(
+                IO.println(
                     "2a. Change " + "[" + a + ".." + p.max + ")" + "=" + val + " at position " + i);
               p.min = a;
               if (i > 0) {
@@ -105,7 +105,7 @@ public class Profile extends ArrayList<ProfileItem> {
                 else add(i, new ProfileItem(type, a, b, val));
               } else {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "2b. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + i);
                 add(i, new ProfileItem(type, a, b, val));
               }
@@ -120,7 +120,7 @@ public class Profile extends ArrayList<ProfileItem> {
               if (a != b) {
                 if (p.max == a && val == p.value) {
                   if (trace)
-                    System.out.println(
+                    IO.println(
                         "3a. Change "
                             + "["
                             + p.min
@@ -135,7 +135,7 @@ public class Profile extends ArrayList<ProfileItem> {
                   if (maxProfileItemHeight < val) maxProfileItemHeight = val;
                 } else {
                   if (trace)
-                    System.out.println(
+                    IO.println(
                         "3b. Add "
                             + "["
                             + a
@@ -160,7 +160,7 @@ public class Profile extends ArrayList<ProfileItem> {
             p.overlap(new ProfileItem(type, a, b, val), new1, new2, new3);
 
             if (trace)
-              System.out.println(
+              IO.println(
                   "Overlap of "
                       + "["
                       + a
@@ -186,7 +186,7 @@ public class Profile extends ArrayList<ProfileItem> {
               else previous = new ProfileItem(type);
               if (previous.max == new1.min && previous.value == new1.value) {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "4a. Change "
                           + "["
                           + previous.min
@@ -199,7 +199,7 @@ public class Profile extends ArrayList<ProfileItem> {
                           + i);
                 previous.setMax(new1.max);
               } else {
-                if (trace) System.out.println("4b. Adding " + new1);
+                if (trace) IO.println("4b. Adding " + new1);
                 add(i, new1);
                 if (maxProfileItemHeight < new1.value) maxProfileItemHeight = new1.value;
                 i++;
@@ -212,7 +212,7 @@ public class Profile extends ArrayList<ProfileItem> {
               else previous = new ProfileItem(type);
               if (previous.max == new2.min && previous.value == new2.value) {
                 if (trace)
-                  System.out.println(
+                  IO.println(
                       "5a. Change "
                           + "["
                           + previous.min
@@ -225,7 +225,7 @@ public class Profile extends ArrayList<ProfileItem> {
                           + i);
                 previous.setMax(new2.max);
               } else {
-                if (trace) System.out.println("5b. Adding " + new2);
+                if (trace) IO.println("5b. Adding " + new2);
                 add(i, new2);
                 if (maxProfileItemHeight < new2.value) maxProfileItemHeight = new2.value;
                 i++;

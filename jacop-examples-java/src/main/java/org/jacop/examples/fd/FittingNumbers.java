@@ -63,7 +63,7 @@ public class FittingNumbers extends ExampleFD {
     example.model();
 
     if (example.searchAllAtOnce()) {
-      System.out.println("Solution(s) found");
+      IO.println("Solution(s) found");
     }
   }
 
@@ -90,6 +90,6 @@ public class FittingNumbers extends ExampleFD {
     store.impose(new LinearInt(counters, elements, "==", sum));
     // store.impose(new SumWeight(counters, elements, sum));
 
-    System.out.println(store);
+    IO.println(store);
   }
 }

@@ -299,7 +299,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             activeLevelsTemp[level] = index;
 
             if (debugAll)
-              System.out.println(
+              IO.println(
                   "Create new state q_"
                       + level
                       + i
@@ -324,7 +324,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 activeLevelsTemp[level + 1] = nextLevelIndex;
 
                 if (debugAll)
-                  System.out.println(
+                  IO.println(
                       "Create new state q_"
                           + (level + 1)
                           + j
@@ -337,7 +337,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
 
               if (debugAll)
-                System.out.println(
+                IO.println(
                     "--  state q_"
                         + level
                         + i
@@ -347,7 +347,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                         + s.outDegree);
 
               if (debugAll)
-                System.out.println(
+                IO.println(
                     "--  state q_"
                         + (level + 1)
                         + j
@@ -403,7 +403,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     for (state = preThisLevelStateNb - 1; state >= 0; state--) {
 
       s = stateLevels[varIndex][state];
-      if (debugAll) System.out.println(state + ": watch state q_" + varIndex + s.id);
+      if (debugAll) IO.println(state + ": watch state q_" + varIndex + s.id);
 
       boolean alreadyTouched = false;
 
@@ -412,7 +412,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         if (!s.intersects(domVar, i)) {
 
           if (debugAll)
-            System.out.println(
+            IO.println(
                 "must remove transition q_"
                     + varIndex
                     + s.id
@@ -435,7 +435,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
 
           if (debugAll) {
-            System.out.println(
+            IO.println(
                 "--  state q_"
                     + s.level
                     + s.id
@@ -443,7 +443,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     + s.inDegree
                     + " and out degree : "
                     + s.outDegree);
-            System.out.println(
+            IO.println(
                 "--  state q_"
                     + (suc.level)
                     + suc.id
@@ -456,7 +456,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert (s.outDegree >= 0);
 
           if (s.outDegree == 0) {
-            if (debugAll) System.out.println("Move OUT state out of scope : q_" + varIndex + s.id);
+            if (debugAll) IO.println("Move OUT state out of scope : q_" + varIndex + s.id);
             assert (s.level == varIndex);
             disableState(varIndex, s.pos);
           }
@@ -464,8 +464,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert (suc.inDegree >= 0);
 
           if (suc.inDegree == 0) {
-            if (debugAll)
-              System.out.println("Move IN state out of scope : q_" + suc.level + suc.id);
+            if (debugAll) IO.println("Move IN state out of scope : q_" + suc.level + suc.id);
             assert (suc.level == varIndex + 1);
             disableState(nextVar, suc.pos);
             levelHadChanged[nextVar] = true;
@@ -580,7 +579,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           suc.inDegree--;
 
           if (debugAll)
-            System.out.println(
+            IO.println(
                 "watch transition q_"
                     + s.level
                     + s.id
@@ -593,8 +592,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert (suc.inDegree >= 0) : "Negative indegree of successor state" + suc.level + suc.id;
 
           if (suc.inDegree == 0) {
-            if (debugAll)
-              System.out.println("> Move IN state out of scope : q_" + suc.level + suc.id);
+            if (debugAll) IO.println("> Move IN state out of scope : q_" + suc.level + suc.id);
             // changed to directl disableState(int, int).
             assert (suc.level == level + 1);
             disableState(level + 1, suc.pos);
@@ -703,7 +701,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       }
     }
 
-    if (debugAll) System.out.println("..next prunning");
+    if (debugAll) IO.println("..next prunning");
     if (saveAllToLatex) saveLatexToFile("After graph sweep");
 
     leftPosition = list.length;
@@ -777,7 +775,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             for (int i = state.outDegree - 1; i >= 0; i--) state.add(varDom, i);
           }
           if (debugAll)
-            System.out.println(
+            IO.println(
                 ">>> Variable x_"
                     + level
                     + " had domain "
@@ -882,7 +880,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
 
           if (debugAll)
-            System.out.println(
+            IO.println(
                 ">>> Variable x_"
                     + level
                     + " had domain "
@@ -1028,12 +1026,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     if (debugAll) {
       for (int[] tuple : tuples) {
-        for (int val : tuple) System.out.print(val + " ");
-        System.out.println("");
+        for (int val : tuple) IO.print(val + " ");
+        IO.println("");
 
-        System.out.println(fsm);
+        IO.println(fsm);
       }
-      System.out.println(constraints);
+      IO.println(constraints);
     }
 
     return constraints;
@@ -1173,7 +1171,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     String fileName = this.latexFile + (calls++) + ".tex";
     File f = new File(fileName);
     try (FileOutputStream fs = new FileOutputStream(f)) {
-      System.out.println("save latex file " + fileName);
+      IO.println("save latex file " + fileName);
       fs.write(this.toLatex(desc).getBytes("UTF-8"));
       fs.flush();
       // fs.close(); not needed; auto close
@@ -1207,7 +1205,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 new FileOutputStream(fileName), Charset.forName("UTF-8").newEncoder());
         BufferedWriter fs = new BufferedWriter(char_output)) {
 
-      System.out.println("save latex file " + fileName);
+      IO.println("save latex file " + fileName);
       fs.append(this.toLatex(desc));
       fs.flush();
       // fs.close(); not needed; auto close

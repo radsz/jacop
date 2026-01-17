@@ -220,8 +220,8 @@ public class Matrix {
 
   void print(double[][] M) {
     for (double[] doubles : M) {
-      for (int j = 0; j < doubles.length; j++) System.out.print(doubles[j] + " ");
-      System.out.println();
+      for (int j = 0; j < doubles.length; j++) IO.print(doubles[j] + " ");
+      IO.println();
     }
   }
 }

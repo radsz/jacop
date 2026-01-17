@@ -117,7 +117,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       store.propagationHasOccurred = false;
 
-      if (debugAll) System.out.println("X " + x + " Y " + y);
+      if (debugAll) IO.println("X " + x + " Y " + y);
 
       IntervalDomain xDom;
 
@@ -161,7 +161,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       yDom.addDom(yDom1);
 
-      if (debugAll) System.out.println("new Ydom " + yDom);
+      if (debugAll) IO.println("new Ydom " + yDom);
 
       // @todo, test more the change from yDom1 to yDom.
       y.domain.in(store.level, y, yDom);
@@ -189,7 +189,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       xDom.addDom(yDom);
 
-      if (debugAll) System.out.println("new Xdom " + xDom);
+      if (debugAll) IO.println("new Xdom " + xDom);
 
       x.domain.in(store.level, x, xDom);
 

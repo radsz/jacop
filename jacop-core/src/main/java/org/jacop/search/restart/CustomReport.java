@@ -57,6 +57,6 @@ public class CustomReport {
   }
 
   public void report() {
-    System.out.println(Arrays.asList(vars));
+    IO.println(Arrays.asList(vars));
   }
 }

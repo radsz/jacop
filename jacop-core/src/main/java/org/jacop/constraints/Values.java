@@ -97,7 +97,7 @@ public class Values extends Constraint implements SatisfiedPresent {
 
       Arrays.sort(list, minFDV);
 
-      if (debug) System.out.println("Sorted : \n" + this);
+      if (debug) IO.println("Sorted : \n" + this);
 
       int minNumberDifferent = 1, minimumMax = list[0].max();
 
@@ -145,14 +145,13 @@ public class Values extends Constraint implements SatisfiedPresent {
           new BipartiteGraphMatching(adj, list.length, valueMap.size());
       int maxNumberDifferent = matcher.hopcroftKarp();
 
-      if (debug) System.out.println("Minimum number of different values = " + minNumberDifferent);
-      if (debug) System.out.println("Maximum number of different values = " + maxNumberDifferent);
+      if (debug) IO.println("Minimum number of different values = " + minNumberDifferent);
+      if (debug) IO.println("Maximum number of different values = " + maxNumberDifferent);
 
       count.domain.in(store.level, count, minNumberDifferent, maxNumberDifferent);
 
       if (debug)
-        System.out.println(
-            "Number singleton values = " + numberSingleton + " Values = " + singletonValues);
+        IO.println("Number singleton values = " + numberSingleton + " Values = " + singletonValues);
 
       if (count.max() == singletonValues.getSize() && numberSingleton < list.length) {
         for (IntVar v : list) if (!v.singleton()) v.domain.in(store.level, v, singletonValues);

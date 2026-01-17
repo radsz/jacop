@@ -91,8 +91,8 @@ public class RestartSearch<T extends Var> {
     do {
       // ns.setCostVar(null); // cost is handled internally by restart search
 
-      if (ns instanceof PrioritySearch) {
-        ((PrioritySearch) ns).addRestartCalculator((PrioritySearch) ns, calculator);
+      if (ns instanceof PrioritySearch prioritySearch) {
+        prioritySearch.addRestartCalculator(prioritySearch, calculator);
       }
 
       // add calculator & do not assign solutions
@@ -154,7 +154,7 @@ public class RestartSearch<T extends Var> {
 
       if (timeOutCheck && System.currentTimeMillis() > timeOut) {
         search.timeOutOccured = true;
-        System.out.println("%% =====TIME-OUT=====");
+        IO.println("%% =====TIME-OUT=====");
         return false;
       }
 
@@ -191,7 +191,7 @@ public class RestartSearch<T extends Var> {
 
   void boundCost() {
 
-    if (cost instanceof IntVar) store.impose(new XltC((IntVar) cost, intCostValue));
+    if (cost instanceof IntVar var) store.impose(new XltC(var, intCostValue));
     else {
       CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
       if (costHandler != null) {
@@ -294,7 +294,7 @@ public class RestartSearch<T extends Var> {
 
       if (reportSolution != null) reportSolution.report();
 
-      if (cost instanceof IntVar) intCostValue = ((IntVar) cost).value();
+      if (cost instanceof IntVar var) intCostValue = var.value();
       else {
         CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
         if (costHandler != null) {

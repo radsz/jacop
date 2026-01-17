@@ -117,14 +117,14 @@ public class NoGood extends Constraint {
   @Override
   public void consistency(Store store) {
 
-    if (debug) System.out.println("Start " + this);
+    if (debug) IO.println("Start " + this);
 
     if (firstWatch == secondWatch) {
       // Special case, when NoGood was one variable no-good
       // or there was no two not singleton variables to be
       // watched.
 
-      if (debug) System.out.println("Special cases of noGood constraints have occured");
+      if (debug) IO.println("Special cases of noGood constraints have occured");
 
       if (listOfVars.length == 1) {
 
@@ -186,7 +186,7 @@ public class NoGood extends Constraint {
         secondWatch.dom().inComplement(store.level, secondWatch, secondValue);
 
         // store.in(secondWatch, Domain.domain.complement(secondValue));
-        if (debug) System.out.println(secondWatch);
+        if (debug) IO.println(secondWatch);
 
         return;
       }
@@ -216,11 +216,11 @@ public class NoGood extends Constraint {
         firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
 
         // store.in(firstWatch, Domain.domain.complement(firstValue));
-        if (debug) System.out.println(firstWatch);
+        if (debug) IO.println(firstWatch);
       }
     }
 
-    if (debug) System.out.println("End" + this);
+    if (debug) IO.println("End" + this);
   }
 
   @Override
@@ -270,7 +270,7 @@ public class NoGood extends Constraint {
         secondValue = firstValue;
 
         // No good is already satisfied and it is ignored.
-        for (IntVar listOfVar : listOfVars)
+        for (IntVar _ : listOfVars)
           if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) return;
 
         // All values match, so no good is at the moment equivalent to

@@ -64,7 +64,7 @@ public class SingleConstraintTest extends TestHelper {
   public TestRule watcher =
       new TestWatcher() {
         protected void starting(Description description) {
-          System.out.println("Starting test: " + description.getMethodName());
+          IO.println("Starting test: " + description.getMethodName());
         }
       };
 

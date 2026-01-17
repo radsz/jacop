@@ -72,9 +72,9 @@ public abstract class ExampleSet {
 
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        System.out.print(matrix[i][j].value() + " ");
+        IO.print(matrix[i][j].value() + " ");
       }
-      System.out.println();
+      IO.println();
     }
   }
 
@@ -102,14 +102,14 @@ public abstract class ExampleSet {
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
-    System.out.println();
-    System.out.print(search.getNodes() + "\t");
-    System.out.print(search.getDecisions() + "\t");
-    System.out.print(search.getWrongDecisions() + "\t");
-    System.out.print(search.getBacktracks() + "\t");
-    System.out.print(search.getMaximumDepth() + "\t");
+    IO.println();
+    IO.print(search.getNodes() + "\t");
+    IO.print(search.getDecisions() + "\t");
+    IO.print(search.getWrongDecisions() + "\t");
+    IO.print(search.getBacktracks() + "\t");
+    IO.print(search.getMaximumDepth() + "\t");
 
     return result;
   }
@@ -136,7 +136,7 @@ public abstract class ExampleSet {
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }
@@ -162,7 +162,7 @@ public abstract class ExampleSet {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
   }
@@ -192,18 +192,18 @@ public abstract class ExampleSet {
     if (optimal) search.labeling(store, select, cost);
     else search.labeling(store, select);
 
-    System.out.println();
-    System.out.print(search.getNodes() + "\t");
-    System.out.print(search.getDecisions() + "\t");
-    System.out.print(search.getWrongDecisions() + "\t");
-    System.out.print(search.getBacktracks() + "\t");
-    System.out.print(search.getMaximumDepth() + "\t");
+    IO.println();
+    IO.print(search.getNodes() + "\t");
+    IO.print(search.getDecisions() + "\t");
+    IO.print(search.getWrongDecisions() + "\t");
+    IO.print(search.getBacktracks() + "\t");
+    IO.print(search.getMaximumDepth() + "\t");
 
     if (result) store.print();
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }
@@ -231,18 +231,18 @@ public abstract class ExampleSet {
 
     boolean result = search.labeling(store, select);
 
-    System.out.println();
-    System.out.print(search.getNodes() + "\t");
-    System.out.print(search.getDecisions() + "\t");
-    System.out.print(search.getWrongDecisions() + "\t");
-    System.out.print(search.getBacktracks() + "\t");
-    System.out.print(search.getMaximumDepth() + "\t");
+    IO.println();
+    IO.print(search.getNodes() + "\t");
+    IO.print(search.getDecisions() + "\t");
+    IO.print(search.getWrongDecisions() + "\t");
+    IO.print(search.getBacktracks() + "\t");
+    IO.print(search.getMaximumDepth() + "\t");
 
     if (result) store.print();
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }
@@ -265,14 +265,14 @@ public abstract class ExampleSet {
 
     boolean result = search.labeling(store, select);
 
-    System.out.println();
-    System.out.print(search.getNodes() + "\t");
-    System.out.print(search.getDecisions() + "\t");
-    System.out.print(search.getWrongDecisions() + "\t");
-    System.out.print(search.getBacktracks() + "\t");
-    System.out.print(search.getMaximumDepth() + "\t");
+    IO.println();
+    IO.print(search.getNodes() + "\t");
+    IO.print(search.getDecisions() + "\t");
+    IO.print(search.getWrongDecisions() + "\t");
+    IO.print(search.getBacktracks() + "\t");
+    IO.print(search.getMaximumDepth() + "\t");
 
-    if (!result) System.out.println("**** No Solution ****");
+    if (!result) IO.println("**** No Solution ****");
 
     return result;
   }
@@ -305,11 +305,11 @@ public abstract class ExampleSet {
     T2 = System.currentTimeMillis();
 
     if (result) {
-      System.out.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       //	search.printAllSolutions();
-    } else System.out.println("Failed to find any solution");
+    } else IO.println("Failed to find any solution");
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }
@@ -344,13 +344,13 @@ public abstract class ExampleSet {
 
     result = labelMaster.labeling(store, selectMaster);
 
-    if (result) System.out.println("Solution found");
+    if (result) IO.println("Solution found");
 
     if (result) store.print();
 
     long T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }

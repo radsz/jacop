@@ -80,15 +80,15 @@ public class BIBD extends ExampleFD {
         example.r = Integer.parseInt(args[2]);
         example.k = Integer.parseInt(args[3]);
         example.lambda = Integer.parseInt(args[4]);
-      } catch (Exception ex) {
-        System.out.println("Program parameters if provided must specify v, b, r, k, and lambda");
+      } catch (Exception _) {
+        IO.println("Program parameters if provided must specify v, b, r, k, and lambda");
       }
     }
 
     example.model();
 
     if (example.searchAllAtOnce()) {
-      System.out.println("Solution(s) found");
+      IO.println("Solution(s) found");
 
       ExampleFD.printMatrix(example.x, example.v, example.b);
     }

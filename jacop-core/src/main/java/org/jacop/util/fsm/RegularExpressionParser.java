@@ -173,7 +173,7 @@ public class RegularExpressionParser {
       if (parseOneNext == true && !(token == LexicalAnalyzer.STAR)) contin = false;
     }
 
-    if (Regular.debugAll) System.out.println("Succesful parsing of " + c);
+    if (Regular.debugAll) IO.println("Succesful parsing of " + c);
 
     return c;
   }
@@ -195,22 +195,15 @@ public class RegularExpressionParser {
 
   private String tokenName(int t) {
 
-    switch (t) {
-      case LexicalAnalyzer.WORD:
-        return "word";
-      case LexicalAnalyzer.LEFT_PAREN:
-        return "(";
-      case LexicalAnalyzer.RIGHT_PAREN:
-        return ")";
-      case LexicalAnalyzer.EOF:
-        return "end of file";
-      case LexicalAnalyzer.Beginning:
-        return "literal or right parenthesis";
-      case LexicalAnalyzer.Operator:
-        return "operator . or *";
-      default:
-        return "???";
-    }
+    return switch (t) {
+      case LexicalAnalyzer.WORD -> "word";
+      case LexicalAnalyzer.LEFT_PAREN -> "(";
+      case LexicalAnalyzer.RIGHT_PAREN -> ")";
+      case LexicalAnalyzer.EOF -> "end of file";
+      case LexicalAnalyzer.Beginning -> "literal or right parenthesis";
+      case LexicalAnalyzer.Operator -> "operator . or *";
+      default -> "???";
+    };
   }
 
   /** SyntaxException raised if not regular expression is being parsed. */
@@ -345,7 +338,7 @@ public class RegularExpressionParser {
     }
 
     public void addExp(Expression e) {
-      if (e.isSimple()) this.disj.add(0, e);
+      if (e.isSimple()) this.disj.addFirst(e);
       else this.disj.add(e);
     }
 

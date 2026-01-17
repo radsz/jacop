@@ -169,7 +169,7 @@ public class Tables {
    */
   public int getInt(String ident) {
     Integer iVal = intTable.get(ident);
-    if (iVal != null) return iVal.intValue();
+    if (iVal != null) return iVal;
     else {
       throw new RuntimeException(
           "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
@@ -204,7 +204,7 @@ public class Tables {
    */
   public double getFloat(String ident) {
     Double dVal = floatTable.get(ident);
-    if (dVal != null) return dVal.doubleValue();
+    if (dVal != null) return dVal;
     else {
       throw new RuntimeException(
           "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");

@@ -94,10 +94,10 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     assert (index < searchVariables.length);
 
     if (debugAll) {
-      System.out.println("index = " + index);
+      IO.println("index = " + index);
 
-      for (T searchVariable : searchVariables) System.out.print(searchVariable + " ");
-      System.out.println();
+      for (T searchVariable : searchVariables) IO.print(searchVariable + " ");
+      IO.println();
     }
 
     int finalIndex = searchVariables.length;
@@ -117,7 +117,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     } else {
       currentIndex = index;
 
-      if (debugAll) System.out.println("selected " + currentVariable);
+      if (debugAll) IO.println("selected " + currentVariable);
 
       return currentVariable;
     }

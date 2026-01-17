@@ -70,7 +70,7 @@ public class BlueberryMuffins extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -81,7 +81,7 @@ public class BlueberryMuffins extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Blueberry Muffins ");
+    IO.println("Program to solve Blueberry Muffins ");
 
     // String arrays with peoples' names.
 

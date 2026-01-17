@@ -50,7 +50,7 @@ public class Loan {
 
     Loan example = new Loan();
 
-    if (args.length != 4) System.out.println("Wring number of parameters");
+    if (args.length != 4) IO.println("Wring number of parameters");
     else {
       double i = Double.parseDouble(args[0]);
       double p = Double.parseDouble(args[1]);
@@ -76,7 +76,7 @@ public class Loan {
     //             B4 = 0.0;
     //	       result P = 907.47 (precision 1e-4)
 
-    System.out.println(
+    IO.println(
         "\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\nR- quarterly repayment and B4- balance owing at end\nParameters:");
 
     Store store = new Store();
@@ -89,19 +89,19 @@ public class Loan {
     FloatVar R; // quarterly repayment
     if (r != 0.0) {
       R = new FloatVar(store, "R", r, r);
-      System.out.println("R = " + r);
+      IO.println("R = " + r);
     } else {
       R = new FloatVar(store, "R", FloatDomain.MinFloat, FloatDomain.MaxFloat);
-      System.out.println("R = ?");
+      IO.println("R = ?");
     }
 
     FloatVar P; // principal initially borrowed
     if (p != 0.0) {
       P = new FloatVar(store, "P", p, p);
-      System.out.println("P = " + p);
+      IO.println("P = " + p);
     } else {
       P = new FloatVar(store, "P", FloatDomain.MinFloat, FloatDomain.MaxFloat);
-      System.out.println("P = ?");
+      IO.println("P = ?");
     }
 
     FloatVar I = new FloatVar(store, "I", i, i); // interest rate
@@ -122,10 +122,10 @@ public class Loan {
     FloatVar B4; //  balance owing at end
     if (b4 >= 0.0) {
       B4 = new FloatVar(store, "B4", b4, b4);
-      System.out.println("B4 = " + b4);
+      IO.println("B4 = " + b4);
     } else {
       B4 = new FloatVar(store, "B4", FloatDomain.MinFloat, FloatDomain.MaxFloat);
-      System.out.println("B4 = ?");
+      IO.println("B4 = ?");
     }
 
     FloatVar t1 = new FloatVar(store, "t1", 1.0, 2.0);
@@ -158,8 +158,8 @@ public class Loan {
 
     label.labeling(store, s);
 
-    System.out.println(B4 + "\n" + P + "\n" + R);
+    IO.println(B4 + "\n" + P + "\n" + R);
 
-    System.out.println("Precision = " + FloatDomain.precision());
+    IO.println("Precision = " + FloatDomain.precision());
   }
 }

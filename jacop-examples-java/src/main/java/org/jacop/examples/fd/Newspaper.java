@@ -67,7 +67,7 @@ public class Newspaper extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestMin()) System.out.println("Solution(s) found");
+    if (example.searchSmallestMin()) IO.println("Solution(s) found");
   }
 
   @Override

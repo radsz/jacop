@@ -48,7 +48,7 @@ public class FloatVar extends Var {
   static {
     try {
       Class.forName("org.jacop.floats.search.FloatSearchSupport");
-    } catch (ClassNotFoundException e) {
+    } catch (ClassNotFoundException _) {
       // FloatSearchSupport not available - handlers won't be registered
       // This is OK if jacop-floats search package is not on classpath
     }

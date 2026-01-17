@@ -243,11 +243,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
       fixpoint.forEach(store::registerRemoveLevelLateListener);
     }
 
-    if (this instanceof RemoveLevelLate)
-      store.registerRemoveLevelLateListener((RemoveLevelLate) this);
+    if (this instanceof RemoveLevelLate late) store.registerRemoveLevelLateListener(late);
 
-    if (this instanceof Stateful) {
-      Stateful c = (Stateful) this;
+    if (this instanceof Stateful c) {
       if (c.isStateful()) {
         store.registerRemoveLevelListener(c);
       }
@@ -255,7 +253,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
-    if (c instanceof RemoveLevelLate) fixpoint.add((RemoveLevelLate) c);
+    if (c instanceof RemoveLevelLate late) fixpoint.add(late);
     if (c.constraintScope != null) c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
     return fixpoint;
   }
@@ -328,7 +326,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @return true if all variables in constraint scope are singletons, false otherwise.
    */
   public boolean grounded(Var[] vars) {
-    return !Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isPresent();
+    return Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isEmpty();
   }
 
   /** It produces a string representation of a constraint state. */

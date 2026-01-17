@@ -87,21 +87,21 @@ public class DefaultSearchVars {
     // collect output arrays
     for (int i = 0; i < dictionary.outputArray.size(); i++)
       for (Var v : dictionary.outputArray.get(i).getArray()) {
-        if (v instanceof BooleanVar) {
-          if (!v.singleton()) bool_vars.add((BooleanVar) v);
-        } else if (v instanceof IntVar) {
-          if (!v.singleton()) int_vars.add((IntVar) v);
-        } else if (v instanceof SetVar) set_vars.add((SetVar) v);
-        else if (v instanceof FloatVar) float_vars.add((FloatVar) v);
+        if (v instanceof BooleanVar var3) {
+          if (!v.singleton()) bool_vars.add(var3);
+        } else if (v instanceof IntVar var2) {
+          if (!v.singleton()) int_vars.add(var2);
+        } else if (v instanceof SetVar var1) set_vars.add(var1);
+        else if (v instanceof FloatVar var) float_vars.add(var);
       }
     // collect output variables
     for (Var v : dictionary.outputVariables) {
-      if (v instanceof BooleanVar) {
-        if (!v.singleton()) bool_vars.add((BooleanVar) v);
-      } else if (v instanceof IntVar) {
-        if (!v.singleton()) int_vars.add((IntVar) v);
-      } else if (v instanceof SetVar) set_vars.add((SetVar) v);
-      else if (v instanceof FloatVar) float_vars.add((FloatVar) v);
+      if (v instanceof BooleanVar var3) {
+        if (!v.singleton()) bool_vars.add(var3);
+      } else if (v instanceof IntVar var2) {
+        if (!v.singleton()) int_vars.add(var2);
+      } else if (v instanceof SetVar var1) set_vars.add(var1);
+      else if (v instanceof FloatVar var) float_vars.add(var);
     }
     int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
     bool_search_variables = bool_vars.toArray(new BooleanVar[bool_vars.size()]);
@@ -131,14 +131,14 @@ public class DefaultSearchVars {
     for (int i = 0; i < dictionary.defaultSearchArrays.size(); i++)
       for (Var v : dictionary.defaultSearchArrays.get(i)) {
         if (!v.singleton())
-          if (v instanceof BooleanVar) bool_vars.add((BooleanVar) v);
+          if (v instanceof BooleanVar var) bool_vars.add(var);
           else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v))
             bool_vars.add((BooleanVar) v);
           else int_vars.add((IntVar) v);
       }
     for (Var v : dictionary.defaultSearchVariables) {
       if (!v.singleton())
-        if (v instanceof BooleanVar) bool_vars.add((BooleanVar) v);
+        if (v instanceof BooleanVar var) bool_vars.add(var);
         else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v))
           bool_vars.add((BooleanVar) v);
         else int_vars.add((IntVar) v);

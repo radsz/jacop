@@ -139,7 +139,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   @Override
   public void consistency(Store store) {
 
-    if (debugAll) System.out.println("Begin " + this);
+    if (debugAll) IO.println("Begin " + this);
 
     if (firstConsistencyCheck) {
 
@@ -175,10 +175,10 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
           int value = enumer.nextElement();
 
           if (debugAll)
-            System.out.println("Seeking support for " + list[varPosition] + " and value " + value);
+            IO.println("Seeking support for " + list[varPosition] + " and value " + value);
           int[] t = seekSupportVA(varPosition, value);
 
-          if (debugAll) System.out.println("Found support?" + !(t == null));
+          if (debugAll) IO.println("Found support?" + !(t == null));
 
           if (t == null) {
             list[varPosition].domain.inComplement(store.level, list[varPosition], value);
@@ -188,7 +188,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       }
     }
 
-    if (debugAll) System.out.println("End " + this);
+    if (debugAll) IO.println("End " + this);
   }
 
   protected int findPosition(int value, int[] values) {
@@ -199,15 +199,14 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     int position = (left + right) >> 1;
 
     if (debugAll) {
-      System.out.println("Looking for " + value);
-      for (int v : values) System.out.print("val " + v);
-      System.out.println("");
+      IO.println("Looking for " + value);
+      for (int v : values) IO.print("val " + v);
+      IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll)
-        System.out.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
 
       if (values[position] > value) {
         right = position;
@@ -236,7 +235,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     super.impose(store);
 
     if (debugAll) {
-      for (Var var : list) System.out.println("Variable " + var);
+      for (Var var : list) IO.println("Variable " + var);
     }
 
     // TO DO, adjust (even simplify) all internal data structures
@@ -258,9 +257,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       int j = 0;
 
       if (debugAll) {
-        System.out.print("support for analysis[");
-        for (int val : t) System.out.print(val + " ");
-        System.out.println("]");
+        IO.print("support for analysis[");
+        for (int val : t) IO.print(val + " ");
+        IO.println("]");
       }
 
       for (int val : t) {
@@ -277,9 +276,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
       if (debugAll) {
         if (!stillSupport[i]) {
-          System.out.print("Not support [");
-          for (int val : t) System.out.print(val + " ");
-          System.out.println("]");
+          IO.print("Not support [");
+          for (int val : t) IO.print(val + " ");
+          IO.println("]");
         }
       }
 
@@ -287,7 +286,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     }
 
     if (debugAll) {
-      System.out.println("No. still supports " + noSupports);
+      IO.println("No. still supports " + noSupports);
     }
 
     int[][] temp4Shrinking = new int[noSupports][];
@@ -302,9 +301,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         i++;
 
         if (debugAll) {
-          System.out.print("Still support [");
-          for (int val : t) System.out.print(val + " ");
-          System.out.println("]");
+          IO.print("Still support [");
+          for (int val : t) IO.print(val + " ");
+          IO.println("]");
         }
       }
 
@@ -334,21 +333,21 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         else val.put(value, key + 1);
       }
 
-      if (debugAll) System.out.println("values " + val.keySet());
+      if (debugAll) IO.println("values " + val.keySet());
 
       PriorityQueue<Integer> sortedVal = new PriorityQueue<Integer>(val.keySet());
 
-      if (debugAll) System.out.println("Sorted val size " + sortedVal.size());
+      if (debugAll) IO.println("Sorted val size " + sortedVal.size());
 
       values[i] = new int[sortedVal.size()];
       supportCount[i] = new int[sortedVal.size()];
       this.tuples[i] = new int[sortedVal.size()][][];
 
-      if (debugAll) System.out.println("values length " + values[i].length);
+      if (debugAll) IO.println("values length " + values[i].length);
 
       for (int j = 0; j < values[i].length; j++) {
 
-        if (debugAll) System.out.println("sortedVal " + sortedVal);
+        if (debugAll) IO.println("sortedVal " + sortedVal);
 
         values[i][j] = sortedVal.poll();
         supportCount[i][j] = val.get(values[i][j]);
@@ -380,7 +379,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   @Override
   public void queueVariable(int level, Var var) {
 
-    if (debugAll) System.out.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    if (debugAll) IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
 
     variableQueue.add((IntVar) var);
   }
@@ -456,8 +455,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   public int[] seekSupportVA(int varPosition, int value) {
 
-    if (debugAll)
-      System.out.println("Seeking support for " + list[varPosition] + " and value " + value);
+    if (debugAll) IO.println("Seeking support for " + list[varPosition] + " and value " + value);
 
     int[] t = setFirstValid(varPosition, value);
     int invalidPosition = -1;
@@ -513,8 +511,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   public int[] findFirstAllowed(int varPosition, int value, int[] t) {
 
     if (debugAll)
-      System.out.println(
-          "variable" + list[varPosition] + " position " + varPosition + " value " + value);
+      IO.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
 
     int[][] tuplesForGivenVariableValuePair =
         tuples[varPosition][findPosition(value, values[varPosition])];

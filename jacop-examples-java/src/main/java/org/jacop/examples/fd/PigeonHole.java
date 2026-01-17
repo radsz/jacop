@@ -64,7 +64,7 @@ public class PigeonHole extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
 
     example = new PigeonHole();
 
@@ -72,7 +72,7 @@ public class PigeonHole extends ExampleFD {
 
     example.modelBasic();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override

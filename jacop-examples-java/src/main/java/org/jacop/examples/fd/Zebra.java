@@ -65,7 +65,7 @@ public class Zebra extends ExampleFD {
 
     example.model();
 
-    if (example.searchMostConstrainedStatic()) System.out.println("Solution(s) found");
+    if (example.searchMostConstrainedStatic()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -74,7 +74,7 @@ public class Zebra extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Program to solve Zebra problem ");
+    IO.println("Program to solve Zebra problem ");
 
     String[] colorNames = {"red", "green", "white", "yellow", "blue"};
     int ired = 0, igreen = 1, iwhite = 2, iyellow = 3, iblue = 4;

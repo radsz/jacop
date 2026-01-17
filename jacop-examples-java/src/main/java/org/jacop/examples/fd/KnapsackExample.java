@@ -75,14 +75,14 @@ public class KnapsackExample extends ExampleFD {
 
     example.model();
 
-    if (example.searchOptimal()) System.out.println("Solution(s) found");
+    if (example.searchOptimal()) IO.println("Solution(s) found");
 
     example = new KnapsackExample();
 
     example.args = args;
     example.modelBasic();
 
-    if (example.searchOptimal()) System.out.println("Solution(s) found");
+    if (example.searchOptimal()) IO.println("Solution(s) found");
   }
 
   @Override

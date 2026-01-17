@@ -73,7 +73,7 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
 
     buf.append("]\n");
 
-    System.out.println(buf.toString());
+    IO.println(buf.toString());
 
     return parent;
   }

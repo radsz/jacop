@@ -340,8 +340,8 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
       for (int i = 0; i < vars.length; i++) {
 
-        if (vars[i] instanceof IntVar)
-          result[no] = new XeqC((IntVar) vars[i], ((IntDomain) solutions[i][number]).min());
+        if (vars[i] instanceof IntVar var)
+          result[no] = new XeqC(var, ((IntDomain) solutions[i][number]).min());
 
         no++;
       }
@@ -370,7 +370,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     while (!(left + 1 >= right)) {
 
-      if (debug) System.out.println("left " + left + " right " + right + " middle " + middle);
+      if (debug) IO.println("left " + left + " right " + right + " middle " + middle);
 
       middle = (left + right) >> 1;
 
@@ -403,34 +403,34 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public void printAllSolutions() {
 
     if (recordSolutions) {
-      System.out.println("\nAll solutions: \n");
-      System.out.println("Number of Solutions: " + noSolutions);
+      IO.println("\nAll solutions: \n");
+      IO.println("Number of Solutions: " + noSolutions);
       for (int i = 0; i < solutions[0].length; i++) {
-        System.out.print(vars[i].id() + " ");
+        IO.print(vars[i].id() + " ");
       }
-      System.out.println();
+      IO.println();
       for (int s = 0; s < noSolutions; s++) {
         for (int i = 0; i < solutions[0].length; i++) {
-          System.out.print(solutions[s][i] + " ");
+          IO.print(solutions[s][i] + " ");
         }
-        System.out.println();
+        IO.println();
       }
     } else {
 
       if (noSolutions > 0) {
-        System.out.println("\nLast recorded solution: \n");
-        System.out.println("Number of Solutions: " + noSolutions);
+        IO.println("\nLast recorded solution: \n");
+        IO.println("Number of Solutions: " + noSolutions);
 
         for (int i = 0; i < solutions[0].length; i++) {
-          System.out.print(vars[i].id() + " ");
+          IO.print(vars[i].id() + " ");
         }
-        System.out.println();
+        IO.println();
         for (int i = 0; i < solutions[0].length; i++) {
-          System.out.print(solutions[0][i] + " ");
+          IO.print(solutions[0][i] + " ");
         }
-        System.out.println();
+        IO.println();
       } else {
-        System.out.println("\nNo solution found. \n");
+        IO.println("\nNo solution found. \n");
       }
     }
   }

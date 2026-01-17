@@ -111,9 +111,9 @@ public class Optimize<T extends Var> {
     if (result) {
 
       if (printInfo) {
-        System.out.println("% Current cost bounds: " + cost + "\n----------");
+        IO.println("% Current cost bounds: " + cost + "\n----------");
         FloatInterval f = new FloatInterval(cost.min(), ((PlteqC) choice).c);
-        System.out.println("% Checking interval " + f);
+        IO.println("% Checking interval " + f);
       }
 
       store.impose(choice);
@@ -128,12 +128,12 @@ public class Optimize<T extends Var> {
       } else {
 
         if (printInfo) {
-          System.out.println("% No solution");
+          IO.println("% No solution");
 
           FloatInterval f =
               new FloatInterval(
                   org.jacop.floats.core.FloatDomain.next(((PlteqC) choice).c), cost.max());
-          System.out.println("% Checking interval " + f);
+          IO.println("% Checking interval " + f);
         }
 
         store.impose(new Not(choice));
@@ -156,13 +156,13 @@ public class Optimize<T extends Var> {
 
   void printLastSolution() {
 
-    System.out.print("[");
+    IO.print("[");
     for (int i = 0; i < lastVarValues.length; i++) {
-      System.out.print(variables[i].id() + " = " + lastVarValues[i]);
-      if (i < lastVarValues.length - 1) System.out.print(", ");
+      IO.print(variables[i].id() + " = " + lastVarValues[i]);
+      if (i < lastVarValues.length - 1) IO.print(", ");
     }
-    System.out.println("]");
-    System.out.println("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
+    IO.println("]");
+    IO.println("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
   }
 
   public FloatInterval getFinalCost() {
@@ -187,8 +187,8 @@ public class Optimize<T extends Var> {
 
       costValue = cost.max();
 
-      System.out.println(java.util.Arrays.asList(var));
-      System.out.println("% Found solution with cost " + cost);
+      IO.println(java.util.Arrays.asList(var));
+      IO.println("% Found solution with cost " + cost);
 
       lastCost = new FloatInterval(cost.min(), cost.max());
       for (int i = 0; i < variables.length; i++) {

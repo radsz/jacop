@@ -520,12 +520,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               Update.unionAdapt(exclude.Max, IntDomain.MaxInt);
 
               if (traceNarr)
-                System.out.print(
-                    "7. Obligatory rectangles Narrow " + r.origin[i] + " in " + Update);
+                IO.print("7. Obligatory rectangles Narrow " + r.origin[i] + " in " + Update);
 
               r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
-              if (traceNarr) System.out.println(" -->" + r.origin[i]);
+              if (traceNarr) IO.println(" -->" + r.origin[i]);
 
               computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.Min, exclude.Max);
 
@@ -537,12 +536,12 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
       // Update rectangles length in direction i
       // sort rectangles on increasing origin i
-      if (trace) System.out.println("10. length = " + durMax);
+      if (trace) IO.println("10. length = " + durMax);
 
       int lengthLimit = 0;
       for (int l : durMax) if (lengthLimit < l) lengthLimit = l;
 
-      if (traceNarr) System.out.println("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
+      if (traceNarr) IO.println("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
 
       r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
     }
@@ -560,21 +559,21 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         break;
       }
     }
-    if (dMax < durMax.get(durMax.size() - 1)) durMax.set(durMax.size() - 1, dMax);
+    if (dMax < durMax.getLast()) durMax.set(durMax.size() - 1, dMax);
 
     if (start.dom().contains(excludeMax)) {
       durMax.add(IntDomain.MaxInt);
     }
 
-    if (trace) System.out.println("+++ " + durMax);
+    if (trace) IO.println("+++ " + durMax);
   }
 
   void narrowRectangle(
       Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
 
     if (trace) {
-      System.out.println("Narrowing " + r);
-      System.out.println(UsedRect);
+      IO.println("Narrowing " + r);
+      IO.println(UsedRect);
     }
 
     for (int i = 0; i < r.dim; i++) {
@@ -673,8 +672,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         if (excludedState && maxJ - currentJposition >= durJ) excludedState = false;
 
         if (excludedState) {
-          ProfileItem first = barrier.get(0);
-          ProfileItem last = barrier.get(barrier.size() - 1);
+          ProfileItem first = barrier.getFirst();
+          ProfileItem last = barrier.getLast();
           if (minJ < first.min) // exist free space before first
             // obstacle
             barrier.addToProfile(minJ, first.min, minimalAfter);
@@ -735,8 +734,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int iMax = i_max + dur;
     for (ProfileItem p : Profile) {
       if (trace)
-        System.out.println(
-            "Comparing " + "[" + iMin + ", " + i_max + "]" + " with profile item " + p);
+        IO.println("Comparing " + "[" + iMin + ", " + i_max + "]" + " with profile item " + p);
 
       if (intervalOverlap(iMin, iMax, p.min, p.max)) {
         if (limit - p.value < Resources.min()) {
@@ -749,18 +747,18 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
             Update.unionAdapt(p.max, IntDomain.MaxInt);
 
-            if (traceNarr) System.out.print("6. Profile Narrowed " + Start + " \\ " + Update);
+            if (traceNarr) IO.print("6. Profile Narrowed " + Start + " \\ " + Update);
 
             Start.domain.in(store.level, Start, Update);
 
-            if (traceNarr) System.out.println(" => " + Start);
+            if (traceNarr) IO.println(" => " + Start);
 
             computeNewMaxDuration(Start, dur, p.min, p.max);
 
             int lengthLimit = 0;
             for (int l : durMax) if (lengthLimit < l) lengthLimit = l;
 
-            if (traceNarr) System.out.println("6b. Length " + Duration + " <-- 0.." + lengthLimit);
+            if (traceNarr) IO.println("6b. Length " + Duration + " <-- 0.." + lengthLimit);
 
             Duration.domain.in(currentStore.level, Duration, 0, lengthLimit);
           }
@@ -772,12 +770,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             if (updateMax < Resources.max()) {
               IntervalDomain Update = new IntervalDomain(0, updateMax);
 
-              if (traceNarr)
-                System.out.println("8. Profile Narrowed " + Resources + " in " + Update);
+              if (traceNarr) IO.println("8. Profile Narrowed " + Resources + " in " + Update);
 
               Resources.domain.in(store.level, Resources, Update);
 
-              if (traceNarr) System.out.println(" => " + Resources);
+              if (traceNarr) IO.println(" => " + Resources);
             }
           }
         }
@@ -793,7 +790,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     IntDomain rOriginJdom = r.origin[j].dom();
     int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
-    if (trace) System.out.println("Start time = " + s + ", resource use = " + resUse);
+    if (trace) IO.println("Start time = " + s + ", resource use = " + resUse);
 
     IntDomain sDom = s.dom();
 
@@ -818,8 +815,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
         if (Profile.size() != 0) {
           if (trace) {
-            System.out.println(r + "\n" + ProfileCandidates);
-            System.out.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
+            IO.println(r + "\n" + ProfileCandidates);
+            IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
           }
 
           profileCheckRectangle(Profile, r, i, j);

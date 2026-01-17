@@ -93,7 +93,7 @@ public class ConferenceTalkPlacement {
     // Real life examples maybe solvable to optimality for much larger sizes.
 
     if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
-      System.out.println("Solution(s) found");
+      IO.println("Solution(s) found");
       return;
     }
 
@@ -116,7 +116,7 @@ public class ConferenceTalkPlacement {
 
     for (int[] ints : costs) result.get(ints[0]).put(ints[1], ints[2]);
 
-    System.out.println(result);
+    IO.println(result);
 
     return result;
   }
@@ -152,7 +152,7 @@ public class ConferenceTalkPlacement {
         i < noOfTimeSlots * (noOfTalksInOneTimeSlot * (noOfTalksInOneTimeSlot - 1) / 2);
         i++) lowerBound += sortedArray[i];
 
-    System.out.println(lowerBound);
+    IO.println(lowerBound);
     return lowerBound;
   }
 
@@ -252,10 +252,10 @@ public class ConferenceTalkPlacement {
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    if (result) System.out.println("Variables : " + vars);
-    else System.out.println("Failed to find any solution");
+    if (result) IO.println("Variables : " + vars);
+    else IO.println("Failed to find any solution");
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
   }
@@ -284,10 +284,10 @@ public class ConferenceTalkPlacement {
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    if (result) System.out.println("Variables : " + vars);
-    else System.out.println("Failed to find any solution");
+    if (result) IO.println("Variables : " + vars);
+    else IO.println("Failed to find any solution");
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
   }

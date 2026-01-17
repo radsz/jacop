@@ -354,9 +354,9 @@ public class NetworkSimplex {
     assert (pivots == -1 || failure || checkOptimality(this));
 
     if (DEBUG) {
-      if (pivots == -1) System.out.println("Abort after " + maxPivots + " iterations");
-      else if (failure) System.out.println("Failure after " + pivots + " iterations");
-      else System.out.println(pivots + " iterations (" + numArcs + " arcs)");
+      if (pivots == -1) IO.println("Abort after " + maxPivots + " iterations");
+      else if (failure) IO.println("Failure after " + pivots + " iterations");
+      else IO.println(pivots + " iterations (" + numArcs + " arcs)");
     }
     if (failure && pivots != -1) pivots = -2;
     return pivots;
@@ -381,10 +381,10 @@ public class NetworkSimplex {
     Arc leaving = this.blocking;
 
     if (DEBUG_ALL) {
-      System.out.println("Entering: " + entering);
-      System.out.println("Leaving : " + leaving);
-      System.out.println("Delta   : " + delta);
-      System.out.println();
+      IO.println("Entering: " + entering);
+      IO.println("Leaving : " + leaving);
+      IO.println("Delta   : " + delta);
+      IO.println();
     }
 
     // update tree
@@ -461,8 +461,8 @@ public class NetworkSimplex {
     Node newParent = entering.head;
 
     if (DEBUG) {
-      System.out.println("leaving  = " + leaving);
-      System.out.println("entering = " + entering);
+      IO.println("leaving  = " + leaving);
+      IO.println("entering = " + entering);
     }
 
     assert (checkBeforeUpdate(leaving, entering));
@@ -574,7 +574,7 @@ public class NetworkSimplex {
     while (balance > 0) {
       // stop when limit is reached
       if (pivots >= maxPivots) {
-        if (DEBUG) System.out.println("Abort after " + pivots + " iterations");
+        if (DEBUG) IO.println("Abort after " + pivots + " iterations");
         return -1;
       }
 
@@ -588,7 +588,7 @@ public class NetworkSimplex {
       // Augment flow
       balance -= augmentFlow(source, sink, balance);
     }
-    if (DEBUG) System.out.println(pivots + " iterations");
+    if (DEBUG) IO.println(pivots + " iterations");
     return pivots;
   }
 
@@ -664,25 +664,25 @@ public class NetworkSimplex {
   // displays the state of the spanning tree and the flow
   public void print() {
 
-    System.out.println("Nodes:");
+    IO.println("Nodes:");
     for (Node n : nodes) {
-      System.out.println("\t" + n);
+      IO.println("\t" + n);
     }
 
-    System.out.println("Arcs:");
+    IO.println("Arcs:");
 
     for (Arc a : allArcs) {
-      System.out.println("\t" + a);
+      IO.println("\t" + a);
     }
 
-    System.out.println("Tree:");
+    IO.println("Tree:");
 
     for (Node i = root; ; i = i.thread) {
-      System.out.println("\t" + i + "\t\t" + i.toParent);
+      IO.println("\t" + i + "\t\t" + i.toParent);
       if (i.thread == root) break;
     }
 
-    System.out.println("Flow");
+    IO.println("Flow");
     int cost = 0;
     for (Arc a : allArcs) {
       if (!a.forward) a = a.sister;
@@ -691,11 +691,11 @@ public class NetworkSimplex {
       if (a.companion != null) flow += a.companion.flowOffset;
 
       if (flow > 0) {
-        System.out.println(flow + "\t" + a.toFlow());
+        IO.println(flow + "\t" + a.toFlow());
         cost += flow * a.cost;
       }
     }
-    System.out.println("Cost: " + cost);
-    System.out.println();
+    IO.println("Cost: " + cost);
+    IO.println();
   }
 }

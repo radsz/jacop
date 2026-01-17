@@ -71,8 +71,7 @@ public class SatTranslation {
       if (intVar.max() == 0) return;
       else if (intVar.min() != 1) a2reduced.add(intVar);
     if (a1reduced.size() == 0 && a2reduced.size() == 0) throw Store.failException;
-    if (debug)
-      System.out.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
+    if (debug) IO.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
 
     for (IntVar v : a1reduced) clauses.register(v);
     for (IntVar v : a2reduced) clauses.register(v);

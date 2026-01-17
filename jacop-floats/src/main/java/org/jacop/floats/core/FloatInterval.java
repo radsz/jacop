@@ -30,6 +30,8 @@
 
 package org.jacop.floats.core;
 
+import java.util.Locale;
+
 /**
  * Defines interval of numbers which is part of FDV definition which consist of one or several
  * intervals.
@@ -129,7 +131,7 @@ public final class FloatInterval implements Cloneable {
   @Override
   public String toString() {
 
-    java.util.Locale locale = new java.util.Locale("ENGLISH", "GERMANY");
+    java.util.Locale locale = Locale.of("ENGLISH", "GERMANY");
     long p;
     String form;
     if (FloatDomain.format() == Double.MAX_VALUE) {

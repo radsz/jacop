@@ -124,9 +124,9 @@ public class Config extends Properties {
     // TODO : enhance
     for (Field field : this.getClass().getFields()) {
       try {
-        sb.append(String.format("%-30s: %s\n", field.getName(), field.get(this)));
-      } catch (IllegalArgumentException e) {
-      } catch (IllegalAccessException e) {
+        sb.append("%-30s: %s\n".formatted(field.getName(), field.get(this)));
+      } catch (IllegalArgumentException _) {
+      } catch (IllegalAccessException _) {
       }
     }
 

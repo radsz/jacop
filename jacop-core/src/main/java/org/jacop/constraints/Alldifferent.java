@@ -182,12 +182,12 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       }
     }
     for (int i = 0; i < adj.length; i++) {
-      System.out.print(i + ": ");
+      IO.print(i + ": ");
 
       for (int j = 0; j < adj[i].length; j++) {
-        System.out.print(adj[i][j] + ", ");
+        IO.print(adj[i][j] + ", ");
       }
-      System.out.println();
+      IO.println();
     }
     // compute maximal value for count
     BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());

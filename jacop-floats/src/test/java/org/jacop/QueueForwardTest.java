@@ -71,7 +71,7 @@ public class QueueForwardTest {
 
     store.impose(new Not(new LinearFloat(v, new double[] {1, -1}, "==", 0)));
 
-    System.out.println("Precision = " + FloatDomain.precision());
+    IO.println("Precision = " + FloatDomain.precision());
 
     // search for solutions and print results
     Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -81,9 +81,9 @@ public class QueueForwardTest {
     boolean result = label.labeling(store, select);
 
     if (result) {
-      System.out.println("Solutions: ");
+      IO.println("Solutions: ");
       label.printAllSolutions();
-    } else System.out.println("*** No");
+    } else IO.println("*** No");
 
     assertEquals(true, result);
   }
@@ -101,7 +101,7 @@ public class QueueForwardTest {
     IntVar one = new IntVar(store, "one", 1, 1);
     store.impose(new Reified(new LinearFloat(v, new double[] {1, -1}, "==", 0), one));
 
-    System.out.println("Precision = " + FloatDomain.precision());
+    IO.println("Precision = " + FloatDomain.precision());
 
     // search for solutions and print results
     Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
@@ -111,9 +111,9 @@ public class QueueForwardTest {
     boolean result = label.labeling(store, select);
 
     if (result) {
-      System.out.println("Solutions: ");
+      IO.println("Solutions: ");
       label.printAllSolutions();
-    } else System.out.println("*** No");
+    } else IO.println("*** No");
 
     assertEquals(false, result);
   }
@@ -140,9 +140,9 @@ public class QueueForwardTest {
     boolean result = label.labeling(store, select);
 
     if (result) {
-      System.out.println("Solutions: ");
+      IO.println("Solutions: ");
       label.printAllSolutions();
-    } else System.out.println("*** No");
+    } else IO.println("*** No");
 
     assertEquals(false, result);
   }

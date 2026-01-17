@@ -68,7 +68,7 @@ public class BabySitting extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -77,7 +77,7 @@ public class BabySitting extends ExampleFD {
     vars = new ArrayList<IntVar>();
     store = new Store();
 
-    System.out.println("Program to solve Babysitting problem ");
+    IO.println("Program to solve Babysitting problem ");
 
     // arrays with surnames
     String[] surnameNames = {"Fell", "Grant", "Hall", "Ivey", "Jule"};

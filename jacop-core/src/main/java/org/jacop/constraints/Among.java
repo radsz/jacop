@@ -118,8 +118,8 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   public void consistency(Store store) {
     // ----------------------------------------------------------
     if (debugAll) {
-      System.out.println("LEVEL : " + store.level);
-      System.out.println(this);
+      IO.println("LEVEL : " + store.level);
+      IO.println(this);
     }
     // ----------------------------------------------------------
 
@@ -174,10 +174,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     // ----------------------------------------------------------
     if (debugAll) {
-      System.out.println("lbS = " + currentLB);
-      System.out.println("ubS = " + currentUB);
-      System.out.println(
-          " domain of N " + n.domain + " is in [ " + currentLB + ", " + currentUB + " ]");
+      IO.println("lbS = " + currentLB);
+      IO.println("ubS = " + currentUB);
+      IO.println(" domain of N " + n.domain + " is in [ " + currentLB + ", " + currentUB + " ]");
     }
     // ----------------------------------------------------------
 
@@ -207,14 +206,13 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
         IntVar var = list[i];
         if (!kSet.contains(var.domain)) {
           if (debugAll) {
-            System.out.println("lb >> The value before in of " + var.id + ": " + var.domain);
-            System.out.println("lb >> subtrack " + kSet);
-            System.out.println("lb >> equals " + var.domain.subtract(kSet));
+            IO.println("lb >> The value before in of " + var.id + ": " + var.domain);
+            IO.println("lb >> subtrack " + kSet);
+            IO.println("lb >> equals " + var.domain.subtract(kSet));
           }
           var.domain.in(store.level, var, var.domain.subtract(kSet));
           var.removeConstraint(this);
-          if (debugAll)
-            System.out.println("lb >> The value after in of " + var.id + ": " + var.domain);
+          if (debugAll) IO.println("lb >> The value after in of " + var.id + ": " + var.domain);
         }
       }
 
@@ -222,7 +220,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       upperBorder.update(currentLB);
 
       // The constrain became satisfied
-      if (debugAll) System.out.println("Simple Among is satisfied");
+      if (debugAll) IO.println("Simple Among is satisfied");
     }
 
     if (currentUB == n.min() && n.domain.singleton()) {
@@ -239,10 +237,10 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       lowerBorder.update(currentUB);
 
       // The constrain became satisfied
-      if (debugAll) System.out.println("Simple Among is satisfied");
+      if (debugAll) IO.println("Simple Among is satisfied");
     }
 
-    if (debugAll) System.out.println(this);
+    if (debugAll) IO.println(this);
   }
 
   @Override
@@ -263,7 +261,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (debugAll) System.out.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    if (debugAll) IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
 
     if (var != n) variableQueue.add((IntVar) var);
   }

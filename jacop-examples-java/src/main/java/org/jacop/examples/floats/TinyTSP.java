@@ -61,7 +61,7 @@ public class TinyTSP {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("========= tiny_tsp =========");
+    IO.println("========= tiny_tsp =========");
 
     Store store = new Store();
 
@@ -94,7 +94,7 @@ public class TinyTSP {
 
     store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 
-    System.out.println(
+    IO.println(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -113,15 +113,15 @@ public class TinyTSP {
 
     label.labeling(store, s, route);
 
-    System.out.println(route);
-    System.out.println(java.util.Arrays.asList(dist));
-    System.out.println(java.util.Arrays.asList(visit));
+    IO.println(route);
+    IO.println(java.util.Arrays.asList(dist));
+    IO.println(java.util.Arrays.asList(visit));
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

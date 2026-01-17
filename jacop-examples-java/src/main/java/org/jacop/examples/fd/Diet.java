@@ -88,9 +88,9 @@ public class Diet extends ExampleFD {
 
   public static void printLastSolution(Diet diet) {
 
-    System.out.println("Cost: " + diet.cost.value());
+    IO.println("Cost: " + diet.cost.value());
     for (int i = 0; i < diet.m; i++) {
-      System.out.println(diet.food[i] + ": " + diet.x[i].value());
+      IO.println(diet.food[i] + ": " + diet.x[i].value());
     }
   }
 
@@ -104,42 +104,42 @@ public class Diet extends ExampleFD {
     Diet diet = new Diet();
     diet.model();
 
-    System.out.println("Searching for optimal using sum weight constraints");
+    IO.println("Searching for optimal using sum weight constraints");
     if (diet.searchOptimal()) {
       printLastSolution(diet);
     } else {
-      System.out.println("No solution.");
+      IO.println("No solution.");
     }
 
     diet = new Diet();
     diet.modelKnapsack();
 
-    System.out.println("Searching for optimal using knapsack constraints");
+    IO.println("Searching for optimal using knapsack constraints");
     if (diet.searchOptimal()) {
       printLastSolution(diet);
     } else {
-      System.out.println("No solution.");
+      IO.println("No solution.");
     }
 
     diet = new Diet();
     diet.model();
 
-    System.out.println("Searching for all solutions using sum weight constraints");
+    IO.println("Searching for all solutions using sum weight constraints");
 
     if (diet.searchAllAtOnce()) {
       printLastSolution(diet);
     } else {
-      System.out.println("No solution.");
+      IO.println("No solution.");
     }
 
     diet = new Diet();
     diet.modelKnapsack();
 
-    System.out.println("Searching for all solutions using knapsack constraints");
+    IO.println("Searching for all solutions using knapsack constraints");
     if (diet.searchAllAtOnce()) {
       printLastSolution(diet);
     } else {
-      System.out.println("No solution.");
+      IO.println("No solution.");
     }
   }
 

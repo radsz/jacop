@@ -32,6 +32,7 @@
 package org.jacop.constraints.geost;
 
 import java.awt.*;
+import java.io.Serial;
 import javax.swing.*;
 import org.jacop.core.IntVar;
 
@@ -46,7 +47,7 @@ import org.jacop.core.IntVar;
 public class BoxDisplay extends JFrame {
 
   /** It specifies the serial UID. */
-  private static final long serialVersionUID = -1620053778620352318L;
+  @Serial private static final long serialVersionUID = -1620053778620352318L;
 
   /** It specifies the number of pixels per unit of length. */
   public int pixelsPerUnit = 5;
@@ -148,9 +149,9 @@ public class BoxDisplay extends JFrame {
 
     if (withFrames) {
       for (InternalConstraint c : geost.internalConstraints) {
-        if (c instanceof ObstacleObjectFrame) {
+        if (c instanceof ObstacleObjectFrame frame) {
           Color frameColor = Color.GRAY; // new Color(c.hashCode());
-          for (DBox fp : ((ObstacleObjectFrame) c).frame) {
+          for (DBox fp : frame.frame) {
             display2DBox(fp, frameColor, true);
           }
         }

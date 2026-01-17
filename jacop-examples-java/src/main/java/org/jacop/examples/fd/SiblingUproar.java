@@ -93,7 +93,7 @@ public class SiblingUproar extends ExampleFD {
 
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   }
 
   @Override
@@ -103,7 +103,7 @@ public class SiblingUproar extends ExampleFD {
     vars = new ArrayList<IntVar>();
     store = new Store();
 
-    System.out.println("Problem name: Sibling Uproar ");
+    IO.println("Problem name: Sibling Uproar ");
 
     // Specification of children names
     String[] childrenNames = {"Brian", "Russell", "Stuart", "Nina", "Paula"};

@@ -182,9 +182,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       try {
         result = search[2 * subSearch].labeling();
-      } catch (SolutionsLimitReached e) {
+      } catch (SolutionsLimitReached _) {
         solutionsReached = true;
-        if (printInfo) System.out.println("Solution limit " + solutionsLimit + " reached");
+        if (printInfo) IO.println("Solution limit " + solutionsLimit + " reached");
       }
 
       visited.set(subSearch, false);
@@ -199,21 +199,21 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (timeOutOccured) {
 
-      if (printInfo) System.out.println("Time-out " + tOut + "s");
+      if (printInfo) IO.println("Time-out " + tOut + "s");
     }
 
     if (noSolutions > 0) {
 
       if (assignSolution) assignSolution();
 
-      if (printInfo) System.out.println(statistics());
+      if (printInfo) IO.println(statistics());
 
       return true;
     } else {
 
       if (printInfo) {
 
-        System.out.println("No solution found.");
+        IO.println("No solution found.");
 
         StringBuffer buf = new StringBuffer();
 
@@ -225,7 +225,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         buf.append("Backtracks : ").append(numberBacktracks).append("\n");
         buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
 
-        System.out.println(buf.toString());
+        IO.println(buf.toString());
       }
 
       return false;
@@ -282,11 +282,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (result) {
       try {
         result = search[2 * subSearch].labeling();
-      } catch (SolutionsLimitReached e) {
+      } catch (SolutionsLimitReached _) {
         getStatistics();
 
         solutionsReached = true;
-        if (printInfo) System.out.println("Solution limit " + solutionsLimit + " reached");
+        if (printInfo) IO.println("Solution limit " + solutionsLimit + " reached");
       }
 
       visited.set(subSearch, false);
@@ -303,7 +303,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (timeOutOccured) {
 
-      if (printInfo) System.out.println("Time-out " + tOut + "s");
+      if (printInfo) IO.println("Time-out " + tOut + "s");
     }
 
     if (noSolutions > 0) {
@@ -315,13 +315,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
         if (costHandler != null) {
           double costValue = costHandler.getCostValue(costVariable);
-          System.out.println("Solution cost is " + costValue);
+          IO.println("Solution cost is " + costValue);
         } else if (costVariable instanceof IntVar) {
-          System.out.println("Solution cost is " + search[0].costValue);
+          IO.println("Solution cost is " + search[0].costValue);
         }
       }
 
-      if (printInfo) System.out.println(statistics());
+      if (printInfo) IO.println(statistics());
 
       return true;
 
@@ -329,9 +329,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       if (printInfo) {
 
-        System.out.println("No solution found.");
+        IO.println("No solution found.");
 
-        System.out.println(statistics());
+        IO.println(statistics());
       }
 
       return false;
@@ -392,11 +392,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (result) {
       try {
         result = search[2 * subSearch].labeling();
-      } catch (SolutionsLimitReached e) {
+      } catch (SolutionsLimitReached _) {
         getStatistics();
 
         solutionsReached = true;
-        if (printInfo) System.out.println("Solution limit " + solutionsLimit + " reached");
+        if (printInfo) IO.println("Solution limit " + solutionsLimit + " reached");
       }
 
       visited.set(subSearch, false);
@@ -414,7 +414,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (timeOutOccured) {
 
-      if (printInfo) System.out.println("Time-out " + tOut + "s");
+      if (printInfo) IO.println("Time-out " + tOut + "s");
     }
 
     if (noSolutions > 0) {
@@ -423,11 +423,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       if (printInfo) {
         if (costVariable != null)
-          if (costVariable instanceof IntVar) System.out.println("Solution cost is " + costValue);
+          if (costVariable instanceof IntVar) IO.println("Solution cost is " + costValue);
           else if (costVariable instanceof IntVar)
-            System.out.println("Solution cost is " + costVariable.dom());
+            IO.println("Solution cost is " + costVariable.dom());
 
-        if (printInfo) System.out.println(statistics());
+        if (printInfo) IO.println(statistics());
       }
 
       if (raisedLevel) {
@@ -442,9 +442,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       if (printInfo) {
 
-        System.out.println("No solution found.");
+        IO.println("No solution found.");
 
-        System.out.println(statistics());
+        IO.println(statistics());
       }
 
       if (raisedLevel) {
@@ -603,13 +603,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   public void addRestartCalculator(DepthFirstSearch<T> s, Calculator calc) {
 
     DepthFirstSearch<T>[] ns = null;
-    if (s instanceof PrioritySearch) ns = ((PrioritySearch) s).getSearchSeq();
+    if (s instanceof PrioritySearch prioritySearch) ns = prioritySearch.getSearchSeq();
     else ns = new DepthFirstSearch[] {s};
 
     for (DepthFirstSearch<T> dfs : ns)
-      if (dfs instanceof PrioritySearch) {
-        for (int i = 0; i < ((PrioritySearch) dfs).search.length / 2; i++) {
-          addRestartCalculator(((PrioritySearch) dfs).search[2 * i], calc);
+      if (dfs instanceof PrioritySearch prioritySearch) {
+        for (int i = 0; i < prioritySearch.search.length / 2; i++) {
+          addRestartCalculator(prioritySearch.search[2 * i], calc);
         }
       } else {
         ConsistencyListener consist = dfs.getConsistencyListener();
@@ -664,16 +664,16 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
 
     void constraineCost() {
-      if (costVariable instanceof IntVar) {
-        int newCost = ((IntVar) costVariable).dom().max();
+      if (costVariable instanceof IntVar var) {
+        int newCost = var.dom().max();
 
         if (newCost < costValue) {
           costValue = newCost;
           master.costValue = newCost;
 
           for (int i = 0; i < n; i++) {
-            DepthFirstSearch ls = lastSearch(search[2 * i]);
-            ls.costValue = ((IntVar) costVariable).dom().max();
+            DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search[2 * i]);
+            ls.costValue = var.dom().max();
             ls.cost = new XltC((IntVar) search[2 * i].costVariable, newCost);
           }
         }
@@ -689,7 +689,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             master.costValueFloat = newCost;
 
             for (int i = 0; i < n; i++) {
-              DepthFirstSearch ls = lastSearch(search[2 * i]);
+              DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search[2 * i]);
               ls.costValueFloat = costHandler.getCostValue(search[2 * i].costVariable);
               ls.cost = costHandler.createCostConstraint(search[2 * i].costVariable, newCost);
             }
@@ -707,7 +707,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           master.costValue = newCost;
 
           for (int i = 0; i < n; i++) {
-            DepthFirstSearch ls = lastSearch(search[2 * i]);
+            DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search[2 * i]);
             ls.costValue = newCost;
             ls.cost = new XltC((IntVar) search[2 * i].costVariable, newCost);
           }
@@ -724,7 +724,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             master.costValueFloat = newCost;
 
             for (int i = 0; i < n; i++) {
-              DepthFirstSearch ls = lastSearch(search[2 * i]);
+              DepthFirstSearch<T> ls = (DepthFirstSearch<T>) lastSearch(search[2 * i]);
               ls.costValueFloat = newCost;
               ls.cost = costHandler.createCostConstraint(search[2 * i].costVariable, newCost);
             }

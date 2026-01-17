@@ -65,7 +65,7 @@ public class LatinSquare extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) System.out.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
   }
 
   @Override
@@ -74,7 +74,7 @@ public class LatinSquare extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    System.out.println("Quasigroup (Latin-square) problem size = " + n + "x" + n);
+    IO.println("Quasigroup (Latin-square) problem size = " + n + "x" + n);
 
     // Get problem size n from second program argument.
     IntVar[][] x = new IntVar[n][n];

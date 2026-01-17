@@ -446,8 +446,8 @@ public class Disjoint extends Diff {
 
         if (Profile.size() != 0) {
           if (trace) {
-            System.out.println(" *** " + r + "\n" + ProfileCandidates);
-            System.out.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
+            IO.println(" *** " + r + "\n" + ProfileCandidates);
+            IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
           }
 
           profileCheckRectangle(Profile, r, i, j);

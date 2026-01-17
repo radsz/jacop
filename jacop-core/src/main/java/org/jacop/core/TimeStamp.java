@@ -168,13 +168,12 @@ public class TimeStamp<T> implements Stateful {
 
     if (stamps[pointer4Last] == store.level) {
       if (debug)
-        System.out.print(
+        IO.print(
             "1. Level: " + store.level + ", In " + this + ",  New value " + val + "replaces old");
 
       values[pointer4Last] = val;
     } else if (stamps[pointer4Last] < store.level) {
-      if (debug)
-        System.out.print("2. Level: " + store.level + ", IN " + this + ",  New value" + val);
+      if (debug) IO.print("2. Level: " + store.level + ", IN " + this + ",  New value" + val);
 
       addLast(val, store.level);
     }

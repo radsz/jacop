@@ -119,7 +119,7 @@ public class CPvizNetworkFlow {
 
     store.impose(new NetworkFlow(net));
 
-    System.out.println(
+    IO.println(
         "\nIntVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -152,13 +152,13 @@ public class CPvizNetworkFlow {
     Result = label.labeling(store, select, cost);
 
     if (Result) {
-      System.out.println("*** Yes");
-      System.out.println(cost);
-    } else System.out.println("*** No");
+      IO.println("*** Yes");
+      IO.println(cost);
+    } else IO.println("*** No");
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
   public class NetListener<T extends Var> extends SimpleSolutionListener<T> {
@@ -167,15 +167,15 @@ public class CPvizNetworkFlow {
 
       boolean returnCode = super.executeAfterSolution(search, select);
 
-      System.out.println("Solution cost cost = " + COST.value());
+      IO.println("Solution cost cost = " + COST.value());
 
-      System.out.print("[");
+      IO.print("[");
 
       for (Var var : vars) {
-        System.out.print(var + " ");
+        IO.print(var + " ");
       }
 
-      System.out.println("]");
+      IO.println("]");
 
       return returnCode;
     }

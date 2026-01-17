@@ -77,7 +77,7 @@ public class FloatMinimize {
 
     // System.out.println (store);
 
-    System.out.println(
+    IO.println(
         "\nVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -94,7 +94,7 @@ public class FloatMinimize {
 
     FloatVar[] vars = (FloatVar[]) fl.getSearch().vars();
 
-    System.out.println("Decision variables: " + Arrays.asList(vars) + "\n");
+    IO.println("Decision variables: " + Arrays.asList(vars) + "\n");
 
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
     SplitSelectFloat<FloatVar> s =
@@ -104,15 +104,15 @@ public class FloatMinimize {
     boolean result = min.minimize();
 
     if (result) {
-      System.out.println("Final cost = " + min.getFinalCost());
-      System.out.println("Variables: ");
+      IO.println("Final cost = " + min.getFinalCost());
+      IO.println("Variables: ");
       FloatInterval[] values = min.getFinalVarValues();
-      for (int i = 0; i < vars.length; i++) System.out.println(vars[i].id() + " = " + values[i]);
-      System.out.println("Yes");
-    } else System.out.println("*** No");
+      for (int i = 0; i < vars.length; i++) IO.println(vars[i].id() + " = " + values[i]);
+      IO.println("Yes");
+    } else IO.println("*** No");
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

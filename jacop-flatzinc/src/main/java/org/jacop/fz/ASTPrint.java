@@ -17,12 +17,12 @@ public class ASTPrint {
   }
 
   public void print(Node node) {
-    System.out.println("\nPrinting the tree ...");
+    IO.println("\nPrinting the tree ...");
     dfs_visit(node);
   }
 
   private void dfs_visit(Node node) {
-    System.out.println(indentString() + node.toString());
+    IO.println(indentString() + node.toString());
     ++indent;
     int count = node.jjtGetNumChildren();
     for (int i = 0; i < count; i++) {

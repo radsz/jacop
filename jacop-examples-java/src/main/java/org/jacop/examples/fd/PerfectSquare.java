@@ -1432,7 +1432,7 @@ public class PerfectSquare extends ExampleFD {
     if (args.length == 0) {
 
       for (int i = 0; i < squares().length; i++) {
-        System.out.println("Problem no. " + i);
+        IO.println("Problem no. " + i);
 
         PerfectSquare example = new PerfectSquare();
 
@@ -1481,7 +1481,7 @@ public class PerfectSquare extends ExampleFD {
     if (args.length == 0) {
 
       for (int i = 0; i < squares().length; i++) {
-        System.out.println("Problem no. " + i);
+        IO.println("Problem no. " + i);
 
         PerfectSquare example = new PerfectSquare();
         example.modelGeost(i);
@@ -1542,9 +1542,9 @@ public class PerfectSquare extends ExampleFD {
     varsY = new IntVar[numberOfRectangles];
     size = new IntVar[numberOfRectangles];
 
-    System.out.print("Constraint model without use of Diffn constraint");
-    System.out.println("No squares = " + numberOfRectangles + " Size = " + masterSize);
-    System.out.print("Square size = [");
+    IO.print("Constraint model without use of Diffn constraint");
+    IO.println("No squares = " + numberOfRectangles + " Size = " + masterSize);
+    IO.print("Square size = [");
 
     for (int j = numberOfRectangles - 1; j >= 0; j--) {
 
@@ -1559,10 +1559,10 @@ public class PerfectSquare extends ExampleFD {
       varsX[j] = X;
       varsY[j] = Y;
 
-      System.out.print(sqSize + " ");
+      IO.print(sqSize + " ");
     }
 
-    System.out.println("]");
+    IO.println("]");
 
     IntVar[] endX = new IntVar[varsX.length];
     IntVar[] endY = new IntVar[varsY.length];
@@ -1618,8 +1618,8 @@ public class PerfectSquare extends ExampleFD {
       store.impose(new SumInt(sumList, "==", limit));
     }
 
-    System.out.println("Number of variables: " + store.size());
-    System.out.println("Number of constraints: " + store.numberConstraints());
+    IO.println("Number of variables: " + store.size());
+    IO.println("Number of constraints: " + store.numberConstraints());
   }
 
   public void model(int problemNo) {
@@ -1636,10 +1636,9 @@ public class PerfectSquare extends ExampleFD {
 
     IntVar[][] rectangles = new IntVar[noRectangles][4];
 
-    System.out.print("Constraint model based on Diffn constraint");
-    System.out.println(
-        "Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
-    System.out.print("Square size = [");
+    IO.print("Constraint model based on Diffn constraint");
+    IO.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
+    IO.print("Square size = [");
 
     for (int j = noRectangles - 1; j >= 0; j--) {
 
@@ -1658,15 +1657,15 @@ public class PerfectSquare extends ExampleFD {
       varsX[j] = X;
       varsY[j] = Y;
 
-      System.out.print(sqSize + " ");
+      IO.print(sqSize + " ");
     }
 
-    System.out.println("]");
+    IO.println("]");
 
     store.impose(new Diffn(rectangles));
 
-    System.out.println("Number of variables: " + store.size());
-    System.out.println("Number of constraints: " + store.numberConstraints());
+    IO.println("Number of variables: " + store.size());
+    IO.println("Number of constraints: " + store.numberConstraints());
   }
 
   public void modelGeost(int problemNo) {
@@ -1687,10 +1686,9 @@ public class PerfectSquare extends ExampleFD {
     List<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
     List<Shape> shapes = new ArrayList<Shape>();
 
-    System.out.print("Constraint model based on Geost and Diffn constraint");
-    System.out.println(
-        "Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
-    System.out.print("Square size = [");
+    IO.print("Constraint model based on Geost and Diffn constraint");
+    IO.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
+    IO.print("Square size = [");
 
     for (int j = noRectangles - 1; j >= 0; j--) {
 
@@ -1713,7 +1711,7 @@ public class PerfectSquare extends ExampleFD {
       varsX[j] = X;
       varsY[j] = Y;
 
-      System.out.print(sqSize + " ");
+      IO.print(sqSize + " ");
 
       IntVar[] coords = {X, Y};
 
@@ -1732,7 +1730,7 @@ public class PerfectSquare extends ExampleFD {
     NonOverlapping constraint = new NonOverlapping(objects, dimensions);
     constraints.add(constraint);
 
-    System.out.println("]");
+    IO.println("]");
 
     // objects, constraints, shapes.
     // Geost does not employ area reasoning and it is loosing greatly
@@ -1751,46 +1749,46 @@ public class PerfectSquare extends ExampleFD {
 
     // {above, below, left, right}
     int [][] relation = { {1, 0, 1, 0}, {0, 1, 1, 0}, {0, 0, 1, 0},
-    					{1, 0, 0, 1}, {0, 1, 0, 1}, {0, 0, 0, 1},
-    					{1, 0, 0, 0}, {0, 1, 0, 0}};
+              {1, 0, 0, 1}, {0, 1, 0, 1}, {0, 0, 0, 1},
+              {1, 0, 0, 0}, {0, 1, 0, 0}};
 
     vars = new ArrayList<Var>();
 
     for (int i = noRectangles - 1; i > 0; i--)
-    	for (int j = i - 1; j >= 0; j--) {
+      for (int j = i - 1; j >= 0; j--) {
 
-    	IntVar above = new IntVar(store, i+"-th-above-"+(j)+"-th", 0, 1);
-    	store.impose(new Reified(new XplusClteqZ(varsY[j], size[j].value(), varsY[i]), above));
+      IntVar above = new IntVar(store, i+"-th-above-"+(j)+"-th", 0, 1);
+      store.impose(new Reified(new XplusClteqZ(varsY[j], size[j].value(), varsY[i]), above));
 
-    	IntVar below = new IntVar(store, i+"-th-below-"+(j)+"-th", 0, 1);
-    	store.impose(new Reified(new XplusClteqZ(varsY[i], size[i].value(), varsY[j]), below));
+      IntVar below = new IntVar(store, i+"-th-below-"+(j)+"-th", 0, 1);
+      store.impose(new Reified(new XplusClteqZ(varsY[i], size[i].value(), varsY[j]), below));
 
-    	IntVar right = new IntVar(store, i+"-th-right-"+(j)+"-th", 0, 1);
-    	store.impose(new Reified(new XplusClteqZ(varsX[j], size[j].value(), varsX[i]), right));
+      IntVar right = new IntVar(store, i+"-th-right-"+(j)+"-th", 0, 1);
+      store.impose(new Reified(new XplusClteqZ(varsX[j], size[j].value(), varsX[i]), right));
 
-    	IntVar left = new IntVar(store, i+"-th-left-"+(j)+"-th", 0, 1);
-    	store.impose(new Reified(new XplusClteqZ(varsX[i], size[i].value(), varsX[j]), above));
+      IntVar left = new IntVar(store, i+"-th-left-"+(j)+"-th", 0, 1);
+      store.impose(new Reified(new XplusClteqZ(varsX[i], size[i].value(), varsX[j]), above));
 
-    	IntVar [] positions = {above, below, right, left};
-    	store.impose(new ExtensionalSupportSTR(positions, relation));
+      IntVar [] positions = {above, below, right, left};
+      store.impose(new ExtensionalSupportSTR(positions, relation));
 
 
-    	//vars.add(above);
-    	//vars.add(below);
-    	//vars.add(right);
-    	//vars.add(left);
+      //vars.add(above);
+      //vars.add(below);
+      //vars.add(right);
+      //vars.add(left);
 
     }
 
     for (int i = noRectangles - 1; i >= 0; i--) {
-    	vars.add(varsX[i]);
-    	vars.add(varsY[i]);
+      vars.add(varsX[i]);
+      vars.add(varsY[i]);
     }
 
     */
 
-    System.out.println("Number of variables: " + store.size());
-    System.out.println("Number of constraints: " + store.numberConstraints());
+    IO.println("Number of variables: " + store.size());
+    IO.println("Number of constraints: " + store.numberConstraints());
   }
 
   @Override
@@ -1832,18 +1830,18 @@ public class PerfectSquare extends ExampleFD {
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    String s = String.format("%.2f", (float) T / 1000);
-    System.out.println("\n\t*** Execution time = " + s + " s");
+    String s = "%.2f".formatted((float) T / 1000);
+    IO.println("\n\t*** Execution time = " + s + " s");
 
     if (result) {
 
-      System.out.print("Positions of rectangles : (");
+      IO.print("Positions of rectangles : (");
 
       for (int i = 0; i < varsX.length; i++)
-        if (i < varsX.length - 1) System.out.print("(" + varsX[i] + ", " + varsY[i] + "), ");
-        else System.out.print("(" + varsX[i] + ", " + varsY[i] + ")");
+        if (i < varsX.length - 1) IO.print("(" + varsX[i] + ", " + varsY[i] + "), ");
+        else IO.print("(" + varsX[i] + ", " + varsY[i] + ")");
 
-      System.out.println(")");
+      IO.println(")");
 
       // If needed a latex representation of the solution can be generated.
       //	System.out.println( printLaTex(T) );

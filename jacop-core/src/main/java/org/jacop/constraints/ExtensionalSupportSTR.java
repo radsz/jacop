@@ -249,7 +249,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     if (reinsertBefore) {
 
-      if (tailsOfEliminatedTuples.value() == -1) System.out.print("Error");
+      if (tailsOfEliminatedTuples.value() == -1) IO.print("Error");
 
       nexts[tailsOfEliminatedTuples.value()] = first;
       if (first == -1) last = tailsOfEliminatedTuples.value();
@@ -288,9 +288,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         int j = 0;
 
         if (debugAll) {
-          System.out.print("support for analysis[");
-          for (int val : t) System.out.print(val + " ");
-          System.out.println("]");
+          IO.print("support for analysis[");
+          for (int val : t) IO.print(val + " ");
+          IO.println("]");
         }
 
         for (int val : t) {
@@ -316,9 +316,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         if (debugAll) {
           if (!stillSupport[i]) {
-            System.out.print("Not support [");
-            for (int val : t) System.out.print(val + " ");
-            System.out.println("]");
+            IO.print("Not support [");
+            for (int val : t) IO.print(val + " ");
+            IO.println("]");
           }
         }
 
@@ -326,7 +326,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
       }
 
       if (debugAll) {
-        System.out.println("No. still supports " + noSupports);
+        IO.println("No. still supports " + noSupports);
       }
 
       int[][] temp4Shrinking = new int[noSupports][];
@@ -341,9 +341,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
           i++;
 
           if (debugAll) {
-            System.out.print("Still support [");
-            for (int val : t) System.out.print(val + " ");
-            System.out.println("]");
+            IO.print("Still support [");
+            for (int val : t) IO.print(val + " ");
+            IO.println("]");
           }
         }
 
@@ -503,7 +503,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     varToIndex = Var.positionMapping(list, false, this.getClass());
 
     if (debugAll) {
-      for (Var var : list) System.out.println("Variable " + var);
+      for (Var var : list) IO.println("Variable " + var);
     }
 
     headsOfEliminatedTuples = new TimeStamp<Integer>(store, -1);

@@ -101,9 +101,9 @@ public class OutputArrayAnnotation {
     for (int i = 0; i < array.length; i++) {
       Var v = array[i];
 
-      if (v instanceof BooleanVar) {
+      if (v instanceof BooleanVar var1) {
         if (v.singleton())
-          switch (((BooleanVar) v).value()) {
+          switch (var1.value()) {
             case 0:
               s.append("false");
               break;
@@ -114,9 +114,9 @@ public class OutputArrayAnnotation {
               s.append(v.dom().toString());
           }
         else s.append("false..true");
-      } else if (v instanceof SetVar) {
+      } else if (v instanceof SetVar var) {
         if (v.singleton()) {
-          IntDomain glb = ((SetVar) v).dom().glb();
+          IntDomain glb = var.dom().glb();
           if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
             s.append(glb.min() + ".." + glb.max());
           } else {

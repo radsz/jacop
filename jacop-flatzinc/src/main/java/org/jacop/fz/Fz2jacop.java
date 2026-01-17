@@ -33,7 +33,7 @@ package org.jacop.fz;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import org.jacop.core.FailException;
 
@@ -45,6 +45,10 @@ import org.jacop.core.FailException;
  */
 public class Fz2jacop {
 
+  public void callMain(String[] args) {
+    main(args);
+  }
+
   /**
    * It parses the provided file and parsing parameters followed by problem solving.
    *
@@ -53,7 +57,7 @@ public class Fz2jacop {
    *     <p>TODO what are the conditions for different exceptions being thrown? Write little info
    *     below.
    */
-  public static void main(String[] args) {
+  void main(String[] args) {
 
     // org.jacop.core.SwitchesPruningLogging.traceVar =  false;
     // org.jacop.core.SwitchesPruningLogging.traceConstraint =  false;
@@ -73,7 +77,7 @@ public class Fz2jacop {
 
     // if (opt.getVerbose())
     if (opt.debug())
-      System.out.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
+      IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
 
     // Thread tread = java.lang.Thread.currentThread();
     // java.lang.management.ThreadMXBean b =
@@ -90,42 +94,40 @@ public class Fz2jacop {
 
       parser.model();
 
-    } catch (FailException e) {
-      System.out.println(
-          "=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+    } catch (FailException _) {
+      IO.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
       if (!opt.getOutputFilename().equals("")) {
         String st = "=====UNSATISFIABLE=====";
         try {
-          Files.write(Paths.get(opt.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
+          Files.write(Path.of(opt.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
         } catch (IOException e1) {
           e1.printStackTrace();
         }
       }
       if (opt.getStatistics()) {
-        System.out.println(
+        IO.println(
             "%%%mzn-stat: variables="
                 + (parser.getStore().size() + parser.getTables().getNumberBoolVariables()));
-        System.out.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
-        System.out.println(
-            "\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
+        IO.println("%%%mzn-stat: propagators=" + parser.getStore().numberConstraints());
+        IO.println("\n%%%mzn-stat: propagations=" + parser.getStore().numberConsistencyCalls);
       }
     } catch (ArithmeticException e) {
       System.err.println("%% Evaluation of model resulted in an overflow.");
-      if (e.getStackTrace().length > 0) System.out.println("%%\t" + e.toString());
+      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.toString());
     } catch (IllegalArgumentException e) {
-      if (e.getStackTrace().length > 0) System.out.println("%%\t" + e.toString());
+      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.toString());
     } catch (ParseException e) {
-      System.out.println("%% Parser exception " + e);
+      IO.println("%% Parser exception " + e);
     } catch (TokenMgrError e) {
-      System.out.println("%% Parser exception " + e);
+      IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
-      System.out.println("%% JaCoP internal error. Array out of bound exception " + e);
-      if (e.getStackTrace().length > 0) System.out.println("%%\t" + e.getStackTrace()[0]);
-    } catch (OutOfMemoryError e) {
-      System.out.println("%% Out of memory error; consider option -Xmx... for JVM");
-    } catch (StackOverflowError e) {
-      System.out.println("%% Stack overflow exception error; consider option -Xss... for JVM");
-    } catch (TrivialSolution e) {
+      IO.println("%% JaCoP internal error. Array out of bound exception " + e);
+      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.getStackTrace()[0]);
+    } catch (OutOfMemoryError _) {
+      IO.println("%% Out of memory error; consider option -Xmx... for JVM");
+    } catch (StackOverflowError _) {
+      IO.println("%% Stack overflow exception error; consider option -Xss... for JVM");
+    } catch (TrivialSolution _) {
       // do nothing
       Runtime.getRuntime().removeShutdownHook(t);
       // return;
@@ -149,9 +151,9 @@ public class Fz2jacop {
                   - TimeUnit.SECONDS.toMillis(sec));
       System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double) execTime / 1000.0);
       if (hr == 0)
-        if (min == 0) System.out.println(); // String.format("(%d.%03d)", sec, ms));
-        else System.out.println(String.format("(%d:%02d.%03d)", min, sec, ms));
-      else System.out.println(String.format("(%d:%02d:%02d.%03d)", hr, min, sec, ms));
+        if (min == 0) IO.println(); // String.format("(%d.%03d)", sec, ms));
+        else IO.println("(%d:%02d.%03d)".formatted(min, sec, ms));
+      else IO.println("(%d:%02d:%02d.%03d)".formatted(hr, min, sec, ms));
     }
   }
 }

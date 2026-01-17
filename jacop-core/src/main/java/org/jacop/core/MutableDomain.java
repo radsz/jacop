@@ -101,21 +101,21 @@ public class MutableDomain implements MutableVar {
 
     if (value.stamp == store.level) {
 
-      if (debug) System.out.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
+      if (debug) IO.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
 
       value.setValue(((MutableDomainValue) val).domain);
 
-      if (debug) System.out.println(", OUT " + value);
+      if (debug) IO.println(", OUT " + value);
 
     } else if (value.stamp < store.level) {
-      if (debug) System.out.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
+      if (debug) IO.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
 
       val.setStamp(store.level);
       val.setPrevious(value);
 
       value = (MutableDomainValue) val;
 
-      if (debug) System.out.println("\n=> OUT " + this + "\nOLD " + value().previous());
+      if (debug) IO.println("\n=> OUT " + this + "\nOLD " + value().previous());
     }
   }
 

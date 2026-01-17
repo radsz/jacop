@@ -67,7 +67,7 @@ public class MagicSquares extends ExampleFD {
 
     example.model();
 
-    if (example.searchMiddle()) System.out.println("Solution(s) found");
+    if (example.searchMiddle()) IO.println("Solution(s) found");
 
     MagicSquares exampleDual = new MagicSquares();
 
@@ -75,7 +75,7 @@ public class MagicSquares extends ExampleFD {
 
     exampleDual.modelDual();
 
-    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
+    if (exampleDual.creditSearch(64, 5000, 10)) IO.println("Solution(s) found");
 
     MagicSquares exampleShave = new MagicSquares();
 
@@ -84,7 +84,7 @@ public class MagicSquares extends ExampleFD {
     exampleShave.model4Shaving();
 
     if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
-      System.out.println("Solution(s) found");
+      IO.println("Solution(s) found");
   }
 
   /**
@@ -100,7 +100,7 @@ public class MagicSquares extends ExampleFD {
 
     example.model();
 
-    if (example.searchMiddle()) System.out.println("Solution(s) found");
+    if (example.searchMiddle()) IO.println("Solution(s) found");
 
     MagicSquares exampleDual = new MagicSquares();
 
@@ -108,7 +108,7 @@ public class MagicSquares extends ExampleFD {
 
     exampleDual.modelDual();
 
-    if (exampleDual.creditSearch(64, 5000, 10)) System.out.println("Solution(s) found");
+    if (exampleDual.creditSearch(64, 5000, 10)) IO.println("Solution(s) found");
   }
 
   @Override

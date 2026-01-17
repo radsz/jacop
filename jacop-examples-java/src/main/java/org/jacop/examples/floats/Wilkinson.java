@@ -63,7 +63,7 @@ public class Wilkinson {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("========= wilkinson =========");
+    IO.println("========= wilkinson =========");
 
     Store store = new Store();
 
@@ -102,7 +102,7 @@ public class Wilkinson {
         new LinearFloat(
             new FloatVar[] {s1, t1}, new double[] {1.0, 0.00000011920928955078}, "==", 0.0));
 
-    System.out.println(
+    IO.println(
         "\bFloatVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -119,13 +119,13 @@ public class Wilkinson {
 
     label.labeling(store, s, x);
 
-    System.out.println(x);
+    IO.println(x);
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

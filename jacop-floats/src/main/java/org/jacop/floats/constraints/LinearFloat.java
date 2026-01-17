@@ -139,7 +139,7 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
   public LinearFloat(
       List<? extends FloatVar> variables, List<Double> weights, String rel, double sum) {
 
-    super(variables.get(0).getStore(), variables, weights, rel, sum);
+    super(variables.getFirst().getStore(), variables, weights, rel, sum);
   }
 
   @Override

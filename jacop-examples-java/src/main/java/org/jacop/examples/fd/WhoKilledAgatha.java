@@ -77,7 +77,7 @@ public class WhoKilledAgatha extends ExampleFD {
     WhoKilledAgatha example = new WhoKilledAgatha();
     example.model();
 
-    if (example.search()) System.out.println("Solution(s) found");
+    if (example.search()) IO.println("Solution(s) found");
   } // end main
 
   public void model() {
@@ -202,24 +202,24 @@ public class WhoKilledAgatha extends ExampleFD {
 
       int numSolutions = search.getSolutionListener().solutionsNo();
 
-      System.out.println("Number of Solutions: " + numSolutions);
+      IO.println("Number of Solutions: " + numSolutions);
 
       for (int s = 1; s <= numSolutions; s++) {
         Domain[] res = search.getSolutionListener().getSolution(s);
         int len = res.length;
 
-        System.out.println("the_killer: " + res[0]);
+        IO.println("the_killer: " + res[0]);
 
         // print the result
         for (Domain re : res) {
-          System.out.print(re + " ");
+          IO.print(re + " ");
         }
-        System.out.println();
+        IO.println();
       }
 
     } else {
 
-      System.out.println("No solution.");
+      IO.println("No solution.");
     }
 
     return result;

@@ -249,7 +249,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
       current++;
     }
 
-    while (shavable.size() != 0 && shavable.size() != depth) shavable.remove(shavable.size() - 1);
+    while (shavable.size() != 0 && shavable.size() != depth) shavable.removeLast();
 
     depth++;
     shavable.add(shavableCurrent);

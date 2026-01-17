@@ -88,7 +88,7 @@ public class OptParse<E> {
         String value = (loc > 0) ? arg.substring(loc + 1) : "";
         if (!handlers.containsKey(key)) {
           // this option is not registered
-          System.out.println("unknown option: " + key);
+          IO.println("unknown option: " + key);
           printHelp();
           return null;
         } else {
@@ -106,8 +106,8 @@ public class OptParse<E> {
   /** print help of all options */
   public void printHelp() {
     // print the main help message
-    System.out.println(mainHelp);
-    System.out.println("options:");
+    IO.println(mainHelp);
+    IO.println("options:");
 
     // print (only once for each handler) its help
     Set<OptHandler<E>> printedHelps = new HashSet<OptHandler<E>>();
@@ -116,9 +116,8 @@ public class OptParse<E> {
       else printedHelps.add(handler);
 
       // print help for this handler
-      String msg =
-          String.format("-%c, --%-16s %s", handler.shortOpt, handler.longOpt, handler.help);
-      System.out.println(msg);
+      String msg = "-%c, --%-16s %s".formatted(handler.shortOpt, handler.longOpt, handler.help);
+      IO.println(msg);
     }
   }
 

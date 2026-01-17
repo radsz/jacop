@@ -30,6 +30,8 @@
 
 package org.jacop.floats.core;
 
+import java.io.Serial;
+
 /**
  * It is thrown when search has encountered a dead end and backtracking must occurr.
  *
@@ -38,7 +40,7 @@ package org.jacop.floats.core;
  */
 public class InternalException extends RuntimeException {
 
-  private static final long serialVersionUID = 8683452581100000009L;
+  @Serial private static final long serialVersionUID = 8683452581100000009L;
 
   public InternalException() {}
 

@@ -50,15 +50,15 @@ public class RunExample {
    *
    * @param args name of the example and its arguments.
    */
-  public static void main(String[] args) {
+  void main(String[] args) {
 
     if (args.length == 0) {
 
-      System.out.println(
+      IO.println(
           "You can run java JaCoP examples with java command and Scala JaCoP examples with scala command");
-      System.out.println("Please specify as the first argument the name of the example");
-      System.out.println("All remaining arguments will be passed to the example.");
-      System.out.println(
+      IO.println("Please specify as the first argument the name of the example");
+      IO.println("All remaining arguments will be passed to the example.");
+      IO.println(
           "The name of the example is either the class name from org.jacop.examples"
               + " or name of .fzn file.");
       System.exit(-1);
@@ -66,7 +66,8 @@ public class RunExample {
 
     if (args[args.length - 1].endsWith(".fzn")) {
 
-      Fz2jacop.main(args);
+      Fz2jacop fz2jacop = new Fz2jacop();
+      fz2jacop.callMain(args);
       return;
 
     } else
@@ -106,15 +107,15 @@ public class RunExample {
                 + args[0]
                 + "\"");
         System.exit(-1);
-      } catch (NoSuchMethodException e) {
+      } catch (NoSuchMethodException _) {
         System.err.println("exampleloader: no main(String[]) method found in class " + args[0]);
         // e.printStackTrace();
         System.exit(-1);
-      } catch (IllegalAccessException e) {
+      } catch (IllegalAccessException _) {
         System.err.println("exampleloader: error calling main method in class " + args[0]);
         // e.printStackTrace();
         System.exit(-1);
-      } catch (InvocationTargetException e) {
+      } catch (InvocationTargetException _) {
         System.err.println("exampleloader: error calling main method in class " + args[0]);
         // e.printStackTrace();
         System.exit(-1);

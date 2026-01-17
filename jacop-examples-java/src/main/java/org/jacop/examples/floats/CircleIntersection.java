@@ -63,7 +63,7 @@ public class CircleIntersection {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    System.out.println("========= circle_intersection =========");
+    IO.println("========= circle_intersection =========");
 
     Store store = new Store();
 
@@ -90,7 +90,7 @@ public class CircleIntersection {
     store.impose(new PmulQeqR(s2, s2, r2));
     store.impose(new PplusQeqR(r1, r2, new FloatVar(store, 4.0, 4.0)));
 
-    System.out.println(
+    IO.println(
         "\bVar store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -110,11 +110,11 @@ public class CircleIntersection {
 
     label.printAllSolutions();
 
-    System.out.println("\nPrecision = " + FloatDomain.precision());
+    IO.println("\nPrecision = " + FloatDomain.precision());
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 }

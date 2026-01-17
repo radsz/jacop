@@ -872,13 +872,11 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     if (!singleton()) return false;
 
-    if (value instanceof IntDomain) {
-      return glb.eq((IntDomain) value);
+    if (value instanceof IntDomain domain) {
+      return glb.eq(domain);
     }
 
-    if (value instanceof BoundSetDomain) {
-
-      BoundSetDomain input = (BoundSetDomain) value;
+    if (value instanceof BoundSetDomain input) {
       if (!input.singleton())
         throw new IllegalArgumentException("The input parameter value is not a singleton domain.");
 

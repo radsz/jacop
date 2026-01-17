@@ -121,7 +121,6 @@ public class IntervalGaussSeidel {
   public FloatInterval[] solve() {
     int N = 0;
     FloatInterval[] x = new FloatInterval[b.length];
-    ;
     FloatInterval[] previousX = new FloatInterval[x.length];
     for (int i = 0; i < x.length; i++) x[i] = new FloatInterval(0.0, 0.0);
 
@@ -147,15 +146,15 @@ public class IntervalGaussSeidel {
     }
 
     if (debug) {
-      System.out.println("dominant = " + dominant + " ===================================");
+      IO.println("dominant = " + dominant + " ===================================");
       for (FloatInterval[] floatIntervals : A) {
         for (int j = 0; j < floatIntervals.length; j++) {
-          if (floatIntervals[j].min <= 0 && floatIntervals[j].max() >= 0) System.out.print("0 ");
-          else if (floatIntervals[j].min() > 0) System.out.print("+ ");
-          else if (floatIntervals[j].min() < 0) System.out.print("- ");
-          else System.out.print("? ");
+          if (floatIntervals[j].min <= 0 && floatIntervals[j].max() >= 0) IO.print("0 ");
+          else if (floatIntervals[j].min() > 0) IO.print("+ ");
+          else if (floatIntervals[j].min() < 0) IO.print("- ");
+          else IO.print("? ");
         }
-        System.out.println();
+        IO.println();
       }
     }
 
@@ -177,12 +176,12 @@ public class IntervalGaussSeidel {
       }
 
       if (debug) {
-        System.out.print("iteration " + N + ": {");
+        IO.print("iteration " + N + ": {");
         for (int i = 0; i < x.length; i++) {
-          if (i == x.length - 1) System.out.print(x[i]);
-          else System.out.print(x[i] + ", ");
+          if (i == x.length - 1) IO.print(x[i]);
+          else IO.print(x[i] + ", ");
         }
-        System.out.println("}");
+        IO.println("}");
       }
 
       if (N == 0) {
@@ -208,7 +207,7 @@ public class IntervalGaussSeidel {
 
   void precondition(FloatInterval[][] AA, double[] bb) {
 
-    if (debug) System.out.println("Before preconditioning\n" + this);
+    if (debug) IO.println("Before preconditioning\n" + this);
 
     double[][] midPoint = new double[AA.length][AA[0].length];
 
@@ -235,7 +234,7 @@ public class IntervalGaussSeidel {
         A[i][j] = new FloatInterval(newA[i][j].min(), newA[i][j].max());
     b = newB;
 
-    if (debug) System.out.println("After preconditioning\n" + this);
+    if (debug) IO.println("After preconditioning\n" + this);
   }
 
   public String toString() {

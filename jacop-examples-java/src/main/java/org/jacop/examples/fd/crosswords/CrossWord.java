@@ -87,7 +87,7 @@ public class CrossWord extends ExampleFD {
     String filename = "";
     if (args.length == 1) {
       filename = args[0];
-      System.out.println("Using file " + filename);
+      IO.println("Using file " + filename);
     }
 
     CrossWord m = new CrossWord();
@@ -101,7 +101,7 @@ public class CrossWord extends ExampleFD {
 
     T2 = System.currentTimeMillis();
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
   } // end main
 
   /** model() */
@@ -201,13 +201,13 @@ public class CrossWord extends ExampleFD {
    */
   public void printSolution(char[][] crossWordTemplate) {
 
-    System.out.println();
+    IO.println();
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
-        if (crossWordTemplate[i][j] != '*') System.out.print((char) x[i][j].value() + " ");
-        else System.out.print("* ");
+        if (crossWordTemplate[i][j] != '*') IO.print((char) x[i][j].value() + " ");
+        else IO.print("* ");
       }
-      System.out.println();
+      IO.println();
     }
   }
 
@@ -258,10 +258,10 @@ public class CrossWord extends ExampleFD {
         } // end while
 
       } catch (IOException e) {
-        System.out.println(e);
+        IO.println(e);
       }
 
-      System.out.println("There are " + wordCount + " words of size " + wordSize);
+      IO.println("There are " + wordCount + " words of size " + wordSize);
       resultForWordSize.reduce();
       mdds.put(wordSize, resultForWordSize);
     }
@@ -293,11 +293,11 @@ public class CrossWord extends ExampleFD {
     T2 = System.currentTimeMillis();
 
     if (result) {
-      System.out.println("Number of solutions " + search.getSolutionListener().solutionsNo());
+      IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       search.printAllSolutions();
-    } else System.out.println("Failed to find any solution");
+    } else IO.println("Failed to find any solution");
 
-    System.out.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
+    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
     return result;
   }
@@ -317,7 +317,7 @@ public class CrossWord extends ExampleFD {
       boolean returnCode = super.executeAfterSolution(search, select);
 
       if (noSolutions % 10 == 0) {
-        System.out.println("Solution # " + noSolutions);
+        IO.println("Solution # " + noSolutions);
         printSolution(crossWordTemplate);
       }
 

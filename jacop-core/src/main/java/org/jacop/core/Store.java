@@ -496,7 +496,7 @@ public class Store {
         currentQueue++;
       }
 
-    } catch (FailException f) {
+    } catch (FailException _) {
 
       if (currentConstraint != null) {
 
@@ -775,7 +775,7 @@ public class Store {
 
   /** This function prints the information of the store to standard output stream. */
   public void print() {
-    System.out.println(toString());
+    IO.println(toString());
   }
 
   /**
@@ -1064,7 +1064,7 @@ public class Store {
       }
     }
 
-    if (removeDebug) System.out.println("Store level changes from " + level + " to " + levelSetTo);
+    if (removeDebug) IO.println("Store level changes from " + level + " to " + levelSetTo);
 
     level = levelSetTo;
   }

@@ -230,9 +230,9 @@ public class LengauerTarjan {
       p.println("}");
 
       // p.close(); not needed; aouto close
-    } catch (UnsupportedEncodingException e) {
+    } catch (UnsupportedEncodingException _) {
       System.err.println("Unsupported encoding for file writing");
-    } catch (Exception e) {
+    } catch (Exception _) {
       System.err.println("Error writing to file");
     }
   }

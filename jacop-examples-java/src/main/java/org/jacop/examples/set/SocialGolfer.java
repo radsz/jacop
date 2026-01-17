@@ -170,7 +170,7 @@ public class SocialGolfer extends ExampleSet {
 
     for (int i = players - 2; i >= 0; i--) weights[i] = weights[i + 1] * base;
 
-    System.out.println("Social golfer problem " + weeks + "-" + groups + "-" + players);
+    IO.println("Social golfer problem " + weeks + "-" + groups + "-" + players);
 
     store = new Store();
 
@@ -248,7 +248,7 @@ public class SocialGolfer extends ExampleSet {
     long startUser = b.getThreadUserTime(tread.getId());
 
     boolean result = store.consistency();
-    System.out.println("*** consistency = " + result);
+    IO.println("*** consistency = " + result);
 
     Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
@@ -266,18 +266,18 @@ public class SocialGolfer extends ExampleSet {
     result = label.labeling(store, select);
 
     if (result) {
-      System.out.println("*** Yes");
+      IO.println("*** Yes");
       for (int i = 0; i < weeks; i++) {
         for (int j = 0; j < groups; j++) {
-          System.out.print(golferGroup[i][j].dom() + " ");
+          IO.print(golferGroup[i][j].dom() + " ");
         }
-        System.out.println();
+        IO.println();
       }
-    } else System.out.println("*** No");
+    } else IO.println("*** No");
 
-    System.out.println(
+    IO.println(
         "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
-    System.out.println(
+    IO.println(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6
             + "ms");

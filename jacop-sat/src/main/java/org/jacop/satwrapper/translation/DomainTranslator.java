@@ -153,6 +153,6 @@ public final class DomainTranslator implements WrapperComponent {
 
   @Override
   public String toString() {
-    return String.format("DomainTranslator [%d variables]", translatedVars.size());
+    return "DomainTranslator [%d variables]".formatted(translatedVars.size());
   }
 }

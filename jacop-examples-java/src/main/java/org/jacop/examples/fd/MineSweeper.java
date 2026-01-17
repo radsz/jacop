@@ -331,7 +331,7 @@ public class MineSweeper extends ExampleFD {
     int r = 0;
     int c = 0;
 
-    System.out.println("readFile(" + file + ")");
+    IO.println("readFile(" + file + ")");
     int lineCount = 0;
 
     try (BufferedReader inr =
@@ -347,7 +347,7 @@ public class MineSweeper extends ExampleFD {
           continue;
         }
 
-        System.out.println(str);
+        IO.println(str);
         if (lineCount == 0) {
           r = Integer.parseInt(str); // number of rows
         } else if (lineCount == 1) {
@@ -372,7 +372,7 @@ public class MineSweeper extends ExampleFD {
       // inr.close(); not needed; auto close
 
     } catch (IOException e) {
-      System.out.println(e);
+      IO.println(e);
     }
 
     return problem;
@@ -403,7 +403,7 @@ public class MineSweeper extends ExampleFD {
 
       T2 = System.currentTimeMillis();
       T = T2 - T1;
-      System.out.println("\n\t*** Execution time = " + T + " ms");
+      IO.println("\n\t*** Execution time = " + T + " ms");
     }
 
     if (args.length > 0) minesweeper.problem = MineSweeper.readFile(args[0]);
@@ -420,7 +420,7 @@ public class MineSweeper extends ExampleFD {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   } // end main
 
   @Override
@@ -509,24 +509,24 @@ public class MineSweeper extends ExampleFD {
       if (numSolutions <= 100) {
         search.printAllSolutions();
       } else {
-        System.out.println("Too many solutions to print...");
+        IO.println("Too many solutions to print...");
       }
 
-      if (numSolutions > 1) System.out.println("\nThe last solution:");
-      else System.out.println("\nThe solution:");
+      if (numSolutions > 1) IO.println("\nThe last solution:");
+      else IO.println("\nThe solution:");
 
       for (int i = 0; i < r; i++) {
         for (int j = 0; j < c; j++) {
-          System.out.print(mines[i][j].value() + " ");
+          IO.print(mines[i][j].value() + " ");
         }
-        System.out.println();
+        IO.println();
       }
 
-      System.out.println("numSolutions: " + numSolutions);
+      IO.println("numSolutions: " + numSolutions);
 
     } else {
 
-      System.out.println("No solutions.");
+      IO.println("No solutions.");
     } // end if result
   } // end search
 } // end class

@@ -77,7 +77,7 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
   /**
@@ -305,12 +305,12 @@ public class FilterBenchmark {
   public static int experiment1(Store store, Filter filter, int addNum, int mulNum) {
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
             + " example"); // without cumulative constraint");
-    System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> TR = makeConstraints(store, filter, addNum, mulNum);
 
@@ -328,7 +328,7 @@ public class FilterBenchmark {
             new IndomainMin<IntVar>(),
             0);
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -336,7 +336,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("1. Constraints consistent = " + result);
+    IO.println("1. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -347,15 +347,15 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
+      IO.println("\n*** Yes");
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -375,10 +375,10 @@ public class FilterBenchmark {
 
     boolean result;
 
-    System.out.println("\n\nTest of scheduling for " + filter.name() + " example");
-    System.out.println(
+    IO.println("\n\nTest of scheduling for " + filter.name() + " example");
+    IO.println(
         "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> TR = makeConstraintsChain(store, filter, addNum, mulNum, clock);
 
@@ -396,7 +396,7 @@ public class FilterBenchmark {
             new IndomainMin<IntVar>(),
             0);
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -404,7 +404,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("2. Constraints consistent = " + result);
+    IO.println("2. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -415,16 +415,16 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
-      System.out.println("Schedule length: " + div(cost.min(), clock));
+      IO.println("\n*** Yes");
+      IO.println("Schedule length: " + div(cost.min(), clock));
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -450,13 +450,13 @@ public class FilterBenchmark {
   public static int experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
             + " example with pipeline multiplier"); // without cumulative
     // constraint");
-    System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> TR = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
 
@@ -474,7 +474,7 @@ public class FilterBenchmark {
             new IndomainMin<IntVar>(),
             0);
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -482,7 +482,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("3. Constraints consistent = " + result);
+    IO.println("3. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -493,15 +493,15 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
+      IO.println("\n*** Yes");
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -520,13 +520,13 @@ public class FilterBenchmark {
 
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
             + " example with pipeline multiplier"); // without cumulative
     // constraint");
-    System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
 
@@ -545,7 +545,7 @@ public class FilterBenchmark {
     SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -553,7 +553,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("4. Constraints consistent = " + result);
+    IO.println("4. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -569,15 +569,15 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
+      IO.println("\n*** Yes");
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -595,12 +595,12 @@ public class FilterBenchmark {
 
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of pipeline scheduling for "
             + filter.name()
             + " example without cumulative constraint");
-    System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
@@ -611,7 +611,7 @@ public class FilterBenchmark {
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
     int mulLB = (rMul == 0) ? tMul : tMul + 1;
     int pipeLB = (addLB > mulLB) ? addLB : mulLB;
-    System.out.println("Lower bound = " + pipeLB);
+    IO.println("Lower bound = " + pipeLB);
 
     List<IntVar> cc = new ArrayList<IntVar>();
     cc.add(new IntVar(store, 10000, 10000));
@@ -645,7 +645,7 @@ public class FilterBenchmark {
     if (search.getTimeOutListener() == null) search.setTimeOutListener(credit);
     else search.getTimeOutListener().setChildrenListeners(credit);
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -654,7 +654,7 @@ public class FilterBenchmark {
     store.impose(new XgteqC(cost, pipeLB));
     result = store.consistency();
 
-    System.out.println("6. Constraints consistent = " + result);
+    IO.println("6. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -663,15 +663,15 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
+      IO.println("\n*** Yes");
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -689,12 +689,12 @@ public class FilterBenchmark {
 
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of pipeline scheduling for "
             + filter.name()
             + " example without cumulative constraint");
-    System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
@@ -705,7 +705,7 @@ public class FilterBenchmark {
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
     int mulLB = (rMul == 0) ? tMul : tMul + 1;
     int pipeLB = (addLB > mulLB) ? addLB : mulLB;
-    System.out.println("Lower bound = " + pipeLB);
+    IO.println("Lower bound = " + pipeLB);
 
     IntVar[] varsTs = new IntVar[Ts.size()];
     for (int j = 0; j < varsTs.length; j++) varsTs[j] = Ts.get(j);
@@ -732,7 +732,7 @@ public class FilterBenchmark {
     search.getExitChildListener().setChildrenListeners(credit);
     search.getTimeOutListener().setChildrenListeners(credit);
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -742,7 +742,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("7. Constraints consistent = " + result);
+    IO.println("7. Constraints consistent = " + result);
 
     result = search.labeling(store, selectMC, cost);
 
@@ -752,12 +752,12 @@ public class FilterBenchmark {
     }
 
     if (result) {
-      System.out.println("\n*** Yes");
+      IO.println("\n*** Yes");
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -775,12 +775,12 @@ public class FilterBenchmark {
 
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
             + " example"); // without cumulative constraint");
-    System.out.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     makeConstraints(store, filter, addNum, mulNum);
 
@@ -799,7 +799,7 @@ public class FilterBenchmark {
     SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -807,7 +807,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("8. Constraints consistent = " + result);
+    IO.println("8. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -823,15 +823,15 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
+      IO.println("\n*** Yes");
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }
@@ -851,13 +851,13 @@ public class FilterBenchmark {
 
     boolean result;
 
-    System.out.println(
+    IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
             + " example"); // without cumulative constraint");
-    System.out.println(
+    IO.println(
         "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
-    System.out.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     makeConstraintsChain(store, filter, addNum, mulNum, clock);
 
@@ -876,7 +876,7 @@ public class FilterBenchmark {
     SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
 
-    System.out.println(
+    IO.println(
         "\nVariable store size: "
             + store.size()
             + "\nNumber of constraints: "
@@ -884,7 +884,7 @@ public class FilterBenchmark {
 
     result = store.consistency();
 
-    System.out.println("10. Constraints consistent = " + result);
+    IO.println("10. Constraints consistent = " + result);
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -900,16 +900,16 @@ public class FilterBenchmark {
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
-    System.out.println("\n\t*** Execution time = " + T + " ms");
+    IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
-      System.out.println("\n*** Yes");
-      System.out.println("Schedule length: " + div(cost.min(), clock));
+      IO.println("\n*** Yes");
+      IO.println("Schedule length: " + div(cost.min(), clock));
       PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      System.out.println(Sch);
+      IO.println(Sch);
       return cost.value();
     } else {
-      System.out.println("*** No");
+      IO.println("*** No");
       return -1;
     }
   }

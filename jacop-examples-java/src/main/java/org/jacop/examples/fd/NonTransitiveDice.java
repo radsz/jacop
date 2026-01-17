@@ -142,15 +142,15 @@ public class NonTransitiveDice extends ExampleFD {
 
       boolean result = example.shavingSearch(example.shavingConstraints, false);
 
-      System.out.print(noDices + "\t");
-      System.out.print(noSides + "\t");
-      System.out.print(currentBest + "\t");
-      System.out.print(result + "\t");
-      System.out.print(example.search.getNodes() + "\t");
-      System.out.print(example.search.getDecisions() + "\t");
-      System.out.print(example.search.getWrongDecisions() + "\t");
-      System.out.print(example.search.getBacktracks() + "\t");
-      System.out.println(example.search.getMaximumDepth() + "\t");
+      IO.print(noDices + "\t");
+      IO.print(noSides + "\t");
+      IO.print(currentBest + "\t");
+      IO.print(result + "\t");
+      IO.print(example.search.getNodes() + "\t");
+      IO.print(example.search.getDecisions() + "\t");
+      IO.print(example.search.getWrongDecisions() + "\t");
+      IO.print(example.search.getBacktracks() + "\t");
+      IO.println(example.search.getMaximumDepth() + "\t");
 
       currentBest--;
 
@@ -328,15 +328,15 @@ public class NonTransitiveDice extends ExampleFD {
 
     boolean result = search.labeling(store, select);
 
-    System.out.print(noDices + "\t");
-    System.out.print(noSides + "\t");
-    System.out.print(currentBest + "\t");
-    System.out.print(result + "\t");
-    System.out.print(search.getNodes() + "\t");
-    System.out.print(search.getDecisions() + "\t");
-    System.out.print(search.getWrongDecisions() + "\t");
-    System.out.print(search.getBacktracks() + "\t");
-    System.out.println(search.getMaximumDepth() + "\t");
+    IO.print(noDices + "\t");
+    IO.print(noSides + "\t");
+    IO.print(currentBest + "\t");
+    IO.print(result + "\t");
+    IO.print(search.getNodes() + "\t");
+    IO.print(search.getDecisions() + "\t");
+    IO.print(search.getWrongDecisions() + "\t");
+    IO.print(search.getBacktracks() + "\t");
+    IO.println(search.getMaximumDepth() + "\t");
 
     return result;
   }
