@@ -180,7 +180,9 @@ public final class Arc {
     sister.capacity = 0;
   }
 
-  /** @return cost associated with an arc. */
+  /**
+   * @return cost associated with an arc.
+   */
   public long longCost() {
 
     if (cost == 0) return 0L;

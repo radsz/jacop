@@ -45,7 +45,9 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
 
   MutableDomainValue() {}
 
-  /** @param domain specifies domain stored by a mutable domain. */
+  /**
+   * @param domain specifies domain stored by a mutable domain.
+   */
   public MutableDomainValue(Domain domain) {
     this.domain = domain;
   }

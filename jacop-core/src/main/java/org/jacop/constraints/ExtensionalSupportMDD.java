@@ -177,7 +177,8 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
               // notSupportYet is empty for all variables level..vars.length
 
               int j = level;
-              for (; j < views.length && views[j].isSupported(); j++) ;
+              for (; j < views.length && views[j].isSupported(); j++)
+                ;
               if (j == views.length) break;
             }
           }

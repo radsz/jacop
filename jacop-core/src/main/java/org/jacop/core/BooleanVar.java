@@ -225,7 +225,9 @@ public class BooleanVar extends IntVar {
     return domain.searchConstraintsToEvaluate;
   }
 
-  /** @return it returns the string description of the boolean variable. */
+  /**
+   * @return it returns the string description of the boolean variable.
+   */
   @Override
   public String toString() {
     if (domain.singleton()) return id + "=" + domain;

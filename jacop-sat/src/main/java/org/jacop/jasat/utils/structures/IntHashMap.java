@@ -96,7 +96,9 @@ public final class IntHashMap<E> {
     else return tableValue[index][i];
   }
 
-  /** @return true if the table is empty */
+  /**
+   * @return true if the table is empty
+   */
   public boolean isEmpty() {
     return cardinal == 0;
   }
@@ -265,7 +267,9 @@ public final class IntHashMap<E> {
     this(INITIAL_SIZE);
   }
 
-  /** @return the set of keys of the map */
+  /**
+   * @return the set of keys of the map
+   */
   public Set<Integer> keySet() {
     return new Set<Integer>() {
 

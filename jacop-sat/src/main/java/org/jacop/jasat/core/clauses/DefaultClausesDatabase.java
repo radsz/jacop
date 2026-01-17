@@ -214,7 +214,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             assert conflictClause.isUnsatisfiableIn(trail);
             core.triggerConflictEvent(conflictClause);
             // copy remaining elements of watchList to the newWatchList
-            /** @TODO: What System.arraycopy for efficiency of copying the remaining elements? */
+            /**
+             * @TODO: What System.arraycopy for efficiency of copying the remaining elements?
+             */
             for (int j = i + 1; j < watchList[0]; ++j) {
               newWatchList[newWatchNum++] = watchList[j];
             }
@@ -390,30 +392,31 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     } // loop
 
     switch (numFoundWatch) {
-        /*
-         * case b)  unknown clause, just add both watches.
-         */
+      /*
+       * case b)  unknown clause, just add both watches.
+       */
       case 2:
         assert watch1pos != watch2pos;
         putAt0And1(clause, watch1pos, watch2pos);
         break;
-        /*
-         * case c)  unit clause (we found exactly one unset literal),
-         * add unit literal as first watch and highest set literal as
-         * second watch
-         */
+      /*
+       * case c)  unit clause (we found exactly one unset literal),
+       * add unit literal as first watch and highest set literal as
+       * second watch
+       */
       case 1:
         assert watch2pos == -1;
         putAt0And1(clause, watch1pos, highestPos);
         // trigger propagation of the first literal if not already fixed literal satisfying the
         // clause.
-        if (trail.values[(clause[0] < 0) ? -clause[0] : clause[0]] == 0) ;
+        if (trail.values[(clause[0] < 0) ? -clause[0] : clause[0]] == 0)
+          ;
         core.triggerPropagateEvent(clause[0], clauseId);
         break;
-        /*
-         * case d)  conflict clause, just add the two highest literals
-         * as watches and trigger conflict
-         */
+      /*
+       * case d)  conflict clause, just add the two highest literals
+       * as watches and trigger conflict
+       */
       case 0:
         assert highestPos != secondHighestPos;
         putAt0And1(clause, highestPos, secondHighestPos);

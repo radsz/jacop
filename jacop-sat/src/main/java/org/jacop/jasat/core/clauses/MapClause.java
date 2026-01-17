@@ -192,7 +192,9 @@ public final class MapClause implements Iterable<Integer> {
     return num == 1;
   }
 
-  /** @return true if the clause is empty */
+  /**
+   * @return true if the clause is empty
+   */
   public boolean isEmpty() {
     return literals.isEmpty();
   }

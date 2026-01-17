@@ -98,17 +98,23 @@ public final class TreeLeaf extends TreeNode {
     this.slice = 0;
   }
 
-  /** @return The variable stored in this leaf */
+  /**
+   * @return The variable stored in this leaf
+   */
   public final IntVar getVariable() {
     return quantity;
   }
 
-  /** @return The profit of one unit of the variable */
+  /**
+   * @return The profit of one unit of the variable
+   */
   public int getProfitOfOne() {
     return profitOfOne;
   }
 
-  /** @return The weight of one unit of the variable */
+  /**
+   * @return The weight of one unit of the variable
+   */
   public int getWeightOfOne() {
     return weightOfOne;
   }
@@ -211,12 +217,16 @@ public final class TreeLeaf extends TreeNode {
     previousMaxQ = max();
   }
 
-  /** @return The minimum value of the variable after slicing. */
+  /**
+   * @return The minimum value of the variable after slicing.
+   */
   public final int min() {
     return quantity.min() - slice;
   }
 
-  /** @return The maximum value of the variable after slicing */
+  /**
+   * @return The maximum value of the variable after slicing
+   */
   public final int max() {
     return quantity.max() - slice;
   }

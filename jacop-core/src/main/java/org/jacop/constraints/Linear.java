@@ -50,7 +50,9 @@ import org.jacop.core.*;
  * @version 4.10
  */
 
-/** @deprecated As of release 4.3.1 replaced by LinearInt constraint. */
+/**
+ * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
+ */
 @Deprecated
 public class Linear extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {

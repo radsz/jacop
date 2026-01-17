@@ -54,12 +54,16 @@ public final class IntStack {
     currentIndex = 0;
   }
 
-  /** @return true if the stack is empty */
+  /**
+   * @return true if the stack is empty
+   */
   public boolean isEmpty() {
     return currentIndex == 0;
   }
 
-  /** @return the number of elements of the stack */
+  /**
+   * @return the number of elements of the stack
+   */
   public int size() {
     return currentIndex;
   }

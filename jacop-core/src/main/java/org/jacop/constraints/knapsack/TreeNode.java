@@ -109,7 +109,9 @@ public class TreeNode {
     this.rightNeighbor = rightNeighbor;
   }
 
-  /** @return true if the node is a leaf, false otherwise. */
+  /**
+   * @return true if the node is a leaf, false otherwise.
+   */
   public boolean isLeaf() {
     return false;
   }

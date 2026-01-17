@@ -15,10 +15,10 @@
         <module>jacop-sets</module>
         <module>jacop-sat</module>
         <module>jacop-flatzinc</module>
-        <module>jacop-scala</module>
         <module>jacop-examples-java</module>
-        <module>jacop-examples-scala</module>
         <module>jacop-benchmarks</module>
+        <module>jacop-scala</module>
+        <module>jacop-examples-scala</module>
     </modules>
 
     <name>JaCoP</name>
@@ -78,10 +78,10 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <aspectj.version>1.8.10</aspectj.version>
-        <scala.version>2.13.12</scala.version>
+        <scala.version>2.13.17</scala.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>
     </properties>
@@ -349,14 +349,16 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>com.diffplug.spotless</groupId>
                     <artifactId>spotless-maven-plugin</artifactId>
-                    <version>2.30.0</version>
+                    <version>3.1.0</version>
                     <configuration>
                         <java>
                             <googleJavaFormat>
-                                <version>1.7</version>
+                                <version>1.33.0</version>
                                 <style>GOOGLE</style>
                             </googleJavaFormat>
-                            <removeUnusedImports/>
+                            <removeUnusedImports>
+                                <engine>google-java-format</engine>
+                            </removeUnusedImports>
                             <trimTrailingWhitespace/>
                             <endWithNewline/>
                         </java>
@@ -372,7 +374,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jdeps-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.2.0</version>
                 </plugin>
 
                 <plugin>
@@ -390,7 +392,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
-                    <version>4.8.1</version>
+                    <version>4.9.8</version>
                 </plugin>
 
                 <plugin>
@@ -422,8 +424,8 @@ setup to run configuration. -->
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>25</source>
+                    <target>25</target>
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <showWarnings>false</showWarnings>
                     <!--  <showDeprecation>true</showDeprecation>  -->
@@ -538,7 +540,7 @@ setup to run configuration. -->
 
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.8</version>
+                <version>0.8.14</version>
                 <configuration>
                     <excludes>
                         <exclude>**/org/jacop/examples/scala/**/*.class</exclude>
@@ -566,7 +568,17 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jdeps-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.2.0</version>
+                <configuration>
+                    <jdepsArgs>
+                        <arg>--ignore-missing-deps</arg>
+                    </jdepsArgs>
+                    <multiRelease>25</multiRelease>
+                    <include>org.jacop.*</include>
+                    <dependenciesToAnalyzeExcludes>
+                        <exclude>net.bytebuddy:byte-buddy</exclude>
+                    </dependenciesToAnalyzeExcludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -673,7 +685,8 @@ setup to run configuration. -->
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>                <version>0.8.8</version>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.14</version>
                 <reportSets>
                     <reportSet>
                         <reports>
@@ -689,8 +702,14 @@ setup to run configuration. -->
     <dependencies>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
-            <version>1.10.19</version>
+            <artifactId>mockito-core</artifactId>
+            <version>5.21.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.17.5</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

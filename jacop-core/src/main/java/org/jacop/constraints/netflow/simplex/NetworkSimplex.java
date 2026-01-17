@@ -185,7 +185,9 @@ public class NetworkSimplex {
 
   /** *************** */
   /** Graph update * */
-  /** @param arc the network arc being added */
+  /**
+   * @param arc the network arc being added
+   */
   protected void addArc(Arc arc) {
     assert (arc.index == DELETED_ARC) : arc;
     int index = numArcs++;

@@ -454,7 +454,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCReified(v1, i2, v3));
             return;
           }
-          // break;
+        // break;
 
         case Support.ne:
           if (v1.min() > i2 || v1.max() < i2) {
@@ -482,7 +482,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCReified(v1, i2, v3));
             return;
           }
-          // break;
+        // break;
         case Support.lt:
           if (v1.max() < i2) {
             v3.domain.inValue(store.level, v3, 1);
@@ -559,7 +559,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCReified(v2, i1, v3));
             return;
           }
-          // break;
+        // break;
 
         case Support.ne:
           if (v2.min() > i1 || v2.max() < i1) {
@@ -574,7 +574,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCReified(v2, i1, v3));
             return;
           }
-          // break;
+        // break;
         case Support.lt:
           if (i1 < v2.min()) {
             v3.domain.inValue(store.level, v3, 1);
@@ -714,7 +714,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCImplied(v1, i2, v3)); // specialized version of Implies...
             return;
           }
-          // break;
+        // break;
 
         case Support.ne:
           if (v1.min() > i2 || v1.max() < i2) {
@@ -732,7 +732,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCImplied(v1, i2, v3)); // specialized version of Implies...
             return;
           }
-          // break;
+        // break;
         case Support.lt:
           if (v1.max() < i2) {
             return;
@@ -819,7 +819,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCImplied(v2, i1, v3));
             return;
           }
-          // break;
+        // break;
 
         case Support.ne:
           if (v2.min() > i1 || v2.max() < i1) {
@@ -833,7 +833,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCImplied(v2, i1, v3)); // specialized version of Implies...
             return;
           }
-          // break;
+        // break;
         case Support.lt:
           if (i1 < v2.min()) {
             v3.domain.inValue(store.level, v3, 1);

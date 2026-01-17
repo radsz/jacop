@@ -46,7 +46,9 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
 
   BoundDomain domain;
 
-  /** @param dom It specifies the BoundDomain for which enumeration of values is performed. */
+  /**
+   * @param dom It specifies the BoundDomain for which enumeration of values is performed.
+   */
   public BoundDomainValueEnumeration(BoundDomain dom) {
     min = dom.min();
     current = min - 1;

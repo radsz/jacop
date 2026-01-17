@@ -338,7 +338,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     int i = 0;
-    for (; i < size && intervals[i].max < min; i++) ;
+    for (; i < size && intervals[i].max < min; i++)
+      ;
 
     if (i == size || intervals[i].min > max) return false;
     else return true;
@@ -1777,7 +1778,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && intervals[pointer1].max <= inputIntervals[pointer2].max
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max > inputIntervals[pointer2].max && ++pointer2 < inputSize) ;
+      while (intervals[pointer1].max > inputIntervals[pointer2].max && ++pointer2 < inputSize)
+        ;
 
       if (pointer2 == inputSize) break;
     }
@@ -2479,7 +2481,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && ++pointer1 < size) {
 
       while (intervals[pointer1].max > inputIntervals[pointer2].max + shift
-          && ++pointer2 < input.size) ;
+          && ++pointer2 < input.size)
+        ;
 
       if (pointer2 == input.size) break;
     }
@@ -3075,7 +3078,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && intervals[pointer1].max <= inputIntervals[pointer2].max
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max > inputIntervals[pointer2].max && ++pointer2 < inputSize) ;
+      while (intervals[pointer1].max > inputIntervals[pointer2].max && ++pointer2 < inputSize)
+        ;
 
       if (pointer2 == inputSize) break;
     }

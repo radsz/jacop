@@ -112,7 +112,9 @@ public class TimeStamp<T> implements Stateful {
     return index;
   }
 
-  /** @return the previous value according to the stamp. */
+  /**
+   * @return the previous value according to the stamp.
+   */
   public final T previousValue() {
     if (pointer4Last > 0) return values[pointer4Last - 1];
     else return null;

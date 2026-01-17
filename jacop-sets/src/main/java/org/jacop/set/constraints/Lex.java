@@ -48,7 +48,9 @@ import org.jacop.set.core.SetVar;
  * @version 4.10
  */
 
-/** @deprecated As of release 4.5.1 replaced by AltB and AleB constraints. */
+/**
+ * @deprecated As of release 4.5.1 replaced by AltB and AleB constraints.
+ */
 @Deprecated
 public class Lex extends Constraint implements Stateful {
 

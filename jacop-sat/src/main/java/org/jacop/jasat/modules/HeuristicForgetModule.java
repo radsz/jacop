@@ -127,7 +127,9 @@ public final class HeuristicForgetModule
     return core.currentLevel == 0 && numberOfLearntClauses() > LEARNT_CLAUSES_NUMBER_THRESHOLD;
   }
 
-  /** @return the number of learnt clauses one can hope to delete */
+  /**
+   * @return the number of learnt clauses one can hope to delete
+   */
   private int numberOfLearntClauses() {
     int answer = 0;
     for (int i = 0; i < learntClauses.length; ++i) answer += learntClauses[i].size();

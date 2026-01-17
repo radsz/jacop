@@ -49,7 +49,9 @@ import org.jacop.core.*;
  * @version 4.10
  */
 
-/** @deprecated As of release 4.3.1 replaced by LinearIntDom constraint. */
+/**
+ * @deprecated As of release 4.3.1 replaced by LinearIntDom constraint.
+ */
 @Deprecated
 public class SumWeightDom extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {

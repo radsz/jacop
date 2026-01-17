@@ -45,7 +45,9 @@ public class MutableDomain implements MutableVar {
 
   MutableDomainValue value = null;
 
-  /** @param store store in which the mutable domain is created. */
+  /**
+   * @param store store in which the mutable domain is created.
+   */
   public MutableDomain(Store store) {
     this.value = new MutableDomainValue(IntervalDomain.emptyDomain);
     this.index = store.putMutableVar(this);

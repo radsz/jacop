@@ -223,7 +223,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       if (!explore.equals("complete"))
         System.err.println("Warning: not recognized search exploration type; use \"complete\"");
 
-    } else if (search_type.equals("restart_none")) ;
+    } else if (search_type.equals("restart_none"))
+      ;
     else if (search_type.equals("restart_constant")) {
       ASTAnnExpr expr = (ASTAnnExpr) ann.jjtGetChild(0).jjtGetChild(0);
       int scale = ((ASTScalarFlatExpr) expr.jjtGetChild(0)).getInt();

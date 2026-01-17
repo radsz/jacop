@@ -93,7 +93,9 @@ public final class IntMap<E> {
     return map.remove(key);
   }
 
-  /** @return the number of keys in the map */
+  /**
+   * @return the number of keys in the map
+   */
   public int size() {
     return map.size();
   }

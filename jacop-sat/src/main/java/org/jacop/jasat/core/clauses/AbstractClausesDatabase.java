@@ -121,7 +121,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     this.databaseIndex = index;
   }
 
-  /** @return the index of this database in the DatabasesStore */
+  /**
+   * @return the index of this database in the DatabasesStore
+   */
   public final int getDatabaseIndex() {
     return databaseIndex;
   }

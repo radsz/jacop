@@ -18,7 +18,9 @@ import org.junit.runners.Parameterized;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-/** @author Mariusz Świerkot */
+/**
+ * @author Mariusz Świerkot
+ */
 @RunWith(Parameterized.class)
 public class SmallDenseDomainTest {
 

@@ -88,7 +88,9 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    */
   public abstract List<T> decompose(Store store);
 
-  /** @return null if no auxiliary variables were created, otherwise a list with variables. */
+  /**
+   * @return null if no auxiliary variables were created, otherwise a list with variables.
+   */
   public List<Var> auxiliaryVariables() {
     return null;
   }

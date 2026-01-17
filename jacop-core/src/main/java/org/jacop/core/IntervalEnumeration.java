@@ -41,9 +41,13 @@ import java.util.Enumeration;
  */
 public abstract class IntervalEnumeration implements Enumeration<Interval> {
 
-  /** @return true if there are more elements to enumerate. */
+  /**
+   * @return true if there are more elements to enumerate.
+   */
   public abstract boolean hasMoreElements();
 
-  /** @return next interval. */
+  /**
+   * @return next interval.
+   */
   public abstract Interval nextElement();
 }

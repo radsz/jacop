@@ -50,7 +50,9 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 
   SetDomain domain;
 
-  /** @param dom It specifies the SetDomain for which enumeration of sets is performed. */
+  /**
+   * @param dom It specifies the SetDomain for which enumeration of sets is performed.
+   */
   public SetDomainValueEnumeration(SetDomain dom) {
     min = dom.glb();
     current = dom.glb();

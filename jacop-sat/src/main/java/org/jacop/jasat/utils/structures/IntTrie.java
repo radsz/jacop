@@ -139,7 +139,9 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     return current;
   }
 
-  /** @return the root node */
+  /**
+   * @return the root node
+   */
   public final N getRoot() {
     return root;
   }
@@ -226,17 +228,23 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     size = 0;
   }
 
-  /** @return true if and only if the trie does not contain anything */
+  /**
+   * @return true if and only if the trie does not contain anything
+   */
   public final boolean isEmpty() {
     return size == 0;
   }
 
-  /** @return the number of elements in the Trie */
+  /**
+   * @return the number of elements in the Trie
+   */
   public final int size() {
     return size;
   }
 
-  /** @return the set of values that the Trie contains (quite inefficient) */
+  /**
+   * @return the set of values that the Trie contains (quite inefficient)
+   */
   @SuppressWarnings("unused")
   public Set<Integer> values() {
     throw new UnsupportedOperationException();

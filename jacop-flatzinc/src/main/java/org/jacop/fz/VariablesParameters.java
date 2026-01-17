@@ -1101,9 +1101,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
     if (child.getId() == JJTSCALARFLATEXPR) {
       switch (((ASTScalarFlatExpr) child).getType()) {
-          // case 0: // int
-          // case 1: // bool
-          //      return true;
+        // case 0: // int
+        // case 1: // bool
+        //      return true;
         case 2: // ident
           Double n = dictionary.checkFloat(((ASTScalarFlatExpr) child).getIdent());
           if (n != null) return true;
@@ -1284,15 +1284,15 @@ public class VariablesParameters implements ParserTreeConstants {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSCALARFLATEXPR) {
       switch (((ASTScalarFlatExpr) child).getType()) {
-          // case 0: // int
-          //      return new IntVar(store, ((ASTScalarFlatExpr)child).getInt(),
-          // ((ASTScalarFlatExpr)child).getInt());
-          // case 1: // bool
-          //      BoundDomain d = new BoundDomain(((ASTScalarFlatExpr)child).getInt(),
-          // ((ASTScalarFlatExpr)child).getInt());
-          //      BooleanVar bb = new BooleanVar(store,"",d);
-          //      //numberBooleanVariables++; // not really a variable; constant
-          //      return bb;
+        // case 0: // int
+        //      return new IntVar(store, ((ASTScalarFlatExpr)child).getInt(),
+        // ((ASTScalarFlatExpr)child).getInt());
+        // case 1: // bool
+        //      BoundDomain d = new BoundDomain(((ASTScalarFlatExpr)child).getInt(),
+        // ((ASTScalarFlatExpr)child).getInt());
+        //      BooleanVar bb = new BooleanVar(store,"",d);
+        //      //numberBooleanVariables++; // not really a variable; constant
+        //      return bb;
         case 2: // ident
           FloatVar var = dictionary.getFloatVariable(((ASTScalarFlatExpr) child).getIdent());
           if (var != null) return var;

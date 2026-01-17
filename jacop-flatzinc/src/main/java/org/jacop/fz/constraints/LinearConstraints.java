@@ -267,12 +267,12 @@ class LinearConstraints implements ParserTreeConstants {
       case Support.lt:
         support.pose(new Reified(new LinearInt(p2, p1, "<", p3), p4));
         break;
-        // gt not present in the newest flatzinc version
-        // case support.gt :
-        //  t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-        //  support.pose(new SumWeight(p2, p1, t));
-        //  support.pose(new Reified(new XgtC(t, p3), p4));
-        //  break;
+      // gt not present in the newest flatzinc version
+      // case support.gt :
+      //  t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
+      //  support.pose(new SumWeight(p2, p1, t));
+      //  support.pose(new Reified(new XgtC(t, p3), p4));
+      //  break;
       case Support.le:
         if (p1.length == 2 && p1[0] == 1 && p1[1] == -1)
           if (p3 == 0) support.pose(new Reified(new XlteqY(p2[0], p2[1]), p4));

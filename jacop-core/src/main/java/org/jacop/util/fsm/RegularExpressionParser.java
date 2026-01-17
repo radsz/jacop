@@ -244,7 +244,9 @@ public class RegularExpressionParser {
      * that this Expression object requires, then this method returns null.
      */
 
-    /** @return type */
+    /**
+     * @return type
+     */
     abstract int getType();
 
     /**

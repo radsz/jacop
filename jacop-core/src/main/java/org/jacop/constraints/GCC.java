@@ -526,7 +526,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     for (IntVar xVar : x) {
       int xValue = xVar.value();
       int position = 0;
-      for (; position < count.length && domainHash[position] != xValue; position++) ;
+      for (; position < count.length && domainHash[position] != xValue; position++)
+        ;
       assert (position < count.length);
       count[position]++;
     }
