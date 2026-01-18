@@ -124,12 +124,11 @@ public class ExampleBasedTest {
   public void testLoan() {
     Loan example = new Loan();
 
-      double i = Double.parseDouble("0.04");
-      double p = Double.parseDouble("1000.0");
-      double r = Double.parseDouble("260.0");
-      double b4 = Double.parseDouble("65.78");
+    double i = Double.parseDouble("0.04");
+    double p = Double.parseDouble("1000.0");
+    double r = Double.parseDouble("260.0");
+    double b4 = Double.parseDouble("65.78");
 
-      example.loan(i, p, r, b4);
+    example.loan(i, p, r, b4);
   }
 }
-
