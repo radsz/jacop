@@ -154,9 +154,7 @@ public class SurvoPuzzle extends ExampleFD {
       matrix = matrix_tmp;
     }
 
-    //
     // initiate structures and variables
-    //
     x = new IntVar[r][c];
     x_arr = new IntVar[r * c];
     for (int i = 0; i < r; i++) {
@@ -170,18 +168,14 @@ public class SurvoPuzzle extends ExampleFD {
       }
     }
 
-    //
     // row sums
-    //
     for (int i = 0; i < r; i++) {
       IntVar r_sum = new IntVar(store, "r_" + i, 1, r * c * r * c);
       store.impose(new SumInt(x[i], "==", r_sum));
       store.impose(new XeqC(r_sum, rowsums[i]));
     }
 
-    //
     // column sums
-    //
     for (int j = 0; j < c; j++) {
       List<IntVar> cols = new ArrayList<>();
       for (int i = 0; i < r; i++) {
@@ -269,10 +263,8 @@ public class SurvoPuzzle extends ExampleFD {
 
       // inr.close(); not needed; aiuto close
 
-      //
       // Now we know everything to be known:
       // Construct the problem matrix and column sums.
-      //
       r = MatrixI.size();
       rowsums = new int[r];
       matrix = new int[r][c];

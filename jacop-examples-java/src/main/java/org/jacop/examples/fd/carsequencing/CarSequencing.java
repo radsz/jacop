@@ -357,7 +357,7 @@ public class CarSequencing extends ExampleFD {
 
   		System.out.println( counter );
 
-  	//	store.impose(new Regular(counter, cars));
+  	// store.impose(new Regular(counter, cars));
 
   		if (i == 0)
   			union = counter;
@@ -534,7 +534,6 @@ public class CarSequencing extends ExampleFD {
       // Possible replacement for Count constraint.
       // IntervalDomain dom = new IntervalDomain(i, i);
       // store.impose(new Among(cars, dom, counter));
-      //
 
     }
   }

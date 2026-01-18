@@ -30,7 +30,7 @@
 
 package org.jacop;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -65,8 +65,8 @@ public class ExampleBasedTest {
       IO.println(line);
     }
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(6, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(6);
   }
 
   @Test
@@ -79,7 +79,7 @@ public class ExampleBasedTest {
 
     crossWord.searchAllAtOnceNoRecord();
 
-    assertEquals(129, crossWord.search.getSolutionListener().solutionsNo());
+    assertThat(crossWord.search.getSolutionListener().solutionsNo()).isEqualTo(129);
   }
 
   @Test
@@ -89,25 +89,25 @@ public class ExampleBasedTest {
     problem.filename = "src/test/resources/testset3.auct";
     problem.model();
     problem.searchSpecial();
-    assertEquals(
-        "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,0of-g3 = 0,0of-g4 = 0,0of-g5 = 0,0of-g6 = 0,0of-g7 = 0,bidCost1 = -477,bidCost2 = -630,bidCost3 = -540,bidCost4 = -78,bidCost5 = 0,cost = -1725,deltaI_g0t0 = 0,deltaI_g0t1 = 0,deltaI_g0t10 = 0,deltaI_g0t11 = 0,deltaI_g0t12 = 0,deltaI_g0t13 = 0,deltaI_g0t14 = 0,deltaI_g0t2 = 0,deltaI_g0t3 = 0,deltaI_g0t4 = 0,deltaI_g0t5 = -6,deltaI_g0t6 = 0,deltaI_g0t7 = 0,deltaI_g0t8 = 0,deltaI_g0t9 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -6,deltaI_g1t10 = 0,deltaI_g1t11 = 0,deltaI_g1t12 = 0,deltaI_g1t13 = 0,deltaI_g1t14 = 0,deltaI_g1t2 = 0,deltaI_g1t3 = 0,deltaI_g1t4 = -3,deltaI_g1t5 = -4,deltaI_g1t6 = 0,deltaI_g1t7 = 0,deltaI_g1t8 = -10,deltaI_g1t9 = 0,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t10 = 0,deltaI_g2t11 = 0,deltaI_g2t12 = 0,deltaI_g2t13 = 0,deltaI_g2t14 = 0,deltaI_g2t2 = 0,deltaI_g2t3 = 0,deltaI_g2t4 = -5,deltaI_g2t5 = -7,deltaI_g2t6 = 0,deltaI_g2t7 = -4,deltaI_g2t8 = 0,deltaI_g2t9 = 0,deltaI_g3t0 = 0,deltaI_g3t1 = 0,deltaI_g3t10 = 0,deltaI_g3t11 = 0,deltaI_g3t12 = 0,deltaI_g3t13 = 0,deltaI_g3t14 = 0,deltaI_g3t2 = 0,deltaI_g3t3 = 0,deltaI_g3t4 = 0,deltaI_g3t5 = -6,deltaI_g3t6 = -5,deltaI_g3t7 = 0,deltaI_g3t8 = 0,deltaI_g3t9 = 0,deltaI_g4t0 = 0,deltaI_g4t1 = 0,deltaI_g4t10 = 0,deltaI_g4t11 = 0,deltaI_g4t12 = 0,deltaI_g4t13 = 0,deltaI_g4t14 = 0,deltaI_g4t2 = 0,deltaI_g4t3 = 0,deltaI_g4t4 = -6,deltaI_g4t5 = -5,deltaI_g4t6 = 0,deltaI_g4t7 = -4,deltaI_g4t8 = 0,deltaI_g4t9 = 0,deltaI_g5t0 = 0,deltaI_g5t1 = -7,deltaI_g5t10 = 0,deltaI_g5t11 = 0,deltaI_g5t12 = 0,deltaI_g5t13 = 0,deltaI_g5t14 = 0,deltaI_g5t2 = 0,deltaI_g5t3 = 0,deltaI_g5t4 = 0,deltaI_g5t5 = 0,deltaI_g5t6 = 0,deltaI_g5t7 = 0,deltaI_g5t8 = 0,deltaI_g5t9 = 0,deltaI_g6t0 = 0,deltaI_g6t1 = 0,deltaI_g6t10 = 0,deltaI_g6t11 = 0,deltaI_g6t12 = 0,deltaI_g6t13 = 0,deltaI_g6t14 = 0,deltaI_g6t2 = 0,deltaI_g6t3 = 0,deltaI_g6t4 = 0,deltaI_g6t5 = -5,deltaI_g6t6 = -4,deltaI_g6t7 = 0,deltaI_g6t8 = 0,deltaI_g6t9 = 0,deltaI_g7t0 = 0,deltaI_g7t1 = 0,deltaI_g7t10 = 0,deltaI_g7t11 = 0,deltaI_g7t12 = 0,deltaI_g7t13 = 0,deltaI_g7t14 = 0,deltaI_g7t2 = 0,deltaI_g7t3 = 0,deltaI_g7t4 = -5,deltaI_g7t5 = 0,deltaI_g7t6 = 0,deltaI_g7t7 = 0,deltaI_g7t8 = 0,deltaI_g7t9 = 0,deltaO_g0t0 = 0,deltaO_g0t1 = 0,deltaO_g0t10 = 0,deltaO_g0t11 = 0,deltaO_g0t12 = 0,deltaO_g0t13 = 0,deltaO_g0t14 = 0,deltaO_g0t2 = 0,deltaO_g0t3 = 6,deltaO_g0t4 = 0,deltaO_g0t5 = 0,deltaO_g0t6 = 6,deltaO_g0t7 = 0,deltaO_g0t8 = 5,deltaO_g0t9 = 0,deltaO_g1t0 = 7,deltaO_g1t1 = 0,deltaO_g1t10 = 0,deltaO_g1t11 = 0,deltaO_g1t12 = 0,deltaO_g1t13 = 0,deltaO_g1t14 = 0,deltaO_g1t2 = 0,deltaO_g1t3 = 6,deltaO_g1t4 = 7,deltaO_g1t5 = 0,deltaO_g1t6 = 0,deltaO_g1t7 = 6,deltaO_g1t8 = 0,deltaO_g1t9 = 0,deltaO_g2t0 = 7,deltaO_g2t1 = 0,deltaO_g2t10 = 0,deltaO_g2t11 = 0,deltaO_g2t12 = 0,deltaO_g2t13 = 0,deltaO_g2t14 = 0,deltaO_g2t2 = 4,deltaO_g2t3 = 0,deltaO_g2t4 = 6,deltaO_g2t5 = 0,deltaO_g2t6 = 0,deltaO_g2t7 = 7,deltaO_g2t8 = 0,deltaO_g2t9 = 0,deltaO_g3t0 = 0,deltaO_g3t1 = 4,deltaO_g3t10 = 0,deltaO_g3t11 = 0,deltaO_g3t12 = 0,deltaO_g3t13 = 0,deltaO_g3t14 = 0,deltaO_g3t2 = 0,deltaO_g3t3 = 0,deltaO_g3t4 = 5,deltaO_g3t5 = 7,deltaO_g3t6 = 6,deltaO_g3t7 = 5,deltaO_g3t8 = 5,deltaO_g3t9 = 6,deltaO_g4t0 = 7,deltaO_g4t1 = 6,deltaO_g4t10 = 0,deltaO_g4t11 = 0,deltaO_g4t12 = 0,deltaO_g4t13 = 0,deltaO_g4t14 = 0,deltaO_g4t2 = 4,deltaO_g4t3 = 6,deltaO_g4t4 = 6,deltaO_g4t5 = 0,deltaO_g4t6 = 0,deltaO_g4t7 = 0,deltaO_g4t8 = 5,deltaO_g4t9 = 0,deltaO_g5t0 = 7,deltaO_g5t1 = 0,deltaO_g5t10 = 0,deltaO_g5t11 = 0,deltaO_g5t12 = 0,deltaO_g5t13 = 0,deltaO_g5t14 = 0,deltaO_g5t2 = 4,deltaO_g5t3 = 6,deltaO_g5t4 = 5,deltaO_g5t5 = 5,deltaO_g5t6 = 0,deltaO_g5t7 = 0,deltaO_g5t8 = 5,deltaO_g5t9 = 0,deltaO_g6t0 = 7,deltaO_g6t1 = 0,deltaO_g6t10 = 0,deltaO_g6t11 = 0,deltaO_g6t12 = 0,deltaO_g6t13 = 0,deltaO_g6t14 = 0,deltaO_g6t2 = 4,deltaO_g6t3 = 6,deltaO_g6t4 = 0,deltaO_g6t5 = 0,deltaO_g6t6 = 0,deltaO_g6t7 = 5,deltaO_g6t8 = 5,deltaO_g6t9 = 0,deltaO_g7t0 = 7,deltaO_g7t1 = 5,deltaO_g7t10 = 0,deltaO_g7t11 = 0,deltaO_g7t12 = 0,deltaO_g7t13 = 0,deltaO_g7t14 = 0,deltaO_g7t2 = 4,deltaO_g7t3 = 6,deltaO_g7t4 = 0,deltaO_g7t5 = 5,deltaO_g7t6 = 6,deltaO_g7t7 = 5,deltaO_g7t8 = 5,deltaO_g7t9 = 0,delta_t10_g1 = -10,delta_t11_g6 = -4,delta_t12_g3 = 0,delta_t14_g1 = 0,delta_t17_g0 = 0,delta_t17_g5 = 0,delta_t1_g1 = -6,delta_t1_g5 = -7,delta_t20_g1 = 0,delta_t21_g1 = 0,delta_t21_g3 = 0,delta_t21_g6 = 0,delta_t22_g0 = 0,delta_t22_g3 = 0,delta_t22_g5 = 0,delta_t23_g4 = -4,delta_t25_g7 = 0,delta_t26_g1 = 0,delta_t27_g1 = 0,delta_t28_g2 = 0,delta_t28_g6 = 0,delta_t2_g0 = -6,delta_t2_g1 = -4,delta_t2_g2 = -7,delta_t2_g4 = -5,delta_t2_g6 = -5,delta_t5_g4 = 0,delta_t6_g1 = 0,delta_t6_g7 = 0,delta_t7_g1 = 0,delta_t8_g6 = 0,delta_t8_g7 = 0,delta_t9_g7 = -5,delta_tid_10_g0 = 5,delta_tid_10_g2 = 0,delta_tid_10_g3 = 5,delta_tid_10_g4 = 5,delta_tid_10_g5 = 5,delta_tid_10_g6 = 5,delta_tid_10_g7 = 5,delta_tid_11_g0 = 6,delta_tid_11_g1 = 0,delta_tid_11_g2 = 0,delta_tid_11_g3 = 1,delta_tid_11_g4 = 0,delta_tid_11_g5 = 0,delta_tid_11_g7 = 6,delta_tid_12_g0 = 0,delta_tid_12_g1 = 0,delta_tid_12_g2 = 0,delta_tid_12_g4 = 0,delta_tid_12_g5 = 0,delta_tid_12_g6 = 0,delta_tid_12_g7 = 0,delta_tid_13_g0 = 0,delta_tid_13_g1 = 0,delta_tid_13_g2 = 0,delta_tid_13_g3 = 0,delta_tid_13_g4 = 0,delta_tid_13_g5 = 0,delta_tid_13_g6 = 0,delta_tid_13_g7 = 0,delta_tid_14_g0 = 0,delta_tid_14_g2 = 0,delta_tid_14_g3 = 0,delta_tid_14_g4 = 0,delta_tid_14_g5 = 0,delta_tid_14_g6 = 0,delta_tid_14_g7 = 0,delta_tid_15_g0 = 0,delta_tid_15_g1 = 0,delta_tid_15_g2 = 0,delta_tid_15_g3 = 0,delta_tid_15_g4 = 0,delta_tid_15_g5 = 0,delta_tid_15_g6 = 0,delta_tid_15_g7 = 0,delta_tid_16_g0 = 0,delta_tid_16_g1 = 0,delta_tid_16_g2 = 0,delta_tid_16_g3 = 0,delta_tid_16_g4 = 0,delta_tid_16_g5 = 0,delta_tid_16_g6 = 0,delta_tid_16_g7 = 0,delta_tid_17_g1 = 0,delta_tid_17_g2 = 0,delta_tid_17_g3 = 0,delta_tid_17_g4 = 0,delta_tid_17_g6 = 0,delta_tid_17_g7 = 0,delta_tid_18_g0 = 0,delta_tid_18_g1 = 0,delta_tid_18_g2 = 4,delta_tid_18_g3 = 0,delta_tid_18_g4 = 4,delta_tid_18_g5 = 4,delta_tid_18_g6 = 4,delta_tid_18_g7 = 4,delta_tid_19_g0 = 6,delta_tid_19_g1 = 6,delta_tid_19_g2 = 0,delta_tid_19_g3 = 0,delta_tid_19_g4 = 6,delta_tid_19_g5 = 6,delta_tid_19_g6 = 6,delta_tid_19_g7 = 6,delta_tid_1_g0 = 0,delta_tid_1_g2 = 0,delta_tid_1_g3 = 4,delta_tid_1_g4 = 6,delta_tid_1_g6 = 0,delta_tid_1_g7 = 5,delta_tid_20_g0 = 0,delta_tid_20_g2 = 0,delta_tid_20_g3 = 0,delta_tid_20_g4 = 0,delta_tid_20_g5 = 0,delta_tid_20_g6 = 0,delta_tid_20_g7 = 0,delta_tid_21_g0 = 0,delta_tid_21_g2 = 0,delta_tid_21_g4 = 0,delta_tid_21_g5 = 0,delta_tid_21_g7 = 0,delta_tid_22_g1 = 0,delta_tid_22_g2 = 0,delta_tid_22_g4 = 0,delta_tid_22_g6 = 0,delta_tid_22_g7 = 0,delta_tid_23_g0 = 0,delta_tid_23_g1 = 6,delta_tid_23_g2 = 3,delta_tid_23_g3 = 5,delta_tid_23_g5 = 0,delta_tid_23_g6 = 5,delta_tid_23_g7 = 5,delta_tid_24_g0 = 0,delta_tid_24_g1 = 0,delta_tid_24_g2 = 0,delta_tid_24_g3 = 6,delta_tid_24_g4 = 0,delta_tid_24_g5 = 0,delta_tid_24_g6 = 0,delta_tid_24_g7 = 0,delta_tid_25_g0 = 0,delta_tid_25_g1 = 0,delta_tid_25_g2 = 0,delta_tid_25_g3 = 0,delta_tid_25_g4 = 0,delta_tid_25_g5 = 0,delta_tid_25_g6 = 0,delta_tid_26_g0 = 0,delta_tid_26_g2 = 0,delta_tid_26_g3 = 0,delta_tid_26_g4 = 0,delta_tid_26_g5 = 0,delta_tid_26_g6 = 0,delta_tid_26_g7 = 0,delta_tid_27_g0 = 0,delta_tid_27_g2 = 0,delta_tid_27_g3 = 0,delta_tid_27_g4 = 0,delta_tid_27_g5 = 0,delta_tid_27_g6 = 0,delta_tid_27_g7 = 0,delta_tid_28_g0 = 0,delta_tid_28_g1 = 0,delta_tid_28_g3 = 0,delta_tid_28_g4 = 0,delta_tid_28_g5 = 0,delta_tid_28_g7 = 0,delta_tid_2_g3 = 1,delta_tid_2_g5 = 5,delta_tid_2_g7 = 5,delta_tid_3_g0 = 0,delta_tid_3_g1 = 7,delta_tid_3_g2 = 7,delta_tid_3_g3 = 0,delta_tid_3_g4 = 7,delta_tid_3_g5 = 7,delta_tid_3_g6 = 7,delta_tid_3_g7 = 7,delta_tid_4_g0 = 0,delta_tid_4_g1 = 0,delta_tid_4_g2 = 0,delta_tid_4_g3 = 0,delta_tid_4_g4 = 0,delta_tid_4_g5 = 0,delta_tid_4_g6 = 0,delta_tid_4_g7 = 0,delta_tid_5_g0 = 0,delta_tid_5_g1 = 0,delta_tid_5_g2 = 0,delta_tid_5_g3 = 0,delta_tid_5_g5 = 0,delta_tid_5_g6 = 0,delta_tid_5_g7 = 0,delta_tid_6_g0 = 0,delta_tid_6_g2 = 0,delta_tid_6_g3 = 0,delta_tid_6_g4 = 0,delta_tid_6_g5 = 0,delta_tid_6_g6 = 0,delta_tid_7_g0 = 0,delta_tid_7_g2 = 0,delta_tid_7_g3 = 0,delta_tid_7_g4 = 0,delta_tid_7_g5 = 0,delta_tid_7_g6 = 0,delta_tid_7_g7 = 0,delta_tid_8_g0 = 0,delta_tid_8_g1 = 0,delta_tid_8_g2 = 0,delta_tid_8_g3 = 0,delta_tid_8_g4 = 0,delta_tid_8_g5 = 0,delta_tid_9_g0 = 0,delta_tid_9_g1 = 4,delta_tid_9_g2 = 1,delta_tid_9_g3 = 5,delta_tid_9_g4 = 0,delta_tid_9_g5 = 5,delta_tid_9_g6 = 0,ind_0_0 = 3,ind_0_1 = 0,ind_1_0 = 0,ind_1_1 = 3,ind_1_2 = 0,ind_2_0 = 0,ind_2_1 = 2,ind_2_2 = 0,ind_3_0 = 0,ind_3_1 = 2,ind_4_0 = 0,ind_4_1 = 0,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,initialQuantity_3 = 0,initialQuantity_4 = 0,initialQuantity_5 = 0,initialQuantity_6 = 0,initialQuantity_7 = 0,isUsed_1 = 1,isUsed_10 = 1,isUsed_11 = 1,isUsed_12 = 0,isUsed_13 = 0,isUsed_14 = 0,isUsed_15 = 0,isUsed_16 = 0,isUsed_17 = 0,isUsed_18 = 1,isUsed_19 = 1,isUsed_2 = 1,isUsed_20 = 0,isUsed_21 = 0,isUsed_22 = 0,isUsed_23 = 1,isUsed_24 = 1,isUsed_25 = 0,isUsed_26 = 0,isUsed_27 = 0,isUsed_28 = 0,isUsed_3 = 1,isUsed_4 = 0,isUsed_5 = 0,isUsed_6 = 0,isUsed_7 = 0,isUsed_8 = 0,isUsed_9 = 1,partialSum_0_0 = 0,partialSum_0_1 = 0,partialSum_0_10 = 11,partialSum_0_11 = 11,partialSum_0_12 = 11,partialSum_0_13 = 11,partialSum_0_14 = 11,partialSum_0_2 = 0,partialSum_0_3 = 6,partialSum_0_4 = 6,partialSum_0_5 = 0,partialSum_0_6 = 6,partialSum_0_7 = 6,partialSum_0_8 = 11,partialSum_0_9 = 11,partialSum_1_0 = 7,partialSum_1_1 = 1,partialSum_1_10 = 3,partialSum_1_11 = 3,partialSum_1_12 = 3,partialSum_1_13 = 3,partialSum_1_14 = 3,partialSum_1_2 = 1,partialSum_1_3 = 7,partialSum_1_4 = 11,partialSum_1_5 = 7,partialSum_1_6 = 7,partialSum_1_7 = 13,partialSum_1_8 = 3,partialSum_1_9 = 3,partialSum_2_0 = 7,partialSum_2_1 = 7,partialSum_2_10 = 8,partialSum_2_11 = 8,partialSum_2_12 = 8,partialSum_2_13 = 8,partialSum_2_14 = 8,partialSum_2_2 = 11,partialSum_2_3 = 11,partialSum_2_4 = 12,partialSum_2_5 = 5,partialSum_2_6 = 5,partialSum_2_7 = 8,partialSum_2_8 = 8,partialSum_2_9 = 8,partialSum_3_0 = 0,partialSum_3_1 = 4,partialSum_3_10 = 27,partialSum_3_11 = 27,partialSum_3_12 = 27,partialSum_3_13 = 27,partialSum_3_14 = 27,partialSum_3_2 = 4,partialSum_3_3 = 4,partialSum_3_4 = 9,partialSum_3_5 = 10,partialSum_3_6 = 11,partialSum_3_7 = 16,partialSum_3_8 = 21,partialSum_3_9 = 27,partialSum_4_0 = 7,partialSum_4_1 = 13,partialSum_4_10 = 19,partialSum_4_11 = 19,partialSum_4_12 = 19,partialSum_4_13 = 19,partialSum_4_14 = 19,partialSum_4_2 = 17,partialSum_4_3 = 23,partialSum_4_4 = 23,partialSum_4_5 = 18,partialSum_4_6 = 18,partialSum_4_7 = 14,partialSum_4_8 = 19,partialSum_4_9 = 19,partialSum_5_0 = 7,partialSum_5_1 = 0,partialSum_5_10 = 25,partialSum_5_11 = 25,partialSum_5_12 = 25,partialSum_5_13 = 25,partialSum_5_14 = 25,partialSum_5_2 = 4,partialSum_5_3 = 10,partialSum_5_4 = 15,partialSum_5_5 = 20,partialSum_5_6 = 20,partialSum_5_7 = 20,partialSum_5_8 = 25,partialSum_5_9 = 25,partialSum_6_0 = 7,partialSum_6_1 = 7,partialSum_6_10 = 18,partialSum_6_11 = 18,partialSum_6_12 = 18,partialSum_6_13 = 18,partialSum_6_14 = 18,partialSum_6_2 = 11,partialSum_6_3 = 17,partialSum_6_4 = 17,partialSum_6_5 = 12,partialSum_6_6 = 8,partialSum_6_7 = 13,partialSum_6_8 = 18,partialSum_6_9 = 18,partialSum_7_0 = 7,partialSum_7_1 = 12,partialSum_7_10 = 38,partialSum_7_11 = 38,partialSum_7_12 = 38,partialSum_7_13 = 38,partialSum_7_14 = 38,partialSum_7_2 = 16,partialSum_7_3 = 22,partialSum_7_4 = 17,partialSum_7_5 = 22,partialSum_7_6 = 28,partialSum_7_7 = 33,partialSum_7_8 = 38,partialSum_7_9 = 38,t1 = 3,t10 = 24,t11 = 0,t12 = 0,t13 = 0,t14 = 0,t15 = 0,t2 = 1,t3 = 18,t4 = 19,t5 = 9,t6 = 2,t7 = 11,t8 = 23,t9 = 10]",
-        problem.store.toStringOrderedVars());
+    assertThat(problem.store.toStringOrderedVars())
+        .isEqualTo(
+            "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,0of-g3 = 0,0of-g4 = 0,0of-g5 = 0,0of-g6 = 0,0of-g7 = 0,bidCost1 = -477,bidCost2 = -630,bidCost3 = -540,bidCost4 = -78,bidCost5 = 0,cost = -1725,deltaI_g0t0 = 0,deltaI_g0t1 = 0,deltaI_g0t10 = 0,deltaI_g0t11 = 0,deltaI_g0t12 = 0,deltaI_g0t13 = 0,deltaI_g0t14 = 0,deltaI_g0t2 = 0,deltaI_g0t3 = 0,deltaI_g0t4 = 0,deltaI_g0t5 = -6,deltaI_g0t6 = 0,deltaI_g0t7 = 0,deltaI_g0t8 = 0,deltaI_g0t9 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -6,deltaI_g1t10 = 0,deltaI_g1t11 = 0,deltaI_g1t12 = 0,deltaI_g1t13 = 0,deltaI_g1t14 = 0,deltaI_g1t2 = 0,deltaI_g1t3 = 0,deltaI_g1t4 = -3,deltaI_g1t5 = -4,deltaI_g1t6 = 0,deltaI_g1t7 = 0,deltaI_g1t8 = -10,deltaI_g1t9 = 0,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t10 = 0,deltaI_g2t11 = 0,deltaI_g2t12 = 0,deltaI_g2t13 = 0,deltaI_g2t14 = 0,deltaI_g2t2 = 0,deltaI_g2t3 = 0,deltaI_g2t4 = -5,deltaI_g2t5 = -7,deltaI_g2t6 = 0,deltaI_g2t7 = -4,deltaI_g2t8 = 0,deltaI_g2t9 = 0,deltaI_g3t0 = 0,deltaI_g3t1 = 0,deltaI_g3t10 = 0,deltaI_g3t11 = 0,deltaI_g3t12 = 0,deltaI_g3t13 = 0,deltaI_g3t14 = 0,deltaI_g3t2 = 0,deltaI_g3t3 = 0,deltaI_g3t4 = 0,deltaI_g3t5 = -6,deltaI_g3t6 = -5,deltaI_g3t7 = 0,deltaI_g3t8 = 0,deltaI_g3t9 = 0,deltaI_g4t0 = 0,deltaI_g4t1 = 0,deltaI_g4t10 = 0,deltaI_g4t11 = 0,deltaI_g4t12 = 0,deltaI_g4t13 = 0,deltaI_g4t14 = 0,deltaI_g4t2 = 0,deltaI_g4t3 = 0,deltaI_g4t4 = -6,deltaI_g4t5 = -5,deltaI_g4t6 = 0,deltaI_g4t7 = -4,deltaI_g4t8 = 0,deltaI_g4t9 = 0,deltaI_g5t0 = 0,deltaI_g5t1 = -7,deltaI_g5t10 = 0,deltaI_g5t11 = 0,deltaI_g5t12 = 0,deltaI_g5t13 = 0,deltaI_g5t14 = 0,deltaI_g5t2 = 0,deltaI_g5t3 = 0,deltaI_g5t4 = 0,deltaI_g5t5 = 0,deltaI_g5t6 = 0,deltaI_g5t7 = 0,deltaI_g5t8 = 0,deltaI_g5t9 = 0,deltaI_g6t0 = 0,deltaI_g6t1 = 0,deltaI_g6t10 = 0,deltaI_g6t11 = 0,deltaI_g6t12 = 0,deltaI_g6t13 = 0,deltaI_g6t14 = 0,deltaI_g6t2 = 0,deltaI_g6t3 = 0,deltaI_g6t4 = 0,deltaI_g6t5 = -5,deltaI_g6t6 = -4,deltaI_g6t7 = 0,deltaI_g6t8 = 0,deltaI_g6t9 = 0,deltaI_g7t0 = 0,deltaI_g7t1 = 0,deltaI_g7t10 = 0,deltaI_g7t11 = 0,deltaI_g7t12 = 0,deltaI_g7t13 = 0,deltaI_g7t14 = 0,deltaI_g7t2 = 0,deltaI_g7t3 = 0,deltaI_g7t4 = -5,deltaI_g7t5 = 0,deltaI_g7t6 = 0,deltaI_g7t7 = 0,deltaI_g7t8 = 0,deltaI_g7t9 = 0,deltaO_g0t0 = 0,deltaO_g0t1 = 0,deltaO_g0t10 = 0,deltaO_g0t11 = 0,deltaO_g0t12 = 0,deltaO_g0t13 = 0,deltaO_g0t14 = 0,deltaO_g0t2 = 0,deltaO_g0t3 = 6,deltaO_g0t4 = 0,deltaO_g0t5 = 0,deltaO_g0t6 = 6,deltaO_g0t7 = 0,deltaO_g0t8 = 5,deltaO_g0t9 = 0,deltaO_g1t0 = 7,deltaO_g1t1 = 0,deltaO_g1t10 = 0,deltaO_g1t11 = 0,deltaO_g1t12 = 0,deltaO_g1t13 = 0,deltaO_g1t14 = 0,deltaO_g1t2 = 0,deltaO_g1t3 = 6,deltaO_g1t4 = 7,deltaO_g1t5 = 0,deltaO_g1t6 = 0,deltaO_g1t7 = 6,deltaO_g1t8 = 0,deltaO_g1t9 = 0,deltaO_g2t0 = 7,deltaO_g2t1 = 0,deltaO_g2t10 = 0,deltaO_g2t11 = 0,deltaO_g2t12 = 0,deltaO_g2t13 = 0,deltaO_g2t14 = 0,deltaO_g2t2 = 4,deltaO_g2t3 = 0,deltaO_g2t4 = 6,deltaO_g2t5 = 0,deltaO_g2t6 = 0,deltaO_g2t7 = 7,deltaO_g2t8 = 0,deltaO_g2t9 = 0,deltaO_g3t0 = 0,deltaO_g3t1 = 4,deltaO_g3t10 = 0,deltaO_g3t11 = 0,deltaO_g3t12 = 0,deltaO_g3t13 = 0,deltaO_g3t14 = 0,deltaO_g3t2 = 0,deltaO_g3t3 = 0,deltaO_g3t4 = 5,deltaO_g3t5 = 7,deltaO_g3t6 = 6,deltaO_g3t7 = 5,deltaO_g3t8 = 5,deltaO_g3t9 = 6,deltaO_g4t0 = 7,deltaO_g4t1 = 6,deltaO_g4t10 = 0,deltaO_g4t11 = 0,deltaO_g4t12 = 0,deltaO_g4t13 = 0,deltaO_g4t14 = 0,deltaO_g4t2 = 4,deltaO_g4t3 = 6,deltaO_g4t4 = 6,deltaO_g4t5 = 0,deltaO_g4t6 = 0,deltaO_g4t7 = 0,deltaO_g4t8 = 5,deltaO_g4t9 = 0,deltaO_g5t0 = 7,deltaO_g5t1 = 0,deltaO_g5t10 = 0,deltaO_g5t11 = 0,deltaO_g5t12 = 0,deltaO_g5t13 = 0,deltaO_g5t14 = 0,deltaO_g5t2 = 4,deltaO_g5t3 = 6,deltaO_g5t4 = 5,deltaO_g5t5 = 5,deltaO_g5t6 = 0,deltaO_g5t7 = 0,deltaO_g5t8 = 5,deltaO_g5t9 = 0,deltaO_g6t0 = 7,deltaO_g6t1 = 0,deltaO_g6t10 = 0,deltaO_g6t11 = 0,deltaO_g6t12 = 0,deltaO_g6t13 = 0,deltaO_g6t14 = 0,deltaO_g6t2 = 4,deltaO_g6t3 = 6,deltaO_g6t4 = 0,deltaO_g6t5 = 0,deltaO_g6t6 = 0,deltaO_g6t7 = 5,deltaO_g6t8 = 5,deltaO_g6t9 = 0,deltaO_g7t0 = 7,deltaO_g7t1 = 5,deltaO_g7t10 = 0,deltaO_g7t11 = 0,deltaO_g7t12 = 0,deltaO_g7t13 = 0,deltaO_g7t14 = 0,deltaO_g7t2 = 4,deltaO_g7t3 = 6,deltaO_g7t4 = 0,deltaO_g7t5 = 5,deltaO_g7t6 = 6,deltaO_g7t7 = 5,deltaO_g7t8 = 5,deltaO_g7t9 = 0,delta_t10_g1 = -10,delta_t11_g6 = -4,delta_t12_g3 = 0,delta_t14_g1 = 0,delta_t17_g0 = 0,delta_t17_g5 = 0,delta_t1_g1 = -6,delta_t1_g5 = -7,delta_t20_g1 = 0,delta_t21_g1 = 0,delta_t21_g3 = 0,delta_t21_g6 = 0,delta_t22_g0 = 0,delta_t22_g3 = 0,delta_t22_g5 = 0,delta_t23_g4 = -4,delta_t25_g7 = 0,delta_t26_g1 = 0,delta_t27_g1 = 0,delta_t28_g2 = 0,delta_t28_g6 = 0,delta_t2_g0 = -6,delta_t2_g1 = -4,delta_t2_g2 = -7,delta_t2_g4 = -5,delta_t2_g6 = -5,delta_t5_g4 = 0,delta_t6_g1 = 0,delta_t6_g7 = 0,delta_t7_g1 = 0,delta_t8_g6 = 0,delta_t8_g7 = 0,delta_t9_g7 = -5,delta_tid_10_g0 = 5,delta_tid_10_g2 = 0,delta_tid_10_g3 = 5,delta_tid_10_g4 = 5,delta_tid_10_g5 = 5,delta_tid_10_g6 = 5,delta_tid_10_g7 = 5,delta_tid_11_g0 = 6,delta_tid_11_g1 = 0,delta_tid_11_g2 = 0,delta_tid_11_g3 = 1,delta_tid_11_g4 = 0,delta_tid_11_g5 = 0,delta_tid_11_g7 = 6,delta_tid_12_g0 = 0,delta_tid_12_g1 = 0,delta_tid_12_g2 = 0,delta_tid_12_g4 = 0,delta_tid_12_g5 = 0,delta_tid_12_g6 = 0,delta_tid_12_g7 = 0,delta_tid_13_g0 = 0,delta_tid_13_g1 = 0,delta_tid_13_g2 = 0,delta_tid_13_g3 = 0,delta_tid_13_g4 = 0,delta_tid_13_g5 = 0,delta_tid_13_g6 = 0,delta_tid_13_g7 = 0,delta_tid_14_g0 = 0,delta_tid_14_g2 = 0,delta_tid_14_g3 = 0,delta_tid_14_g4 = 0,delta_tid_14_g5 = 0,delta_tid_14_g6 = 0,delta_tid_14_g7 = 0,delta_tid_15_g0 = 0,delta_tid_15_g1 = 0,delta_tid_15_g2 = 0,delta_tid_15_g3 = 0,delta_tid_15_g4 = 0,delta_tid_15_g5 = 0,delta_tid_15_g6 = 0,delta_tid_15_g7 = 0,delta_tid_16_g0 = 0,delta_tid_16_g1 = 0,delta_tid_16_g2 = 0,delta_tid_16_g3 = 0,delta_tid_16_g4 = 0,delta_tid_16_g5 = 0,delta_tid_16_g6 = 0,delta_tid_16_g7 = 0,delta_tid_17_g1 = 0,delta_tid_17_g2 = 0,delta_tid_17_g3 = 0,delta_tid_17_g4 = 0,delta_tid_17_g6 = 0,delta_tid_17_g7 = 0,delta_tid_18_g0 = 0,delta_tid_18_g1 = 0,delta_tid_18_g2 = 4,delta_tid_18_g3 = 0,delta_tid_18_g4 = 4,delta_tid_18_g5 = 4,delta_tid_18_g6 = 4,delta_tid_18_g7 = 4,delta_tid_19_g0 = 6,delta_tid_19_g1 = 6,delta_tid_19_g2 = 0,delta_tid_19_g3 = 0,delta_tid_19_g4 = 6,delta_tid_19_g5 = 6,delta_tid_19_g6 = 6,delta_tid_19_g7 = 6,delta_tid_1_g0 = 0,delta_tid_1_g2 = 0,delta_tid_1_g3 = 4,delta_tid_1_g4 = 6,delta_tid_1_g6 = 0,delta_tid_1_g7 = 5,delta_tid_20_g0 = 0,delta_tid_20_g2 = 0,delta_tid_20_g3 = 0,delta_tid_20_g4 = 0,delta_tid_20_g5 = 0,delta_tid_20_g6 = 0,delta_tid_20_g7 = 0,delta_tid_21_g0 = 0,delta_tid_21_g2 = 0,delta_tid_21_g4 = 0,delta_tid_21_g5 = 0,delta_tid_21_g7 = 0,delta_tid_22_g1 = 0,delta_tid_22_g2 = 0,delta_tid_22_g4 = 0,delta_tid_22_g6 = 0,delta_tid_22_g7 = 0,delta_tid_23_g0 = 0,delta_tid_23_g1 = 6,delta_tid_23_g2 = 3,delta_tid_23_g3 = 5,delta_tid_23_g5 = 0,delta_tid_23_g6 = 5,delta_tid_23_g7 = 5,delta_tid_24_g0 = 0,delta_tid_24_g1 = 0,delta_tid_24_g2 = 0,delta_tid_24_g3 = 6,delta_tid_24_g4 = 0,delta_tid_24_g5 = 0,delta_tid_24_g6 = 0,delta_tid_24_g7 = 0,delta_tid_25_g0 = 0,delta_tid_25_g1 = 0,delta_tid_25_g2 = 0,delta_tid_25_g3 = 0,delta_tid_25_g4 = 0,delta_tid_25_g5 = 0,delta_tid_25_g6 = 0,delta_tid_26_g0 = 0,delta_tid_26_g2 = 0,delta_tid_26_g3 = 0,delta_tid_26_g4 = 0,delta_tid_26_g5 = 0,delta_tid_26_g6 = 0,delta_tid_26_g7 = 0,delta_tid_27_g0 = 0,delta_tid_27_g2 = 0,delta_tid_27_g3 = 0,delta_tid_27_g4 = 0,delta_tid_27_g5 = 0,delta_tid_27_g6 = 0,delta_tid_27_g7 = 0,delta_tid_28_g0 = 0,delta_tid_28_g1 = 0,delta_tid_28_g3 = 0,delta_tid_28_g4 = 0,delta_tid_28_g5 = 0,delta_tid_28_g7 = 0,delta_tid_2_g3 = 1,delta_tid_2_g5 = 5,delta_tid_2_g7 = 5,delta_tid_3_g0 = 0,delta_tid_3_g1 = 7,delta_tid_3_g2 = 7,delta_tid_3_g3 = 0,delta_tid_3_g4 = 7,delta_tid_3_g5 = 7,delta_tid_3_g6 = 7,delta_tid_3_g7 = 7,delta_tid_4_g0 = 0,delta_tid_4_g1 = 0,delta_tid_4_g2 = 0,delta_tid_4_g3 = 0,delta_tid_4_g4 = 0,delta_tid_4_g5 = 0,delta_tid_4_g6 = 0,delta_tid_4_g7 = 0,delta_tid_5_g0 = 0,delta_tid_5_g1 = 0,delta_tid_5_g2 = 0,delta_tid_5_g3 = 0,delta_tid_5_g5 = 0,delta_tid_5_g6 = 0,delta_tid_5_g7 = 0,delta_tid_6_g0 = 0,delta_tid_6_g2 = 0,delta_tid_6_g3 = 0,delta_tid_6_g4 = 0,delta_tid_6_g5 = 0,delta_tid_6_g6 = 0,delta_tid_7_g0 = 0,delta_tid_7_g2 = 0,delta_tid_7_g3 = 0,delta_tid_7_g4 = 0,delta_tid_7_g5 = 0,delta_tid_7_g6 = 0,delta_tid_7_g7 = 0,delta_tid_8_g0 = 0,delta_tid_8_g1 = 0,delta_tid_8_g2 = 0,delta_tid_8_g3 = 0,delta_tid_8_g4 = 0,delta_tid_8_g5 = 0,delta_tid_9_g0 = 0,delta_tid_9_g1 = 4,delta_tid_9_g2 = 1,delta_tid_9_g3 = 5,delta_tid_9_g4 = 0,delta_tid_9_g5 = 5,delta_tid_9_g6 = 0,ind_0_0 = 3,ind_0_1 = 0,ind_1_0 = 0,ind_1_1 = 3,ind_1_2 = 0,ind_2_0 = 0,ind_2_1 = 2,ind_2_2 = 0,ind_3_0 = 0,ind_3_1 = 2,ind_4_0 = 0,ind_4_1 = 0,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,initialQuantity_3 = 0,initialQuantity_4 = 0,initialQuantity_5 = 0,initialQuantity_6 = 0,initialQuantity_7 = 0,isUsed_1 = 1,isUsed_10 = 1,isUsed_11 = 1,isUsed_12 = 0,isUsed_13 = 0,isUsed_14 = 0,isUsed_15 = 0,isUsed_16 = 0,isUsed_17 = 0,isUsed_18 = 1,isUsed_19 = 1,isUsed_2 = 1,isUsed_20 = 0,isUsed_21 = 0,isUsed_22 = 0,isUsed_23 = 1,isUsed_24 = 1,isUsed_25 = 0,isUsed_26 = 0,isUsed_27 = 0,isUsed_28 = 0,isUsed_3 = 1,isUsed_4 = 0,isUsed_5 = 0,isUsed_6 = 0,isUsed_7 = 0,isUsed_8 = 0,isUsed_9 = 1,partialSum_0_0 = 0,partialSum_0_1 = 0,partialSum_0_10 = 11,partialSum_0_11 = 11,partialSum_0_12 = 11,partialSum_0_13 = 11,partialSum_0_14 = 11,partialSum_0_2 = 0,partialSum_0_3 = 6,partialSum_0_4 = 6,partialSum_0_5 = 0,partialSum_0_6 = 6,partialSum_0_7 = 6,partialSum_0_8 = 11,partialSum_0_9 = 11,partialSum_1_0 = 7,partialSum_1_1 = 1,partialSum_1_10 = 3,partialSum_1_11 = 3,partialSum_1_12 = 3,partialSum_1_13 = 3,partialSum_1_14 = 3,partialSum_1_2 = 1,partialSum_1_3 = 7,partialSum_1_4 = 11,partialSum_1_5 = 7,partialSum_1_6 = 7,partialSum_1_7 = 13,partialSum_1_8 = 3,partialSum_1_9 = 3,partialSum_2_0 = 7,partialSum_2_1 = 7,partialSum_2_10 = 8,partialSum_2_11 = 8,partialSum_2_12 = 8,partialSum_2_13 = 8,partialSum_2_14 = 8,partialSum_2_2 = 11,partialSum_2_3 = 11,partialSum_2_4 = 12,partialSum_2_5 = 5,partialSum_2_6 = 5,partialSum_2_7 = 8,partialSum_2_8 = 8,partialSum_2_9 = 8,partialSum_3_0 = 0,partialSum_3_1 = 4,partialSum_3_10 = 27,partialSum_3_11 = 27,partialSum_3_12 = 27,partialSum_3_13 = 27,partialSum_3_14 = 27,partialSum_3_2 = 4,partialSum_3_3 = 4,partialSum_3_4 = 9,partialSum_3_5 = 10,partialSum_3_6 = 11,partialSum_3_7 = 16,partialSum_3_8 = 21,partialSum_3_9 = 27,partialSum_4_0 = 7,partialSum_4_1 = 13,partialSum_4_10 = 19,partialSum_4_11 = 19,partialSum_4_12 = 19,partialSum_4_13 = 19,partialSum_4_14 = 19,partialSum_4_2 = 17,partialSum_4_3 = 23,partialSum_4_4 = 23,partialSum_4_5 = 18,partialSum_4_6 = 18,partialSum_4_7 = 14,partialSum_4_8 = 19,partialSum_4_9 = 19,partialSum_5_0 = 7,partialSum_5_1 = 0,partialSum_5_10 = 25,partialSum_5_11 = 25,partialSum_5_12 = 25,partialSum_5_13 = 25,partialSum_5_14 = 25,partialSum_5_2 = 4,partialSum_5_3 = 10,partialSum_5_4 = 15,partialSum_5_5 = 20,partialSum_5_6 = 20,partialSum_5_7 = 20,partialSum_5_8 = 25,partialSum_5_9 = 25,partialSum_6_0 = 7,partialSum_6_1 = 7,partialSum_6_10 = 18,partialSum_6_11 = 18,partialSum_6_12 = 18,partialSum_6_13 = 18,partialSum_6_14 = 18,partialSum_6_2 = 11,partialSum_6_3 = 17,partialSum_6_4 = 17,partialSum_6_5 = 12,partialSum_6_6 = 8,partialSum_6_7 = 13,partialSum_6_8 = 18,partialSum_6_9 = 18,partialSum_7_0 = 7,partialSum_7_1 = 12,partialSum_7_10 = 38,partialSum_7_11 = 38,partialSum_7_12 = 38,partialSum_7_13 = 38,partialSum_7_14 = 38,partialSum_7_2 = 16,partialSum_7_3 = 22,partialSum_7_4 = 17,partialSum_7_5 = 22,partialSum_7_6 = 28,partialSum_7_7 = 33,partialSum_7_8 = 38,partialSum_7_9 = 38,t1 = 3,t10 = 24,t11 = 0,t12 = 0,t13 = 0,t14 = 0,t15 = 0,t2 = 1,t3 = 18,t4 = 19,t5 = 9,t6 = 2,t7 = 11,t8 = 23,t9 = 10]");
 
     problem = new MUCA();
     problem.filename = "src/test/resources/testset1.auct";
     problem.model();
     problem.searchSpecial();
-    assertEquals(
-        "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,bidCost1 = -100,cost = -100,deltaI_g0t0 = 0,deltaI_g0t1 = -1,deltaI_g0t2 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -1,deltaI_g1t2 = -1,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t2 = -1,deltaO_g0t0 = 1,deltaO_g0t1 = 0,deltaO_g0t2 = 0,deltaO_g1t0 = 1,deltaO_g1t1 = 1,deltaO_g1t2 = 0,deltaO_g2t0 = 0,deltaO_g2t1 = 1,deltaO_g2t2 = 2,delta_t2_g0 = -1,delta_t3_g1 = -1,delta_tid_1_g0 = 1,delta_tid_1_g1 = 1,delta_tid_1_g2 = 0,delta_tid_2_g1 = 0,delta_tid_2_g2 = 1,delta_tid_3_g0 = 0,delta_tid_3_g2 = 1,ind_0_0 = 3,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,isUsed_1 = 1,isUsed_2 = 1,isUsed_3 = 1,partialSum_0_0 = 1,partialSum_0_1 = 0,partialSum_0_2 = 0,partialSum_1_0 = 1,partialSum_1_1 = 1,partialSum_1_2 = 0,partialSum_2_0 = 0,partialSum_2_1 = 1,partialSum_2_2 = 2,t1 = 1,t2 = 2,t3 = 3]",
-        problem.store.toStringOrderedVars());
+    assertThat(problem.store.toStringOrderedVars())
+        .isEqualTo(
+            "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,bidCost1 = -100,cost = -100,deltaI_g0t0 = 0,deltaI_g0t1 = -1,deltaI_g0t2 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -1,deltaI_g1t2 = -1,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t2 = -1,deltaO_g0t0 = 1,deltaO_g0t1 = 0,deltaO_g0t2 = 0,deltaO_g1t0 = 1,deltaO_g1t1 = 1,deltaO_g1t2 = 0,deltaO_g2t0 = 0,deltaO_g2t1 = 1,deltaO_g2t2 = 2,delta_t2_g0 = -1,delta_t3_g1 = -1,delta_tid_1_g0 = 1,delta_tid_1_g1 = 1,delta_tid_1_g2 = 0,delta_tid_2_g1 = 0,delta_tid_2_g2 = 1,delta_tid_3_g0 = 0,delta_tid_3_g2 = 1,ind_0_0 = 3,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,isUsed_1 = 1,isUsed_2 = 1,isUsed_3 = 1,partialSum_0_0 = 1,partialSum_0_1 = 0,partialSum_0_2 = 0,partialSum_1_0 = 1,partialSum_1_1 = 1,partialSum_1_2 = 0,partialSum_2_0 = 0,partialSum_2_1 = 1,partialSum_2_2 = 2,t1 = 1,t2 = 2,t3 = 3]");
 
     problem = new MUCA();
     problem.filename = "src/test/resources/testset2.auct";
     problem.model();
     problem.searchSpecial();
-    assertEquals(
-        "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,bidCost1 = -100,cost = -100,deltaI_g0t0 = 0,deltaI_g0t1 = -1,deltaI_g0t2 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -1,deltaI_g1t2 = -1,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t2 = -1,deltaO_g0t0 = 1,deltaO_g0t1 = 0,deltaO_g0t2 = 0,deltaO_g1t0 = 1,deltaO_g1t1 = 1,deltaO_g1t2 = 0,deltaO_g2t0 = 0,deltaO_g2t1 = 1,deltaO_g2t2 = 1,delta_t2_g0 = -1,delta_t3_g1 = -1,delta_tid_1_g0 = 1,delta_tid_1_g1 = 1,delta_tid_1_g2 = 0,delta_tid_2_g1 = 0,delta_tid_2_g2 = 1,delta_tid_3_g0 = 0,delta_tid_3_g2 = 0,ind_0_0 = 3,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,isUsed_1 = 1,isUsed_2 = 1,isUsed_3 = 1,partialSum_0_0 = 1,partialSum_0_1 = 0,partialSum_0_2 = 0,partialSum_1_0 = 1,partialSum_1_1 = 1,partialSum_1_2 = 0,partialSum_2_0 = 0,partialSum_2_1 = 1,partialSum_2_2 = 1,t1 = 1,t2 = 2,t3 = 3]",
-        problem.store.toStringOrderedVars());
+    assertThat(problem.store.toStringOrderedVars())
+        .isEqualTo(
+            "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,bidCost1 = -100,cost = -100,deltaI_g0t0 = 0,deltaI_g0t1 = -1,deltaI_g0t2 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -1,deltaI_g1t2 = -1,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t2 = -1,deltaO_g0t0 = 1,deltaO_g0t1 = 0,deltaO_g0t2 = 0,deltaO_g1t0 = 1,deltaO_g1t1 = 1,deltaO_g1t2 = 0,deltaO_g2t0 = 0,deltaO_g2t1 = 1,deltaO_g2t2 = 1,delta_t2_g0 = -1,delta_t3_g1 = -1,delta_tid_1_g0 = 1,delta_tid_1_g1 = 1,delta_tid_1_g2 = 0,delta_tid_2_g1 = 0,delta_tid_2_g2 = 1,delta_tid_3_g0 = 0,delta_tid_3_g2 = 0,ind_0_0 = 3,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,isUsed_1 = 1,isUsed_2 = 1,isUsed_3 = 1,partialSum_0_0 = 1,partialSum_0_1 = 0,partialSum_0_2 = 0,partialSum_1_0 = 1,partialSum_1_1 = 1,partialSum_1_2 = 0,partialSum_2_0 = 0,partialSum_2_1 = 1,partialSum_2_2 = 1,t1 = 1,t2 = 2,t3 = 3]");
   }
 
   @Test
@@ -149,8 +149,8 @@ public class ExampleBasedTest {
         IO.println("Solution(s) found");
       }
 
-      assertEquals(1, example.search.getSolutionListener().solutionsNo());
-      assertEquals(solutions[i / 10], example.store.toStringOrderedVars());
+      assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
+      assertThat(example.store.toStringOrderedVars()).isEqualTo(solutions[i / 10]);
     }
   }
 
@@ -171,7 +171,7 @@ public class ExampleBasedTest {
         "[x0_0 = 3,x0_1 = 4,x0_10 = 0,x0_11 = 10,x0_12 = 2,x0_13 = 19,x0_14 = 6,x0_15 = 9,x0_16 = 12,x0_17 = 5,x0_18 = 18,x0_19 = 7,x0_2 = 21,x0_20 = 14,x0_21 = 11,x0_22 = 8,x0_23 = 17,x0_24 = 1,x0_3 = 23,x0_4 = 24,x0_5 = 13,x0_6 = 22,x0_7 = 15,x0_8 = 16,x0_9 = 20,x10_0 = 11,x10_1 = 9,x10_10 = 15,x10_11 = 7,x10_12 = 19,x10_13 = 13,x10_14 = 24,x10_15 = 14,x10_16 = 16,x10_17 = 6,x10_18 = 12,x10_19 = 1,x10_2 = 23,x10_20 = 5,x10_21 = 22,x10_22 = 0,x10_23 = 21,x10_24 = 2,x10_3 = 20,x10_4 = 4,x10_5 = 18,x10_6 = 10,x10_7 = 17,x10_8 = 8,x10_9 = 3,x11_0 = 19,x11_1 = 6,x11_10 = 21,x11_11 = 24,x11_12 = 20,x11_13 = 15,x11_14 = 12,x11_15 = 2,x11_16 = 13,x11_17 = 17,x11_18 = 7,x11_19 = 4,x11_2 = 8,x11_20 = 11,x11_21 = 16,x11_22 = 1,x11_23 = 18,x11_24 = 5,x11_3 = 22,x11_4 = 3,x11_5 = 14,x11_6 = 23,x11_7 = 0,x11_8 = 9,x11_9 = 10,x12_0 = 21,x12_1 = 3,x12_10 = 6,x12_11 = 12,x12_12 = 24,x12_13 = 2,x12_14 = 1,x12_15 = 19,x12_16 = 0,x12_17 = 11,x12_18 = 20,x12_19 = 5,x12_2 = 14,x12_20 = 10,x12_21 = 15,x12_22 = 22,x12_23 = 8,x12_24 = 18,x12_3 = 4,x12_4 = 7,x12_5 = 9,x12_6 = 17,x12_7 = 13,x12_8 = 23,x12_9 = 16,x13_0 = 16,x13_1 = 7,x13_10 = 9,x13_11 = 19,x13_12 = 22,x13_13 = 23,x13_14 = 20,x13_15 = 18,x13_16 = 3,x13_17 = 10,x13_18 = 8,x13_19 = 14,x13_2 = 0,x13_20 = 15,x13_21 = 24,x13_22 = 12,x13_23 = 13,x13_24 = 11,x13_3 = 17,x13_4 = 21,x13_5 = 6,x13_6 = 4,x13_7 = 2,x13_8 = 1,x13_9 = 5,x14_0 = 20,x14_1 = 10,x14_10 = 17,x14_11 = 6,x14_12 = 7,x14_13 = 12,x14_14 = 3,x14_15 = 5,x14_16 = 15,x14_17 = 13,x14_18 = 4,x14_19 = 18,x14_2 = 22,x14_20 = 0,x14_21 = 9,x14_22 = 23,x14_23 = 24,x14_24 = 8,x14_3 = 14,x14_4 = 16,x14_5 = 19,x14_6 = 11,x14_7 = 1,x14_8 = 2,x14_9 = 21,x15_0 = 4,x15_1 = 11,x15_10 = 5,x15_11 = 0,x15_12 = 15,x15_13 = 20,x15_14 = 9,x15_15 = 12,x15_16 = 1,x15_17 = 8,x15_18 = 2,x15_19 = 3,x15_2 = 17,x15_20 = 22,x15_21 = 23,x15_22 = 16,x15_23 = 10,x15_24 = 13,x15_3 = 24,x15_4 = 14,x15_5 = 7,x15_6 = 21,x15_7 = 18,x15_8 = 6,x15_9 = 19,x16_0 = 10,x16_1 = 2,x16_10 = 22,x16_11 = 23,x16_12 = 5,x16_13 = 16,x16_14 = 4,x16_15 = 3,x16_16 = 17,x16_17 = 1,x16_18 = 14,x16_19 = 6,x16_2 = 24,x16_20 = 8,x16_21 = 21,x16_22 = 15,x16_23 = 11,x16_24 = 9,x16_3 = 19,x16_4 = 12,x16_5 = 0,x16_6 = 18,x16_7 = 20,x16_8 = 7,x16_9 = 13,x17_0 = 14,x17_1 = 12,x17_10 = 13,x17_11 = 15,x17_12 = 6,x17_13 = 1,x17_14 = 8,x17_15 = 24,x17_16 = 19,x17_17 = 3,x17_18 = 23,x17_19 = 22,x17_2 = 4,x17_20 = 21,x17_21 = 17,x17_22 = 11,x17_23 = 0,x17_24 = 10,x17_3 = 16,x17_4 = 2,x17_5 = 5,x17_6 = 20,x17_7 = 9,x17_8 = 18,x17_9 = 7,x18_0 = 12,x18_1 = 14,x18_10 = 2,x18_11 = 20,x18_12 = 18,x18_13 = 10,x18_14 = 11,x18_15 = 16,x18_16 = 24,x18_17 = 15,x18_18 = 19,x18_19 = 23,x18_2 = 1,x18_20 = 13,x18_21 = 3,x18_22 = 17,x18_23 = 7,x18_24 = 22,x18_3 = 6,x18_4 = 5,x18_5 = 8,x18_6 = 9,x18_7 = 4,x18_8 = 21,x18_9 = 0,x19_0 = 9,x19_1 = 23,x19_10 = 11,x19_11 = 16,x19_12 = 4,x19_13 = 21,x19_14 = 14,x19_15 = 7,x19_16 = 18,x19_17 = 24,x19_18 = 3,x19_19 = 15,x19_2 = 20,x19_20 = 19,x19_21 = 5,x19_22 = 6,x19_23 = 22,x19_24 = 17,x19_3 = 8,x19_4 = 13,x19_5 = 2,x19_6 = 0,x19_7 = 12,x19_8 = 10,x19_9 = 1,x1_0 = 24,x1_1 = 19,x1_10 = 23,x1_11 = 18,x1_12 = 1,x1_13 = 7,x1_14 = 13,x1_15 = 22,x1_16 = 9,x1_17 = 20,x1_18 = 10,x1_19 = 11,x1_2 = 12,x1_20 = 16,x1_21 = 6,x1_22 = 2,x1_23 = 5,x1_24 = 14,x1_3 = 15,x1_4 = 0,x1_5 = 3,x1_6 = 8,x1_7 = 21,x1_8 = 17,x1_9 = 4,x20_0 = 22,x20_1 = 16,x20_10 = 12,x20_11 = 1,x20_12 = 9,x20_13 = 3,x20_14 = 7,x20_15 = 11,x20_16 = 14,x20_17 = 21,x20_18 = 0,x20_19 = 13,x20_2 = 6,x20_20 = 17,x20_21 = 18,x20_22 = 10,x20_23 = 20,x20_24 = 24,x20_3 = 5,x20_4 = 23,x20_5 = 4,x20_6 = 15,x20_7 = 8,x20_8 = 19,x20_9 = 2,x21_0 = 7,x21_1 = 24,x21_10 = 8,x21_11 = 14,x21_12 = 16,x21_13 = 9,x21_14 = 23,x21_15 = 15,x21_16 = 21,x21_17 = 19,x21_18 = 13,x21_19 = 12,x21_2 = 2,x21_20 = 3,x21_21 = 20,x21_22 = 5,x21_23 = 4,x21_24 = 0,x21_3 = 1,x21_4 = 18,x21_5 = 17,x21_6 = 6,x21_7 = 10,x21_8 = 11,x21_9 = 22,x22_0 = 0,x22_1 = 8,x22_10 = 16,x22_11 = 17,x22_12 = 23,x22_13 = 24,x22_14 = 15,x22_15 = 6,x22_16 = 11,x22_17 = 4,x22_18 = 21,x22_19 = 19,x22_2 = 18,x22_20 = 20,x22_21 = 2,x22_22 = 13,x22_23 = 9,x22_24 = 3,x22_3 = 7,x22_4 = 10,x22_5 = 12,x22_6 = 1,x22_7 = 22,x22_8 = 5,x22_9 = 14,x23_0 = 18,x23_1 = 21,x23_10 = 20,x23_11 = 11,x23_12 = 10,x23_13 = 17,x23_14 = 19,x23_15 = 1,x23_16 = 4,x23_17 = 16,x23_18 = 6,x23_19 = 0,x23_2 = 5,x23_20 = 2,x23_21 = 14,x23_22 = 7,x23_23 = 3,x23_24 = 23,x23_3 = 9,x23_4 = 8,x23_5 = 22,x23_6 = 12,x23_7 = 24,x23_8 = 13,x23_9 = 15,x24_0 = 13,x24_1 = 0,x24_10 = 1,x24_11 = 5,x24_12 = 17,x24_13 = 14,x24_14 = 2,x24_15 = 10,x24_16 = 20,x24_17 = 23,x24_18 = 24,x24_19 = 8,x24_2 = 9,x24_20 = 6,x24_21 = 7,x24_22 = 18,x24_23 = 16,x24_24 = 4,x24_3 = 11,x24_4 = 22,x24_5 = 21,x24_6 = 19,x24_7 = 3,x24_8 = 15,x24_9 = 12,x2_0 = 6,x2_1 = 13,x2_10 = 4,x2_11 = 9,x2_12 = 11,x2_13 = 5,x2_14 = 22,x2_15 = 8,x2_16 = 2,x2_17 = 18,x2_18 = 17,x2_19 = 10,x2_2 = 3,x2_20 = 24,x2_21 = 0,x2_22 = 19,x2_23 = 1,x2_24 = 12,x2_3 = 21,x2_4 = 15,x2_5 = 16,x2_6 = 14,x2_7 = 7,x2_8 = 20,x2_9 = 23,x3_0 = 5,x3_1 = 17,x3_10 = 18,x3_11 = 4,x3_12 = 3,x3_13 = 0,x3_14 = 21,x3_15 = 23,x3_16 = 22,x3_17 = 12,x3_18 = 1,x3_19 = 2,x3_2 = 7,x3_20 = 9,x3_21 = 8,x3_22 = 20,x3_23 = 15,x3_24 = 6,x3_3 = 13,x3_4 = 19,x3_5 = 10,x3_6 = 16,x3_7 = 11,x3_8 = 14,x3_9 = 24,x4_0 = 15,x4_1 = 20,x4_10 = 3,x4_11 = 21,x4_12 = 12,x4_13 = 18,x4_14 = 17,x4_15 = 13,x4_16 = 8,x4_17 = 7,x4_18 = 5,x4_19 = 9,x4_2 = 10,x4_20 = 4,x4_21 = 19,x4_22 = 14,x4_23 = 2,x4_24 = 16,x4_3 = 0,x4_4 = 11,x4_5 = 1,x4_6 = 24,x4_7 = 23,x4_8 = 22,x4_9 = 6,x5_0 = 17,x5_1 = 1,x5_10 = 7,x5_11 = 3,x5_12 = 0,x5_13 = 11,x5_14 = 5,x5_15 = 20,x5_16 = 23,x5_17 = 14,x5_18 = 22,x5_19 = 24,x5_2 = 13,x5_20 = 18,x5_21 = 10,x5_22 = 21,x5_23 = 6,x5_24 = 19,x5_3 = 12,x5_4 = 9,x5_5 = 15,x5_6 = 2,x5_7 = 16,x5_8 = 4,x5_9 = 8,x6_0 = 2,x6_1 = 18,x6_10 = 24,x6_11 = 22,x6_12 = 14,x6_13 = 8,x6_14 = 10,x6_15 = 21,x6_16 = 5,x6_17 = 0,x6_18 = 9,x6_19 = 20,x6_2 = 16,x6_20 = 1,x6_21 = 13,x6_22 = 4,x6_23 = 19,x6_24 = 15,x6_3 = 3,x6_4 = 17,x6_5 = 23,x6_6 = 7,x6_7 = 6,x6_8 = 12,x6_9 = 11,x7_0 = 8,x7_1 = 5,x7_10 = 14,x7_11 = 2,x7_12 = 13,x7_13 = 4,x7_14 = 18,x7_15 = 17,x7_16 = 6,x7_17 = 22,x7_18 = 16,x7_19 = 21,x7_2 = 15,x7_20 = 7,x7_21 = 12,x7_22 = 24,x7_23 = 23,x7_24 = 20,x7_3 = 10,x7_4 = 1,x7_5 = 11,x7_6 = 3,x7_7 = 19,x7_8 = 0,x7_9 = 9,x8_0 = 23,x8_1 = 22,x8_10 = 19,x8_11 = 8,x8_12 = 21,x8_13 = 6,x8_14 = 0,x8_15 = 4,x8_16 = 10,x8_17 = 2,x8_18 = 15,x8_19 = 16,x8_2 = 11,x8_20 = 12,x8_21 = 1,x8_22 = 9,x8_23 = 14,x8_24 = 7,x8_3 = 18,x8_4 = 20,x8_5 = 24,x8_6 = 13,x8_7 = 5,x8_8 = 3,x8_9 = 17,x9_0 = 1,x9_1 = 15,x9_10 = 10,x9_11 = 13,x9_12 = 8,x9_13 = 22,x9_14 = 16,x9_15 = 0,x9_16 = 7,x9_17 = 9,x9_18 = 11,x9_19 = 17,x9_2 = 19,x9_20 = 23,x9_21 = 4,x9_22 = 3,x9_23 = 12,x9_24 = 21,x9_3 = 2,x9_4 = 6,x9_5 = 20,x9_6 = 5,x9_7 = 14,x9_8 = 24,x9_9 = 18]");
     solutions.add(
         "[x0_0 = 3,x0_1 = 4,x0_10 = 0,x0_11 = 10,x0_12 = 2,x0_13 = 19,x0_14 = 6,x0_15 = 9,x0_16 = 12,x0_17 = 5,x0_18 = 18,x0_19 = 7,x0_2 = 21,x0_20 = 14,x0_21 = 11,x0_22 = 8,x0_23 = 17,x0_24 = 1,x0_3 = 23,x0_4 = 24,x0_5 = 13,x0_6 = 22,x0_7 = 15,x0_8 = 16,x0_9 = 20,x10_0 = 11,x10_1 = 9,x10_10 = 15,x10_11 = 7,x10_12 = 19,x10_13 = 13,x10_14 = 24,x10_15 = 14,x10_16 = 16,x10_17 = 6,x10_18 = 12,x10_19 = 1,x10_2 = 23,x10_20 = 5,x10_21 = 22,x10_22 = 0,x10_23 = 21,x10_24 = 2,x10_3 = 20,x10_4 = 4,x10_5 = 18,x10_6 = 10,x10_7 = 17,x10_8 = 8,x10_9 = 3,x11_0 = 19,x11_1 = 6,x11_10 = 21,x11_11 = 24,x11_12 = 20,x11_13 = 15,x11_14 = 12,x11_15 = 2,x11_16 = 13,x11_17 = 17,x11_18 = 7,x11_19 = 4,x11_2 = 8,x11_20 = 11,x11_21 = 16,x11_22 = 1,x11_23 = 18,x11_24 = 5,x11_3 = 22,x11_4 = 3,x11_5 = 14,x11_6 = 23,x11_7 = 0,x11_8 = 9,x11_9 = 10,x12_0 = 21,x12_1 = 3,x12_10 = 6,x12_11 = 12,x12_12 = 24,x12_13 = 2,x12_14 = 1,x12_15 = 19,x12_16 = 0,x12_17 = 11,x12_18 = 20,x12_19 = 5,x12_2 = 14,x12_20 = 10,x12_21 = 15,x12_22 = 22,x12_23 = 8,x12_24 = 18,x12_3 = 4,x12_4 = 7,x12_5 = 9,x12_6 = 17,x12_7 = 13,x12_8 = 23,x12_9 = 16,x13_0 = 16,x13_1 = 7,x13_10 = 9,x13_11 = 19,x13_12 = 22,x13_13 = 23,x13_14 = 20,x13_15 = 18,x13_16 = 3,x13_17 = 10,x13_18 = 8,x13_19 = 14,x13_2 = 0,x13_20 = 15,x13_21 = 24,x13_22 = 12,x13_23 = 13,x13_24 = 11,x13_3 = 17,x13_4 = 21,x13_5 = 6,x13_6 = 4,x13_7 = 2,x13_8 = 1,x13_9 = 5,x14_0 = 20,x14_1 = 10,x14_10 = 17,x14_11 = 6,x14_12 = 7,x14_13 = 12,x14_14 = 3,x14_15 = 5,x14_16 = 15,x14_17 = 13,x14_18 = 4,x14_19 = 18,x14_2 = 22,x14_20 = 0,x14_21 = 9,x14_22 = 23,x14_23 = 24,x14_24 = 8,x14_3 = 14,x14_4 = 16,x14_5 = 19,x14_6 = 11,x14_7 = 1,x14_8 = 2,x14_9 = 21,x15_0 = 4,x15_1 = 11,x15_10 = 5,x15_11 = 0,x15_12 = 15,x15_13 = 20,x15_14 = 9,x15_15 = 12,x15_16 = 1,x15_17 = 8,x15_18 = 2,x15_19 = 3,x15_2 = 17,x15_20 = 22,x15_21 = 23,x15_22 = 16,x15_23 = 10,x15_24 = 13,x15_3 = 24,x15_4 = 14,x15_5 = 7,x15_6 = 21,x15_7 = 18,x15_8 = 6,x15_9 = 19,x16_0 = 10,x16_1 = 2,x16_10 = 22,x16_11 = 23,x16_12 = 5,x16_13 = 16,x16_14 = 4,x16_15 = 3,x16_16 = 17,x16_17 = 1,x16_18 = 14,x16_19 = 6,x16_2 = 24,x16_20 = 8,x16_21 = 21,x16_22 = 15,x16_23 = 11,x16_24 = 9,x16_3 = 19,x16_4 = 12,x16_5 = 0,x16_6 = 18,x16_7 = 20,x16_8 = 7,x16_9 = 13,x17_0 = 14,x17_1 = 12,x17_10 = 13,x17_11 = 15,x17_12 = 6,x17_13 = 1,x17_14 = 8,x17_15 = 24,x17_16 = 19,x17_17 = 3,x17_18 = 23,x17_19 = 22,x17_2 = 4,x17_20 = 21,x17_21 = 17,x17_22 = 11,x17_23 = 0,x17_24 = 10,x17_3 = 16,x17_4 = 2,x17_5 = 5,x17_6 = 20,x17_7 = 9,x17_8 = 18,x17_9 = 7,x18_0 = 12,x18_1 = 14,x18_10 = 2,x18_11 = 20,x18_12 = 18,x18_13 = 21,x18_14 = 11,x18_15 = 16,x18_16 = 24,x18_17 = 15,x18_18 = 19,x18_19 = 23,x18_2 = 1,x18_20 = 13,x18_21 = 3,x18_22 = 17,x18_23 = 7,x18_24 = 22,x18_3 = 6,x18_4 = 5,x18_5 = 8,x18_6 = 9,x18_7 = 4,x18_8 = 10,x18_9 = 0,x19_0 = 9,x19_1 = 23,x19_10 = 11,x19_11 = 16,x19_12 = 4,x19_13 = 10,x19_14 = 14,x19_15 = 7,x19_16 = 18,x19_17 = 24,x19_18 = 3,x19_19 = 15,x19_2 = 20,x19_20 = 19,x19_21 = 5,x19_22 = 6,x19_23 = 22,x19_24 = 17,x19_3 = 8,x19_4 = 13,x19_5 = 2,x19_6 = 0,x19_7 = 12,x19_8 = 21,x19_9 = 1,x1_0 = 24,x1_1 = 19,x1_10 = 23,x1_11 = 18,x1_12 = 1,x1_13 = 7,x1_14 = 13,x1_15 = 22,x1_16 = 9,x1_17 = 20,x1_18 = 10,x1_19 = 11,x1_2 = 12,x1_20 = 16,x1_21 = 6,x1_22 = 2,x1_23 = 5,x1_24 = 14,x1_3 = 15,x1_4 = 0,x1_5 = 3,x1_6 = 8,x1_7 = 21,x1_8 = 17,x1_9 = 4,x20_0 = 22,x20_1 = 16,x20_10 = 12,x20_11 = 1,x20_12 = 9,x20_13 = 3,x20_14 = 7,x20_15 = 11,x20_16 = 14,x20_17 = 21,x20_18 = 0,x20_19 = 13,x20_2 = 6,x20_20 = 17,x20_21 = 18,x20_22 = 10,x20_23 = 20,x20_24 = 24,x20_3 = 5,x20_4 = 23,x20_5 = 4,x20_6 = 15,x20_7 = 8,x20_8 = 19,x20_9 = 2,x21_0 = 7,x21_1 = 24,x21_10 = 8,x21_11 = 14,x21_12 = 16,x21_13 = 9,x21_14 = 23,x21_15 = 15,x21_16 = 21,x21_17 = 19,x21_18 = 13,x21_19 = 12,x21_2 = 2,x21_20 = 3,x21_21 = 20,x21_22 = 5,x21_23 = 4,x21_24 = 0,x21_3 = 1,x21_4 = 18,x21_5 = 17,x21_6 = 6,x21_7 = 10,x21_8 = 11,x21_9 = 22,x22_0 = 0,x22_1 = 8,x22_10 = 16,x22_11 = 17,x22_12 = 23,x22_13 = 24,x22_14 = 15,x22_15 = 6,x22_16 = 11,x22_17 = 4,x22_18 = 21,x22_19 = 19,x22_2 = 18,x22_20 = 20,x22_21 = 2,x22_22 = 13,x22_23 = 9,x22_24 = 3,x22_3 = 7,x22_4 = 10,x22_5 = 12,x22_6 = 1,x22_7 = 22,x22_8 = 5,x22_9 = 14,x23_0 = 18,x23_1 = 21,x23_10 = 20,x23_11 = 11,x23_12 = 10,x23_13 = 17,x23_14 = 19,x23_15 = 1,x23_16 = 4,x23_17 = 16,x23_18 = 6,x23_19 = 0,x23_2 = 5,x23_20 = 2,x23_21 = 14,x23_22 = 7,x23_23 = 3,x23_24 = 23,x23_3 = 9,x23_4 = 8,x23_5 = 22,x23_6 = 12,x23_7 = 24,x23_8 = 13,x23_9 = 15,x24_0 = 13,x24_1 = 0,x24_10 = 1,x24_11 = 5,x24_12 = 17,x24_13 = 14,x24_14 = 2,x24_15 = 10,x24_16 = 20,x24_17 = 23,x24_18 = 24,x24_19 = 8,x24_2 = 9,x24_20 = 6,x24_21 = 7,x24_22 = 18,x24_23 = 16,x24_24 = 4,x24_3 = 11,x24_4 = 22,x24_5 = 21,x24_6 = 19,x24_7 = 3,x24_8 = 15,x24_9 = 12,x2_0 = 6,x2_1 = 13,x2_10 = 4,x2_11 = 9,x2_12 = 11,x2_13 = 5,x2_14 = 22,x2_15 = 8,x2_16 = 2,x2_17 = 18,x2_18 = 17,x2_19 = 10,x2_2 = 3,x2_20 = 24,x2_21 = 0,x2_22 = 19,x2_23 = 1,x2_24 = 12,x2_3 = 21,x2_4 = 15,x2_5 = 16,x2_6 = 14,x2_7 = 7,x2_8 = 20,x2_9 = 23,x3_0 = 5,x3_1 = 17,x3_10 = 18,x3_11 = 4,x3_12 = 3,x3_13 = 0,x3_14 = 21,x3_15 = 23,x3_16 = 22,x3_17 = 12,x3_18 = 1,x3_19 = 2,x3_2 = 7,x3_20 = 9,x3_21 = 8,x3_22 = 20,x3_23 = 15,x3_24 = 6,x3_3 = 13,x3_4 = 19,x3_5 = 10,x3_6 = 16,x3_7 = 11,x3_8 = 14,x3_9 = 24,x4_0 = 15,x4_1 = 20,x4_10 = 3,x4_11 = 21,x4_12 = 12,x4_13 = 18,x4_14 = 17,x4_15 = 13,x4_16 = 8,x4_17 = 7,x4_18 = 5,x4_19 = 9,x4_2 = 10,x4_20 = 4,x4_21 = 19,x4_22 = 14,x4_23 = 2,x4_24 = 16,x4_3 = 0,x4_4 = 11,x4_5 = 1,x4_6 = 24,x4_7 = 23,x4_8 = 22,x4_9 = 6,x5_0 = 17,x5_1 = 1,x5_10 = 7,x5_11 = 3,x5_12 = 0,x5_13 = 11,x5_14 = 5,x5_15 = 20,x5_16 = 23,x5_17 = 14,x5_18 = 22,x5_19 = 24,x5_2 = 13,x5_20 = 18,x5_21 = 10,x5_22 = 21,x5_23 = 6,x5_24 = 19,x5_3 = 12,x5_4 = 9,x5_5 = 15,x5_6 = 2,x5_7 = 16,x5_8 = 4,x5_9 = 8,x6_0 = 2,x6_1 = 18,x6_10 = 24,x6_11 = 22,x6_12 = 14,x6_13 = 8,x6_14 = 10,x6_15 = 21,x6_16 = 5,x6_17 = 0,x6_18 = 9,x6_19 = 20,x6_2 = 16,x6_20 = 1,x6_21 = 13,x6_22 = 4,x6_23 = 19,x6_24 = 15,x6_3 = 3,x6_4 = 17,x6_5 = 23,x6_6 = 7,x6_7 = 6,x6_8 = 12,x6_9 = 11,x7_0 = 8,x7_1 = 5,x7_10 = 14,x7_11 = 2,x7_12 = 13,x7_13 = 4,x7_14 = 18,x7_15 = 17,x7_16 = 6,x7_17 = 22,x7_18 = 16,x7_19 = 21,x7_2 = 15,x7_20 = 7,x7_21 = 12,x7_22 = 24,x7_23 = 23,x7_24 = 20,x7_3 = 10,x7_4 = 1,x7_5 = 11,x7_6 = 3,x7_7 = 19,x7_8 = 0,x7_9 = 9,x8_0 = 23,x8_1 = 22,x8_10 = 19,x8_11 = 8,x8_12 = 21,x8_13 = 6,x8_14 = 0,x8_15 = 4,x8_16 = 10,x8_17 = 2,x8_18 = 15,x8_19 = 16,x8_2 = 11,x8_20 = 12,x8_21 = 1,x8_22 = 9,x8_23 = 14,x8_24 = 7,x8_3 = 18,x8_4 = 20,x8_5 = 24,x8_6 = 13,x8_7 = 5,x8_8 = 3,x8_9 = 17,x9_0 = 1,x9_1 = 15,x9_10 = 10,x9_11 = 13,x9_12 = 8,x9_13 = 22,x9_14 = 16,x9_15 = 0,x9_16 = 7,x9_17 = 9,x9_18 = 11,x9_19 = 17,x9_2 = 19,x9_20 = 23,x9_21 = 4,x9_22 = 3,x9_23 = 12,x9_24 = 21,x9_3 = 2,x9_4 = 6,x9_5 = 20,x9_6 = 5,x9_7 = 14,x9_8 = 24,x9_9 = 18]");
-    assertEquals(true, solutions.contains(example.store.toStringOrderedVars()));
+    assertThat(solutions.contains(example.store.toStringOrderedVars())).isTrue();
   }
 
   @Test
@@ -180,8 +180,8 @@ public class ExampleBasedTest {
     ArchFriends example = new ArchFriends();
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -191,8 +191,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -202,8 +202,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -219,8 +219,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(151200, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(151200);
   }
 
   @Test
@@ -230,8 +230,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(24, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(24);
   }
 
   @Test
@@ -241,8 +241,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(480, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(480);
   }
 
   @Test
@@ -252,8 +252,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(24, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(24);
   }
 
   @Test
@@ -263,14 +263,14 @@ public class ExampleBasedTest {
 
     exampleBasic.modelBasic();
 
-    assertEquals(true, exampleBasic.searchAllAtOnce());
-    assertEquals(1, exampleBasic.search.getSolutionListener().solutionsNo());
+    assertThat(exampleBasic.searchAllAtOnce()).isTrue();
+    assertThat(exampleBasic.search.getSolutionListener().solutionsNo()).isEqualTo(1);
 
     exampleBasic.getSearch().assignSolution();
 
-    assertEquals(
-        "[Antonio = 3,Brett = 10,Cliff = 2,Dabney = 6,Ed = 9,Francisco = 7,Griff = 5,Harry = 11,Ivor = 12,John = 1,Karl = 4,Lorentzo = 8,Moross = 6,Nelsen = 4,ORourke = 9,Paulos = 5,Quarello = 8,Reede = 1,Sheldon = 10,Taylor = 7,Uhler = 11,Vickers = 12,Wang = 2,Xiao = 3,archery = 9,badmington = 11,croquet = 10,football = 12,golf = 1,hockey = 5,lacrosse = 8,offset1 = 3,offset2 = 6,p_vauliting = 3,rowing = 7,squash = 2,tennis = 6,volleyball = 4]",
-        exampleBasic.store.toStringOrderedVars());
+    assertThat(exampleBasic.store.toStringOrderedVars())
+        .isEqualTo(
+            "[Antonio = 3,Brett = 10,Cliff = 2,Dabney = 6,Ed = 9,Francisco = 7,Griff = 5,Harry = 11,Ivor = 12,John = 1,Karl = 4,Lorentzo = 8,Moross = 6,Nelsen = 4,ORourke = 9,Paulos = 5,Quarello = 8,Reede = 1,Sheldon = 10,Taylor = 7,Uhler = 11,Vickers = 12,Wang = 2,Xiao = 3,archery = 9,badmington = 11,croquet = 10,football = 12,golf = 1,hockey = 5,lacrosse = 8,offset1 = 3,offset2 = 6,p_vauliting = 3,rowing = 7,squash = 2,tennis = 6,volleyball = 4]");
   }
 
   @Test
@@ -280,15 +280,15 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
+    assertThat(example.searchAllAtOnce()).isTrue();
 
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[Antonio = 3,Brett = 10,Cliff = 2,Dabney = 6,Ed = 9,Francisco = 7,Griff = 5,Harry = 11,Ivor = 12,John = 1,Karl = 4,Lorenzo = 8,Moross = 6,Nelsen = 4,O_Rourke = 9,Paulos = 5,Quarello = 8,Reede = 1,Sheldon = 10,Taylor = 7,Uhler = 11,Vickers = 12,Wang = 2,Xiao = 3,archery = 9,badminton = 11,c10_1_m = 3,c10_1_x = 8,c10_2_m = 2,c10_2_x = 9,c10_3_m = 1,c10_3_x = 10,c11_1_m = 1,c11_1_x = 9,c11_2_m = 3,c11_2_x = 10,c11_3_m = 2,c11_3_x = 11,c12_1_m = 2,c12_2_m = 1,c12_3_m = 3,c1_1_m = 2,c1_2_m = 3,c1_3_m = 1,c2_1_m = 1,c2_1_x = 4,c2_2_m = 3,c2_2_x = 5,c2_3_m = 2,c2_3_x = 6,c4_1_m = 3,c4_2_m = 2,c4_3_m = 1,c9_1_m = 2,c9_2_m = 1,c9_3_m = 3,croquet = 10,even = 6,football = 12,golf = 1,hockey = 5,lacrosse = 8,rowing = 7,squash = 2,tennis = 6,vaulting = 3,volleyball = 4]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[Antonio = 3,Brett = 10,Cliff = 2,Dabney = 6,Ed = 9,Francisco = 7,Griff = 5,Harry = 11,Ivor = 12,John = 1,Karl = 4,Lorenzo = 8,Moross = 6,Nelsen = 4,O_Rourke = 9,Paulos = 5,Quarello = 8,Reede = 1,Sheldon = 10,Taylor = 7,Uhler = 11,Vickers = 12,Wang = 2,Xiao = 3,archery = 9,badminton = 11,c10_1_m = 3,c10_1_x = 8,c10_2_m = 2,c10_2_x = 9,c10_3_m = 1,c10_3_x = 10,c11_1_m = 1,c11_1_x = 9,c11_2_m = 3,c11_2_x = 10,c11_3_m = 2,c11_3_x = 11,c12_1_m = 2,c12_2_m = 1,c12_3_m = 3,c1_1_m = 2,c1_2_m = 3,c1_3_m = 1,c2_1_m = 1,c2_1_x = 4,c2_2_m = 3,c2_2_x = 5,c2_3_m = 2,c2_3_x = 6,c4_1_m = 3,c4_2_m = 2,c4_3_m = 1,c9_1_m = 2,c9_2_m = 1,c9_3_m = 3,croquet = 10,even = 6,football = 12,golf = 1,hockey = 5,lacrosse = 8,rowing = 7,squash = 2,tennis = 6,vaulting = 3,volleyball = 4]");
   }
 
   @Test
@@ -298,8 +298,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(2, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(2);
   }
 
   @Test
@@ -331,9 +331,9 @@ public class ExampleBasedTest {
 
       exampleLeft.model();
 
-      assertEquals(true, exampleLeft.searchAllAtOnce());
+      assertThat(exampleLeft.searchAllAtOnce()).isTrue();
 
-      assertEquals(noSol[i], exampleLeft.search.getSolutionListener().solutionsNo());
+      assertThat(exampleLeft.search.getSolutionListener().solutionsNo()).isEqualTo(noSol[i]);
     }
   }
 
@@ -347,7 +347,7 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
+    assertThat(example.searchAllAtOnce()).isTrue();
 
     // prints then de Bruijn sequences
     IO.print("de Bruijn sequence:");
@@ -367,7 +367,7 @@ public class ExampleBasedTest {
       IO.println(" : " + example.x[i].value());
     }
 
-    assertEquals(14, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(14);
   }
 
   @Test
@@ -379,11 +379,11 @@ public class ExampleBasedTest {
 
     exampleSumWeight.model();
 
-    assertEquals(exampleSumWeight.searchAllAtOnce(), true);
+    assertThat(true).isEqualTo(exampleSumWeight.searchAllAtOnce());
 
     Diet.printLastSolution(exampleSumWeight);
 
-    assertEquals(6, exampleSumWeight.search.getSolutionListener().solutionsNo());
+    assertThat(exampleSumWeight.search.getSolutionListener().solutionsNo()).isEqualTo(6);
   }
 
   @Test
@@ -394,11 +394,11 @@ public class ExampleBasedTest {
 
     exampleKnapsack.modelKnapsack();
 
-    assertEquals(exampleKnapsack.searchAllAtOnce(), true);
+    assertThat(true).isEqualTo(exampleKnapsack.searchAllAtOnce());
 
     Diet.printLastSolution(exampleKnapsack);
 
-    assertEquals(6, exampleKnapsack.search.getSolutionListener().solutionsNo());
+    assertThat(exampleKnapsack.search.getSolutionListener().solutionsNo()).isEqualTo(6);
   }
 
   @Test
@@ -408,8 +408,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(36, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(36);
   }
 
   @Test
@@ -419,8 +419,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -430,8 +430,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -441,8 +441,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(6967, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(6967);
   }
 
   @Test
@@ -451,8 +451,8 @@ public class ExampleBasedTest {
     Flowers example = new Flowers();
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -461,8 +461,8 @@ public class ExampleBasedTest {
     FourIslands example = new FourIslands();
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -471,8 +471,8 @@ public class ExampleBasedTest {
     FurnitureMoving example = new FurnitureMoving();
     example.model();
 
-    assertEquals(true, example.searchSpecific());
-    assertEquals(36, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchSpecific()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(36);
   }
 
   @Test
@@ -481,8 +481,8 @@ public class ExampleBasedTest {
     Gates example = new Gates();
     example.model();
 
-    assertEquals(true, example.searchSpecific());
-    assertEquals(8, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchSpecific()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
   }
 
   @Test
@@ -491,8 +491,8 @@ public class ExampleBasedTest {
     Gates example = new Gates();
     example.model(Gates::tableConstraintProviderUsingExtensionalSTR);
 
-    assertEquals(true, example.searchSpecific());
-    assertEquals(8, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchSpecific()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
   }
 
   @Test
@@ -501,8 +501,8 @@ public class ExampleBasedTest {
     Golf example = new Golf();
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -511,7 +511,7 @@ public class ExampleBasedTest {
     Golomb example = new Golomb();
     example.model();
 
-    assertEquals(true, example.searchOptimalInfo());
+    assertThat(example.searchOptimalInfo()).isTrue();
 
     int optimalCost = example.cost.value();
 
@@ -519,8 +519,8 @@ public class ExampleBasedTest {
     example.bound = optimalCost;
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -529,8 +529,8 @@ public class ExampleBasedTest {
     HistoricHomes example = new HistoricHomes();
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -540,8 +540,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1);
   }
 
   @Test
@@ -551,8 +551,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(18, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(18);
   }
 
   @Test
@@ -563,16 +563,16 @@ public class ExampleBasedTest {
     example.m = 10;
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(10, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(10);
 
     Langford exampleDual = new Langford();
     exampleDual.n = 3;
     exampleDual.m = 10;
     exampleDual.modelDual();
 
-    assertEquals(true, exampleDual.searchAllAtOnce());
-    assertEquals(10, exampleDual.search.getSolutionListener().solutionsNo());
+    assertThat(exampleDual.searchAllAtOnce()).isTrue();
+    assertThat(exampleDual.search.getSolutionListener().solutionsNo()).isEqualTo(10);
   }
 
   @Test
@@ -582,8 +582,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(120, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(120);
   }
 
   @Test
@@ -593,8 +593,8 @@ public class ExampleBasedTest {
 
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(1760, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(4436);
   }
 
   @Test
@@ -603,8 +603,8 @@ public class ExampleBasedTest {
     MasterClass example = new MasterClass();
     example.model();
 
-    assertEquals(true, example.searchAllAtOnce());
-    assertEquals(12, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.searchAllAtOnce()).isTrue();
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(12);
   }
 
   @Test
@@ -637,7 +637,7 @@ public class ExampleBasedTest {
 
       minesweeper.getSearch().assignSolution();
 
-      assertEquals("Sol " + i, results[i], minesweeper.store.toStringOrderedVars());
+      assertThat(minesweeper.store.toStringOrderedVars()).as("Sol " + i).isEqualTo(results[i]);
     }
   }
 
@@ -652,9 +652,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[algy[0] = 110,algy[1] = 45,algy[2] = 140,algy[3] = 165,bertie[0] = 35,bertie[1] = 113,bertie[2] = 110,bertie[3] = 170,charlie[0] = 20,charlie[1] = 35,charlie[2] = 15,charlie[3] = 45,digby[0] = 166,digby[1] = 165,digby[2] = 167,digby[3] = 75,durationAlgyExpress = 2,durationAlgyFT = 60,durationAlgyGuardian = 30,durationAlgySun = 5,durationBertieExpress = 3,durationBertieFT = 25,durationBertieGuardian = 75,durationBertieSun = 10,durationCharlieExpress = 5,durationCharlieFT = 10,durationCharlieGuardian = 15,durationCharlieSun = 30,durationDigbyExpress = 1,durationDigbyFT = 1,durationDigbyGuardian = 1,durationDigbySun = 90,makespan = 180,one = 1]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[algy[0] = 110,algy[1] = 45,algy[2] = 140,algy[3] = 165,bertie[0] = 35,bertie[1] = 113,bertie[2] = 110,bertie[3] = 170,charlie[0] = 20,charlie[1] = 35,charlie[2] = 15,charlie[3] = 45,digby[0] = 166,digby[1] = 165,digby[2] = 167,digby[3] = 75,durationAlgyExpress = 2,durationAlgyFT = 60,durationAlgyGuardian = 30,durationAlgySun = 5,durationBertieExpress = 3,durationBertieFT = 25,durationBertieGuardian = 75,durationBertieSun = 10,durationCharlieExpress = 5,durationCharlieFT = 10,durationCharlieGuardian = 15,durationCharlieSun = 30,durationDigbyExpress = 1,durationDigbyFT = 1,durationDigbyGuardian = 1,durationDigbySun = 90,makespan = 180,one = 1]");
   }
 
   @Test
@@ -711,9 +711,9 @@ public class ExampleBasedTest {
       solution = example.store.toStringOrderedVars();
     }
 
-    assertEquals(
-        "[win_D1->2F00=0,win_D1->2F01=0,win_D1->2F02=0,win_D1->2F03=0,win_D1->2F04=0,win_D1->2F05=0,win_D1->2F06=0,win_D1->2F10=1,win_D1->2F11=1,win_D1->2F12=1,win_D1->2F13=1,win_D1->2F14=0,win_D1->2F15=0,win_D1->2F16=0,win_D1->2F20=1,win_D1->2F21=1,win_D1->2F22=1,win_D1->2F23=1,win_D1->2F24=0,win_D1->2F25=0,win_D1->2F26=0,win_D1->2F30=1,win_D1->2F31=1,win_D1->2F32=1,win_D1->2F33=1,win_D1->2F34=0,win_D1->2F35=0,win_D1->2F36=0,win_D1->2F40=1,win_D1->2F41=1,win_D1->2F42=1,win_D1->2F43=1,win_D1->2F44=1,win_D1->2F45=1,win_D1->2F46=0,win_D1->2F50=1,win_D1->2F51=1,win_D1->2F52=1,win_D1->2F53=1,win_D1->2F54=1,win_D1->2F55=1,win_D1->2F56=0,win_D1->2F60=1,win_D1->2F61=1,win_D1->2F62=1,win_D1->2F63=1,win_D1->2F64=1,win_D1->2F65=1,win_D1->2F66=0,win_D2->3F00=1,win_D2->3F01=1,win_D2->3F02=1,win_D2->3F03=0,win_D2->3F04=0,win_D2->3F05=0,win_D2->3F06=0,win_D2->3F10=1,win_D2->3F11=1,win_D2->3F12=1,win_D2->3F13=1,win_D2->3F14=0,win_D2->3F15=0,win_D2->3F16=0,win_D2->3F20=1,win_D2->3F21=1,win_D2->3F22=1,win_D2->3F23=1,win_D2->3F24=0,win_D2->3F25=0,win_D2->3F26=0,win_D2->3F30=1,win_D2->3F31=1,win_D2->3F32=1,win_D2->3F33=1,win_D2->3F34=0,win_D2->3F35=0,win_D2->3F36=0,win_D2->3F40=1,win_D2->3F41=1,win_D2->3F42=1,win_D2->3F43=1,win_D2->3F44=0,win_D2->3F45=0,win_D2->3F46=0,win_D2->3F50=1,win_D2->3F51=1,win_D2->3F52=1,win_D2->3F53=1,win_D2->3F54=0,win_D2->3F55=0,win_D2->3F56=0,win_D2->3F60=1,win_D2->3F61=1,win_D2->3F62=1,win_D2->3F63=1,win_D2->3F64=1,win_D2->3F65=1,win_D2->3F66=1,win_D3->0F00=1,win_D3->0F01=1,win_D3->0F02=0,win_D3->0F03=0,win_D3->0F04=0,win_D3->0F05=0,win_D3->0F06=0,win_D3->0F10=1,win_D3->0F11=1,win_D3->0F12=1,win_D3->0F13=0,win_D3->0F14=0,win_D3->0F15=0,win_D3->0F16=0,win_D3->0F20=1,win_D3->0F21=1,win_D3->0F22=1,win_D3->0F23=0,win_D3->0F24=0,win_D3->0F25=0,win_D3->0F26=0,win_D3->0F30=1,win_D3->0F31=1,win_D3->0F32=1,win_D3->0F33=0,win_D3->0F34=0,win_D3->0F35=0,win_D3->0F36=0,win_D3->0F40=1,win_D3->0F41=1,win_D3->0F42=1,win_D3->0F43=1,win_D3->0F44=1,win_D3->0F45=0,win_D3->0F46=0,win_D3->0F50=1,win_D3->0F51=1,win_D3->0F52=1,win_D3->0F53=1,win_D3->0F54=1,win_D3->0F55=1,win_D3->0F56=1,win_D3->0F60=1,win_D3->0F61=1,win_D3->0F62=1,win_D3->0F63=1,win_D3->0F64=1,win_D3->0F65=1,win_D3->0F66=1,win_D4->1F00=1,win_D4->1F01=0,win_D4->1F02=0,win_D4->1F03=0,win_D4->1F04=0,win_D4->1F05=0,win_D4->1F06=0,win_D4->1F10=1,win_D4->1F11=0,win_D4->1F12=0,win_D4->1F13=0,win_D4->1F14=0,win_D4->1F15=0,win_D4->1F16=0,win_D4->1F20=1,win_D4->1F21=0,win_D4->1F22=0,win_D4->1F23=0,win_D4->1F24=0,win_D4->1F25=0,win_D4->1F26=0,win_D4->1F30=1,win_D4->1F31=1,win_D4->1F32=1,win_D4->1F33=1,win_D4->1F34=1,win_D4->1F35=1,win_D4->1F36=0,win_D4->1F40=1,win_D4->1F41=1,win_D4->1F42=1,win_D4->1F43=1,win_D4->1F44=1,win_D4->1F45=1,win_D4->1F46=1,win_D4->1F50=1,win_D4->1F51=1,win_D4->1F52=1,win_D4->1F53=1,win_D4->1F54=1,win_D4->1F55=1,win_D4->1F56=1,win_D4->1F60=1,win_D4->1F61=1,win_D4->1F62=1,win_D4->1F63=1,win_D4->1F64=1,win_D4->1F65=1,win_D4->1F66=1,MinDominance = 30,d1f1 = 1,d1f2 = 13,d1f3 = 14,d1f4 = 15,d1f5 = 18,d1f6 = 19,d1f7 = 21,d2f1 = 8,d2f2 = 10,d2f3 = 11,d2f4 = 12,d2f5 = 16,d2f6 = 17,d2f7 = 28,d3f1 = 4,d3f2 = 6,d3f3 = 7,d3f4 = 9,d3f5 = 23,d3f6 = 26,d3f7 = 27,d4f1 = 2,d4f2 = 3,d4f3 = 5,d4f4 = 20,d4f5 = 22,d4f6 = 24,d4f7 = 25,diff = 19,maxNo = 28,noWins-d1->d2 = 30,noWins-d2->d3 = 30,noWins-d3->d0 = 30,noWins-d4->d1 = 30]",
-        solution);
+    assertThat(solution)
+        .isEqualTo(
+            "[win_D1->2F00=0,win_D1->2F01=0,win_D1->2F02=0,win_D1->2F03=0,win_D1->2F04=0,win_D1->2F05=0,win_D1->2F06=0,win_D1->2F10=1,win_D1->2F11=1,win_D1->2F12=1,win_D1->2F13=1,win_D1->2F14=0,win_D1->2F15=0,win_D1->2F16=0,win_D1->2F20=1,win_D1->2F21=1,win_D1->2F22=1,win_D1->2F23=1,win_D1->2F24=0,win_D1->2F25=0,win_D1->2F26=0,win_D1->2F30=1,win_D1->2F31=1,win_D1->2F32=1,win_D1->2F33=1,win_D1->2F34=0,win_D1->2F35=0,win_D1->2F36=0,win_D1->2F40=1,win_D1->2F41=1,win_D1->2F42=1,win_D1->2F43=1,win_D1->2F44=1,win_D1->2F45=1,win_D1->2F46=0,win_D1->2F50=1,win_D1->2F51=1,win_D1->2F52=1,win_D1->2F53=1,win_D1->2F54=1,win_D1->2F55=1,win_D1->2F56=0,win_D1->2F60=1,win_D1->2F61=1,win_D1->2F62=1,win_D1->2F63=1,win_D1->2F64=1,win_D1->2F65=1,win_D1->2F66=0,win_D2->3F00=1,win_D2->3F01=1,win_D2->3F02=1,win_D2->3F03=0,win_D2->3F04=0,win_D2->3F05=0,win_D2->3F06=0,win_D2->3F10=1,win_D2->3F11=1,win_D2->3F12=1,win_D2->3F13=1,win_D2->3F14=0,win_D2->3F15=0,win_D2->3F16=0,win_D2->3F20=1,win_D2->3F21=1,win_D2->3F22=1,win_D2->3F23=1,win_D2->3F24=0,win_D2->3F25=0,win_D2->3F26=0,win_D2->3F30=1,win_D2->3F31=1,win_D2->3F32=1,win_D2->3F33=1,win_D2->3F34=0,win_D2->3F35=0,win_D2->3F36=0,win_D2->3F40=1,win_D2->3F41=1,win_D2->3F42=1,win_D2->3F43=1,win_D2->3F44=0,win_D2->3F45=0,win_D2->3F46=0,win_D2->3F50=1,win_D2->3F51=1,win_D2->3F52=1,win_D2->3F53=1,win_D2->3F54=0,win_D2->3F55=0,win_D2->3F56=0,win_D2->3F60=1,win_D2->3F61=1,win_D2->3F62=1,win_D2->3F63=1,win_D2->3F64=1,win_D2->3F65=1,win_D2->3F66=1,win_D3->0F00=1,win_D3->0F01=1,win_D3->0F02=0,win_D3->0F03=0,win_D3->0F04=0,win_D3->0F05=0,win_D3->0F06=0,win_D3->0F10=1,win_D3->0F11=1,win_D3->0F12=1,win_D3->0F13=0,win_D3->0F14=0,win_D3->0F15=0,win_D3->0F16=0,win_D3->0F20=1,win_D3->0F21=1,win_D3->0F22=1,win_D3->0F23=0,win_D3->0F24=0,win_D3->0F25=0,win_D3->0F26=0,win_D3->0F30=1,win_D3->0F31=1,win_D3->0F32=1,win_D3->0F33=0,win_D3->0F34=0,win_D3->0F35=0,win_D3->0F36=0,win_D3->0F40=1,win_D3->0F41=1,win_D3->0F42=1,win_D3->0F43=1,win_D3->0F44=1,win_D3->0F45=0,win_D3->0F46=0,win_D3->0F50=1,win_D3->0F51=1,win_D3->0F52=1,win_D3->0F53=1,win_D3->0F54=1,win_D3->0F55=1,win_D3->0F56=1,win_D3->0F60=1,win_D3->0F61=1,win_D3->0F62=1,win_D3->0F63=1,win_D3->0F64=1,win_D3->0F65=1,win_D3->0F66=1,win_D4->1F00=1,win_D4->1F01=0,win_D4->1F02=0,win_D4->1F03=0,win_D4->1F04=0,win_D4->1F05=0,win_D4->1F06=0,win_D4->1F10=1,win_D4->1F11=0,win_D4->1F12=0,win_D4->1F13=0,win_D4->1F14=0,win_D4->1F15=0,win_D4->1F16=0,win_D4->1F20=1,win_D4->1F21=0,win_D4->1F22=0,win_D4->1F23=0,win_D4->1F24=0,win_D4->1F25=0,win_D4->1F26=0,win_D4->1F30=1,win_D4->1F31=1,win_D4->1F32=1,win_D4->1F33=1,win_D4->1F34=1,win_D4->1F35=1,win_D4->1F36=0,win_D4->1F40=1,win_D4->1F41=1,win_D4->1F42=1,win_D4->1F43=1,win_D4->1F44=1,win_D4->1F45=1,win_D4->1F46=1,win_D4->1F50=1,win_D4->1F51=1,win_D4->1F52=1,win_D4->1F53=1,win_D4->1F54=1,win_D4->1F55=1,win_D4->1F56=1,win_D4->1F60=1,win_D4->1F61=1,win_D4->1F62=1,win_D4->1F63=1,win_D4->1F64=1,win_D4->1F65=1,win_D4->1F66=1,MinDominance = 30,d1f1 = 1,d1f2 = 13,d1f3 = 14,d1f4 = 15,d1f5 = 18,d1f6 = 19,d1f7 = 21,d2f1 = 8,d2f2 = 10,d2f3 = 11,d2f4 = 12,d2f5 = 16,d2f6 = 17,d2f7 = 28,d3f1 = 4,d3f2 = 6,d3f3 = 7,d3f4 = 9,d3f5 = 23,d3f6 = 26,d3f7 = 27,d4f1 = 2,d4f2 = 3,d4f3 = 5,d4f4 = 20,d4f5 = 22,d4f6 = 24,d4f7 = 25,diff = 19,maxNo = 28,noWins-d1->d2 = 30,noWins-d2->d3 = 30,noWins-d3->d0 = 30,noWins-d4->d1 = 30]");
   }
 
   @Test
@@ -729,9 +729,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[Cost = 355,cities[0] = 8,cities[1] = 3,cities[2] = 4,cities[3] = 6,cities[4] = 10,cities[5] = 7,cities[6] = 1,cities[7] = 9,cities[8] = 5,cities[9] = 2,costs[0] = 56,costs[1] = 26,costs[2] = 71,costs[3] = 19,costs[4] = 13,costs[5] = 65,costs[6] = 25,costs[7] = 23,costs[8] = 8,costs[9] = 49,nextLoad[0] = 2,nextLoad[1] = 1,nextLoad[2] = 4,nextLoad[3] = -3,nextLoad[4] = 1,nextLoad[5] = 5,nextLoad[6] = -6,nextLoad[7] = 3,nextLoad[8] = -5,nextLoad[9] = 0,nextTown[0] = 9,nextTown[1] = 5,nextTown[2] = 10,nextTown[3] = 2,nextTown[4] = 3,nextTown[5] = 4,nextTown[6] = 6,nextTown[7] = 7,nextTown[8] = 1,nextTown[9] = 8,partialLoad[0-0] = 2,partialLoad[0-1] = 3,partialLoad[0-2] = 7,partialLoad[0-3] = 4,partialLoad[0-4] = 5,partialLoad[0-5] = 10,partialLoad[0-6] = 4,partialLoad[0-7] = 7,partialLoad[0-8] = 2,partialLoad[0-9] = 2,MutableVar[0] (0)[8, 7],MutableVar[1] (0)[3, 10],MutableVar[2] (0)[4, 2],MutableVar[3] (0)[6, 3],MutableVar[4] (0)[10, 9],MutableVar[5] (0)[7, 4],MutableVar[6] (0)[1, 6],MutableVar[7] (0)[9, 1],MutableVar[8] (0)[5, 8],MutableVar[9] (0)[2, 5]]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[Cost = 355,cities[0] = 8,cities[1] = 3,cities[2] = 4,cities[3] = 6,cities[4] = 10,cities[5] = 7,cities[6] = 1,cities[7] = 9,cities[8] = 5,cities[9] = 2,costs[0] = 56,costs[1] = 26,costs[2] = 71,costs[3] = 19,costs[4] = 13,costs[5] = 65,costs[6] = 25,costs[7] = 23,costs[8] = 8,costs[9] = 49,nextLoad[0] = 2,nextLoad[1] = 1,nextLoad[2] = 4,nextLoad[3] = -3,nextLoad[4] = 1,nextLoad[5] = 5,nextLoad[6] = -6,nextLoad[7] = 3,nextLoad[8] = -5,nextLoad[9] = 0,nextTown[0] = 9,nextTown[1] = 5,nextTown[2] = 10,nextTown[3] = 2,nextTown[4] = 3,nextTown[5] = 4,nextTown[6] = 6,nextTown[7] = 7,nextTown[8] = 1,nextTown[9] = 8,partialLoad[0-0] = 2,partialLoad[0-1] = 3,partialLoad[0-2] = 7,partialLoad[0-3] = 4,partialLoad[0-4] = 5,partialLoad[0-5] = 10,partialLoad[0-6] = 4,partialLoad[0-7] = 7,partialLoad[0-8] = 2,partialLoad[0-9] = 2,MutableVar[0] (0)[8, 7],MutableVar[1] (0)[3, 10],MutableVar[2] (0)[4, 2],MutableVar[3] (0)[6, 3],MutableVar[4] (0)[10, 9],MutableVar[5] (0)[7, 4],MutableVar[6] (0)[1, 6],MutableVar[7] (0)[9, 1],MutableVar[8] (0)[5, 8],MutableVar[9] (0)[2, 5]]");
   }
 
   @Test
@@ -762,10 +762,9 @@ public class ExampleBasedTest {
       example.model(problemNumbers[no]);
       example.search();
 
-      assertEquals(
-          "Solution for problem no " + no + " is different ",
-          solutions[no],
-          example.store.toStringOrderedVars());
+      assertThat(example.store.toStringOrderedVars())
+          .as("Solution for problem no " + no + " is different ")
+          .isEqualTo(solutions[no]);
     }
   }
 
@@ -775,12 +774,12 @@ public class ExampleBasedTest {
     PigeonHole example = new PigeonHole();
     example.model();
 
-    assertEquals(false, example.search());
+    assertThat(example.search()).isFalse();
 
     example = new PigeonHole();
     example.modelBasic();
 
-    assertEquals(false, example.search());
+    assertThat(example.search()).isFalse();
   }
 
   @Test
@@ -796,9 +795,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[2 = 2,25 = 25,Mr._Akerman_Group[1] = 1,Mr._Akerman_Group[2] = 1,Mr._Akerman_Group[3] = 1,Mr._Akerman_Group[4] = 1,Mr._Akerman_Group[5] = 0,Mr._Chatham_Group[1] = 1,Mr._Chatham_Group[2] = 0,Mr._Chatham_Group[3] = 1,Mr._Chatham_Group[4] = 0,Mr._Chatham_Group[5] = 0,Mr._Etting_Group[1] = 1,Mr._Etting_Group[2] = 1,Mr._Etting_Group[3] = 1,Mr._Etting_Group[4] = 0,Mr._Etting_Group[5] = 0,Ms._Baird_Group[1] = 1,Ms._Baird_Group[2] = 0,Ms._Baird_Group[3] = 1,Ms._Baird_Group[4] = 1,Ms._Baird_Group[5] = 0,Ms._Duval_Group[1] = 1,Ms._Duval_Group[2] = 1,Ms._Duval_Group[3] = 0,Ms._Duval_Group[4] = 0,Ms._Duval_Group[5] = 0,Sum4Group[1] = 5,Sum4Group[2] = 3,Sum4Group[3] = 4,Sum4Group[4] = 2,Sum4Group[5] = 0,agreeOnVote0 = 1,agreeOnVote1 = 0,agreeOnVote2 = 0,agreeOnVote3 = 0,agreeOnVote4 = 1,noAgreeBairdAndDuval = 2,noNoVotes = 11,noYesVotes = 14,sumChatham = 2,weightedVotes4Mr._Akerman = 15,weightedVotes4Mr._Chatham = 5,weightedVotes4Mr._Etting = 7,weightedVotes4Ms._Baird = 13,weightedVotes4Ms._Duval = 3]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[2 = 2,25 = 25,Mr._Akerman_Group[1] = 1,Mr._Akerman_Group[2] = 1,Mr._Akerman_Group[3] = 1,Mr._Akerman_Group[4] = 1,Mr._Akerman_Group[5] = 0,Mr._Chatham_Group[1] = 1,Mr._Chatham_Group[2] = 0,Mr._Chatham_Group[3] = 1,Mr._Chatham_Group[4] = 0,Mr._Chatham_Group[5] = 0,Mr._Etting_Group[1] = 1,Mr._Etting_Group[2] = 1,Mr._Etting_Group[3] = 1,Mr._Etting_Group[4] = 0,Mr._Etting_Group[5] = 0,Ms._Baird_Group[1] = 1,Ms._Baird_Group[2] = 0,Ms._Baird_Group[3] = 1,Ms._Baird_Group[4] = 1,Ms._Baird_Group[5] = 0,Ms._Duval_Group[1] = 1,Ms._Duval_Group[2] = 1,Ms._Duval_Group[3] = 0,Ms._Duval_Group[4] = 0,Ms._Duval_Group[5] = 0,Sum4Group[1] = 5,Sum4Group[2] = 3,Sum4Group[3] = 4,Sum4Group[4] = 2,Sum4Group[5] = 0,agreeOnVote0 = 1,agreeOnVote1 = 0,agreeOnVote2 = 0,agreeOnVote3 = 0,agreeOnVote4 = 1,noAgreeBairdAndDuval = 2,noNoVotes = 11,noYesVotes = 14,sumChatham = 2,weightedVotes4Mr._Akerman = 15,weightedVotes4Mr._Chatham = 5,weightedVotes4Mr._Etting = 7,weightedVotes4Ms._Baird = 13,weightedVotes4Ms._Duval = 3]");
   }
 
   @Test
@@ -810,7 +809,7 @@ public class ExampleBasedTest {
 
     example.searchAllAtOnce();
 
-    assertEquals(40, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(40);
 
     example = new Queens();
     example.numberQ = 7;
@@ -818,7 +817,7 @@ public class ExampleBasedTest {
 
     example.searchAllAtOnce();
 
-    assertEquals(40, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(40);
   }
 
   @Test
@@ -834,9 +833,9 @@ public class ExampleBasedTest {
 
     exampleBasic.getSearch().assignSolution();
 
-    assertEquals(
-        "[D = 7,E = 5,M = 1,MONEY = 10652,MORE = 1085,N = 6,O = 0,R = 8,S = 9,SEND = 9567,Y = 2,v(DinSEND) = 7,v(EinMONEY) = 50,v(EinMORE) = 5,v(EinSEND) = 500,v(MONEinMONEY) = 10650,v(MOinMONEY) = 10000,v(MOinMORE) = 1000,v(MinMONEY) = 10000,v(MinMORE) = 1000,v(NDinSEND) = 67,v(NEinMONEY) = 650,v(NinMONEY) = 600,v(NinSEND) = 60,v(OinMONEY) = 0,v(OinMORE) = 0,v(REinMORE) = 85,v(RinMORE) = 80,v(SEinSEND) = 9500,v(SinSEND) = 9000,v(YinMONEY) = 2]",
-        exampleBasic.store.toStringOrderedVars());
+    assertThat(exampleBasic.store.toStringOrderedVars())
+        .isEqualTo(
+            "[D = 7,E = 5,M = 1,MONEY = 10652,MORE = 1085,N = 6,O = 0,R = 8,S = 9,SEND = 9567,Y = 2,v(DinSEND) = 7,v(EinMONEY) = 50,v(EinMORE) = 5,v(EinSEND) = 500,v(MONEinMONEY) = 10650,v(MOinMONEY) = 10000,v(MOinMORE) = 1000,v(MinMONEY) = 10000,v(MinMORE) = 1000,v(NDinSEND) = 67,v(NEinMONEY) = 650,v(NinMONEY) = 600,v(NinSEND) = 60,v(OinMONEY) = 0,v(OinMORE) = 0,v(REinMORE) = 85,v(RinMORE) = 80,v(SEinSEND) = 9500,v(SinSEND) = 9000,v(YinMONEY) = 2]");
 
     SendMoreMoney exampleGlobal = new SendMoreMoney();
 
@@ -848,9 +847,9 @@ public class ExampleBasedTest {
 
     exampleGlobal.getSearch().assignSolution();
 
-    assertEquals(
-        "[D = 7,E = 5,M = 1,N = 6,O = 0,R = 8,S = 9,Y = 2,v(MONEY) = 10652,v(MORE) = 1085,v(SEND) = 9567]",
-        exampleGlobal.store.toStringOrderedVars());
+    assertThat(exampleGlobal.store.toStringOrderedVars())
+        .isEqualTo(
+            "[D = 7,E = 5,M = 1,N = 6,O = 0,R = 8,S = 9,Y = 2,v(MONEY) = 10652,v(MORE) = 1085,v(SEND) = 9567]");
   }
 
   @Test
@@ -866,9 +865,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[Brian = 5,Nina = 3,Paula = 4,Russell = 1,Stuart = 2,Z = 2,angryAtBrian = 2,angryAtNina = 5,angryAtPaula = 1,angryAtRussell = 3,angryAtStuart = 4,boy = 2,cleaning_the_attic = 5,cleaning_the_basement = 3,cleaning_the_garage = 1,failed_to_return_rollerblades = 2,finished_cereal = 5,hid_violin = 3,hogged_television = 3,hung_up_on_friend = 2,imie = 2,knocked_over_chess_game = 5,kto = 1,let_dog_in_room = 4,let_gerbil_out_of_cage = 4,removed_light_bulbs = 1,sibling = 5,somebody = 3,someone = 2,used_up_hot_water = 1,washing_the_blinds = 4,washing_the_windows = 2,x1 = 1,x2 = 2,x3 = 3,x4 = 4,x5 = 5,y1 = 2,y2 = 3,y3 = 4,y4 = 5,y5 = 1]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[Brian = 5,Nina = 3,Paula = 4,Russell = 1,Stuart = 2,Z = 2,angryAtBrian = 2,angryAtNina = 5,angryAtPaula = 1,angryAtRussell = 3,angryAtStuart = 4,boy = 2,cleaning_the_attic = 5,cleaning_the_basement = 3,cleaning_the_garage = 1,failed_to_return_rollerblades = 2,finished_cereal = 5,hid_violin = 3,hogged_television = 3,hung_up_on_friend = 2,imie = 2,knocked_over_chess_game = 5,kto = 1,let_dog_in_room = 4,let_gerbil_out_of_cage = 4,removed_light_bulbs = 1,sibling = 5,somebody = 3,someone = 2,used_up_hot_water = 1,washing_the_blinds = 4,washing_the_windows = 2,x1 = 1,x2 = 2,x3 = 3,x4 = 4,x5 = 5,y1 = 2,y2 = 3,y3 = 4,y4 = 5,y5 = 1]");
   }
 
   @Test
@@ -884,9 +883,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[2 = 2,3apart = 3,Green = 16,Mellie = 16,Nellie = 14,Ollie = 13,Pollie = 17,Rollie = 15,White1 = 14,White2 = 17,Yellow1 = 13,Yellow2 = 15,mellieRoomNo = 3,mellieRoomPosition = 5,nellieRoomNo = 2,nellieRoomPosition = 3,ollieRoomNo = 1,ollieRoomPosition = 1,pollieRoomNo = 2,pollieRoomPosition = 4,rollieRoomNo = 1,rollieRoomPosition = 2]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[2 = 2,3apart = 3,Green = 16,Mellie = 16,Nellie = 14,Ollie = 13,Pollie = 17,Rollie = 15,White1 = 14,White2 = 17,Yellow1 = 13,Yellow2 = 15,mellieRoomNo = 3,mellieRoomPosition = 5,nellieRoomNo = 2,nellieRoomPosition = 3,ollieRoomNo = 1,ollieRoomPosition = 1,pollieRoomNo = 2,pollieRoomPosition = 4,rollieRoomNo = 1,rollieRoomPosition = 2]");
   }
 
   @Test
@@ -902,9 +901,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[Ching = 2,Finland = 4,Italy = 2,Japan = 3,Ming = 3,Sung = 4,Tang = 1,USA = 1,beltbuckle = 1,darkgreen = 4,dragon = 2,grasshopper = 3,horse = 4,lightgreen = 3,red = 1,white = 2]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[Ching = 2,Finland = 4,Italy = 2,Japan = 3,Ming = 3,Sung = 4,Tang = 1,USA = 1,beltbuckle = 1,darkgreen = 4,dragon = 2,grasshopper = 3,horse = 4,lightgreen = 3,red = 1,white = 2]");
   }
 
   @Test
@@ -920,9 +919,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[f00 = 8,f01 = 1,f02 = 3,f03 = 4,f04 = 2,f05 = 9,f06 = 7,f07 = 6,f08 = 5,f10 = 4,f11 = 6,f12 = 2,f13 = 5,f14 = 7,f15 = 1,f16 = 8,f17 = 3,f18 = 9,f20 = 7,f21 = 9,f22 = 5,f23 = 3,f24 = 6,f25 = 8,f26 = 1,f27 = 4,f28 = 2,f30 = 2,f31 = 4,f32 = 7,f33 = 1,f34 = 5,f35 = 3,f36 = 9,f37 = 8,f38 = 6,f40 = 5,f41 = 3,f42 = 9,f43 = 8,f44 = 4,f45 = 6,f46 = 2,f47 = 1,f48 = 7,f50 = 6,f51 = 8,f52 = 1,f53 = 2,f54 = 9,f55 = 7,f56 = 4,f57 = 5,f58 = 3,f60 = 9,f61 = 7,f62 = 8,f63 = 6,f64 = 1,f65 = 5,f66 = 3,f67 = 2,f68 = 4,f70 = 1,f71 = 2,f72 = 6,f73 = 7,f74 = 3,f75 = 4,f76 = 5,f77 = 9,f78 = 8,f80 = 3,f81 = 5,f82 = 4,f83 = 9,f84 = 8,f85 = 2,f86 = 6,f87 = 7,f88 = 1]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[f00 = 8,f01 = 1,f02 = 3,f03 = 4,f04 = 2,f05 = 9,f06 = 7,f07 = 6,f08 = 5,f10 = 4,f11 = 6,f12 = 2,f13 = 5,f14 = 7,f15 = 1,f16 = 8,f17 = 3,f18 = 9,f20 = 7,f21 = 9,f22 = 5,f23 = 3,f24 = 6,f25 = 8,f26 = 1,f27 = 4,f28 = 2,f30 = 2,f31 = 4,f32 = 7,f33 = 1,f34 = 5,f35 = 3,f36 = 9,f37 = 8,f38 = 6,f40 = 5,f41 = 3,f42 = 9,f43 = 8,f44 = 4,f45 = 6,f46 = 2,f47 = 1,f48 = 7,f50 = 6,f51 = 8,f52 = 1,f53 = 2,f54 = 9,f55 = 7,f56 = 4,f57 = 5,f58 = 3,f60 = 9,f61 = 7,f62 = 8,f63 = 6,f64 = 1,f65 = 5,f66 = 3,f67 = 2,f68 = 4,f70 = 1,f71 = 2,f72 = 6,f73 = 7,f74 = 3,f75 = 4,f76 = 5,f77 = 9,f78 = 8,f80 = 3,f81 = 5,f82 = 4,f83 = 9,f84 = 8,f85 = 2,f86 = 6,f87 = 7,f88 = 1]");
 
     example = new Sudoku();
 
@@ -934,9 +933,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[f00 = 8,f01 = 1,f02 = 3,f03 = 4,f04 = 2,f05 = 9,f06 = 7,f07 = 6,f08 = 5,f10 = 4,f11 = 6,f12 = 2,f13 = 5,f14 = 7,f15 = 1,f16 = 8,f17 = 3,f18 = 9,f20 = 7,f21 = 9,f22 = 5,f23 = 3,f24 = 6,f25 = 8,f26 = 1,f27 = 4,f28 = 2,f30 = 2,f31 = 4,f32 = 7,f33 = 1,f34 = 5,f35 = 3,f36 = 9,f37 = 8,f38 = 6,f40 = 5,f41 = 3,f42 = 9,f43 = 8,f44 = 4,f45 = 6,f46 = 2,f47 = 1,f48 = 7,f50 = 6,f51 = 8,f52 = 1,f53 = 2,f54 = 9,f55 = 7,f56 = 4,f57 = 5,f58 = 3,f60 = 9,f61 = 7,f62 = 8,f63 = 6,f64 = 1,f65 = 5,f66 = 3,f67 = 2,f68 = 4,f70 = 1,f71 = 2,f72 = 6,f73 = 7,f74 = 3,f75 = 4,f76 = 5,f77 = 9,f78 = 8,f80 = 3,f81 = 5,f82 = 4,f83 = 9,f84 = 8,f85 = 2,f86 = 6,f87 = 7,f88 = 1]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[f00 = 8,f01 = 1,f02 = 3,f03 = 4,f04 = 2,f05 = 9,f06 = 7,f07 = 6,f08 = 5,f10 = 4,f11 = 6,f12 = 2,f13 = 5,f14 = 7,f15 = 1,f16 = 8,f17 = 3,f18 = 9,f20 = 7,f21 = 9,f22 = 5,f23 = 3,f24 = 6,f25 = 8,f26 = 1,f27 = 4,f28 = 2,f30 = 2,f31 = 4,f32 = 7,f33 = 1,f34 = 5,f35 = 3,f36 = 9,f37 = 8,f38 = 6,f40 = 5,f41 = 3,f42 = 9,f43 = 8,f44 = 4,f45 = 6,f46 = 2,f47 = 1,f48 = 7,f50 = 6,f51 = 8,f52 = 1,f53 = 2,f54 = 9,f55 = 7,f56 = 4,f57 = 5,f58 = 3,f60 = 9,f61 = 7,f62 = 8,f63 = 6,f64 = 1,f65 = 5,f66 = 3,f67 = 2,f68 = 4,f70 = 1,f71 = 2,f72 = 6,f73 = 7,f74 = 3,f75 = 4,f76 = 5,f77 = 9,f78 = 8,f80 = 3,f81 = 5,f82 = 4,f83 = 9,f84 = 8,f85 = 2,f86 = 6,f87 = 7,f88 = 1]");
   }
 
   @Test
@@ -954,9 +953,9 @@ public class ExampleBasedTest {
 
     survoPuzzle.getSearch().assignSolution();
 
-    assertEquals(
-        "[c_0 = 22,c_1 = 11,c_2 = 42,c_3 = 32,c_4 = 27,c_5 = 37,r_0 = 30,r_1 = 86,r_2 = 55,x_0_0 = 4,x_0_1 = 1,x_0_2 = 10,x_0_3 = 5,x_0_4 = 3,x_0_5 = 7,x_1_0 = 12,x_1_1 = 8,x_1_2 = 18,x_1_3 = 16,x_1_4 = 15,x_1_5 = 17,x_2_0 = 6,x_2_1 = 2,x_2_2 = 14,x_2_3 = 11,x_2_4 = 9,x_2_5 = 13,xa_0_0 = 4,xa_0_1 = 1,xa_0_2 = 10,xa_0_3 = 5,xa_0_4 = 3,xa_0_5 = 7,xa_1_0 = 12,xa_1_1 = 8,xa_1_2 = 18,xa_1_3 = 16,xa_1_4 = 15,xa_1_5 = 17,xa_2_0 = 6,xa_2_1 = 2,xa_2_2 = 14,xa_2_3 = 11,xa_2_4 = 9,xa_2_5 = 13]",
-        survoPuzzle.store.toStringOrderedVars());
+    assertThat(survoPuzzle.store.toStringOrderedVars())
+        .isEqualTo(
+            "[c_0 = 22,c_1 = 11,c_2 = 42,c_3 = 32,c_4 = 27,c_5 = 37,r_0 = 30,r_1 = 86,r_2 = 55,x_0_0 = 4,x_0_1 = 1,x_0_2 = 10,x_0_3 = 5,x_0_4 = 3,x_0_5 = 7,x_1_0 = 12,x_1_1 = 8,x_1_2 = 18,x_1_3 = 16,x_1_4 = 15,x_1_5 = 17,x_2_0 = 6,x_2_1 = 2,x_2_2 = 14,x_2_3 = 11,x_2_4 = 9,x_2_5 = 13,xa_0_0 = 4,xa_0_1 = 1,xa_0_2 = 10,xa_0_3 = 5,xa_0_4 = 3,xa_0_5 = 7,xa_1_0 = 12,xa_1_1 = 8,xa_1_2 = 18,xa_1_3 = 16,xa_1_4 = 15,xa_1_5 = 17,xa_2_0 = 6,xa_2_1 = 2,xa_2_2 = 14,xa_2_3 = 11,xa_2_4 = 9,xa_2_5 = 13]");
   }
 
   @Test
@@ -972,9 +971,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[Cost = 340,cities[10] = 2,cities[1] = 7,cities[2] = 3,cities[3] = 4,cities[4] = 6,cities[5] = 10,cities[6] = 1,cities[7] = 8,cities[8] = 9,cities[9] = 5,costs[10] = 49,costs[1] = 25,costs[2] = 26,costs[3] = 71,costs[4] = 19,costs[5] = 13,costs[6] = 76,costs[7] = 30,costs[8] = 23,costs[9] = 8,MutableVar[0] (0)[7, 6],MutableVar[1] (0)[3, 10],MutableVar[2] (0)[4, 2],MutableVar[3] (0)[6, 3],MutableVar[4] (0)[10, 9],MutableVar[5] (0)[1, 4],MutableVar[6] (0)[8, 1],MutableVar[7] (0)[9, 7],MutableVar[8] (0)[5, 8],MutableVar[9] (0)[2, 5]]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[Cost = 340,cities[10] = 2,cities[1] = 7,cities[2] = 3,cities[3] = 4,cities[4] = 6,cities[5] = 10,cities[6] = 1,cities[7] = 8,cities[8] = 9,cities[9] = 5,costs[10] = 49,costs[1] = 25,costs[2] = 26,costs[3] = 71,costs[4] = 19,costs[5] = 13,costs[6] = 76,costs[7] = 30,costs[8] = 23,costs[9] = 8,MutableVar[0] (0)[7, 6],MutableVar[1] (0)[3, 10],MutableVar[2] (0)[4, 2],MutableVar[3] (0)[6, 3],MutableVar[4] (0)[10, 9],MutableVar[5] (0)[1, 4],MutableVar[6] (0)[8, 1],MutableVar[7] (0)[9, 7],MutableVar[8] (0)[5, 8],MutableVar[9] (0)[2, 5]]");
   }
 
   @Test
@@ -990,9 +989,9 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[2 = 2,carnival = 4,country = 3,grunge = 1,information = 3,metal = 2,mosh = 2,reggae = 4,s1 = 1,s2 = 0,s3 = 1,vendor = 1]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[2 = 2,carnival = 4,country = 3,grunge = 1,information = 3,metal = 2,mosh = 2,reggae = 4,s1 = 1,s2 = 0,s3 = 1,vendor = 1]");
   }
 
   @Test
@@ -1005,7 +1004,7 @@ public class ExampleBasedTest {
       IO.println("Solution(s) found");
     }
 
-    assertEquals(8, example.search.getSolutionListener().solutionsNo());
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
   }
 
   @Test
@@ -1035,9 +1034,9 @@ public class ExampleBasedTest {
       example.getSearch().assignSolution();
     }
 
-    assertEquals(
-        "[cabbageOnBoatInMove1 = 0,cabbageOnBoatInMove2 = 0,cabbageOnBoatInMove3 = 1,cabbageOnBoatInMove4 = 0,cabbageOnBoatInMove5 = 0,cabbageOnBoatInMove6 = 0,cabbageOnBoatInMove7 = 0,cabbageStateInMove1 = 0,cabbageStateInMove2 = 0,cabbageStateInMove3 = 1,cabbageStateInMove4 = 2,cabbageStateInMove5 = 2,cabbageStateInMove6 = 2,cabbageStateInMove7 = 2,goatOnBoatInMove1 = 1,goatOnBoatInMove2 = 0,goatOnBoatInMove3 = 0,goatOnBoatInMove4 = 1,goatOnBoatInMove5 = 0,goatOnBoatInMove6 = 0,goatOnBoatInMove7 = 1,goatStateInMove1 = 1,goatStateInMove2 = 2,goatStateInMove3 = 2,goatStateInMove4 = 1,goatStateInMove5 = 0,goatStateInMove6 = 0,goatStateInMove7 = 1,left = 0,numberOnBoatInMove1 = 1,numberOnBoatInMove2 = 0,numberOnBoatInMove3 = 1,numberOnBoatInMove4 = 1,numberOnBoatInMove5 = 1,numberOnBoatInMove6 = 0,numberOnBoatInMove7 = 1,right = 2,wolfOnBoatInMove1 = 0,wolfOnBoatInMove2 = 0,wolfOnBoatInMove3 = 0,wolfOnBoatInMove4 = 0,wolfOnBoatInMove5 = 1,wolfOnBoatInMove6 = 0,wolfOnBoatInMove7 = 0,wolfStateInMove1 = 0,wolfStateInMove2 = 0,wolfStateInMove3 = 0,wolfStateInMove4 = 0,wolfStateInMove5 = 1,wolfStateInMove6 = 2,wolfStateInMove7 = 2]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[cabbageOnBoatInMove1 = 0,cabbageOnBoatInMove2 = 0,cabbageOnBoatInMove3 = 1,cabbageOnBoatInMove4 = 0,cabbageOnBoatInMove5 = 0,cabbageOnBoatInMove6 = 0,cabbageOnBoatInMove7 = 0,cabbageStateInMove1 = 0,cabbageStateInMove2 = 0,cabbageStateInMove3 = 1,cabbageStateInMove4 = 2,cabbageStateInMove5 = 2,cabbageStateInMove6 = 2,cabbageStateInMove7 = 2,goatOnBoatInMove1 = 1,goatOnBoatInMove2 = 0,goatOnBoatInMove3 = 0,goatOnBoatInMove4 = 1,goatOnBoatInMove5 = 0,goatOnBoatInMove6 = 0,goatOnBoatInMove7 = 1,goatStateInMove1 = 1,goatStateInMove2 = 2,goatStateInMove3 = 2,goatStateInMove4 = 1,goatStateInMove5 = 0,goatStateInMove6 = 0,goatStateInMove7 = 1,left = 0,numberOnBoatInMove1 = 1,numberOnBoatInMove2 = 0,numberOnBoatInMove3 = 1,numberOnBoatInMove4 = 1,numberOnBoatInMove5 = 1,numberOnBoatInMove6 = 0,numberOnBoatInMove7 = 1,right = 2,wolfOnBoatInMove1 = 0,wolfOnBoatInMove2 = 0,wolfOnBoatInMove3 = 0,wolfOnBoatInMove4 = 0,wolfOnBoatInMove5 = 1,wolfOnBoatInMove6 = 0,wolfOnBoatInMove7 = 0,wolfStateInMove1 = 0,wolfStateInMove2 = 0,wolfStateInMove3 = 0,wolfStateInMove4 = 0,wolfStateInMove5 = 1,wolfStateInMove6 = 2,wolfStateInMove7 = 2]");
   }
 
   @Test
@@ -1053,8 +1052,8 @@ public class ExampleBasedTest {
 
     example.getSearch().assignSolution();
 
-    assertEquals(
-        "[blue = 2,coffee = 5,diplomat = 1,distance3 = -1,doctor = 2,dog = 4,english = 3,fox = 1,green = 5,horse = 2,italian = 2,japanese = 5,juice = 4,milk = 3,norwegian = 1,painter = 5,red = 3,sculptor = 3,snails = 3,spaniard = 4,tea = 2,violinist = 4,water = 1,white = 4,yellow = 1,zebra = 5]",
-        example.store.toStringOrderedVars());
+    assertThat(example.store.toStringOrderedVars())
+        .isEqualTo(
+            "[blue = 2,coffee = 5,diplomat = 1,distance3 = -1,doctor = 2,dog = 4,english = 3,fox = 1,green = 5,horse = 2,italian = 2,japanese = 5,juice = 4,milk = 3,norwegian = 1,painter = 5,red = 3,sculptor = 3,snails = 3,spaniard = 4,tea = 2,violinist = 4,water = 1,white = 4,yellow = 1,zebra = 5]");
   }
 }

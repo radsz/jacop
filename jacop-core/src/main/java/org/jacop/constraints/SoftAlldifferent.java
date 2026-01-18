@@ -141,9 +141,9 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
       // create constraint
       decomposition.add(new SoftAlldiffBuilder(doms, violationMeasure).build());
 
-      //	SoftAlldiffBuilder soft = new SoftAlldiffBuilder(doms, violationMeasure);
-      //	soft.decompositionConstraints = new ArrayList<Constraint>();
-      //	soft.primitiveDecomposition(store);
+      // SoftAlldiffBuilder soft = new SoftAlldiffBuilder(doms, violationMeasure);
+      // soft.decompositionConstraints = new ArrayList<Constraint>();
+      // soft.primitiveDecomposition(store);
 
     }
 

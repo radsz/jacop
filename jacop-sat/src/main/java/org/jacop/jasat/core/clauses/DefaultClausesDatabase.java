@@ -257,10 +257,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       }
 
       // the current literal should be the second watch, to simplify many things
-      //			if (myWatchPos == 0) {
-      //				swap(clause, 0, 1);
-      //				myWatchPos = 1;
-      //			}
+      // 		if (myWatchPos == 0) {
+      // 			swap(clause, 0, 1);
+      // 			myWatchPos = 1;
+      // 		}
 
       /*
        * case c)  Maybe unit clause, maybe unknown clause if another watch
@@ -313,7 +313,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     }
 
     // for (int c : watchList)
-    //	assert checkWatches4Clause(c) == null;
+    // assert checkWatches4Clause(c) == null;
 
     // recycle old watch list
     pool.storeOld(watchList);
@@ -423,7 +423,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     assert (checkWatches4Clause(clauseIndex) == null);
 
     // for (int literal : clause)
-    //	assert checkWatches4var(Math.abs(literal)) == null;
+    // assert checkWatches4var(Math.abs(literal)) == null;
 
     return clauseId;
   }
@@ -455,7 +455,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       // resolution !
       // try to remove -literal. If it fails, add literal
       // if (! explanation.removeLiteral(-literal))
-      //	explanation.addLiteral(literal);
+      // explanation.addLiteral(literal);
       explanation.partialResolveWith(literal);
     }
     return explanation;

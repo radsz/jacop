@@ -173,7 +173,7 @@ public class Golomb extends ExampleFD {
 
         // sub + jth = ith since sub = ith - jth
         // Add constraint so the above relationship holds
-        //			store.imposePropagators(new XplusYeqZ(sub, numbers[j], numbers[i]));
+        // 		store.imposePropagators(new XplusYeqZ(sub, numbers[j], numbers[i]));
         store.impose(new XplusYeqZ(sub, numbers[j], numbers[i]));
       }
     }
@@ -181,8 +181,8 @@ public class Golomb extends ExampleFD {
     int index = 0;
     for (int i = 1; i < noMarks; i++) {
       for (int j = 0; j < i; j++) {
-        //				store.imposePropagators(new XplusClteqZ(subs.get(index++), (noMarks - 1 - i + j)
-        //						* (noMarks - i + j) / 2, numbers[noMarks - 1]));
+        // 			store.imposePropagators(new XplusClteqZ(subs.get(index++), (noMarks - 1 - i + j)
+        // 					* (noMarks - i + j) / 2, numbers[noMarks - 1]));
         store.impose(
             new XplusClteqZ(
                 subs.get(index++),

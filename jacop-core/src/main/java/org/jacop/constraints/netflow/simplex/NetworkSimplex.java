@@ -46,7 +46,7 @@ public class NetworkSimplex {
   public static final int LARGE_COST = 100000; // 1 << 29; // or 28 ?
 
   public static final int TREE_ARC = -1;
-  //	public static final int OTHER_ARC = -2;
+  // public static final int OTHER_ARC = -2;
   public static final int DELETED_ARC = -3;
 
   // 'nodes' does NOT contain the root
@@ -131,10 +131,10 @@ public class NetworkSimplex {
   }
 
   private void incrementDegree(Node node, Arc myArc) {
-    //		System.out.println("INCR " + node.name);
+    // 	System.out.println("INCR " + node.name);
 
     // TODO, CRUCIAL, BUG?, assert removed.
-    //	assert(node != root);
+    // assert(node != root);
 
     if (node.degree < 2) {
       node.adjacencyList[node.degree] = myArc.forward ? myArc : myArc.sister;
@@ -144,7 +144,7 @@ public class NetworkSimplex {
   }
 
   private void decrementDegree(Node node) {
-    //		System.out.println("DECR " + node.name);
+    // 	System.out.println("DECR " + node.name);
     assert (node != root);
 
     node.degree--;
@@ -161,7 +161,7 @@ public class NetworkSimplex {
     }
     // update adjacency list
     if (node.degree < 2) {
-      //			System.out.println( node + "\n" + node.degree + ": " +
+      // 		System.out.println( node + "\n" + node.degree + ": " +
       // Arrays.toString(node.adjacencyList) );
 
       Arc arc = node.adjacencyList[0];
@@ -205,7 +205,7 @@ public class NetworkSimplex {
 
     incrementDegree(arc.head, arc);
     incrementDegree(arc.tail(), arc);
-    //		System.out.println(numArcs+"  Added : " + arc);
+    // 	System.out.println(numArcs+"  Added : " + arc);
   }
 
   public void addArcWithFlow(Arc arc) {
@@ -231,7 +231,7 @@ public class NetworkSimplex {
 
     incrementDegree(arc.head, arc);
     incrementDegree(arc.tail(), arc);
-    //		System.out.println(numArcs+"  Added2 : " + arc);
+    // 	System.out.println(numArcs+"  Added2 : " + arc);
   }
 
   public void removeArc(Arc arc) {
@@ -252,7 +252,7 @@ public class NetworkSimplex {
 
     decrementDegree(arc.head);
     decrementDegree(arc.tail());
-    //		System.out.println(numArcs+"  Removed : " + arc);
+    // 	System.out.println(numArcs+"  Removed : " + arc);
   }
 
   /**
@@ -264,11 +264,11 @@ public class NetworkSimplex {
 
     assert (checkFlow(this));
     assert (checkStructure(this));
-    //		infeasibleNodes.add(arc.tail());
-    //		infeasibleNodes.add(arc.head);
+    // 	infeasibleNodes.add(arc.tail());
+    // 	infeasibleNodes.add(arc.head);
 
     // initialize artificial arcs
-    //		infeasibleNodes.addAll(Arrays.asList(nodes));
+    // 	infeasibleNodes.addAll(Arrays.asList(nodes));
     Iterator<Node> it = infeasibleNodes.iterator();
     while (it.hasNext()) {
       Node node = it.next();
@@ -342,7 +342,7 @@ public class NetworkSimplex {
       if (infeasibleFlow != 0) {
         failure = true;
       } else {
-        //				removeArc(arc);
+        // 			removeArc(arc);
         it.remove();
       }
     }
@@ -509,10 +509,10 @@ public class NetworkSimplex {
     } else {
       // here: leaving.sister.capacity == 0;
 
-      //			System.out.println("Leaving  : " + leaving);
-      //			System.out.println("Entering : " + entering);
-      //			System.out.println(leaving == entering);
-      //			assert (leaving.sister.capacity == 0);
+      // 		System.out.println("Leaving  : " + leaving);
+      // 		System.out.println("Entering : " + entering);
+      // 		System.out.println(leaving == entering);
+      // 		assert (leaving.sister.capacity == 0);
 
       lower[index] = leaving;
     }
@@ -630,7 +630,7 @@ public class NetworkSimplex {
     tree.markTree(true);
     for (int i = 0; i < numArcs; i++) {
       Arc arc = lower[i];
-      //			if (arc.isInCut(forward)) {// && arc.capacity > 0) {
+      // 		if (arc.isInCut(forward)) {// && arc.capacity > 0) {
       if (arc.capacity > 0 && arc.isInCut(forward)) {
 
         assert (arc.capacity > 0) : "" + arc;
@@ -648,9 +648,9 @@ public class NetworkSimplex {
     if (entering == null) {
       return false; // infeasible
     } else {
-      //			System.out.println(".Leaving  : " + leaving);
-      //			System.out.println(".Entering : " + entering);
-      //			System.out.println(leaving.sister == entering);
+      // 		System.out.println(".Leaving  : " + leaving);
+      // 		System.out.println(".Entering : " + entering);
+      // 		System.out.println(leaving.sister == entering);
 
       updateTree(leaving.sister, entering);
       return true;
@@ -664,7 +664,7 @@ public class NetworkSimplex {
       Arc arc = lower[i];
       cost += arc.longCost();
       if (cost >= cutoff) {
-        //				throw Store.failException;
+        // 			throw Store.failException;
         return cutoff;
       }
     }
@@ -672,7 +672,7 @@ public class NetworkSimplex {
     for (Node node = root.thread; node != root; node = node.thread) {
       cost += node.toParent.longCost();
       if (cost >= cutoff) {
-        //				throw Store.failException;
+        // 			throw Store.failException;
         return cutoff;
       }
     }

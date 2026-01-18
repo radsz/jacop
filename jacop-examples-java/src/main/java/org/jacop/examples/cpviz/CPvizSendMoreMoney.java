@@ -174,7 +174,7 @@ public class CPvizSendMoreMoney {
 
     // 		search.setConsistencyListener((ConsistencyListener)select);
     // 		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //		search.setExitListener((ExitListener)select);
+    // 	search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
@@ -262,7 +262,7 @@ public class CPvizSendMoreMoney {
 
     // 		search.setConsistencyListener((ConsistencyListener)select);
     //  		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //		search.setExitListener((ExitListener)select);
+    // 	search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);

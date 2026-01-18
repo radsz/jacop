@@ -150,7 +150,7 @@ public class CPvizSudoku {
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
     // 		search.setConsistencyListener((ConsistencyListener)select);
     // 		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //		search.setExitListener((ExitListener)select);
+    // 	search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
@@ -254,7 +254,7 @@ public class CPvizSudoku {
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
     // 		search.setConsistencyListener((ConsistencyListener)select);
     //  		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //		search.setExitListener((ExitListener)select);
+    // 	search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);

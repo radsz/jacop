@@ -272,7 +272,7 @@ public class SocialGolfer extends ExampleSet {
             new MaxGlbCard<>(),
             new IndomainSetMin<>());
 
-    //	label.setSolutionListener(new SetSimpleSolutionListener<SetVar>());
+    // label.setSolutionListener(new SetSimpleSolutionListener<SetVar>());
     label.getSolutionListener().searchAll(false);
     label.getSolutionListener().recordSolutions(false);
 

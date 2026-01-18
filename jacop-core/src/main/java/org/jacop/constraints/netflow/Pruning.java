@@ -65,7 +65,6 @@ public class Pruning extends Network {
   private final Statistics statistics;
 
   // int z;
-  //
   // private void checkCount() {
   // z++;
   // int count = 0;

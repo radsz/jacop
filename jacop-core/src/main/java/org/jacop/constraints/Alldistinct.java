@@ -1542,7 +1542,7 @@ public class Alldistinct extends Constraint
 
     guideVariable = null;
 
-    //		System.out.println("1. var " + guideVariable + " value " + guideValue);
+    // 	System.out.println("1. var " + guideVariable + " value " + guideValue);
 
     int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
@@ -1643,7 +1643,7 @@ public class Alldistinct extends Constraint
       }
     }
 
-    //		System.out.println("2. var " + guideVariable + " value " + guideValue);
+    // 	System.out.println("2. var " + guideVariable + " value " + guideValue);
 
     // Permutation only at this moment
 

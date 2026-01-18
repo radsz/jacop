@@ -132,7 +132,7 @@ public class Gardner extends ExampleSet {
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<>(vars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
 
-    //	label.setSolutionListener(new SimpleSolutionListener());
+    // label.setSolutionListener(new SimpleSolutionListener());
     label.getSolutionListener().searchAll(false);
     label.getSolutionListener().recordSolutions(false);
 

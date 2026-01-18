@@ -670,7 +670,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void firstPass() {
 
     pFirst.clear();
-    //		int j = 0;
+    // 	int j = 0;
     int xIndex = 0;
     int maxY;
     int match1XOrderIndex = 0;
@@ -707,7 +707,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           // it was checked that the min == i so max cannot be under min. Well, yes there are cases
           // where it's useful.
         }
-        //				j++;
+        // 			j++;
       }
     }
 
@@ -744,7 +744,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void secondPass() {
 
     pSecond.clear();
-    //		int j = 0;
+    // 	int j = 0;
     int top;
     int xIndex = 0;
     int minY;
@@ -777,7 +777,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         match2XOrder[match2XOrderIndex] = top;
         match2XOrderIndex++;
         nbOfMatchPerY[i]++;
-        //				j++;
+        // 			j++;
       }
       while (!pSecond.isEmpty() && ((pSecond.element().max()) < i + 1)) {
         top = pSecond.remove().index;
@@ -786,7 +786,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         match2XOrder[match2XOrderIndex] = top;
         match2XOrderIndex++;
         nbOfMatchPerY[i]++;
-        //				j++;
+        // 			j++;
       }
     }
 
@@ -1272,7 +1272,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  //	----------------------------SORT_AND_COMPARATOR--------------------------//
+  // ----------------------------SORT_AND_COMPARATOR--------------------------//
 
   private void sortXByDomainMin() {
     // I need to sort only the part concern, otherwise old values still after

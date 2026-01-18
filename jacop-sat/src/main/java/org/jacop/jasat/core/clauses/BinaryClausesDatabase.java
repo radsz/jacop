@@ -99,7 +99,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
     // notify all clauses
     int[] watchedClauses = watchLists[var];
-    //		for (int i = 1; i < clauses[0]; ++i) {
+    // 	for (int i = 1; i < clauses[0]; ++i) {
     for (int i = watchedClauses[0] - 1; i > 0; i--) {
 
       // int clauseIndex = clauses[i];
@@ -147,7 +147,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
     	// try to remove -literal. If it fails, add literal
     	//if (! clause.removeLiteral(-literal))
-    	//	clause.addLiteral(literal);
+    	// clause.addLiteral(literal);
     	clause.partialResolveWith(literal);
 
     }

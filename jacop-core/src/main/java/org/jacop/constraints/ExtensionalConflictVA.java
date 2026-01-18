@@ -597,14 +597,14 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         this.tuples[i][j] = new int[supportCount[i][j]][];
       }
 
-      //			int m = 0;
+      // 		int m = 0;
       for (int[] t : tuplesFromConstructor) {
 
         int value = t[i];
         int position = findPosition(value, values[i]);
 
         this.tuples[i][position][--supportCount[i][position]] = t;
-        //				m++;
+        // 			m++;
 
       }
 

@@ -70,7 +70,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public final Map<T, Integer> position = Var.createEmptyPositioning();
 
-  //	int subListSize;
+  // int subListSize;
   /** It stores variables which need to be labelled. */
   public final List<List<T>> searchVariables = new ArrayList<>();
 

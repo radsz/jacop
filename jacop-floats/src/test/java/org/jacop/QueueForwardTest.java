@@ -30,7 +30,7 @@
 
 package org.jacop;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
@@ -86,7 +86,7 @@ public class QueueForwardTest {
       IO.println("*** No");
     }
 
-    assertEquals(true, result);
+    assertThat(result).isTrue();
   }
 
   @Test
@@ -118,7 +118,7 @@ public class QueueForwardTest {
       IO.println("*** No");
     }
 
-    assertEquals(false, result);
+    assertThat(result).isFalse();
   }
 
   @Test
@@ -149,6 +149,6 @@ public class QueueForwardTest {
       IO.println("*** No");
     }
 
-    assertEquals(false, result);
+    assertThat(result).isFalse();
   }
 }

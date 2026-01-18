@@ -125,9 +125,7 @@ public class CrossWord extends ExampleFD {
 
     readDictionaryFromFile(defaultDictionary, wordSizes);
 
-    //
     // initiate structures and variables
-    //
 
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {

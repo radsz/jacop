@@ -70,9 +70,7 @@ public class DeBruijn extends ExampleFD {
   public IntVar[][] binary; // the representation of numbers in x, in the choosen base
   IntVar[] bin_code; // the de Bruijn sequence (first number in binary)
 
-  //
   // the model
-  //
 
   /**
    * Running the program java DeBruijn base n java DeBruijn base n m
@@ -156,12 +154,9 @@ public class DeBruijn extends ExampleFD {
       x[i] = new IntVar(store, "x_" + i, 0, pow_base_n - 1);
     }
 
-    //
     // convert between decimal number in x[i] and "base-ary" numbers
     // in binary[i][0..n-1].
-    //
     // (This corresponds to the predicate toNum in the MiniZinc model)
-    //
 
     // calculate the weights array
     int[] weights = new int[n];
@@ -182,10 +177,8 @@ public class DeBruijn extends ExampleFD {
       // store.impose(new SumWeight (binary[i], weights, x[i]));
     }
 
-    //
     // assert the the deBruijn property:  element i in binary starts
     // with the end of element i-1
-    //
     for (int i = 1; i < m; i++) {
       for (int j = 1; j < n; j++) {
         store.impose(new XeqY(binary[i - 1][j], binary[i][j - 1]));
@@ -198,10 +191,8 @@ public class DeBruijn extends ExampleFD {
     }
 
     vars = new ArrayList<>();
-    //
     // This is the de Bruijn sequence, i.e.
     // the first element of of each row in binary[i]
-    //
     bin_code = new IntVar[m];
     for (int i = 0; i < m; i++) {
       bin_code[i] = new IntVar(store, "bin_code_" + i, 0, base - 1);

@@ -95,7 +95,7 @@ public final class IntStack {
 
     assert currentIndex != 0;
     // if (currentIndex == 0)
-    //	throw new EmptyStackException();
+    // throw new EmptyStackException();
 
     return array[--currentIndex];
   }
@@ -109,7 +109,7 @@ public final class IntStack {
 
     assert currentIndex != 0;
     // if (currentIndex == 0)
-    //	throw new EmptyStackException();
+    // throw new EmptyStackException();
 
     return array[currentIndex - 1];
   }

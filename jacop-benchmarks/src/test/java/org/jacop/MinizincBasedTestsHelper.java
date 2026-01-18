@@ -30,8 +30,8 @@
 
 package org.jacop;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -216,19 +216,19 @@ public class MinizincBasedTestsHelper {
                 + "not found in expected result");
       }
 
-      assertEquals(
-          "\n"
-              + "File path: "
-              + timeCategory
-              + testFilename
-              + ".out "
-              + "\nError line number (expected, actual): ("
-              + (j + 1)
-              + ","
-              + (i + 1)
-              + ")\n",
-          expectedResult.get(j).trim(),
-          result.get(i).trim());
+      assertThat(result.get(i).trim())
+          .as(
+              "\n"
+                  + "File path: "
+                  + timeCategory
+                  + testFilename
+                  + ".out "
+                  + "\nError line number (expected, actual): ("
+                  + (j + 1)
+                  + ","
+                  + (i + 1)
+                  + ")\n")
+          .isEqualTo(expectedResult.get(j).trim());
       i++;
       j++;
     }

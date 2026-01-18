@@ -99,7 +99,7 @@ public final class SatWrapper extends Constraint
 
   // association from CP variables to boolean variables
   // public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
-  //	new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
+  // new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
   // TODO : find more efficient ? hard, because IntVar has no unique ID
   /*
    * TODO : a way to add those only if needed
@@ -212,7 +212,7 @@ public final class SatWrapper extends Constraint
     if (!registeredVars.contains(variable)) {
 
       registeredVars.add(variable);
-      //	registeredVarsArray.add(variable);
+      // registeredVarsArray.add(variable);
 
       // tell the Sat Change listener
       satChangesListener.ensureAccess(variable);
@@ -344,9 +344,9 @@ public final class SatWrapper extends Constraint
 
     // print what literal we assert, and its meaning
     // log(this, "wrapper assert literal "+literal+
-    //		" at (cp level " + store.level +
-    //		", sat level "+currentSatLevel+
-    //		") standing for "+showLiteralMeaning(literal));
+    // 	" at (cp level " + store.level +
+    // 	", sat level "+currentSatLevel+
+    // 	") standing for "+showLiteralMeaning(literal));
 
     // trigger propagation in *SAT-solver*
     core.assertLiteral(literal, currentSatLevel);
@@ -426,7 +426,7 @@ public final class SatWrapper extends Constraint
       }
     }
     // log(this, "remove cp level "+cpLevel +
-    //		" (previous : "+previousCpLevel+")");
+    // 	" (previous : "+previousCpLevel+")");
 
     // this CP level does not correspond to anything anymore
     cpToSatLevels[cpLevel] = null;
@@ -452,9 +452,9 @@ public final class SatWrapper extends Constraint
 
         mustBacktrack = clauseToLearn.isUnsatisfiableIn(trail);
       }
-      //			else {
-      //				core.triggerIdleEvent();
-      //			}
+      // 		else {
+      // 			core.triggerIdleEvent();
+      // 		}
 
     }
   }

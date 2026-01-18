@@ -91,7 +91,7 @@ public class NonTransitiveDice extends ExampleFD {
    */
   static void main(String[] args) {
 
-    //		int sols = 0;
+    // 	int sols = 0;
 
     boolean firstSolutionFound = false;
 
@@ -129,7 +129,7 @@ public class NonTransitiveDice extends ExampleFD {
 
       if (result) {
         firstSolutionFound = true;
-        //				sols++;
+        // 			sols++;
       }
 
       if (!result && firstSolutionFound) {
@@ -166,7 +166,7 @@ public class NonTransitiveDice extends ExampleFD {
 
       if (result) {
         firstSolutionFound = true;
-        //				sols++;
+        // 			sols++;
       }
 
       if (!result && firstSolutionFound) {

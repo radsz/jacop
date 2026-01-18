@@ -136,7 +136,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
 
     // first index represents compared vectors and the second variables within vectors
-    //		int numberStates = 0;
+    // 	int numberStates = 0;
     int numberVar = 0;
 
     BooleanVar[][] lt = new BooleanVar[x.length - 1][];
@@ -167,10 +167,10 @@ public class Lex extends DecomposedConstraint<Constraint> {
         state[i][j][0] = new FSMState();
         state[i][j][1] = new FSMState();
         numberVar += 2;
-        //				numberStates += 2;
+        // 			numberStates += 2;
 
         if (i < x.length - 2) {
-          //					numberStates += 2*(sizeToCompare-j) - 1;
+          // 				numberStates += 2*(sizeToCompare-j) - 1;
           if (j == 0) {
             addState[i] = new FSMState[2 * (sizeToCompare - j) - 1];
 
@@ -181,7 +181,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
         }
       }
     }
-    //		numberStates++;
+    // 	numberStates++;
 
     IntVar[] var = new IntVar[numberVar];
     FSM g = new FSM();
@@ -269,7 +269,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
 
     // first index represents compared vectors and the second varinbales within vectors
-    //		int numberStates = 0;
+    // 	int numberStates = 0;
     int numberVar = 0;
     BooleanVar[][] lt = new BooleanVar[x.length - 1][];
     BooleanVar[][] eq = new BooleanVar[x.length - 1][];
@@ -310,14 +310,14 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
         state[i][j] = new FSMState[2];
         state[i][j][0] = new FSMState();
-        //				numberStates++;
+        // 			numberStates++;
         if (j < sizeToCompare - 1) {
           state[i][j][1] = new FSMState();
-          //					numberStates++;
+          // 				numberStates++;
         }
 
         if (i < x.length - 2) {
-          //					numberStates += 2*(sizeToCompare-j) - 2;
+          // 				numberStates += 2*(sizeToCompare-j) - 2;
 
           if (j == 0) {
             addState[i] = new FSMState[2 * (sizeToCompare - j) - 2];
@@ -329,7 +329,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
         }
       }
     }
-    //		numberStates++;
+    // 	numberStates++;
 
     IntVar[] var = new IntVar[numberVar];
     FSM g = new FSM();

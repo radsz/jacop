@@ -72,7 +72,7 @@ public class NetworkFlow extends Constraint
   static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The network */
-  //	public final Network network;
+  // public final Network network;
   public final Pruning network;
 
   /** The cost variable */
@@ -184,7 +184,7 @@ public class NetworkFlow extends Constraint
     // DomainStructure structure = map.get(variable);
 
     if (!disableQueueVariable) {
-      //			System.out.println("\tQueue var : " + variable);
+      // 		System.out.println("\tQueue var : " + variable);
       if (variable == costVariable) {
         // System.out.println("** Cost var queued, abort");
         return;

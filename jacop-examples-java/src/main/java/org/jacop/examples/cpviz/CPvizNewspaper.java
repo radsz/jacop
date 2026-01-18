@@ -281,7 +281,7 @@ public class CPvizNewspaper {
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, abcd);
     // 		search.setConsistencyListener((ConsistencyListener)select);
     //  		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //		search.setExitListener((ExitListener)select);
+    // 	search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select, cost);

@@ -194,9 +194,7 @@ public class WhoKilledAgatha extends ExampleFD {
     search.getSolutionListener().recordSolutions(true);
     boolean result = search.labeling(store, select);
 
-    //
     // output
-    //
     if (result) {
 
       int numSolutions = search.getSolutionListener().solutionsNo();

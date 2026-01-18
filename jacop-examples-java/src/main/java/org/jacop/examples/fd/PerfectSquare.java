@@ -1842,7 +1842,7 @@ public class PerfectSquare extends ExampleFD {
       IO.println(")");
 
       // If needed a latex representation of the solution can be generated.
-      //	System.out.println( printLaTex(T) );
+      // System.out.println( printLaTex(T) );
 
     }
 

@@ -468,8 +468,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         val = heuristic.getChoiceValue();
         assert (store.currentConstraint == null);
 
-        //		maybe a boolean flag, if search should work
-        //		C, not(C) versus not(C), C;
+        // 	maybe a boolean flag, if search should work
+        // 	C, not(C) versus not(C), C;
 
         DomainOperationHandler domainHandler =
             SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
@@ -746,7 +746,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           store.removeLevel(depth);
 
         }
-        //				else if (!fdv.dom().singleton(val)) {
+        // 			else if (!fdv.dom().singleton(val)) {
         else if (!fdv.dom().singleton()) {
 
           assert (store.currentConstraint == null);

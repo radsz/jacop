@@ -86,7 +86,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       if (ignoreCache.get(Math.abs(assertedLiteral))) {
     	// ignore some literals
     	//wrapper.log(this, "  (ignored) called on literal "+assertedLiteral
-    	//		+" meaning "+wrapper.showLiteralMeaning(assertedLiteral));
+    	// 	+" meaning "+wrapper.showLiteralMeaning(assertedLiteral));
     	return;
     }
     */
@@ -100,7 +100,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       return;
     } else {
       // wrapper.log(this, "  called on literal "+assertedLiteral+" meaning "+
-      //	wrapper.showLiteralMeaning(assertedLiteral));
+      // wrapper.showLiteralMeaning(assertedLiteral));
     }
 
     // get the value this literal corresponds to
@@ -143,9 +143,9 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
         conflictClause.addLiteral(literal);
 
         // wrapper.log(this, "  failure : literal "+literal+
-        //		" meaning "+wrapper.showLiteralMeaning(literal)+
-        //		" is set to "+trail.values[var]
-        //		+" (explanation "+conflictClause+")");
+        // 	" meaning "+wrapper.showLiteralMeaning(literal)+
+        // 	" is set to "+trail.values[var]
+        // 	+" (explanation "+conflictClause+")");
 
         // trigger the conflict and fail
         core.triggerConflictEvent(conflictClause);
@@ -154,13 +154,13 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       } else {
         // nothing to do, literal is already set to the right value
         // wrapper.log(this, "  does not propagate literal "+literal
-        //		+" meaning "+wrapper.showLiteralMeaning(literal));
+        // 	+" meaning "+wrapper.showLiteralMeaning(literal));
       }
     } else {
 
       // wrapper.log(this, "  propagate literal "+literal+" meaning "+
-      //		wrapper.showLiteralMeaning(literal)
-      //		+" at fake index "+clauseIndex);
+      // 	wrapper.showLiteralMeaning(literal)
+      // 	+" at fake index "+clauseIndex);
 
       /*
        * trigger propagate event in the solver. All those propagated
@@ -219,11 +219,11 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
         || (!clause.containsLiteral(-propagatedLiteral));
 
     // resolve clause with [-assertedLiteral, propagatedLiteral]
-    //	if (! clause.removeLiteral(assertedLiteral))
-    //		clause.addLiteral(- assertedLiteral);
+    // if (! clause.removeLiteral(assertedLiteral))
+    // 	clause.addLiteral(- assertedLiteral);
     clause.partialResolveWith(-assertedLiteral);
-    //	if (! clause.removeLiteral(- propagatedLiteral))
-    //		clause.addLiteral(propagatedLiteral);
+    // if (! clause.removeLiteral(- propagatedLiteral))
+    // 	clause.addLiteral(propagatedLiteral);
     clause.partialResolveWith(propagatedLiteral);
 
     return clause;

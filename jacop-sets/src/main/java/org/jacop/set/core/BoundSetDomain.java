@@ -430,9 +430,9 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     in(storeLevel, var, setDom.glb(), setDom.lub());
   }
 
-  //	public void in(int storeLevel, SetVar var, IntDomain set) {
-  //		this.in(storeLevel, var, IntDomain.emptyIntDomain, set);
-  //	}
+  // public void in(int storeLevel, SetVar var, IntDomain set) {
+  // 	this.in(storeLevel, var, IntDomain.emptyIntDomain, set);
+  // }
 
   /**
    * It intersects current domain with the one given as a parameter.
@@ -972,13 +972,13 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       int event;
 
-      //			if (intersect.domainID() == IntDomain.SmallDenseDomainID && lub.domainID() ==
+      // 		if (intersect.domainID() == IntDomain.SmallDenseDomainID && lub.domainID() ==
       // IntDomain.IntervalDomainID) {
-      //				IntDomain replacement = intersect.cloneLight();
-      //				event = replacement.intersectAdapt(lub);
-      //				lub = replacement;
-      //			}
-      //			else
+      // 			IntDomain replacement = intersect.cloneLight();
+      // 			event = replacement.intersectAdapt(lub);
+      // 			lub = replacement;
+      // 		}
+      // 		else
       event = lub.intersectAdapt(intersect);
 
       if (event == Domain.NONE) {
@@ -1016,7 +1016,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       // propagation and only forced call of consistency function below recovers
       // the lost pruning.
       // if (cardinality.min() < resultLUB.getSize() && resultLUB.eq(lub))
-      //	return;
+      // return;
 
       IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLUB.getSize());
       if (resultCardinality.isEmpty()) {
@@ -1025,7 +1025,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       // TODO, remove as early exit is moved higher.
       // if (resultCardinality.min() < resultLUB.getSize() && resultLUB.eq(lub))
-      //	return;
+      // return;
 
       BoundSetDomain result = new BoundSetDomain();
 
@@ -1146,7 +1146,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       // correct.
       // Turn on the lines below after domains are stable to check for potential pruning bugs.
       // if (cardinality.max() > resultGLB.getSize() && resultGLB.eq(glb))
-      //	return;
+      // return;
 
       IntDomain resultCardinality = cardinality.intersect(resultGLB.getSize(), lub.getSize());
       if (resultCardinality.isEmpty()) {

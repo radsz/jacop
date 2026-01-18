@@ -512,7 +512,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // in the beginning of the array and move the pointer. It helps to avoid
     // some recalculations and give potential to fail if the number of ungrounded Y
     // is not enough to cover the future domain
-    //		int countGY = 0;
+    // 	int countGY = 0;
     IntVar y;
     int lastIndex = yGrounded.value();
     IntervalDomain lbVubV = new IntervalDomain();
@@ -551,7 +551,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
               }
             }
-            //						countGY ++;
+            // 					countGY ++;
 
             if (yi >= lastIndex) {
               if (yi != lastIndex) {

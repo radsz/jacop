@@ -31,7 +31,7 @@
 
 package org.jacop;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -192,7 +192,9 @@ public class FilterBenchmarkTest extends FilterBenchmark {
 
     int costFound = (Integer) exp.invoke(this, new Store(), filter, resourcesConfiguration);
 
-    assertEquals("Test " + experiment + " failed for " + Filter.class, costExp, costFound);
+    assertThat(costFound)
+        .as("Test " + experiment + " failed for " + Filter.class)
+        .isEqualTo(costExp);
   }
 
   /**

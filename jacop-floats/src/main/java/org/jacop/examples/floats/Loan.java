@@ -75,7 +75,7 @@ public class Loan {
     //       LOAN3 I = 0.04;
     //             R = 250.0;
     //             B4 = 0.0;
-    //	       result P = 907.47 (precision 1e-4)
+    //        result P = 907.47 (precision 1e-4)
 
     IO.println(
         "\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\nR- quarterly repayment and B4- balance owing at end\nParameters:");

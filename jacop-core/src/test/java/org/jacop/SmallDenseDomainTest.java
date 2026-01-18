@@ -1,8 +1,6 @@
 package org.jacop;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 import static org.mockito.MockitoAnnotations.initMocks;
 
@@ -48,15 +46,15 @@ public class SmallDenseDomainTest {
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
 
-    assertEquals(false, testedDomain.contains(createDomain(new Interval(0, 0))));
-    assertEquals(true, testedDomain.contains(createDomain(new Interval(1, 1))));
+    assertThat(testedDomain.contains(createDomain(new Interval(0, 0)))).isFalse();
+    assertThat(testedDomain.contains(createDomain(new Interval(1, 1)))).isTrue();
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-3, 4, 5, 5, 9, 10}});
 
     IO.println("Test Complement function");
-    assertEquals(
-        false, testedDomain.contains(createDomain(new Interval(1, 2), new Interval(6, 6))));
+    assertThat(testedDomain.contains(createDomain(new Interval(1, 2), new Interval(6, 6))))
+        .isFalse();
   }
 
   @Test
@@ -64,9 +62,8 @@ public class SmallDenseDomainTest {
     IO.println("Complement function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        "{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}",
-        testedDomain.complement().toString());
+    assertThat(testedDomain.complement().toString())
+        .isEqualTo("{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}");
   }
 
   @Test
@@ -74,8 +71,8 @@ public class SmallDenseDomainTest {
     IO.println("GetElementAt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertEquals(1, testedDomain.getElementAt(0));
-    assertEquals(2, testedDomain.getElementAt(1));
+    assertThat(testedDomain.getElementAt(0)).isEqualTo(1);
+    assertThat(testedDomain.getElementAt(1)).isEqualTo(2);
   }
 
   @Test
@@ -87,27 +84,27 @@ public class SmallDenseDomainTest {
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {2, 2}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.intersect(2, 3).toString());
+    assertThat(testedDomain.intersect(2, 3).toString()).isEqualTo(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.intersect(0, 25).toString());
+    assertThat(testedDomain.intersect(0, 25).toString()).isEqualTo(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.intersect(1, 2).toString());
+    assertThat(testedDomain.intersect(1, 2).toString()).isEqualTo(goldenResultDomain.toString());
 
     testedDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertEquals(0, testedDomain.intersectAdapt(createDomain(new Interval(2, 4))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isEqualTo(0);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {2, 3, 5, 7, 12, 14}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.intersect(2, 14).toString());
+    assertThat(testedDomain.intersect(2, 14).toString()).isEqualTo(goldenResultDomain.toString());
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {15, 15}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.intersect(15, 15).toString());
+    assertThat(testedDomain.intersect(15, 15).toString()).isEqualTo(goldenResultDomain.toString());
   }
 
   @Test
@@ -116,102 +113,102 @@ public class SmallDenseDomainTest {
     IO.println("IntersectAdapt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
-    assertEquals(0, testedDomain.intersectAdapt(createDomain(new Interval(2, 4))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 4)))).isEqualTo(0);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(1, testedDomain.intersectAdapt(createDomain(new Interval(14, 20))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(14, 20)))).isEqualTo(1);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(1, testedDomain.intersectAdapt(createDomain(new Interval(2, 6))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 6)))).isEqualTo(1);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        1, testedDomain.intersectAdapt(createDomain(new Interval(2, 6), new Interval(8, 15))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(2, 6), new Interval(8, 15))))
+        .isEqualTo(1);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        0, testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(20, 28))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(20, 28))))
+        .isEqualTo(0);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        1,
-        testedDomain.intersectAdapt(
-            createDomain(new Interval(2, 2), new Interval(5, 5), new Interval(20, 25))));
+    assertThat(
+            testedDomain.intersectAdapt(
+                createDomain(new Interval(2, 2), new Interval(5, 5), new Interval(20, 25))))
+        .isEqualTo(1);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        1,
-        testedDomain.intersectAdapt(
-            createDomain(new Interval(1, 3), new Interval(5, 5), new Interval(20, 25))));
+    assertThat(
+            testedDomain.intersectAdapt(
+                createDomain(new Interval(1, 3), new Interval(5, 5), new Interval(20, 25))))
+        .isEqualTo(1);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        2,
-        testedDomain.intersectAdapt(
-            createDomain(new Interval(1, 3), new Interval(5, 5), new Interval(13, 18))));
+    assertThat(
+            testedDomain.intersectAdapt(
+                createDomain(new Interval(1, 3), new Interval(5, 5), new Interval(13, 18))))
+        .isEqualTo(2);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(1, testedDomain.intersectAdapt(createDomain(new Interval(4, 9))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(4, 9)))).isEqualTo(1);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(0, testedDomain.intersectAdapt(createDomain(new Interval(0, 0))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0)))).isEqualTo(0);
 
     testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(
-        0, testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(2, 2))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(0, 0), new Interval(2, 2))))
+        .isEqualTo(0);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(0, testedDomain.intersectAdapt(2, 2));
+    assertThat(testedDomain.intersectAdapt(2, 2)).isEqualTo(0);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(0, testedDomain.intersectAdapt(0, 0));
+    assertThat(testedDomain.intersectAdapt(0, 0)).isEqualTo(0);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(1, testedDomain.intersectAdapt(1, 9));
+    assertThat(testedDomain.intersectAdapt(1, 9)).isEqualTo(1);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(-1, testedDomain.intersectAdapt(0, 26));
+    assertThat(testedDomain.intersectAdapt(0, 26)).isEqualTo(-1);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(0, testedDomain.intersectAdapt(28, 45));
+    assertThat(testedDomain.intersectAdapt(28, 45)).isEqualTo(0);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(
-        1, testedDomain.intersectAdapt(createDomain(new Interval(-4, 3), new Interval(9, 18))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(-4, 3), new Interval(9, 18))))
+        .isEqualTo(1);
 
     testedDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(1, testedDomain.intersectAdapt(createDomain(new Interval(-4, 1))));
+    assertThat(testedDomain.intersectAdapt(createDomain(new Interval(-4, 1)))).isEqualTo(1);
   }
 
   @Test
@@ -222,9 +219,9 @@ public class SmallDenseDomainTest {
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(false, testedDomain.isIntersecting(28, 45));
-    assertEquals(true, testedDomain.isIntersecting(0, 0));
-    assertEquals(true, testedDomain.isIntersecting(0, 26));
+    assertThat(testedDomain.isIntersecting(28, 45)).isFalse();
+    assertThat(testedDomain.isIntersecting(0, 0)).isTrue();
+    assertThat(testedDomain.isIntersecting(0, 26)).isTrue();
   }
 
   @Test
@@ -239,19 +236,19 @@ public class SmallDenseDomainTest {
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {0, 0, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.subtract(1, 3).toString());
+    assertThat(testedDomain.subtract(1, 3).toString()).isEqualTo(goldenResultDomain.toString());
 
     goldenResultDomain =
         (IntDomain)
             prepareMethod.invoke(
                 this, new Object[] {new int[] {1, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.subtract(0, 0).toString());
+    assertThat(testedDomain.subtract(0, 0).toString()).isEqualTo(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.subtract(1, 26).toString());
+    assertThat(testedDomain.subtract(1, 26).toString()).isEqualTo(goldenResultDomain.toString());
 
     goldenResultDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 6}});
-    assertEquals(goldenResultDomain.toString(), testedDomain.subtract(8, 26).toString());
+    assertThat(testedDomain.subtract(8, 26).toString()).isEqualTo(goldenResultDomain.toString());
   }
 
   @Test
@@ -261,7 +258,7 @@ public class SmallDenseDomainTest {
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(5, goldenResultDomain.nextValue(3));
+    assertThat(goldenResultDomain.nextValue(3)).isEqualTo(5);
   }
 
   @Test
@@ -271,7 +268,7 @@ public class SmallDenseDomainTest {
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
-    assertEquals(1, goldenResultDomain.previousValue(2));
+    assertThat(goldenResultDomain.previousValue(2)).isEqualTo(1);
   }
 
   @Before
@@ -1101,7 +1098,7 @@ public class SmallDenseDomainTest {
 
     boolean result = intDomain1.contains(intDomain);
 
-    assertTrue(result);
+    assertThat(result).isTrue();
   }
 
   @Test
@@ -1117,7 +1114,7 @@ public class SmallDenseDomainTest {
 
     boolean result = intDomain1.isIntersecting(intDomain);
 
-    assertTrue(result);
+    assertThat(result).isTrue();
   }
 
   @Test
@@ -1129,7 +1126,7 @@ public class SmallDenseDomainTest {
     when(intDomain1.eq(intDomain)).thenReturn(true);
     boolean result = intDomain1.singleton(intDomain);
 
-    assertTrue(result);
+    assertThat(result).isTrue();
   }
 
   @Test
@@ -1142,7 +1139,7 @@ public class SmallDenseDomainTest {
     when(intDomain1.getSize()).thenReturn(10);
     boolean result = intDomain1.singleton(intDomain);
 
-    assertFalse(result);
+    assertThat(result).isFalse();
   }
 
   @Test
@@ -1155,7 +1152,7 @@ public class SmallDenseDomainTest {
     when(intDomain1.isEmpty()).thenReturn(true);
     boolean result = intDomain1.singleton(intDomain);
 
-    assertFalse(result);
+    assertThat(result).isFalse();
   }
 
   @Test
@@ -1176,7 +1173,7 @@ public class SmallDenseDomainTest {
 
     boolean result = intDomain1.contains(intDomain);
 
-    assertFalse(result);
+    assertThat(result).isFalse();
   }
 
   public IntDomain createDomain(Interval... intervals) {

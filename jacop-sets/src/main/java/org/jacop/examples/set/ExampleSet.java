@@ -313,7 +313,7 @@ public abstract class ExampleSet {
 
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
-      //	search.printAllSolutions();
+      // search.printAllSolutions();
     } else {
       IO.println("Failed to find any solution");
     }

@@ -253,7 +253,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     assert (level > firstConsistencyLevel)
         : "Constraint has the level at which it has computed its initial state being removed.";
 
-    //		It is called upon removing level
+    // 	It is called upon removing level
 
     backtrackOccured = true;
     lastAssignedVariablePosition = -1;
@@ -398,7 +398,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
       nexts[nexts.length - 1] = -1;
       last = nexts.length - 1;
 
-      //		domainSizeAfterConsistency = new int[list.length];
+      // 	domainSizeAfterConsistency = new int[list.length];
 
       for (int j = 0; j < views.length; j++) {
 

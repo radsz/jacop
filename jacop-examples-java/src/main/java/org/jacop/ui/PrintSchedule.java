@@ -256,7 +256,7 @@ public class PrintSchedule {
       result.append("\t\t").append(i);
     }
 
-    //	s = s + "\t\t" + i;
+    // s = s + "\t\t" + i;
 
     result.append("\n");
 
@@ -265,7 +265,7 @@ public class PrintSchedule {
     for (int i = 0; i <= maxT; i++) {
 
       result.append(i).append("\t");
-      //	s = s + i + "\t";
+      // s = s + i + "\t";
       int j = 0;
       // int k = 1;
       int start = ((IntVar) TaskArr[j].get(1)).min();
@@ -296,10 +296,10 @@ public class PrintSchedule {
         if (integers.isEmpty()) {
           result.append("-");
         }
-        //		s = s + "-";
+        // s = s + "-";
 
         result.append(tab(16 - result.length() + sp));
-        //	s = s + tab(16 - s.length() + sp);
+        // s = s + tab(16 - s.length() + sp);
 
       }
 
@@ -308,6 +308,6 @@ public class PrintSchedule {
     }
 
     return result.toString();
-    //	return s;
+    // return s;
   }
 }

@@ -30,8 +30,7 @@
  */
 package org.jacop;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,7 +109,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(2));
+    assertThat(noOfSolutions).isEqualTo(2);
   }
 
   @Test
@@ -130,7 +129,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(2));
+    assertThat(noOfSolutions).isEqualTo(2);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -177,7 +176,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(6));
+    assertThat(noOfSolutions).isEqualTo(6);
   }
 
   @Test
@@ -199,7 +198,7 @@ public class SingleConstraintTest extends TestHelper {
             store,
             Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
-    assertThat(noOfSolutions, is(42));
+    assertThat(noOfSolutions).isEqualTo(42);
   }
 
   @Test
@@ -215,7 +214,7 @@ public class SingleConstraintTest extends TestHelper {
 
     Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
-    assertThat(dubletons.size(), is(1));
+    assertThat(dubletons.size()).isEqualTo(1);
   }
 
   @Test
@@ -231,7 +230,7 @@ public class SingleConstraintTest extends TestHelper {
 
     Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
 
-    assertThat(dubletons.size(), is(0));
+    assertThat(dubletons.size()).isEqualTo(0);
   }
 
   @Test
@@ -248,7 +247,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, list);
 
-    assertThat(noOfSolutions, is(21));
+    assertThat(noOfSolutions).isEqualTo(21);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -285,7 +284,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(5));
+    assertThat(noOfSolutions).isEqualTo(5);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -376,7 +375,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(xSize * xSize - 2));
+    assertThat(noOfSolutions).isEqualTo(xSize * xSize - 2);
   }
 
   @Test
@@ -395,7 +394,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
 
-    assertThat(noOfSolutions, is(4));
+    assertThat(noOfSolutions).isEqualTo(4);
   }
 
   @Test
@@ -415,7 +414,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
 
-    assertThat(noOfSolutions, is(10));
+    assertThat(noOfSolutions).isEqualTo(10);
   }
 
   @Test
@@ -434,7 +433,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
 
-    assertThat(noOfSolutions, is(10));
+    assertThat(noOfSolutions).isEqualTo(10);
   }
 
   @Test
@@ -453,7 +452,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(2));
+    assertThat(noOfSolutions).isEqualTo(2);
   }
 
   @Test
@@ -472,7 +471,7 @@ public class SingleConstraintTest extends TestHelper {
     store.print();
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(30));
+    assertThat(noOfSolutions).isEqualTo(30);
   }
 
   @Test
@@ -491,7 +490,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(2));
+    assertThat(noOfSolutions).isEqualTo(2);
   }
 
   @Test
@@ -510,7 +509,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(24));
+    assertThat(noOfSolutions).isEqualTo(24);
   }
 
   @Test
@@ -529,7 +528,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
-    assertThat(noOfSolutions, is(2401));
+    assertThat(noOfSolutions).isEqualTo(2401);
   }
 
   @Test
@@ -551,7 +550,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
-    assertThat(noOfSolutions, is(2401));
+    assertThat(noOfSolutions).isEqualTo(2401);
   }
 
   @Test
@@ -571,7 +570,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(15));
+    assertThat(noOfSolutions).isEqualTo(15);
   }
 
   @Test
@@ -590,7 +589,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x);
 
-    assertThat(noOfSolutions, is(81));
+    assertThat(noOfSolutions).isEqualTo(81);
   }
 
   @Test
@@ -614,7 +613,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
 
-    assertThat(noOfSolutions, is(24));
+    assertThat(noOfSolutions).isEqualTo(24);
   }
 
   @Test
@@ -636,7 +635,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, z});
 
-    assertThat(noOfSolutions, is(length));
+    assertThat(noOfSolutions).isEqualTo(length);
   }
 
   @Test
@@ -654,7 +653,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(16));
+    assertThat(noOfSolutions).isEqualTo(16);
   }
 
   @Test
@@ -674,7 +673,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x1, x2);
 
-    assertThat(noOfSolutions, is(188640));
+    assertThat(noOfSolutions).isEqualTo(188640);
   }
 
   @Test
@@ -695,7 +694,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, counters);
 
-    assertThat(noOfSolutions, is(81));
+    assertThat(noOfSolutions).isEqualTo(81);
   }
 
   @Test
@@ -718,7 +717,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, y, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(177147));
+    assertThat(noOfSolutions).isEqualTo(177147);
   }
 
   @Test
@@ -743,7 +742,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
 
-    assertThat(noOfSolutions, is(741642));
+    assertThat(noOfSolutions).isEqualTo(741642);
   }
 
   @Test
@@ -768,7 +767,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
 
-    assertThat(noOfSolutions, is(699189));
+    assertThat(noOfSolutions).isEqualTo(699189);
   }
 
   @Test
@@ -793,7 +792,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
 
-    assertThat(noOfSolutions, is(791208));
+    assertThat(noOfSolutions).isEqualTo(791208);
   }
 
   @Test
@@ -832,7 +831,7 @@ public class SingleConstraintTest extends TestHelper {
     int noOfSolutions =
         noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
 
-    assertThat(noOfSolutions, is(141141));
+    assertThat(noOfSolutions).isEqualTo(141141);
   }
 
   @Test
@@ -851,7 +850,7 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(xSize));
+    assertThat(noOfSolutions).isEqualTo(xSize);
   }
 
   @Test
@@ -870,6 +869,6 @@ public class SingleConstraintTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(88));
+    assertThat(noOfSolutions).isEqualTo(88);
   }
 }

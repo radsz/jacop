@@ -422,17 +422,17 @@ public class TraceGenerator<T extends Var>
     }
 
     currentSearchNode = searchStack.pop();
-    //		SearchNode previousSearchNode = currentSearchNode;
+    // 	SearchNode previousSearchNode = currentSearchNode;
 
     if (!status && returnCode) {
 
       currentSearchNode = new SearchNode();
       // currentSearchNode.v = var;
 
-      //			if (previousSearchNode.dom instanceof JaCoP.core.IntDomain)
-      //				currentSearchNode.dom = ((IntDomain)previousSearchNode.dom).subtract( value );
-      //			else if (previousSearchNode.dom instanceof JaCoP.set.core.SetDomain)
-      //				currentSearchNode.dom = ((SetDomain)previousSearchNode.dom).subtract( value, value );
+      // 		if (previousSearchNode.dom instanceof JaCoP.core.IntDomain)
+      // 			currentSearchNode.dom = ((IntDomain)previousSearchNode.dom).subtract( value );
+      // 		else if (previousSearchNode.dom instanceof JaCoP.set.core.SetDomain)
+      // 			currentSearchNode.dom = ((SetDomain)previousSearchNode.dom).subtract( value, value );
 
       // currentSearchNode.val = value;
       currentSearchNode.id = searchNodeId++;

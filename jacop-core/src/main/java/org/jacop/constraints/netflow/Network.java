@@ -77,7 +77,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public TimeStamp<Integer> modifiedSize;
 
   // Data structure for pruning
-  //	private final Pruning pruning;
+  // private final Pruning pruning;
 
   // public final boolean isMinimizing;
   /** The store */
@@ -124,7 +124,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     costOffset -= arc.longCost();
 
     if (arc.companion != null) {
-      //			((Pruning)this).numActiveArcs++;
+      // 		((Pruning)this).numActiveArcs++;
       if (arc.companion.structure != null) {
         arc.companion.structure.ungroundArc(arc.companion.arcID);
       }
@@ -157,13 +157,13 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       Node tail = arc.tail();
       // pointing upwards
       if (tail.parent == arc.head) {
-        //				addArc(tail.artificial);
+        // 			addArc(tail.artificial);
         updateTree(arc.sister, tail.artificial);
       }
       // pointing downwards
       else {
         assert (arc.head.parent == tail);
-        //				addArc(arc.head.artificial);
+        // 			addArc(arc.head.artificial);
         updateTree(arc, arc.head.artificial);
       }
     }
@@ -193,7 +193,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     deletedSize.update(deletedArcs.size());
 
     if (arc.companion != null) {
-      //			((Pruning)this).numActiveArcs--;
+      // 		((Pruning)this).numActiveArcs--;
     }
 
     if (SHOW_CHANGES) {

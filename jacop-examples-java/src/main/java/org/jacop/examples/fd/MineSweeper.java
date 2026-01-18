@@ -443,9 +443,7 @@ public class MineSweeper extends ExampleFD {
     r = problem.length;
     c = problem[0].length;
 
-    //
     // Initialize the constraint variables.
-    //
     mines = new IntVar[r][c];
     game = new IntVar[r][c];
     for (int i = 0; i < r; i++) {
@@ -473,7 +471,6 @@ public class MineSweeper extends ExampleFD {
           store.impose(new XeqC(mines[i][j], 0));
 
           // Sum the number of neighbours: same as game[i][j].
-          //
           // Note: Maybe this could be modelled more elegant
           // instead of using an ArrayList.
           List<IntVar> lst = new ArrayList<>();
