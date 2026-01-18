@@ -31,6 +31,15 @@
 
     <build>
         <plugins>
+            <!-- Skip rewrite plugin for Scala examples module -->
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <configuration>
+                    <rewriteSkip>true</rewriteSkip>
+                </configuration>
+            </plugin>
+
             <!-- Scala plugin -->
             <plugin>
                 <groupId>net.alchim31.maven</groupId>

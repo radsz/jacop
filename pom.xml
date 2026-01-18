@@ -92,6 +92,7 @@
         <maven.compiler.version>3.14.1</maven.compiler.version>
         <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
         <maven.checkstyle.tool.version>13.0.0</maven.checkstyle.tool.version>
+        <checkstyle.suppressions.file>${maven.multiModuleProjectDirectory}/doc/suppression.xml</checkstyle.suppressions.file>
         <jacoco.version>0.8.14</jacoco.version>
         <spotless.version>3.1.0</spotless.version>
         <google.java.format.version>1.33.0</google.java.format.version>
@@ -384,7 +385,82 @@ setup to run configuration. -->
                     <exportDatatables>true</exportDatatables>
                     <activeRecipes>
                         <recipe>org.openrewrite.java.migrate.UpgradeToJava25</recipe>
-                        <recipe>org.openrewrite.staticanalysis.CodeCleanup</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FinalizeLocalVariables</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FinalizeMethodArguments</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FinalizePrivateFields</recipe>
+                        <recipe>org.openrewrite.staticanalysis.FixStringFormatExpressions</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ForLoopControlVariablePostfixOperators</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ForLoopIncrementInUpdate</recipe>
+                        <recipe>org.openrewrite.staticanalysis.HiddenField</recipe>
+                        <recipe>org.openrewrite.staticanalysis.HideUtilityClassConstructor</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IndexOfChecksShouldUseAStartPosition</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IndexOfReplaceableByContains</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IndexOfShouldNotCompareGreaterThanZero</recipe>
+                        <recipe>org.openrewrite.staticanalysis.InlineVariable</recipe>
+                        <recipe>org.openrewrite.staticanalysis.InstanceOfPatternMatch</recipe>
+                        <recipe>org.openrewrite.staticanalysis.IsEmptyCallOnCollections</recipe>
+                        <recipe>org.openrewrite.staticanalysis.LambdaBlockToExpression</recipe>
+                        <recipe>org.openrewrite.staticanalysis.LowercasePackage</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MaskCreditCardNumbers</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MethodNameCasing</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MinimumSwitchCases</recipe>
+                        <recipe>org.openrewrite.staticanalysis.MultipleVariableDeclarations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NeedBraces</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NestedEnumsAreNotStatic</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NewStringBuilderBufferWithCharArgument</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NoDoubleBraceInitialization</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NoEmptyCollectionWithRawType</recipe>
+                        <recipe>org.openrewrite.staticanalysis.NoEqualityInForCondition</recipe>
+                        <recipe>org.openrewrite.staticanalysis.PreferIncrementOperator</recipe>
+                        <recipe>org.openrewrite.staticanalysis.PreferSystemGetPropertyOverGetenv</recipe>
+                        <recipe>org.openrewrite.staticanalysis.PrimitiveWrapperClassConstructorToValueOf</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RedundantFileCreation</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReferentialEqualityToObjectEquals</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RemoveRedundantTypeCast</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RemoveSystemOutPrintln</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RemoveToStringCallsFromArrayInstances</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RenameLocalVariablesToCamelCase</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RenameMethodsNamedHashcodeEqualOrToString</recipe>
+                        <recipe>org.openrewrite.staticanalysis.RenamePrivateFieldsToCamelCase</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceLambdaWithMethodReference</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceOptionalIsPresentWithIfPresent</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceRedundantFormatWithPrintf</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceStackWithDeque</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceStringBuilderWithString</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceStringConcatenationWithStringValueOf</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceTextBlockWithString</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceValidateNotNullHavingVarargsWithObjectsRequireNonNull</recipe>
+                        <recipe>org.openrewrite.staticanalysis.ReplaceWeekYearWithYear</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyArraysAsList</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyBooleanExpression</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyConstantIfBranchExecution</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyDurationCreationUnits</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyElseBranch</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyTernaryFalseTrue</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SimplifyTernaryTrueFalse</recipe>
+                        <recipe>org.openrewrite.staticanalysis.SortedSetStreamToLinkedHashSet</recipe>
+                        <recipe>org.openrewrite.staticanalysis.StaticMethodNotFinal</recipe>
+                        <recipe>org.openrewrite.staticanalysis.StringLiteralEquality</recipe>
+                        <recipe>org.openrewrite.staticanalysis.TernaryOperatorsShouldNotBeNested</recipe>
+                        <recipe>org.openrewrite.staticanalysis.TypecastParenPad</recipe>
+                        <recipe>org.openrewrite.staticanalysis.URLEquals</recipe>
+                        <recipe>org.openrewrite.staticanalysis.URLHashCode</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryCatch</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryCloseInTryWithResources</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryExplicitTypeArguments</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryParentheses</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryPrimitiveAnnotations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryReturnAsLastStatement</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnnecessaryThrows</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnwrapElseAfterReturn</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UnwrapRepeatableAnnotations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseForEachRemoveInsteadOfSetRemoveAll</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseJavaStyleArrayDeclarations</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseLambdaForFunctionalInterface</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseListSort</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UseObjectNotifyAll</recipe>
+                        <recipe>org.openrewrite.staticanalysis.UsePortableNewlines</recipe>
+                        <!-- Excluded: org.openrewrite.java.format.MethodParamPad (conflicts with Spotless/google-java-format) -->
                     </activeRecipes>
                     <checkstyleConfigFile>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</checkstyleConfigFile>
                 </configuration>
