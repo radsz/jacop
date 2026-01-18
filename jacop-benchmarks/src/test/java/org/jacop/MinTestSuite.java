@@ -40,10 +40,5 @@ import org.junit.runners.Suite;
  * @version 4.10
  */
 @RunWith(Suite.class)
-// Note: QueueForwardTest and SingleConstraintTest require test-jar dependencies
-// They will be available once jacop-core and jacop-floats are built with test-jar plugin
-@Suite.SuiteClasses({
-  ExampleBasedTest.class, /* QueueForwardTest.class, SingleConstraintTest.class, */
-  MinizincBasedTestUpTo5Seconds.class
-})
+@Suite.SuiteClasses({MinizincBasedTestUpTo5Seconds.class})
 public class MinTestSuite {}
