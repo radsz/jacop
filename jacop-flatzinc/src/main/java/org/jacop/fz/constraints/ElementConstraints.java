@@ -30,14 +30,13 @@
 
 package org.jacop.fz.constraints;
 
-import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementBool;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
-import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XeqC;
-import org.jacop.floats.constraints.PeqC;
+import org.jacop.constraints.XeqY;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -59,232 +58,212 @@ import org.jacop.set.core.SetVar;
  */
 class ElementConstraints implements ParserTreeConstants {
 
-    Support support;
-    Store store;
+  Support support;
+  Store store;
 
-    public ElementConstraints(Support support) {
-        this.support = support;
-        this.store = support.store;
+  public ElementConstraints(Support support) {
+    this.support = support;
+    this.store = support.store;
+  }
+
+  void gen_array_int_element(SimpleNode node) {
+    generateIntElementConstraint(node);
+  }
+
+  void gen_array_bool_element(SimpleNode node) {
+    generateBoolElementConstraint(node);
+  }
+
+  void gen_array_var_int_element(SimpleNode node) {
+    generateVarElementConstraint(node);
+  }
+
+  void gen_array_var_set_element(SimpleNode node) {
+    generateVarSetElementConstraint(node);
+  }
+
+  void gen_array_set_element(SimpleNode node) {
+    generateSetElementConstraint(node);
+  }
+
+  void gen_array_float_element(SimpleNode node) {
+    generateFloatElementConstraint(node);
+  }
+
+  void gen_array_var_float_element(SimpleNode node) {
+    generateVarFloatElementConstraint(node);
+  }
+
+  void generateIntElementConstraint(SimpleNode node) throws FailException {
+
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+    poseElementInteger(p1, p2, p3);
+  }
+
+  void poseElementInteger(IntVar p1, int[] p2, IntVar p3) {
+
+    p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+
+    int newP2Length = p1.max() - p1.min() + 1;
+    int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
+    int[] newP2 = new int[listLength];
+    for (int i = 0; i < listLength; i++) newP2[i] = p2[p1.min() - 1 + i];
+
+    if (p2.length > 1 && allEqual(p2)) {
+      p3.domain.in(store.level, p3, p2[0], p2[0]);
+      p1.domain.in(store.level, p1, 1, p2.length);
+      return;
     }
 
-    void gen_array_int_element(SimpleNode node) {
-        generateIntElementConstraint(node);
+    if (p1.singleton(1) && newP2.length == 1) support.pose(new XeqC(p3, newP2[0]));
+    else if (support.options.getBoundConsistency())
+      support.pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
+    else support.pose(new ElementInteger(p1, newP2, p3, p1.min() - 1));
+  }
+
+  void generateBoolElementConstraint(SimpleNode node) throws FailException {
+
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+    p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+
+    int newP2Length = p1.max() - p1.min() + 1;
+    int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
+    int[] newP2 = new int[listLength];
+    for (int i = 0; i < listLength; i++) newP2[i] = p2[p1.min() - 1 + i];
+
+    if (p2.length > 1 && allEqual(p2)) {
+      p3.domain.in(store.level, p3, p2[0], p2[0]);
+      p1.domain.in(store.level, p1, 1, p2.length);
+      return;
     }
 
-    void gen_array_bool_element(SimpleNode node) {
-        generateBoolElementConstraint(node);
+    if (p1.singleton(1) && newP2.length == 1) support.pose(new XeqC(p3, newP2[0]));
+    else support.pose(new ElementBool(p1, newP2, p3, p1.min() - 1));
+  }
+
+  void generateVarElementConstraint(SimpleNode node) throws FailException {
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+    IntVar[] p2var = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+
+    if (allSingleton(p2var)) {
+      int[] p2int = new int[p2var.length];
+      for (int i = 0; i < p2int.length; i++) p2int[i] = p2var[i].value();
+
+      poseElementInteger(p1, p2int, p3);
+    } else {
+      p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+
+      int newP2Length = p1.max() - p1.min() + 1;
+      int listLength = (p2var.length < newP2Length) ? p2var.length : newP2Length;
+      IntVar[] newP2 = new IntVar[listLength];
+      for (int i = 0; i < listLength; i++) newP2[i] = p2var[p1.min() - 1 + i];
+
+      if (p1.singleton(1) && newP2.length == 1) support.pose(new XeqY(newP2[0], p3));
+      else if (support.boundsConsistency || support.options.getBoundConsistency())
+        support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
+      else support.pose(new ElementVariable(p1, newP2, p3, p1.min() - 1));
     }
+  }
 
-    void gen_array_var_int_element(SimpleNode node) {
-        generateVarElementConstraint(node);
-    }
+  void generateSetElementConstraint(SimpleNode node) throws FailException {
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
+    SetVar p3 = support.getSetVariable(node, 2);
 
-    void gen_array_var_set_element(SimpleNode node) {
-        generateVarSetElementConstraint(node);
-    }
+    for (int i = 0; i < p2.length; i++)
+      if (p2[i] == null) {
+        throw new IllegalArgumentException(
+            "%% var_set_element with list of set variables is not avaible in org.jacop.set");
+      }
 
-    void gen_array_set_element(SimpleNode node) {
-        generateSetElementConstraint(node);
-    }
+    support.pose(new ElementSet(p1, p2, p3));
+  }
 
-    void gen_array_float_element(SimpleNode node) {
-        generateFloatElementConstraint(node);
-    }
+  void generateVarSetElementConstraint(SimpleNode node) throws FailException {
 
-    void gen_array_var_float_element(SimpleNode node) {
-        generateVarFloatElementConstraint(node);
-    }
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    SetVar p3 = support.getSetVariable(node, 2);
 
-    void generateIntElementConstraint(SimpleNode node) throws FailException {
+    IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
+    if (p2 != null) {
 
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-        IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-
-        poseElementInteger(p1, p2, p3);
-    }
-
-    void poseElementInteger(IntVar p1, int[] p2, IntVar p3) {
-
-        p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
-
-        int newP2Length = p1.max() - p1.min() + 1;
-        int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
-        int[] newP2 = new int[listLength];
-        for (int i = 0; i < listLength; i++)
-            newP2[i] = p2[p1.min() - 1 + i];
-
-        if (p2.length > 1 && allEqual(p2)) {
-            p3.domain.in(store.level, p3, p2[0], p2[0]);
-            p1.domain.in(store.level, p1, 1, p2.length);
-            return;
+      for (int i = 0; i < p2.length; i++)
+        if (p2[i] == null) {
+          throw new IllegalArgumentException(
+              "%% var_set_element with list of set variables is not available in org.jacop.set");
         }
 
-        if (p1.singleton(1) && newP2.length == 1)
-            support.pose(new XeqC(p3, newP2[0]));
-        else if (support.options.getBoundConsistency())
-            support.pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
-        else
-            support.pose(new ElementInteger(p1, newP2, p3, p1.min() - 1));
+      support.pose(new ElementSet(p1, p2, p3));
 
+    } else {
+      SetVar[] vs = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
+      support.pose(new ElementSetVariable(p1, vs, p3));
     }
+  }
 
-    void generateBoolElementConstraint(SimpleNode node) throws FailException {
+  void generateFloatElementConstraint(SimpleNode node) throws FailException {
 
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        int[] p2 = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-        IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    double[] p2 = support.getFloatArray((SimpleNode) node.jjtGetChild(1));
+    FloatVar p3 = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+    poseElementFloat(p1, p2, p3);
+  }
 
-        int newP2Length = p1.max() - p1.min() + 1;
-        int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
-        int[] newP2 = new int[listLength];
-        for (int i = 0; i < listLength; i++)
-            newP2[i] = p2[p1.min() - 1 + i];
+  void generateVarFloatElementConstraint(SimpleNode node) throws FailException {
 
-        if (p2.length > 1 && allEqual(p2)) {
-            p3.domain.in(store.level, p3, p2[0], p2[0]);
-            p1.domain.in(store.level, p1, 1, p2.length);
-            return;
-        }
+    IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    FloatVar[] p2 = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
+    FloatVar p3 = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-        if (p1.singleton(1) && newP2.length == 1)
-            support.pose(new XeqC(p3, newP2[0]));
-        else
-            support.pose(new ElementBool(p1, newP2, p3, p1.min() - 1));
+    if (allFloatSingleton(p2)) {
+      double[] p2double = new double[p2.length];
+      for (int i = 0; i < p2.length; i++) p2double[i] = p2[i].value();
+
+      poseElementFloat(p1, p2double, p3);
+    } else {
+      support.pose(new ElementFloatVariable(p1, p2, p3));
     }
+  }
 
-    void generateVarElementConstraint(SimpleNode node) throws FailException {
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        IntVar p3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+  void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
 
-        IntVar[] p2var = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
-        if (allSingleton(p2var)) {
-            int[] p2int = new int[p2var.length];
-            for (int i = 0; i < p2int.length; i++)
-                p2int[i] = p2var[i].value();
+    int newP2Length = p1.max() - p1.min() + 1;
+    int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
+    double[] newP2 = new double[listLength];
+    for (int i = 0; i < listLength; i++) newP2[i] = p2[p1.min() - 1 + i];
 
-            poseElementInteger(p1, p2int, p3);
-        } else {
-            p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
+    if (p1.singleton(1) && newP2.length == 1)
+      support.pose(new org.jacop.floats.constraints.PeqC(p3, newP2[0]));
+    else support.pose(new ElementFloat(p1, newP2, p3, p1.min() - 1));
+  }
 
-            int newP2Length = p1.max() - p1.min() + 1;
-            int listLength = (p2var.length < newP2Length) ? p2var.length : newP2Length;
-            IntVar[] newP2 = new IntVar[listLength];
-            for (int i = 0; i < listLength; i++)
-                newP2[i] = p2var[p1.min() - 1 + i];
+  boolean allSingleton(IntVar[] vs) {
+    for (IntVar v : vs) if (!v.singleton()) return false;
+    return true;
+  }
 
-            if (p1.singleton(1) && newP2.length == 1)
-                support.pose(new XeqY(newP2[0], p3));
-            else if (support.boundsConsistency || support.options.getBoundConsistency())
-                support.pose(new ElementVariableFast(p1, newP2, p3, p1.min() - 1));
-            else
-                support.pose(new ElementVariable(p1, newP2, p3, p1.min() - 1));
-        }
+  boolean allFloatSingleton(FloatVar[] vs) {
+    for (FloatVar v : vs) if (v.min() != v.max()) return false;
+    return true;
+  }
+
+  boolean allEqual(int[] v) {
+
+    int e = v[0];
+    for (int i = 1; i < v.length; i++) {
+      if (e != v[i]) return false;
     }
-
-    void generateSetElementConstraint(SimpleNode node) throws FailException {
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
-        SetVar p3 = support.getSetVariable(node, 2);
-
-        for (int i = 0; i < p2.length; i++)
-            if (p2[i] == null) {
-                throw new IllegalArgumentException("%% var_set_element with list of set variables is not avaible in org.jacop.set");
-            }
-
-        support.pose(new ElementSet(p1, p2, p3));
-    }
-
-    void generateVarSetElementConstraint(SimpleNode node) throws FailException {
-
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        SetVar p3 = support.getSetVariable(node, 2);
-
-        IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
-        if (p2 != null) {
-
-            for (int i = 0; i < p2.length; i++)
-                if (p2[i] == null) {
-                    throw new IllegalArgumentException("%% var_set_element with list of set variables is not available in org.jacop.set");
-                }
-
-            support.pose(new ElementSet(p1, p2, p3));
-
-        } else {
-            SetVar[] vs = support.getSetVarArray((SimpleNode) node.jjtGetChild(1));
-            support.pose(new ElementSetVariable(p1, vs, p3));
-        }
-    }
-
-
-    void generateFloatElementConstraint(SimpleNode node) throws FailException {
-
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        double[] p2 = support.getFloatArray((SimpleNode) node.jjtGetChild(1));
-        FloatVar p3 = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-
-        poseElementFloat(p1, p2, p3);
-
-    }
-
-    void generateVarFloatElementConstraint(SimpleNode node) throws FailException {
-
-        IntVar p1 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
-        FloatVar[] p2 = support.getFloatVarArray((SimpleNode) node.jjtGetChild(1));
-        FloatVar p3 = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-
-        if (allFloatSingleton(p2)) {
-            double[] p2double = new double[p2.length];
-            for (int i = 0; i < p2.length; i++)
-                p2double[i] = p2[i].value();
-
-            poseElementFloat(p1, p2double, p3);
-        } else {
-            support.pose(new ElementFloatVariable(p1, p2, p3));
-        }
-    }
-
-    void poseElementFloat(IntVar p1, double[] p2, FloatVar p3) {
-
-        p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
-
-        int newP2Length = p1.max() - p1.min() + 1;
-        int listLength = (p2.length < newP2Length) ? p2.length : newP2Length;
-        double[] newP2 = new double[listLength];
-        for (int i = 0; i < listLength; i++)
-            newP2[i] = p2[p1.min() - 1 + i];
-
-        if (p1.singleton(1) && newP2.length == 1)
-            support.pose(new org.jacop.floats.constraints.PeqC(p3, newP2[0]));
-        else
-            support.pose(new ElementFloat(p1, newP2, p3, p1.min() - 1));
-
-    }
-
-    boolean allSingleton(IntVar[] vs) {
-        for (IntVar v : vs)
-            if (!v.singleton())
-                return false;
-        return true;
-    }
-
-    boolean allFloatSingleton(FloatVar[] vs) {
-        for (FloatVar v : vs)
-            if (v.min() != v.max())
-                return false;
-        return true;
-    }
-
-    boolean allEqual(int[] v) {
-
-        int e = v[0];
-        for (int i = 1; i < v.length; i++) {
-            if (e != v[i])
-                return false;
-        }
-        return true;
-    }
+    return true;
+  }
 }

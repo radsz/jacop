@@ -30,126 +30,114 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraint X ^ Y #= Z
- * <p>
- * Boundary consistecny is used.
+ *
+ * <p>Boundary consistecny is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XexpYeqZ extends Constraint implements SatisfiedPresent {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies the variable x in equation x^y = z.
-     */
-    final public IntVar x;
+  /** It specifies the variable x in equation x^y = z. */
+  public final IntVar x;
 
-    /**
-     * It specifies the variable y in equation x^y = z.
-     */
-    final public IntVar y;
+  /** It specifies the variable y in equation x^y = z. */
+  public final IntVar y;
 
-    /**
-     * It specifies the variable z in equation x^y = z.
-     */
-    final public IntVar z;
+  /** It specifies the variable z in equation x^y = z. */
+  public final IntVar z;
 
-    /**
-     * It constructs constraint X^Y=Z.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     * @param z variable z.
-     */
-    public XexpYeqZ(IntVar x, IntVar y, IntVar z) {
+  /**
+   * It constructs constraint X^Y=Z.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   * @param z variable z.
+   */
+  public XexpYeqZ(IntVar x, IntVar y, IntVar z) {
 
-        checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
+    checkInputForNullness(new String[] {"x", "y", "z"}, new Object[] {x, y, z});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
-        this.z = z;
+    this.x = x;
+    this.y = y;
+    this.z = z;
 
-        setScope(x, y, z);
+    setScope(x, y, z);
+  }
 
-    }
+  @Override
+  public void consistency(Store store) {
 
-    @Override public void consistency(Store store) {
+    do {
 
-        do {
+      store.propagationHasOccurred = false;
 
-            store.propagationHasOccurred = false;
+      // compute domain for x,y and z
+      IntDomain zDom = new IntervalDomain();
+      IntDomain xDom = new IntervalDomain();
+      IntDomain yDom = new IntervalDomain();
+      for (ValueEnumeration ex = x.domain.valueEnumeration(); ex.hasMoreElements(); ) {
+        int xi = ex.nextElement();
+        for (ValueEnumeration ey = y.domain.valueEnumeration(); ey.hasMoreElements(); ) {
+          int yi = ey.nextElement();
 
-            // compute domain for x,y and z
-            IntDomain zDom = new IntervalDomain();
-            IntDomain xDom = new IntervalDomain();
-            IntDomain yDom = new IntervalDomain();
-            for (ValueEnumeration ex = x.domain.valueEnumeration(); ex.hasMoreElements();) {
-                int xi = ex.nextElement();
-                for (ValueEnumeration ey = y.domain.valueEnumeration(); ey.hasMoreElements();) {
-                    int yi = ey.nextElement();
+          int zi;
+          long zl;
+          if (xi == 0)
+            if (yi == 0) zi = 1;
+            else if (yi < 0) continue; // 0 to negative exponent is infinity :(
+            else zi = 0;
+          else {
+            zl = toLong(Math.pow(xi, yi));
 
-                    int zi;
-                    long zl;
-                    if (xi == 0)
-                        if (yi == 0)
-                            zi = 1;
-                        else if (yi < 0)
-                            continue; // 0 to negative exponent is infinity :(
-                        else
-                            zi = 0;
-                    else {
-                        zl = toLong(Math.pow(xi, yi));
+            if (zl < z.min() || zl > z.max()) continue; // value not in domain of z
+            else zi = long2int(zl);
+          }
 
-                        if (zl < z.min() || zl > z.max())
-                            continue; // value not in domain of z
-                        else
-                            zi = long2int(zl);
-                    }
+          if (z.domain.contains(zi)) {
+            xDom.unionAdapt(xi);
+            yDom.unionAdapt(yi);
+          }
 
-                    if (z.domain.contains(zi)) {
-                        xDom.unionAdapt(xi);
-                        yDom.unionAdapt(yi);
-                    }
+          zDom.unionAdapt(zi);
+        }
+      }
 
-                    zDom.unionAdapt(zi);
-                }
-            }
+      z.domain.in(store.level, z, zDom);
+      x.domain.in(store.level, x, xDom);
+      y.domain.in(store.level, y, yDom);
 
-            z.domain.in(store.level, z, zDom);
-            x.domain.in(store.level, x, xDom);
-            y.domain.in(store.level, y, yDom);
+    } while (store.propagationHasOccurred);
+  }
 
-        } while (store.propagationHasOccurred);
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public boolean satisfied() {
 
-    @Override public boolean satisfied() {
+    return grounded() && toInt(Math.pow(x.min(), y.min())) == z.min();
+  }
 
-        return grounded() && toInt(Math.pow(x.min(), y.min())) == z.min();
+  @Override
+  public String toString() {
 
-    }
-
-    @Override public String toString() {
-
-        return id() + " : XexpYeqZ(" + x + ", " + y + ", " + z + " )";
-
-    }
-
+    return id() + " : XexpYeqZ(" + x + ", " + y + ", " + z + " )";
+  }
 }

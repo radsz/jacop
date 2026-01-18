@@ -30,13 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
-import org.jacop.api.SatisfiedPresent;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Arrays;
 
 /**
  * Constraints forall i != j: x[i] #= x[j]
@@ -46,127 +45,125 @@ import java.util.Arrays;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AllEqual extends PrimitiveConstraint {
 
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    static final AtomicInteger idNumber = new AtomicInteger(0);
+  /** It specifies a left hand variable in equality constraint. */
+  public final IntVar[] x;
 
-    /**
-     * It specifies a left hand variable in equality constraint.
-     */
-    public final IntVar[] x;
+  private int n;
 
-    private int n;
+  private TimeStamp<Integer> position;
 
-    private TimeStamp<Integer> position;
+  /**
+   * It constructs constraint x[i] = x[j].
+   *
+   * @param x variables x.
+   */
+  public AllEqual(IntVar[] x) {
 
-    /**
-     * It constructs constraint x[i] = x[j].
-     *
-     * @param x variables x.
-     */
-    public AllEqual(IntVar[] x) {
+    checkInputForNullness(new String[] {"x"}, new Object[] {x});
 
-        checkInputForNullness(new String[] {"x"}, new Object[] {x});
+    numberId = idNumber.incrementAndGet();
 
-        numberId = idNumber.incrementAndGet();
+    this.x = x;
+    this.n = x.length;
 
-        this.x = x;
-        this.n = x.length;
+    setScope(x);
+  }
 
-        setScope(x);
+  @Override
+  public void consistency(final Store store) {
+
+    // bottom up
+    for (int i = 1; i < n; i++) {
+
+      // domain consistency
+      x[i - 1].domain.in(store.level, x[i - 1], x[i].domain);
+
+      x[i].domain.in(store.level, x[i], x[i - 1].domain);
     }
 
-    @Override public void consistency(final Store store) {
+    // top down
+    for (int i = n - 2; i >= 0; i--) {
 
-        // bottom up
-        for (int i = 1; i < n; i++) {
-    
-            // domain consistency
-            x[i - 1].domain.in(store.level, x[i - 1], x[i].domain);
+      // domain consistency
+      x[i + 1].domain.in(store.level, x[i], x[i].domain);
 
-            x[i].domain.in(store.level, x[i], x[i - 1].domain);
-        }
-
-        // top down
-        for (int i = n - 2; i >= 0; i--) {
-    
-            // domain consistency
-            x[i + 1].domain.in(store.level, x[i], x[i].domain);
-
-            x[i].domain.in(store.level, x[i], x[i + 1].domain);
-        }
+      x[i].domain.in(store.level, x[i], x[i + 1].domain);
     }
+  }
 
-    @Override public void include(Store store) {
-        position = new TimeStamp<>(store, 0);
-    }
+  @Override
+  public void include(Store store) {
+    position = new TimeStamp<>(store, 0);
+  }
 
-    @Override public void notConsistency(final Store store) {
+  @Override
+  public void notConsistency(final Store store) {
 
-        int start = position.value();
+    int start = position.value();
 
-        for (int i = start; i < n; i++) {
-            if (x[i].singleton())
-                if (start == 0)
-                    swap(start++, i);
-                else if (x[0].value() == x[i].value()) {
-                    swap(start++, i);
-                } else {
-                    removeConstraint();
-                    return;
-                }
-        }
-
-        if (start == n - 1)
-            x[start].domain.inComplement(store.level, x[start], x[0].value());
-        else if (start == n)
-            throw Store.failException;
-
-        position.update(start);
-    }
-
-    private void swap(int i, int j) {
-        if (i != j) {
-            IntVar tmp = x[i];
-            x[i] = x[j];
-            x[j] = tmp;
+    for (int i = start; i < n; i++) {
+      if (x[i].singleton())
+        if (start == 0) swap(start++, i);
+        else if (x[0].value() == x[i].value()) {
+          swap(start++, i);
+        } else {
+          removeConstraint();
+          return;
         }
     }
 
-    @Override public boolean satisfied() {
+    if (start == n - 1) x[start].domain.inComplement(store.level, x[start], x[0].value());
+    else if (start == n) throw Store.failException;
 
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                if (! (x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value()))
-                    return false;
-            }
-        }
-        return true;
+    position.update(start);
+  }
+
+  private void swap(int i, int j) {
+    if (i != j) {
+      IntVar tmp = x[i];
+      x[i] = x[j];
+      x[j] = tmp;
     }
+  }
 
-    @Override public boolean notSatisfied() {
+  @Override
+  public boolean satisfied() {
 
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                if (i != j && !x[i].domain.isIntersecting(x[j].domain))
-                    return true;
-            }
-        }
-        return false;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) return false;
+      }
     }
+    return true;
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.ANY;
+  @Override
+  public boolean notSatisfied() {
+
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) return true;
+      }
     }
+    return false;
+  }
 
-    @Override public int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.ANY;
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
-    @Override public String toString() {
-        return id() + " : AllEqual(" + Arrays.asList(x) + " )";
-    }
+  @Override
+  public int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
 
+  @Override
+  public String toString() {
+    return id() + " : AllEqual(" + Arrays.asList(x) + " )";
+  }
 }

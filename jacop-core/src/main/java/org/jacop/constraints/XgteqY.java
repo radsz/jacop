@@ -30,11 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Constraints X {@literal >=} Y
@@ -42,88 +41,90 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XgteqY extends PrimitiveConstraint {
 
-    final static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-    /**
-     * It specifies variable x which must be greater or equal to variable Y.
-     */
-    final public IntVar x;
+  /** It specifies variable x which must be greater or equal to variable Y. */
+  public final IntVar x;
 
-    /**
-     * It specifies variable y from which variable x must be greater or equal.
-     */
-    final public IntVar y;
+  /** It specifies variable y from which variable x must be greater or equal. */
+  public final IntVar y;
 
-    /**
-     * It constructs constraint X {@literal >=} Y.
-     *
-     * @param x variable x.
-     * @param y variable y.
-     */
-    public XgteqY(IntVar x, IntVar y) {
+  /**
+   * It constructs constraint X {@literal >=} Y.
+   *
+   * @param x variable x.
+   * @param y variable y.
+   */
+  public XgteqY(IntVar x, IntVar y) {
 
-        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-        numberId = idNumber.incrementAndGet();
+    numberId = idNumber.incrementAndGet();
 
-        this.x = x;
-        this.y = y;
+    this.x = x;
+    this.y = y;
 
-        setScope(x, y);
+    setScope(x, y);
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    if (satisfied()) {
+      // If x and y are the same, XgteqY is trivially consistent.
+      return;
     }
 
-    @Override public void impose(Store store) {
+    super.impose(store);
+  }
 
-        if (satisfied()) {
-            // If x and y are the same, XgteqY is trivially consistent.
-	    return;
-        }
+  @Override
+  public void consistency(final Store store) {
 
-        super.impose(store);
+    x.domain.inMin(store.level, x, y.min());
+    y.domain.inMax(store.level, y, x.max());
+  }
 
-    }
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override public void consistency(final Store store) {
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-        x.domain.inMin(store.level, x, y.min());
-        y.domain.inMax(store.level, y, x.max());
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    }
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
 
-    @Override protected int getDefaultNestedConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public void notConsistency(final Store store) {
+    x.domain.inMax(store.level, x, y.max() - 1);
+    y.domain.inMin(store.level, y, x.min() + 1);
+  }
 
-    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public boolean notSatisfied() {
+    return x.max() < y.min();
+  }
 
-    @Override protected int getDefaultNotConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
+  @Override
+  public boolean satisfied() {
+    return x == y || x.min() >= y.max();
+  }
 
-    @Override public int getDefaultConsistencyPruningEvent() {
-        return IntDomain.BOUND;
-    }
-
-    @Override public void notConsistency(final Store store) {
-        x.domain.inMax(store.level, x, y.max() - 1);
-        y.domain.inMin(store.level, y, x.min() + 1);
-    }
-
-    @Override public boolean notSatisfied() {
-        return x.max() < y.min();
-    }
-
-    @Override public boolean satisfied() {
-        return x == y || x.min() >= y.max();
-    }
-
-    @Override public String toString() {
-        return id() + " : XgteqY(" + x + ", " + y + " )";
-    }
-
+  @Override
+  public String toString() {
+    return id() + " : XgteqY(" + x + ", " + y + " )";
+  }
 }
