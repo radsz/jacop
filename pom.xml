@@ -81,9 +81,21 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <aspectj.version>1.8.10</aspectj.version>
-        <scala.version>2.13.17</scala.version>
+        <scala.version>2.13.18</scala.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>
+        <maven.surefire.version>3.5.4</maven.surefire.version>
+        <maven.surefire.report.version>3.5.4</maven.surefire.report.version>
+        <maven.javadoc.version>3.12.0</maven.javadoc.version>
+        <maven.source.version>3.4.0</maven.source.version>
+        <maven.gpg.version>3.2.8</maven.gpg.version>
+        <maven.compiler.version>3.14.1</maven.compiler.version>
+        <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
+        <maven.checkstyle.tool.version>13.0.0</maven.checkstyle.tool.version>
+        <jacoco.version>0.8.14</jacoco.version>
+        <spotless.version>3.1.0</spotless.version>
+        <google.java.format.version>1.33.0</google.java.format.version>
+        <scala.maven.plugin.version>4.9.8</scala.maven.plugin.version>
     </properties>
 
     <!-- In order to see logging output,
@@ -116,9 +128,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -147,9 +159,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -178,9 +190,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -209,9 +221,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M9</version>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -241,7 +253,7 @@ setup to run configuration. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.5</version>
+                        <version>${maven.gpg.version}</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -266,24 +278,24 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-report-plugin</artifactId>
-                    <version>3.0.0-M9</version>
+                    <version>${maven.surefire.report.version}</version>
                 </plugin>
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.1</version>
+                    <version>${maven.compiler.version}</version>
                 </plugin>
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>3.6.0</version>
+                    <version>${maven.checkstyle.version}</version>
                     <dependencies>
                         <dependency>
                             <groupId>com.puppycrawl.tools</groupId>
                             <artifactId>checkstyle</artifactId>
-                            <version>13.0.0</version>
+                            <version>${maven.checkstyle.tool.version}</version>
                         </dependency>
                     </dependencies>
                     <configuration>
@@ -295,11 +307,11 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>com.diffplug.spotless</groupId>
                     <artifactId>spotless-maven-plugin</artifactId>
-                    <version>3.1.0</version>
+                    <version>${spotless.version}</version>
                     <configuration>
                         <java>
                             <googleJavaFormat>
-                                <version>1.33.0</version>
+                                <version>${google.java.format.version}</version>
                                 <style>GOOGLE</style>
                             </googleJavaFormat>
                             <removeUnusedImports>
@@ -338,7 +350,7 @@ setup to run configuration. -->
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
-                    <version>4.9.8</version>
+                    <version>${scala.maven.plugin.version}</version>
                 </plugin>
 
                 <plugin>
@@ -402,7 +414,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>${maven.source.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -436,7 +448,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>${maven.javadoc.version}</version>
 
                 <configuration>
                   <failOnWarnings>false</failOnWarnings>
@@ -470,9 +482,9 @@ setup to run configuration. -->
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M9</version>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.version}</version>
                 <configuration>
                   <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
@@ -505,7 +517,7 @@ setup to run configuration. -->
 
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.14</version>
+                <version>${jacoco.version}</version>
                 <configuration>
                     <excludes>
                         <exclude>**/org/jacop/examples/scala/**/*.class</exclude>
@@ -621,7 +633,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.5.0</version>
+                <version>${maven.javadoc.version}</version>
                 <configuration>
                   <failOnWarnings>false</failOnWarnings>
                   <doclint>none</doclint>
@@ -630,7 +642,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>3.0.0-M9</version>
+                <version>${maven.surefire.report.version}</version>
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                 </configuration>
@@ -654,7 +666,7 @@ setup to run configuration. -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.14</version>
+                <version>${jacoco.version}</version>
                 <reportSets>
                     <reportSet>
                         <reports>
