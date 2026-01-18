@@ -126,12 +126,34 @@ package object scala {
   }
 
   /**
+    * Wrapper for [[org.jacop.constraints.AlldifferentExceptZero]].
+    *
+    * @param x array of variables to be different.
+    */
+  def alldifferent_except_0(x: Array[IntVar]) : Unit = {
+    val c = new AlldifferentExceptZero(x.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+  /**
     * Wrapper for [[org.jacop.constraints.Alldistinct]].
     *
     * @param x array of variables to be different.
     */
   def alldistinct(x: Array[IntVar]) : Unit = {
     val c = new Alldistinct(x.asInstanceOf[Array[org.jacop.core.IntVar]])
+    if (trace) println(c)
+    impModel.impose(c)
+  }
+
+  /**
+    * Wrapper for [[org.jacop.constraints.AllEqual]].
+    *
+    * @param x array of variables to be different.
+    */
+  def allequal(x: Array[IntVar]) : Unit = {
+    val c = new AllEqual(x.asInstanceOf[Array[org.jacop.core.IntVar]])
     if (trace) println(c)
     impModel.impose(c)
   }

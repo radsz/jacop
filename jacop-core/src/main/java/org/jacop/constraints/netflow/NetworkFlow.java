@@ -30,12 +30,6 @@
 
 package org.jacop.constraints.netflow;
 
-import static org.jacop.constraints.netflow.Assert.checkFlow;
-import static org.jacop.constraints.netflow.Assert.checkStructure;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -47,278 +41,323 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static org.jacop.constraints.netflow.Assert.checkFlow;
+import static org.jacop.constraints.netflow.Assert.checkStructure;
+
 /**
- * The network flow constraint. Use the NetworkBuilder to create a network and instantiate the
- * network.
+ * The network flow constraint. Use the NetworkBuilder to create a network and
+ * instantiate the network.
  *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-public class NetworkFlow extends Constraint
-    implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
-  private static final int QUEUE_INDEX = 2;
-  private static final boolean DO_INSTRUMENTATION = false;
-  private static final boolean SHOW_LEVEL = false;
+public class NetworkFlow extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
-  /** Instance counter */
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+    private static final int QUEUE_INDEX = 2;
+    private static final boolean DO_INSTRUMENTATION = false;
+    private static final boolean SHOW_LEVEL = false;
 
-  static {
-    // fails if asserts are disabled
-    // asserts.Assert.forceAsserts();
-  }
+    Statistics statistics = new Statistics();
 
-  /** The network */
-  //	public final Network network;
-  public final Pruning network;
-
-  /** The variables and their handlers */
-  public final Map<IntVar, VarHandler> map;
-
-  /** The set of queued variables */
-  public final Set<IntVar> queue;
-
-  /** The cost variable */
-  public IntVar costVariable;
-
-  /** Disables the queue variable function during consistency */
-  public boolean disableQueueVariable;
-
-  public int previousLevel = -1;
-  final Statistics statistics = new Statistics();
-
-  /** Initialization */
-
-  // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
-  private NetworkFlow(
-      List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
-
-    this.network = new Pruning(nodes, arcs, statistics);
-    this.map = Var.createEmptyPositioning();
-    this.queue = new HashSet<>();
-    this.costVariable = costVariable;
-
-    for (VarHandler ds : flowVariables) {
-      for (IntVar var : ds.listVariables()) {
-        VarHandler handler = map.get(var);
-        if (handler == null) {
-          map.put(var, ds);
-        } else if (handler instanceof MultiVarHandler varHandler) {
-          varHandler.add(ds);
-        } else {
-          map.put(var, new MultiVarHandler(var, handler, ds));
-        }
-      }
+    static {
+        // fails if asserts are disabled
+        // asserts.Assert.forceAsserts();
     }
 
-    map.put(
-        costVariable,
-        new VarHandler() {
-          @Override
-          public List<IntVar> listVariables() {
-            return Collections.singletonList(costVariable);
-          }
+    /**
+     * Instance counter
+     */
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-          @Override
-          public int getPruningEvent(Var variable) {
-            return IntDomain.ANY;
-          }
+    /**
+     * The network
+     */
+    //	public final Network network;
+    public final Pruning network;
 
-          @Override
-          public void processEvent(IntVar variable, MutableNetwork network) {
-            // TODO, maybe here extra work that before was not being done can be done.
-          }
+    /**
+     * The cost variable
+     */
+    public IntVar costVariable;
+
+    /**
+     * The variables and their handlers
+     */
+    public final Map<IntVar, VarHandler> map;
+
+    /**
+     * The set of queued variables
+     */
+    public final Set<IntVar> queue;
+
+    /**
+     * Disables the queue variable function during consistency
+     */
+    public boolean disableQueueVariable;
+
+    public int previousLevel = -1;
+
+    /********************/
+    /**
+     * Initialization
+     **/
+
+    // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
+    private NetworkFlow(List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
+
+        this.network = new Pruning(nodes, arcs, statistics);
+        this.map = Var.createEmptyPositioning();
+        this.queue = new HashSet<IntVar>();
+        this.costVariable = costVariable;
+
+        for (VarHandler ds : flowVariables) {
+            for (IntVar var : ds.listVariables()) {
+                VarHandler handler = map.get(var);
+                if (handler == null) {
+                    map.put(var, ds);
+                } else if (handler instanceof MultiVarHandler) {
+                    ((MultiVarHandler) handler).add(ds);
+                } else {
+                    map.put(var, new MultiVarHandler(var, handler, ds));
+                }
+            }
+        }
+
+        map.put(costVariable, new VarHandler() {
+            @Override public List<IntVar> listVariables() {
+                return Arrays.asList(costVariable);
+            }
+
+            @Override public int getPruningEvent(Var variable) {
+                return IntDomain.ANY;
+            }
+
+            @Override public void processEvent(IntVar variable, MutableNetwork network) {
+                // TODO, maybe here extra work that before was not being done can be done.
+            }
         });
 
-    // fields in superclass
-    this.queueIndex = QUEUE_INDEX;
-    this.numberId = idNumber.incrementAndGet();
+        // fields in superclass
+        this.queueIndex = QUEUE_INDEX;
+        this.numberId = idNumber.incrementAndGet();
 
-    setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
+        setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
 
-    // for (VarHandler vh : flowVariables)
-    //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
-    // for (Arc arc : arcs)
-    //     System.out.println(arc);
+        // for (VarHandler vh : flowVariables)
+        //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
+        // for (Arc arc : arcs)
+        //     System.out.println(arc);
 
-  }
-
-  public NetworkFlow(NetworkBuilder builder) {
-
-    this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var var) {
-    return map.get(var).getPruningEvent(var);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("Not yet implemented as more precise variant exists.");
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    if (costVariable == null) {
-      costVariable = new IntVar(store, 0, 0);
-      System.err.println("WARNING: No cost variable was set, using zero cost.");
     }
 
-    network.initialize(store);
+    public NetworkFlow(NetworkBuilder builder) {
 
-    // register with store
-    queueIndex = QUEUE_INDEX;
-    store.registerRemoveLevelLateListener(this);
-    super.impose(store);
-  }
+        this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
 
-  /** Search {@literal &} Backtracking */
-  @Override
-  public void queueVariable(int level, Var variable) {
-    // DomainStructure structure = map.get(variable);
-
-    if (!disableQueueVariable) {
-      //			System.out.println("\tQueue var : " + variable);
-      if (variable == costVariable) {
-        // System.out.println("** Cost var queued, abort");
-        return;
-      }
-      queue.add((IntVar) variable);
-    } else {
-      // TODO remove
-      // System.err.println("Can this actually happen ... " + variable);
-    }
-  }
-
-  private void updateGraph() {
-    // update graph
-    network.increaseLevel();
-    try {
-      disableQueueVariable = true;
-      for (IntVar variable : queue) {
-        VarHandler handler = map.get(variable);
-        handler.processEvent(variable, network);
-      }
-    } finally {
-      queue.clear();
-      disableQueueVariable = false;
-      // network.increaseLevel();
-    }
-  }
-
-  @Override
-  public void consistency(Store store) {
-
-    if (SHOW_LEVEL) {
-      IO.println();
-      IO.println("--------- Level " + store.level);
-      IO.println();
     }
 
-    if (DO_INSTRUMENTATION) {
-      statistics.consistencyCalls++;
-    }
-    updateGraph();
-
-    boolean first = true; // (previousLevel != store.level);
-    // System.out.println(store.level + "   (" + first + ")");
-    previousLevel = store.level;
-
-    int iteration = 0;
-    while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
-
-      if (DO_INSTRUMENTATION) {
-        statistics.consistencyIterations++;
-      }
-      // System.out.println(iteration);
-
-      iteration++;
-      if (SHOW_LEVEL) {
-        IO.println("--------- => Iteration " + iteration);
-      }
-
-      // recompute flow
-      int result = network.networkSimplex(9999999);
-      // network.print();
-
-      // is flow infeasible ?
-      if (result == -2) {
-        throw Store.failException;
-      }
-
-      // compute cost and throw failure on overflow
-      int cost = (int) network.cost(costVariable.max() + 1);
-      if (cost > costVariable.max()) {
-        throw Store.failException;
-      }
-      // prune minimum cost
-      if (cost > costVariable.min()) {
-        costVariable.domain.inMin(store.level, costVariable, cost);
-      }
-
-      // perform domain pruning
-      int costLimit = costVariable.max() - costVariable.min();
-
-      network.pruneNodesWithSmallDegree();
-      network.analyze(costLimit);
-
-      assert (checkFlow(network));
-      assert (checkStructure(network));
-
-      updateGraph();
+    @Override public int getConsistencyPruningEvent(Var var) {
+        return map.get(var).getPruningEvent(var);
     }
 
-    // compute cost and throw failure on overflow
-    int cost = (int) network.cost(costVariable.max() + 1);
-    if (cost > costVariable.max()) {
-      throw Store.failException;
-    }
-    // prune minimum cost
-    if (cost > costVariable.min()) {
-      costVariable.domain.inMin(store.level, costVariable, cost);
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not yet implemented as more precise variant exists.");
     }
 
-    // KKU, 2016-02-08, max value of cost variable is equal min
-    // if all constraint variables are ground.
-    // It is difficult to compute the better upper bound since we have three types of variables
-    // flow, cost weight and structure. Specially structure variables are difficult since
-    // they "dynamically" make arcs active/inactive.
-    boolean allVarsGround = true;
-    for (IntVar v : map.keySet()) {
-      if (!v.singleton()) {
-        allVarsGround = false;
-        break;
-      }
-    }
-    if (allVarsGround) {
-      costVariable.domain.inMax(store.level, costVariable, cost);
-    }
-  }
+    @Override public void impose(Store store) {
 
-  @Override
-  public void removeLevel(int level) {
-    queue.clear();
-  }
+        if (costVariable == null) {
+            costVariable = new IntVar(store, 0, 0);
+            System.err.println("WARNING: No cost variable was set, using zero cost.");
+        }
 
-  @Override
-  public void removeLevelLate(int level) {
+        network.initialize(store);
 
-    if (SHOW_LEVEL) {
-      IO.println();
-      IO.println("######### Level " + level);
-      IO.println();
+        // register with store
+        queueIndex = QUEUE_INDEX;
+        store.registerRemoveLevelLateListener(this);
+        super.impose(store);
     }
 
-    network.backtrack();
-  }
+    /***************************/
+    /**
+     * Search {@literal &} Backtracking
+     **/
 
-  /** Identifiers */
-  @Override
-  public String toString() {
-    // TODO Do proper constraint print-out
-    return id() + " :";
-  }
+    @Override public void queueVariable(int level, Var variable) {
+        // DomainStructure structure = map.get(variable);
+
+        if (!disableQueueVariable) {
+            //			System.out.println("\tQueue var : " + variable);
+            if (variable == costVariable) {
+                // System.out.println("** Cost var queued, abort");
+                return;
+            }
+            queue.add((IntVar) variable);
+        } else {
+            // TODO remove
+            // System.err.println("Can this actually happen ... " + variable);
+        }
+    }
+
+    private void updateGraph() {
+        // update graph
+        network.increaseLevel();
+        try {
+            disableQueueVariable = true;
+            for (IntVar variable : queue) {
+                VarHandler handler = map.get(variable);
+                handler.processEvent(variable, network);
+            }
+        } finally {
+            queue.clear();
+            disableQueueVariable = false;
+            // network.increaseLevel();
+        }
+    }
+
+    @Override public void consistency(Store store) {
+
+        if (SHOW_LEVEL) {
+            System.out.println();
+            System.out.println("--------- Level " + store.level);
+            System.out.println();
+        }
+
+        if (DO_INSTRUMENTATION) {
+            statistics.consistencyCalls++;
+        }
+        updateGraph();
+
+        boolean first = true; //(previousLevel != store.level);
+        //System.out.println(store.level + "   (" + first + ")");
+        previousLevel = store.level;
+
+        int iteration = 0;
+        while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
+
+            if (DO_INSTRUMENTATION) {
+                statistics.consistencyIterations++;
+            }
+            //System.out.println(iteration);
+
+            iteration++;
+            if (SHOW_LEVEL) {
+                System.out.println("--------- => Iteration " + iteration);
+            }
+
+            // recompute flow
+            int result = network.networkSimplex(9999999);
+            // network.print();
+
+            // is flow infeasible ?
+            if (result == -2) {
+                throw Store.failException;
+            }
+
+            // compute cost and throw failure on overflow
+            int cost = (int) network.cost(costVariable.max() + 1);
+            if (cost > costVariable.max()) {
+                throw Store.failException;
+            }
+            // prune minimum cost
+            if (cost > costVariable.min()) {
+                costVariable.domain.inMin(store.level, costVariable, cost);
+            }
+
+            // perform domain pruning
+            int costLimit = costVariable.max() - costVariable.min();
+
+            network.pruneNodesWithSmallDegree();
+            network.analyze(costLimit);
+
+            assert (checkFlow(network));
+            assert (checkStructure(network));
+
+            updateGraph();
+        }
+
+
+        // compute cost and throw failure on overflow
+        int cost = (int) network.cost(costVariable.max() + 1);
+        if (cost > costVariable.max()) {
+            throw Store.failException;
+        }
+        // prune minimum cost
+        if (cost > costVariable.min()) {
+            costVariable.domain.inMin(store.level, costVariable, cost);
+        }
+
+        // KKU, 2016-02-08, max value of cost variable is equal min
+        // if all constraint variables are ground.
+        // It is difficult to compute the better upper bound since we have three types of variables
+        // flow, cost weight and structure. Specially structure variables are difficult since
+        // they "dynamically" make arcs active/inactive.
+        boolean allVarsGround = true;
+        for (IntVar v : map.keySet())
+            if (!v.singleton()) {
+                allVarsGround = false;
+                break;
+            }
+        if (allVarsGround)
+            costVariable.domain.inMax(store.level, costVariable, cost);
+    }
+
+    @Override public void removeLevel(int level) {
+        queue.clear();
+    }
+
+    @Override public void removeLevelLate(int level) {
+
+        if (SHOW_LEVEL) {
+            System.out.println();
+            System.out.println("######### Level " + level);
+            System.out.println();
+        }
+
+        network.backtrack();
+
+    }
+
+
+    /*****************/
+    /**
+     * Identifiers
+     **/
+
+    @Override public String toString() {
+
+        StringBuilder result = new StringBuilder(id());
+
+        result.append(" : NetworkFlow([");
+        for (int i = 0; i < network.nodes.length; i++) {
+            result.append("(" + network.nodes[i].name + ", " + network.nodes[i].initialBalance + ")");
+            if (i < network.nodes.length - 1)
+                result.append(", ");
+        }
+
+        result.append("], [");
+        for (int i = 0; i < network.allArcs.size(); i++) {
+            result.append("(");
+            result.append(network.allArcs.get(i).tail().name + "->" +
+                          network.allArcs.get(i).head.name);
+            if (network.allArcs.get(i).companion.wVar == null)
+                result.append(", " + network.allArcs.get(i).cost);
+            else
+                result.append(", " + network.allArcs.get(i).companion.wVar);
+            result.append(", " + network.allArcs.get(i).companion.xVar);
+            result.append(")");
+            if (i < network.allArcs.size() - 1)
+                result.append(", ");
+        }
+        result.append("]");
+
+        result.append(", " + costVariable + "}");
+        return result.toString();
+    }
 }

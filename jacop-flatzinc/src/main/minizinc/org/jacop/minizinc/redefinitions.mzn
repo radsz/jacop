@@ -13,6 +13,19 @@ predicate float_tanh(var float: x, var float: y) =
     } in
     y = (e2x - 1.0)/(e2x + 1.0);
 
+predicate float_asinh(var float: x, var float: y) =
+    y = ln(x + sqrt(x^2.0 + 1));
+
+predicate float_acosh(var float: x, var float: y) =
+    x >= 1
+    /\
+    y = ln(x + sqrt(x^2.0 - 1));
+
+predicate float_atanh(var float: x, var float: y) =
+    let {
+       var float: t = ln(x)
+    } in
+    y = ((t + 1.0) / (t - 1.0)) / 2.0;
 
 
 predicate array_bool_and_imp(array [int] of var bool: as, var bool: r);

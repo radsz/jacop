@@ -30,117 +30,114 @@
 
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Constraints X #\= Y
- *
- * <p>Domain consistency is used.
+ * <p>
+ * Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+
 public class XneqY extends PrimitiveConstraint {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+    final static AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies variable x in the constraint x != y. */
-  public final IntVar x;
+    /**
+     * It specifies variable x in the constraint x != y.
+     */
+    final public IntVar x;
 
-  /** It specifies variable y in the constraint x != y. */
-  public final IntVar y;
+    /**
+     * It specifies variable y in the constraint x != y.
+     */
+    final public IntVar y;
 
-  /**
-   * It constructs X != Y constraint.
-   *
-   * @param x variable x.
-   * @param y variable y.
-   */
-  public XneqY(IntVar x, IntVar y) {
+    /**
+     * It constructs X != Y constraint.
+     *
+     * @param x variable x.
+     * @param y variable y.
+     */
+    public XneqY(IntVar x, IntVar y) {
 
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+        checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
 
-    numberId = idNumber.incrementAndGet();
+        numberId = idNumber.incrementAndGet();
 
-    this.x = x;
-    this.y = y;
+        this.x = x;
+        this.y = y;
 
-    setScope(x, y);
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    if (x == y) {
-      // If x and y are the same, XneqY is trivially inconsistent.
-      throw new IllegalArgumentException(
-          "Arguments to XneqY are the same, the model is trivially inconsistent.");
+        setScope(x, y);
     }
 
-    super.impose(store);
-  }
+    @Override public void impose(Store store) {
 
-  @Override
-  public void consistency(final Store store) {
+        if (notSatisfied()) {
+            // XneqY is trivially inconsistent.
+	    throw new IllegalArgumentException("Arguments to XneqY are the same, the model is trivially inconsistent.");
+        }
 
-    if (y.singleton()) {
-      x.domain.inComplement(store.level, x, y.min());
+        super.impose(store);
+
     }
 
-    if (x.singleton()) {
-      y.domain.inComplement(store.level, y, x.min());
+    @Override public void consistency(final Store store) {
+
+        if (y.singleton())
+            x.domain.inComplement(store.level, x, y.min());
+
+        if (x.singleton())
+            y.domain.inComplement(store.level, y, x.min());
+
     }
-  }
 
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
+    @Override protected int getDefaultNestedNotConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
 
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
+    @Override protected int getDefaultNestedConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
+    @Override protected int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.GROUND;
+    }
 
-  @Override
-  public void notConsistency(final Store store) {
+    @Override public void notConsistency(final Store store) {
 
-    do {
+        do {
 
-      x.domain.in(store.level, x, y.domain);
+            x.domain.in(store.level, x, y.domain);
 
-      store.propagationHasOccurred = false;
+            store.propagationHasOccurred = false;
 
-      y.domain.in(store.level, y, x.domain);
+            y.domain.in(store.level, y, x.domain);
 
-    } while (store.propagationHasOccurred);
-  }
+        } while (store.propagationHasOccurred);
 
-  @Override
-  public boolean notSatisfied() {
-    return x == y || x.singleton() && y.singleton() && x.min() == y.min();
-  }
+    }
 
-  @Override
-  public boolean satisfied() {
-    return !x.domain.isIntersecting(y.domain);
-  }
+    @Override public boolean notSatisfied() {
+        return x == y || x.singleton() && y.singleton() && x.min() == y.min();
+    }
 
-  @Override
-  public String toString() {
-    return id() + " : XneqY(" + x + ", " + y + " )";
-  }
+    @Override public boolean satisfied() {
+        return !x.domain.isIntersecting(y.domain);
+    }
+
+    @Override public String toString() {
+        return id() + " : XneqY(" + x + ", " + y + " )";
+    }
+
 }

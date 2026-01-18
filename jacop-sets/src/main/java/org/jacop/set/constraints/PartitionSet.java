@@ -30,124 +30,190 @@
 
 package org.jacop.set.constraints;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.*;
 import org.jacop.set.core.*;
+import org.jacop.api.UsesQueueVariable;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.stream.Stream;
+import java.util.LinkedHashSet;
 
 /**
- * Channel constraint requires that array of int variables x and array of set variables y are
- * related such that (x[i] = j) {@literal <->} (i in s[j]). Indexes start form 0, both for integer
- * and set variables, by default. To define other starting index use offset definitions.
+ * Channel constraint requires that array of int variables x and array
+ * of set variables y are related such that (x[i] = j) {@literal <->}
+ (i in s[j]).  Indexes start form 0, both for integer and set variables,
+ * by default. To define other starting index use offset definitions.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class PartitionSet extends Constraint implements UsesQueueVariable {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  final SetVar[] s;
-  final int n;
-  final IntDomain u;
+public class PartitionSet extends Constraint {
 
-  boolean firstConsistencyCheck = true;
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-  LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
-  final HashMap<SetVar, Integer> varMap = new HashMap<>();
+    SetVar[] s;
+    int n;
+    IntDomain u;
 
-  Store store;
+    AunionBeqC[] union;
+    List<Constraint> constraints;
 
-  /**
-   * It constructs a Channel constraint.
-   *
-   * @param s array of set variables.
-   * @param universe set of all values.
-   */
-  public PartitionSet(SetVar[] s, IntDomain universe) {
+    boolean firstConsistencyCheck = true;
 
-    checkInputForNullness(new String[] {"s"}, new Object[] {s});
+    LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
+    HashMap<SetVar, Integer> varMap = new HashMap<>();
 
-    numberId = idNumber.incrementAndGet();
+    Store store;
 
-    this.s = s;
-    n = s.length;
-    this.u = universe;
+    /**
+     * It constructs a Channel constraint.
+     *
+     * @param s array of set variables.
+     * @param universe set of all values.
+     */
+    public PartitionSet(SetVar[] s, IntDomain universe) {
 
-    for (int i = 0; i < n; i++) {
-      varMap.put(s[i], i);
+        checkInputForNullness(new String[] {"s"}, new Object[] {s});
+
+        numberId = idNumber.incrementAndGet();
+
+        this.s = s;
+        n = s.length;
+        this.u = universe;
+
+        for (int i = 0; i < n; i++) {
+            varMap.put(s[i], i);
+        }
+        queueIndex = 2;
+
+        setScope(Arrays.stream(s));
     }
 
-    setScope(Arrays.stream(s));
-  }
+    @Override public void consistency(Store store) throws FailException {
 
-  @Override
-  public void consistency(Store store) throws FailException {
+        if (firstConsistencyCheck) {
+            
+            for (int i = 0; i < n; i++)
+                s[i].domain.inLUB(store.level, s[i], u);
 
-    if (firstConsistencyCheck) {
+            firstConsistencyCheck = false;
+        }
 
-      for (int i = 0; i < n; i++) {
-        s[i].domain.inLUB(store.level, s[i], u);
-      }
+        // check union constraint
+        for (int i = 0; i < n; i++) {
+            IntDomain ub = u.cloneLight();
+            IntDomain lb = u.cloneLight();
+            int cardMin = u.getSize();
+            int cardMax = u.getSize();
 
-      firstConsistencyCheck = false;
-    }
-
-    do {
-
-      store.propagationHasOccurred = false;
-
-      LinkedHashSet<Integer> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<>();
-
-      for (Integer i : fdvs) {
-        if (i != null) {
-          IntDomain glb = s[i].dom().glb();
-          for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
-            int si = e.nextElement();
             for (int j = 0; j < n; j++) {
-              if (i != j) {
-                s[j].dom().inLUBComplement(store.level, s[j], si);
-              }
+                if (i != j) {
+                    ub = ub.subtract(s[j].dom().lub());
+                    lb = lb.subtract(s[j].dom().glb());
+
+                    cardMin -= s[j].dom().card().max();
+                    cardMax -= s[j].dom().card().min();
+                }
             }
-          }
-        }
-      }
-    } while (store.propagationHasOccurred);
 
-    // check union constraint
-    for (int i = 0; i < n; i++) {
-      IntDomain t = u.cloneLight();
-      for (int j = 0; j < n; j++) {
-        if (i != j) {
-          t = t.subtract(s[j].dom().lub());
+            s[i].dom().inLUB(store.level, s[i], lb);
+            s[i].dom().inGLB(store.level, s[i], ub);
+
+            if (cardMax < cardMin || cardMax < 0)
+                throw store.failException;
+            if (s[i].dom().card().max() < cardMin || s[i].dom().card().min() > cardMax)
+                throw store.failException;
+            if (cardMin > s[i].dom().card().min())
+                s[i].domain.inCardinality(store.level, s[i], cardMin, Integer.MAX_VALUE);
+            if (cardMax < s[i].dom().card().max())
+                s[i].dom().inCardinality(store.level, s[i], s[i].dom().card().min(), cardMax);
+
+            if (!s[i].singleton())
+                if (s[i].dom().glb().getSize() == s[i].dom().card().max()) {
+                    System.out.println("% 1" + s[i] + " in " + s[i].dom().glb());
+
+                    s[i].domain.inLUB(store.level, s[i], s[i].dom().glb());
+                }
+                else if (s[i].dom().lub().getSize() == s[i].dom().card().min()) {
+                    System.out.println("% 2");
+
+                    s[i].domain.inGLB(store.level, s[i], s[i].dom().lub());
+                }
         }
-      }
-      s[i].dom().inGLB(store.level, s[i], t);
     }
-  }
 
-  @Override
-  public void queueVariable(int level, Var var) {
-    variableQueue.add(varMap.get((SetVar) var));
-  }
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return SetDomain.ANY;
+    }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return SetDomain.ANY;
-  }
+    AunionBeqC[] unionConstraints() {
 
-  @Override
-  public String toString() {
+        IntDomain empty = new org.jacop.core.IntervalDomain();
+        SetVar tmp1 = new SetVar(s[0].getStore(), new BoundSetDomain(empty, u));
+        Store store = s[0].getStore();
+        union = new AunionBeqC[s.length - 1];
+        int index = 0;
+        for (int i = 1; i < s.length; i++) {
+            if (i == 1) {
+                union[index++] = new AunionBeqC(s[i - 1], s[i], tmp1);
+            } else if (i == s.length - 1) {
+                SetVar tmp3 = new SetVar(store, new BoundSetDomain(u, u));
+                union[index++] = new AunionBeqC(tmp1, s[i], tmp3);
+            } else {
+                SetVar tmp2 = new SetVar(store, new BoundSetDomain(empty, u));
+                union[index++] = new AunionBeqC(tmp1, s[i], tmp2);
+                tmp1 = tmp2;
+            }
+        }
+        return union;
+    }
 
-    StringBuilder result = new StringBuilder();
-    result.append(id()).append(" : PartitionSet(");
-    result.append(Arrays.asList(s)).append(", ").append(u);
-    result.append(")");
-    return result.toString();
-  }
+    List<AdisjointB> disjointConstraints() {
+
+        Store store = s[0].getStore();
+        ArrayList<AdisjointB> intersect = new ArrayList<>();
+        for (int i = 0; i < s.length; i++)
+            for (int j = i + 1; j < s.length; j++) {
+                intersect.add(new AdisjointB(s[i], s[j]));
+            }
+
+        return intersect;
+    }
+
+    @Override public List<Constraint> decompose(Store store) {
+
+        constraints = new ArrayList<>();
+
+        AunionBeqC[] union = unionConstraints();
+        List<AdisjointB> intersect = disjointConstraints();
+
+        constraints = new ArrayList<Constraint>() { { addAll(Arrays.asList(union)); addAll(intersect); } };
+
+        return constraints;
+    }
+
+    @Override public void imposeDecomposition(Store store) {
+
+        if (constraints == null)
+            constraints = decompose(store);
+
+        for (Constraint c : constraints)
+            store.impose(c, queueIndex);
+
+    }
+    @Override public String toString() {
+
+        StringBuffer result = new StringBuffer();
+        result.append(id() + " : PartitionSet(");
+        result.append(Arrays.asList(s)).append(", ").append(u);
+        result.append(")");
+        return result.toString();
+
+    }
 }

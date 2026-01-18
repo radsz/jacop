@@ -30,7 +30,6 @@
 
 package org.jacop.set.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -40,95 +39,113 @@ import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * The set cardinality constraint.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
+
 public class CardAeqX extends Constraint implements SatisfiedPresent {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+    static AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies set variable a which is being restricted. */
-  public final SetVar a;
+    /**
+     * It specifies set variable a which is being restricted.
+     */
+    public SetVar a;
 
-  /** It specifies integer variable c specifying the possible cardinality of set variable a. */
-  public final IntVar cardinality;
+    /**
+     * It specifies integer variable c specifying the possible cardinality of set variable a.
+     */
+    public IntVar cardinality;
 
-  /**
-   * It constructs a cardinality constraint to restrict the number of elements in the set assigned
-   * to set variable a.
-   *
-   * @param a variable that is restricted to have the cardinality c.
-   * @param cardinality the variable specifying the possible values for cardinality of set variable
-   *     a.
-   */
-  public CardAeqX(SetVar a, IntVar cardinality) {
+    /**
+     * It constructs a cardinality constraint to restrict the number of elements
+     * in the set assigned to set variable a.
+     *
+     * @param a           variable that is restricted to have the cardinality c.
+     * @param cardinality the variable specifying the possible values for cardinality of set variable a.
+     */
+    public CardAeqX(SetVar a, IntVar cardinality) {
 
-    checkInputForNullness(new String[] {"a", "cardinality"}, new Object[] {a, cardinality});
+        checkInputForNullness(new String[] {"a", "cardinality"}, new Object[] {a, cardinality});
 
-    this.numberId = idNumber.incrementAndGet();
-    this.a = a;
-    this.cardinality = cardinality;
+        this.numberId = idNumber.incrementAndGet();
+        this.a = a;
+        this.cardinality = cardinality;
 
-    setScope(a, cardinality);
-  }
+        setScope(a, cardinality);
 
-  @Override
-  public void consistency(Store store) {
-
-    SetDomain aDom = a.domain;
-    IntDomain card = cardinality.domain;
-
-    // T12
-    int min = Math.max(aDom.glb().getSize(), card.min());
-    int max = Math.min(aDom.lub().getSize(), card.max());
-
-    if (min > max) {
-      throw Store.failException;
     }
 
-    cardinality.domain.in(store.level, cardinality, min, max);
+    @Override public void consistency(Store store) {
 
-    // T13 else //T14
-    if (aDom.glb().getSize() == card.max()) {
-      a.domain.inLUB(store.level, a, aDom.glb());
-    } else if (aDom.lub().getSize() == card.min()) {
-      a.domain.inGLB(store.level, a, aDom.lub());
+        /**
+         * It computes the consistency of the constraint.
+         *
+         * #A = B
+         *
+         * Cardinality of set variable A is equal to int variable B.
+         *
+         * B.in(#glbA, #lubA).
+         *
+         * If #glbA is already equal to maximum allowed cardinality then set is specified by glbA.
+         * if (#glbA == B.max()) then A = glbA
+         * If #lubA is already equal to minimum allowed cardinality then set is specified by lubA.
+         * if (#lubA == B.min()) then A = lubA
+         *
+         *
+         */
+
+        SetDomain aDom = a.domain;
+        IntDomain card = cardinality.domain;
+
+        //T12
+        int min = Math.max(aDom.glb().getSize(), card.min());
+        int max = Math.min(aDom.lub().getSize(), card.max());
+
+        if (min > max)
+            throw Store.failException;
+
+        cardinality.domain.in(store.level, cardinality, min, max);
+        a.domain.inCardinality(store.level, a, min, max);
+
+        //T13 else //T14
+        if (aDom.glb().getSize() == card.max())
+            a.domain.inLUB(store.level, a, aDom.glb());
+        else if (aDom.lub().getSize() == card.min())
+            a.domain.inGLB(store.level, a, aDom.lub());
+
     }
-  }
 
-  @Override
-  public int getConsistencyPruningEvent(Var var) {
+    @Override public int getConsistencyPruningEvent(Var var) {
 
-    // If consistency function mode
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
+        // If consistency function mode
+        if (consistencyPruningEvents != null) {
+            Integer possibleEvent = consistencyPruningEvents.get(var);
+            if (possibleEvent != null)
+                return possibleEvent;
+        }
+
+        if (var == cardinality)
+            return IntDomain.ANY;
+        else
+            return SetDomain.ANY;
     }
 
-    if (var == cardinality) {
-      return IntDomain.ANY;
-    } else {
-      return SetDomain.ANY;
+    @Override public int getDefaultConsistencyPruningEvent() {
+        throw new IllegalStateException("Not implemented as more precise variant exists.");
     }
-  }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    throw new IllegalStateException("Not implemented as more precise variant exists.");
-  }
+    @Override public boolean satisfied() {
+        return (grounded() && a.domain.card().eq(cardinality.dom()));
+    }
 
-  @Override
-  public boolean satisfied() {
-    return grounded() && a.domain.card().eq(cardinality.dom());
-  }
+    @Override public String toString() {
+        return id() + " : card(" + a + ", " + cardinality + " )";
+    }
 
-  @Override
-  public String toString() {
-    return id() + " : card(" + a + ", " + cardinality + " )";
-  }
 }

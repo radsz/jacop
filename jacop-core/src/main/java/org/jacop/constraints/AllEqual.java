@@ -30,11 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.api.SatisfiedPresent;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Arrays;
 
 /**
  * Constraints forall i != j: x[i] #= x[j]
@@ -44,113 +46,127 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+
 public class AllEqual extends PrimitiveConstraint {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies a left hand variable in equality constraint. */
-  public final IntVar[] x;
+    static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /**
-   * It constructs constraint x[i] = x[j].
-   *
-   * @param x variables x.
-   */
-  public AllEqual(IntVar[] x) {
+    /**
+     * It specifies a left hand variable in equality constraint.
+     */
+    public final IntVar[] x;
 
-    checkInputForNullness(new String[] {"x"}, new Object[] {x});
+    private int n;
 
-    numberId = idNumber.incrementAndGet();
+    private TimeStamp<Integer> position;
 
-    this.x = x;
+    /**
+     * It constructs constraint x[i] = x[j].
+     *
+     * @param x variables x.
+     */
+    public AllEqual(IntVar[] x) {
 
-    setScope(x);
-  }
+        checkInputForNullness(new String[] {"x"}, new Object[] {x});
 
-  @Override
-  public void consistency(final Store store) {
+        numberId = idNumber.incrementAndGet();
 
-    // bottom up
-    for (int i = 1; i < x.length; i++) {
+        this.x = x;
+        this.n = x.length;
 
-      // domain consistency
-      x[i - 1].domain.in(store.level, x[i - 1], x[i].domain);
-
-      x[i].domain.in(store.level, x[i], x[i - 1].domain);
+        setScope(x);
     }
 
-    // top down
-    for (int i = x.length - 2; i >= 0; i--) {
+    @Override public void consistency(final Store store) {
 
-      // domain consistency
-      x[i + 1].domain.in(store.level, x[i], x[i].domain);
+        // bottom up
+        for (int i = 1; i < n; i++) {
+    
+            // domain consistency
+            x[i - 1].domain.in(store.level, x[i - 1], x[i].domain);
 
-      x[i].domain.in(store.level, x[i], x[i + 1].domain);
-    }
-  }
-
-  @Override
-  public void notConsistency(final Store store) {
-    if (notSatisfied()) {
-      removeConstraint();
-    }
-
-    int n = 0;
-    int idx = -1;
-    int sIndex = -1;
-    for (int i = 0; i < x.length; i++) {
-      if (!x[i].singleton()) {
-        idx = i;
-        n++;
-      } else {
-        sIndex = i;
-      }
-    }
-    if (n == 0) {
-      throw Store.failException;
-    } else if (n == 1) {
-      x[idx].domain.inComplement(store.level, x[idx], x[sIndex].value());
-    }
-  }
-
-  @Override
-  public boolean satisfied() {
-
-    for (int i = 0; i < x.length; i++) {
-      for (int j = i + 1; j < x.length; j++) {
-        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) {
-          return false;
+            x[i].domain.in(store.level, x[i], x[i - 1].domain);
         }
-      }
-    }
-    return true;
-  }
 
-  @Override
-  public boolean notSatisfied() {
+        // top down
+        for (int i = n - 2; i >= 0; i--) {
+    
+            // domain consistency
+            x[i + 1].domain.in(store.level, x[i], x[i].domain);
 
-    for (int i = 0; i < x.length; i++) {
-      for (int j = i + 1; j < x.length; j++) {
-        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) {
-          return true;
+            x[i].domain.in(store.level, x[i], x[i + 1].domain);
         }
-      }
     }
-    return false;
-  }
 
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
+    @Override public void include(Store store) {
+        position = new TimeStamp<>(store, 0);
+    }
 
-  @Override
-  public int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
+    @Override public void notConsistency(final Store store) {
 
-  @Override
-  public String toString() {
-    return id() + " : AllEqual(" + Arrays.asList(x) + " )";
-  }
+        int start = position.value();
+
+        for (int i = start; i < n; i++) {
+            if (x[i].singleton())
+                if (start == 0)
+                    swap(start++, i);
+                else if (x[0].value() == x[i].value()) {
+                    swap(start++, i);
+                } else {
+                    removeConstraint();
+                    return;
+                }
+        }
+
+        if (start == n - 1)
+            x[start].domain.inComplement(store.level, x[start], x[0].value());
+        else if (start == n)
+            throw Store.failException;
+
+        position.update(start);
+    }
+
+    private void swap(int i, int j) {
+        if (i != j) {
+            IntVar tmp = x[i];
+            x[i] = x[j];
+            x[j] = tmp;
+        }
+    }
+
+    @Override public boolean satisfied() {
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (! (x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value()))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    @Override public boolean notSatisfied() {
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (i != j && !x[i].domain.isIntersecting(x[j].domain))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    @Override public int getDefaultConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override public int getDefaultNotConsistencyPruningEvent() {
+        return IntDomain.ANY;
+    }
+
+    @Override public String toString() {
+        return id() + " : AllEqual(" + Arrays.asList(x) + " )";
+    }
+
 }
