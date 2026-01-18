@@ -35,8 +35,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.*;
-import org.jacop.core.IntDomain;
-import org.jacop.core.IntervalDomain;
 
 /**
  * ElementBool constraint defines a relation list[index - indexOffset] = value.
@@ -52,16 +50,16 @@ import org.jacop.core.IntervalDomain;
  */
 public class ElementBool extends Constraint implements UsesQueueVariable {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
 
   /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  public IntVar index;
+  public final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  public IntVar value;
+  public final IntVar value;
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
   public final int indexOffset;
@@ -70,13 +68,13 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public int list[];
+  public final int[] list;
 
   boolean indexHasChanged = true;
   boolean valueHasChanged = true;
 
-  IntDomain indexAtZero = new IntervalDomain(5);
-  IntDomain indexAtOne = new IntervalDomain(5);
+  final IntDomain indexAtZero = new IntervalDomain(5);
+  final IntDomain indexAtOne = new IntervalDomain(5);
 
   /**
    * It constructs an element constraint.
@@ -234,7 +232,7 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : elementBool").append("( ").append(index).append(", [");
 
