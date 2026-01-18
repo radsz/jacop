@@ -53,7 +53,7 @@ public class SimpleTable extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   static final boolean debug = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Variables within the scope of table constraint */
   public IntVar[] x;

@@ -38,7 +38,7 @@ package org.jacop.search.restart;
  */
 public class LinearCalculator extends Calculator {
 
-  long increment;
+  final long increment;
   long n;
 
   public LinearCalculator(int scale) {

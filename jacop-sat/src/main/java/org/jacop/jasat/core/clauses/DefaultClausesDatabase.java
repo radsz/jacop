@@ -552,7 +552,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    * @param i the first index
    * @param j the second index
    */
-  private final void putAt0And1(int[] clause, int i, int j) {
+  private void putAt0And1(int[] clause, int i, int j) {
     assert i >= 0 && i < clause.length;
     assert j >= 0 && j < clause.length;
     assert i != j;

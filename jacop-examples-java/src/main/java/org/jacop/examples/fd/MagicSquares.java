@@ -117,7 +117,7 @@ public class MagicSquares extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] squares = new IntVar[number * number];
 
@@ -169,11 +169,11 @@ public class MagicSquares extends ExampleFD {
   /** It creates the model with specification of what constraint can help in guiding shaving. */
   public void model4Shaving() {
 
-    guidingShaving = new ArrayList<Constraint>();
+    guidingShaving = new ArrayList<>();
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] squares = new IntVar[number * number];
 
@@ -237,7 +237,7 @@ public class MagicSquares extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] squares = new IntVar[number * number];
 

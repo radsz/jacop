@@ -98,7 +98,7 @@ public class BIBD extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Get problem size n from second program argument.
     x = new IntVar[v][b];
@@ -126,7 +126,7 @@ public class BIBD extends ExampleFD {
     for (int i = 0; i - 1 < v; i++)
       for (int j = i + 1; j < v; j++) {
 
-        List<IntVar> result = new ArrayList<IntVar>();
+        List<IntVar> result = new ArrayList<>();
 
         for (int m = 0; m < b; m++) {
           BooleanVar product = new BooleanVar(store, "p" + i + "_" + j + "_" + m);

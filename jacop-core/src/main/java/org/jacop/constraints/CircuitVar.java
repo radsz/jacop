@@ -43,9 +43,9 @@ import org.jacop.core.Store;
  */
 class CircuitVar implements MutableVar {
 
-  int index;
+  final int index;
 
-  Store store;
+  final Store store;
 
   CircuitVarValue value = null;
 

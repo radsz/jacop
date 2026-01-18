@@ -56,7 +56,7 @@ public class QCP extends ExampleFD {
   public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
 
   /** It contains constraints which can be used to guide shaving. */
-  public List<Constraint> shavingConstraints = new ArrayList<>();
+  public final List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** It contains the order of the QCP being solved. */
   public int n = 0;

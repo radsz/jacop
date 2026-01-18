@@ -86,7 +86,7 @@ public class Gates extends ExampleFD {
   public void model(BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     BooleanVar a = new BooleanVar(store, "a");
     BooleanVar b = new BooleanVar(store, "b");
@@ -210,12 +210,10 @@ public class Gates extends ExampleFD {
   public boolean searchSpecific() {
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);

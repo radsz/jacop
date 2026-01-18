@@ -346,12 +346,7 @@ public final class IntHashMap<E> {
    * @return iterator for enumeration of elements in this map
    */
   public Iterable<Map.Entry<Integer, E>> entrySet() {
-    return new Iterable<>() {
-
-      public Iterator<Map.Entry<Integer, E>> iterator() {
-        return new EntryIterator();
-      }
-    };
+    return EntryIterator::new;
   }
 
   /**

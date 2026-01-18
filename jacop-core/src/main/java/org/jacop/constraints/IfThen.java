@@ -45,14 +45,14 @@ import org.jacop.util.QueueForward;
  */
 public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies constraint condC in the IfThen constraint. */
-  public PrimitiveConstraint condC;
+  public final PrimitiveConstraint condC;
 
   /** It specifies constraint condC in the IfThen constraint. */
-  public PrimitiveConstraint thenC;
+  public final PrimitiveConstraint thenC;
 
   boolean imposed = false;
   Store store;

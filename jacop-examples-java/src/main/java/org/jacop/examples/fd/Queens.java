@@ -125,7 +125,7 @@ public class Queens extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // I-th queen variable represents the placement
     // of a queen in i-th column
@@ -174,7 +174,7 @@ public class Queens extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Global model
 
@@ -227,7 +227,7 @@ public class Queens extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // I-th queen variable represents the placement
     // of a queen in i-th column

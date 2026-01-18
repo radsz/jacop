@@ -82,9 +82,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
     int rdiff = rminNext - rmin;
 
-    if (ldiff > rdiff) return 1;
-    if (ldiff < rdiff) return -1;
-    return 0;
+    return Integer.compare(ldiff, rdiff);
   }
 
   public double metric(T o) {

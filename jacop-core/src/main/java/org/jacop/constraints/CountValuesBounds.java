@@ -70,8 +70,8 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
   /*
    * lower and upper bounds on values occurence
    */
-  int[] lb;
-  int[] ub;
+  final int[] lb;
+  final int[] ub;
   /*
    * Defines first position of the variable that are not considered;
    * either equal to value or missing the value in their domain.

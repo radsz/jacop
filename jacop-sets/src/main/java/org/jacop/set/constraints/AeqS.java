@@ -46,16 +46,16 @@ import org.jacop.set.core.SetVar;
  */
 public class AeqS extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a, which must be equal to set variable b. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies the set which must be equal to set variable a. */
-  public IntDomain set;
+  public final IntDomain set;
 
   /** It specifies the size of b. */
-  int sizeOfB;
+  final int sizeOfB;
 
   /**
    * It constructs an AeqS constraint to restrict the domain of the variables.

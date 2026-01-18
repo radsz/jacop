@@ -47,13 +47,13 @@ public class BipartiteGraphMatching {
 
   // m is  number of vertices on left side and n is a maximum number of vertices on right side of
   // Bipartite Graph
-  int m;
-  int n;
+  final int m;
+  final int n;
 
   // array adj stores adjacents vertices of vertex 'u'. The value of u ranges from 1 to m.  0 is
   // used for
   // dummy vertex
-  int[][] adj;
+  final int[][] adj;
 
   // These are arrays needed for hopcroftKarp()
   int[] pairU, pairV, dist;

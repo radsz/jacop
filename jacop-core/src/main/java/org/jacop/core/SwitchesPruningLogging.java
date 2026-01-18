@@ -71,13 +71,13 @@ public final class SwitchesPruningLogging {
   public static final boolean traceSearch = trace && true;
 
   /** It traces the decisions within search. */
-  public static boolean traceSearchTree = trace && traceSearch && true;
+  public static final boolean traceSearchTree = trace && traceSearch && true;
 
   /** It turns on all trace printouts in variables. */
   public static boolean traceVar = trace && true;
 
   /** It turns on all trace printouts in constraints. */
-  public static boolean traceConstraint = trace && true;
+  public static final boolean traceConstraint = trace && true;
 
   /** It traces all constraints have failed. */
   public static boolean traceConstraintFailure = trace && true;
@@ -90,10 +90,10 @@ public final class SwitchesPruningLogging {
 
   private SwitchesPruningLogging() {}
 
-  public static final void log(boolean isEnabled, Class fromClass, String pattern, Object[] args) {}
+  public static void log(boolean isEnabled, Class fromClass, String pattern, Object[] args) {}
 
-  public static final void log(boolean isEnabled, Class fromClass, String pattern, Object arg1) {}
+  public static void log(boolean isEnabled, Class fromClass, String pattern, Object arg1) {}
 
-  public static final void log(
+  public static void log(
       boolean isEnabled, Class fromClass, String pattern, Object arg1, Object arg2) {}
 }

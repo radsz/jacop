@@ -216,7 +216,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         IO.println("No solution found.");
 
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
 
         buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
@@ -420,7 +420,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (noSolutions > 0) {
       // update number solutions in solution listener; otherwise it will be zero :(
-      ((SimpleSolutionListener) solutionListener).setSolutionsNo(noSolutions);
+      ((SimpleSolutionListener<?>) solutionListener).setSolutionsNo(noSolutions);
 
       if (printInfo) {
         if (costVariable != null)
@@ -528,7 +528,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   String statistics() {
 
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
 
     buf.append("No solutions : ").append(noSolutions).append("\n");
     buf.append("Nodes : ").append(nodes).append("\n");
@@ -626,7 +626,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   }
 
   public String toString() {
-    StringBuffer b = new StringBuffer();
+    StringBuilder b = new StringBuilder();
 
     b.append("PrioritySearch(")
         .append(java.util.Arrays.asList(priority))
@@ -656,7 +656,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   class LinkingSearch<T extends Var> extends DepthFirstSearch<T> {
 
-    DepthFirstSearch<T> master;
+    final DepthFirstSearch<T> master;
 
     LinkingSearch(DepthFirstSearch<T> m) {
       master = m;

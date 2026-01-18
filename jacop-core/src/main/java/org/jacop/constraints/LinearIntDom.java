@@ -50,7 +50,7 @@ import org.jacop.core.*;
  */
 public class LinearIntDom extends LinearInt {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Defines support (valid values) for each variable */
   IntervalDomain[] support;
@@ -59,7 +59,7 @@ public class LinearIntDom extends LinearInt {
   int[] assignments;
 
   /** Limit on the product of sizes of domains when domain consistency is carried out. */
-  double limitDomainPruning = 1e+7;
+  final double limitDomainPruning = 1e+7;
 
   /**
    * It constructs the constraint LinearIntDom.

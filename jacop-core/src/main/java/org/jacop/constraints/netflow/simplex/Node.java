@@ -66,7 +66,7 @@ public final class Node {
   public int degree;
 
   /** adjacency list (recorded when degree reaches 2) */
-  public Arc[] adjacencyList;
+  public final Arc[] adjacencyList;
 
   /** marks the cut (S,T) for dual pivot */
   boolean marked;

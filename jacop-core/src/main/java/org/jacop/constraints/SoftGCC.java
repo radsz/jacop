@@ -53,12 +53,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
   public List<Constraint> decomposition;
 
-  public IntVar[] xVars;
+  public final IntVar[] xVars;
 
   public IntVar[] hardCounters;
   public IntVar[] softCounters;
 
-  public int[] countedValue;
+  public final int[] countedValue;
 
   public int[] softLowerBound;
   public int[] softUpperBound;
@@ -66,9 +66,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   public int[] hardLowerBound;
   public int[] hardUpperBound;
 
-  public IntVar costVar;
+  public final IntVar costVar;
 
-  public ViolationMeasure violationMeasure;
+  public final ViolationMeasure violationMeasure;
 
   /**
    * It specifies soft-GCC constraint.
@@ -537,7 +537,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append(" : SoftGCC([");
 

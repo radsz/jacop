@@ -60,28 +60,28 @@ public class LexOrder extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
 
   static final boolean debug = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Two vectors that have to be lexicographically ordered. */
-  public IntVar[] x;
+  public final IntVar[] x;
 
-  public IntVar[] y;
+  public final IntVar[] y;
 
   /** Lex enforcing "{@literal <}" relationship (true). */
   public boolean lexLT;
 
-  public boolean originalLexLT;
+  public final boolean originalLexLT;
 
   /** size of the longest vector. */
-  int n;
+  final int n;
 
   boolean satisfied;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   SimpleHashSet<Integer> indexQueue = new SimpleHashSet<>();
-  Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
-  Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
+  final Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
+  final Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
   private Store store;
   private TimeStamp<Integer> alpha;
   private TimeStamp<Integer> beta;

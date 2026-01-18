@@ -42,8 +42,8 @@ import org.jacop.search.DepthFirstSearch;
 
 public class Rosenbrock {
 
-  double MIN_FLOAT = -1e+150;
-  double MAX_FLOAT = 1e+150;
+  final double MIN_FLOAT = -1e+150;
+  final double MAX_FLOAT = 1e+150;
 
   /**
    * It executes the program.
@@ -105,11 +105,10 @@ public class Rosenbrock {
     label.labeling(store, s, z);
     */
 
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2}, null);
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, new FloatVar[] {x1, x2}, null);
 
-    Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, z);
+    Optimize<FloatVar> min = new Optimize<>(store, label, s, z);
     boolean result = min.minimize();
 
     if (result) {

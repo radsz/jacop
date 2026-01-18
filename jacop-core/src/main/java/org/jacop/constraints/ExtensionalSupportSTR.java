@@ -51,10 +51,10 @@ import org.jacop.util.IndexDomainView;
 public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It stores variables within this extensional constraint, order does matter. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   /** */
   public int[][] tuples;
@@ -117,10 +117,10 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   public int lastAssignedVariablePosition = -1;
 
   /** It specifies if the tuples previously removed are re-inserted at the beginning. */
-  public boolean reinsertBefore;
+  public final boolean reinsertBefore;
 
   /** It specifies if the residues are moved at the beginning of the list. */
-  public boolean residuesBefore;
+  public final boolean residuesBefore;
 
   /** It specifies if there was no first consistency check yet. */
   public boolean firstConsistencyCheck = true;
@@ -133,7 +133,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
   // FIXME, remove the need for this attribute.
   Store store;
-  IndexDomainView[] views;
+  final IndexDomainView[] views;
   // for each variable computes the domain as given by all tuples.
   IntervalDomain[] valuesInFocus;
   int[] domainSizeAfterConsistency;
@@ -506,8 +506,8 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
       for (Var var : list) IO.println("Variable " + var);
     }
 
-    headsOfEliminatedTuples = new TimeStamp<Integer>(store, -1);
-    tailsOfEliminatedTuples = new TimeStamp<Integer>(store, -1);
+    headsOfEliminatedTuples = new TimeStamp<>(store, -1);
+    tailsOfEliminatedTuples = new TimeStamp<>(store, -1);
 
     nbValuesToBeSupported = new int[list.length];
     validityVariablePositions = new int[list.length];

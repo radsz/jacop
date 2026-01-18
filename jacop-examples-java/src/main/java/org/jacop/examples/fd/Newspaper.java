@@ -75,7 +75,7 @@ public class Newspaper extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // algy[0], bertie[0], charlie[0], digby[0]
     // - when a person starts reading guardian

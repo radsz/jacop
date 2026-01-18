@@ -82,7 +82,7 @@ public class Gardner extends ExampleSet {
     for (int i = 0; i < days.length; i++)
       days[i] = new SetVar(store, "days[" + i + "]", new BoundSetDomain(1, persons));
 
-    vars = new ArrayList<SetVar>();
+    vars = new ArrayList<>();
 
     vars.addAll(Arrays.asList(days));
 
@@ -120,10 +120,10 @@ public class Gardner extends ExampleSet {
     boolean result = store.consistency();
     IO.println("*** consistency = " + result);
 
-    Search<SetVar> label = new DepthFirstSearch<SetVar>();
+    Search<SetVar> label = new DepthFirstSearch<>();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(vars.toArray(new SetVar[0]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(vars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
 
     //	label.setSolutionListener(new SimpleSolutionListener());
     label.getSolutionListener().searchAll(false);

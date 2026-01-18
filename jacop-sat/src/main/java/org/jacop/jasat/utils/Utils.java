@@ -54,7 +54,7 @@ public final class Utils {
    * @param pool the MemoryPool from which to find an int[]
    * @return a new int[] with required size, and elements from @param array
    */
-  public static final int[] resize(int[] array, int newSize, int size, MemoryPool pool) {
+  public static int[] resize(int[] array, int newSize, int size, MemoryPool pool) {
     assert newSize > array.length : "resize to bigger size";
     assert size <= array.length;
 
@@ -74,7 +74,7 @@ public final class Utils {
     return answer;
   }
 
-  public static final int[] resize(int[] array, int newSize, MemoryPool pool) {
+  public static int[] resize(int[] array, int newSize, MemoryPool pool) {
     return resize(array, newSize, array.length, pool);
   }
 
@@ -85,7 +85,7 @@ public final class Utils {
    * @param newSize the size of the array we want
    * @return a new array which first elements are the same as the ones in array
    */
-  public static final int[][] resize(int[][] array, int newSize) {
+  public static int[][] resize(int[][] array, int newSize) {
     int[][] answer = new int[newSize][];
     System.arraycopy(array, 0, answer, 0, array.length);
     return answer;
@@ -99,14 +99,14 @@ public final class Utils {
    * @param size the number of elements to copy from the old
    * @return a new array which first elements are the same as the ones in array
    */
-  public static final int[][] resize(int[][] array, int newSize, int size) {
+  public static int[][] resize(int[][] array, int newSize, int size) {
     assert size < newSize;
     int[][] answer = new int[newSize][];
     System.arraycopy(array, 0, answer, 0, size);
     return answer;
   }
 
-  public static final Integer[] ensure(Integer[] array, int size) {
+  public static Integer[] ensure(Integer[] array, int size) {
     if (array.length <= size) {
       Integer[] answer = new Integer[2 * size];
       System.arraycopy(array, 0, answer, 0, array.length);
@@ -114,7 +114,7 @@ public final class Utils {
     } else return array;
   }
 
-  public static final <E> Set<E>[] ensure(HashSet<E>[] array, int size) {
+  public static <E> Set<E>[] ensure(HashSet<E>[] array, int size) {
     if (array.length <= size) {
       @SuppressWarnings("unchecked")
       Set<E>[] answer = (HashSet<E>[]) new HashSet[2 * size];

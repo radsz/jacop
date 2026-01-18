@@ -30,10 +30,7 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -50,7 +47,7 @@ import org.jacop.core.Store;
  */
 public class Diff2 extends Diff {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of pairs of rectangles which can overlap. */
   public int[] exclusiveList = new int[0];
@@ -115,7 +112,7 @@ public class Diff2 extends Diff {
     this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
     numberId = idNumber.incrementAndGet();
 
-    setScope(rectangles.stream().map(i -> i.stream()).flatMap(i -> i));
+    setScope(rectangles.stream().map(Collection::stream).flatMap(i -> i));
   }
 
   /**
@@ -236,7 +233,7 @@ public class Diff2 extends Diff {
     this.exclusiveList = new int[list.size()];
     for (int i = 0; i < list.size(); i++) this.exclusiveList[i] = list.get(i);
 
-    setScope(rectangles.stream().map(i -> i.stream()).flatMap(i -> i));
+    setScope(rectangles.stream().map(Collection::stream).flatMap(i -> i));
   }
 
   /**

@@ -92,7 +92,7 @@ public class Flowers extends ExampleFD {
     IO.println("Program to solve Flower logic puzzle");
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     String[] wifeWeek = {"Emma", "Kristin", "Lynn", "Toni"};
     String[] wifeDay = {"EmmaDay", "KristinDay", "LynnDay", "ToniDay"};

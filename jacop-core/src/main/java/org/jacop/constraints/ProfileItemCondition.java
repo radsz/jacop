@@ -183,7 +183,7 @@ class ProfileItemCondition extends ProfileItem {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer("{[");
+    StringBuilder result = new StringBuilder("{[");
     result.append(min).append("..").append(max).append(") = ").append(value).append(", [");
 
     for (Iterator<int[]> e = rectangles.listIterator(0); e.hasNext(); ) {

@@ -57,9 +57,7 @@ public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
     int left = leftVar.getSize();
     int right = rightVar.getSize();
 
-    if (left < right) return 1;
-    if (left > right) return -1;
-    return 0;
+    return Integer.compare(right, left);
   }
 
   public double metric(T var) {

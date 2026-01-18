@@ -88,16 +88,16 @@ public class CarSequencing extends ExampleFD {
    * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
    * deterministic.
    */
-  public boolean slideDecomposition = false;
+  public final boolean slideDecomposition = false;
 
   /** It specifies if the regular constraint should be used. */
-  public boolean regular = true;
+  public final boolean regular = true;
 
   /**
    * It specifies if one extensional constraint based on MDD created from FSM should be used. The
    * translation process works if FSM is deterministic.
    */
-  public boolean extensionalMDD = false;
+  public final boolean extensionalMDD = false;
 
   /**
    * A simple car sequencing problem.
@@ -455,7 +455,7 @@ public class CarSequencing extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] cars = new IntVar[noCar];
 

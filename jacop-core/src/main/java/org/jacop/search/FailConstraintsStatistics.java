@@ -45,11 +45,11 @@ import org.jacop.core.Store;
 public class FailConstraintsStatistics implements ConsistencyListener {
 
   // data structures to collect fail constraint statistics
-  public Map<String, Integer> failConstraintsStatistics = new HashMap<>();
-  public Map<String, Integer> failConstraintsIdStatistics = new HashMap<>();
+  public final Map<String, Integer> failConstraintsStatistics = new HashMap<>();
+  public final Map<String, Integer> failConstraintsIdStatistics = new HashMap<>();
   public long otherFails;
 
-  Store store;
+  final Store store;
 
   public FailConstraintsStatistics(Store s) {
     store = s;
@@ -59,7 +59,7 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     List<Entry<String, Integer>> list = new LinkedList<>(map.entrySet());
 
     // Sorting
-    Collections.sort(list, (o1, o2) -> o2.getValue().compareTo(o1.getValue()));
+    list.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
 
     return list;
   }

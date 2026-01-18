@@ -102,7 +102,7 @@ public class Langford extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Get problem size n from second program argument.
     IntVar[] x = new IntVar[n * m];
@@ -127,7 +127,7 @@ public class Langford extends ExampleFD {
   public void modelDual() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] x = new IntVar[n * m];
 

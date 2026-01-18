@@ -68,7 +68,7 @@ public class Conference extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // session letter
     // A, B, C, D, E, F, G, H, I, J, K

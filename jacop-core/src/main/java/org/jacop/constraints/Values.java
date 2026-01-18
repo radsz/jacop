@@ -55,7 +55,7 @@ public class Values extends Constraint implements SatisfiedPresent {
   /** It specifies the idNumber of different values among variables on a given list. */
   protected final IntVar count;
 
-  Comparator<IntVar> minFDV = (o1, o2) -> (o1.min() - o2.min());
+  final Comparator<IntVar> minFDV = Comparator.comparingInt(IntVar::min);
 
   /**
    * It constructs Values constraint.

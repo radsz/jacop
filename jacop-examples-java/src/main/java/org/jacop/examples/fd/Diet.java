@@ -69,18 +69,20 @@ public class Diet extends ExampleFD {
 
   public IntVar[] x;
 
-  public int n = 4; // number of ingredients
-  public int m = 4; // number of food types
+  public final int n = 4; // number of ingredients
+  public final int m = 4; // number of food types
 
-  public String[] food = {"Chocolate Cake", "Chocolate ice cream", "Cola", "Pineapple cheesecake"};
+  public final String[] food = {
+    "Chocolate Cake", "Chocolate ice cream", "Cola", "Pineapple cheesecake"
+  };
 
   public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
 
-  public int[] price = {50, 20, 30, 80}; // in cents
-  public int[] limits = {500, 6, 10, 8}; // minimum required for a diet
+  public final int[] price = {50, 20, 30, 80}; // in cents
+  public final int[] limits = {500, 6, 10, 8}; // minimum required for a diet
 
   // Food: 0   1     2    3
-  public int[][] matrix = {
+  public final int[][] matrix = {
     {400, 200, 150, 500}, // calories
     {3, 2, 0, 0}, // chocolate
     {2, 2, 4, 4}, // sugar
@@ -171,7 +173,7 @@ public class Diet extends ExampleFD {
     store.impose(new LinearInt(x, price, "==", cost));
     // store.impose( new SumWeight(x, price, cost) );
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     vars.addAll(Arrays.asList(x));
   }
 
@@ -200,7 +202,7 @@ public class Diet extends ExampleFD {
       }
     }
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     vars.addAll(Arrays.asList(x));
   }
 }

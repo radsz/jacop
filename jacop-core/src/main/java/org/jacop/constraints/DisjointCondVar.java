@@ -44,9 +44,9 @@ import org.jacop.core.Store;
  */
 class DisjointCondVar implements MutableVar {
 
-  int index;
+  final int index;
 
-  Store store;
+  final Store store;
 
   DisjointCondVarValue value = null;
 

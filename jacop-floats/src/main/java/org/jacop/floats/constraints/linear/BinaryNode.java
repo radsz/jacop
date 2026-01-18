@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class BinaryNode {
 
-  static AtomicInteger n = new AtomicInteger(0);
+  static final AtomicInteger n = new AtomicInteger(0);
   int id;
 
   // tree structure

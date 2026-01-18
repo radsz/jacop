@@ -62,7 +62,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   protected static final int CLAUSE_RATE_WELL_SUPPORTED = 8;
   // the minimal size of (var => clauses) watches
   protected static final int MINIMUM_VAR_WATCH_SIZE = 10;
-  protected static int CLAUSE_RATE_I_WANT_THIS_CLAUSE = 20;
+  protected static final int CLAUSE_RATE_I_WANT_THIS_CLAUSE = 20;
   // memory pool for fast int[] allocation/deallocation
   public MemoryPool pool;
 

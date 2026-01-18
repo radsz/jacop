@@ -126,11 +126,10 @@ public class CPvizNetworkFlow {
             + store.numberConstraints());
 
     boolean Result = true;
-    Search<IntVar> label = new DepthFirstSearch<IntVar>();
-    SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<IntVar>(x, null, new IndomainMin<IntVar>());
+    Search<IntVar> label = new DepthFirstSearch<>();
+    SelectChoicePoint<IntVar> varSelect = new SimpleSelect<>(x, null, new IndomainMin<>());
     // Trace --->
-    SelectChoicePoint<IntVar> select = new TraceGenerator<IntVar>(label, varSelect);
+    SelectChoicePoint<IntVar> select = new TraceGenerator<>(label, varSelect);
 
     //      SelectChoicePoint<IntVar> select = new TraceGenerator<IntVar>(varSelect, false);
     //      label.setConsistencyListener((ConsistencyListener)select);
@@ -138,12 +137,12 @@ public class CPvizNetworkFlow {
     //      label.setExitListener((ExitListener)select);
     // <---
 
-    DepthFirstSearch<IntVar> costSearch = new DepthFirstSearch<IntVar>();
+    DepthFirstSearch<IntVar> costSearch = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> costSelect =
-        new SimpleSelect<IntVar>(new IntVar[] {cost}, null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(new IntVar[] {cost}, null, new IndomainMin<>());
     costSearch.setSelectChoicePoint(costSelect);
     costSearch.setPrintInfo(false);
-    costSearch.setSolutionListener(new NetListener<IntVar>());
+    costSearch.setSolutionListener(new NetListener<>());
     label.addChildSearch(costSearch);
 
     label.setAssignSolution(true);

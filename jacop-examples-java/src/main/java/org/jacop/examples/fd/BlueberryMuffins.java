@@ -79,7 +79,7 @@ public class BlueberryMuffins extends ExampleFD {
     // Constraint store created below.
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IO.println("Program to solve Blueberry Muffins ");
 

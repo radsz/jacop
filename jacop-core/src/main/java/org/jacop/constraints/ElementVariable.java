@@ -53,37 +53,37 @@ import org.jacop.core.*;
 public class ElementVariable extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   public final int indexOffset;
 
   /** It specifies variable index within an element constraint list[index - indexOffset] = value. */
-  public IntVar index;
+  public final IntVar index;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
-  public IntVar value;
+  public final IntVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   boolean indexHasChanged = false;
 
-  IntDomain indexRange;
+  final IntDomain indexRange;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
-  Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
+  final Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
 
-  Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
+  final Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
   // For each variable from the list it specifies the values it supports
   IntDomain[] supports;
-  Random generator = new Random(2);
+  final Random generator = new Random(2);
   private boolean valueHasChanged;
 
   /**
@@ -243,14 +243,11 @@ public class ElementVariable extends Constraint
 
       if (!variableQueue.isEmpty()) {
 
-        Iterator<IntVar> itr = variableQueue.iterator();
-
         // TODO, what if one variable occurs multiple times in list? Only one
         // occurence in the list can be active, the other ones have to be ignored.
 
-        while (itr.hasNext()) {
+        for (IntVar changedVar : variableQueue) {
 
-          IntVar changedVar = itr.next();
           int position = mapping.get(changedVar);
 
           // reason about possible changes to value variable.

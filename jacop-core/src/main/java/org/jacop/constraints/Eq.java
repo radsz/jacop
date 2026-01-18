@@ -45,20 +45,20 @@ import org.jacop.util.QueueForward;
  */
 public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   public final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
    * It specifies the first constraint which status must be equivalent to the status of the second
    * constraint.
    */
-  public PrimitiveConstraint c1;
+  public final PrimitiveConstraint c1;
 
   /**
    * It specifies the second constraint which status must be equivalent to the status of the first
    * constraint.
    */
-  public PrimitiveConstraint c2;
+  public final PrimitiveConstraint c2;
 
   /**
    * It constructs equality constraint between two constraints.

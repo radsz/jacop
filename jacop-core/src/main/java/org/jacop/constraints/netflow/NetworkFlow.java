@@ -62,7 +62,7 @@ public class NetworkFlow extends Constraint
   private static final boolean SHOW_LEVEL = false;
 
   /** Instance counter */
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   static {
     // fails if asserts are disabled
@@ -86,7 +86,7 @@ public class NetworkFlow extends Constraint
   public boolean disableQueueVariable;
 
   public int previousLevel = -1;
-  Statistics statistics = new Statistics();
+  final Statistics statistics = new Statistics();
 
   /** Initialization */
 

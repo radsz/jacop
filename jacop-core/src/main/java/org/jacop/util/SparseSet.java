@@ -42,10 +42,10 @@ public class SparseSet {
   // not really required to make it possible to add 0 at the first position.
 
   /** Sparse array used within SparseSet functionality. */
-  public int[] sparse;
+  public final int[] sparse;
 
   /** Dense array used within SparseSet functionality. */
-  public int[] dense;
+  public final int[] dense;
 
   /** It specifies number of elements in the SparseSet. */
   public int members;

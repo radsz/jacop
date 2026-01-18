@@ -252,7 +252,7 @@ public abstract class ExampleFD {
    */
   public boolean searchMostConstrainedStatic() {
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -539,7 +539,7 @@ public abstract class ExampleFD {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), new MaxRegret<>(), new IndomainMin<>());

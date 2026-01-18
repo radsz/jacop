@@ -44,13 +44,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class PlteqC extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x which must be smaller or equal to a given constant. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /** It specifies constant c from which a given variable must be smaller or equal. */
-  public double c;
+  public final double c;
 
   /**
    * It constructs constraint P {@literal <=} C.

@@ -47,19 +47,19 @@ import org.jacop.set.core.SetVar;
  */
 public class AdisjointB extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies set variable b. */
-  public SetVar b;
+  public final SetVar b;
 
   /**
    * It specifies if the constrain attempts to perform expensive and yet unlikely propagation due to
    * cardinality information.
    */
-  public boolean performCardinalityReasoning = false;
+  public final boolean performCardinalityReasoning = false;
 
   private boolean aHasChanged = true;
   private boolean bHasChanged = true;

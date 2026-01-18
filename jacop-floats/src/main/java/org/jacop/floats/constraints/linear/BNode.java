@@ -36,7 +36,7 @@ import org.jacop.floats.core.FloatDomain;
 public class BNode extends BinaryNode {
 
   // bounds for this node
-  BoundsVar bound;
+  final BoundsVar bound;
 
   public BNode(Store store) {
     id = n.incrementAndGet();

@@ -54,10 +54,10 @@ public class SeqPrecedeChain extends Constraint {
   /** It specifies lists of variables for the constraint. */
   final IntVar[] x;
 
-  int n;
+  final int n;
 
-  int[] first;
-  int[] last;
+  final int[] first;
+  final int[] last;
 
   /**
    * It constructs SeqPrecedeChain.

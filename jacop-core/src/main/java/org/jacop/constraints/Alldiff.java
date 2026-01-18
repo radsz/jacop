@@ -55,16 +55,16 @@ import org.jacop.core.Var;
  */
 public class Alldiff extends Alldifferent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   // it stores the store locally so all the private functions which
   // are part of the consistency function can throw failure exception
   // without passing store argument every time their function is called.
   Store store;
 
-  private final Comparator<Element> maxVariable = (o1, o2) -> (o1.var.max() - o2.var.max());
+  private final Comparator<Element> maxVariable = Comparator.comparingInt(o -> o.var.max());
 
-  private final Comparator<Element> minVariable = (o1, o2) -> (o1.var.min() - o2.var.min());
+  private final Comparator<Element> minVariable = Comparator.comparingInt(o -> o.var.min());
 
   private int[] t; // holds the critical capacity pointers; that is, t[i] points to the
   // predecessor of i in the bounds list.

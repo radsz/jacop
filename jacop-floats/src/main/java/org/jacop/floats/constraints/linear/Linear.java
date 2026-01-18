@@ -68,7 +68,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     lt // ge=5;
   };
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what relations is used by this constraint */
   public byte relationType;
@@ -83,10 +83,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public double sum;
 
   Store store;
-  Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
+  final Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
 
   // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
-  SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
+  final SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
 
   boolean reified = true;
 
@@ -461,18 +461,38 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   public byte relation(String r) {
-    if (r.equals("==")) return eq;
-    else if (r.equals("=")) return eq;
-    else if (r.equals("<")) return lt;
-    else if (r.equals("<=")) return le;
-    else if (r.equals("=<")) return le;
-    else if (r.equals("!=")) return ne;
-    else if (r.equals(">")) return gt;
-    else if (r.equals(">=")) return ge;
-    else if (r.equals("=>")) return ge;
-    else {
-      System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
-      return eq;
+    switch (r) {
+      case "==" -> {
+        return eq;
+      }
+      case "=" -> {
+        return eq;
+      }
+      case "<" -> {
+        return lt;
+      }
+      case "<=" -> {
+        return le;
+      }
+      case "=<" -> {
+        return le;
+      }
+      case "!=" -> {
+        return ne;
+      }
+      case ">" -> {
+        return gt;
+      }
+      case ">=" -> {
+        return ge;
+      }
+      case "=>" -> {
+        return ge;
+      }
+      default -> {
+        System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
+        return eq;
+      }
     }
   }
 

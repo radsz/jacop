@@ -84,7 +84,7 @@ public class WolfGoatCabbage extends ExampleFD {
     IO.println("Creating model for solution with " + numberInnerMoves + " intermediate steps");
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar left = new IntVar(store, "left", 0, 0);
     IntVar right = new IntVar(store, "right", 2, 2);

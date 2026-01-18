@@ -64,7 +64,7 @@ public class Alldistinct extends Constraint
 
   static final boolean debugPruning = false;
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It counts the number of executions of the consistency function. */
   public int consistencyChecks = 0;
@@ -76,12 +76,12 @@ public class Alldistinct extends Constraint
   public int fullConsistencyPassesWithNarrowingEvent = 0;
 
   /** It specifies all variables which have to have different values. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   boolean backtrackOccured = true;
   // Any variable which matched edge ends up deleted is added to this
   // structure to obtain a new matched edge
-  LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<>();
+  final LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<>();
   // failure (inconsistency) discovered during imposition
   boolean impositionFailure = false;
   // each fdv has a matched value in maximal matching
@@ -91,7 +91,7 @@ public class Alldistinct extends Constraint
   // can be directly used.
   // If a matched edge was removed then the remains of maximum matching
   // are used to compute a new maximum matching.
-  Map<IntVar, TimeStamp<Integer>> matching;
+  final Map<IntVar, TimeStamp<Integer>> matching;
   boolean maximumMatchingNotRecomputed = true;
   // Important global variables for visitTarjan and revisitTarjan
   // Probably vn can be replaced by n.
@@ -100,14 +100,14 @@ public class Alldistinct extends Constraint
   boolean permutationConsistency = true;
   // Until pointer stampValues it stores all values still in domain of
   // at least one variable
-  Integer[] potentialFreeValues;
+  final Integer[] potentialFreeValues;
   // Represents for each Variable a scc to which it belongs.
   // This can change from a lot from matching to matching.
   // Variable may belong to different components given different matching.
   // Only if old maximum matching is used than the old components numbers can
   // be reused.
   Map<IntVar, Integer> scc;
-  Map<IntVar, TimeStamp<Integer>> sccStamp;
+  final Map<IntVar, TimeStamp<Integer>> sccStamp;
   // All grounded variables are not taken into account, they have
   // their consistent value and can be simply omitted in any kind of
   // analysis.
@@ -127,7 +127,7 @@ public class Alldistinct extends Constraint
   // Tarjan algorithm.
   // stamps specify the position of the last fdv which posses given integer
   // it decrease with increase of the store level.
-  Map<Integer, TimeStamp<Integer>> stamps;
+  final Map<Integer, TimeStamp<Integer>> stamps;
   // For discovery of situation when number of values is equal
   // to number of variables, which means that there is no free
   // values
@@ -139,14 +139,14 @@ public class Alldistinct extends Constraint
   // up significantly the swap operation when a value is not free
   // anymore and needs to be moved at the end of potentialFreeValues
   // array.
-  Map<Integer, Integer> valueIndex;
+  final Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
-  Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
+  final Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   int vn;
   IntVar guideVariable = null;
   int guideValue;
-  boolean greedy = true;
+  final boolean greedy = true;
 
   /**
    * It constructs an alldistinct constraint.
@@ -271,11 +271,11 @@ public class Alldistinct extends Constraint
     SimpleArrayList<IntVar> currentSimpleArrayList = null;
     TimeStamp<Integer> stamp = null;
 
-    SimpleHashSet<IntVar> singletons = new SimpleHashSet<IntVar>();
+    SimpleHashSet<IntVar> singletons = new SimpleHashSet<>();
 
     while (!variableQueue.isEmpty()) {
 
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       for (IntVar Q : fdvs) {
         Qdom = Q.dom();
@@ -552,7 +552,7 @@ public class Alldistinct extends Constraint
 
     // Revisited Tarjan
 
-    List<IntVar> l = new ArrayList<IntVar>();
+    List<IntVar> l = new ArrayList<>();
     Map<IntVar, Integer> dfsnum = Var.createEmptyPositioning();
     Map<IntVar, Integer> low = Var.createEmptyPositioning();
 
@@ -627,7 +627,7 @@ public class Alldistinct extends Constraint
     // each potential free value check against
 
     LinkedHashSet<IntVar> variablesReachableFromFreeValues =
-        new LinkedHashSet<IntVar>(list.length, 0.50f);
+        new LinkedHashSet<>(list.length, 0.50f);
 
     int stampValue = stampValues.value();
 
@@ -640,7 +640,7 @@ public class Alldistinct extends Constraint
       // to different representation) then no free values, so no need for
       // reachability analysis.
 
-      Set<Integer> matchedValues = new HashSet<Integer>(list.length, 0.50f);
+      Set<Integer> matchedValues = new HashSet<>(list.length, 0.50f);
 
       int noOfReachedVariablesLastTime = stampReachability.value();
 
@@ -814,7 +814,7 @@ public class Alldistinct extends Constraint
 
     boolean maximumMatchingFound = false;
 
-    Set<Integer> nonFreeValues = new HashSet<Integer>();
+    Set<Integer> nonFreeValues = new HashSet<>();
 
     Integer matched;
 
@@ -853,7 +853,7 @@ public class Alldistinct extends Constraint
     }
 
     // Points at edge which was not yet used by Karp-Hopcroft algorithm
-    Map<Integer, Integer> notYetUsedVariablePointer = new HashMap<Integer, Integer>();
+    Map<Integer, Integer> notYetUsedVariablePointer = new HashMap<>();
 
     // Use Global Potential Free Values
     int sizePotentialFreeValues = stampValues.value();
@@ -878,15 +878,15 @@ public class Alldistinct extends Constraint
 
     while (!maximumMatchingFound) {
 
-      List<LinkedList<Object>> allpaths = new ArrayList<LinkedList<Object>>();
+      List<LinkedList<Object>> allpaths = new ArrayList<>();
 
-      LinkedList<Object> path = new LinkedList<Object>();
+      LinkedList<Object> path = new LinkedList<>();
 
       if (debugAll) {
         IO.println("Non Free Values" + nonFreeValues);
       }
 
-      Set<IntVar> visitedVariables = new HashSet<IntVar>(matching.size());
+      Set<IntVar> visitedVariables = new HashSet<>(matching.size());
 
       // Very important since above it is also defined
       currentlyUsedPotentialFreeValue = 0;
@@ -991,7 +991,7 @@ public class Alldistinct extends Constraint
         // path found
         if (path.size() % 2 == 0) {
           allpaths.add(path);
-          path = new LinkedList<Object>();
+          path = new LinkedList<>();
         } else if (path.size() > 2) {
           // Value did not have any variables it could use to continue
           // path builing
@@ -1060,7 +1060,7 @@ public class Alldistinct extends Constraint
 
         // Points at edge which was not yet used by Karp-Hopcroft
         // algorithm
-        notYetUsedVariablePointer = new HashMap<Integer, Integer>(sizePotentialFreeValues);
+        notYetUsedVariablePointer = new HashMap<>(sizePotentialFreeValues);
 
         while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
@@ -1085,17 +1085,17 @@ public class Alldistinct extends Constraint
 
     super.impose(store);
 
-    stampValues = new TimeStamp<Integer>(store, valueMapVariable.size());
+    stampValues = new TimeStamp<>(store, valueMapVariable.size());
 
-    stampReachability = new TimeStamp<Integer>(store, list.length);
+    stampReachability = new TimeStamp<>(store, list.length);
 
-    nStamp = new TimeStamp<Integer>(store, 0);
+    nStamp = new TimeStamp<>(store, 0);
 
-    stampNotGroundedVariables = new TimeStamp<Integer>(store, list.length - 1);
+    stampNotGroundedVariables = new TimeStamp<>(store, list.length - 1);
 
     Integer zero = 0;
 
-    Function<IntVar, TimeStamp<Integer>> f = (_) -> new TimeStamp<Integer>(store, zero);
+    Function<IntVar, TimeStamp<Integer>> f = (_) -> new TimeStamp<>(store, zero);
     Var.addPositionMapping(matching, list, f, false, this.getClass());
     Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
 
@@ -1103,14 +1103,14 @@ public class Alldistinct extends Constraint
       Integer key = entry.getKey();
       SimpleArrayList<IntVar> value = entry.getValue();
       // Use the key and the value
-      stamps.put(key, new TimeStamp<Integer>(store, value.size() - 1));
+      stamps.put(key, new TimeStamp<>(store, value.size() - 1));
     }
 
     // the initial maximum matching needs to be computed
     // search may return to this matching
     freeVariables.addAll(Arrays.asList(list));
 
-    LinkedHashSet<IntVar> fdvs = new LinkedHashSet<IntVar>(freeVariables);
+    LinkedHashSet<IntVar> fdvs = new LinkedHashSet<>(freeVariables);
 
     // If first invocation of hocroft matching algorithm fails just set
     // variable and quit
@@ -1121,7 +1121,7 @@ public class Alldistinct extends Constraint
 
     n = nStamp.value();
 
-    List<IntVar> l = new ArrayList<IntVar>();
+    List<IntVar> l = new ArrayList<>();
     Map<IntVar, Integer> dfsnum = Var.createEmptyPositioning();
     Map<IntVar, Integer> low = Var.createEmptyPositioning();
 
@@ -1313,7 +1313,7 @@ public class Alldistinct extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer buf = new StringBuffer(id());
+    StringBuilder buf = new StringBuilder(id());
 
     buf.append(" : alldistinct([");
 
@@ -1689,8 +1689,8 @@ public class Alldistinct extends Constraint
 
   int estimatePruning(IntVar x, Integer v) {
 
-    List<IntVar> exploredX = new ArrayList<IntVar>();
-    List<Integer> exploredV = new ArrayList<Integer>();
+    List<IntVar> exploredX = new ArrayList<>();
+    List<Integer> exploredV = new ArrayList<>();
 
     int pruning = estimatePruningRecursive(x, v, exploredX, exploredV);
 

@@ -85,7 +85,7 @@ public class Steiner extends ExampleSet {
 
       store = new Store();
 
-      vars = new ArrayList<SetVar>();
+      vars = new ArrayList<>();
       SetVar[] s = new SetVar[t];
 
       for (int i = 0; i < t; i++) {
@@ -127,11 +127,11 @@ public class Steiner extends ExampleSet {
 
       boolean result = store.consistency();
 
-      Search<SetVar> label = new DepthFirstSearch<SetVar>();
+      Search<SetVar> label = new DepthFirstSearch<>();
 
       SelectChoicePoint<SetVar> select =
-          new SimpleSelect<SetVar>(
-              vars.toArray(new SetVar[0]), new MaxCardDiff<SetVar>(), new IndomainSetMax<SetVar>());
+          new SimpleSelect<>(
+              vars.toArray(new SetVar[0]), new MaxCardDiff<>(), new IndomainSetMax<>());
 
       label.getSolutionListener().searchAll(true);
       label.getSolutionListener().recordSolutions(true);

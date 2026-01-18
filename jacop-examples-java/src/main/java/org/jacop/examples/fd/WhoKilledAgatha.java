@@ -101,7 +101,7 @@ public class WhoKilledAgatha extends ExampleFD {
       }
     }
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // """
     // Agatha, the butler, and Charles live in Dreadsbury Mansion, and
@@ -184,10 +184,10 @@ public class WhoKilledAgatha extends ExampleFD {
   public boolean search() {
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
     boolean result = search.labeling(store, select);

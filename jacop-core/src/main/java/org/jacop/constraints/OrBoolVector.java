@@ -45,7 +45,7 @@ import org.jacop.core.*;
  */
 public class OrBoolVector extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the length of the list of variables. */
   final int l;
@@ -54,12 +54,12 @@ public class OrBoolVector extends PrimitiveConstraint {
    * It specifies a list of variables among which one must be equal to 1 to set result variable to
    * 1.
    */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   /**
    * It specifies variable result, storing the result of or function performed a list of variables.
    */
-  public IntVar result;
+  public final IntVar result;
 
   List<Constraint> constraints;
   /*

@@ -65,7 +65,7 @@ public class Store {
    * It stores constraints scheduled for reevaluation. It does not register constraints which are
    * already scheduled for reevaluation.
    */
-  public SimpleHashSet<Constraint>[] changed;
+  public final SimpleHashSet<Constraint>[] changed;
 
   /**
    * It stores boolean variables as soon as they change (become grounded or number of constraints
@@ -80,7 +80,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed before it has actually began.
    */
-  public Set<Stateful> removeLevelListeners = new HashSet<>(10);
+  public final Set<Stateful> removeLevelListeners = new HashSet<>(10);
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -88,7 +88,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed after it has been removed.
    */
-  public Set<RemoveLevelLate> removeLevelLateListeners = new HashSet<>(10);
+  public final Set<RemoveLevelLate> removeLevelLateListeners = new HashSet<>(10);
 
   /**
    * It contains all auxilary variables created by decomposable constraints. They have to be
@@ -161,7 +161,7 @@ public class Store {
    * It indicates that consistency function should immediately return fail if last inconsistency was
    * not followed yet by removeLevel function.
    */
-  public boolean strict = true;
+  public final boolean strict = true;
 
   /** This flag is set to true when consistency function of the store encounters failure. */
   public boolean isLastConsistencyFailure = false;
@@ -181,14 +181,14 @@ public class Store {
    * It allows to manage information about changed variables in efficient/specialized/tailored
    * manner.
    */
-  public BacktrackableManager trailManager;
+  public final BacktrackableManager trailManager;
 
   /**
    * It may be used for faster retrieval of variables given their id. However, by default this
    * variable is not created to reduce memory consumption. If it exists then it will be used by
    * functions looking for a variable given the name.
    */
-  public Map<String, Var> variablesHashMap = new HashMap<>();
+  public final Map<String, Var> variablesHashMap = new HashMap<>();
 
   /** It is used by Extensional MDD constraints. It is to represent G_yes. */
   public SparseSet sparseSet;
@@ -201,7 +201,7 @@ public class Store {
    * of backtracks the old value must be restored, therefore the store keeps information about all
    * mutable variables.
    */
-  protected List<MutableVar> mutableVariables = new ArrayList<>(100);
+  protected final List<MutableVar> mutableVariables = new ArrayList<>(100);
 
   /** It stores the number of constraints which were imposed to the store. */
   protected int numberOfConstraints = 0;
@@ -215,7 +215,7 @@ public class Store {
    * simply restored. Simple and efficient way for getting mutable variable functionality for simple
    * data types.
    */
-  protected List<Stateful> timeStamps = new ArrayList<>(100);
+  protected final List<Stateful> timeStamps = new ArrayList<>(100);
 
   /** The prefix of any variable which was noname. */
   protected String variableIdPrefix = "_";
@@ -1096,7 +1096,7 @@ public class Store {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("\n*** Store\n");
 
@@ -1176,7 +1176,7 @@ public class Store {
    */
   public String toStringChangedEl() {
 
-    StringBuffer c = new StringBuffer();
+    StringBuilder c = new StringBuilder();
 
     for (int i = 0; i < queueNo; i++) c.append(changed[i].toString()).append("\n");
 
@@ -1198,7 +1198,7 @@ public class Store {
 
   public String toStringOrderedVars() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("[");
 

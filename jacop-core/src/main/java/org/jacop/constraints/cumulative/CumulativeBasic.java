@@ -431,10 +431,10 @@ public class CumulativeBasic extends Constraint {
   }
 
   private static class Event {
-    int type;
-    TaskView t;
-    int date;
-    int value;
+    final int type;
+    final TaskView t;
+    final int date;
+    final int value;
 
     Event(int type, TaskView t, int date, int value) {
       this.type = type;

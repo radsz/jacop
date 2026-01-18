@@ -42,7 +42,7 @@ import org.jacop.search.*;
 public class TinyTSP {
 
   // double MIN_FLOAT = -1e+150;
-  double MAX_FLOAT = 1e+150;
+  final double MAX_FLOAT = 1e+150;
 
   /**
    * It executes the program.
@@ -103,9 +103,9 @@ public class TinyTSP {
     // DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
     // SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, var, new
     // MaxRegretFloat<FloatVar>());
-    DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> s =
-        new SimpleSelect<IntVar>(visit, new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(visit, new SmallestDomain<>(), new IndomainMin<>());
     label.setAssignSolution(true);
     // s.leftFirst = false;
 

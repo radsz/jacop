@@ -47,10 +47,10 @@ import org.jacop.set.core.SetVar;
  */
 public class CardA extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a set variable x which is being restricted. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies variable c specifying the possible cardinality of variable x. */
   public IntDomain cardinality;

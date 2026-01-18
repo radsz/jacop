@@ -31,7 +31,6 @@
 package org.jacop.jasat.core.clauses;
 
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.util.Random;
 import org.jacop.core.Store;
 import org.jacop.jasat.utils.Utils;
@@ -56,7 +55,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   /**
    * Put it one place so there is only one Random generator for the whole SAT solver. TODO: Radek.
    */
-  Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   // the index of the current empty slot.
   private int currentIndex = 0;
@@ -272,19 +271,19 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   }
 
   /** is the literal at position @param literalPos satisfied in current trail ? */
-  private final boolean isSatisfied(int literal) {
+  private boolean isSatisfied(int literal) {
     return trail.values[(literal < 0) ? -literal : literal] == literal;
   }
 
   /** is the literal at position @param literalPos satisfied or active ? */
-  private final boolean isActiveOrSatisfied(int literal) {
+  private boolean isActiveOrSatisfied(int literal) {
 
     int value = trail.values[(literal < 0) ? -literal : literal];
     return value == 0 || value == literal;
   }
 
   /** is the literal at position @param literalPos satisfied or active ? */
-  private final boolean isActive(int literal) {
+  private boolean isActive(int literal) {
 
     return trail.values[(literal < 0) ? -literal : literal] == 0;
   }
@@ -891,7 +890,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   //
 
   @Override
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCNF(BufferedWriter output) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 }

@@ -50,9 +50,9 @@ public class MultivariateIntervalNewton {
 
   static final boolean debug = false;
 
-  FloatVar[] f;
-  FloatVar[] x;
-  FloatVar[][] fprime;
+  final FloatVar[] f;
+  final FloatVar[] x;
+  final FloatVar[][] fprime;
 
   double[] xInit;
 
@@ -60,7 +60,7 @@ public class MultivariateIntervalNewton {
   double[] b;
 
   Map<FloatVar, Double> map;
-  Stack<Constraint> eval;
+  final Stack<Constraint> eval;
 
   public MultivariateIntervalNewton(Store store, FloatVar[] f, FloatVar[] x) {
 
@@ -167,99 +167,106 @@ public class MultivariateIntervalNewton {
     // if (debug)
     //      System.out.println ("current constraint for variable " + f + " is " + c);
 
-    double result = 0.0;
+    double result;
 
-    if (c instanceof PmulQeqR qeqR3) {
-      if (f.equals(qeqR3.r)) {
-        result = value(qeqR3.p) * value(qeqR3.q);
-      } else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
-      }
-    } else if (c instanceof PmulCeqR ceqR1) {
-      if (f.equals(ceqR1.r)) result = value(ceqR1.p) * ceqR1.c;
-      else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
-      }
-    } else if (c instanceof PdivQeqR qeqR2) {
-      if (f.equals(qeqR2.r)) {
-        result = value(qeqR2.p) / value(qeqR2.q);
-      } else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
-      }
-    } else if (c instanceof PplusQeqR qeqR1) {
-      if (f.equals(qeqR1.r)) result = value(qeqR1.p) + value(qeqR1.q);
-      else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
-      }
-    } else if (c instanceof PplusCeqR ceqR) {
-      if (f.equals(ceqR.r)) result = value(ceqR.p) + ceqR.c;
-      else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
-      }
-    } else if (c instanceof PminusQeqR qeqR) {
-      if (f.equals(qeqR.r)) result = value(qeqR.p) - value(qeqR.q);
-      else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
-      }
-    } else if (c instanceof LinearFloat float1) {
-
-      FloatVar[] v = float1.list;
-      double[] w = float1.weights;
-      double sum = float1.sum;
-
-      FloatVar vOut = null;
-      double wOut = 1000.0;
-
-      for (int i = 0; i < v.length; i++) {
-        if (!v[i].equals(f)) sum -= value(v[i]) * w[i];
-        else {
-          vOut = v[i];
-          wOut = w[i];
+    switch (c) {
+      case PdivQeqR qeqR2 -> {
+        if (f.equals(qeqR2.r)) {
+          result = value(qeqR2.p) / value(qeqR2.q);
+        } else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
         }
       }
-
-      if (vOut != null) result = sum / wOut;
-      else {
-        throw new RuntimeException(
-            "!!! Anable to compute middle value for "
-                + f
-                + "; + Constraint "
-                + c
-                + " does not define a function for variable\n");
+      case PmulQeqR qeqR3 -> {
+        if (f.equals(qeqR3.r)) {
+          result = value(qeqR3.p) * value(qeqR3.q);
+        } else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
+        }
       }
-    } else {
-      throw new RuntimeException(
-          "!!! Constraint " + c + " is not yet supported in Newtoen method\n");
+      case PmulCeqR ceqR1 -> {
+        if (f.equals(ceqR1.r)) result = value(ceqR1.p) * ceqR1.c;
+        else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
+        }
+      }
+      case PminusQeqR qeqR -> {
+        if (f.equals(qeqR.r)) result = value(qeqR.p) - value(qeqR.q);
+        else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
+        }
+      }
+      case PplusQeqR qeqR1 -> {
+        if (f.equals(qeqR1.r)) result = value(qeqR1.p) + value(qeqR1.q);
+        else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
+        }
+      }
+      case PplusCeqR ceqR -> {
+        if (f.equals(ceqR.r)) result = value(ceqR.p) + ceqR.c;
+        else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
+        }
+      }
+      case LinearFloat float1 -> {
+        FloatVar[] v = float1.list;
+        double[] w = float1.weights;
+        double sum = float1.sum;
+
+        FloatVar vOut = null;
+        double wOut = 1000.0;
+
+        for (int i = 0; i < v.length; i++) {
+          if (!v[i].equals(f)) sum -= value(v[i]) * w[i];
+          else {
+            vOut = v[i];
+            wOut = w[i];
+          }
+        }
+
+        if (vOut != null) result = sum / wOut;
+        else {
+          throw new RuntimeException(
+              "!!! Anable to compute middle value for "
+                  + f
+                  + "; + Constraint "
+                  + c
+                  + " does not define a function for variable\n");
+        }
+      }
+      case null, default ->
+          throw new RuntimeException(
+              "!!! Constraint " + c + " is not yet supported in Newtoen method\n");
     }
 
     eval.pop();
@@ -272,7 +279,7 @@ public class MultivariateIntervalNewton {
 
   Constraint constraint(FloatVar v) {
 
-    List<Constraint> list = new ArrayList<Constraint>();
+    List<Constraint> list = new ArrayList<>();
 
     for (int i = 0; i < v.dom().modelConstraints.length; i++)
       if (v.dom().modelConstraints[i] != null)

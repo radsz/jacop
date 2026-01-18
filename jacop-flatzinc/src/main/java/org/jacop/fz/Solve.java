@@ -68,7 +68,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public StringBuffer lastSolution = null;
   Tables dictionary;
   Options options;
-  Store store;
+  final Store store;
   int initNumberConstraints;
   Timer timer;
   long startCPU;
@@ -77,8 +77,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // ComparatorVariable tieBreaking=null;
   SelectChoicePoint<T> variable_selection;
   ArrayList<Search<T>> list_seq_searches = null;
-  boolean debug = false;
-  boolean print_search_info = false;
+  final boolean debug = false;
+  final boolean print_search_info = false;
   boolean heuristicSeqSearch = false;
   Var costVariable;
   // restart search
@@ -102,9 +102,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   SelectChoicePoint<T> flatzincVariableSelection;
   Var flatzincCost;
   int solveKind = -1;
-  SatTranslation sat;
+  final SatTranslation sat;
   FailConstraintsStatistics failStatistics;
-  NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
+  final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   int numberSolutions;
   // relax and reconstruct
   IntVar[] relaxVars;
@@ -1437,91 +1437,99 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> last_search = l;
     DepthFirstSearch<T> label = null;
 
-    if (si.type().equals("int_search") || si.type().equals("bool_search")) {
-      label = int_search(si);
-      if (!master) label.setSelectChoicePoint(variable_selection);
+    switch (si.type()) {
+      case "int_search", "bool_search" -> {
+        label = int_search(si);
+        if (!master) label.setSelectChoicePoint(variable_selection);
 
-      // LDS heuristic search
-      if (si.exploration().equals("lds")) {
-        lds_search(label, si.ldsValue);
-        heuristicSeqSearch = true;
+        // LDS heuristic search
+        if (si.exploration().equals("lds")) {
+          lds_search(label, si.ldsValue);
+          heuristicSeqSearch = true;
+        }
+        // Credit heuristic search
+        if (si.exploration().equals("credit")) {
+          credit_search(label, si.creditValue, si.bbsValue);
+          heuristicSeqSearch = true;
+        }
+        list_seq_searches.add(label);
+        label.setPrintInfo(false);
       }
-      // Credit heuristic search
-      if (si.exploration().equals("credit")) {
-        credit_search(label, si.creditValue, si.bbsValue);
-        heuristicSeqSearch = true;
-      }
-      list_seq_searches.add(label);
-      label.setPrintInfo(false);
-    } else if (si.type().equals("set_search")) {
-      label = set_search(si);
-      if (!master) label.setSelectChoicePoint(variable_selection);
+      case "set_search" -> {
+        label = set_search(si);
+        if (!master) label.setSelectChoicePoint(variable_selection);
 
-      // LDS heuristic search
-      if (si.exploration().equals("lds")) {
-        lds_search(label, si.ldsValue);
-        heuristicSeqSearch = true;
-      }
-      // Credit heuristic search
-      if (si.exploration().equals("credit")) {
-        credit_search(label, si.creditValue, si.bbsValue);
-        heuristicSeqSearch = true;
-      }
+        // LDS heuristic search
+        if (si.exploration().equals("lds")) {
+          lds_search(label, si.ldsValue);
+          heuristicSeqSearch = true;
+        }
+        // Credit heuristic search
+        if (si.exploration().equals("credit")) {
+          credit_search(label, si.creditValue, si.bbsValue);
+          heuristicSeqSearch = true;
+        }
 
-      list_seq_searches.add(label);
-      label.setPrintInfo(false);
-    } else if (si.type().equals("priority_search")) {
-      label = priority_search(si);
+        list_seq_searches.add(label);
+        label.setPrintInfo(false);
+      }
+      case "priority_search" -> {
+        label = priority_search(si);
 
-      list_seq_searches.add(label);
-    } else if (si.type().equals("warm_start")) {
-      label = warm_start_search(si);
-      if (!master) label.setSelectChoicePoint(variable_selection);
-    } else if (si.type().equals("seq_search")) {
-      for (int i = 0; i < si.getSearchItems().size(); i++) {
-        if (i == 0) { // master search
-          DepthFirstSearch<T> label_seq =
-              sub_search(si.getSearchItems().get(i), last_search, false);
-          last_search = getLastSearch(label_seq);
-          label = label_seq;
-        } else {
-          DepthFirstSearch<T> label_seq =
-              sub_search(si.getSearchItems().get(i), last_search, false);
-          last_search.addChildSearch(label_seq);
-          last_search = getLastSearch(label_seq);
+        list_seq_searches.add(label);
+      }
+      case "warm_start" -> {
+        label = warm_start_search(si);
+        if (!master) label.setSelectChoicePoint(variable_selection);
+      }
+      case "seq_search" -> {
+        for (int i = 0; i < si.getSearchItems().size(); i++) {
+          if (i == 0) { // master search
+            DepthFirstSearch<T> label_seq =
+                sub_search(si.getSearchItems().get(i), last_search, false);
+            last_search = getLastSearch(label_seq);
+            label = label_seq;
+          } else {
+            DepthFirstSearch<T> label_seq =
+                sub_search(si.getSearchItems().get(i), last_search, false);
+            last_search.addChildSearch(label_seq);
+            last_search = getLastSearch(label_seq);
+          }
         }
       }
-    } else if (si.type().equals("float_search")) {
-      label = float_search(si);
-      if (!master) label.setSelectChoicePoint(variable_selection);
+      case "float_search" -> {
+        label = float_search(si);
+        if (!master) label.setSelectChoicePoint(variable_selection);
 
-      // LDS heuristic search
-      if (si.exploration().equals("lds")) {
-        lds_search(label, si.ldsValue);
-        heuristicSeqSearch = true;
+        // LDS heuristic search
+        if (si.exploration().equals("lds")) {
+          lds_search(label, si.ldsValue);
+          heuristicSeqSearch = true;
+        }
+        // Credit heuristic search
+        if (si.exploration().equals("credit")) {
+          credit_search(label, si.creditValue, si.bbsValue);
+          heuristicSeqSearch = true;
+        }
+        list_seq_searches.add(label);
+        label.setPrintInfo(false);
       }
-      // Credit heuristic search
-      if (si.exploration().equals("credit")) {
-        credit_search(label, si.creditValue, si.bbsValue);
-        heuristicSeqSearch = true;
-      }
-      list_seq_searches.add(label);
-      label.setPrintInfo(false);
-    } else {
-      DepthFirstSearch<T>[] ls = setSubSearchForAll(null, options);
+      default -> {
+        DepthFirstSearch<T>[] ls = setSubSearchForAll(null, options);
 
-      if (ls[0] != null) {
-        label = ls[0];
-      } else if (ls[1] != null) {
-        label = ls[1];
-      } else if (ls[2] != null) {
-        label = ls[2];
-      } else if (ls[3] != null) {
-        label = ls[3];
+        if (ls[0] != null) {
+          label = ls[0];
+        } else if (ls[1] != null) {
+          label = ls[1];
+        } else if (ls[2] != null) {
+          label = ls[2];
+        } else if (ls[3] != null) {
+          label = ls[3];
+        }
       }
 
-      // throw new IllegalArgumentException("!!! Not recognized or supported search type \"" +
-      // si.type() + "\"; compilation aborted");
+        // throw new IllegalArgumentException("!!! Not recognized or supported search type \"" +
+        // si.type() + "\"; compilation aborted");
     }
 
     return label;
@@ -1592,42 +1600,49 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (SearchItem<T> s : dfs_s) {
 
       DepthFirstSearch<T> subSearch = null;
-      if (s.search_type.equals("int_search") || s.search_type.equals("bool_search")) {
-        subSearch = int_search(s);
-        subSearch.setSelectChoicePoint(variable_selection);
-        subSearch.setPrintInfo(false);
-        searches[i++] = subSearch;
-      } else if (s.search_type.equals("set_search")) {
-        subSearch = set_search(s);
-        subSearch.setSelectChoicePoint(variable_selection);
-        subSearch.setPrintInfo(false);
-        searches[i++] = subSearch;
-      } else if (s.search_type.equals("float_search")) {
-        subSearch = float_search(s);
-        subSearch.setSelectChoicePoint(variable_selection);
-        subSearch.setPrintInfo(false);
-        searches[i++] = subSearch;
-      } else if (s.search_type.equals("seq_search")) {
-        subSearch = sub_search(s, null, false);
+      switch (s.search_type) {
+        case "int_search", "bool_search" -> {
+          subSearch = int_search(s);
+          subSearch.setSelectChoicePoint(variable_selection);
+          subSearch.setPrintInfo(false);
+          searches[i++] = subSearch;
+        }
+        case "set_search" -> {
+          subSearch = set_search(s);
+          subSearch.setSelectChoicePoint(variable_selection);
+          subSearch.setPrintInfo(false);
+          searches[i++] = subSearch;
+        }
+        case "float_search" -> {
+          subSearch = float_search(s);
+          subSearch.setSelectChoicePoint(variable_selection);
+          subSearch.setPrintInfo(false);
+          searches[i++] = subSearch;
+        }
+        case "seq_search" -> {
+          subSearch = sub_search(s, null, false);
 
-        DepthFirstSearch<T> ns = subSearch;
-        do {
-          ns.setPrintInfo(false);
-          // find next search
-          if (ns.childSearches == null) ns = null;
-          else ns = (DepthFirstSearch) ns.childSearches[0];
-        } while (ns != null);
+          DepthFirstSearch<T> ns = subSearch;
+          do {
+            ns.setPrintInfo(false);
+            // find next search
+            if (ns.childSearches == null) ns = null;
+            else ns = (DepthFirstSearch) ns.childSearches[0];
+          } while (ns != null);
 
-        searches[i++] = subSearch;
-      } else if (s.search_type.equals("priority_search")) {
-        subSearch = priority_search(s);
-        subSearch.setPrintInfo(false);
-        searches[i++] = subSearch;
-      } else
-        throw new RuntimeException(
-            "Error: Not supported search type "
-                + s.search_type
-                + "in priority_search; execution aborted");
+          searches[i++] = subSearch;
+        }
+        case "priority_search" -> {
+          subSearch = priority_search(s);
+          subSearch.setPrintInfo(false);
+          searches[i++] = subSearch;
+        }
+        default ->
+            throw new RuntimeException(
+                "Error: Not supported search type "
+                    + s.search_type
+                    + "in priority_search; execution aborted");
+      }
     }
 
     // ComparatorVariable<IntVar> comparator = si.getVarSelect();
@@ -1655,7 +1670,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (options.getNumberSolutions() > 0)
-      ((PrioritySearch) label).setSolutionLimit(options.getNumberSolutions());
+      ((PrioritySearch<?>) label).setSolutionLimit(options.getNumberSolutions());
 
     return label;
   }
@@ -1766,15 +1781,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   int getKind(String k) {
-    if (k.equals("satisfy")) // 0 = satisfy
-    return 0;
-    else if (k.equals("minimize")) // 1 = minimize
-    return 1;
-    else if (k.equals("maximize")) // 2 = maximize
-    return 2;
-    else {
-      throw new IllegalArgumentException("Not supported search kind; compilation aborted");
-    }
+    return switch (k) {
+      case "satisfy" ->
+          // 0 = satisfy
+          0;
+      case "minimize" ->
+          // 1 = minimize
+          1;
+      case "maximize" ->
+          // 2 = maximize
+          2;
+      default ->
+          throw new IllegalArgumentException("Not supported search kind; compilation aborted");
+    };
   }
 
   IntVar getCost(ASTSolveExpr node) {
@@ -1954,7 +1973,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     InitializeListener[] initializeChildListeners;
 
-    double precision;
+    final double precision;
 
     PrecisionSetting(double p) {
       precision = p;

@@ -290,7 +290,7 @@ public class IntDomainTest {
   }
 
   @Before
-  public void setUp() throws InvocationTargetException, IllegalAccessException {
+  public void setUp() {
     initMocks(this);
     intDomain = new IntervalDomain();
   }

@@ -48,13 +48,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class XeqP extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a left hand variable in equality constraint. */
-  public IntVar x;
+  public final IntVar x;
 
   /** It specifies a right hand variable in equality constraint. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /**
    * It constructs constraint X = P.

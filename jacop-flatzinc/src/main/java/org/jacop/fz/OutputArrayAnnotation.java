@@ -44,10 +44,10 @@ import org.jacop.set.core.SetVar;
  */
 public class OutputArrayAnnotation {
 
-  String id;
+  final String id;
 
   // TODO, ArrayList of Sets? Why? Is a set needed? Maybe just IntervalDomain suffices?
-  ArrayList<IntDomain> indexes;
+  final ArrayList<IntDomain> indexes;
   Var[] array;
 
   /**

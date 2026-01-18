@@ -50,12 +50,12 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   protected static final boolean trace = false;
   private static final boolean traceNarr = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the list of rectangles which are of interest for this diff constraint. */
   public Rectangle[] rectangles;
 
-  protected Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
+  protected final Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
       (dim ->
           (IntRectangle o1, IntRectangle o2) -> {
             int v1 = o1.origin[dim];
@@ -871,7 +871,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   }
 
   static class Pair {
-    int Min, Max;
+    final int Min;
+    final int Max;
 
     Pair(int i1, int i2) {
       Min = i1;

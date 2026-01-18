@@ -52,34 +52,34 @@ import org.jacop.set.core.SetVar;
  */
 public class Tables {
 
-  public Map<IntVar, IntVar> aliasTable = new HashMap<>();
+  public final Map<IntVar, IntVar> aliasTable = new HashMap<>();
   // IntVar zero, one;
   Store store;
-  HashMap<Integer, IntVar> constantTable = new HashMap<>();
-  HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<>();
-  HashMap<Double, FloatVar> constantFloatTable = new HashMap<>();
+  final HashMap<Integer, IntVar> constantTable = new HashMap<>();
+  final HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<>();
+  final HashMap<Double, FloatVar> constantFloatTable = new HashMap<>();
   // intTable keeps both int & bool (0=false, 1=true) parameters
-  HashMap<String, Integer> intTable = new HashMap<>();
-  HashMap<String, Double> floatTable = new HashMap<>();
-  HashMap<String, int[]> intArrayTable =
+  final HashMap<String, Integer> intTable = new HashMap<>();
+  final HashMap<String, Double> floatTable = new HashMap<>();
+  final HashMap<String, int[]> intArrayTable =
       new HashMap<>(); // boolean are also stored here as 0/1 values
-  HashMap<String, double[]> floatArrayTable = new HashMap<>();
-  HashMap<String, IntDomain> setTable = new HashMap<>();
-  HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
-  HashMap<String, IntVar> variableTable = new HashMap<>();
-  HashMap<String, IntVar[]> variableArrayTable = new HashMap<>();
-  HashMap<String, FloatVar> variableFloatTable = new HashMap<>();
-  HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<>();
-  HashMap<String, SetVar> setVariableTable = new HashMap<>();
-  HashMap<String, SetVar[]> setVariableArrayTable = new HashMap<>();
-  ArrayList<Var> outputVariables = new ArrayList<>();
-  ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<>();
-  ArrayList<Var> defaultSearchVariables = new ArrayList<>();
-  ArrayList<Var> defaultSearchFloatVariables = new ArrayList<>();
-  ArrayList<Var[]> defaultSearchArrays = new ArrayList<>();
-  ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
-  ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
-  ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
+  final HashMap<String, double[]> floatArrayTable = new HashMap<>();
+  final HashMap<String, IntDomain> setTable = new HashMap<>();
+  final HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
+  final HashMap<String, IntVar> variableTable = new HashMap<>();
+  final HashMap<String, IntVar[]> variableArrayTable = new HashMap<>();
+  final HashMap<String, FloatVar> variableFloatTable = new HashMap<>();
+  final HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<>();
+  final HashMap<String, SetVar> setVariableTable = new HashMap<>();
+  final HashMap<String, SetVar[]> setVariableArrayTable = new HashMap<>();
+  final ArrayList<Var> outputVariables = new ArrayList<>();
+  final ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<>();
+  final ArrayList<Var> defaultSearchVariables = new ArrayList<>();
+  final ArrayList<Var> defaultSearchFloatVariables = new ArrayList<>();
+  final ArrayList<Var[]> defaultSearchArrays = new ArrayList<>();
+  final ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
+  final ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
+  final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   int numberBoolVariables = 0;
   int numberFloatVariables = 0;
   int numberSetVariables = 0;

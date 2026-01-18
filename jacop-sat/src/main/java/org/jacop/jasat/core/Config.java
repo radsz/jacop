@@ -48,22 +48,22 @@ import org.jacop.jasat.core.clauses.*;
 public class Config extends Properties {
 
   /** how many clausesDatabases can we have ? must be a power of 2 */
-  public int MAX_NUMBER_OF_DATABASES = 8;
+  public final int MAX_NUMBER_OF_DATABASES = 8;
 
   /** number of int[] of each size in the memory pool */
-  public int MEMORY_POOL_STOCK_SIZE = 500;
+  public final int MEMORY_POOL_STOCK_SIZE = 500;
 
   /** the maximum size of int[] to store in the memory pool */
-  public int MEMORY_POOL_MAX_SIZE = 60;
+  public final int MEMORY_POOL_MAX_SIZE = 60;
 
   /** threshold above which a rebase is performed for activity counters */
-  public int rebase_threshold = Integer.MAX_VALUE / 10;
+  public final int rebase_threshold = Integer.MAX_VALUE / 10;
 
   /** the default bump rate. It is added to activity at each bump() */
-  public int bump_rate = 4;
+  public final int bump_rate = 4;
 
   /** initial number of variables in the trail */
-  public int trail_size = 100;
+  public final int trail_size = 100;
 
   /** controls default solver verbosity */
   public int verbosity = 0;
@@ -78,16 +78,16 @@ public class Config extends Properties {
   public long seed = System.currentTimeMillis();
 
   /** factor by which restart threshold is increased */
-  public double RESTART_THRESHOLD_INCREASE_RATE = 1.5;
+  public final double RESTART_THRESHOLD_INCREASE_RATE = 1.5;
 
   /** initial threshold (number of conflicts needed) for restarts */
-  public long RESTART_CONFLICT_THRESHOLD = 100;
+  public final long RESTART_CONFLICT_THRESHOLD = 100;
 
   /** the list of components the solver must add */
-  public List<SolverComponent> mainComponents = new ArrayList<>();
+  public final List<SolverComponent> mainComponents = new ArrayList<>();
 
   /** the list of databases the solver must add */
-  public List<AbstractClausesDatabase> clausesDatabases = new ArrayList<>();
+  public final List<AbstractClausesDatabase> clausesDatabases = new ArrayList<>();
 
   /**
    * constructor for config, that adds some default components. If you want to choose all
@@ -125,8 +125,7 @@ public class Config extends Properties {
     for (Field field : this.getClass().getFields()) {
       try {
         sb.append("%-30s: %s\n".formatted(field.getName(), field.get(this)));
-      } catch (IllegalArgumentException _) {
-      } catch (IllegalAccessException _) {
+      } catch (IllegalArgumentException | IllegalAccessException _) {
       }
     }
 

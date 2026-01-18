@@ -43,8 +43,8 @@ import org.jacop.search.PrintOutListener;
 
 public class Wilkinson {
 
-  double MIN_FLOAT = -1e+150;
-  double MAX_FLOAT = 1e+150;
+  final double MIN_FLOAT = -1e+150;
+  final double MAX_FLOAT = 1e+150;
 
   /**
    * It executes the program.
@@ -108,14 +108,13 @@ public class Wilkinson {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(
-            store, new FloatVar[] {x}, new SmallestDomainFloat<FloatVar>());
+        new SplitSelectFloat<>(store, new FloatVar[] {x}, new SmallestDomainFloat<>());
     label.setAssignSolution(true);
     // s.leftFirst = false;
 
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    label.setSolutionListener(new PrintOutListener<>());
 
     label.labeling(store, s, x);
 

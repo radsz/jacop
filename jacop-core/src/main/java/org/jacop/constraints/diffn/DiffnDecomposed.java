@@ -56,7 +56,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
   final IntVar[] lx;
   final IntVar[] ly;
   protected List<Constraint> constraints = null;
-  protected List<Var> auxVar = new ArrayList<>();
+  protected final List<Var> auxVar = new ArrayList<>();
 
   /**
    * It specifies a diffn constraint.
@@ -185,7 +185,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
   }
 
   public List<Constraint> decompose(Store store) {
-    constraints = new ArrayList<Constraint>();
+    constraints = new ArrayList<>();
 
     constraints.add(new org.jacop.constraints.diffn.Nooverlap(x, y, lx, ly));
 

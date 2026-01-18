@@ -46,16 +46,16 @@ import org.jacop.set.core.SetVar;
  */
 public class AinS extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies set which must contain the value of set variable A. */
-  public IntDomain set;
+  public final IntDomain set;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict;
+  public final boolean strict;
 
   /**
    * It constructs a constraint that makes sure that value of set variable a is contained within a

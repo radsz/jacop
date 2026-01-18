@@ -82,7 +82,7 @@ public class SendMoreMoney extends ExampleFD {
    */
   public void modelBasic() {
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     store = new Store();
 
@@ -228,10 +228,10 @@ public class SendMoreMoney extends ExampleFD {
     */
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     boolean result = search.labeling(store, select);
 
@@ -246,7 +246,7 @@ public class SendMoreMoney extends ExampleFD {
   @Override
   public void model() {
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     store = new Store();
 

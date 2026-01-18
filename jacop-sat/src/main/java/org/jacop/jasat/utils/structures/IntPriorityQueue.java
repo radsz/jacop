@@ -162,7 +162,7 @@ public final class IntPriorityQueue {
   }
 
   /** heapify the tree by swapping nodes (from the root) until the tree becomes a heap */
-  private final void percolateDown() {
+  private void percolateDown() {
     // TODO
   }
 
@@ -172,7 +172,7 @@ public final class IntPriorityQueue {
    *
    * @param n the node
    */
-  private final void percolateUp(Node n) {
+  private void percolateUp(Node n) {
     // TODO
   }
 
@@ -186,6 +186,6 @@ public final class IntPriorityQueue {
     public Node rightSon; // right tree in binary tree
     public Node parentNode; // the parent node of this node
     public int priority; // current priority in the tree
-    public int depth = 0; // depth of the deepest leaf in this subtree;
+    public final int depth = 0; // depth of the deepest leaf in this subtree;
   }
 }

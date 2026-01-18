@@ -178,7 +178,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    *
    * @param literal the literal
    */
-  public final void assertLiteral(int literal) {
+  public void assertLiteral(int literal) {
     // assert in all databases
     for (int i = 0; i < currentIndex; ++i) {
       databases[i].assertLiteral(literal);
@@ -193,7 +193,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param clauseId a unique clause Id
    * @return the index of the ClausesDatabase that contains the clause
    */
-  public final int uniqueIdToDb(int clauseId) {
+  public int uniqueIdToDb(int clauseId) {
     // is this >>> or >> ?
     int dbIndex = (clauseId & DATABASES_MASK) >>> INDEX_MASK_NUM_BITS;
     assert dbIndex >= 0;
@@ -212,7 +212,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param clauseId the unique clauseId
    * @return the clause index in the database
    */
-  public final int uniqueIdToIndex(int clauseId) {
+  public int uniqueIdToIndex(int clauseId) {
     int index = clauseId & INDEX_MASK;
     assert index >= 0;
 
@@ -226,7 +226,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param databaseIndex database index
    * @return unique id from a clause index
    */
-  public final int indexesToUniqueId(int clauseIndex, int databaseIndex) {
+  public int indexesToUniqueId(int clauseIndex, int databaseIndex) {
     assert databaseIndex < currentIndex;
     assert clauseIndex >= 0;
     assert databaseIndex >= 0;

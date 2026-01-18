@@ -118,7 +118,7 @@ public class KnapsackExample extends ExampleFD {
     // Creating constraint store
     store = new Store();
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // I-th variable represents if i-th item is taken
     IntVar[] quantity = new IntVar[noItems];
@@ -180,7 +180,7 @@ public class KnapsackExample extends ExampleFD {
     // Creating constraint store
     store = new Store();
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // I-th variable represents if i-th item is taken
     IntVar[] quantity = new IntVar[noItems];
@@ -241,7 +241,7 @@ public class KnapsackExample extends ExampleFD {
     // Creating constraint store
     store = new Store();
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // I-th variable represents if i-th item is taken
     IntVar[] quantity = new IntVar[noItems];
@@ -325,7 +325,7 @@ public class KnapsackExample extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // I-th variable represents if i-th item is taken
     IntVar[] quantity = new IntVar[noItems];

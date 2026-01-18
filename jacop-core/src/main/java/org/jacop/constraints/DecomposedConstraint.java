@@ -61,7 +61,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
         Arrays.stream(parameters).filter(i -> !i.singleton()).collect(Collectors.toList());
     Set<Var> notGroundedParametersSet = new HashSet<>(notGroundedParametersList);
     if (notGroundedParametersSet.size() != notGroundedParametersList.size()) {
-      notGroundedParametersSet.stream().forEach(i -> notGroundedParametersList.remove(i));
+      notGroundedParametersSet.stream().forEach(notGroundedParametersList::remove);
       return new HashSet<>(notGroundedParametersList);
     } else {
       return Collections.emptySet();

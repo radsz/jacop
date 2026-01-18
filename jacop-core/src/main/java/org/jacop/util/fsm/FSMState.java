@@ -43,7 +43,7 @@ public class FSMState {
   public int id;
 
   /** It specifies the list of transitions outgoing from this state. */
-  public Set<FSMTransition> transitions;
+  public final Set<FSMTransition> transitions;
 
   /**
    * It constructs a FSM state.

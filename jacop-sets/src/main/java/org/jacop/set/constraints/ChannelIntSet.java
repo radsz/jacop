@@ -48,14 +48,14 @@ import org.jacop.set.core.*;
  */
 public class ChannelIntSet extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  IntVar[] x;
-  SetVar[] s;
-  int ni;
-  int ns;
-  int offsetInt;
-  int offsetSet;
+  final IntVar[] x;
+  final SetVar[] s;
+  final int ni;
+  final int ns;
+  final int offsetInt;
+  final int offsetSet;
 
   boolean firstConsistencyCheck = true;
 

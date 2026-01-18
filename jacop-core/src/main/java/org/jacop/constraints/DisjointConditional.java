@@ -48,7 +48,7 @@ import org.jacop.core.*;
 public class DisjointConditional extends Diff {
 
   static final boolean trace = false, traceNarr = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what rectangles can conditionally overlap. */
   public ExclusiveList exclusionList = new ExclusiveList();
@@ -571,7 +571,7 @@ public class DisjointConditional extends Diff {
     for (int i = 0; i < rectangles.length; i++) {
       condVariables[i + 1] = exclusionList.fdvs(i + 1);
 
-      List<RectangleWithCondition> rectsC = new ArrayList<RectangleWithCondition>();
+      List<RectangleWithCondition> rectsC = new ArrayList<>();
       for (int j = 0; j < rectangles.length; j++) {
         if (i != j) {
           IntVar c = exclusionList.condition(i, j);
@@ -617,7 +617,7 @@ public class DisjointConditional extends Diff {
 
       UsedRectArray = UsedRect.toArray(UsedRectArray);
 
-      TreeSet<IntRectangle> starts = new TreeSet<IntRectangle>(dimIthMinComparator.apply(i));
+      TreeSet<IntRectangle> starts = new TreeSet<>(dimIthMinComparator.apply(i));
       Collections.addAll(starts, UsedRectArray);
 
       IntRectangle strtR = new IntRectangle(r.dim);
@@ -630,7 +630,7 @@ public class DisjointConditional extends Diff {
       }
       starts.add(strtR);
 
-      List<IntRectangle> ConsideredRect = new ArrayList<IntRectangle>();
+      List<IntRectangle> ConsideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
         s = ir.origin[i];
 
@@ -702,7 +702,7 @@ public class DisjointConditional extends Diff {
 
       // Update rectangles length in direction i
       // sort rectangles on increasing origin i
-      List<IntRectangle> ConsideredRectDur = new ArrayList<IntRectangle>();
+      List<IntRectangle> ConsideredRectDur = new ArrayList<>();
       for (IntRectangle t : UsedRectArray) {
         if (t.overlap(maxRect)) {
           ConsideredRectDur.add(t);
@@ -802,9 +802,9 @@ public class DisjointConditional extends Diff {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-        List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-        List<RectangleWithCondition> ProfileCandidates = new ArrayList<RectangleWithCondition>();
-        List<RectangleWithCondition> OverlappingRects = new ArrayList<RectangleWithCondition>();
+        List<IntRectangle> UsedRect = new ArrayList<>();
+        List<RectangleWithCondition> ProfileCandidates = new ArrayList<>();
+        List<RectangleWithCondition> OverlappingRects = new ArrayList<>();
         boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
 
         needToNarrow = needToNarrow || ntN || conditionChanged(fdvQueue, l + 1);
@@ -1003,7 +1003,7 @@ public class DisjointConditional extends Diff {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : disjointConditional( ");
 

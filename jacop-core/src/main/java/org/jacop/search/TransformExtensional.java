@@ -50,7 +50,7 @@ public class TransformExtensional implements InitializeListener {
    * It contains all the information which will become variables in the scope of the extensional
    * constraint produced by this search listener.
    */
-  public List<IntVar> variablesTransformationScope = new ArrayList<>();
+  public final List<IntVar> variablesTransformationScope = new ArrayList<>();
 
   /**
    * The limit of solutions upon reaching the transformation is abandoned and solution progress

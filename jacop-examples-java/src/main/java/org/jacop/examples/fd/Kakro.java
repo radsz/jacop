@@ -50,17 +50,17 @@ public class Kakro extends ExampleFD {
 
   public IntVar[][] elements;
 
-  public int noRows = 4;
+  public final int noRows = 4;
 
-  public int noColumns = 4;
+  public final int noColumns = 4;
 
   // >1 - wall with row sum
   // <0 - wall with column sum
   // 1 - field
   // 0 - clean wall.
-  int[][] rowDescription = {{0, 0, 0, 0}, {3, 1, 1, 0}, {6, 1, 1, 1}, {0, 5, 1, 1}};
+  final int[][] rowDescription = {{0, 0, 0, 0}, {3, 1, 1, 0}, {6, 1, 1, 1}, {0, 5, 1, 1}};
 
-  int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
+  final int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
 
   /**
    * It executes the program to solve simple Kakro puzzle.
@@ -84,7 +84,7 @@ public class Kakro extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     elements = new IntVar[noRows][noColumns];
 
@@ -107,7 +107,7 @@ public class Kakro extends ExampleFD {
           IntVar sum =
               new IntVar(store, "sumAt" + i + "-" + j, rowDescription[i][j], rowDescription[i][j]);
 
-          List<IntVar> row = new ArrayList<IntVar>();
+          List<IntVar> row = new ArrayList<>();
 
           for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++)
             row.add(elements[i][m]);
@@ -127,7 +127,7 @@ public class Kakro extends ExampleFD {
                   -columnDescription[i][j],
                   -columnDescription[i][j]);
 
-          List<IntVar> column = new ArrayList<IntVar>();
+          List<IntVar> column = new ArrayList<>();
 
           for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++)
             column.add(elements[m][j]);

@@ -103,7 +103,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   static final boolean DEBUG_REORDER = false;
 
   /** It specifies the unique number used to differentiate geost constraints. */
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * It specifies the order between dimensions which is used by the pruning algorithm. The order may
@@ -202,11 +202,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   final int dimension;
 
   /** if set to true, a variable will never be skipped, even if grounded and not in queue */
-  public boolean enforceNoSkip =
+  public final boolean enforceNoSkip =
       true; // setting to false is causing a bug that allows incorrect solution to be accepted.
 
   /** set to false to disable relaxed shape pruning */
-  public boolean partialShapeSweep = true;
+  public final boolean partialShapeSweep = true;
 
   /**
    * It stores all generated internal constraints for all objects/constraints. It is used to speed
@@ -221,7 +221,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * provide a better performance (up to 50% faster). It can only be changed before impose()
    * function, changing it afterwards will lead to improper behavior.
    */
-  public boolean alwaysUseFrames = false;
+  public final boolean alwaysUseFrames = false;
 
   // int lowerBound;
   /**
@@ -345,7 +345,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * It is used inside flushQueue function to separate timeconsistency execution from object update
    * (potentially expensive if for example object frame is recomputed).
    */
-  SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<>();
+  final SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<>();
 
   /**
    * It is set by queueVariable after a time variable has been changed. It indicates that we should

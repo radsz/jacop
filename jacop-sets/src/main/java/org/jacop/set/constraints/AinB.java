@@ -47,13 +47,13 @@ public class AinB extends PrimitiveConstraint {
 
   // FIXME, check consistency and other methods like satisfied, notConsistency, notSatisfied.
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable a. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies variable b. */
-  public SetVar b;
+  public final SetVar b;
 
   /** It specifies if the inclusion relation is strict. */
   public boolean strict = false;

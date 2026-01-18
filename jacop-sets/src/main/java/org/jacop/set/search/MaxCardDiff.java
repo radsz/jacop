@@ -70,10 +70,7 @@ public class MaxCardDiff<T extends SetVar> implements ComparatorVariable<T> {
     int left = leftDom.lub().getSize() - leftDom.glb().getSize();
     int right = rightDom.lub().getSize() - rightDom.glb().getSize();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
-
-    return 0;
+    return Integer.compare(left, right);
   }
 
   /** Returns the metric(Cardinality difference) of the variable. */

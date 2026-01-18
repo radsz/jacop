@@ -43,9 +43,9 @@ class IntRectangle {
 
   int dim = 0;
 
-  int[] length;
+  final int[] length;
 
-  int[] origin;
+  final int[] origin;
 
   public IntRectangle(List<Integer> R) {
     dim = R.size() / 2;

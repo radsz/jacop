@@ -47,19 +47,19 @@ import org.jacop.set.core.SetVar;
  */
 public class Match extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * It specifies a set variable whose values are being matched against integer variables from the
    * list.
    */
-  public SetVar a;
+  public final SetVar a;
 
   /**
    * It specifies the list of integer variables which value is being matched against elements from a
    * set variable a.
    */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   /**
    * It constructs a match constraint to connect the value of set variable a to the values of

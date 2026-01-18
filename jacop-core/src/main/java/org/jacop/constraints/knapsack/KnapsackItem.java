@@ -107,7 +107,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    *
    * @return quantity finite domain variable.
    */
-  public final IntVar getVariable() {
+  public IntVar getVariable() {
     return quantity;
   }
 
@@ -116,7 +116,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    *
    * @return profit of a single instance of that item.
    */
-  public final int getProfit() {
+  public int getProfit() {
     return profit;
   }
 
@@ -125,7 +125,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    *
    * @return weight of a single instance of that item.
    */
-  public final int getWeight() {
+  public int getWeight() {
     return weight;
   }
 
@@ -134,7 +134,7 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    *
    * @return the efficiency of that item.
    */
-  public final double getEfficiency() {
+  public double getEfficiency() {
     return efficiency;
   }
 

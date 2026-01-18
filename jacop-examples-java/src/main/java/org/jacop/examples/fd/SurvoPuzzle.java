@@ -183,7 +183,7 @@ public class SurvoPuzzle extends ExampleFD {
     // column sums
     //
     for (int j = 0; j < c; j++) {
-      List<IntVar> cols = new ArrayList<IntVar>();
+      List<IntVar> cols = new ArrayList<>();
       for (int i = 0; i < r; i++) {
         cols.add(x[i][j]);
       }
@@ -195,7 +195,7 @@ public class SurvoPuzzle extends ExampleFD {
     // Alldifferent on the array version.
     store.impose(new Alldiff(x_arr));
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     vars.addAll(Arrays.asList(x_arr));
   }
@@ -220,7 +220,7 @@ public class SurvoPuzzle extends ExampleFD {
 
       String str;
       int lineCount = 0;
-      List<List<Integer>> MatrixI = new ArrayList<List<Integer>>();
+      List<List<Integer>> MatrixI = new ArrayList<>();
       while ((str = inr.readLine()) != null && !str.isEmpty()) {
 
         str = str.trim();
@@ -252,7 +252,7 @@ public class SurvoPuzzle extends ExampleFD {
             // Otherwise:
             // The problem matrix: index 1 .. row.length-1
             // The row sums: index row.length
-            List<Integer> this_row = new ArrayList<Integer>();
+            List<Integer> this_row = new ArrayList<>();
             for (String s : row) {
               if (s.equals("*")) {
                 this_row.add(0);

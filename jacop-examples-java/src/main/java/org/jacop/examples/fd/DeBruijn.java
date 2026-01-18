@@ -188,7 +188,7 @@ public class DeBruijn extends ExampleFD {
     // ... "around the corner": last element is connected to the first
     for (int j = 1; j < n; j++) store.impose(new XeqY(binary[m - 1][j], binary[0][j - 1]));
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     //
     // This is the de Bruijn sequence, i.e.
     // the first element of of each row in binary[i]

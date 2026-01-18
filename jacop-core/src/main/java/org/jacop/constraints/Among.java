@@ -66,7 +66,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   /** It is a idNumber variable. */
   public final IntVar n;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   // number if x that belongs to K (Kset)
   // As search progress this time stamp can only increase
   // because if X was in between lbS and ubS than

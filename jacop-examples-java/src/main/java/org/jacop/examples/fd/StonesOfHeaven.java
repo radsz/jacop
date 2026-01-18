@@ -83,7 +83,7 @@ public class StonesOfHeaven extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IO.println("Solution for problem Stones of Heaven");
 

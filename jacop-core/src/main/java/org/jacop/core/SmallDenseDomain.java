@@ -135,7 +135,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
    */
   public long bits;
 
-  long first8 = 255L << 56;
+  final long first8 = 255L << 56;
   private boolean singleton;
   private int size;
   private int max;

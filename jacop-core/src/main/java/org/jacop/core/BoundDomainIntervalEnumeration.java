@@ -40,7 +40,7 @@ package org.jacop.core;
  */
 public class BoundDomainIntervalEnumeration extends IntervalEnumeration {
 
-  Interval i;
+  final Interval i;
 
   boolean done = false;
 

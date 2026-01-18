@@ -64,16 +64,16 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    * List of variables x which values are checked against values of variables y. Each x is counted
    * only once as equal to one of the elements of list y.
    */
-  public IntVar[] listOfX;
+  public final IntVar[] listOfX;
 
   /** It specifies what values we are counting in the list of x's. */
-  public IntVar[] listOfY;
+  public final IntVar[] listOfY;
 
   // Derived variables
   /**
    * It specifies the number of x variables equal to at least one value present in the list of y.
    */
-  public IntVar n;
+  public final IntVar n;
 
   // All variables attributes
   private Map<IntVar, Integer> xIndex;
@@ -1011,7 +1011,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int i = 0;
     IntVar y;
     IntVar x;
-    int gx = (int) Arrays.stream(listOfX).filter(xElement -> xElement.singleton()).count();
+    int gx = (int) Arrays.stream(listOfX).filter(IntVar::singleton).count();
 
     yIndex = Var.positionMapping(listOfY, false, this.getClass());
 

@@ -40,7 +40,7 @@ public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 
   int current;
 
-  SmallDenseDomain domain;
+  final SmallDenseDomain domain;
 
   long bits;
 

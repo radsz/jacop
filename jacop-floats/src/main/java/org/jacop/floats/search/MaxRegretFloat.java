@@ -63,9 +63,7 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
 
     double rdiff = rminNext - rmin;
 
-    if (ldiff > rdiff) return 1;
-    if (ldiff < rdiff) return -1;
-    return 0;
+    return Double.compare(ldiff, rdiff);
   }
 
   public int compare(T left, T right) {
@@ -96,9 +94,7 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
 
     double rdiff = rminNext - rmin;
 
-    if (ldiff > rdiff) return 1;
-    if (ldiff < rdiff) return -1;
-    return 0;
+    return Double.compare(ldiff, rdiff);
   }
 
   public double metric(T o) {

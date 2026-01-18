@@ -80,7 +80,7 @@ public class PigeonHole extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] numbers = new IntVar[noPigeons];
 
@@ -96,7 +96,7 @@ public class PigeonHole extends ExampleFD {
   public void modelBasic() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] numbers = new IntVar[noPigeons];
 

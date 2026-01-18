@@ -85,7 +85,7 @@ public class Parcel extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Denotes a city to go to from
     // index city

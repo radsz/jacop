@@ -48,18 +48,18 @@ import org.jacop.core.TimeStamp;
  */
 public class Member extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   Store store;
   boolean reified = true;
 
   /** It specifies a list of variables being summed. */
-  IntVar[] x;
+  final IntVar[] x;
 
   /** It specifies variable for the overall sum. */
-  IntVar e;
+  final IntVar e;
 
   /** It specifies the number of variables on the list. */
-  int l;
+  final int l;
 
   /*
    * Defines first position of the variable that might equal e

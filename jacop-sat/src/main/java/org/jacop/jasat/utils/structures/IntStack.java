@@ -48,7 +48,7 @@ public final class IntStack {
   public int currentIndex = 0;
 
   // pool of int[]
-  public MemoryPool pool;
+  public final MemoryPool pool;
 
   public IntStack(MemoryPool pool) {
     this.pool = pool;

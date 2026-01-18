@@ -183,7 +183,7 @@ public class RegularExpressionParser {
    *
    * @param t The type of token that is expected.
    */
-  private void expect(int t) throws SyntaxException {
+  private void expect(int t) {
 
     if (token != t) {
 
@@ -252,8 +252,8 @@ public class RegularExpressionParser {
 
   class Concatination extends Expression {
 
-    public Expression a;
-    public Expression b;
+    public final Expression a;
+    public final Expression b;
 
     public Concatination(Expression a, Expression b) {
       super();
@@ -279,7 +279,7 @@ public class RegularExpressionParser {
 
   class Star extends Expression {
 
-    public Expression inStar;
+    public final Expression inStar;
 
     public Star(Expression inStar) {
       super();
@@ -304,11 +304,11 @@ public class RegularExpressionParser {
 
   class Sum extends Expression {
 
-    public List<Expression> disj;
+    public final List<Expression> disj;
 
     public Sum(Expression a, Expression b) {
       super();
-      this.disj = new ArrayList<Expression>();
+      this.disj = new ArrayList<>();
       addExp(a);
       addExp(b);
     }
@@ -316,7 +316,7 @@ public class RegularExpressionParser {
     @Override
     public String toString() {
 
-      StringBuffer result = new StringBuffer("(");
+      StringBuilder result = new StringBuilder("(");
 
       for (Expression e : this.disj) result.append(e.toString()).append("+");
       result.deleteCharAt(result.length() - 1);
@@ -379,7 +379,7 @@ public class RegularExpressionParser {
   public class Literal extends Expression {
 
     /** String denoting the literal. */
-    public String lit;
+    public final String lit;
 
     /**
      * It constructs a literal.

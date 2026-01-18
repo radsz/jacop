@@ -121,7 +121,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     Arrays.sort(priorities, 0, prioritiesIndex, comparator);
   }
 
-  public final void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
+  public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
 
     // if needed, increase bump rate
     if (!isModelClause) learntCount++;
@@ -151,7 +151,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     }
   }
 
-  public final void onClauseRemoval(int clauseId) {
+  public void onClauseRemoval(int clauseId) {
     // nothing to do
   }
 
@@ -160,7 +160,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    *
    * @return a non set literal, or 0 if all known literals are set
    */
-  public final int getLiteralToAssert() {
+  public int getLiteralToAssert() {
 
     // by decreasing activity order
     for (int i = 0; i < prioritiesIndex; ++i) {
@@ -180,7 +180,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    *
    * @return the activity of this (variable, polarity)
    */
-  private final int getLiteralActivity(int var, boolean polarity) {
+  private int getLiteralActivity(int var, boolean polarity) {
     assert var > 0;
 
     if (polarity) return posActivities[var];
@@ -192,7 +192,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    *
    * @return the new activity of the variable
    */
-  private final int bumpVar(int literal) {
+  private int bumpVar(int literal) {
     int var = Math.abs(literal);
     ensureVarSize(var);
     int curValue = (literal > 0 ? posActivities[var] : negActivities[var]);
@@ -206,7 +206,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   }
 
   // be sure the variable bump can be accessed safely
-  private final void ensureVarSize(int var) {
+  private void ensureVarSize(int var) {
     assert var > 0;
     assert posActivities.length == negActivities.length;
 
@@ -227,7 +227,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   }
 
   /** increases the bump rate, so that recent activity is more important than old activity */
-  private final void increaseBumpRate() {
+  private void increaseBumpRate() {
     currentBumpRate = currentBumpRate * BUMP_INCREASE_FACTOR;
   }
 
@@ -236,7 +236,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
    *
    * @param value the value that just overflowed
    */
-  private final void rebase(int value) {
+  private void rebase(int value) {
 
     // RS: Rebasing should use shift operations instead of *
     // e.g. >> 20 (?)

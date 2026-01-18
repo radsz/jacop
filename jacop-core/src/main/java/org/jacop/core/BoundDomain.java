@@ -782,7 +782,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringConstraints() {
 
-    StringBuffer s = new StringBuffer("");
+    StringBuilder s = new StringBuilder("");
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       s.append(e.next().id());
@@ -795,7 +795,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringFull() {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuilder result = new StringBuilder("");
 
     IntDomain domain = this;
 

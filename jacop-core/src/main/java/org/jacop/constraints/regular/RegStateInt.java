@@ -148,8 +148,7 @@ public class RegStateInt extends RegState {
   @Override
   public void setSupports(Map<Integer, RegEdge> hashMap, int i) {
 
-    if (hashMap.get(toSucDom[i]) == null)
-      hashMap.put(toSucDom[i], new RegEdge(this, successors[i]));
+    hashMap.computeIfAbsent(toSucDom[i], k -> new RegEdge(this, successors[i]));
   }
 
   @Override

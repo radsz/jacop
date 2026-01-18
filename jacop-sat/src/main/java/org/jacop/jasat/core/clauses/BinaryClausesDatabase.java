@@ -168,7 +168,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
    * @param clauseIndex index of the clause
    * @return the state of the clause
    */
-  private final int notifyClause(int clauseIndex) {
+  private int notifyClause(int clauseIndex) {
 
     int offset = clauseIndex << 1;
 

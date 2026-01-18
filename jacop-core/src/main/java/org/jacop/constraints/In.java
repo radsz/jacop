@@ -43,13 +43,13 @@ import org.jacop.core.*;
  */
 public class In extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x whose domain must lie within a specified domain. */
-  public IntVar x;
+  public final IntVar x;
 
   /** It specifies domain d which restricts the possible value of the specified variable. */
-  public IntDomain dom;
+  public final IntDomain dom;
 
   /** It specifies all the values which can not be taken by a variable. */
   private final IntDomain DomComplement;

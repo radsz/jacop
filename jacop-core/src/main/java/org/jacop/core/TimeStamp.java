@@ -56,8 +56,8 @@ public class TimeStamp<T> implements Stateful {
   @SuppressWarnings("unchecked")
   public transient T[] values = (T[]) new Object[10];
 
-  int index;
-  Store store;
+  final int index;
+  final Store store;
 
   /**
    * The constructor.

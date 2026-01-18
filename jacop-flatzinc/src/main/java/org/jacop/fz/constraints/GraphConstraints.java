@@ -46,8 +46,8 @@ import org.jacop.fz.SimpleNode;
  */
 class GraphConstraints implements ParserTreeConstants {
 
-  Store store;
-  Support support;
+  final Store store;
+  final Support support;
 
   public GraphConstraints(Support support) {
     this.store = support.store;
@@ -80,19 +80,11 @@ class GraphConstraints implements ParserTreeConstants {
       Object constraint = cons.newInstance(t, p, targetType, patternType, m, offset);
       support.poseDC((DecomposedConstraint<T>) constraint);
 
-    } catch (java.lang.ClassNotFoundException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.InstantiationException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.IllegalAccessException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.reflect.InvocationTargetException _) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | IllegalAccessException
+        | InstantiationException
+        | NoSuchMethodException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }
@@ -147,19 +139,11 @@ class GraphConstraints implements ParserTreeConstants {
           cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, true);
       support.pose((Constraint) constraint);
 
-    } catch (java.lang.ClassNotFoundException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.InstantiationException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.IllegalAccessException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.reflect.InvocationTargetException _) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | IllegalAccessException
+        | InstantiationException
+        | NoSuchMethodException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }
@@ -216,19 +200,11 @@ class GraphConstraints implements ParserTreeConstants {
           cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, false);
       support.pose((Constraint) constraint);
 
-    } catch (java.lang.ClassNotFoundException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.InstantiationException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.IllegalAccessException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.reflect.InvocationTargetException _) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | IllegalAccessException
+        | InstantiationException
+        | NoSuchMethodException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }
@@ -288,19 +264,11 @@ class GraphConstraints implements ParserTreeConstants {
           cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, true);
       support.pose((Constraint) constraint);
 
-    } catch (java.lang.ClassNotFoundException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.InstantiationException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.IllegalAccessException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.reflect.InvocationTargetException _) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | IllegalAccessException
+        | InstantiationException
+        | NoSuchMethodException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }
@@ -362,19 +330,11 @@ class GraphConstraints implements ParserTreeConstants {
           cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, false);
       support.pose((Constraint) constraint);
 
-    } catch (java.lang.ClassNotFoundException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.InstantiationException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.IllegalAccessException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.reflect.InvocationTargetException _) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | IllegalAccessException
+        | InstantiationException
+        | NoSuchMethodException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }
@@ -414,16 +374,11 @@ class GraphConstraints implements ParserTreeConstants {
       Object constraint = cons.newInstance(store, g, type, index_min, c, cost);
       support.pose((Constraint) constraint);
 
-    } catch (ClassNotFoundException | InvocationTargetException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.InstantiationException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.IllegalAccessException _) {
+    } catch (ClassNotFoundException
+        | InvocationTargetException
+        | IllegalAccessException
+        | InstantiationException
+        | NoSuchMethodException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }

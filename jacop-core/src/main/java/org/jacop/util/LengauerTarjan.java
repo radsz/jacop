@@ -41,18 +41,22 @@ public class LengauerTarjan {
 
   int root;
   // succ stores successors of a vertex. Numbered from 0.
-  BitSet[] succ;
-  int[] parent, ancestor, vertex;
-  int[] label, semi;
-  BitSet[] pred, bucket;
+  final BitSet[] succ;
+  final int[] parent;
+  final int[] ancestor;
+  final int[] vertex;
+  final int[] label;
+  final int[] semi;
+  final BitSet[] pred;
+  final BitSet[] bucket;
 
-  int n; // number of nodes
+  final int n; // number of nodes
   int dfs_n;
 
-  int[] dom;
+  final int[] dom;
 
-  BitSet[] domTreeSucc;
-  BitSet[] domClosure;
+  final BitSet[] domTreeSucc;
+  final BitSet[] domClosure;
 
   public LengauerTarjan(int n) {
     succ = new BitSet[n];

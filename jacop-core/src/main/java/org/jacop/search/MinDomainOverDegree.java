@@ -51,11 +51,7 @@ public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T>
 
     double right = var.getSize() / var.sizeConstraints();
 
-    if (left < right) return 1;
-
-    if (left > right) return -1;
-
-    return 0;
+    return Double.compare(right, left);
   }
 
   public int compare(T leftVar, T rightVar) {
@@ -63,11 +59,7 @@ public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T>
     double left = leftVar.getSize() / leftVar.sizeConstraints();
     double right = rightVar.getSize() / rightVar.sizeConstraints();
 
-    if (left < right) return 1;
-
-    if (left > right) return -1;
-
-    return 0;
+    return Double.compare(right, left);
   }
 
   public double metric(T var) {

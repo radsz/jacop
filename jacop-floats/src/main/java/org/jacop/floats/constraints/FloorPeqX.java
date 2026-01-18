@@ -49,7 +49,7 @@ import org.jacop.floats.core.FloatVar;
  */
 public class FloorPeqX extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a left hand variable in equality constraint. */
   public IntVar x;

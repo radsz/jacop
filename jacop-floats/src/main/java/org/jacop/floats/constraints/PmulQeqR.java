@@ -49,16 +49,16 @@ import org.jacop.floats.core.FloatVar;
  */
 public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDerivableConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable p in constraint p * q = r. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /** It specifies variable q in constraint p * q = r. */
-  public FloatVar q;
+  public final FloatVar q;
 
   /** It specifies variable r in constraint p * q = r. */
-  public FloatVar r;
+  public final FloatVar r;
 
   boolean xSquare = false;
 

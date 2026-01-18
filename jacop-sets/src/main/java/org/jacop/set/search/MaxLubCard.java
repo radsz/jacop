@@ -68,9 +68,7 @@ public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {
     int left = leftSD.lub().getSize();
     int right = rightSD.lub().getSize();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
-    return 0;
+    return Integer.compare(left, right);
   }
 
   /** Returns the cardinality of the lub. */

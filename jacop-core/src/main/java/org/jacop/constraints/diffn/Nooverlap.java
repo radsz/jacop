@@ -45,7 +45,7 @@ public class Nooverlap extends Constraint {
 
   static final boolean trace = false, traceNarr = false;
   static final int x = 0, y = 1;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * defines how to treat rectangles with width zero strict = true means they still need to be
@@ -367,7 +367,7 @@ public class Nooverlap extends Constraint {
       BitSet bs = new BitSet(rectangle.length);
       bs.flip(0, rectangle.length); // set all bits to true == all rectangles overlap
       bs.set(i, false); // rectangle does not overlaps with itself
-      overlapping[i] = new TimeStamp<BitSet>(store, bs);
+      overlapping[i] = new TimeStamp<>(store, bs);
 
       // impose constraint on rectangle length >= 0
       rectangle[i].length(0).domain.inMin(store.level, rectangle[i].length(0), 0);

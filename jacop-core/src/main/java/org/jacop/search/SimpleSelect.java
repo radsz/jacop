@@ -49,16 +49,16 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
   /** It chooses if input order tie breaking is used. */
   public boolean inputOrderTieBreaking = true;
 
-  public T[] searchVariables;
+  public final T[] searchVariables;
 
-  public ComparatorVariable<T> variableOrdering;
+  public final ComparatorVariable<T> variableOrdering;
 
   public ComparatorVariable<T> tieBreakingComparator = null;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
-  public Map<T, Integer> position;
+  public final Map<T, Integer> position;
 
-  Indomain<T> valueOrdering;
+  final Indomain<T> valueOrdering;
   int currentIndex = 0;
 
   /**

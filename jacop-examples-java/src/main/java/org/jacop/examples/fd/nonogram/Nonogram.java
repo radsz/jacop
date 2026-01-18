@@ -58,10 +58,10 @@ import org.jacop.util.fsm.FSMTransition;
 public class Nonogram extends ExampleFD {
 
   /** The value that represents a black dot. */
-  public int black = 1;
+  public final int black = 1;
 
   /** The value that represents a white dot. */
-  public int white = 0;
+  public final int white = 0;
 
   /** A board to be painted in white/black dots. */
   public IntVar[][] board;
@@ -71,16 +71,16 @@ public class Nonogram extends ExampleFD {
    * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
    * deterministic.
    */
-  public boolean slideDecomposition = false;
+  public final boolean slideDecomposition = false;
 
   /** It specifies if the regular constraint should be used. */
-  public boolean regular = true;
+  public final boolean regular = true;
 
   /**
    * It specifies if one extensional constraint based on MDD created from FSM should be used. The
    * translation process works if FSM is deterministic.
    */
-  public boolean extensionalMDD = false;
+  public final boolean extensionalMDD = false;
 
   /** It specifies a rule for each row. */
   public int[][] row_rules = {
@@ -302,7 +302,7 @@ public class Nonogram extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Specifying what values are allowed.
     IntervalDomain values = new IntervalDomain();
@@ -372,9 +372,9 @@ public class Nonogram extends ExampleFD {
     // a) search for all solutions
     // b) all variables have binary domain.
     SelectChoicePoint<IntVar> select =
-        new InputOrderSelect<IntVar>(store, vars.toArray(new IntVar[1]), new IndomainMin<IntVar>());
+        new InputOrderSelect<>(store, vars.toArray(new IntVar[1]), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(false);
@@ -406,8 +406,8 @@ public class Nonogram extends ExampleFD {
   public void printMatrix(IntVar[][] matrix) {
 
     for (IntVar[] intVars : matrix) {
-      for (int j = 0; j < intVars.length; j++) {
-        if (intVars[j].value() == black) IO.print("0");
+      for (IntVar intVar : intVars) {
+        if (intVar.value() == black) IO.print("0");
         else IO.print(" ");
       }
       IO.println();

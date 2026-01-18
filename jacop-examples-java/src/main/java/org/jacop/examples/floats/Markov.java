@@ -113,9 +113,9 @@ public class Markov {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(store, vars, null); // new SmallestDomainFloat<FloatVar>());
+        new SplitSelectFloat<>(store, vars, null); // new SmallestDomainFloat<FloatVar>());
     label.setAssignSolution(true);
     // label.setSolutionListener(new PrintOutListener<FloatVar>());
     label.getSolutionListener().recordSolutions(true);

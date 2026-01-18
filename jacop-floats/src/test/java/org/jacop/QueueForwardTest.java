@@ -73,9 +73,9 @@ public class QueueForwardTest {
     IO.println("Precision = " + FloatDomain.precision());
 
     // search for solutions and print results
-    Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    Search<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, v, null);
+    label.setSolutionListener(new PrintOutListener<>());
 
     boolean result = label.labeling(store, select);
 
@@ -103,9 +103,9 @@ public class QueueForwardTest {
     IO.println("Precision = " + FloatDomain.precision());
 
     // search for solutions and print results
-    Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    Search<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, v, null);
+    label.setSolutionListener(new PrintOutListener<>());
 
     boolean result = label.labeling(store, select);
 
@@ -132,9 +132,9 @@ public class QueueForwardTest {
     store.impose(new Reified(new Not(new LinearFloat(v, new double[] {1, -1}, "!=", 0)), one));
 
     // search for solutions and print results
-    Search<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<FloatVar>(store, v, null);
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    Search<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> select = new SplitSelectFloat<>(store, v, null);
+    label.setSolutionListener(new PrintOutListener<>());
 
     boolean result = label.labeling(store, select);
 

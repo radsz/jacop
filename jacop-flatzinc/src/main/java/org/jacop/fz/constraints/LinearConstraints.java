@@ -46,9 +46,9 @@ import org.jacop.satwrapper.SatTranslation;
  */
 class LinearConstraints implements ParserTreeConstants {
 
-  Store store;
-  Support support;
-  SatTranslation sat;
+  final Store store;
+  final Support support;
+  final SatTranslation sat;
 
   public LinearConstraints(Support support) {
     this.store = support.store;

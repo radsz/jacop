@@ -72,7 +72,7 @@ public class LinearInt extends PrimitiveConstraint {
     le, // gt=4,
     lt // ge=5;
   };
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   public byte relationType;
   Store store;
 
@@ -231,7 +231,7 @@ public class LinearInt extends PrimitiveConstraint {
     this.store = store;
     this.b = sum;
 
-    LinkedHashMap<IntVar, Long> parameters = new LinkedHashMap<IntVar, Long>();
+    LinkedHashMap<IntVar, Long> parameters = new LinkedHashMap<>();
 
     for (int i = 0; i < list.length; i++) {
       if (weights[i] != 0) {
@@ -625,18 +625,38 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   public byte relation(String r) {
-    if (r.equals("==")) return eq;
-    else if (r.equals("=")) return eq;
-    else if (r.equals("<")) return lt;
-    else if (r.equals("<=")) return le;
-    else if (r.equals("=<")) return le;
-    else if (r.equals("!=")) return ne;
-    else if (r.equals(">")) return gt;
-    else if (r.equals(">=")) return ge;
-    else if (r.equals("=>")) return ge;
-    else {
-      System.err.println("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
-      return eq;
+    switch (r) {
+      case "==" -> {
+        return eq;
+      }
+      case "=" -> {
+        return eq;
+      }
+      case "<" -> {
+        return lt;
+      }
+      case "<=" -> {
+        return le;
+      }
+      case "=<" -> {
+        return le;
+      }
+      case "!=" -> {
+        return ne;
+      }
+      case ">" -> {
+        return gt;
+      }
+      case ">=" -> {
+        return ge;
+      }
+      case "=>" -> {
+        return ge;
+      }
+      default -> {
+        System.err.println("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
+        return eq;
+      }
     }
   }
 

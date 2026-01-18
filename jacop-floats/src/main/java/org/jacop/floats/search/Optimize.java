@@ -49,18 +49,18 @@ import org.jacop.search.SimpleSolutionListener;
  */
 public class Optimize<T extends Var> {
 
-  Store store;
-  Search<T> search;
-  FloatVar cost;
-  SplitSelectFloat<FloatVar> split;
-  SelectChoicePoint<T> select;
-  Var[] variables;
+  final Store store;
+  final Search<T> search;
+  final FloatVar cost;
+  final SplitSelectFloat<FloatVar> split;
+  final SelectChoicePoint<T> select;
+  final Var[] variables;
   double costValue = Double.NaN;
 
-  boolean printInfo = true;
+  final boolean printInfo = true;
 
   FloatInterval lastCost;
-  FloatInterval[] lastVarValues;
+  final FloatInterval[] lastVarValues;
 
   public Optimize(Store store, Search<T> search, SelectChoicePoint<T> select, FloatVar cost) {
 
@@ -167,7 +167,7 @@ public class Optimize<T extends Var> {
 
   public class ResultListener extends SimpleSolutionListener<T> {
 
-    Var[] var;
+    final Var[] var;
 
     public ResultListener(Var[] v) {
       var = v;

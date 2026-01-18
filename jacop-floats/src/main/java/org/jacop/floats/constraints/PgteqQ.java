@@ -44,13 +44,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class PgteqQ extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variables p which must be greater or equal to a given varibale. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /** It specifies variablw q from which a given variable must be greater or equal. */
-  public FloatVar q;
+  public final FloatVar q;
 
   /**
    * It constructs constraint P {@literal >=} Q.

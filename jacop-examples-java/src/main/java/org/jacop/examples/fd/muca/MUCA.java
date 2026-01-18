@@ -81,13 +81,13 @@ public class MUCA extends ExampleFD {
   public int maxDelta = 10;
 
   /** It specifies the minimal value for the cost. */
-  public int minCost = -100000;
+  public final int minCost = -100000;
 
   /** It specifies the maximal value for the cost. */
-  public int maxCost = 100000;
+  public final int maxCost = 100000;
 
   /** The maximal number of products. */
-  public int maxProducts = 100;
+  public final int maxProducts = 100;
 
   /** For each bidder it specifies variable representing the cost of the chosen xor bid. */
   public List<IntVar> bidCosts;
@@ -154,18 +154,18 @@ public class MUCA extends ExampleFD {
   /** It creates an instance of the auction problem. */
   public void setupProblem1() {
 
-    bids = new ArrayList<List<List<Transformation>>>();
+    bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
-    t1.goodsIds = new ArrayList<Integer>();
+    t1.goodsIds = new ArrayList<>();
     t1.goodsIds.add(3);
     t1.goodsIds.add(10);
-    t1.delta = new ArrayList<Delta>();
+    t1.delta = new ArrayList<>();
     t1.delta.add(new Delta(0, 1));
     t1.delta.add(new Delta(5, 0));
 
@@ -173,11 +173,11 @@ public class MUCA extends ExampleFD {
 
     // ((2, 3))
     Transformation t2 = new Transformation();
-    t2.goodsIds = new ArrayList<Integer>();
+    t2.goodsIds = new ArrayList<>();
     t2.goodsIds.add(4);
     t2.goodsIds.add(10);
     t2.goodsIds.add(11);
-    t2.delta = new ArrayList<Delta>();
+    t2.delta = new ArrayList<>();
     t2.delta.add(new Delta(0, 2));
     t2.delta.add(new Delta(2, 0));
     t2.delta.add(new Delta(2, 0));
@@ -186,17 +186,17 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t3 = new Transformation();
     // ((0, 1))
-    t3.goodsIds = new ArrayList<Integer>();
+    t3.goodsIds = new ArrayList<>();
     t3.goodsIds.add(5);
     t3.goodsIds.add(11);
     t3.goodsIds.add(12);
-    t3.delta = new ArrayList<Delta>();
+    t3.delta = new ArrayList<>();
     t3.delta.add(new Delta(0, 1));
     t3.delta.add(new Delta(1, 0));
     t3.delta.add(new Delta(1, 01));
@@ -205,12 +205,12 @@ public class MUCA extends ExampleFD {
 
     Transformation t4 = new Transformation();
     // ((0, 1))
-    t4.goodsIds = new ArrayList<Integer>();
+    t4.goodsIds = new ArrayList<>();
     t4.goodsIds.add(6);
     t4.goodsIds.add(11);
     t4.goodsIds.add(12);
     t4.goodsIds.add(13);
-    t4.delta = new ArrayList<Delta>();
+    t4.delta = new ArrayList<>();
     t4.delta.add(new Delta(0, 2));
     t4.delta.add(new Delta(2, 0));
     t4.delta.add(new Delta(2, 0));
@@ -220,11 +220,11 @@ public class MUCA extends ExampleFD {
 
     Transformation t5 = new Transformation();
     // ((0, 1))
-    t5.goodsIds = new ArrayList<Integer>();
+    t5.goodsIds = new ArrayList<>();
     t5.goodsIds.add(7);
     t5.goodsIds.add(12);
     t5.goodsIds.add(13);
-    t5.delta = new ArrayList<Delta>();
+    t5.delta = new ArrayList<>();
     t5.delta.add(new Delta(1));
     t5.delta.add(new Delta(-1));
     t5.delta.add(new Delta(-1));
@@ -233,17 +233,17 @@ public class MUCA extends ExampleFD {
 
     bid_2.add(bid_2_xor1);
 
-    List<List<Transformation>> bid_3 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_3 = new ArrayList<>();
 
-    List<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_3_xor1 = new ArrayList<>();
 
     Transformation t6 = new Transformation();
     // ((0, 1))
-    t6.goodsIds = new ArrayList<Integer>();
+    t6.goodsIds = new ArrayList<>();
     t6.goodsIds.add(8);
     t6.goodsIds.add(13);
     t6.goodsIds.add(14);
-    t6.delta = new ArrayList<Delta>();
+    t6.delta = new ArrayList<>();
     t6.delta.add(new Delta(2));
     t6.delta.add(new Delta(-2));
     t6.delta.add(new Delta(-2));
@@ -252,11 +252,11 @@ public class MUCA extends ExampleFD {
 
     // ((2, 3))
     Transformation t7 = new Transformation();
-    t7.goodsIds = new ArrayList<Integer>();
+    t7.goodsIds = new ArrayList<>();
     t7.goodsIds.add(9);
     t7.goodsIds.add(13);
     t7.goodsIds.add(14);
-    t7.delta = new ArrayList<Delta>();
+    t7.delta = new ArrayList<>();
     t7.delta.add(new Delta(2));
     t7.delta.add(new Delta(-3));
     t7.delta.add(new Delta(-10));
@@ -265,17 +265,17 @@ public class MUCA extends ExampleFD {
 
     bid_3.add(bid_3_xor1);
 
-    List<List<Transformation>> bid_4 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_4 = new ArrayList<>();
 
-    List<Transformation> bid_4_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_4_xor1 = new ArrayList<>();
 
     Transformation t8 = new Transformation();
     // ((0, 1))
-    t8.goodsIds = new ArrayList<Integer>();
+    t8.goodsIds = new ArrayList<>();
     t8.goodsIds.add(0);
     t8.goodsIds.add(3);
     t8.goodsIds.add(4);
-    t8.delta = new ArrayList<Delta>();
+    t8.delta = new ArrayList<>();
     t8.delta.add(new Delta(1));
     t8.delta.add(new Delta(-1));
     t8.delta.add(new Delta(-1));
@@ -284,18 +284,18 @@ public class MUCA extends ExampleFD {
 
     bid_4.add(bid_4_xor1);
 
-    List<List<Transformation>> bid_5 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_5 = new ArrayList<>();
 
-    List<Transformation> bid_5_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_5_xor1 = new ArrayList<>();
 
     Transformation t9 = new Transformation();
     // ((0, 1))
-    t9.goodsIds = new ArrayList<Integer>();
+    t9.goodsIds = new ArrayList<>();
     t9.goodsIds.add(1);
     t9.goodsIds.add(5);
     t9.goodsIds.add(6);
     t9.goodsIds.add(7);
-    t9.delta = new ArrayList<Delta>();
+    t9.delta = new ArrayList<>();
     t9.delta.add(new Delta(4));
     t9.delta.add(new Delta(-1));
     t9.delta.add(new Delta(-2));
@@ -305,17 +305,17 @@ public class MUCA extends ExampleFD {
 
     bid_5.add(bid_5_xor1);
 
-    List<List<Transformation>> bid_6 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_6 = new ArrayList<>();
 
-    List<Transformation> bid_6_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_6_xor1 = new ArrayList<>();
 
     Transformation t10 = new Transformation();
     // ((0, 1))
-    t10.goodsIds = new ArrayList<Integer>();
+    t10.goodsIds = new ArrayList<>();
     t10.goodsIds.add(2);
     t10.goodsIds.add(8);
     t10.goodsIds.add(9);
-    t10.delta = new ArrayList<Delta>();
+    t10.delta = new ArrayList<>();
     t10.delta.add(new Delta(1));
     t10.delta.add(new Delta(-1));
     t10.delta.add(new Delta(-1));
@@ -324,17 +324,17 @@ public class MUCA extends ExampleFD {
 
     bid_6.add(bid_6_xor1);
 
-    List<List<Transformation>> bid_7 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_7 = new ArrayList<>();
 
-    List<Transformation> bid_7_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_7_xor1 = new ArrayList<>();
 
     Transformation t11 = new Transformation();
     // ((0, 1))
-    t11.goodsIds = new ArrayList<Integer>();
+    t11.goodsIds = new ArrayList<>();
     t11.goodsIds.add(5);
     t11.goodsIds.add(11);
     t11.goodsIds.add(12);
-    t11.delta = new ArrayList<Delta>();
+    t11.delta = new ArrayList<>();
     t11.delta.add(new Delta(1));
     t11.delta.add(new Delta(-1));
     t11.delta.add(new Delta(-1));
@@ -343,12 +343,12 @@ public class MUCA extends ExampleFD {
 
     Transformation t12 = new Transformation();
     // ((0, 1))
-    t12.goodsIds = new ArrayList<Integer>();
+    t12.goodsIds = new ArrayList<>();
     t12.goodsIds.add(6);
     t12.goodsIds.add(11);
     t12.goodsIds.add(12);
     t12.goodsIds.add(13);
-    t12.delta = new ArrayList<Delta>();
+    t12.delta = new ArrayList<>();
     t12.delta.add(new Delta(2));
     t12.delta.add(new Delta(-2));
     t12.delta.add(new Delta(-2));
@@ -358,11 +358,11 @@ public class MUCA extends ExampleFD {
 
     Transformation t13 = new Transformation();
     // ((0, 1))
-    t13.goodsIds = new ArrayList<Integer>();
+    t13.goodsIds = new ArrayList<>();
     t13.goodsIds.add(7);
     t13.goodsIds.add(12);
     t13.goodsIds.add(13);
-    t13.delta = new ArrayList<Delta>();
+    t13.delta = new ArrayList<>();
     t13.delta.add(new Delta(1));
     t13.delta.add(new Delta(-1));
     t13.delta.add(new Delta(-1));
@@ -371,18 +371,18 @@ public class MUCA extends ExampleFD {
 
     bid_7.add(bid_7_xor1);
 
-    List<List<Transformation>> bid_8 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_8 = new ArrayList<>();
 
-    List<Transformation> bid_8_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_8_xor1 = new ArrayList<>();
 
     Transformation t14 = new Transformation();
     // ((1, 2))
-    t14.goodsIds = new ArrayList<Integer>();
+    t14.goodsIds = new ArrayList<>();
     t14.goodsIds.add(1);
     t14.goodsIds.add(5);
     t14.goodsIds.add(6);
     t14.goodsIds.add(7);
-    t14.delta = new ArrayList<Delta>();
+    t14.delta = new ArrayList<>();
     t14.delta.add(new Delta(4));
     t14.delta.add(new Delta(-1));
     t14.delta.add(new Delta(-2));
@@ -400,7 +400,7 @@ public class MUCA extends ExampleFD {
     bids.add(bid_7);
     bids.add(bid_8);
 
-    initialQuantity = new ArrayList<Integer>();
+    initialQuantity = new ArrayList<>();
     initialQuantity.add(0);
     initialQuantity.add(0);
     initialQuantity.add(0);
@@ -416,7 +416,7 @@ public class MUCA extends ExampleFD {
     initialQuantity.add(4);
     initialQuantity.add(3);
 
-    finalQuantity = new ArrayList<Integer>();
+    finalQuantity = new ArrayList<>();
     finalQuantity.add(0);
     finalQuantity.add(4);
     finalQuantity.add(0);
@@ -432,56 +432,56 @@ public class MUCA extends ExampleFD {
     finalQuantity.add(0);
     finalQuantity.add(0);
 
-    costs = new ArrayList<List<Integer>>();
-    List<Integer> cost_bid_1 = new ArrayList<Integer>();
+    costs = new ArrayList<>();
+    List<Integer> cost_bid_1 = new ArrayList<>();
     cost_bid_1.add(-10);
 
     costs.add(cost_bid_1);
 
-    List<Integer> cost_bid_2 = new ArrayList<Integer>();
+    List<Integer> cost_bid_2 = new ArrayList<>();
     cost_bid_2.add(-20);
     costs.add(cost_bid_2);
 
-    List<Integer> cost_bid_3 = new ArrayList<Integer>();
+    List<Integer> cost_bid_3 = new ArrayList<>();
     cost_bid_3.add(25);
     costs.add(cost_bid_3);
 
-    List<Integer> cost_bid_4 = new ArrayList<Integer>();
+    List<Integer> cost_bid_4 = new ArrayList<>();
     cost_bid_4.add(-30);
     costs.add(cost_bid_4);
 
-    List<Integer> cost_bid_5 = new ArrayList<Integer>();
+    List<Integer> cost_bid_5 = new ArrayList<>();
     cost_bid_5.add(35);
     costs.add(cost_bid_5);
 
-    List<Integer> cost_bid_6 = new ArrayList<Integer>();
+    List<Integer> cost_bid_6 = new ArrayList<>();
     cost_bid_6.add(-32);
     costs.add(cost_bid_6);
 
-    List<Integer> cost_bid_7 = new ArrayList<Integer>();
+    List<Integer> cost_bid_7 = new ArrayList<>();
     cost_bid_7.add(-15);
     costs.add(cost_bid_7);
 
-    List<Integer> cost_bid_8 = new ArrayList<Integer>();
+    List<Integer> cost_bid_8 = new ArrayList<>();
     cost_bid_8.add(-30);
     costs.add(cost_bid_8);
   }
 
   /** It creates an instance of the auction problem. */
   public void setupProblem2() {
-    bids = new ArrayList<List<List<Transformation>>>();
+    bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
-    t1.goodsIds = new ArrayList<Integer>();
+    t1.goodsIds = new ArrayList<>();
     t1.goodsIds.add(3);
     t1.goodsIds.add(0);
     t1.goodsIds.add(1);
-    t1.delta = new ArrayList<Delta>();
+    t1.delta = new ArrayList<>();
     t1.delta.add(new Delta(1));
     t1.delta.add(new Delta(-1));
     t1.delta.add(new Delta(-1));
@@ -490,12 +490,12 @@ public class MUCA extends ExampleFD {
 
     Transformation t2 = new Transformation();
     // ((0, 1))
-    t2.goodsIds = new ArrayList<Integer>();
+    t2.goodsIds = new ArrayList<>();
     t2.goodsIds.add(4);
     t2.goodsIds.add(0);
     t2.goodsIds.add(1);
     t2.goodsIds.add(2);
-    t2.delta = new ArrayList<Delta>();
+    t2.delta = new ArrayList<>();
     t2.delta.add(new Delta(2));
     t2.delta.add(new Delta(-2));
     t2.delta.add(new Delta(-2));
@@ -505,11 +505,11 @@ public class MUCA extends ExampleFD {
 
     Transformation t3 = new Transformation();
     // ((0, 1))
-    t3.goodsIds = new ArrayList<Integer>();
+    t3.goodsIds = new ArrayList<>();
     t3.goodsIds.add(5);
     t3.goodsIds.add(1);
     t3.goodsIds.add(2);
-    t3.delta = new ArrayList<Delta>();
+    t3.delta = new ArrayList<>();
     t3.delta.add(new Delta(1));
     t3.delta.add(new Delta(-1));
     t3.delta.add(new Delta(-1));
@@ -518,18 +518,18 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t4 = new Transformation();
     // ((0, 1))
-    t4.goodsIds = new ArrayList<Integer>();
+    t4.goodsIds = new ArrayList<>();
     t4.goodsIds.add(6);
     t4.goodsIds.add(3);
     t4.goodsIds.add(4);
     t4.goodsIds.add(5);
-    t4.delta = new ArrayList<Delta>();
+    t4.delta = new ArrayList<>();
     t4.delta.add(new Delta(4));
     t4.delta.add(new Delta(-1));
     t4.delta.add(new Delta(-2));
@@ -539,17 +539,17 @@ public class MUCA extends ExampleFD {
 
     bid_2.add(bid_2_xor1);
 
-    List<List<Transformation>> bid_3 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_3 = new ArrayList<>();
 
-    List<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_3_xor1 = new ArrayList<>();
 
     Transformation t5 = new Transformation();
     // ((0, 1))
-    t5.goodsIds = new ArrayList<Integer>();
+    t5.goodsIds = new ArrayList<>();
     t5.goodsIds.add(3);
     t5.goodsIds.add(0);
     t5.goodsIds.add(1);
-    t5.delta = new ArrayList<Delta>();
+    t5.delta = new ArrayList<>();
     t5.delta.add(new Delta(1));
     t5.delta.add(new Delta(-1));
     t5.delta.add(new Delta(-1));
@@ -558,12 +558,12 @@ public class MUCA extends ExampleFD {
 
     Transformation t6 = new Transformation();
     // ((0, 1))
-    t6.goodsIds = new ArrayList<Integer>();
+    t6.goodsIds = new ArrayList<>();
     t6.goodsIds.add(4);
     t6.goodsIds.add(0);
     t6.goodsIds.add(1);
     t6.goodsIds.add(2);
-    t6.delta = new ArrayList<Delta>();
+    t6.delta = new ArrayList<>();
     t6.delta.add(new Delta(2));
     t6.delta.add(new Delta(-2));
     t6.delta.add(new Delta(-2));
@@ -573,11 +573,11 @@ public class MUCA extends ExampleFD {
 
     Transformation t7 = new Transformation();
     // ((0, 1))
-    t7.goodsIds = new ArrayList<Integer>();
+    t7.goodsIds = new ArrayList<>();
     t7.goodsIds.add(5);
     t7.goodsIds.add(1);
     t7.goodsIds.add(2);
-    t7.delta = new ArrayList<Delta>();
+    t7.delta = new ArrayList<>();
     t7.delta.add(new Delta(1));
     t7.delta.add(new Delta(-1));
     t7.delta.add(new Delta(-1));
@@ -586,18 +586,18 @@ public class MUCA extends ExampleFD {
 
     bid_3.add(bid_3_xor1);
 
-    List<List<Transformation>> bid_4 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_4 = new ArrayList<>();
 
-    List<Transformation> bid_4_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_4_xor1 = new ArrayList<>();
 
     Transformation t8 = new Transformation();
     // ((1, 2))
-    t8.goodsIds = new ArrayList<Integer>();
+    t8.goodsIds = new ArrayList<>();
     t8.goodsIds.add(6);
     t8.goodsIds.add(3);
     t8.goodsIds.add(4);
     t8.goodsIds.add(5);
-    t8.delta = new ArrayList<Delta>();
+    t8.delta = new ArrayList<>();
     t8.delta.add(new Delta(4));
     t8.delta.add(new Delta(-1));
     t8.delta.add(new Delta(-2));
@@ -606,7 +606,7 @@ public class MUCA extends ExampleFD {
     bid_4_xor1.add(t8);
     bid_4.add(bid_4_xor1);
 
-    initialQuantity = new ArrayList<Integer>();
+    initialQuantity = new ArrayList<>();
     initialQuantity.add(3);
     initialQuantity.add(4);
     initialQuantity.add(3);
@@ -615,7 +615,7 @@ public class MUCA extends ExampleFD {
     initialQuantity.add(0);
     initialQuantity.add(0);
 
-    finalQuantity = new ArrayList<Integer>();
+    finalQuantity = new ArrayList<>();
     finalQuantity.add(0);
     finalQuantity.add(0);
     finalQuantity.add(0);
@@ -624,26 +624,26 @@ public class MUCA extends ExampleFD {
     finalQuantity.add(0);
     finalQuantity.add(4);
 
-    costs = new ArrayList<List<Integer>>();
+    costs = new ArrayList<>();
 
     bids.add(bid_1);
     bids.add(bid_2);
     bids.add(bid_3);
     bids.add(bid_4);
 
-    List<Integer> cost_bid_1 = new ArrayList<Integer>();
+    List<Integer> cost_bid_1 = new ArrayList<>();
     cost_bid_1.add(-20);
     costs.add(cost_bid_1);
 
-    List<Integer> cost_bid_2 = new ArrayList<Integer>();
+    List<Integer> cost_bid_2 = new ArrayList<>();
     cost_bid_2.add(-35);
     costs.add(cost_bid_2);
 
-    List<Integer> cost_bid_3 = new ArrayList<Integer>();
+    List<Integer> cost_bid_3 = new ArrayList<>();
     cost_bid_3.add(-15);
     costs.add(cost_bid_3);
 
-    List<Integer> cost_bid_4 = new ArrayList<Integer>();
+    List<Integer> cost_bid_4 = new ArrayList<>();
     cost_bid_4.add(-30);
     costs.add(cost_bid_4);
   }
@@ -651,18 +651,18 @@ public class MUCA extends ExampleFD {
   /** It creates an instance of the auction problem. */
   public void setupProblem3() {
 
-    bids = new ArrayList<List<List<Transformation>>>();
+    bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
-    t1.goodsIds = new ArrayList<Integer>();
+    t1.goodsIds = new ArrayList<>();
     t1.goodsIds.add(0);
     t1.goodsIds.add(1);
-    t1.delta = new ArrayList<Delta>();
+    t1.delta = new ArrayList<>();
     t1.delta.add(new Delta(-1));
     t1.delta.add(new Delta(1));
 
@@ -670,10 +670,10 @@ public class MUCA extends ExampleFD {
 
     // ((2, 3))
     Transformation t2 = new Transformation();
-    t2.goodsIds = new ArrayList<Integer>();
+    t2.goodsIds = new ArrayList<>();
     t2.goodsIds.add(2);
     t2.goodsIds.add(3);
-    t2.delta = new ArrayList<Delta>();
+    t2.delta = new ArrayList<>();
     t2.delta.add(new Delta(-1));
     t2.delta.add(new Delta(1));
 
@@ -681,16 +681,16 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t4 = new Transformation();
     // ((0, 1))
-    t4.goodsIds = new ArrayList<Integer>();
+    t4.goodsIds = new ArrayList<>();
     t4.goodsIds.add(0);
     t4.goodsIds.add(1);
-    t4.delta = new ArrayList<Delta>();
+    t4.delta = new ArrayList<>();
     t4.delta.add(new Delta(-1));
     t4.delta.add(new Delta(1));
 
@@ -698,10 +698,10 @@ public class MUCA extends ExampleFD {
 
     // ((2, 3))
     Transformation t5 = new Transformation();
-    t5.goodsIds = new ArrayList<Integer>();
+    t5.goodsIds = new ArrayList<>();
     t5.goodsIds.add(2);
     t5.goodsIds.add(3);
-    t5.delta = new ArrayList<Delta>();
+    t5.delta = new ArrayList<>();
     t5.delta.add(new Delta(-1));
     t5.delta.add(new Delta(1));
 
@@ -709,16 +709,16 @@ public class MUCA extends ExampleFD {
 
     bid_2.add(bid_2_xor1);
 
-    List<List<Transformation>> bid_3 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_3 = new ArrayList<>();
 
-    List<Transformation> bid_3_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_3_xor1 = new ArrayList<>();
 
     Transformation t3 = new Transformation();
     // ((1, 2))
-    t3.goodsIds = new ArrayList<Integer>();
+    t3.goodsIds = new ArrayList<>();
     t3.goodsIds.add(1);
     t3.goodsIds.add(2);
-    t3.delta = new ArrayList<Delta>();
+    t3.delta = new ArrayList<>();
     t3.delta.add(new Delta(-1));
     t3.delta.add(new Delta(1));
 
@@ -729,30 +729,30 @@ public class MUCA extends ExampleFD {
     bids.add(bid_2);
     bids.add(bid_3);
 
-    initialQuantity = new ArrayList<Integer>();
+    initialQuantity = new ArrayList<>();
     initialQuantity.add(1);
     initialQuantity.add(0);
     initialQuantity.add(0);
     initialQuantity.add(0);
 
-    finalQuantity = new ArrayList<Integer>();
+    finalQuantity = new ArrayList<>();
     finalQuantity.add(0);
     finalQuantity.add(0);
     finalQuantity.add(0);
     finalQuantity.add(1);
 
-    costs = new ArrayList<List<Integer>>();
-    List<Integer> cost_bid_1 = new ArrayList<Integer>();
+    costs = new ArrayList<>();
+    List<Integer> cost_bid_1 = new ArrayList<>();
     cost_bid_1.add(-5);
 
     costs.add(cost_bid_1);
 
-    List<Integer> cost_bid_2 = new ArrayList<Integer>();
+    List<Integer> cost_bid_2 = new ArrayList<>();
     cost_bid_2.add(-8);
 
     costs.add(cost_bid_2);
 
-    List<Integer> cost_bid_3 = new ArrayList<Integer>();
+    List<Integer> cost_bid_3 = new ArrayList<>();
     cost_bid_3.add(-2);
     costs.add(cost_bid_3);
   }
@@ -762,18 +762,18 @@ public class MUCA extends ExampleFD {
 
     noGoods = 4;
 
-    bids = new ArrayList<List<List<Transformation>>>();
+    bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
-    t1.goodsIds = new ArrayList<Integer>();
+    t1.goodsIds = new ArrayList<>();
     t1.goodsIds.add(0);
     t1.goodsIds.add(1);
-    t1.delta = new ArrayList<Delta>();
+    t1.delta = new ArrayList<>();
     t1.delta.add(new Delta(-1));
     t1.delta.add(new Delta(1));
 
@@ -781,10 +781,10 @@ public class MUCA extends ExampleFD {
 
     // ((2, 3))
     Transformation t2 = new Transformation();
-    t2.goodsIds = new ArrayList<Integer>();
+    t2.goodsIds = new ArrayList<>();
     t2.goodsIds.add(2);
     t2.goodsIds.add(3);
-    t2.delta = new ArrayList<Delta>();
+    t2.delta = new ArrayList<>();
     t2.delta.add(new Delta(-1));
     t2.delta.add(new Delta(1));
 
@@ -792,14 +792,14 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<Transformation> bid_1_xor2 = new ArrayList<Transformation>();
+    List<Transformation> bid_1_xor2 = new ArrayList<>();
 
     Transformation t4 = new Transformation();
     // ((0, 1))
-    t4.goodsIds = new ArrayList<Integer>();
+    t4.goodsIds = new ArrayList<>();
     t4.goodsIds.add(0);
     t4.goodsIds.add(1);
-    t4.delta = new ArrayList<Delta>();
+    t4.delta = new ArrayList<>();
     t4.delta.add(new Delta(-1));
     t4.delta.add(new Delta(1));
 
@@ -807,10 +807,10 @@ public class MUCA extends ExampleFD {
 
     // ((2, 3))
     Transformation t5 = new Transformation();
-    t5.goodsIds = new ArrayList<Integer>();
+    t5.goodsIds = new ArrayList<>();
     t5.goodsIds.add(2);
     t5.goodsIds.add(3);
-    t5.delta = new ArrayList<Delta>();
+    t5.delta = new ArrayList<>();
     t5.delta.add(new Delta(-1));
     t5.delta.add(new Delta(1));
 
@@ -818,16 +818,16 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor2);
 
-    List<List<Transformation>> bid_2 = new ArrayList<List<Transformation>>();
+    List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<Transformation>();
+    List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t3 = new Transformation();
     // ((1, 2))
-    t3.goodsIds = new ArrayList<Integer>();
+    t3.goodsIds = new ArrayList<>();
     t3.goodsIds.add(1);
     t3.goodsIds.add(2);
-    t3.delta = new ArrayList<Delta>();
+    t3.delta = new ArrayList<>();
     t3.delta.add(new Delta(-1));
     t3.delta.add(new Delta(1));
 
@@ -837,26 +837,26 @@ public class MUCA extends ExampleFD {
     bids.add(bid_1);
     bids.add(bid_2);
 
-    initialQuantity = new ArrayList<Integer>();
+    initialQuantity = new ArrayList<>();
     initialQuantity.add(1);
     initialQuantity.add(0);
     initialQuantity.add(0);
     initialQuantity.add(0);
 
-    finalQuantity = new ArrayList<Integer>();
+    finalQuantity = new ArrayList<>();
     finalQuantity.add(0);
     finalQuantity.add(0);
     finalQuantity.add(0);
     finalQuantity.add(1);
 
-    costs = new ArrayList<List<Integer>>();
-    List<Integer> cost_bid_1 = new ArrayList<Integer>();
+    costs = new ArrayList<>();
+    List<Integer> cost_bid_1 = new ArrayList<>();
     cost_bid_1.add(-5);
     cost_bid_1.add(-8);
 
     costs.add(cost_bid_1);
 
-    List<Integer> cost_bid_2 = new ArrayList<Integer>();
+    List<Integer> cost_bid_2 = new ArrayList<>();
     cost_bid_2.add(-2);
     costs.add(cost_bid_2);
   }
@@ -907,7 +907,7 @@ public class MUCA extends ExampleFD {
     int noTransformations = 0;
     int no = 0;
 
-    bidCosts = new ArrayList<IntVar>();
+    bidCosts = new ArrayList<>();
 
     for (List<List<Transformation>> bid : bids) {
 
@@ -921,7 +921,7 @@ public class MUCA extends ExampleFD {
 
         IntervalDomain kSet = new IntervalDomain();
 
-        List<IntVar> xorUsedTransformation = new ArrayList<IntVar>();
+        List<IntVar> xorUsedTransformation = new ArrayList<>();
         for (Transformation t : bid_xor) {
           noTransformations++;
           t.id = noTransformations;
@@ -959,7 +959,7 @@ public class MUCA extends ExampleFD {
 
     for (int g = 0; g < noGoods; g++) {
 
-      List<int[]> tuples4transitions = new ArrayList<int[]>();
+      List<int[]> tuples4transitions = new ArrayList<>();
 
       int[] dummyTransition = {0, 0, 0};
       tuples4transitions.add(dummyTransition);
@@ -986,7 +986,7 @@ public class MUCA extends ExampleFD {
 
       for (int i = 0; i < maxNoTransformations; i++) {
 
-        List<IntVar> vars = new ArrayList<IntVar>();
+        List<IntVar> vars = new ArrayList<>();
         vars.add(transitions[i]);
         deltasI[i][g] = new IntVar(store, "deltaI_g" + g + "t" + i, minDelta, maxDelta);
         vars.add(deltasI[i][g]);
@@ -1063,14 +1063,12 @@ public class MUCA extends ExampleFD {
    */
   public boolean searchSpecial() {
 
-    Search<IntVar> search1 = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search1 = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> select1 =
-        new SimpleSelect<IntVar>(
-            bidCosts.toArray(new IntVar[1]), new MaxRegret<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(bidCosts.toArray(new IntVar[1]), new MaxRegret<>(), new IndomainMin<>());
 
-    Search<IntVar> search2 = new DepthFirstSearch<IntVar>();
-    SelectChoicePoint<IntVar> select2 =
-        new SimpleSelect<IntVar>(transitions, null, new IndomainMin<IntVar>());
+    Search<IntVar> search2 = new DepthFirstSearch<>();
+    SelectChoicePoint<IntVar> select2 = new SimpleSelect<>(transitions, null, new IndomainMin<>());
 
     search1.addChildSearch(search2);
     search2.setSelectChoicePoint(select2);
@@ -1282,8 +1280,8 @@ public class MUCA extends ExampleFD {
 
     // Both must be positive, even if input means consuming.
 
-    public int input;
-    public int output;
+    public final int input;
+    public final int output;
 
     public Delta(int input, int output) {
 

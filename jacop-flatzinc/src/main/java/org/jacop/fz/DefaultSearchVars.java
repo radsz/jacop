@@ -56,7 +56,7 @@ public class DefaultSearchVars {
 
   FloatVar[] float_search_variables = new FloatVar[0];
 
-  Tables dictionary;
+  final Tables dictionary;
 
   private final Comparator<Var> domainSizeComparator =
       (o1, o2) -> {

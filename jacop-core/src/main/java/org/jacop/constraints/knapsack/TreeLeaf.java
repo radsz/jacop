@@ -101,7 +101,7 @@ public final class TreeLeaf extends TreeNode {
   /**
    * @return The variable stored in this leaf
    */
-  public final IntVar getVariable() {
+  public IntVar getVariable() {
     return quantity;
   }
 
@@ -124,7 +124,7 @@ public final class TreeLeaf extends TreeNode {
    *
    * @return If the minimum has changed
    */
-  public final boolean hasMinChanged() {
+  public boolean hasMinChanged() {
     return min() != previousMinQ;
   }
 
@@ -133,7 +133,7 @@ public final class TreeLeaf extends TreeNode {
    *
    * @return The last change of the minimum
    */
-  public final int lastIncreasedOfMin() {
+  public int lastIncreasedOfMin() {
     return min() - previousMinQ;
   }
 
@@ -142,34 +142,34 @@ public final class TreeLeaf extends TreeNode {
    *
    * @return If the maximum has changed
    */
-  public final boolean hasMaxChanged() {
+  public boolean hasMaxChanged() {
 
     return max() != previousMaxQ;
   }
 
   @Override
-  public final int getWMax() {
+  public int getWMax() {
 
     // max() function reflects the value of the slice.
     return max() * weightOfOne;
   }
 
   @Override
-  public final int getWSum() {
+  public int getWSum() {
 
     // max() function reflects the value of the slice.
     return max() * weightOfOne;
   }
 
   @Override
-  public final int getPSum() {
+  public int getPSum() {
 
     // max() function reflects the value of the slice.
     return max() * profitOfOne;
   }
 
   @Override
-  public final boolean isLeaf() {
+  public boolean isLeaf() {
     return true;
   }
 
@@ -178,12 +178,12 @@ public final class TreeLeaf extends TreeNode {
    *
    * @return the efficiency of the item stored at this computer.
    */
-  public final double getEfficiency() {
+  public double getEfficiency() {
     return efficiency;
   }
 
   @Override
-  public final String toString() {
+  public String toString() {
 
     StringBuilder result = new StringBuilder();
 
@@ -195,7 +195,7 @@ public final class TreeLeaf extends TreeNode {
   }
 
   @Override
-  public final String nodeToString() {
+  public String nodeToString() {
     return toString();
   }
 
@@ -220,14 +220,14 @@ public final class TreeLeaf extends TreeNode {
   /**
    * @return The minimum value of the variable after slicing.
    */
-  public final int min() {
+  public int min() {
     return quantity.min() - slice;
   }
 
   /**
    * @return The maximum value of the variable after slicing
    */
-  public final int max() {
+  public int max() {
     return quantity.max() - slice;
   }
 

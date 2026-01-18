@@ -57,8 +57,8 @@ import org.jacop.set.core.SetVar;
  */
 class ElementConstraints implements ParserTreeConstants {
 
-  Support support;
-  Store store;
+  final Support support;
+  final Store store;
 
   public ElementConstraints(Support support) {
     this.support = support;

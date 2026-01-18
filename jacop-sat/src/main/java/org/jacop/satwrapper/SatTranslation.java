@@ -46,9 +46,9 @@ public class SatTranslation {
 
   public boolean debug = false;
 
-  SatWrapper clauses;
+  final SatWrapper clauses;
 
-  Store store;
+  final Store store;
 
   long numberClauses;
 

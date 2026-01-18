@@ -56,7 +56,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
   int minHoleSize;
 
-  int minHoleSizeAfterSplit = 4;
+  final int minHoleSizeAfterSplit = 4;
 
   int[] currentIntervals;
 
@@ -64,8 +64,8 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
   int removeCount = 0;
   boolean addingToIntervals;
-  Boolean valueFalse = Boolean.FALSE;
-  Boolean valueTrue = Boolean.TRUE;
+  final Boolean valueFalse = Boolean.FALSE;
+  final Boolean valueTrue = Boolean.TRUE;
 
   /**
    * It creates a interval based backtrackable manager. At some point, instead of storing a list of

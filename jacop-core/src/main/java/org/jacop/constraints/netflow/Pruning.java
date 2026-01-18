@@ -85,7 +85,7 @@ public class Pruning extends Network {
 
     super(nodes, arcs);
 
-    this.queue = new PriorityQueue<ArcCompanion>();
+    this.queue = new PriorityQueue<>();
     this.strategy = new PercentStrategy(P_ATTEMPT_PRUNING, MIN_NUM_PRUNING);
 
     for (Arc arc : arcs) {
@@ -527,7 +527,7 @@ public class Pruning extends Network {
 
     final double percentage;
     final int minimum;
-    List<ArcCompanion> seen = new ArrayList<ArcCompanion>();
+    final List<ArcCompanion> seen = new ArrayList<>();
     int i;
     int limit;
 

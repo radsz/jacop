@@ -46,7 +46,7 @@ import org.jacop.set.core.SetVar;
  */
 public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
 
-  Random seed;
+  final Random seed;
 
   /** It creates random indomain heuristic with randomly generated seed for random generated. */
   public IndomainSetRandom() {

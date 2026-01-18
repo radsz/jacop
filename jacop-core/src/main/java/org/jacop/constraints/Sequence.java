@@ -51,11 +51,11 @@ import org.jacop.util.fsm.FSMTransition;
  */
 public class Sequence extends DecomposedConstraint<Constraint> {
 
-  IntervalDomain set;
-  int min;
-  int max;
-  int q;
-  IntVar[] list;
+  final IntervalDomain set;
+  final int min;
+  final int max;
+  final int q;
+  final IntVar[] list;
   List<Constraint> constraints;
 
   /**

@@ -40,7 +40,7 @@ public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
 
   int current;
 
-  SmallDenseDomain domain;
+  final SmallDenseDomain domain;
 
   long bits;
 

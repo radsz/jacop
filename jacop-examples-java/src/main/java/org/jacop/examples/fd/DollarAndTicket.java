@@ -72,7 +72,7 @@ public class DollarAndTicket extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IO.println("Program to solve DollarATicket Solve problem ");
 

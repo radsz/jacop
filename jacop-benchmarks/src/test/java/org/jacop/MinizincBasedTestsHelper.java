@@ -63,7 +63,7 @@ public class MinizincBasedTestsHelper {
   protected static Fz2jacop fz2jacop;
   private static final int counter = 0;
   protected String testFilename;
-  String timeCategory;
+  final String timeCategory;
 
   protected MinizincBasedTestsHelper(String timeCategory) {
     this.timeCategory = timeCategory;
@@ -87,7 +87,7 @@ public class MinizincBasedTestsHelper {
         BufferedReader br = new BufferedReader(file)) {
 
       String line = "";
-      List<String> list = new ArrayList<String>();
+      List<String> list = new ArrayList<>();
       int i = 0;
       while ((line = br.readLine()) != null) {
         list.add(i, line);
@@ -126,7 +126,7 @@ public class MinizincBasedTestsHelper {
       try (BufferedReader reader =
           Files.newBufferedReader(Path.of(foo + "/options.opt"), Charset.defaultCharset())) {
         String line;
-        List<String> options = new ArrayList<String>();
+        List<String> options = new ArrayList<>();
         while ((line = reader.readLine()) != null) {
           options.add(line);
         }
@@ -157,7 +157,7 @@ public class MinizincBasedTestsHelper {
   protected void testExecution(String timeCategory) throws IOException {
 
     IO.println("Test file: " + timeCategory + testFilename);
-    List<String> result = new ArrayList<String>();
+    List<String> result = new ArrayList<>();
     List<String> expectedResult =
         expected(timeCategory + testFilename + ".out"); // path to file name *.out
     List<String> res =

@@ -52,10 +52,10 @@ import org.jacop.util.fsm.FSMTransition;
  */
 public class Stretch extends DecomposedConstraint<Constraint> {
 
-  int[] values;
-  int[] min;
-  int[] max;
-  IntVar[] x;
+  final int[] values;
+  final int[] min;
+  final int[] max;
+  final IntVar[] x;
   List<Constraint> constraints;
 
   /**

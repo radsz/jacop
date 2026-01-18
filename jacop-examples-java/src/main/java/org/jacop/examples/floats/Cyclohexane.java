@@ -42,8 +42,8 @@ import org.jacop.search.PrintOutListener;
 
 public class Cyclohexane {
 
-  double MIN_FLOAT = -1e+150;
-  double MAX_FLOAT = 1e+150;
+  final double MIN_FLOAT = -1e+150;
+  final double MAX_FLOAT = 1e+150;
 
   /**
    * It executes the program.
@@ -143,11 +143,11 @@ public class Cyclohexane {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(
+        new SplitSelectFloat<>(
             store, new FloatVar[] {x, y, z}, null); // new SmallestDomainFloat<FloatVar>());
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    label.setSolutionListener(new PrintOutListener<>());
     label.getSolutionListener().recordSolutions(true);
     // label.getSolutionListener().searchAll(true);
     label.setAssignSolution(true);

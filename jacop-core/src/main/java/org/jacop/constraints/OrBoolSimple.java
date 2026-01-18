@@ -45,17 +45,17 @@ import org.jacop.core.Store;
  */
 public class OrBoolSimple extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variables which all must be equal to 1 to set result variable to 1. */
-  public IntVar a;
+  public final IntVar a;
 
-  public IntVar b;
+  public final IntVar b;
 
   /**
    * It specifies variable result, storing the result of or function performed a list of variables.
    */
-  public IntVar result;
+  public final IntVar result;
 
   /**
    * It constructs orBool.

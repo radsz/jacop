@@ -56,22 +56,22 @@ import org.jacop.floats.core.FloatVar;
 public class ElementFloat extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
   public final int indexOffset;
 
   /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  public IntVar index;
+  public final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  public FloatVar value;
+  public final FloatVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0.
    */
-  public double[] list;
+  public final double[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
@@ -80,7 +80,7 @@ public class ElementFloat extends Constraint
    * It specifies for each value what are the possible values of the index variable (it takes into
    * account indexOffset.
    */
-  Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<>();
+  final Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<>();
 
   boolean indexHasChanged = true;
   boolean valueHasChanged = true;

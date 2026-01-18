@@ -91,7 +91,7 @@ public class CalendarMen extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IO.println("This program solves logic puzzle Calendar Men");
 
@@ -471,7 +471,7 @@ public class CalendarMen extends ExampleFD {
   public void modelBasic() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IO.println("This program solves logic puzzle Calendar Men");
 

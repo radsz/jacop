@@ -85,7 +85,7 @@ public class Tunapalooza extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // names
     int Ellyfish = 1, Korrupt = 2, Retread = 3, Yellow = 4;

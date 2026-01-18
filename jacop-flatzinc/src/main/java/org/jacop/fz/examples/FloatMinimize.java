@@ -96,11 +96,11 @@ public class FloatMinimize {
 
     IO.println("Decision variables: " + Arrays.asList(vars) + "\n");
 
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(store, vars, fl.getSearch().getFloatVarSelect().getVarSel());
+        new SplitSelectFloat<>(store, vars, fl.getSearch().getFloatVarSelect().getVarSel());
 
-    Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, (FloatVar) fl.getCost());
+    Optimize<FloatVar> min = new Optimize<>(store, label, s, (FloatVar) fl.getCost());
     boolean result = min.minimize();
 
     if (result) {

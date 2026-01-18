@@ -54,15 +54,15 @@ import org.jacop.core.Store;
 public class Cryptogram extends ExampleFD {
 
   /** It specifies how many lines of expressions can be inputed in one execution. */
-  public int maxInputLines = 100;
+  public final int maxInputLines = 100;
 
   /** It specifies the base of the numerical system to be used in the calculations. */
-  public int base = 10;
+  public final int base = 10;
 
   /** It specifies the file which contains the puzzle to be solved. */
   public String filename;
 
-  public String[] lines = new String[maxInputLines];
+  public final String[] lines = new String[maxInputLines];
 
   public int noLines;
 
@@ -153,10 +153,10 @@ public class Cryptogram extends ExampleFD {
     List<List<String>> words = new ArrayList<>();
 
     // Adding array list for each inputed line
-    for (int i = 0; i < noLines; i++) words.add(new ArrayList<String>());
+    for (int i = 0; i < noLines; i++) words.add(new ArrayList<>());
 
     // letters used in the file.
-    Map<String, IntVar> letters = new HashMap<String, IntVar>();
+    Map<String, IntVar> letters = new HashMap<>();
 
     // parsing the words within each line.
     for (int i = 0; i < noLines; i++) {
@@ -166,7 +166,7 @@ public class Cryptogram extends ExampleFD {
       for (String s : result) words.get(i).add(s);
     }
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     for (int i = 0; i < noLines; i++)
       for (int j = words.get(i).size() - 1; j >= 0; j--)

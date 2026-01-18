@@ -51,13 +51,13 @@ import org.jacop.set.core.SetVar;
  */
 public class AleB extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the first variable of the constraint */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies the second variable of the constraint */
-  public SetVar b;
+  public final SetVar b;
 
   /** Negated constraint */
   AltB aGTb;

@@ -1591,7 +1591,7 @@ public class PerfectSquare extends ExampleFD {
 
     for (int i = 0; i < masterSize - 1; i++) {
 
-      List<IntVar> sumList = new ArrayList<IntVar>();
+      List<IntVar> sumList = new ArrayList<>();
 
       for (int j = 0; j < varsX.length; j++) {
         IntVar b = new IntVar(store, 0, 1);
@@ -1606,7 +1606,7 @@ public class PerfectSquare extends ExampleFD {
 
     for (int i = 0; i < masterSize - 1; i++) {
 
-      List<IntVar> sumList = new ArrayList<IntVar>();
+      List<IntVar> sumList = new ArrayList<>();
 
       for (int j = 0; j < varsY.length; j++) {
         IntVar b = new IntVar(store, 0, 1);
@@ -1682,9 +1682,9 @@ public class PerfectSquare extends ExampleFD {
 
     IntVar[][] rectangles = new IntVar[noRectangles][4];
 
-    List<GeostObject> objects = new ArrayList<GeostObject>();
-    List<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
-    List<Shape> shapes = new ArrayList<Shape>();
+    List<GeostObject> objects = new ArrayList<>();
+    List<ExternalConstraint> constraints = new ArrayList<>();
+    List<Shape> shapes = new ArrayList<>();
 
     IO.print("Constraint model based on Geost and Diffn constraint");
     IO.println("Example " + problemNo + "  No squares = " + noRectangles + " Size = " + masterSize);
@@ -1804,24 +1804,16 @@ public class PerfectSquare extends ExampleFD {
 
     boolean result = store.consistency();
 
-    Search<IntVar> labelSlave1 = new DepthFirstSearch<IntVar>();
+    Search<IntVar> labelSlave1 = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectSlave1 =
-        new SimpleSelect<IntVar>(
-            varsY,
-            new SmallestMin<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(varsY, new SmallestMin<>(), new SmallestDomain<>(), new IndomainMin<>());
 
     labelSlave1.setSelectChoicePoint(selectSlave1);
     labelSlave1.setPrintInfo(false);
 
-    Search<IntVar> labelMaster = new DepthFirstSearch<IntVar>();
+    Search<IntVar> labelMaster = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectMaster =
-        new SimpleSelect<IntVar>(
-            varsX,
-            new SmallestMin<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(varsX, new SmallestMin<>(), new SmallestDomain<>(), new IndomainMin<>());
 
     labelMaster.addChildSearch(labelSlave1);
 

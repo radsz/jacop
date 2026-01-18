@@ -143,8 +143,7 @@ public final class ConflictLearning implements SolverComponent {
    * @param level the level of selectable literals
    * @return the last set literal of the clause, at current level, or 0 if none has been found
    */
-  private final int findPositionTopLiteral(
-      MapClause explanationClause, int level, int startingPosition) {
+  private int findPositionTopLiteral(MapClause explanationClause, int level, int startingPosition) {
     // TODO : improve perfs.
 
     for (int i = startingPosition; i >= 0; --i) {
@@ -172,7 +171,7 @@ public final class ConflictLearning implements SolverComponent {
    * @param explanationClause the explanation clause
    * @param literal the literal that must be resolved
    */
-  private final void applyExplain(MapClause explanationClause, int literal) {
+  private void applyExplain(MapClause explanationClause, int literal) {
     assert explanationClause.containsVariable(literal);
     assert trail.isSet(Math.abs(literal));
     assert !trail.isAsserted(Math.abs(literal));

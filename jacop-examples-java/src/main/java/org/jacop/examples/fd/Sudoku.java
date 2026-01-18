@@ -110,7 +110,7 @@ public class Sudoku extends ExampleFD {
     int noColumns = 3;
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
@@ -138,7 +138,7 @@ public class Sudoku extends ExampleFD {
     for (int i = 0; i < noRows; i++)
       for (int j = 0; j < noColumns; j++) {
 
-        List<IntVar> block = new ArrayList<IntVar>();
+        List<IntVar> block = new ArrayList<>();
         for (int k = 0; k < noColumns; k++)
           block.addAll(
               Arrays.asList(elements[i * noColumns + k])
@@ -170,7 +170,7 @@ public class Sudoku extends ExampleFD {
     int noColumns = 3;
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
@@ -199,7 +199,7 @@ public class Sudoku extends ExampleFD {
     for (int i = 0; i < noRows; i++)
       for (int j = 0; j < noColumns; j++) {
 
-        List<IntVar> block = new ArrayList<IntVar>();
+        List<IntVar> block = new ArrayList<>();
         for (int k = 0; k < noColumns; k++)
           block.addAll(
               Arrays.asList(elements[i * noColumns + k])

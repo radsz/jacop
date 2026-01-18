@@ -109,17 +109,16 @@ public class CPvizGardner {
     boolean Result = store.consistency();
     IO.println("*** consistency = " + Result);
 
-    Search<SetVar> label = new DepthFirstSearch<SetVar>();
+    Search<SetVar> label = new DepthFirstSearch<>();
 
-    SelectChoicePoint<SetVar> varSelect =
-        new SimpleSelect<SetVar>(days, null, new IndomainSetMin<SetVar>());
+    SelectChoicePoint<SetVar> varSelect = new SimpleSelect<>(days, null, new IndomainSetMin<>());
 
-    label.setSolutionListener(new SimpleSolutionListener<SetVar>());
+    label.setSolutionListener(new SimpleSolutionListener<>());
     label.getSolutionListener().searchAll(false);
     label.getSolutionListener().recordSolutions(false);
 
     // Trace --->
-    SelectChoicePoint<SetVar> select = new TraceGenerator<SetVar>(label, varSelect); // , days);
+    SelectChoicePoint<SetVar> select = new TraceGenerator<>(label, varSelect); // , days);
     //      label.setConsistencyListener((ConsistencyListener)select);
     //     label.setExitChildListener((ExitChildListener)select);
     //      label.setExitListener((ExitListener)select);

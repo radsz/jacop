@@ -177,7 +177,7 @@ public final class IntQueue implements Iterable<Integer> {
     }
 
     /** find the next index */
-    private final void findNext() {
+    private void findNext() {
       index++;
       if (index == array.length) index = 0;
       if (index == stop) hasNext = false;

@@ -59,16 +59,16 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
   /** It specifies if the debugging information is printed. */
   public static final boolean debugAll = false;
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a multiple value decision diagram used by this constraint. */
-  public MDD mdd;
+  public final MDD mdd;
 
   TimeStamp<Integer> G_no_size;
-  SparseSet G_no;
+  final SparseSet G_no;
   SparseSet G_yes;
 
-  IndexDomainView[] views;
+  final IndexDomainView[] views;
 
   /**
    * It creates an extensional constraint.
@@ -201,7 +201,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
 
     result.append(" : extensionalSupportMDD( ");
 

@@ -64,7 +64,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
   public boolean roundRobin = true;
 
-  TimeStamp<Integer> currentIndex;
+  final TimeStamp<Integer> currentIndex;
 
   /**
    * The constructor to create a simple choice select mechanism.

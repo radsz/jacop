@@ -47,13 +47,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class PeqQ extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a left hand variable in equality constraint. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /** It specifies a right hand variable in equality constraint. */
-  public FloatVar q;
+  public final FloatVar q;
 
   /**
    * It constructs constraint P = Q.

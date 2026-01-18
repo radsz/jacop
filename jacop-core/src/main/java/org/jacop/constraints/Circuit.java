@@ -49,19 +49,19 @@ import org.jacop.util.SophisticatedLengauerTarjan;
  */
 public class Circuit extends Alldiff implements Stateful {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   int chainLength = 0;
   boolean firstConsistencyCheck = true;
   MutableVar[] graph;
   int idd = 0;
   int sccLength = 0;
-  int[] val;
-  Hashtable<Var, Integer> valueIndex = new Hashtable<>();
+  final int[] val;
+  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
 
   int firstConsistencyLevel;
 
-  SophisticatedLengauerTarjan graphDominance;
-  Random random = new Random(0);
+  final SophisticatedLengauerTarjan graphDominance;
+  final Random random = new Random(0);
 
   /**
    * It constructs a circuit constraint.
@@ -245,7 +245,7 @@ public class Circuit extends Alldiff implements Stateful {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : circuit([");
 
     for (int i = 0; i < list.length; i++) {

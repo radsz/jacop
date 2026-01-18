@@ -46,9 +46,9 @@ import org.jacop.core.Store;
 
 public class CumulativeUnaryOptional extends CumulativeUnary {
 
-  IntVar[] opt;
+  final IntVar[] opt;
 
-  ProfileOptional up;
+  final ProfileOptional up;
 
   /**
    * It creates a cumulative constraint.

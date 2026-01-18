@@ -159,7 +159,7 @@ public class RegStateDom extends RegState {
 
       int v = enumer.nextElement();
 
-      if (hashMap.get(v) == null) hashMap.put(v, new RegEdge(this, successors[i]));
+      hashMap.computeIfAbsent(v, k -> new RegEdge(this, successors[i]));
     }
   }
 

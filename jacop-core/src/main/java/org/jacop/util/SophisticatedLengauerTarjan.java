@@ -31,8 +31,8 @@ package org.jacop.util;
  */
 public class SophisticatedLengauerTarjan extends LengauerTarjan {
 
-  int[] child;
-  int[] size;
+  final int[] child;
+  final int[] size;
 
   public SophisticatedLengauerTarjan(int n) {
     super(n);

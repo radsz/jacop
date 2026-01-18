@@ -67,25 +67,25 @@ public class SumInt extends PrimitiveConstraint {
     lt // ge=5;
   };
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what relations is used by this constraint */
-  public byte relationType;
+  public final byte relationType;
 
-  Store store;
+  final Store store;
   boolean reified = true;
 
   /** It specifies a list of variables being summed. */
-  IntVar[] x;
+  final IntVar[] x;
 
   /** It specifies variable for the overall sum. */
-  IntVar sum;
+  final IntVar sum;
 
   /** It specifies the number of variables. */
-  int l;
+  final int l;
 
   /** It specifies "variability" of each variable */
-  long[] I;
+  final long[] I;
 
   /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values) */
   long sumXmin, sumXmax;
@@ -440,18 +440,38 @@ public class SumInt extends PrimitiveConstraint {
   }
 
   public byte relation(String r) {
-    if (r.equals("==")) return eq;
-    else if (r.equals("=")) return eq;
-    else if (r.equals("<")) return lt;
-    else if (r.equals("<=")) return le;
-    else if (r.equals("=<")) return le;
-    else if (r.equals("!=")) return ne;
-    else if (r.equals(">")) return gt;
-    else if (r.equals(">=")) return ge;
-    else if (r.equals("=>")) return ge;
-    else {
-      System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
-      return eq;
+    switch (r) {
+      case "==" -> {
+        return eq;
+      }
+      case "=" -> {
+        return eq;
+      }
+      case "<" -> {
+        return lt;
+      }
+      case "<=" -> {
+        return le;
+      }
+      case "=<" -> {
+        return le;
+      }
+      case "!=" -> {
+        return ne;
+      }
+      case ">" -> {
+        return gt;
+      }
+      case ">=" -> {
+        return ge;
+      }
+      case "=>" -> {
+        return ge;
+      }
+      default -> {
+        System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
+        return eq;
+      }
     }
   }
 

@@ -70,16 +70,16 @@ import org.jacop.core.Var;
 public class Shaving<T extends IntVar> implements ExitChildListener<T>, ConsistencyListener {
 
   /** It specifies if only the last failed constraint is allowed to suggest shaving values. */
-  public boolean onlyFailedConstraint = false;
+  public final boolean onlyFailedConstraint = false;
 
   /**
    * It specifies if only variables in the scope of the last failed constraint are allowed to be
    * used in shaving attempts.
    */
-  public boolean onlyIntVarsOfFailedConstraint = false;
+  public final boolean onlyIntVarsOfFailedConstraint = false;
 
   /** It stores the variables of the last failed constraints. */
-  public HashSet<IntVar> varsOfFailedConstraint = new HashSet<>();
+  public final HashSet<IntVar> varsOfFailedConstraint = new HashSet<>();
 
   /**
    * It specifies if the quickShave approach should be also used. Quickshave uses variable-value
@@ -95,7 +95,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   public int failures = 0;
 
   /** It contains list of constraints which suggest shaving explorations. */
-  List<Constraint> shavingConstraints = new ArrayList<>();
+  final List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** It specifies if the search is in the left child. */
   boolean leftChild = true;
@@ -106,11 +106,11 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   Store store;
 
   Constraint recentlyFailedConstraint = null;
-  boolean leftChildShaving = true;
+  final boolean leftChildShaving = true;
   boolean rightChild = false;
   boolean wrongDecisionEncountered;
-  List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
-  Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
+  final List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
+  final Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
   private ExitChildListener<T>[] exitChildListeners;
   private ConsistencyListener[] consistencyListeners;
   private boolean leftChildWrongDecision = false;
@@ -148,12 +148,9 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
         if (position < 0) position = 0;
 
         Map<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
-        LinkedHashSet<Integer> shaveVarList = current.get(var);
+        LinkedHashSet<Integer> shaveVarList =
+            current.computeIfAbsent(var, k -> new LinkedHashSet<>());
 
-        if (shaveVarList == null) {
-          shaveVarList = new LinkedHashSet<>();
-          current.put(var, shaveVarList);
-        }
         shaveVarList.add(value);
       }
     }
@@ -217,11 +214,8 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
           if (shavablePair) {
 
-            LinkedHashSet<Integer> shaveVarList = shavableCurrent.get(shaveVar);
-            if (shaveVarList == null) {
-              shaveVarList = new LinkedHashSet<>();
-              shavableCurrent.put(shaveVar, shaveVarList);
-            }
+            LinkedHashSet<Integer> shaveVarList =
+                shavableCurrent.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
             shaveVarList.add(shaveVal);
 
             store.impose(new XneqC(shaveVar, shaveVal));
@@ -236,11 +230,8 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
             // record that pair (shaveVar,shareValue) was not
             // shaved.
-            LinkedHashSet<Integer> notShaveVarList = notShavable.get(shaveVar);
-            if (notShaveVarList == null) {
-              notShaveVarList = new LinkedHashSet<>();
-              notShavable.put(shaveVar, notShaveVarList);
-            }
+            LinkedHashSet<Integer> notShaveVarList =
+                notShavable.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
             notShaveVarList.add(shaveVal);
           }
         }
@@ -279,12 +270,9 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
         if (shavablePair) {
 
-          LinkedHashSet<Integer> shaveVarList = shavableCurrent.get(shaveVar);
+          LinkedHashSet<Integer> shaveVarList =
+              shavableCurrent.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
 
-          if (shaveVarList == null) {
-            shaveVarList = new LinkedHashSet<>();
-            shavableCurrent.put(shaveVar, shaveVarList);
-          }
           shaveVarList.add(shaveVal);
 
           store.impose(new XneqC(shaveVar, shaveVal));
@@ -295,11 +283,8 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
         } else {
 
           // record that pair (shaveVar,shareValue) was not shaved.
-          LinkedHashSet<Integer> notShaveVarList = notShavable.get(shaveVar);
-          if (notShaveVarList == null) {
-            notShaveVarList = new LinkedHashSet<>();
-            notShavable.put(shaveVar, notShaveVarList);
-          }
+          LinkedHashSet<Integer> notShaveVarList =
+              notShavable.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
           notShaveVarList.add(shaveVal);
         }
       }

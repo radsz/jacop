@@ -45,11 +45,12 @@ import org.jacop.core.IntVar;
  */
 public class PrintSchedule {
 
-  int[] d;
+  final int[] d;
 
-  List<String> n;
+  final List<String> n;
 
-  IntVar[] t, r;
+  final IntVar[] t;
+  final IntVar[] r;
 
   /**
    * It constructs PrintSchedule object.
@@ -262,8 +263,8 @@ public class PrintSchedule {
 
       for (List<Integer> integers : Line) {
         int sp = result.length();
-        for (int ri = 0; ri < integers.size(); ri++)
-          result.append("[").append(TaskArr[integers.get(ri)].getFirst()).append("]");
+        for (Integer integer : integers)
+          result.append("[").append(TaskArr[integer].getFirst()).append("]");
 
         if (integers.isEmpty()) result.append("-");
         //		s = s + "-";

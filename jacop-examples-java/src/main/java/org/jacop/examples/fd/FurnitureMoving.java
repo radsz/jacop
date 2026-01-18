@@ -126,7 +126,7 @@ public class FurnitureMoving extends ExampleFD {
       store.impose(new XeqC(numPersons, 3));
     }
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     vars.addAll(Arrays.asList(starts));
 
@@ -145,10 +145,10 @@ public class FurnitureMoving extends ExampleFD {
   public boolean searchSpecific() {
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
 

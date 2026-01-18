@@ -92,9 +92,9 @@ public abstract class ExampleSet {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
 
     boolean result = search.labeling(store, select);
 
@@ -126,9 +126,9 @@ public abstract class ExampleSet {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
 
     boolean result = search.labeling(store, select, cost);
 
@@ -152,9 +152,9 @@ public abstract class ExampleSet {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(vars.toArray(new SetVar[1]), null, new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
 
@@ -180,12 +180,10 @@ public abstract class ExampleSet {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(
-            vars.toArray(new SetVar[1]),
-            new SmallestDomain<SetVar>(),
-            new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(
+            vars.toArray(new SetVar[1]), new SmallestDomain<>(), new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
 
     boolean result = false;
 
@@ -221,13 +219,13 @@ public abstract class ExampleSet {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(
+        new SimpleSelect<>(
             vars.toArray(new SetVar[1]),
-            new WeightedDegree<SetVar>(store),
-            new SmallestDomain<SetVar>(),
-            new IndomainSetMin<SetVar>());
+            new WeightedDegree<>(store),
+            new SmallestDomain<>(),
+            new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
 
     boolean result = search.labeling(store, select);
 
@@ -255,13 +253,11 @@ public abstract class ExampleSet {
    */
   public boolean searchMostConstrainedStatic() {
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(
-            vars.toArray(new SetVar[1]),
-            new MostConstrainedStatic<SetVar>(),
-            new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(
+            vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
 
     boolean result = search.labeling(store, select);
 
@@ -289,12 +285,10 @@ public abstract class ExampleSet {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(
-            vars.toArray(new SetVar[1]),
-            new MostConstrainedStatic<SetVar>(),
-            new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(
+            vars.toArray(new SetVar[1]), new MostConstrainedStatic<>(), new IndomainSetMin<>());
 
-    search = new DepthFirstSearch<SetVar>();
+    search = new DepthFirstSearch<>();
 
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
@@ -327,16 +321,14 @@ public abstract class ExampleSet {
 
     boolean result = false;
 
-    Search<SetVar> labelSlave = new DepthFirstSearch<SetVar>();
+    Search<SetVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<SetVar> selectSlave =
-        new SimpleSelect<SetVar>(
-            slaveVars.toArray(new SetVar[0]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(slaveVars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
     labelSlave.setSelectChoicePoint(selectSlave);
 
-    Search<SetVar> labelMaster = new DepthFirstSearch<SetVar>();
+    Search<SetVar> labelMaster = new DepthFirstSearch<>();
     SelectChoicePoint<SetVar> selectMaster =
-        new SimpleSelect<SetVar>(
-            masterVars.toArray(new SetVar[0]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<>(masterVars.toArray(new SetVar[0]), null, new IndomainSetMin<>());
 
     labelMaster.addChildSearch(labelSlave);
 

@@ -61,13 +61,13 @@ public class SGMPCSearch {
   public static final int luby = 1;
   public static final int poly = 2;
   static final double precision = 1e-12;
-  public Store store;
+  public final Store store;
 
   /** Variables for search. */
-  public IntVar[] vars;
+  public final IntVar[] vars;
 
   /** Cost variable. */
-  public IntVar cost;
+  public final IntVar cost;
 
   // e- number of elite solutions
   public int e = 4;
@@ -77,7 +77,7 @@ public class SGMPCSearch {
   // at position 0 is cost and values of variables start at positions 1
   public int[][] elite;
   public int costPosition;
-  boolean trace = false;
+  final boolean trace = false;
   boolean printInfo = true;
   // Start time of the search to compute termination criteria
   long searchStartTime;
@@ -102,9 +102,9 @@ public class SGMPCSearch {
   int[] solution;
   // time-out value in miliseconds (default 10 second)
   long timeOut = 10000;
-  ImproveSolution<IntVar> search;
-  Function<Integer, Comparator<int[]>> solutionComparator =
-      (p) -> (int[] o1, int[] o2) -> (o1[p] - o2[p]);
+  final ImproveSolution<IntVar> search;
+  final Function<Integer, Comparator<int[]>> solutionComparator =
+      (p) -> Comparator.comparingInt((int[] o) -> o[p]);
 
   public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
@@ -165,8 +165,8 @@ public class SGMPCSearch {
       v[vars.length] = cost;
     } else v = vars;
 
-    DepthFirstSearch<IntVar> label = new DepthFirstSearch<IntVar>();
-    SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(v, null, new IndomainMin<IntVar>());
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
+    SelectChoicePoint<IntVar> select = new SimpleSelect<>(v, null, new IndomainMin<>());
     label.getSolutionListener().searchAll(true);
     label.getSolutionListener().recordSolutions(true);
     label.getSolutionListener().setSolutionLimit(eInit);

@@ -389,10 +389,10 @@ class CumulativePrimary extends Constraint {
   }
 
   private static class Event {
-    int type;
-    int index;
-    int date;
-    int value;
+    final int type;
+    final int index;
+    final int date;
+    final int value;
 
     Event(int type, int t, int date, int value) {
       this.type = type;

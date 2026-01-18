@@ -44,13 +44,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class PgtC extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable p which must be greater than a given constraint. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /** It specifies a constant C from which a given variable must be greater. */
-  public double c;
+  public final double c;
 
   /**
    * It constructs constraint P {@literal >} C.

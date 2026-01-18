@@ -56,9 +56,9 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
         }
       };
 
-  protected List<int[]> eqns;
-  protected List<IntVar> vars;
-  protected Map<IntVar, Integer> map;
+  protected final List<int[]> eqns;
+  protected final List<IntVar> vars;
+  protected final Map<IntVar, Integer> map;
 
   List<Constraint> decomposition;
 

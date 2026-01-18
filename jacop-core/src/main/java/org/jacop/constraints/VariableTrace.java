@@ -46,9 +46,9 @@ import org.jacop.core.Var;
  */
 public class VariableTrace extends Constraint implements UsesQueueVariable, RemoveLevelLate {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  Var[] vars;
+  final Var[] vars;
   Store store;
 
   /**

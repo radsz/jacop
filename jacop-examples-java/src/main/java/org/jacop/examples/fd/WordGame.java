@@ -62,7 +62,8 @@ import org.jacop.util.MDD;
  */
 public class WordGame {
 
-  public static String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
+  public static final String defaultDictionary =
+      "src/main/java/org/jacop/examples/fd/crosswords/words";
 
   static void main(String[] args) {
 
@@ -84,7 +85,7 @@ public class WordGame {
       SelectChoicePoint<IntVar> select =
           new SimpleSelect<>(unknownWord, new SmallestDomain<>(), new IndomainMin<>());
       Search<IntVar> search = new DepthFirstSearch<>();
-      PrintListener<IntVar> simpleSolutionListener = new PrintListener<IntVar>();
+      PrintListener<IntVar> simpleSolutionListener = new PrintListener<>();
       search.setSolutionListener(simpleSolutionListener);
       simpleSolutionListener.searchAll(true);
       simpleSolutionListener.recordSolutions(false);

@@ -47,9 +47,9 @@ import org.jacop.core.Store;
  */
 public class FittingNumbers extends ExampleFD {
 
-  int[] elements = {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
+  final int[] elements = {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
 
-  int[] sum = {13000};
+  final int[] sum = {13000};
 
   /**
    * It executes the program to solve simple Kakro puzzle.
@@ -71,7 +71,7 @@ public class FittingNumbers extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] counters = new IntVar[elements.length];
 

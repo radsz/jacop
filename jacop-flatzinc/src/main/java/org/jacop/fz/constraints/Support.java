@@ -63,16 +63,16 @@ public class Support implements ParserTreeConstants {
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar = null;
-  Store store;
-  Tables dictionary;
+  final Store store;
+  final Tables dictionary;
   // ============ SAT solver interface ==============
-  SatTranslation sat;
+  final SatTranslation sat;
   boolean intPresent = true;
   boolean floatPresent = true;
-  ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
-  ArrayList<Constraint> delayedConstraints = new ArrayList<>();
-  ReificationConstraints reif = new ReificationConstraints(this);
-  ImplicationConstraints imply = new ImplicationConstraints(this);
+  final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final ReificationConstraints reif = new ReificationConstraints(this);
+  final ImplicationConstraints imply = new ImplicationConstraints(this);
 
   public Support(Store store, Tables d, SatTranslation sat) {
     this.store = store;
@@ -474,27 +474,31 @@ public class Support implements ParserTreeConstants {
       // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
       constraintPriority = -1;
 
-      if (ann.getAnnId().equals("$expr")) {
-        ASTScalarFlatExpr n = (ASTScalarFlatExpr) ann.jjtGetChild(0).jjtGetChild(0);
-        if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
-          boundsConsistency = true;
-          domainConsistency = false;
-        } else if (n.getIdent().equals("domain")) {
-          boundsConsistency = false;
-          domainConsistency = true;
+      switch (ann.getAnnId()) {
+        case "$expr" -> {
+          ASTScalarFlatExpr n = (ASTScalarFlatExpr) ann.jjtGetChild(0).jjtGetChild(0);
+          if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
+            boundsConsistency = true;
+            domainConsistency = false;
+          } else if (n.getIdent().equals("domain")) {
+            boundsConsistency = false;
+            domainConsistency = true;
+          }
         }
-      } else if (ann.getAnnId().equals("defines_var")) { // no used in JaCoP yet
-        SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
-        ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
-        Var v = getAnnVar(expr);
+        case "defines_var" -> { // no used in JaCoP yet
+          SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
+          ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
+          Var v = getAnnVar(expr);
 
-        definedVar = (IntVar) v;
-      } else if (ann.getAnnId().equals("priority")) {
-        SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
-        ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
-        int val = getAnnInt(expr);
+          definedVar = (IntVar) v;
+        }
+        case "priority" -> {
+          SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
+          ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
+          int val = getAnnInt(expr);
 
-        constraintPriority = val;
+          constraintPriority = val;
+        }
       }
     }
     // System.out.println("defines " + definedVar);

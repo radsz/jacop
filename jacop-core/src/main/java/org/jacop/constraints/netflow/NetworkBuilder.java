@@ -291,8 +291,8 @@ public class NetworkBuilder {
       }
     }
 
-    List<IntVar> vars = new ArrayList<IntVar>();
-    List<Integer> weights = new ArrayList<Integer>();
+    List<IntVar> vars = new ArrayList<>();
+    List<Integer> weights = new ArrayList<>();
 
     boolean simpleSum = true;
     for (Arc arc : arcList) {

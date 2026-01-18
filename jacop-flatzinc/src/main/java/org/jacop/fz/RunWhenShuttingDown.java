@@ -32,7 +32,7 @@ package org.jacop.fz;
 
 public class RunWhenShuttingDown extends Thread {
 
-  Parser parser;
+  final Parser parser;
 
   public RunWhenShuttingDown(Parser parser) {
     this.parser = parser;

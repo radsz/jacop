@@ -206,7 +206,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       noSolutions++;
       if (parentSolutionListener != null) {
         parentSolutionNo[0] = parentSolutionListener.solutionsNo();
-        ((SimpleSolutionListener) parentSolutionListener).noSolutions =
+        ((SimpleSolutionListener<?>) parentSolutionListener).noSolutions =
             noSolutions; // KKU, 2020-01-09, added to make flatzinc option -n X work properly
       }
     }
@@ -294,7 +294,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   @Override
   public String toString() {
 
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
 
     if (noSolutions > 1) {
       buf.append("\nNo of solutions : ").append(noSolutions);

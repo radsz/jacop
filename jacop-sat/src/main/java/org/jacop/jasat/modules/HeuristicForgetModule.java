@@ -54,7 +54,7 @@ public final class HeuristicForgetModule
     implements ForgetListener, ExplanationListener, BackjumpListener {
 
   // after how many learnt clauses can we try to forget() ?
-  public int LEARNT_CLAUSES_NUMBER_THRESHOLD = 1000;
+  public final int LEARNT_CLAUSES_NUMBER_THRESHOLD = 1000;
 
   /** threshold of activity under which a clause is removed */
   public double FORGET_THRESHOLD = 10;
@@ -123,7 +123,7 @@ public final class HeuristicForgetModule
    *
    * @return true if the heuristic advises to forget AND the level is 0
    */
-  public final boolean shouldTriggerForget() {
+  public boolean shouldTriggerForget() {
     return core.currentLevel == 0 && numberOfLearntClauses() > LEARNT_CLAUSES_NUMBER_THRESHOLD;
   }
 

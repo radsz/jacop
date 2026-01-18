@@ -71,25 +71,22 @@ import org.jacop.util.fsm.FSMTransition;
  */
 class GlobalConstraints implements ParserTreeConstants {
 
-  Store store;
-  Support support;
+  final Store store;
+  final Support support;
 
   boolean useDisjunctions = false;
   boolean useCumulativeUnary = false;
 
-  java.util.Comparator<ArrayList<Integer>> rowComparator =
-      new java.util.Comparator<>() {
-        @Override
-        public int compare(ArrayList<Integer> o1, ArrayList<Integer> o2) {
-          for (int i = 0; i < o1.size(); i++) {
-            if (o1.get(i) > o2.get(i)) {
-              return 1;
-            } else if (o1.get(i) < o2.get(i)) {
-              return -1;
-            }
+  final java.util.Comparator<ArrayList<Integer>> rowComparator =
+      (o1, o2) -> {
+        for (int i = 0; i < o1.size(); i++) {
+          if (o1.get(i) > o2.get(i)) {
+            return 1;
+          } else if (o1.get(i) < o2.get(i)) {
+            return -1;
           }
-          return 0; // all equal
         }
+        return 0; // all equal
       };
   ArrayList<Pair> duplicates;
 

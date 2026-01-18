@@ -60,11 +60,7 @@ public class ActivityMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
     double right = var.activity() / var.getSizeFloat();
 
-    if (left > right) return 1;
-
-    if (left < right) return -1;
-
-    return 0;
+    return Double.compare(left, right);
   }
 
   public int compare(T leftVar, T rightVar) {
@@ -73,11 +69,7 @@ public class ActivityMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
     double right = rightVar.activity() / rightVar.getSizeFloat();
 
-    if (left > right) return 1;
-
-    if (left < right) return -1;
-
-    return 0;
+    return Double.compare(left, right);
   }
 
   public double metric(T var) {

@@ -48,11 +48,11 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
   static final boolean debugAll = false;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
-  public Map<T, Integer> position;
+  public final Map<T, Integer> position;
 
-  T[] searchVariables;
-  Indomain<T> valueOrdering;
-  TimeStamp<Integer> currentIndex;
+  final T[] searchVariables;
+  final Indomain<T> valueOrdering;
+  final TimeStamp<Integer> currentIndex;
 
   /**
    * It constructs an input order selection procedure.

@@ -47,7 +47,7 @@ import org.jacop.floats.core.FloatVar;
  */
 public class PneqC extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the constant to which a specified variable should be equal to. */
   public double c;

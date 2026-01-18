@@ -68,7 +68,7 @@ public class ElementInteger extends Constraint
    */
   static final int minDuplicatesSize = 10;
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
   public final int indexOffset;
@@ -80,16 +80,16 @@ public class ElementInteger extends Constraint
   public final boolean checkDuplicates;
 
   /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
-  public IntVar index;
+  public final IntVar index;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  public IntVar value;
+  public final IntVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public int[] list;
+  public final int[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

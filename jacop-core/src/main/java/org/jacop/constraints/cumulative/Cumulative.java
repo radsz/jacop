@@ -62,11 +62,11 @@ import org.jacop.core.Store;
 
 public class Cumulative extends CumulativeBasic {
 
-  protected Comparator<TaskView> taskIncEstComparator =
+  protected final Comparator<TaskView> taskIncEstComparator =
       (o1, o2) -> (o1.est() == o2.est()) ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
-  protected Comparator<TaskView> taskDecLctComparator =
+  protected final Comparator<TaskView> taskDecLctComparator =
       (o1, o2) -> (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
-  TaskView[] taskReversed;
+  final TaskView[] taskReversed;
   boolean doEdgeFind = true;
   boolean doQuadraticEdgeFind = false;
   private Set<Integer> preComputedCapacities = null;
@@ -357,7 +357,7 @@ public class Cumulative extends CumulativeBasic {
 
     int n = ts.length;
     // sorted by non-decreasing deadline (lct)
-    Arrays.sort(ts, (TaskView o1, TaskView o2) -> o1.lct() - o2.lct());
+    Arrays.sort(ts, Comparator.comparingInt(TaskView::lct));
 
     int[] LB = new int[n];
     int[] Dupd = new int[n];
@@ -375,7 +375,7 @@ public class Cumulative extends CumulativeBasic {
     // tasks t1 sorted by non-incereasing relese dates (est)
     Arrays.sort(t1, (Integer o1, Integer o2) -> ts[o2].est() - ts[o1].est());
     // tasks t2 sorted by non-decreasing relese dates (est)
-    Arrays.sort(t2, (Integer o1, Integer o2) -> ts[o1].est() - ts[o2].est());
+    Arrays.sort(t2, Comparator.comparingInt((Integer o) -> ts[o].est()));
 
     for (TaskView u : ts) {
 

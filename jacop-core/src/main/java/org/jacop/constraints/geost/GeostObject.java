@@ -74,13 +74,13 @@ public class GeostObject {
   public final ArrayList<Var> variables;
 
   /** It specifies the time constraint to execute to ensure that start + duration = end. */
-  TimeBoundConstraint timeConstraint;
+  final TimeBoundConstraint timeConstraint;
 
   /**
    * For each dimension, the shape ID that provided the minimal lower bound or the maximal
    * upperBound
    */
-  int[] bestShapeID;
+  final int[] bestShapeID;
 
   /** It specifies the number of variables currently grounded. */
   int groundCount;

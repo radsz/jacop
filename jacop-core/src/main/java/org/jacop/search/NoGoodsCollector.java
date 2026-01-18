@@ -182,7 +182,7 @@ public class NoGoodsCollector<T extends IntVar>
   public String toString() {
 
     if (noGoodsVariables != null) {
-      StringBuffer sb = new StringBuffer(noGoodsVariables.toString());
+      StringBuilder sb = new StringBuilder(noGoodsVariables.toString());
       sb.append(noGoodsValues.toString());
       return sb.toString();
     } else return "[]";

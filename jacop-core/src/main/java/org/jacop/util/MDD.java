@@ -534,7 +534,7 @@ public class MDD {
   @SuppressWarnings("unchecked")
   public void reduce() {
 
-    reducedNodes = new TreeMap<Integer, Integer>();
+    reducedNodes = new TreeMap<>();
 
     same = new ArrayList[vars.length][];
     id = new ArrayList[vars.length][];
@@ -605,8 +605,8 @@ public class MDD {
       }
     else {
 
-      same[level][numberOfChildren] = new ArrayList<int[]>();
-      id[level][numberOfChildren] = new ArrayList<Integer>();
+      same[level][numberOfChildren] = new ArrayList<>();
+      id[level][numberOfChildren] = new ArrayList<>();
     }
 
     id[level][numberOfChildren].add(node);
@@ -668,7 +668,7 @@ public class MDD {
   @Override
   public String toString() {
 
-    StringBuffer buffer = new StringBuffer("");
+    StringBuilder buffer = new StringBuilder("");
     for (int i = 0; i < diagram.length && i < freePosition; i++)
       buffer.append(diagram[i]).append(" ");
 

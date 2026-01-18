@@ -61,7 +61,7 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
   }
 
   List<? extends IntVar> fdvs(int index) {
-    List<IntVar> list = new ArrayList<IntVar>();
+    List<IntVar> list = new ArrayList<>();
     for (int i = 0; i < size(); i++) {
       ExclusiveItem v = get(i);
       if (index == v.i1 && !v.cond.singleton()) list.add(v.cond);

@@ -92,7 +92,7 @@ public class Exodus extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     String[] firstnames = {"Bernice", "Carl", "Debby", "Sammy", "Ted"};
 

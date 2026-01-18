@@ -38,8 +38,8 @@ package org.jacop.search.restart;
  */
 public class GeometricCalculator extends Calculator {
 
-  int scale;
-  double base;
+  final int scale;
+  final double base;
   int n;
 
   public GeometricCalculator(double base, int scale) {

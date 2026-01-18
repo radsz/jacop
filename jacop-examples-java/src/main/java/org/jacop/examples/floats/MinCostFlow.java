@@ -43,8 +43,8 @@ import org.jacop.search.DepthFirstSearch;
 
 public class MinCostFlow {
 
-  double MIN_FLOAT = -1e+150;
-  double MAX_FLOAT = 1e+150;
+  final double MIN_FLOAT = -1e+150;
+  final double MAX_FLOAT = 1e+150;
 
   /**
    * It executes the program.
@@ -87,16 +87,16 @@ public class MinCostFlow {
 
     for (int i = 0; i < n; i++) {
 
-      List<FloatVar> outFlow = new ArrayList<FloatVar>();
-      List<Double> outFlowWeights = new ArrayList<Double>();
+      List<FloatVar> outFlow = new ArrayList<>();
+      List<Double> outFlowWeights = new ArrayList<>();
       for (int j = 0; j < m; j++)
         if (arcs[j][1] == i + 1) {
           outFlow.add(X[j]);
           outFlowWeights.add(1.0);
         }
 
-      List<FloatVar> inFlow = new ArrayList<FloatVar>();
-      List<Double> inFlowWeights = new ArrayList<Double>();
+      List<FloatVar> inFlow = new ArrayList<>();
+      List<Double> inFlowWeights = new ArrayList<>();
       for (int j = 0; j < m; j++)
         if (arcs[j][0] == i + 1) {
           inFlow.add(X[j]);
@@ -128,9 +128,8 @@ public class MinCostFlow {
     store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
 
     // solve minimize cost;
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, X, new SmallestDomainFloat<>());
     label.setAssignSolution(true);
     // s.leftFirst = false;
     label.setTimeOut(1);

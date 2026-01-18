@@ -44,10 +44,10 @@ public class Shape {
   public final DBox boundingBox;
 
   /** The collection of DBoxes that constitute the shape. */
-  public Collection<DBox> boxes;
+  public final Collection<DBox> boxes;
 
   /** It defines unique shape id which is used by geost objects to define their shapes. */
-  public int no;
+  public final int no;
 
   /** It defines the area (2D) or volume (3D) of the shape. */
   private int area;

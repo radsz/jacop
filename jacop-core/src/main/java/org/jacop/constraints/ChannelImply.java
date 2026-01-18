@@ -57,7 +57,7 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
   /** It specifies variables b and related values for variable x. */
   final Item[] item;
 
-  Map<Integer, IntVar> valueMap = new HashMap<>();
+  final Map<Integer, IntVar> valueMap = new HashMap<>();
   private TimeStamp<Integer> position;
 
   /**
@@ -230,8 +230,8 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
 
   static class Item {
 
-    int value;
-    IntVar b;
+    final int value;
+    final IntVar b;
 
     public Item(IntVar b, int v) {
       this.b = b;

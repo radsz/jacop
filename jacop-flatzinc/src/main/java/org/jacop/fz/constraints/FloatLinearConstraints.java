@@ -42,8 +42,8 @@ import org.jacop.fz.SimpleNode;
 class FloatLinearConstraints implements ParserTreeConstants {
 
   boolean reified;
-  Support support;
-  Store store;
+  final Support support;
+  final Store store;
 
   public FloatLinearConstraints(Support support) {
     this.support = support;

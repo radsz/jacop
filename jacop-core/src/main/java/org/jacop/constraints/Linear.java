@@ -59,10 +59,10 @@ public class Linear extends Constraint
     lt // ge=5;
   };
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what relations is used by this constraint */
-  public byte relationType;
+  public final byte relationType;
 
   /** It specifies a list of variables being summed. */
   public IntVar[] list;
@@ -73,7 +73,7 @@ public class Linear extends Constraint
   /** It specifies variable for the overall sum. */
   public int sum;
 
-  Store store;
+  final Store store;
   int lMin;
 
   int lMax;
@@ -548,18 +548,38 @@ public class Linear extends Constraint
   }
 
   public byte relation(String r) {
-    if (r.equals("==")) return eq;
-    else if (r.equals("=")) return eq;
-    else if (r.equals("<")) return lt;
-    else if (r.equals("<=")) return le;
-    else if (r.equals("=<")) return le;
-    else if (r.equals("!=")) return ne;
-    else if (r.equals(">")) return gt;
-    else if (r.equals(">=")) return ge;
-    else if (r.equals("=>")) return ge;
-    else {
-      System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
-      return eq;
+    switch (r) {
+      case "==" -> {
+        return eq;
+      }
+      case "=" -> {
+        return eq;
+      }
+      case "<" -> {
+        return lt;
+      }
+      case "<=" -> {
+        return le;
+      }
+      case "=<" -> {
+        return le;
+      }
+      case "!=" -> {
+        return ne;
+      }
+      case ">" -> {
+        return gt;
+      }
+      case ">=" -> {
+        return ge;
+      }
+      case "=>" -> {
+        return ge;
+      }
+      default -> {
+        System.err.println("Wrong relation symbol in Linear constraint " + r + "; assumed ==");
+        return eq;
+      }
     }
   }
 

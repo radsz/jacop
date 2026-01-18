@@ -38,7 +38,7 @@ package org.jacop.search.restart;
  */
 public class LubyCalculator extends Calculator {
 
-  long scale;
+  final long scale;
   int n;
 
   public LubyCalculator(int scale) {

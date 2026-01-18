@@ -275,7 +275,7 @@ public class SmallDenseDomainTest {
   }
 
   @Before
-  public void setUp() throws InvocationTargetException, IllegalAccessException {
+  public void setUp() {
     initMocks(this);
     intervalDomain = new IntervalDomain();
   }

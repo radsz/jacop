@@ -40,7 +40,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
   int current;
 
-  IntervalDomain domain;
+  final IntervalDomain domain;
 
   Interval i = null;
 

@@ -48,13 +48,13 @@ import org.jacop.set.core.SetVar;
  */
 public class CardAeqX extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a which is being restricted. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies integer variable c specifying the possible cardinality of set variable a. */
-  public IntVar cardinality;
+  public final IntVar cardinality;
 
   /**
    * It constructs a cardinality constraint to restrict the number of elements in the set assigned

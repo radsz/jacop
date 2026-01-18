@@ -45,7 +45,7 @@ import org.jacop.util.SophisticatedLengauerTarjan;
  */
 public class Subcircuit extends Alldiff {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   Store store;
 
@@ -58,18 +58,18 @@ public class Subcircuit extends Alldiff {
 
   int sccLength = 0;
 
-  int[] val;
+  final int[] val;
 
-  Hashtable<Var, Integer> valueIndex = new Hashtable<>();
+  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
 
   int firstConsistencyLevel;
 
-  SophisticatedLengauerTarjan graphDominance;
+  final SophisticatedLengauerTarjan graphDominance;
   int sccCounter = 0;
-  int[] stack; // stack for strongly connected compoents algorithm
+  final int[] stack; // stack for strongly connected compoents algorithm
   int stack_pointer;
   BitSet cycleVar;
-  Random random = new Random(0);
+  final Random random = new Random(0);
 
   /**
    * It constructs a circuit constraint.
@@ -214,7 +214,7 @@ public class Subcircuit extends Alldiff {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : subcircuit([");
 
     for (int i = 0; i < list.length; i++) {

@@ -43,19 +43,19 @@ import org.jacop.set.core.SetVar;
 @Deprecated
 public class Lex extends Constraint implements Stateful {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * It specifies a list on which element a lex relationship holds for every two consecutive
    * variables.
    */
-  public SetVar a;
+  public final SetVar a;
 
   /**
    * It specifies a list on which element a lex relationship holds for every two consecutive
    * variables.
    */
-  public SetVar b;
+  public final SetVar b;
 
   /** It specifies if the relation is strict or not. */
   public boolean strict = true;

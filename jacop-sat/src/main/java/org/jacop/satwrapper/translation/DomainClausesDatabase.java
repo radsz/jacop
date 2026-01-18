@@ -32,7 +32,6 @@
 package org.jacop.satwrapper.translation;
 
 import java.io.BufferedWriter;
-import java.io.IOException;
 import org.jacop.core.Store;
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
 import org.jacop.jasat.core.clauses.MapClause;
@@ -274,7 +273,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   }
 
   @Override
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCNF(BufferedWriter output) {
 
     if (!wrapper.registeredVars.equals(wrapper.domainTranslator.translatedVars))
       throw new UnsupportedOperationException("Not supported yet.");

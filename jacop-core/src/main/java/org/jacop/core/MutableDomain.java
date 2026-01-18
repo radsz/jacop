@@ -39,9 +39,9 @@ public class MutableDomain implements MutableVar {
   /** It specifies if debugging info should be printed out. */
   public static final boolean debug = false;
 
-  int index;
+  final int index;
 
-  Store store;
+  final Store store;
 
   MutableDomainValue value = null;
 

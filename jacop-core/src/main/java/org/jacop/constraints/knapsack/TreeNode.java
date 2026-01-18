@@ -146,7 +146,7 @@ public class TreeNode {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("[wmax: ").append(wMax).append(", wsum: ").append(wSum);
     result.append(", psum: ").append(pSum).append(";");
@@ -197,7 +197,7 @@ public class TreeNode {
    */
   public String nodeToString() {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     result.append("[wmax: ").append(wMax).append(", wsum: ").append(wSum);
     result.append(", psum: ").append(pSum).append(";");

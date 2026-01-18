@@ -41,7 +41,7 @@ import org.jacop.core.IntVar;
  */
 class RectangleWithCondition extends Rectangle {
 
-  IntVar c;
+  final IntVar c;
 
   int index = 0;
 

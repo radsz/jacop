@@ -43,24 +43,20 @@ import org.jacop.core.Var;
  */
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {
 
-  Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   /** It constructs RandomVar Comparator. */
   public RandomVar() {}
 
   public int compare(double left, T var) {
     double right = generator.nextFloat();
-    if (left < right) return 1;
-    if (left > right) return -1;
-    return 0;
+    return Double.compare(right, left);
   }
 
   public int compare(T leftVar, T rightVar) {
     double left = generator.nextFloat();
     double right = generator.nextFloat();
-    if (left < right) return 1;
-    if (left > right) return -1;
-    return 0;
+    return Double.compare(right, left);
   }
 
   public double metric(T o) {

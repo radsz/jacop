@@ -101,7 +101,7 @@ public class SiblingUproar extends ExampleFD {
   public void model() {
 
     // Array of FDV's which will be used during search.
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     store = new Store();
 
     IO.println("Problem name: Sibling Uproar ");

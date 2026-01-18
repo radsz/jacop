@@ -50,7 +50,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   // @todo make debugAll be used in printing statements.
   static final boolean debugAll = true;
-  static AtomicInteger no = new AtomicInteger(0);
+  static final AtomicInteger no = new AtomicInteger(0);
 
   /**
    * If it is set to true then the optimizing search will quit the search if this action is
@@ -98,7 +98,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public String id;
 
   /** It specifies if for setVar based search the left branch should impose EinA constraint. */
-  public boolean einAinleftTree = true;
+  public final boolean einAinleftTree = true;
 
   /** It remembers what child search has been already examined. */
   public int currentChildSearch = -1;
@@ -847,7 +847,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         IO.println("No solution found.");
 
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
 
         buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
@@ -938,7 +938,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         IO.println("No solution found.");
 
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
 
         buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
@@ -1059,7 +1059,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         IO.println("No solution found.");
 
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
 
         buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
@@ -1164,7 +1164,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   @Override
   public String toString() {
 
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
 
     buf.append(id).append(": DFS(");
 
@@ -1175,7 +1175,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   public String toStringFull() {
 
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
 
     buf.append("Depth First Search ").append(id).append("\n");
 

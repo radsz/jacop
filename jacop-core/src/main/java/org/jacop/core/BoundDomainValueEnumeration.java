@@ -44,7 +44,7 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
 
   int max;
 
-  BoundDomain domain;
+  final BoundDomain domain;
 
   /**
    * @param dom It specifies the BoundDomain for which enumeration of values is performed.

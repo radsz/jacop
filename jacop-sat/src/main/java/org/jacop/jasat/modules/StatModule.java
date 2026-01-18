@@ -134,7 +134,7 @@ public final class StatModule
   }
 
   /** print current stats with solver's logc2 method */
-  public final void logStats() {
+  public void logStats() {
     printBlank();
     printLine(true);
 
@@ -165,7 +165,7 @@ public final class StatModule
   }
 
   /** logs one line of stat (for one parameter) */
-  private final void logStat(String stat, long num, long timeDiff) {
+  private void logStat(String stat, long num, long timeDiff) {
     core.logc(2, "%-20s: %-10s (%d/s)", stat, num, num * 1000 / timeDiff);
   }
 

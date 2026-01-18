@@ -79,7 +79,7 @@ public class ProAndCon extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     String[] surname = {"Mr._Akerman", "Ms._Baird", "Mr._Chatham", "Ms._Duval", "Mr._Etting"};
 
@@ -105,23 +105,23 @@ public class ProAndCon extends ExampleFD {
     }
 
     // Sum constraint for each group
-    List<IntVar> votesMotion1 = new ArrayList<IntVar>();
+    List<IntVar> votesMotion1 = new ArrayList<>();
     for (int i = 0; i < 5; i++) votesMotion1.add(vote[i][iMotion1]);
     store.impose(new SumInt(votesMotion1, "==", sum4Group[iMotion1]));
 
-    List<IntVar> votesMotion2 = new ArrayList<IntVar>();
+    List<IntVar> votesMotion2 = new ArrayList<>();
     for (int i = 0; i < 5; i++) votesMotion2.add(vote[i][iMotion2]);
     store.impose(new SumInt(votesMotion2, "==", sum4Group[iMotion2]));
 
-    List<IntVar> votesMotion3 = new ArrayList<IntVar>();
+    List<IntVar> votesMotion3 = new ArrayList<>();
     for (int i = 0; i < 5; i++) votesMotion3.add(vote[i][iMotion3]);
     store.impose(new SumInt(votesMotion3, "==", sum4Group[iMotion3]));
 
-    List<IntVar> votesMotion4 = new ArrayList<IntVar>();
+    List<IntVar> votesMotion4 = new ArrayList<>();
     for (int i = 0; i < 5; i++) votesMotion4.add(vote[i][iMotion4]);
     store.impose(new SumInt(votesMotion4, "==", sum4Group[iMotion4]));
 
-    List<IntVar> votesMotion5 = new ArrayList<IntVar>();
+    List<IntVar> votesMotion5 = new ArrayList<>();
     for (int i = 0; i < 5; i++) votesMotion5.add(vote[i][iMotion5]);
     store.impose(new SumInt(votesMotion5, "==", sum4Group[iMotion5]));
 

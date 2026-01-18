@@ -46,8 +46,8 @@ import org.jacop.search.DepthFirstSearch;
 
 public class SixHumpCamelFunction {
 
-  double MIN_FLOAT = -1e+20;
-  double MAX_FLOAT = 1e+20;
+  final double MIN_FLOAT = -1e+20;
+  final double MAX_FLOAT = 1e+20;
 
   /**
    * It executes the program.
@@ -111,7 +111,7 @@ public class SixHumpCamelFunction {
 
     // with first derivative it computes minimum value
     // in 2.735s instead of 382s :)
-    Set<FloatVar> vars = new HashSet<FloatVar>();
+    Set<FloatVar> vars = new HashSet<>();
     vars.add(x1);
     vars.add(x2);
     Derivative.init(store);
@@ -134,12 +134,12 @@ public class SixHumpCamelFunction {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(
+        new SplitSelectFloat<>(
             store, new FloatVar[] {x1, x2}, null); // new LargestDomainFloat<FloatVar>());
 
-    Optimize<FloatVar> min = new Optimize<FloatVar>(store, label, s, f);
+    Optimize<FloatVar> min = new Optimize<>(store, label, s, f);
     boolean result = min.minimize();
 
     if (!result) IO.println("NO SOLUTION");

@@ -51,8 +51,8 @@ public class Diffn extends Nooverlap {
   // for decomposed diffn
   protected List<Constraint> constraints = null;
 
-  protected List<Var> auxVar = new ArrayList<>();
-  Comparator<Event> eventComparator =
+  protected final List<Var> auxVar = new ArrayList<>();
+  final Comparator<Event> eventComparator =
       (o1, o2) -> (o1.date() == o2.date()) ? o1.type() - o2.type() : o1.date() - o2.date();
 
   /**
@@ -571,7 +571,7 @@ public class Diffn extends Nooverlap {
   }
 
   public List<Constraint> decompose(Store store) {
-    constraints = new ArrayList<Constraint>();
+    constraints = new ArrayList<>();
 
     IntVar[] x = new IntVar[rectangle.length];
     IntVar[] y = new IntVar[rectangle.length];
@@ -661,11 +661,11 @@ public class Diffn extends Nooverlap {
   }
 
   private static class Event {
-    int type;
-    Rectangle r;
-    int date;
-    int value;
-    Interval block;
+    final int type;
+    final Rectangle r;
+    final int date;
+    final int value;
+    final Interval block;
 
     Event(int type, Rectangle r, int date, int value, Interval block) {
       this.type = type;

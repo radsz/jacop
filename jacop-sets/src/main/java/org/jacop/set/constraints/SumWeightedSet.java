@@ -48,17 +48,17 @@ import org.jacop.set.core.SetVar;
  */
 public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** A set variable a whose elements contribute with their weight to the sum. */
-  public SetVar a;
+  public final SetVar a;
 
   // public int[] elements;
 
   // public int[] weights;
 
   /** Integer variable containing the total weight of all elements within a set variable a. */
-  public IntVar totalWeight;
+  public final IntVar totalWeight;
 
   /**
    * It specifies if the costs of elements are increasing given the lexical order of the elements.
@@ -66,7 +66,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   boolean increasingCosts;
 
   /** It provides a quick access to the weights of given elements of the set. */
-  Map<Integer, Integer> elementWeights;
+  final Map<Integer, Integer> elementWeights;
 
   /**
    * It constructs a weighted set sum constraint.

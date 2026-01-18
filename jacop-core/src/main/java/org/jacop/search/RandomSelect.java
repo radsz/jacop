@@ -47,15 +47,15 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
   static final boolean debugAll = false;
 
-  public T[] searchVariables;
+  public final T[] searchVariables;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
-  public Map<T, Integer> position;
+  public final Map<T, Integer> position;
 
-  Indomain<T> valueOrdering;
+  final Indomain<T> valueOrdering;
   int currentIndex = 0;
 
-  Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  final Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
 
   /**
    * The constructor to create a simple choice select mechanism.

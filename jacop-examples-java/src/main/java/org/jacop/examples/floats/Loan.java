@@ -149,12 +149,12 @@ public class Loan {
     store.impose(new PplusQeqR(t5, negR, B4));
 
     // solve minimize cost;
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(store, new FloatVar[] {B1, B2, B3, B4, P, R}, null);
+        new SplitSelectFloat<>(store, new FloatVar[] {B1, B2, B3, B4, P, R}, null);
     // s.leftFirst = false;
 
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    label.setSolutionListener(new PrintOutListener<>());
 
     label.labeling(store, s);
 

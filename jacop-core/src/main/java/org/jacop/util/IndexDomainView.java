@@ -46,12 +46,12 @@ public class IndexDomainView {
   private static final boolean debugAll = false;
 
   /** It specifies mapping of the index value onto value in the domain of the variable. */
-  public int[] indexToValue;
+  public final int[] indexToValue;
 
-  IntVar var;
+  final IntVar var;
   boolean[] forRemoval;
 
-  boolean viewOfSparseDomain;
+  final boolean viewOfSparseDomain;
 
   /**
    * It creates an index domain view for a given variable. It currently implements only sparse

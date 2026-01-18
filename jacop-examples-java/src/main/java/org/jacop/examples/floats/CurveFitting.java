@@ -42,8 +42,8 @@ import org.jacop.search.PrintOutListener;
 
 public class CurveFitting {
 
-  double MIN_FLOAT = -1e+150;
-  double MAX_FLOAT = 1e+150;
+  final double MIN_FLOAT = -1e+150;
+  final double MAX_FLOAT = 1e+150;
 
   /**
    * It executes the program.
@@ -145,13 +145,13 @@ public class CurveFitting {
             + store.numberConstraints());
 
     // solve minimize cost;
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<FloatVar>(store, vars, null); // new SmallestDomainFloat<FloatVar>());
+        new SplitSelectFloat<>(store, vars, null); // new SmallestDomainFloat<FloatVar>());
     label.setAssignSolution(true);
     // s.leftFirst = false;
 
-    label.setSolutionListener(new PrintOutListener<FloatVar>());
+    label.setSolutionListener(new PrintOutListener<>());
 
     label.labeling(store, s);
 

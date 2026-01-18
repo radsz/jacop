@@ -53,7 +53,7 @@ public final class IntVec implements Iterable<Integer> {
   public int numElem = 0;
 
   // memory pool
-  public MemoryPool pool;
+  public final MemoryPool pool;
 
   /**
    * initializes the array with a memory pool

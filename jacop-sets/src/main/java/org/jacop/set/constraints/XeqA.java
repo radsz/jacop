@@ -48,13 +48,13 @@ import org.jacop.set.core.SetVar;
  */
 public class XeqA extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable a. */
-  public IntVar x;
+  public final IntVar x;
 
   /** It specifies variable b. */
-  public SetVar a;
+  public final SetVar a;
 
   /**
    * It constructs an XeqA constraint to restrict the domain of the integer variables x and set

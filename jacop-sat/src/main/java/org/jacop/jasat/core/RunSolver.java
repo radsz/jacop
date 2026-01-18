@@ -77,7 +77,7 @@ public final class RunSolver {
       };
   // prints help
   private static final OptHandler<Config> helpHandler =
-      new OptHandler<Config>() {
+      new OptHandler<>() {
         {
           shortOpt = 'h';
           longOpt = "help";
@@ -92,7 +92,7 @@ public final class RunSolver {
         }
       };
   private static final OptHandler<Config> timeoutHandler =
-      new OptHandler<Config>() {
+      new OptHandler<>() {
         {
           shortOpt = 't';
           longOpt = "timeout";
@@ -109,7 +109,7 @@ public final class RunSolver {
         }
       };
   private static final OptHandler<Config> debugHandler =
-      new OptHandler<Config>() {
+      new OptHandler<>() {
         {
           shortOpt = 'd';
           longOpt = "debug";
@@ -154,19 +154,17 @@ public final class RunSolver {
   /** on forced exit, print solution */
   private static void protectOnTermination(final Core core) {
     Thread handler =
-        new Thread() {
-          @Override
-          public void run() {
-            if (!core.isStopped) {
-              // solver still running
-              core.logc("(forced) exiting...");
-              core.stop();
-              core.currentState = SolverState.UNKNOWN;
-              core.printSolution();
-            }
-            return;
-          }
-        };
+        new Thread(
+            () -> {
+              if (!core.isStopped) {
+                // solver still running
+                core.logc("(forced) exiting...");
+                core.stop();
+                core.currentState = SolverState.UNKNOWN;
+                core.printSolution();
+              }
+              return;
+            });
     handler.setDaemon(true);
     Runtime.getRuntime().addShutdownHook(handler);
   }

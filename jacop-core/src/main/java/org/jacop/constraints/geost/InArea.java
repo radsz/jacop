@@ -48,10 +48,10 @@ import org.jacop.util.SimpleHashSet;
 public class InArea implements ExternalConstraint {
 
   /** It specifies the allowed area in which the objects can reside. */
-  public DBox allowedArea;
+  public final DBox allowedArea;
 
   /** It specifies the holes within the allowed area in which the objects can not be placed. */
-  public Collection<DBox> holes;
+  public final Collection<DBox> holes;
 
   /** It holds all the constraints which have been generated from this external constraints. */
   public Set<InternalConstraint> constraints;

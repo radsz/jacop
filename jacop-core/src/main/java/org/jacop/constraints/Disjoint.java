@@ -50,7 +50,7 @@ import org.jacop.core.Store;
  */
 public class Disjoint extends Diff {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   Diff2Var[] evalRects;
 

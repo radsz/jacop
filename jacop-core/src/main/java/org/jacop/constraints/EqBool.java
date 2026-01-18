@@ -49,13 +49,13 @@ import org.jacop.core.Store;
  */
 public class EqBool extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies x variables in the constraint. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   /** It specifies variable result in the constraint. */
-  public IntVar result;
+  public final IntVar result;
 
   List<Constraint> constraints;
 
@@ -136,10 +136,8 @@ public class EqBool extends PrimitiveConstraint {
 
     if (result.min() == 1) {
 
-      if (x0 > 0)
-        for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 0);
-      if (x1 > 0)
-        for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 1);
+      if (x0 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 0);
+      if (x1 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 1);
 
     } else {
       if (result.max() == 0) {
@@ -181,10 +179,8 @@ public class EqBool extends PrimitiveConstraint {
 
       } else {
         if (result.max() == 0) {
-          if (x0 > 0)
-            for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 0);
-          if (x1 > 0)
-            for (int i = 0; i < list.length; i++) list[i].domain.inValue(store.level, list[i], 1);
+          if (x0 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 0);
+          if (x1 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 1);
         }
       }
 
@@ -205,10 +201,10 @@ public class EqBool extends PrimitiveConstraint {
       int x1 = 0;
       int x0 = 0;
 
-      for (int i = 0; i < list.length; i++) {
+      for (IntVar intVar : list) {
 
-        if (list[i].min() == 1) x1++;
-        else if (list[i].max() == 0) x0++;
+        if (intVar.min() == 1) x1++;
+        else if (intVar.max() == 0) x0++;
 
         if (x0 > 0 && x1 > 0) return true;
       }
@@ -241,10 +237,10 @@ public class EqBool extends PrimitiveConstraint {
       int x1 = 0;
       int x0 = 0;
 
-      for (int i = 0; i < list.length; i++) {
+      for (IntVar intVar : list) {
 
-        if (list[i].min() == 1) x1++;
-        else if (list[i].max() == 0) x0++;
+        if (intVar.min() == 1) x1++;
+        else if (intVar.max() == 0) x0++;
 
         if (x0 > 0 && x1 > 0) return false;
       }
@@ -258,10 +254,10 @@ public class EqBool extends PrimitiveConstraint {
         int x1 = 0;
         int x0 = 0;
 
-        for (int i = 0; i < list.length; i++) {
+        for (IntVar intVar : list) {
 
-          if (list[i].min() == 1) x1++;
-          else if (list[i].max() == 0) x0++;
+          if (intVar.min() == 1) x1++;
+          else if (intVar.max() == 0) x0++;
 
           if (x0 > 0 && x1 > 0) return true;
         }
@@ -276,7 +272,7 @@ public class EqBool extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer resultString = new StringBuffer(id());
+    StringBuilder resultString = new StringBuilder(id());
 
     resultString.append(" : eqBool( ");
     for (int i = 0; i < list.length; i++) {
@@ -292,7 +288,7 @@ public class EqBool extends PrimitiveConstraint {
   @Override
   public List<Constraint> decompose(Store store) {
 
-    constraints = new ArrayList<Constraint>();
+    constraints = new ArrayList<>();
 
     PrimitiveConstraint[] eqConstraints = new PrimitiveConstraint[list.length];
 

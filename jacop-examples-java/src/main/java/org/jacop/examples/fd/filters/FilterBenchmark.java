@@ -322,12 +322,8 @@ public class FilterBenchmark {
     }
 
     SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            vars,
-            new SmallestMin<IntVar>(),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>(),
-            0);
+        new SimpleMatrixSelect<>(
+            vars, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
     IO.println(
         "\nVariable store size: "
@@ -342,7 +338,7 @@ public class FilterBenchmark {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    Search<IntVar> label = new DepthFirstSearch<IntVar>();
+    Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, select, cost);
 
@@ -390,12 +386,8 @@ public class FilterBenchmark {
     }
 
     SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            vars,
-            new SmallestMin<IntVar>(),
-            new MostConstrainedStatic<>(),
-            new IndomainMin<IntVar>(),
-            0);
+        new SimpleMatrixSelect<>(
+            vars, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
     IO.println(
         "\nVariable store size: "
@@ -410,7 +402,7 @@ public class FilterBenchmark {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    Search<IntVar> label = new DepthFirstSearch<IntVar>();
+    Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, select, cost);
 
@@ -468,12 +460,8 @@ public class FilterBenchmark {
     }
 
     SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            vars,
-            new SmallestMax<IntVar>(),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>(),
-            0);
+        new SimpleMatrixSelect<>(
+            vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
     IO.println(
         "\nVariable store size: "
@@ -488,7 +476,7 @@ public class FilterBenchmark {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    Search<IntVar> label = new DepthFirstSearch<IntVar>();
+    Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, select, cost);
 
@@ -538,13 +526,10 @@ public class FilterBenchmark {
     for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
 
     SelectChoicePoint<IntVar> selectMC =
-        new SimpleSelect<IntVar>(
-            varsTs,
-            new MostConstrainedStatic<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
     SelectChoicePoint<IntVar> selectIO =
-        new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
         "\nVariable store size: "
@@ -559,12 +544,12 @@ public class FilterBenchmark {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    Search<IntVar> label = new DepthFirstSearch<IntVar>();
+    Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, selectMC, cost);
 
     if (result) {
-      label = new DepthFirstSearch<IntVar>();
+      label = new DepthFirstSearch<>();
       result = label.labeling(store, selectIO);
     }
 
@@ -614,7 +599,7 @@ public class FilterBenchmark {
     int pipeLB = (addLB > mulLB) ? addLB : mulLB;
     IO.println("Lower bound = " + pipeLB);
 
-    List<IntVar> cc = new ArrayList<IntVar>();
+    List<IntVar> cc = new ArrayList<>();
     cc.add(new IntVar(store, 10000, 10000));
     cc.add(cost);
     TR.add(cc);
@@ -626,16 +611,12 @@ public class FilterBenchmark {
     }
 
     SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            vars,
-            new SmallestMax<IntVar>(),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>(),
-            0);
+        new SimpleMatrixSelect<>(
+            vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
-    CreditCalculator<IntVar> credit = new CreditCalculator<IntVar>(TR.size(), 20, 10);
+    CreditCalculator<IntVar> credit = new CreditCalculator<>(TR.size(), 20, 10);
 
-    Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<>();
 
     if (search.getConsistencyListener() == null) search.setConsistencyListener(credit);
     else search.getConsistencyListener().setChildrenListeners(credit);
@@ -715,17 +696,14 @@ public class FilterBenchmark {
     for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
 
     SelectChoicePoint<IntVar> selectMC =
-        new SimpleSelect<IntVar>(
-            varsTs,
-            new SmallestMin<IntVar>(),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
     SelectChoicePoint<IntVar> selectIO =
-        new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
-    CreditCalculator<IntVar> credit = new CreditCalculator<IntVar>(TR.size() / 2, 5, 10);
+    CreditCalculator<IntVar> credit = new CreditCalculator<>(TR.size() / 2, 5, 10);
 
-    Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<>();
 
     if (search.getConsistencyListener() == null) search.setConsistencyListener(credit);
     else search.getConsistencyListener().setChildrenListeners(credit);
@@ -748,7 +726,7 @@ public class FilterBenchmark {
     result = search.labeling(store, selectMC, cost);
 
     if (result) {
-      search = new DepthFirstSearch<IntVar>();
+      search = new DepthFirstSearch<>();
       result = search.labeling(store, selectIO);
     }
 
@@ -792,13 +770,10 @@ public class FilterBenchmark {
     for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
 
     SelectChoicePoint<IntVar> selectMC =
-        new SimpleSelect<IntVar>(
-            varsTs,
-            new MostConstrainedStatic<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
     SelectChoicePoint<IntVar> selectIO =
-        new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
         "\nVariable store size: "
@@ -813,12 +788,12 @@ public class FilterBenchmark {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<>();
 
     result = search.labeling(store, selectMC, cost);
 
     if (result) {
-      search = new DepthFirstSearch<IntVar>();
+      search = new DepthFirstSearch<>();
       result = search.labeling(store, selectIO);
     }
 
@@ -869,13 +844,10 @@ public class FilterBenchmark {
     for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
 
     SelectChoicePoint<IntVar> selectMC =
-        new SimpleSelect<IntVar>(
-            varsTs,
-            new SmallestMin<IntVar>(),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
     SelectChoicePoint<IntVar> selectIO =
-        new SimpleSelect<IntVar>(varsRs, null, null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
         "\nVariable store size: "
@@ -890,12 +862,12 @@ public class FilterBenchmark {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<>();
 
     result = search.labeling(store, selectMC, cost);
 
     if (result) {
-      search = new DepthFirstSearch<IntVar>();
+      search = new DepthFirstSearch<>();
       result = search.labeling(store, selectIO);
     }
 
@@ -988,7 +960,7 @@ public class FilterBenchmark {
       store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
-    List<IntVar> endOp = new ArrayList<IntVar>();
+    List<IntVar> endOp = new ArrayList<>();
     for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
       store.impose(new XplusCeqZ(T[value], D[value], end));
@@ -1006,11 +978,11 @@ public class FilterBenchmark {
     IntVar limitMul = new IntVar(store, 1, mulNum);
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
-    Ts = new ArrayList<IntVar>();
+    Ts = new ArrayList<>();
     Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<IntVar>();
+    Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<Integer>();
+    Ds = new ArrayList<>();
     for (Integer v : D) Ds.add(v);
 
     Ns = filter.names();
@@ -1094,7 +1066,7 @@ public class FilterBenchmark {
       store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
-    List<IntVar> endOp = new ArrayList<IntVar>();
+    List<IntVar> endOp = new ArrayList<>();
     for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
       store.impose(new XplusCeqZ(T[value], D[value], end));
@@ -1112,11 +1084,11 @@ public class FilterBenchmark {
     IntVar limitMul = new IntVar(store, 0, mulNum);
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
-    Ts = new ArrayList<IntVar>();
+    Ts = new ArrayList<>();
     Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<IntVar>();
+    Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<Integer>();
+    Ds = new ArrayList<>();
     for (Integer v : D) Ds.add(v);
 
     Ns = filter.names();
@@ -1216,7 +1188,7 @@ public class FilterBenchmark {
       store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
-    List<IntVar> endOp = new ArrayList<IntVar>();
+    List<IntVar> endOp = new ArrayList<>();
     for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 1000);
       store.impose(new XplusCeqZ(T[value], D[value], end));
@@ -1238,11 +1210,11 @@ public class FilterBenchmark {
     IntVar limitMul = new IntVar(store, 1, mulNum);
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
-    Ts = new ArrayList<IntVar>();
+    Ts = new ArrayList<>();
     Ts.addAll(Arrays.asList(T));
-    Rs = new ArrayList<IntVar>();
+    Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
-    Ds = new ArrayList<Integer>();
+    Ds = new ArrayList<>();
     for (Integer v : D) Ds.add(v);
 
     Ns = filter.names();
@@ -1362,7 +1334,7 @@ public class FilterBenchmark {
       store.impose(new XplusClteqZ(T[dependency[0]], delays[dependency[0]], T[dependency[1]]));
     }
 
-    List<IntVar> endOp = new ArrayList<IntVar>();
+    List<IntVar> endOp = new ArrayList<>();
     for (int value : lastOp) {
       IntVar end = new IntVar(store, 0, 100);
       store.impose(new XplusCeqZ(T[value], D[value], end));
@@ -1376,17 +1348,17 @@ public class FilterBenchmark {
     store.impose(new Diffn(Tadd, Radd, Dadd, ResAdd));
     store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
 
-    Ts = new ArrayList<IntVar>();
+    Ts = new ArrayList<>();
     Ts.addAll(Arrays.asList(T));
     Ts.addAll(Arrays.asList(Ta));
     Ts.addAll(Arrays.asList(Tb));
 
-    Rs = new ArrayList<IntVar>();
+    Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
     Rs.addAll(Arrays.asList(R));
     Rs.addAll(Arrays.asList(R));
 
-    Ds = new ArrayList<Integer>();
+    Ds = new ArrayList<>();
     for (Integer v : D) Ds.add(v);
     for (int v : D) Ds.add(v);
     for (int v : D) Ds.add(v);
@@ -1407,10 +1379,10 @@ public class FilterBenchmark {
    */
   public static List<List<IntVar>> makeLabelingList(IntVar[] T, IntVar[] R) {
 
-    List<List<IntVar>> list = new ArrayList<List<IntVar>>();
+    List<List<IntVar>> list = new ArrayList<>();
 
     for (int i = 0; i < T.length; i++) {
-      List<IntVar> TR = new ArrayList<IntVar>();
+      List<IntVar> TR = new ArrayList<>();
       TR.add(T[i]);
       TR.add(R[i]);
       list.add(TR);

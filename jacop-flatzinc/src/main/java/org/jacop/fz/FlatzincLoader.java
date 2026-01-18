@@ -44,7 +44,7 @@ import org.jacop.search.SelectChoicePoint;
  */
 public class FlatzincLoader {
 
-  Options opt;
+  final Options opt;
 
   Parser parser;
 

@@ -50,12 +50,12 @@ public class EquationSystem extends Constraint {
   static final boolean debug = false;
 
   // variables defining eqations
-  FloatVar[] f;
+  final FloatVar[] f;
 
   // variables of the eqation system
-  FloatVar[] x;
+  final FloatVar[] x;
 
-  MultivariateIntervalNewton newton;
+  final MultivariateIntervalNewton newton;
 
   /**
    * It constructs the constraint EquationSystem.

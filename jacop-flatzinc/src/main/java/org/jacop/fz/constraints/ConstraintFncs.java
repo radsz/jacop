@@ -28,17 +28,17 @@ import org.jacop.fz.SimpleNode;
 
 public final class ConstraintFncs {
 
-  BoolConstraints bc;
-  ComparisonConstraints cc;
-  LinearConstraints lc;
-  OperationConstraints oc;
-  ElementConstraints ec;
-  GlobalConstraints gc;
-  GraphConstraints graph;
-  SetConstraints sc;
-  FloatComparisonConstraints fcc;
-  FloatLinearConstraints flc;
-  FloatOperationConstraints foc;
+  final BoolConstraints bc;
+  final ComparisonConstraints cc;
+  final LinearConstraints lc;
+  final OperationConstraints oc;
+  final ElementConstraints ec;
+  final GlobalConstraints gc;
+  final GraphConstraints graph;
+  final SetConstraints sc;
+  final FloatComparisonConstraints fcc;
+  final FloatLinearConstraints flc;
+  final FloatOperationConstraints foc;
 
   public ConstraintFncs(Support support) {
 

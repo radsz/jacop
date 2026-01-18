@@ -72,23 +72,23 @@ public class SumBool extends PrimitiveConstraint {
   /*
    * It specifies what relations is used by this constraint
    */
-  public byte relationType;
-  Store store;
+  public final byte relationType;
+  final Store store;
   boolean reified = true;
   /*
    * It specifies a list of variables being summed.
    */
-  IntVar[] x;
+  final IntVar[] x;
 
   /*
    * It specifies variable for the overall sum.
    */
-  IntVar sum;
+  final IntVar sum;
 
   /*
    * It specifies the number of variables.
    */
-  int l;
+  final int l;
 
   /*
    * @param store current store
@@ -311,18 +311,38 @@ public class SumBool extends PrimitiveConstraint {
   }
 
   public byte relation(String r) {
-    if (r.equals("==")) return eq;
-    else if (r.equals("=")) return eq;
-    else if (r.equals("<")) return lt;
-    else if (r.equals("<=")) return le;
-    else if (r.equals("=<")) return le;
-    else if (r.equals("!=")) return ne;
-    else if (r.equals(">")) return gt;
-    else if (r.equals(">=")) return ge;
-    else if (r.equals("=>")) return ge;
-    else {
-      System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
-      return eq;
+    switch (r) {
+      case "==" -> {
+        return eq;
+      }
+      case "=" -> {
+        return eq;
+      }
+      case "<" -> {
+        return lt;
+      }
+      case "<=" -> {
+        return le;
+      }
+      case "=<" -> {
+        return le;
+      }
+      case "!=" -> {
+        return ne;
+      }
+      case ">" -> {
+        return gt;
+      }
+      case ">=" -> {
+        return ge;
+      }
+      case "=>" -> {
+        return ge;
+      }
+      default -> {
+        System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
+        return eq;
+      }
     }
   }
 
@@ -360,7 +380,7 @@ public class SumBool extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : SumBool( [ ");
 
     for (int i = 0; i < l; i++) {

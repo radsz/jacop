@@ -39,7 +39,7 @@ package org.jacop.constraints.netflow.simplex;
  */
 public class Danzig implements PivotRule {
 
-  public NetworkSimplex network;
+  public final NetworkSimplex network;
 
   public Danzig(NetworkSimplex network) {
     this.network = network;

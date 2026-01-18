@@ -51,18 +51,18 @@ import org.jacop.core.*;
 public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debug = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** Variables within the scope of table constraint */
-  public IntVar[] x;
+  public final IntVar[] x;
 
   /** Tuples specifying the allowed values */
-  public int[][] tuple;
+  public final int[][] tuple;
 
   Store store;
 
   /** */
-  Map<IntVar, Integer> varMap;
+  final Map<IntVar, Integer> varMap;
 
   /** Main data structure for the constraint */
   ReversibleSparseBitSet rbs;
@@ -353,7 +353,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   @Override
   public String toString() {
 
-    StringBuffer s = new StringBuffer(id());
+    StringBuilder s = new StringBuilder(id());
 
     s.append(" : table(");
     s.append(java.util.Arrays.asList(x));

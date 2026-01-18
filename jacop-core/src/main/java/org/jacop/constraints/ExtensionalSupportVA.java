@@ -52,10 +52,10 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   static final boolean debugPruning = false;
 
   /** It specifies the id of the constraint. */
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It stores variables within this extensional constraint, order does matter. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   boolean firstConsistencyCheck = true;
   int levelOfFirstConsistencyCheck;
@@ -322,20 +322,18 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     for (i = 0; i < list.length; i++) {
 
-      Map<Integer, Integer> val = new HashMap<Integer, Integer>();
+      Map<Integer, Integer> val = new HashMap<>();
 
       for (int[] t : tuplesFromConstructor) {
 
         Integer value = t[i];
-        Integer key = val.get(value);
 
-        if (key == null) val.put(value, 1);
-        else val.put(value, key + 1);
+        val.merge(value, 1, Integer::sum);
       }
 
       if (debugAll) IO.println("values " + val.keySet());
 
-      PriorityQueue<Integer> sortedVal = new PriorityQueue<Integer>(val.keySet());
+      PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
       if (debugAll) IO.println("Sorted val size " + sortedVal.size());
 

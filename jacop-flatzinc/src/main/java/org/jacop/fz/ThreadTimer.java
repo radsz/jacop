@@ -34,8 +34,8 @@ import java.lang.management.ThreadMXBean;
 
 public class ThreadTimer implements Timer {
 
-  Thread thread;
-  ThreadMXBean timer;
+  final Thread thread;
+  final ThreadMXBean timer;
 
   public ThreadTimer() {
     thread = Thread.currentThread();

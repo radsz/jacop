@@ -49,7 +49,7 @@ import org.jacop.util.QueueForward;
 
 public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   private final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies variable b in the Implies constraint. */

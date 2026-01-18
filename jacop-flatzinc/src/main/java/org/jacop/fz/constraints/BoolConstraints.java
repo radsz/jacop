@@ -40,10 +40,10 @@ import org.jacop.satwrapper.SatTranslation;
  */
 class BoolConstraints implements ParserTreeConstants {
 
-  Store store;
+  final Store store;
   boolean reified, implied;
-  SatTranslation sat;
-  Support support;
+  final SatTranslation sat;
+  final Support support;
 
   public BoolConstraints(Support support) {
     this.support = support;

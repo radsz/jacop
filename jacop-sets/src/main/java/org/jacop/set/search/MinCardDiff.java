@@ -69,9 +69,7 @@ public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {
     int left = leftSD.lub().getSize() - leftSD.glb().getSize();
     int right = rightSD.lub().getSize() - rightSD.glb().getSize();
 
-    if (left < right) return 1;
-    if (left > right) return -1;
-    return 0;
+    return Integer.compare(right, left);
   }
 
   /** Returns the metric(Cardinality difference) of the variable. */

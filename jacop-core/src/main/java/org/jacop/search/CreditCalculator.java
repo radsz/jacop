@@ -122,7 +122,7 @@ public class CreditCalculator<T extends Var>
   @Override
   public String toString() {
 
-    StringBuffer desc = new StringBuffer();
+    StringBuilder desc = new StringBuilder();
 
     desc.append("credit-right\n");
     for (int k : creditsRight) desc.append(k).append(" ");

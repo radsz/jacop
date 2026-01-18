@@ -63,8 +63,8 @@ public class ProfileOptional {
   /** It specifies the limit of the profile of cumulative use of resources. */
   private final IntVar limit;
 
-  boolean debugNarr = false;
-  boolean debug = false;
+  final boolean debugNarr = false;
+  final boolean debug = false;
   List<Event> utilizationProfile;
   boolean existsOpt = true;
   private final Comparator<Event> eventComparator =
@@ -428,9 +428,9 @@ public class ProfileOptional {
   }
 
   private static class Event {
-    int type;
-    TaskView t;
-    int date;
+    final int type;
+    final TaskView t;
+    final int date;
     int value;
 
     Event(int type, TaskView t, int date, int value) {

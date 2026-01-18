@@ -52,16 +52,16 @@ public class IfThenBool extends PrimitiveConstraint {
    * 1   1   1
    */
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
-  public IntVar x;
+  public final IntVar x;
 
   /** It specifies variable y in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
-  public IntVar y;
+  public final IntVar y;
 
   /** It specifies variable z in constraint ( X {@literal =>} Y ) {@literal <=>} Z. */
-  public IntVar z;
+  public final IntVar z;
 
   /**
    * It constructs constraint ( X {@literal =>} Y ) {@literal <=>} Z.

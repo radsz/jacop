@@ -37,9 +37,9 @@ package org.jacop.fz;
  */
 public class ArrayAccess {
 
-  String id;
+  final String id;
 
-  int index;
+  final int index;
 
   /**
    * It creates an array access storage object.

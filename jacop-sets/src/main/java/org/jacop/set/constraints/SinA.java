@@ -46,16 +46,16 @@ import org.jacop.set.core.SetVar;
  */
 public class SinA extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the set s which must be in variable a. */
-  public IntDomain set;
+  public final IntDomain set;
 
   /** It specifies variable a within which it must contains set s. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict;
+  public final boolean strict;
 
   /**
    * It creates a set inclusion constraint.

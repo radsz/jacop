@@ -57,7 +57,7 @@ import org.jacop.core.Var;
 public class NoGood extends Constraint {
 
   private static final boolean debug = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables in no-good constraint. */
   protected IntVar[] listOfVars;

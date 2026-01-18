@@ -47,17 +47,13 @@ public class LargestMinFloat<T extends FloatVar> implements ComparatorVariable<T
 
   public int compare(double left, T var) {
     double right = var.dom().min();
-    if (left > right) return 1;
-    if (left < right) return -1;
-    return 0;
+    return Double.compare(left, right);
   }
 
   public int compare(T leftVar, T rightVar) {
     double left = leftVar.dom().min();
     double right = rightVar.dom().min();
-    if (left > right) return 1;
-    if (left < right) return -1;
-    return 0;
+    return Double.compare(left, right);
   }
 
   public double metric(T var) {

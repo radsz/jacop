@@ -44,11 +44,11 @@ import org.jacop.core.*;
  */
 public class Increasing extends Constraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   // List of decomposed constraints
   protected List<Constraint> constraints = null;
-  IntVar[] x;
-  int n;
+  final IntVar[] x;
+  final int n;
   byte strict = 0;
 
   /*

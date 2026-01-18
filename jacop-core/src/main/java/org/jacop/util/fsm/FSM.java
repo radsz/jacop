@@ -47,7 +47,7 @@ import org.jacop.util.MDD;
 public class FSM {
 
   /** It specifies number of states created in DFA class. */
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the intial state of DFA. */
   public FSMState initState;
@@ -213,7 +213,7 @@ public class FSM {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer("digraph FSM {\nnode [shape = doublecircle]; ");
+    StringBuilder result = new StringBuilder("digraph FSM {\nnode [shape = doublecircle]; ");
 
     result.append(initState.id).append("; /* Init state */\n");
 

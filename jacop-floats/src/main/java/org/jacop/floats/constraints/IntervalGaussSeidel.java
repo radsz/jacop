@@ -47,7 +47,7 @@ public class IntervalGaussSeidel {
 
   static final boolean debug = false;
 
-  int MaxIterations = 100;
+  final int MaxIterations = 100;
 
   FloatInterval[][] A;
   double[] b;
@@ -146,10 +146,10 @@ public class IntervalGaussSeidel {
     if (debug) {
       IO.println("dominant = " + dominant + " ===================================");
       for (FloatInterval[] floatIntervals : A) {
-        for (int j = 0; j < floatIntervals.length; j++) {
-          if (floatIntervals[j].min <= 0 && floatIntervals[j].max() >= 0) IO.print("0 ");
-          else if (floatIntervals[j].min() > 0) IO.print("+ ");
-          else if (floatIntervals[j].min() < 0) IO.print("- ");
+        for (FloatInterval floatInterval : floatIntervals) {
+          if (floatInterval.min <= 0 && floatInterval.max() >= 0) IO.print("0 ");
+          else if (floatInterval.min() > 0) IO.print("+ ");
+          else if (floatInterval.min() < 0) IO.print("- ");
           else IO.print("? ");
         }
         IO.println();

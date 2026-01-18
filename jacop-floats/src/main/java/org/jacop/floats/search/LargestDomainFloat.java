@@ -50,18 +50,14 @@ public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> 
   public int compare(double left, T var) {
     double right = ((FloatVar) var).getSizeFloat();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
-    return 0;
+    return Double.compare(left, right);
   }
 
   public int compare(T leftVar, T rightVar) {
     double left = ((FloatVar) leftVar).getSizeFloat();
     double right = ((FloatVar) rightVar).getSizeFloat();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
-    return 0;
+    return Double.compare(left, right);
   }
 
   public double metric(T var) {

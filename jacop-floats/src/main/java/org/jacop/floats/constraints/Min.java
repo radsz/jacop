@@ -50,13 +50,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class Min extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables among which the minimum value is being searched for. */
-  public FloatVar[] list;
+  public final FloatVar[] list;
 
   /** It specifies variable min, which stores the minimum value within the whole list. */
-  public FloatVar min;
+  public final FloatVar min;
 
   /**
    * It constructs min constraint.

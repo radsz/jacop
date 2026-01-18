@@ -50,13 +50,13 @@ import org.jacop.core.*;
 
 public class Sum extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the variables to be summed. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   /** It specifies variable sum to store the overall sum of the variables being summed up. */
-  public IntVar sum;
+  public final IntVar sum;
 
   int guideValue = 0;
 

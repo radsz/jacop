@@ -39,13 +39,13 @@ package org.jacop.floats.core;
  */
 public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumeration {
 
-  FloatIntervalDomain domain;
+  final FloatIntervalDomain domain;
 
   FloatInterval i = null;
 
   int intervalNo = -1;
 
-  int maxIntervalNo;
+  final int maxIntervalNo;
 
   /**
    * It creates an enumeration for a given interval domain.

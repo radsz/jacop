@@ -73,7 +73,7 @@ public class DonaldGeraldRobert extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar d = new IntVar(store, "d", 0, 9);
     IntVar o = new IntVar(store, "o", 0, 9);

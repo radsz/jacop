@@ -46,7 +46,7 @@ import org.jacop.core.*;
 public class SumWeightDom extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables being summed. */
   public IntVar[] list;
@@ -209,7 +209,7 @@ public class SumWeightDom extends Constraint
       int pointer = nextGroundedPosition.value();
 
       LinkedHashSet<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       // check recently grounded variables
       for (IntVar q : fdvs) {
@@ -256,8 +256,8 @@ public class SumWeightDom extends Constraint
   @Override
   public void impose(Store store) {
 
-    sumGrounded = new TimeStamp<Integer>(store, 0);
-    nextGroundedPosition = new TimeStamp<Integer>(store, 0);
+    sumGrounded = new TimeStamp<>(store, 0);
+    nextGroundedPosition = new TimeStamp<>(store, 0);
     positionMaping = Var.positionMapping(list, false, this.getClass());
 
     store.registerRemoveLevelLateListener(this);
@@ -347,7 +347,7 @@ public class SumWeightDom extends Constraint
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : sumWeightDom( [ ");
 
     for (int i = 0; i < list.length; i++) {
@@ -406,7 +406,7 @@ public class SumWeightDom extends Constraint
         temp.intervals[k++] = new Interval(-e.max(), -e.min());
       }
     } else {
-      List<Interval> ranges = new ArrayList<Interval>();
+      List<Interval> ranges = new ArrayList<>();
 
       for (IntervalEnumeration e = d.intervalEnumeration(); e.hasMoreElements(); ) {
         Interval i = e.nextElement();
@@ -529,7 +529,7 @@ public class SumWeightDom extends Constraint
 
       } else {
         // singleton and NOT interval domain
-        List<Interval> ranges = new ArrayList<Interval>();
+        List<Interval> ranges = new ArrayList<>();
 
         int d1Value = d1.value();
         int sumMin = sum - lMax + d2.max();
@@ -595,7 +595,7 @@ public class SumWeightDom extends Constraint
       // }
     } else { // First domain not singleton and not IntervalDomain
 
-      List<Interval> ranges = new ArrayList<Interval>();
+      List<Interval> ranges = new ArrayList<>();
 
       int sumMin = sum - lMax + d2.max();
       int sumMax = sum - lMin + d2.min();

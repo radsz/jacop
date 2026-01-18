@@ -110,7 +110,7 @@ public class OptParse<E> {
     IO.println("options:");
 
     // print (only once for each handler) its help
-    Set<OptHandler<E>> printedHelps = new HashSet<OptHandler<E>>();
+    Set<OptHandler<E>> printedHelps = new HashSet<>();
     for (OptHandler<E> handler : handlers.values()) {
       if (printedHelps.contains(handler)) continue;
       else printedHelps.add(handler);

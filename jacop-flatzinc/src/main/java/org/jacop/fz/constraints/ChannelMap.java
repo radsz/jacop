@@ -44,11 +44,11 @@ import org.jacop.core.*;
  */
 class ChannelMap {
 
-  Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
+  final Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
 
-  int minSize = 1;
+  final int minSize = 1;
 
-  Support support;
+  final Support support;
 
   public ChannelMap(Support support) {
     this.support = support;

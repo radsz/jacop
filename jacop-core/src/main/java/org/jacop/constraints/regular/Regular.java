@@ -65,7 +65,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** It specifies if constraint description should be saved to latex for later viewing. */
   public static final boolean saveAllToLatex = false;
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
    * It specifies if the translation of FSM into optimized MDD should take place so minimal layered
@@ -92,16 +92,16 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   public Map<Integer, RegEdge>[] supports;
 
   /** It specifies if the edges should have a list of values associated with them. */
-  public boolean listRepresentation = true;
+  public final boolean listRepresentation = true;
 
   /** It specifies if the support functionality should be used. */
-  public boolean oneSupport = true;
+  public final boolean oneSupport = true;
 
   /** It specifies finite state machine used by this regular. */
-  public FSM fsm;
+  public final FSM fsm;
 
   /** Array of the variables of the graph levels. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   /** Number of states in the graph used only during the printing to latex function. */
   int stateNumber;
@@ -111,7 +111,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * given variable or a domain size to pickup first variables which may result in failure faster.
    * It does not have to be fully correct ordering.
    */
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   Map<IntVar, Integer> mapping;
 
@@ -913,12 +913,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     lastNumberOfActiveStates = new int[list.length + 1];
     activeLevels = new TimeStamp[list.length + 1];
     for (int i = list.length; i >= 0; i--)
-      activeLevels[i] = new TimeStamp<Integer>(store, activeLevelsTemp[i]);
+      activeLevels[i] = new TimeStamp<>(store, activeLevelsTemp[i]);
 
-    leftChange = new TimeStamp<Integer>(store, 0);
-    touchedIndex = new TimeStamp<Integer>(store, 0);
+    leftChange = new TimeStamp<>(store, 0);
+    touchedIndex = new TimeStamp<>(store, 0);
 
-    rightChange = new TimeStamp<Integer>(store, list.length - 1);
+    rightChange = new TimeStamp<>(store, list.length - 1);
 
     activeLevelsTemp = null;
 
@@ -926,7 +926,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       supports = (HashMap<Integer, RegEdge>[]) new HashMap[list.length];
       RegState state;
       for (int level = this.list.length - 1; level >= 0; level--) {
-        supports[level] = new HashMap<Integer, RegEdge>();
+        supports[level] = new HashMap<>();
 
         for (int s = this.activeLevels[level].value() - 1; s >= 0; s--) {
           state = this.stateLevels[level][s];
@@ -962,7 +962,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append("( [ ");
     for (IntVar intVar : list) result.append(intVar.id()).append(" ");
     result.append(" ], FSM \n");
@@ -985,7 +985,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     fsm.resize();
 
-    List<int[]> listOfTuples = new ArrayList<int[]>();
+    List<int[]> listOfTuples = new ArrayList<>();
 
     // tuples for transitions from not-intial states.
 
@@ -1010,7 +1010,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     for (int i = 0; i < q.length; i++) q[i] = new IntVar(store, "Q" + i, 0, fsm.allStates.size());
 
-    constraints = new ArrayList<Constraint>();
+    constraints = new ArrayList<>();
 
     for (int i = 0; i < q.length - 1; i++) {
       IntVar[] scope = {q[i], list[i], q[i + 1]};
@@ -1170,11 +1170,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       fs.write(this.toLatex(desc).getBytes(StandardCharsets.UTF_8));
       fs.flush();
       // fs.close(); not needed; auto close
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    } catch (NumberFormatException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
+    } catch (IOException | NumberFormatException e) {
       e.printStackTrace();
     }
   }
@@ -1204,11 +1200,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       fs.append(this.toLatex(desc));
       fs.flush();
       // fs.close(); not needed; auto close
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    } catch (NumberFormatException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
+    } catch (IOException | NumberFormatException e) {
       e.printStackTrace();
     }
   }
@@ -1232,7 +1224,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     List<RegState>[] layeredGraph =
         (ArrayList<RegState>[]) Array.newInstance(ArrayList.class, levels + 1);
-    for (int i = 0; i < layeredGraph.length; i++) layeredGraph[i] = new ArrayList<RegState>();
+    for (int i = 0; i < layeredGraph.length; i++) layeredGraph[i] = new ArrayList<>();
 
     this.activeLevelsTemp = new int[this.list.length + 1];
 

@@ -46,7 +46,7 @@ import org.jacop.core.*;
 public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private static final boolean debug = false, debugNarr = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the limit of the profile of cumulative use of resources. */
   public IntVar limit;
@@ -82,9 +82,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   private final Task[] Ts;
   private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
 
-  private final Comparator<IntDomain> domainMinComparator = (o1, o2) -> (o1.min() - o2.min());
+  private final Comparator<IntDomain> domainMinComparator = Comparator.comparingInt(IntDomain::min);
 
-  private final Comparator<Task> taskAscEctComparator = (o1, o2) -> (o1.ect() - o2.ect());
+  private final Comparator<Task> taskAscEctComparator = Comparator.comparingInt(Task::ect);
 
   private final Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
 
@@ -427,7 +427,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       // Create S = {t|EST(t) >= est0}
       // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-      List<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
+      List<Task> S = new ArrayList<>(Ts.length), L = new ArrayList<>(Ts.length);
       for (Task t : Ts) {
         if (t.nonZeroTask()) {
           if (t.est() >= est0) S.add(t);
@@ -576,7 +576,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private void edgeFindingUp(Store store) {
 
-    TreeSet<IntDomain> lctDownList = new TreeSet<IntDomain>(domainMaxComparator);
+    TreeSet<IntDomain> lctDownList = new TreeSet<>(domainMaxComparator);
 
     if (debug)
       IO.println(
@@ -593,7 +593,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       // Create S = {t|EST(t) <= lct0}
       // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-      List<Task> S = new ArrayList<Task>(Ts.length), L = new ArrayList<Task>(Ts.length);
+      List<Task> S = new ArrayList<>(Ts.length), L = new ArrayList<>(Ts.length);
       for (Task t : Ts) {
         if (t.nonZeroTask()) {
           if (t.lct() <= lct0) S.add(t);

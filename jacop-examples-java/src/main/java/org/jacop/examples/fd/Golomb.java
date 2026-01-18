@@ -116,7 +116,7 @@ public class Golomb extends ExampleFD {
     IO.println("Program to solve Golomb mark problem - length " + noMarks);
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     IntVar[] numbers = new IntVar[noMarks];
 
@@ -136,7 +136,7 @@ public class Golomb extends ExampleFD {
     if (bound > -1) store.impose(new XlteqC(numbers[noMarks - 1], bound));
 
     // ArrayList contains all differences
-    subs = new ArrayList<IntVar>();
+    subs = new ArrayList<>();
 
     for (int i = 1; i < numbers.length; i++) {
 
@@ -189,11 +189,11 @@ public class Golomb extends ExampleFD {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
-        new InputOrderSelect<IntVar>(store, vars.toArray(new IntVar[1]), new IndomainMin<IntVar>());
+        new InputOrderSelect<>(store, vars.toArray(new IntVar[1]), new IndomainMin<>());
 
-    Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<>();
 
-    PrintOutListener<IntVar> solutionListener = new PrintOutListener<IntVar>();
+    PrintOutListener<IntVar> solutionListener = new PrintOutListener<>();
     search.setSolutionListener(solutionListener);
 
     boolean result = search.labeling(store, select, cost);

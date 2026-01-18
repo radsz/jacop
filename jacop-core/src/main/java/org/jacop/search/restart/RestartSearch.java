@@ -57,14 +57,14 @@ public class RestartSearch<T extends Var> {
 
   // relax and reconstruct
   private final Random generator;
-  Store store;
-  DepthFirstSearch<T> search;
-  SelectChoicePoint<T> select;
-  Calculator calculator;
+  final Store store;
+  final DepthFirstSearch<T> search;
+  final SelectChoicePoint<T> select;
+  final Calculator calculator;
   SolutionListener<T> lastSolutionListener;
   CustomReport reportSolution = null;
   Search<T> lastNotNullSearch;
-  Var cost;
+  final Var cost;
   int intCostValue = Integer.MAX_VALUE;
   double floatCostValue = Double.MAX_VALUE;
   int numberRestarts = 0;
@@ -149,7 +149,7 @@ public class RestartSearch<T extends Var> {
 
       atLeastOneSolution |= result;
 
-      int sl = ((SimpleSolutionListener) lastNotNullSearch.getSolutionListener()).solutionLimit;
+      int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
       if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) return false;
 
       if (timeOutCheck && System.currentTimeMillis() > timeOut) {

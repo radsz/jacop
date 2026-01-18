@@ -49,16 +49,16 @@ import org.jacop.set.core.*;
  */
 public class PartitionSet extends Constraint implements UsesQueueVariable {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  SetVar[] s;
-  int n;
-  IntDomain u;
+  final SetVar[] s;
+  final int n;
+  final IntDomain u;
 
   boolean firstConsistencyCheck = true;
 
   LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
-  HashMap<SetVar, Integer> varMap = new HashMap<>();
+  final HashMap<SetVar, Integer> varMap = new HashMap<>();
 
   Store store;
 

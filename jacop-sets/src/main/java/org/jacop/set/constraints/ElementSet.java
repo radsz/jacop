@@ -50,21 +50,21 @@ import org.jacop.set.core.SetVar;
  */
 public class ElementSet extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what element from the list of sets is equal to set variable value. */
-  public IntVar index;
+  public final IntVar index;
 
   /**
    * It specifies a list of sets from which one element will be made equal to set variable value.
    */
-  public IntDomain[] list;
+  public final IntDomain[] list;
 
   /**
    * It specifies the set variable which is equal to one of the sets from the list as indicated by
    * int variable index.
    */
-  public SetVar value;
+  public final SetVar value;
 
   /**
    * It allows to offset the indexing. By default the indexing starts from 1, if index variable

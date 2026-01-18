@@ -37,10 +37,10 @@ import org.jacop.floats.core.FloatVar;
 
 public class VarWeightNode extends VariableNode {
 
-  double weight;
+  final double weight;
 
   // bounds for this node
-  BoundsVar bound;
+  final BoundsVar bound;
 
   public VarWeightNode(Store store, FloatVar v, double w) {
 

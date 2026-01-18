@@ -46,9 +46,9 @@ import org.jacop.satwrapper.SatTranslation;
  */
 class ComparisonConstraints implements ParserTreeConstants {
 
-  Support support;
-  Store store;
-  SatTranslation sat;
+  final Support support;
+  final Store store;
+  final SatTranslation sat;
 
   public ComparisonConstraints(Support support) {
     this.support = support;

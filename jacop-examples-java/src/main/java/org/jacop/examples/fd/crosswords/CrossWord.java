@@ -59,18 +59,18 @@ import org.jacop.util.MDD;
 public class CrossWord extends ExampleFD {
 
   public String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
-  int r = 5; // number of rows
-  int c = 5; // number of column
-  int[] wordSizesPrimitive = {4, 5};
+  final int r = 5; // number of rows
+  final int c = 5; // number of column
+  final int[] wordSizesPrimitive = {4, 5};
   // * - black wall
   // letter - letter which must be in crossword
   // _ - unknown letter, any letter is accepted.
-  List<Integer> wordSizes = new ArrayList<>();
+  final List<Integer> wordSizes = new ArrayList<>();
   IntVar[][] x; // the solution
   IntVar blank;
-  Map<Integer, MDD> mdds = new HashMap<>();
+  final Map<Integer, MDD> mdds = new HashMap<>();
 
-  char[][] crosswordTemplate = {
+  final char[][] crosswordTemplate = {
     {'*', '_', '_', '_', '_'},
     {'_', '_', '_', 'l', '_'},
     {'_', '_', '_', '_', '_'},
@@ -139,7 +139,7 @@ public class CrossWord extends ExampleFD {
 
     for (int i = 0; i < r; i++) {
 
-      List<Var> word = new ArrayList<Var>();
+      List<Var> word = new ArrayList<>();
 
       for (int j = 0; j < c; j++) {
 
@@ -166,7 +166,7 @@ public class CrossWord extends ExampleFD {
 
     for (int j = 0; j < c; j++) {
 
-      List<Var> word = new ArrayList<Var>();
+      List<Var> word = new ArrayList<>();
 
       for (int i = 0; i < r; i++) {
 
@@ -190,7 +190,7 @@ public class CrossWord extends ExampleFD {
       }
     }
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) if (x[i][j] != null) vars.add(x[i][j]);
   }
@@ -307,7 +307,7 @@ public class CrossWord extends ExampleFD {
   /** It is a simple print listener to print every tenth solution encountered. */
   public class PrintListener<T extends Var> extends SimpleSolutionListener<T> {
 
-    char[][] crossWordTemplate;
+    final char[][] crossWordTemplate;
 
     public PrintListener(char[][] crosswordTemplate) {
       this.crossWordTemplate = crosswordTemplate;

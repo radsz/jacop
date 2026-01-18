@@ -63,11 +63,7 @@ public class AFCMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
     double right = afcValue(var) / var.getSizeFloat();
 
-    if (left > right) return 1;
-
-    if (left < right) return -1;
-
-    return 0;
+    return Double.compare(left, right);
   }
 
   public int compare(T leftVar, T rightVar) {
@@ -76,11 +72,7 @@ public class AFCMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
     double right = afcValue(rightVar) / rightVar.getSizeFloat();
 
-    if (left > right) return 1;
-
-    if (left < right) return -1;
-
-    return 0;
+    return Double.compare(left, right);
   }
 
   public double metric(T var) {

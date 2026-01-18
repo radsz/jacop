@@ -76,7 +76,7 @@ public class SleepingArrangements extends ExampleFD {
   public void model() {
 
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     String[] nameID = {"Ollie", "Rollie", "Mellie", "Nellie", "Pollie"};
     int iOllie = 0, iRollie = 1, iMellie = 2, iNellie = 3, iPollie = 4;

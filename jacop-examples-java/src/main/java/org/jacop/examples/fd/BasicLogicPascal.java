@@ -69,7 +69,7 @@ public class BasicLogicPascal extends ExampleFD {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Creating FDV (finite domain variables)
     IntVar b = new IntVar(store, "B", 0, 9);

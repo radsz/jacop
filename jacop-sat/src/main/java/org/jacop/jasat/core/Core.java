@@ -66,7 +66,7 @@ public final class Core implements SolverComponent {
   // is the solver stopped ?
   public boolean isStopped = false;
   // timer for scheduled events (daemon thread)
-  public Timer timer = new Timer(true);
+  public final Timer timer = new Timer(true);
   // pool of int[] to avoir allocating too much
   public MemoryPool pool;
   // all current clauses
@@ -82,7 +82,7 @@ public final class Core implements SolverComponent {
   // 0 means no messages at all, 1 means only important messages
   public int verbosity;
   // stream to log messages to
-  public PrintStream logStream = System.out;
+  public final PrintStream logStream = System.out;
   // the current level of research
   public int currentLevel = 0;
   // current state of the solver (indicates what to do next)
@@ -90,16 +90,16 @@ public final class Core implements SolverComponent {
   // the conflict learning module
   public ConflictLearning conflictLearning;
   // for modules.
-  public AssertionListener[] assertionModules = new AssertionListener[5];
-  public BackjumpListener[] backjumpModules = new BackjumpListener[5];
-  public ConflictListener[] conflictModules = new ConflictListener[5];
-  public PropagateListener[] propagateModules = new PropagateListener[5];
-  public SolutionListener[] solutionModules = new SolutionListener[5];
-  public ForgetListener[] forgetModules = new ForgetListener[5];
-  public ClauseListener[] clauseModules = new ClauseListener[5];
-  public ExplanationListener[] explanationModules = new ExplanationListener[5];
-  public StartStopListener[] startStopModules = new StartStopListener[5];
-  public BackjumpListener[] restartModules = new BackjumpListener[5];
+  public final AssertionListener[] assertionModules = new AssertionListener[5];
+  public final BackjumpListener[] backjumpModules = new BackjumpListener[5];
+  public final ConflictListener[] conflictModules = new ConflictListener[5];
+  public final PropagateListener[] propagateModules = new PropagateListener[5];
+  public final SolutionListener[] solutionModules = new SolutionListener[5];
+  public final ForgetListener[] forgetModules = new ForgetListener[5];
+  public final ClauseListener[] clauseModules = new ClauseListener[5];
+  public final ExplanationListener[] explanationModules = new ExplanationListener[5];
+  public final StartStopListener[] startStopModules = new StartStopListener[5];
+  public final BackjumpListener[] restartModules = new BackjumpListener[5];
   public int numAssertionModules = 0;
   public int numBackjumpModules = 0;
   public int numConflictModules = 0;
@@ -355,7 +355,7 @@ public final class Core implements SolverComponent {
    * performs propagation on all unit clauses until either : - no unit clause remains - a conflict
    * occurs
    */
-  public final void unitPropagate() {
+  public void unitPropagate() {
     // propagate until there remain no unit clauses or a conflict occurs
     while (currentState != SolverState.CONFLICT && !toPropagate.isEmpty()) {
       assert !toPropagate.isEmpty();
@@ -568,7 +568,7 @@ public final class Core implements SolverComponent {
    *
    * @param s the mark of current time
    */
-  public final void markTime(String s) {
+  public void markTime(String s) {
     timeMap.put(s, System.currentTimeMillis());
   }
 
@@ -578,7 +578,7 @@ public final class Core implements SolverComponent {
    * @param s the mark
    * @return the time associated with given mark, or 0 if none
    */
-  public final long getTime(String s) {
+  public long getTime(String s) {
     if (timeMap.containsKey(s)) return timeMap.get(s);
     return 0;
   }
@@ -589,7 +589,7 @@ public final class Core implements SolverComponent {
    * @param s the mark
    * @return the time elapsed since mark, in ms
    */
-  public final long getTimeDiff(String s) {
+  public long getTimeDiff(String s) {
     if (!timeMap.containsKey(s)) return 0;
     else return System.currentTimeMillis() - timeMap.get(s);
   }
@@ -604,7 +604,7 @@ public final class Core implements SolverComponent {
    * @param s the message
    * @param args the arguments for the message
    */
-  public final void logc(String s, Object... args) {
+  public void logc(String s, Object... args) {
     if (verbosity > 0) {
       logStream.print("c ");
       logStream.printf(s, args);
@@ -619,7 +619,7 @@ public final class Core implements SolverComponent {
    * @param s the message
    * @param args the arguments for the message
    */
-  public final void logc(int level, String s, Object... args) {
+  public void logc(int level, String s, Object... args) {
     if (verbosity >= level) {
       logStream.print("c ");
       logStream.printf(s, args);
@@ -630,12 +630,12 @@ public final class Core implements SolverComponent {
   /**
    * @return true if the solver reached a solution
    */
-  public final boolean hasSolution() {
+  public boolean hasSolution() {
     return currentState == SolverState.SATISFIABLE || currentState == SolverState.UNSATISFIABLE;
   }
 
   /** prints the current solution on standard output */
-  public final void printSolution() {
+  public void printSolution() {
     // TODO : clean it (factor code, avoid repetition)
 
     assert hasSolution();
@@ -668,7 +668,7 @@ public final class Core implements SolverComponent {
    *
    * @return the return code to exit with
    */
-  public final int getReturnCode() {
+  public int getReturnCode() {
     return switch (currentState) {
       case SolverState.UNSATISFIABLE -> 20;
       case SolverState.SATISFIABLE -> 10;

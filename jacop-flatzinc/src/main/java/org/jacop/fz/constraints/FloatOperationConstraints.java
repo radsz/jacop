@@ -39,8 +39,8 @@ import org.jacop.fz.SimpleNode;
  */
 class FloatOperationConstraints implements ParserTreeConstants {
 
-  Support support;
-  Store store;
+  final Support support;
+  final Store store;
 
   public FloatOperationConstraints(Support support) {
     this.support = support;

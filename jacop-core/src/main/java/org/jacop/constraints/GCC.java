@@ -50,16 +50,16 @@ import org.jacop.core.*;
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   private static final boolean debug = false;
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variables x whose values are counted. */
-  public IntVar[] x;
+  public final IntVar[] x;
 
   /**
    * It species variables counters for counting occurences of each possible value from the intial
    * domain of x variables.
    */
-  protected IntVar[] counters;
+  protected final IntVar[] counters;
 
   /**
    * TODO An improvement to increase the incrementality even further.

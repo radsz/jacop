@@ -48,13 +48,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It contains variable p. */
-  public FloatVar p;
+  public final FloatVar p;
 
   /** It contains variable q. */
-  public FloatVar q;
+  public final FloatVar q;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

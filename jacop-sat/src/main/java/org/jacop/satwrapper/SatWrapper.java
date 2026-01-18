@@ -106,7 +106,7 @@ public final class SatWrapper extends Constraint
   // keep track of literals activity, and give search advices (optional)
   public ActivityModule activity = null;
   // guide assertions
-  public HeuristicAssertionModule assertionModule = null;
+  public final HeuristicAssertionModule assertionModule = null;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
   public SatCPBridge[] boolVarToDomains = new SatCPBridge[50];
   // the change listene to plug in the SAT solver
@@ -116,7 +116,7 @@ public final class SatWrapper extends Constraint
   // pool of int[]
   public MemoryPool pool;
   // the DomainClausesDatabase, if any
-  public DomainClausesDatabase domainDatabase;
+  public final DomainClausesDatabase domainDatabase;
   // the translator of domains
   public DomainTranslator domainTranslator;
   // SAT level to backjump to if failure
@@ -127,7 +127,7 @@ public final class SatWrapper extends Constraint
   public Integer[] cpToSatLevels = new Integer[5];
 
   // level of verbosity (the higher, the more verbose)
-  public int verbosity = 0;
+  public final int verbosity = 0;
   // empty == true if no cluases has been added
   boolean empty = true;
   // the trail of the solver
@@ -596,7 +596,7 @@ public final class SatWrapper extends Constraint
    *
    * @param module the module to add
    */
-  public final void addSolverComponent(SolverComponent module) {
+  public void addSolverComponent(SolverComponent module) {
     core.addComponent(module);
   }
 
@@ -605,12 +605,12 @@ public final class SatWrapper extends Constraint
    *
    * @param module the component
    */
-  public final void addWrapperComponent(WrapperComponent module) {
+  public void addWrapperComponent(WrapperComponent module) {
     module.initialize(this);
   }
 
   /** asks the solver to forget useless clauses, to free memory */
-  public final void forget() {
+  public void forget() {
     core.forget();
   }
 
@@ -619,14 +619,14 @@ public final class SatWrapper extends Constraint
    *
    * @param clause the clause to add
    */
-  public final void addModelClause(Collection<Integer> clause) {
+  public void addModelClause(Collection<Integer> clause) {
     int[] toAdd = pool.getNew(clause.size());
     int index = 0;
     for (int i : clause) toAdd[index++] = i;
     modelClausesToAdd.add(toAdd);
   }
 
-  public final void addModelClause(int[] clause) {
+  public void addModelClause(int[] clause) {
 
     empty = false;
 
@@ -638,7 +638,7 @@ public final class SatWrapper extends Constraint
    *
    * @param constraint the constraint to add
    */
-  public final void impose(Constraint constraint) {
+  public void impose(Constraint constraint) {
 
     System.err.println("impose constraint in SatWrapper is not defined");
     throw new RuntimeException();
@@ -647,7 +647,7 @@ public final class SatWrapper extends Constraint
   }
 
   @Override
-  public final void impose(Store store) {
+  public void impose(Store store) {
     this.store = store;
 
     // make solver quiet, if not debug
@@ -670,7 +670,7 @@ public final class SatWrapper extends Constraint
    *     'x{@literal <=}d'
    * @return the corresponding literal, or 0 if it is out of bounds
    */
-  public final int cpVarToBoolVar(IntVar variable, int value, boolean isEquality) {
+  public int cpVarToBoolVar(IntVar variable, int value, boolean isEquality) {
 
     SatCPBridge range = getSatBridge(variable);
 
@@ -689,7 +689,7 @@ public final class SatWrapper extends Constraint
    * @param literal the boolean literal
    * @return a range
    */
-  public final SatCPBridge boolVarToDomain(int literal) {
+  public SatCPBridge boolVarToDomain(int literal) {
     int var = Math.abs(literal);
     SatCPBridge range = boolVarToDomains[var];
     return range;
@@ -701,7 +701,7 @@ public final class SatWrapper extends Constraint
    * @param literal the literal
    * @return IntVar represented by the literal
    */
-  public final IntVar boolVarToCpVar(int literal) {
+  public IntVar boolVarToCpVar(int literal) {
     assert isVarLiteral(literal);
 
     int var = Math.abs(literal);
@@ -715,7 +715,7 @@ public final class SatWrapper extends Constraint
    * @param literal literal to be transformed to value it represents
    * @return the value represented by this literal
    */
-  public final int boolVarToCpValue(int literal) {
+  public int boolVarToCpValue(int literal) {
     assert isVarLiteral(literal);
 
     int var = Math.abs(literal);
@@ -731,7 +731,7 @@ public final class SatWrapper extends Constraint
    * @return true if the literal represents a proposition 'x=v', false if it represents 'x{@literal
    *     <=}v'
    */
-  public final boolean isEqualityBoolVar(int literal) {
+  public boolean isEqualityBoolVar(int literal) {
     assert isVarLiteral(literal);
     int var = Math.abs(literal);
     IntVar variable = boolVarToCpVar(literal);
@@ -745,7 +745,7 @@ public final class SatWrapper extends Constraint
    * @param literal the literal
    * @return true if this literal stands for some 'x=v' or 'x{@literal <=}v' proposition
    */
-  public final boolean isVarLiteral(int literal) {
+  public boolean isVarLiteral(int literal) {
     /*
      * we must ensure it is very fast (called very often)
      */

@@ -320,7 +320,7 @@ public class SimpleHashSet<E> {
   @Override
   @SuppressWarnings("unchecked")
   public String toString() {
-    StringBuffer s = new StringBuffer();
+    StringBuilder s = new StringBuilder();
 
     s.append("SimpleHashSet[");
 

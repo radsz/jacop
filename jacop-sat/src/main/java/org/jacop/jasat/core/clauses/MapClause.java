@@ -49,7 +49,7 @@ import org.jacop.jasat.utils.MemoryPool;
 public final class MapClause implements Iterable<Integer> {
 
   /** the literals of the clause */
-  public Map<Integer, Boolean> literals = new HashMap<>();
+  public final Map<Integer, Boolean> literals = new HashMap<>();
 
   /** the literal that will be asserted due to unit propagation of the conflict clause. */
   public int assertedLiteral;
@@ -288,7 +288,7 @@ public final class MapClause implements Iterable<Integer> {
    * @param clause the literals to add
    * @return true if the resulting SetClause is trivial (tautology), false otherwise
    */
-  public final boolean addAll(Iterable<Integer> clause) {
+  public boolean addAll(Iterable<Integer> clause) {
     boolean answer = false;
     for (int literal : clause) answer |= addLiteral(literal);
     return answer;
@@ -300,7 +300,7 @@ public final class MapClause implements Iterable<Integer> {
    * @param clause clause the literals to add
    * @return true if the resulting SetClause is trivial (tautology), false otherwise
    */
-  public final boolean addAll(int[] clause) {
+  public boolean addAll(int[] clause) {
     boolean answer = false;
     for (int literal : clause) answer |= addLiteral(literal);
     return answer;

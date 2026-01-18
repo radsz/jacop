@@ -70,7 +70,7 @@ public class ArchFriends extends ExampleFD {
   @Override
   public void model() {
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     store = new Store();
 
     IO.println("Program to solve ArchFriends problem ");

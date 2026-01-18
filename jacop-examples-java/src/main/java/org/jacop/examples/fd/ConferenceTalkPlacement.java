@@ -110,9 +110,9 @@ public class ConferenceTalkPlacement {
 
   private Map<Integer, Map<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
 
-    Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
+    Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
 
-    for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<Integer, Integer>());
+    for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<>());
 
     for (int[] ints : costs) result.get(ints[0]).put(ints[1], ints[2]);
 
@@ -126,9 +126,9 @@ public class ConferenceTalkPlacement {
 
     Random seed = new Random(randomSeed);
 
-    Map<Integer, Map<Integer, Integer>> result = new HashMap<Integer, Map<Integer, Integer>>();
+    Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
 
-    for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<Integer, Integer>());
+    for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<>());
 
     for (int i = 0; i < noOfTalks; i++)
       for (int j = i + 1; j < noOfTalks; j++) result.get(i).put(j, seed.nextInt(maxSingleCost));
@@ -233,19 +233,16 @@ public class ConferenceTalkPlacement {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<IntVar>();
-    PrintOutListener<IntVar> solutionListener = new PrintOutListener<IntVar>();
+    search = new DepthFirstSearch<>();
+    PrintOutListener<IntVar> solutionListener = new PrintOutListener<>();
     search.setSolutionListener(solutionListener);
 
     if (timeOutSeconds > 0) search.setTimeOut(timeOutSeconds);
 
     // pivot variable is at index 0.
     SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            varsMatrix,
-            new MaxRegret<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleMatrixSelect<>(
+            varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
 
     boolean result = search.labeling(store, select, cost);
 
@@ -267,15 +264,12 @@ public class ConferenceTalkPlacement {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     // pivot variable is at index 0.
     SelectChoicePoint<IntVar> select =
-        new SimpleMatrixSelect<IntVar>(
-            varsMatrix,
-            new MaxRegret<IntVar>(),
-            new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+        new SimpleMatrixSelect<>(
+            varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
 
     if (timeOutSeconds > 0) search.setTimeOut(timeOutSeconds);
 

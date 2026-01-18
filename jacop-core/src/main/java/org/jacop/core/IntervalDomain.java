@@ -2320,7 +2320,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   @Override
   public String toString() {
 
-    StringBuffer s = new StringBuffer("");
+    StringBuilder s = new StringBuilder("");
 
     if (!singleton()) {
       s.append("{");
@@ -2338,7 +2338,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringConstraints() {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuilder result = new StringBuilder("");
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       result.append(e.next().id());
@@ -2352,7 +2352,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringFull() {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuilder result = new StringBuilder("");
 
     IntDomain domain = this;
 

@@ -43,9 +43,9 @@ import org.jacop.core.Store;
  */
 class Diff2Var implements MutableVar {
 
-  int index;
+  final int index;
 
-  Store store;
+  final Store store;
 
   Diff2VarValue value = null;
 

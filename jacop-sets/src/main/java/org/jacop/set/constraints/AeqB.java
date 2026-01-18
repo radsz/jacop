@@ -44,13 +44,13 @@ import org.jacop.set.core.SetVar;
  */
 public class AeqB extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a, which must be equal to set variable b. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies set variable b, which must be equal to set variable a. */
-  public SetVar b;
+  public final SetVar b;
 
   // private boolean aHasChanged = true;
   // private boolean bHasChanged = true;

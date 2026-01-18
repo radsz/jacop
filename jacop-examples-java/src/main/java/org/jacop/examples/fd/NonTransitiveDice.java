@@ -77,10 +77,10 @@ public class NonTransitiveDice extends ExampleFD {
   public int currentBest = 16;
 
   /** It contains constraints which can be used for shaving guidance. */
-  public List<Constraint> shavingConstraints = new ArrayList<>();
+  public final List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** If true then faces on non consequtive faces can be the same. */
-  public boolean reuseOfNumbers = false;
+  public final boolean reuseOfNumbers = false;
 
   /**
    * It executes the program solving non transitive dice problem using two different methods. The
@@ -301,7 +301,7 @@ public class NonTransitiveDice extends ExampleFD {
     // Simple maximum constraint on cost variable
     // store.setLevel(store.level + 1);
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     for (int i = noSides / 2, j = noSides / 2 + 1; i >= 0 || j < noSides; i--, j++) {
       for (int d = 0; d < noDices; d++) if (i >= 0) vars.add(faces[d * noSides + i]);
@@ -320,12 +320,12 @@ public class NonTransitiveDice extends ExampleFD {
    */
   public boolean searchSpecial() {
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
     search.setBacktracksOut(10000000);
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<IntVar>());
+        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
     boolean result = search.labeling(store, select);
 

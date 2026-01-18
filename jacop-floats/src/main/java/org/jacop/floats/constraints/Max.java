@@ -52,13 +52,13 @@ import org.jacop.floats.core.FloatVar;
  */
 public class Max extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables among which a maximum value is being searched for. */
-  public FloatVar[] list;
+  public final FloatVar[] list;
 
   /** It specifies variable max which stores the maximum value present in the list. */
-  public FloatVar max;
+  public final FloatVar max;
 
   /**
    * It constructs max constraint.

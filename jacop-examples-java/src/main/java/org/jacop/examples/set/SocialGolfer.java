@@ -176,7 +176,7 @@ public class SocialGolfer extends ExampleSet {
 
     golferGroup = new SetVar[weeks][groups];
 
-    vars = new ArrayList<SetVar>();
+    vars = new ArrayList<>();
 
     for (int i = 0; i < weeks; i++)
       for (int j = 0; j < groups; j++) {
@@ -250,14 +250,14 @@ public class SocialGolfer extends ExampleSet {
     boolean result = store.consistency();
     IO.println("*** consistency = " + result);
 
-    Search<SetVar> label = new DepthFirstSearch<SetVar>();
+    Search<SetVar> label = new DepthFirstSearch<>();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(
+        new SimpleSelect<>(
             vars.toArray(new SetVar[0]),
-            new MinLubCard<SetVar>(),
-            new MaxGlbCard<SetVar>(),
-            new IndomainSetMin<SetVar>());
+            new MinLubCard<>(),
+            new MaxGlbCard<>(),
+            new IndomainSetMin<>());
 
     //	label.setSolutionListener(new SetSimpleSolutionListener<SetVar>());
     label.getSolutionListener().searchAll(false);

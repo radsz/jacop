@@ -52,7 +52,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
   // list of ordered tasks
   TaskView[] orderedTasks;
 
-  ThetaLambdaUnaryNode empty = new ThetaLambdaUnaryNode();
+  final ThetaLambdaUnaryNode empty = new ThetaLambdaUnaryNode();
 
   public ThetaLambdaUnaryTree() {}
 

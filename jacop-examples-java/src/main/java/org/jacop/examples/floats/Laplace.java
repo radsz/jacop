@@ -90,8 +90,8 @@ public class Laplace {
     for (int i = 0; i < r + 1; i++) for (int j = 0; j < c + 1; j++) xs[n++] = x[i][j];
 
     // solve minimize cost;
-    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, xs, null);
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, xs, null);
     label.setAssignSolution(true);
     s.leftFirst = false;
 

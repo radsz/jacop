@@ -40,9 +40,10 @@ import org.jacop.core.IntVar;
  */
 class ExclusiveItem {
 
-  IntVar cond;
+  final IntVar cond;
 
-  int i1, i2;
+  final int i1;
+  final int i2;
 
   ExclusiveItem(int a, int b, IntVar c) {
     i1 = a;

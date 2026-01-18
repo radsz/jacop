@@ -45,7 +45,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
  */
 public class Matrix {
 
-  double[][] A;
+  final double[][] A;
 
   public Matrix(double[][] M) {
 
@@ -224,7 +224,7 @@ public class Matrix {
 
   void print(double[][] M) {
     for (double[] doubles : M) {
-      for (int j = 0; j < doubles.length; j++) IO.print(doubles[j] + " ");
+      for (double aDouble : doubles) IO.print(aDouble + " ");
       IO.println();
     }
   }

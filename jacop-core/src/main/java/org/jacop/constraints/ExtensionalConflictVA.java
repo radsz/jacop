@@ -52,13 +52,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
   static final boolean debugPruning = false;
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the tuples given in the constructor. */
   public int[][] tuplesFromConstructor;
 
   /** It stores variables within this extensional constraint, order does matter. */
-  public IntVar[] list;
+  public final IntVar[] list;
 
   int numberTuples = 0;
   Store store;
@@ -72,8 +72,8 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   /** It represents values which are supported for a variable. */
   int[][] values;
 
-  LinkedHashSet<Var> variableQueue = new LinkedHashSet<Var>();
-  int[] tuple;
+  final LinkedHashSet<Var> variableQueue = new LinkedHashSet<>();
+  final int[] tuple;
   int[][][] lastofsequence;
   int[][][] supports;
   private boolean satisfiedAlreadyAtImposition = false;
@@ -504,20 +504,18 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     for (i = 0; i < list.length; i++) {
 
-      Map<Integer, Integer> val = new HashMap<Integer, Integer>();
+      Map<Integer, Integer> val = new HashMap<>();
 
       for (int[] t : tuplesFromConstructor) {
 
         Integer value = t[i];
-        Integer key = val.get(value);
 
-        if (key == null) val.put(value, 1);
-        else val.put(value, key + 1);
+        val.merge(value, 1, Integer::sum);
       }
 
       if (debugAll) IO.println("values " + val.keySet());
 
-      PriorityQueue<Integer> sortedVal = new PriorityQueue<Integer>(val.keySet());
+      PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
       if (debugAll) IO.println("Sorted val size " + sortedVal.size());
 
@@ -532,7 +530,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         if (debugAll) IO.println("sortedVal " + sortedVal);
 
         values[i][j] = sortedVal.poll();
-        supportCount[i][j] = val.get(Integer.valueOf(values[i][j]));
+        supportCount[i][j] = val.get(values[i][j]);
         this.tuples[i][j] = new int[supportCount[i][j]][];
       }
 
@@ -625,7 +623,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   @Override
   public String toString() {
 
-    StringBuffer tupleString = new StringBuffer();
+    StringBuilder tupleString = new StringBuilder();
 
     tupleString.append(id());
     tupleString.append("(");

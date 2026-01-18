@@ -45,8 +45,8 @@ import org.jacop.fz.VariablesParameters;
 class FloatComparisonConstraints implements ParserTreeConstants {
 
   boolean reified;
-  Support support;
-  Store store;
+  final Support support;
+  final Store store;
 
   public FloatComparisonConstraints(Support support) {
     this.support = support;

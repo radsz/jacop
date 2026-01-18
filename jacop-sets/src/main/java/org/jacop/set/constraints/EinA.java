@@ -45,13 +45,13 @@ import org.jacop.set.core.SetVar;
  */
 public class EinA extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the element which must be present in the set variable. */
-  public int element;
+  public final int element;
 
   /** It specifies the set variable which must contain a specified element. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
   public boolean strict = false;

@@ -68,11 +68,11 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
   public int pivotPosition;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
-  public Map<T, Integer> position = Var.createEmptyPositioning();
+  public final Map<T, Integer> position = Var.createEmptyPositioning();
 
   //	int subListSize;
   /** It stores variables which need to be labelled. */
-  public List<List<T>> searchVariables = new ArrayList<>();
+  public final List<List<T>> searchVariables = new ArrayList<>();
 
   ComparatorVariable<T> mainComparator = null;
   ComparatorVariable<T> tieBreakingComparator = null;
@@ -150,13 +150,13 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     for (T[] var : vars) {
 
-      List<T> current = new ArrayList<T>();
+      List<T> current = new ArrayList<>();
 
       assert (var.length > pivotPosition);
 
-      for (int j = 0; j < var.length; j++) {
-        current.add(var[j]);
-        if (!position.containsKey(var[j])) position.put(var[j], no++);
+      for (T t : var) {
+        current.add(t);
+        if (!position.containsKey(t)) position.put(t, no++);
       }
 
       searchVariables.add(current);

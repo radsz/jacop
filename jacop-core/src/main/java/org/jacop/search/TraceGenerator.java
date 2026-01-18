@@ -85,15 +85,15 @@ public class TraceGenerator<T extends Var>
   public final String visFilename;
 
   /** It specifies the list of variables that are being traced. */
-  public List<Var> tracedVar = new ArrayList<>();
+  public final List<Var> tracedVar = new ArrayList<>();
 
-  public Map<Var, Integer> varIndex = Var.createEmptyPositioning();
+  public final Map<Var, Integer> varIndex = Var.createEmptyPositioning();
   ConsistencyListener[] consistencyListeners;
   ExitChildListener<T>[] exitChildListeners;
   ExitListener[] exitListeners;
 
   /** It stores the original select choice point method that is used by this trace wrapper. */
-  SelectChoicePoint<T> select;
+  final SelectChoicePoint<T> select;
 
   /** It stores information about var being selected by internal select choice point. */
   T selectedVar;
@@ -107,7 +107,7 @@ public class TraceGenerator<T extends Var>
   /** An xml handler for visualization file. */
   TransformerHandler hdVis;
 
-  Stack<SearchNode> searchStack = new Stack<>();
+  final Stack<SearchNode> searchStack = new Stack<>();
   SearchNode currentSearchNode;
   int searchNodeId = 1;
   int visualisationNodeId = 1;
