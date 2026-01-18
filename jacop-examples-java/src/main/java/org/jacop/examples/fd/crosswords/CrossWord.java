@@ -280,11 +280,11 @@ public class CrossWord extends ExampleFD {
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
-    search.setSolutionListener(new PrintListener<IntVar>(crosswordTemplate));
+    search = new DepthFirstSearch<>();
+    search.setSolutionListener(new PrintListener<>(crosswordTemplate));
 
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(false);

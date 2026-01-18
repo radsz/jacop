@@ -67,9 +67,8 @@ public class RegularExpressionParser {
    * It constructs a parser of the regular expression.
    *
    * @param input string reader containing the regular expression.
-   * @throws SyntaxException if first token is neither word or left parenthesis.
    */
-  public RegularExpressionParser(StringReader input) throws SyntaxException {
+  public RegularExpressionParser(StringReader input) {
 
     lexer = new LexicalAnalyzer(input);
 
@@ -86,9 +85,8 @@ public class RegularExpressionParser {
    *
    * @param parseOneNext if parsing should parse only one item.
    * @return An expression that is the root of the parse tree produced by the parser.
-   * @throws SyntaxException execption rised when syntax is not followed
    */
-  public Expression parse(boolean parseOneNext) throws SyntaxException {
+  public Expression parse(boolean parseOneNext) {
 
     Expression c = null;
 

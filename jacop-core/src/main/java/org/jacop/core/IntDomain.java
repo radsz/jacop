@@ -104,7 +104,7 @@ public abstract class IntDomain extends Domain {
   /*
    * Finds result interval for multiplication of {a..b} * {c..d}
    */
-  public static final Interval mulBounds(int a, int b, int c, int d) {
+  public static Interval mulBounds(int a, int b, int c, int d) {
 
     int ac = multiplyInt(a, c);
     int ad = multiplyInt(a, d);
@@ -119,7 +119,7 @@ public abstract class IntDomain extends Domain {
   /*
    * Finds result interval by constant for multiplication of {a..b} * c
    */
-  public static final Interval mulBounds(int a, int b, int c) {
+  public static Interval mulBounds(int a, int b, int c) {
 
     int min;
     int max;
@@ -137,7 +137,7 @@ public abstract class IntDomain extends Domain {
   /*
    * Finds result interval for {a..b}^2
    */
-  public static final Interval squareBounds(int a, int b) {
+  public static Interval squareBounds(int a, int b) {
 
     int aa = multiplyInt(a, a);
     int bb = multiplyInt(b, b);
@@ -152,7 +152,7 @@ public abstract class IntDomain extends Domain {
   /*
    * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
    */
-  public static final Interval divBounds(int a, int b, int c, int d) {
+  public static Interval divBounds(int a, int b, int c, int d) {
 
     int min;
     int max;
@@ -189,7 +189,7 @@ public abstract class IntDomain extends Domain {
   /*
    * Finds result interval for division of {a..b} / {c..d} for mul constraints
    */
-  public static final Interval divIntBounds(int a, int b, int c, int d) {
+  public static Interval divIntBounds(int a, int b, int c, int d) {
     int min;
     int max;
 
@@ -228,7 +228,7 @@ public abstract class IntDomain extends Domain {
   /*
    * Finds result interval by constnat division of {a..b} / c for div and mod constraints
    */
-  public static final Interval divIntBounds(int a, int b, int c) {
+  public static Interval divIntBounds(int a, int b, int c) {
 
     int min;
     int max;
@@ -334,7 +334,7 @@ public abstract class IntDomain extends Domain {
    * @param i Interval which needs to be added to the domain.
    */
   public void unionAdapt(Interval i) {
-    unionAdapt(i.min, i.max);
+    unionAdapt(i.min(), i.max());
   }
 
   /**
@@ -382,7 +382,7 @@ public abstract class IntDomain extends Domain {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        if (isIntersecting(next.min, next.max)) return true;
+        if (isIntersecting(next.min(), next.max())) return true;
       }
     } else {
 
@@ -414,7 +414,7 @@ public abstract class IntDomain extends Domain {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        if (!contains(next.min, next.max)) return false;
+        if (!contains(next.min(), next.max())) return false;
       }
     } else {
       ValueEnumeration enumer = domain.valueEnumeration();
@@ -583,10 +583,10 @@ public abstract class IntDomain extends Domain {
     if (!domain.isSparseRepresentation()) {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       Interval first = enumer.nextElement();
-      IntDomain result = this.subtract(first.min, first.max);
+      IntDomain result = this.subtract(first.min(), first.max());
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        result.subtractAdapt(next.min, next.max);
+        result.subtractAdapt(next.min(), next.max());
       }
       return result;
     } else {
@@ -628,7 +628,7 @@ public abstract class IntDomain extends Domain {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        result.unionAdapt(next.min, next.max);
+        result.unionAdapt(next.min(), next.max());
       }
       return result;
     } else {
@@ -789,7 +789,7 @@ public abstract class IntDomain extends Domain {
    * @return the left bound of the specified interval.
    */
   public int leftElement(int intervalNo) {
-    return getInterval(intervalNo).min;
+    return getInterval(intervalNo).min();
   }
 
   /**
@@ -799,7 +799,7 @@ public abstract class IntDomain extends Domain {
    * @return the right bound of the specified interval.
    */
   public int rightElement(int intervalNo) {
-    return getInterval(intervalNo).max;
+    return getInterval(intervalNo).max();
   }
 
   /**
@@ -833,7 +833,7 @@ public abstract class IntDomain extends Domain {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        if (!contains(next.min, next.max)) return false;
+        if (!contains(next.min(), next.max())) return false;
       }
       return true;
     } else {

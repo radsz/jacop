@@ -45,7 +45,6 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.*;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -201,13 +200,6 @@ public class SingleConstraintTest extends TestHelper {
             Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
     assertThat(noOfSolutions, is(42));
-  }
-
-  @Test
-  @Ignore("Requires org.jacop.examples.fd.PerfectSquare - moved to examples module")
-  public void testGeost() {
-    // This test requires PerfectSquare from examples module
-    // Moved to jacop-examples-java module
   }
 
   @Test

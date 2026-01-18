@@ -87,7 +87,7 @@ public class DBox {
    *
    * @param dimension the number of dimensions
    */
-  public static final synchronized void supportDimension(int dimension) {
+  public static synchronized void supportDimension(int dimension) {
 
     int size = freeBoxes.size();
 
@@ -104,7 +104,7 @@ public class DBox {
    *
    * @param unusedBox the not used DBox which is being recycled.
    */
-  public static final synchronized void dispatchBox(DBox unusedBox) {
+  public static synchronized void dispatchBox(DBox unusedBox) {
 
     freeBoxes.get(unusedBox.origin.length).push(unusedBox);
   }
@@ -117,7 +117,7 @@ public class DBox {
    * @return It returns DBox with the specified dimension. Later on, when box is no longer needed it
    *     should be dispatched back.
    */
-  public static final synchronized DBox newBox(int dimension) {
+  public static synchronized DBox newBox(int dimension) {
 
     SimpleArrayList<DBox> boxes = freeBoxes.get(dimension);
 
@@ -132,7 +132,7 @@ public class DBox {
    * @param dimension the number of dimensions
    * @return it returns a preallocated DBox of a given dimensions.
    */
-  public static final DBox getAllocatedInstance(int dimension) {
+  public static DBox getAllocatedInstance(int dimension) {
     return new DBox(dimension);
   }
 
@@ -657,8 +657,6 @@ public class DBox {
 
     if (!Arrays.equals(length, other.length)) return false;
 
-    if (!Arrays.equals(origin, other.origin)) return false;
-
-    return true;
+    return Arrays.equals(origin, other.origin);
   }
 }

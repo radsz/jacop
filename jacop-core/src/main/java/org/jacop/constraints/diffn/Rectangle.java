@@ -154,10 +154,7 @@ public class Rectangle {
   }
 
   boolean possibleOverlap(Rectangle r) {
-    if (noOverlap(r, 0) || noOverlap(r, 1)) {
-      return false;
-    }
-    return true;
+    return !noOverlap(r, 0) && !noOverlap(r, 1);
   }
 
   boolean instantiated() {

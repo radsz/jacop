@@ -245,7 +245,7 @@ public class EqBool extends PrimitiveConstraint {
         if (x0 > 0 && x1 > 0) return false;
       }
 
-      if (x0 == list.length || x1 == list.length) return true;
+      return x0 == list.length || x1 == list.length;
 
     } else {
 

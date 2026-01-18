@@ -276,7 +276,4 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
     return proposedVariable;
   }
-
-  @Override
-  public void supplyGuideFeedback(boolean feedback) {}
 }

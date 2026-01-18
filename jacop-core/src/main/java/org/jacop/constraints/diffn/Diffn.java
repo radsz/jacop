@@ -660,39 +660,10 @@ public class Diffn extends Nooverlap {
     return result.append("], ").append(strict).append(")").toString();
   }
 
-  private static class Event {
-    final int type;
-    final Rectangle r;
-    final int date;
-    final int value;
-    final Interval block;
-
-    Event(int type, Rectangle r, int date, int value, Interval block) {
-      this.type = type;
-      this.r = r;
-      this.date = date;
-      this.value = value;
-      this.block = block;
-    }
-
-    int date() {
-      return date;
-    }
-
-    int type() {
-      return type;
-    }
-
-    int value() {
-      return value;
-    }
+  private record Event(int type, Rectangle r, int date, int value, Interval block) {
 
     Rectangle rect() {
       return r;
-    }
-
-    Interval block() {
-      return block;
     }
 
     @Override

@@ -36,19 +36,14 @@ package org.jacop.core;
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
+ * @param min It specifies the minimal value in the interval.
+ * @param max It specifies the maximal value in the interval.
  */
-public final class Interval implements Cloneable {
-
-  /** It specifies the minimal value in the interval. */
-  public final int min;
-
-  /** It specifies the maximal value in the interval. */
-  public final int max;
+public record Interval(int min, int max) implements Cloneable {
 
   /** It creates the largest possible interval. */
   public Interval() {
-    min = IntDomain.MinInt;
-    max = IntDomain.MaxInt;
+    this(IntDomain.MinInt, IntDomain.MaxInt);
   }
 
   /**
@@ -57,12 +52,9 @@ public final class Interval implements Cloneable {
    * @param min the minimal value in the interval (the left bound).
    * @param max the maximal value in the interval (the right bound).
    */
-  public Interval(int min, int max) {
+  public Interval {
 
     assert (min <= max) : "min value " + min + " is larger than max value " + max;
-
-    this.min = min;
-    this.max = max;
   }
 
   @Override
@@ -85,6 +77,7 @@ public final class Interval implements Cloneable {
    *
    * @return the maximal value from the interval.
    */
+  @Override
   public int max() {
     return max;
   }
@@ -94,6 +87,7 @@ public final class Interval implements Cloneable {
    *
    * @return the minimal value from the interval.
    */
+  @Override
   public int min() {
     return min;
   }

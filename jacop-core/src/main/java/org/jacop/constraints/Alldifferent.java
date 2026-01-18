@@ -193,8 +193,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());
     int maxNumberDifferent = matcher.hopcroftKarp();
 
-    if (maxNumberDifferent < list.length) return true;
-    else return false;
+    return maxNumberDifferent < list.length;
   }
 
   @Override

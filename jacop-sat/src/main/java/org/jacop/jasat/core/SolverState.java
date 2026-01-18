@@ -46,17 +46,12 @@ public final class SolverState {
    */
   public static String show(int state) {
 
-    switch (state) {
-      case 0:
-        return "CONFLICT";
-      case 1:
-        return "UNKNOWN";
-      case 2:
-        return "SATISFIABLE";
-      case 3:
-        return "UNSATISFIABLE";
-      default:
-        throw new AssertionError("bad SolverState int");
-    }
+    return switch (state) {
+      case 0 -> "CONFLICT";
+      case 1 -> "UNKNOWN";
+      case 2 -> "SATISFIABLE";
+      case 3 -> "UNSATISFIABLE";
+      default -> throw new AssertionError("bad SolverState int");
+    };
   }
 }

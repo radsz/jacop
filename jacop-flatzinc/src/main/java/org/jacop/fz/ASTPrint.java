@@ -9,11 +9,7 @@ public class ASTPrint {
   private int indent = 1;
 
   private String indentString() {
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < indent; ++i) {
-      sb.append("  ");
-    }
-    return sb.toString();
+    return "  ".repeat(Math.max(0, indent));
   }
 
   public void print(Node node) {

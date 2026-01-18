@@ -51,30 +51,27 @@ public class IntDomainOperationHandler implements DomainOperationHandler {
 
   @Override
   public void inValue(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     // For IntVar, leftBranch parameter is ignored - always use inValue
     ((IntDomain) intVar.dom()).inValue(store.level, intVar, value);
   }
 
   @Override
   public void inComplement(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     // For IntVar, leftBranch parameter is ignored - always use inComplement
     ((IntDomain) intVar.dom()).inComplement(store.level, intVar, value);
   }
 
   @Override
   public String getDomainString(Var var) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     return intVar.dom().toString();
   }
 }

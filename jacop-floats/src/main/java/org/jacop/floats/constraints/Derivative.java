@@ -71,8 +71,7 @@ public class Derivative {
     definitionConstraint = Var.createEmptyPositioning();
   }
 
-  public static final FloatVar getDerivative(
-      Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
+  public static FloatVar getDerivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     // System.out.println ("Var = " + f);
 
@@ -141,7 +140,7 @@ public class Derivative {
     }
   }
 
-  static final void poseDerivativeConstraint(Constraint c) {
+  static void poseDerivativeConstraint(Constraint c) {
 
     // System.out.println (c);
 
@@ -195,11 +194,11 @@ public class Derivative {
     definitionConstraint.put(f, c);
   }
 
-  public static final int numberDerivativeConstraints() {
+  public static int numberDerivativeConstraints() {
     return derivateConstraints.size();
   }
 
-  public static final Set<Constraint> derivativeConstraints() {
+  public static Set<Constraint> derivativeConstraints() {
     return derivateConstraints;
   }
 }

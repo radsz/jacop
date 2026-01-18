@@ -76,8 +76,7 @@ public class SparseSet {
 
     int a = sparse[k];
 
-    if (a < members && dense[a] == k) return true;
-    else return false;
+    return a < members && dense[a] == k;
   }
 
   /**

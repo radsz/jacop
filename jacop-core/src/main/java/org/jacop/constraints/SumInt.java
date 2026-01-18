@@ -349,8 +349,7 @@ public class SumInt extends PrimitiveConstraint {
   private boolean pruneNe(IntVar x, long min, long max) {
 
     if (min == max) {
-      boolean boundsChanged = false;
-      if (min == (long) x.min() || max == (long) x.max()) boundsChanged = true;
+      boolean boundsChanged = min == (long) x.min() || max == (long) x.max();
 
       x.domain.inComplement(store.level, x, long2int(min));
 
@@ -421,22 +420,15 @@ public class SumInt extends PrimitiveConstraint {
 
   private boolean entailed(int rel) {
 
-    switch (rel) {
-      case eq:
-        return satisfiedEq();
-      case le:
-        return satisfiedLtEq(0);
-      case lt:
-        return satisfiedLtEq(1);
-      case ne:
-        return satisfiedNeq();
-      case gt:
-        return satisfiedGtEq(1);
-      case ge:
-        return satisfiedGtEq(0);
-    }
-
-    return false;
+    return switch (rel) {
+      case eq -> satisfiedEq();
+      case le -> satisfiedLtEq(0);
+      case lt -> satisfiedLtEq(1);
+      case ne -> satisfiedNeq();
+      case gt -> satisfiedGtEq(1);
+      case ge -> satisfiedGtEq(0);
+      default -> false;
+    };
   }
 
   public byte relation(String r) {
@@ -564,7 +556,4 @@ public class SumInt extends PrimitiveConstraint {
 
     return proposedVariable;
   }
-
-  @Override
-  public void supplyGuideFeedback(boolean feedback) {}
 }

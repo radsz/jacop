@@ -558,10 +558,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
       if (timeSizeMax - timeSizeOrigin <= 0) return false;
 
       // check if point is between bounds, if not return null
-      if (c[obstacle.dimension] < timeSizeOrigin || c[obstacle.dimension] > timeSizeMax)
-        // point cannot be contained in outbox, no need to continue
-        return false;
-      else return true;
+      // point cannot be contained in outbox, no need to continue
+      return c[obstacle.dimension] >= timeSizeOrigin && c[obstacle.dimension] <= timeSizeMax;
 
     } else {
       // time is not included in the dimensions, thus the outbox covers the whole space

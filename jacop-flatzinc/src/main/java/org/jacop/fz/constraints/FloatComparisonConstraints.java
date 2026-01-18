@@ -216,22 +216,14 @@ class FloatComparisonConstraints implements ParserTreeConstants {
         FloatVar v1 = support.getFloatVariable(p1);
         FloatVar v2 = support.getFloatVariable(p2);
 
-        switch (operation) {
-          case Support.eq:
-            c = new PeqQ(v1, v2);
-            break;
-          case Support.ne:
-            c = new PneqQ(v1, v2);
-            break;
-          case Support.lt:
-            c = new PltQ(v1, v2);
-            break;
-          case Support.le:
-            c = new PlteqQ(v1, v2);
-            break;
-          default:
-            throw new RuntimeException("Internal error in " + getClass().getName());
-        }
+        c =
+            switch (operation) {
+              case Support.eq -> new PeqQ(v1, v2);
+              case Support.ne -> new PneqQ(v1, v2);
+              case Support.lt -> new PltQ(v1, v2);
+              case Support.le -> new PlteqQ(v1, v2);
+              default -> throw new RuntimeException("Internal error in " + getClass().getName());
+            };
       }
 
       Constraint cr = new Reified(c, v3);

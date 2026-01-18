@@ -443,10 +443,7 @@ public final class SatWrapper extends Constraint
 
       if (clauseToLearn != null) {
 
-        if (clauseToLearn.isUnsatisfiableIn(trail)) mustBacktrack = true;
-        else {
-          mustBacktrack = false;
-        }
+        mustBacktrack = clauseToLearn.isUnsatisfiableIn(trail);
       }
       //			else {
       //				core.triggerIdleEvent();

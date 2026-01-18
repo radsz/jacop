@@ -430,30 +430,7 @@ public class CumulativeBasic extends Constraint {
     }
   }
 
-  private static class Event {
-    final int type;
-    final TaskView t;
-    final int date;
-    final int value;
-
-    Event(int type, TaskView t, int date, int value) {
-      this.type = type;
-      this.t = t;
-      this.date = date;
-      this.value = value;
-    }
-
-    int date() {
-      return date;
-    }
-
-    int type() {
-      return type;
-    }
-
-    int value() {
-      return value;
-    }
+  private record Event(int type, TaskView t, int date, int value) {
 
     TaskView task() {
       return t;

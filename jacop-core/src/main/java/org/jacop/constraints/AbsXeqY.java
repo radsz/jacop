@@ -141,18 +141,18 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       int i = 0;
       Interval[] intervals = xDom.intervals;
-      for (; i < xDom.size; i++) if (intervals[i].max > 0) break;
+      for (; i < xDom.size; i++) if (intervals[i].max() > 0) break;
 
       int j = i;
       if (j == xDom.size) j--;
 
       for (; j >= 0; j--)
-        if (intervals[j].max <= 0) yDom1.unionAdapt(-intervals[j].max, -intervals[j].min);
+        if (intervals[j].max() <= 0) yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
 
-      if (i < xDom.size && intervals[i].min < 0 && intervals[i].max > 0) {
+      if (i < xDom.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
 
-        if (-intervals[i].min > intervals[i].max) yDom1.unionAdapt(0, -intervals[i].min);
-        else yDom1.unionAdapt(0, intervals[i].max);
+        if (-intervals[i].min() > intervals[i].max()) yDom1.unionAdapt(0, -intervals[i].min());
+        else yDom1.unionAdapt(0, intervals[i].max());
       }
 
       IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
@@ -185,7 +185,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
       }
 
       for (i = yDom.size - 1; i >= 0; i--)
-        xDom.unionAdapt(-yDom.intervals[i].max, -yDom.intervals[i].min);
+        xDom.unionAdapt(-yDom.intervals[i].max(), -yDom.intervals[i].min());
 
       xDom.addDom(yDom);
 

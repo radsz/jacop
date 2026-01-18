@@ -87,32 +87,17 @@ class LexicalAnalyzer {
     int token;
 
     try {
-      switch (input.nextToken()) {
-        case StreamTokenizer.TT_EOF:
-          token = EOF;
-          break;
-        case StreamTokenizer.TT_WORD:
-          token = WORD;
-          break;
-        case '(':
-          token = LEFT_PAREN;
-          break;
-        case ')':
-          token = RIGHT_PAREN;
-          break;
-        case '*':
-          token = STAR;
-          break;
-        case '+':
-          token = PLUS;
-          break;
-        case '.':
-          token = DOT;
-          break;
-        default:
-          token = INVALID_CHAR;
-          break;
-      } // switch
+      token =
+          switch (input.nextToken()) {
+            case StreamTokenizer.TT_EOF -> EOF;
+            case StreamTokenizer.TT_WORD -> WORD;
+            case '(' -> LEFT_PAREN;
+            case ')' -> RIGHT_PAREN;
+            case '*' -> STAR;
+            case '+' -> PLUS;
+            case '.' -> DOT;
+            default -> INVALID_CHAR;
+          }; // switch
     } catch (IOException _) {
       // Treat an IOException as an end of file
       token = EOF;

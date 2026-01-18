@@ -185,7 +185,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     } else
       for (int i = 0; i < d.size; i++)
         // can not use function add(Interval)
-        unionAdapt(d.intervals[i].min, d.intervals[i].max);
+        unionAdapt(d.intervals[i].min(), d.intervals[i].max());
 
     assert checkInvariants() == null : checkInvariants();
   }
@@ -207,10 +207,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       for (; i < size; i++) {
         // i - position of the interval which touches with or intersects with min..max
 
-        if ((next(max) >= intervals[i].min && max <= next(intervals[i].max))
-            || (next(min) >= intervals[i].min && min <= next(intervals[i].max))
-            || (min <= intervals[i].min && intervals[i].max <= max)) break;
-        if (next(max) < intervals[i].min) {
+        if ((next(max) >= intervals[i].min() && max <= next(intervals[i].max()))
+            || (next(min) >= intervals[i].min() && min <= next(intervals[i].max()))
+            || (min <= intervals[i].min() && intervals[i].max() <= max)) break;
+        if (next(max) < intervals[i].min()) {
           // interval is inserted at position i
 
           if (size == intervals.length) {
@@ -261,21 +261,21 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       double newMin;
       // interval(min, max) intersects with current domain
-      if (min < intervals[i].min) {
+      if (min < intervals[i].min()) {
         newMin = min;
       } else {
-        newMin = intervals[i].min;
+        newMin = intervals[i].min();
       }
 
       int target = i;
       double newMax;
 
-      while (target < size && max >= intervals[target].max) target++;
+      while (target < size && max >= intervals[target].max()) target++;
 
       if (target == size) newMax = max;
-      else if (intervals[target].min > next(max)) newMax = max;
+      else if (intervals[target].min() > next(max)) newMax = max;
       else {
-        newMax = intervals[target].max;
+        newMax = intervals[target].max();
         target++;
       }
 
@@ -314,13 +314,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatInterval interval2 = intervalDomain.intervals[pointer2];
 
     while (true) {
-      if (interval1.max < interval2.min) {
+      if (interval1.max() < interval2.min()) {
         pointer1++;
         if (pointer1 < size) {
           interval1 = intervals[pointer1];
           continue;
         } else break;
-      } else if (interval2.max < interval1.min) {
+      } else if (interval2.max() < interval1.min()) {
         pointer2++;
         if (pointer2 < size2) {
           interval2 = intervalDomain.intervals[pointer2];
@@ -338,11 +338,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     int i = 0;
-    for (; i < size && intervals[i].max < min; i++)
+    for (; i < size && intervals[i].max() < min; i++)
       ;
 
-    if (i == size || intervals[i].min > max) return false;
-    else return true;
+    return i != size && !(intervals[i].min() > max);
   }
 
   /** It removes all elements. */
@@ -413,8 +412,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     // FIXME, check that FD(int) part does not assume to have different
     // answers to this input conditions.
     if (isEmpty()) {
-      if (domain.isEmpty()) return true;
-      return false;
+      return domain.isEmpty();
     }
 
     if (domain.isEmpty()) return true;
@@ -435,7 +433,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     while (true) {
 
-      while (interval2.min > interval1.max) {
+      while (interval2.min() > interval1.max()) {
 
         i1++;
 
@@ -444,7 +442,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         interval1 = intervals[i1];
       }
 
-      if (interval2.min < interval1.min || interval2.max > interval1.max) return false;
+      if (interval2.min() < interval1.min() || interval2.max() > interval1.max()) return false;
 
       i2++;
 
@@ -465,10 +463,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
     if (min() != FloatDomain.MinFloat)
-      result.unionAdapt(new FloatInterval(FloatDomain.MinFloat, previous(intervals[0].min)));
+      result.unionAdapt(new FloatInterval(FloatDomain.MinFloat, previous(intervals[0].min())));
 
     for (int i = 0; i < size - 1; i++)
-      result.unionAdapt(new FloatInterval(next(intervals[i].max), previous(intervals[i + 1].min)));
+      result.unionAdapt(
+          new FloatInterval(next(intervals[i].max()), previous(intervals[i + 1].min())));
 
     if (max() != FloatDomain.MaxFloat)
       result.unionAdapt(new FloatInterval(next(max()), FloatDomain.MaxFloat));
@@ -488,7 +487,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     for (int m = 0; m < size; m++) {
       FloatInterval i = intervals[m];
-      if (i.max >= value) if (value >= i.min) return true;
+      if (i.max() >= value) if (value >= i.min()) return true;
     }
 
     return false;
@@ -500,9 +499,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     for (int m = 0; m < size; m++) {
       FloatInterval i = intervals[m];
-      if (i.max > value)
-        if (value >= previous(i.min)) return next(value);
-        else return i.min;
+      if (i.max() > value)
+        if (value >= previous(i.min())) return next(value);
+        else return i.min();
     }
 
     return value;
@@ -565,7 +564,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     double n = 0;
 
-    for (int i = 0; i < size; i++) n += intervals[i].max - intervals[i].min;
+    for (int i = 0; i < size; i++) n += intervals[i].max() - intervals[i].min();
 
     return n;
   }
@@ -599,13 +598,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatInterval interval2 = input.intervals[pointer2];
 
     while (true) {
-      if (interval1.max < interval2.min) {
+      if (interval1.max() < interval2.min()) {
         pointer1++;
         if (pointer1 < size1) {
           interval1 = intervals[pointer1];
           continue;
         } else break;
-      } else if (interval2.max < interval1.min) {
+      } else if (interval2.max() < interval1.min()) {
         pointer2++;
         if (pointer2 < size2) {
           interval2 = input.intervals[pointer2];
@@ -614,18 +613,18 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       } else
       // interval1.max >= interval2.min
       // interval2.max >= interval1.min
-      if (interval1.min <= interval2.min) {
+      if (interval1.min() <= interval2.min()) {
 
-        if (interval1.max <= interval2.max) {
+        if (interval1.max() <= interval2.max()) {
 
-          temp.unionAdapt(interval2.min, interval1.max);
+          temp.unionAdapt(interval2.min(), interval1.max());
           pointer1++;
           if (pointer1 < size1) {
             interval1 = intervals[pointer1];
             continue;
           } else break;
         } else {
-          temp.unionAdapt(interval2.min, interval2.max);
+          temp.unionAdapt(interval2.min(), interval2.max());
           pointer2++;
           if (pointer2 < size2) {
             interval2 = input.intervals[pointer2];
@@ -638,15 +637,15 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       // interval2.max >= interval1.min
       // interval1.min > interval2.min
       {
-        if (interval2.max <= interval1.max) {
-          temp.unionAdapt(interval1.min, interval2.max);
+        if (interval2.max() <= interval1.max()) {
+          temp.unionAdapt(interval1.min(), interval2.max());
           pointer2++;
           if (pointer2 < size2) {
             interval2 = input.intervals[pointer2];
             continue;
           } else break;
         } else {
-          temp.unionAdapt(interval1.min, interval1.max);
+          temp.unionAdapt(interval1.min(), interval1.max());
           pointer1++;
           if (pointer1 < size1) {
             interval1 = intervals[pointer1];
@@ -677,22 +676,22 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatInterval interval1 = intervals[pointer1];
 
     while (true) {
-      if (interval1.max < min) {
+      if (interval1.max() < min) {
         pointer1++;
         if (pointer1 < size) {
           interval1 = intervals[pointer1];
           continue;
         } else break;
-      } else if (max < interval1.min) {
+      } else if (max < interval1.min()) {
         break;
       } else
       // interval1.max >= interval2.min
       // interval2.max >= interval1.min
-      if (interval1.min <= min) {
+      if (interval1.min() <= min) {
 
-        if (interval1.max <= max) {
+        if (interval1.max() <= max) {
 
-          temp.unionAdapt(new FloatInterval(min, interval1.max));
+          temp.unionAdapt(new FloatInterval(min, interval1.max()));
           pointer1++;
           if (pointer1 < size) {
             interval1 = intervals[pointer1];
@@ -708,12 +707,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       // interval2.max >= interval1.min
       // interval1.min > interval2.min
       {
-        if (max <= interval1.max) {
-          temp.unionAdapt(new FloatInterval(interval1.min, max));
+        if (max <= interval1.max()) {
+          temp.unionAdapt(new FloatInterval(interval1.min(), max));
           //                                      pointer2++;
           break;
         } else {
-          temp.unionAdapt(new FloatInterval(interval1.min, interval1.max));
+          temp.unionAdapt(new FloatInterval(interval1.min(), interval1.max()));
           pointer1++;
           if (pointer1 < size) {
             interval1 = intervals[pointer1];
@@ -744,7 +743,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     while (true) {
 
-      if (interval1.max < value) {
+      if (interval1.max() < value) {
         pointer1++;
         if (pointer1 < size) {
           interval1 = intervals[pointer1];
@@ -752,13 +751,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         } else break;
       }
 
-      if (!(interval1.min > value)) {
+      if (!(interval1.min() > value)) {
 
-        if (interval1.min != value) {
+        if (interval1.min() != value) {
 
-          double oldMax = interval1.max;
+          double oldMax = interval1.max();
           // replace min..max with interval1.min..value-1
-          result.intervals[pointer1] = new FloatInterval(interval1.min, previous(value));
+          result.intervals[pointer1] = new FloatInterval(interval1.min(), previous(value));
           pointer1++;
 
           if (value != oldMax) {
@@ -767,9 +766,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
             pointer1++;
           }
 
-        } else if (interval1.max != value) {
+        } else if (interval1.max() != value) {
           // replace value..max with value+1..interval1.max
-          result.intervals[pointer1] = new FloatInterval(next(value), interval1.max);
+          result.intervals[pointer1] = new FloatInterval(next(value), interval1.max());
           pointer1++;
         } else {
           result.removeInterval(pointer1);
@@ -797,7 +796,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert size != 0;
 
-    return intervals[size - 1].max;
+    return intervals[size - 1].max();
   }
 
   /** It returns the minimum value in a domain. */
@@ -808,7 +807,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert size != 0;
 
-    return intervals[0].min;
+    return intervals[0].min();
   }
 
   /*
@@ -906,8 +905,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
     return (size == 1
         && intervals[0].singleton()
-        && intervals[0].min <= c
-        && c <= intervals[0].max);
+        && intervals[0].min() <= c
+        && c <= intervals[0].max());
   }
 
   /** It subtracts domain from current domain and returns the result. */
@@ -940,7 +939,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     while (true) {
 
-      if (currentDomain1.max < currentDomain2.min) {
+      if (currentDomain1.max() < currentDomain2.min()) {
         result.unionAdapt(currentDomain1);
         i1++;
         if (i1 == size) break;
@@ -949,16 +948,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         continue;
       }
 
-      if (currentDomain2.max < currentDomain1.min) {
+      if (currentDomain2.max() < currentDomain1.min()) {
         i2++;
         if (i2 == max2) break;
         currentDomain2 = intervalDomain.intervals[i2];
         continue;
       }
 
-      if (currentDomain1.min >= currentDomain2.min) {
+      if (currentDomain1.min() >= currentDomain2.min()) {
 
-        if (currentDomain1.max <= currentDomain2.max) {
+        if (currentDomain1.max() <= currentDomain2.max()) {
           // Skip current interval of i1 completely
           i1++;
           if (i1 == size) break;
@@ -972,12 +971,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           // BUT next currentdomain2.min needs to be larger than
           // currentDomain1.max
 
-          double oldMax = currentDomain2.max;
+          double oldMax = currentDomain2.max();
           i2++;
           if (i2 != max2) currentDomain2 = intervalDomain.intervals[i2];
 
-          if (i2 == max2 || currentDomain2.min > currentDomain1.max) {
-            result.unionAdapt(new FloatInterval(next(oldMax), currentDomain1.max));
+          if (i2 == max2 || currentDomain2.min() > currentDomain1.max()) {
+            result.unionAdapt(new FloatInterval(next(oldMax), currentDomain1.max()));
             i1++;
             if (i1 == size) break;
             currentDomain1 = intervals[i1];
@@ -990,7 +989,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
                 new FloatInterval(
                     next(oldMax),
                     // currentDomain2.min - 1));
-                    previous(currentDomain2.min)));
+                    previous(currentDomain2.min())));
             minIncluded = true;
           }
         }
@@ -998,13 +997,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       } else {
         // currentDomain1.min < currentDomain2.min)
 
-        if (currentDomain1.max <= currentDomain2.max) {
+        if (currentDomain1.max() <= currentDomain2.max()) {
 
           if (!minIncluded)
-            if (currentDomain1.max >= currentDomain2.min)
+            if (currentDomain1.max() >= currentDomain2.min())
               result.unionAdapt(
-                  new FloatInterval(currentDomain1.min, previous(currentDomain2.min)));
-            else result.unionAdapt(new FloatInterval(currentDomain1.min, currentDomain1.max));
+                  new FloatInterval(currentDomain1.min(), previous(currentDomain2.min())));
+            else result.unionAdapt(new FloatInterval(currentDomain1.min(), currentDomain1.max()));
 
           i1++;
           if (i1 == size) break;
@@ -1018,16 +1017,17 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           // currentDomain1.max
 
           if (!minIncluded) {
-            result.unionAdapt(new FloatInterval(currentDomain1.min, previous(currentDomain2.min)));
+            result.unionAdapt(
+                new FloatInterval(currentDomain1.min(), previous(currentDomain2.min())));
             minIncluded = true;
           }
 
-          double oldMax = currentDomain2.max;
+          double oldMax = currentDomain2.max();
           i2++;
           if (i2 != max2) currentDomain2 = intervalDomain.intervals[i2];
 
-          if (i2 == max2 || currentDomain2.min > currentDomain1.max) {
-            result.unionAdapt(new FloatInterval(next(oldMax), currentDomain1.max));
+          if (i2 == max2 || currentDomain2.min() > currentDomain1.max()) {
+            result.unionAdapt(new FloatInterval(next(oldMax), currentDomain1.max()));
             i1++;
             if (i1 == size) break;
             currentDomain1 = intervals[i1];
@@ -1040,7 +1040,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
             // if (i1 == size)
             // break;
 
-            result.unionAdapt(new FloatInterval(next(oldMax), previous(currentDomain2.min)));
+            result.unionAdapt(new FloatInterval(next(oldMax), previous(currentDomain2.min())));
           }
         }
       }
@@ -1076,7 +1076,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     while (true) {
 
-      if (currentInterval1.max < min) {
+      if (currentInterval1.max() < min) {
         result.unionAdapt(intervals[i1]);
         i1++;
         if (i1 == size) break;
@@ -1084,16 +1084,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         continue;
       }
 
-      if (max < currentInterval1.min) {
+      if (max < currentInterval1.min()) {
         break;
       }
 
-      if (currentInterval1.min >= min) {
+      if (currentInterval1.min() >= min) {
 
         // currentDomain1.max >= min
         // max >= currentDomain1.min
 
-        if (currentInterval1.max <= max) {
+        if (currentInterval1.max() <= max) {
           // Skip current interval of i1 completely
           i1++;
           if (i1 == size) break;
@@ -1107,7 +1107,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           // BUT next currentdomain2.min needs to be larger than
           // currentDomain1.max
 
-          result.unionAdapt(new FloatInterval(next(max), currentInterval1.max));
+          result.unionAdapt(new FloatInterval(next(max), currentInterval1.max()));
 
           i1++;
           break;
@@ -1118,9 +1118,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         // currentDomain1.max >= min
         // max >= currentDomain1.min
 
-        if (currentInterval1.max <= max) {
+        if (currentInterval1.max() <= max) {
 
-          result.unionAdapt(new FloatInterval(currentInterval1.min, previous(min)));
+          result.unionAdapt(new FloatInterval(currentInterval1.min(), previous(min)));
 
           i1++;
 
@@ -1134,8 +1134,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           // interval of min..max ends before interval of dom1 ends
           // max+1 .. currentDomain1.max
 
-          result.unionAdapt(currentInterval1.min, previous(min));
-          result.unionAdapt(next(max), currentInterval1.max);
+          result.unionAdapt(currentInterval1.min(), previous(min));
+          result.unionAdapt(next(max), currentInterval1.max());
 
           i1++;
           break;
@@ -1187,16 +1187,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     while (true) {
 
-      if (next(currentDomain1.max) < currentDomain2.min) {
-        result.unionAdapt(new FloatInterval(currentDomain1.min, currentDomain1.max));
+      if (next(currentDomain1.max()) < currentDomain2.min()) {
+        result.unionAdapt(new FloatInterval(currentDomain1.min(), currentDomain1.max()));
         i1++;
         if (i1 == max1) break;
         currentDomain1 = intervals[i1];
         continue;
       }
 
-      if (next(currentDomain2.max) < currentDomain1.min) {
-        result.unionAdapt(new FloatInterval(currentDomain2.min, currentDomain2.max));
+      if (next(currentDomain2.max()) < currentDomain1.min()) {
+        result.unionAdapt(new FloatInterval(currentDomain2.min(), currentDomain2.max()));
         i2++;
         if (i2 == max2) break;
         currentDomain2 = intervalDomain.intervals[i2];
@@ -1208,22 +1208,22 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       double min;
 
-      if (currentDomain1.min < currentDomain2.min) min = currentDomain1.min;
-      else min = currentDomain2.min;
+      if (currentDomain1.min() < currentDomain2.min()) min = currentDomain1.min();
+      else min = currentDomain2.min();
 
-      while ((next(currentDomain1.max) >= currentDomain2.min
-              && currentDomain1.min <= currentDomain2.min)
-          || (next(currentDomain2.max) >= currentDomain1.min
-              && currentDomain2.min <= currentDomain1.min)) {
+      while ((next(currentDomain1.max()) >= currentDomain2.min()
+              && currentDomain1.min() <= currentDomain2.min())
+          || (next(currentDomain2.max()) >= currentDomain1.min()
+              && currentDomain2.min() <= currentDomain1.min())) {
 
-        if (currentDomain1.max <= currentDomain2.max) {
+        if (currentDomain1.max() <= currentDomain2.max()) {
           i1++;
           if (i1 == max1) break;
           currentDomain1 = intervals[i1];
           continue;
         }
 
-        if (currentDomain2.max < currentDomain1.max) {
+        if (currentDomain2.max() < currentDomain1.max()) {
           i2++;
           if (i2 == max2) break;
           currentDomain2 = intervalDomain.intervals[i2];
@@ -1233,47 +1233,47 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       if (i1 == max1) {
 
-        while (currentDomain2.max <= currentDomain1.max) {
+        while (currentDomain2.max() <= currentDomain1.max()) {
           i2++;
           if (i2 == max2) break;
           currentDomain2 = intervalDomain.intervals[i2];
         }
 
-        if (currentDomain1.max <= currentDomain2.max
-            && next(currentDomain1.max) >= currentDomain2.min) {
-          result.unionAdapt(new FloatInterval(min, currentDomain2.max));
+        if (currentDomain1.max() <= currentDomain2.max()
+            && next(currentDomain1.max()) >= currentDomain2.min()) {
+          result.unionAdapt(new FloatInterval(min, currentDomain2.max()));
           i2++;
         } else {
-          result.unionAdapt(new FloatInterval(min, currentDomain1.max));
+          result.unionAdapt(new FloatInterval(min, currentDomain1.max()));
         }
         break;
       }
 
       if (i2 == max2) {
 
-        while (currentDomain1.max <= currentDomain2.max) {
+        while (currentDomain1.max() <= currentDomain2.max()) {
           i1++;
           if (i1 == max1) break;
           currentDomain1 = intervals[i1];
         }
 
-        if (currentDomain2.max <= currentDomain1.max
-            && next(currentDomain2.max) >= currentDomain1.min) {
-          result.unionAdapt(new FloatInterval(min, currentDomain1.max));
+        if (currentDomain2.max() <= currentDomain1.max()
+            && next(currentDomain2.max()) >= currentDomain1.min()) {
+          result.unionAdapt(new FloatInterval(min, currentDomain1.max()));
           i1++;
         } else {
-          result.unionAdapt(new FloatInterval(min, currentDomain2.max));
+          result.unionAdapt(new FloatInterval(min, currentDomain2.max()));
         }
         break;
       }
 
-      if (currentDomain1.max < currentDomain2.max) {
-        result.unionAdapt(new FloatInterval(min, currentDomain1.max));
+      if (currentDomain1.max() < currentDomain2.max()) {
+        result.unionAdapt(new FloatInterval(min, currentDomain1.max()));
         i1++;
         if (i1 == max1) break;
         currentDomain1 = intervals[i1];
       } else {
-        result.unionAdapt(new FloatInterval(min, currentDomain2.max));
+        result.unionAdapt(new FloatInterval(min, currentDomain2.max()));
         i2++;
         if (i2 == max2) break;
         currentDomain2 = intervalDomain.intervals[i2];
@@ -1307,7 +1307,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     while (true) {
 
       // all intervals before and not glued (min..max) are included
-      if (next(currentInterval1.max) < min) {
+      if (next(currentInterval1.max()) < min) {
         result.unionAdapt(currentInterval1);
         i1++;
         if (i1 == size) {
@@ -1319,7 +1319,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       }
 
       // currentInterval if after and not glued
-      if (next(max) < currentInterval1.min) {
+      if (next(max) < currentInterval1.min()) {
         result.unionAdapt(new FloatInterval(min, max));
         break;
       }
@@ -1328,16 +1328,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       double tempMin;
 
-      if (currentInterval1.min < min) tempMin = currentInterval1.min;
+      if (currentInterval1.min() < min) tempMin = currentInterval1.min();
       else tempMin = min;
 
-      if (currentInterval1.max > max) {
-        result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max));
+      if (currentInterval1.max() > max) {
+        result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max()));
         i1++;
       } else {
 
         // (min..max) can cover multiple intervals.
-        while (currentInterval1.max <= max) {
+        while (currentInterval1.max() <= max) {
           i1++;
           if (i1 == size) {
             result.unionAdapt(new FloatInterval(tempMin, max));
@@ -1347,8 +1347,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         }
 
         // if current interval is glued or intersects with (min..max)
-        if (next(max) >= currentInterval1.min) {
-          result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max));
+        if (next(max) >= currentInterval1.min()) {
+          result.unionAdapt(new FloatInterval(tempMin, currentInterval1.max()));
           i1++;
         } else result.unionAdapt(new FloatInterval(tempMin, max));
       }
@@ -1378,7 +1378,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     while (true) {
 
-      if (next(currentInterval.max) < value) {
+      if (next(currentInterval.max()) < value) {
         result.unionAdapt(currentInterval);
         i1++;
         if (i1 == size) {
@@ -1390,19 +1390,19 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       } else break;
     }
 
-    if (next(value) < currentInterval.min) {
+    if (next(value) < currentInterval.min()) {
       result.unionAdapt(new FloatInterval(value, value));
     } else {
 
       double tempMin = value;
       double tempMax = value;
 
-      if (currentInterval.min < value) tempMin = currentInterval.min;
+      if (currentInterval.min() < value) tempMin = currentInterval.min();
 
-      if (currentInterval.max > value) tempMax = currentInterval.max;
+      if (currentInterval.max() > value) tempMax = currentInterval.max();
 
-      if (i1 + 1 < size && next(tempMax) == intervals[i1 + 1].min) {
-        tempMax = intervals[i1 + 1].max;
+      if (i1 + 1 < size && next(tempMax) == intervals[i1 + 1].min()) {
+        tempMax = intervals[i1 + 1].max();
         i1++;
       }
 
@@ -1497,19 +1497,19 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (min > intervals[size - 1].max) throw failException;
+    if (min > intervals[size - 1].max()) throw failException;
 
-    if (min <= intervals[0].min) return;
+    if (min <= intervals[0].min()) return;
 
     if (stamp == storeLevel) {
 
       int pointer = 0;
 
-      while (intervals[pointer].max < min) pointer++;
+      while (intervals[pointer].max() < min) pointer++;
 
       int i = 0;
-      if (intervals[pointer].min < min) {
-        intervals[0] = new FloatInterval(min, intervals[pointer].max);
+      if (intervals[pointer].min() < min) {
+        intervals[0] = new FloatInterval(min, intervals[pointer].max());
         pointer++;
         i++;
       }
@@ -1537,10 +1537,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       int pointer = 0;
 
       // pointer is always smaller than size as domains intersect
-      while (intervals[pointer].max < min) pointer++;
+      while (intervals[pointer].max() < min) pointer++;
 
-      if (intervals[pointer].min < min) {
-        result.unionAdapt(new FloatInterval(min, intervals[pointer++].max));
+      if (intervals[pointer].min() < min) {
+        result.unionAdapt(new FloatInterval(min, intervals[pointer++].max()));
       }
 
       for (; pointer < size; pointer++) {
@@ -1578,9 +1578,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (max < intervals[0].min) throw failException;
+    if (max < intervals[0].min()) throw failException;
 
-    double currentMax = intervals[size - 1].max;
+    double currentMax = intervals[size - 1].max();
 
     if (max >= currentMax) return;
 
@@ -1588,13 +1588,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     if (stamp == storeLevel) {
 
-      while (intervals[pointer].min > max) {
+      while (intervals[pointer].min() > max) {
         // intervals[pointer] = null;
         pointer--;
       }
 
-      if (intervals[pointer].max > max)
-        intervals[pointer] = new FloatInterval(intervals[pointer].min, max);
+      if (intervals[pointer].max() > max)
+        intervals[pointer] = new FloatInterval(intervals[pointer].min(), max);
 
       size = pointer + 1;
 
@@ -1612,7 +1612,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       assert stamp < storeLevel;
 
-      while (intervals[pointer].min > max) {
+      while (intervals[pointer].min() > max) {
         pointer--;
       }
 
@@ -1620,8 +1620,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       for (int i = 0; i < pointer; i++) result.unionAdapt(intervals[i]);
 
-      if (intervals[pointer].max > max)
-        result.unionAdapt(new FloatInterval(intervals[pointer].min, max));
+      if (intervals[pointer].max() > max)
+        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
       else result.unionAdapt(intervals[pointer]);
 
       result.modelConstraints = modelConstraints;
@@ -1657,40 +1657,40 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert (min <= max) : "Min value greater than max value " + min + " > " + max;
 
-    if (max < intervals[0].min) throw failException;
+    if (max < intervals[0].min()) throw failException;
 
-    double currentMax = intervals[size - 1].max;
+    double currentMax = intervals[size - 1].max();
     if (min > currentMax) throw failException;
 
-    if (min <= intervals[0].min && max >= currentMax) return;
+    if (min <= intervals[0].min() && max >= currentMax) return;
 
     int pointer = 0;
 
     // pointer is always smaller than size as domains intersect
-    while (intervals[pointer].max < min) pointer++;
+    while (intervals[pointer].max() < min) pointer++;
 
-    if (intervals[pointer].min > max) throw failException;
+    if (intervals[pointer].min() > max) throw failException;
 
     FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
 
-    if (intervals[pointer].min >= min)
-      if (intervals[pointer].max <= max) {
+    if (intervals[pointer].min() >= min)
+      if (intervals[pointer].max() <= max) {
         result.unionAdapt(intervals[pointer]);
 
-      } else result.unionAdapt(new FloatInterval(intervals[pointer].min, max));
-    else if (intervals[pointer].max <= max)
-      result.unionAdapt(new FloatInterval(min, intervals[pointer].max));
+      } else result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
+    else if (intervals[pointer].max() <= max)
+      result.unionAdapt(new FloatInterval(min, intervals[pointer].max()));
     else result.unionAdapt(new FloatInterval(min, max));
 
     pointer++;
 
     while (pointer < size)
-      if (intervals[pointer].max <= max) result.unionAdapt(intervals[pointer++]);
+      if (intervals[pointer].max() <= max) result.unionAdapt(intervals[pointer++]);
       else break;
 
     if (pointer < size)
-      if (intervals[pointer].min <= max)
-        result.unionAdapt(new FloatInterval(intervals[pointer].min, max));
+      if (intervals[pointer].min() <= max)
+        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
 
     if (stamp == storeLevel) {
 
@@ -1754,17 +1754,17 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatInterval[] inputIntervals = input.intervals;
     int inputSize = input.size;
     // Chance for no event
-    while (pointer2 < inputSize && inputIntervals[pointer2].max < intervals[pointer1].min)
+    while (pointer2 < inputSize && inputIntervals[pointer2].max() < intervals[pointer1].min())
       pointer2++;
 
     if (pointer2 == inputSize) throw failException;
 
     // traverse within while loop until certain that change will occur
-    while (intervals[pointer1].min >= inputIntervals[pointer2].min
-        && intervals[pointer1].max <= inputIntervals[pointer2].max
+    while (intervals[pointer1].min() >= inputIntervals[pointer2].min()
+        && intervals[pointer1].max() <= inputIntervals[pointer2].max()
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max > inputIntervals[pointer2].max && ++pointer2 < inputSize)
+      while (intervals[pointer1].max() > inputIntervals[pointer2].max() && ++pointer2 < inputSize)
         ;
 
       if (pointer2 == inputSize) break;
@@ -1781,25 +1781,25 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     pointer2 = 0;
 
-    double interval1Min = intervals[pointer1].min;
-    double interval1Max = intervals[pointer1].max;
-    double interval2Min = inputIntervals[pointer2].min;
-    double interval2Max = inputIntervals[pointer2].max;
+    double interval1Min = intervals[pointer1].min();
+    double interval1Max = intervals[pointer1].max();
+    double interval2Min = inputIntervals[pointer2].min();
+    double interval2Max = inputIntervals[pointer2].max();
 
     while (true) {
 
       if (interval1Max < interval2Min) {
         pointer1++;
         if (pointer1 < size) {
-          interval1Min = intervals[pointer1].min;
-          interval1Max = intervals[pointer1].max;
+          interval1Min = intervals[pointer1].min();
+          interval1Max = intervals[pointer1].max();
           continue;
         } else break;
       } else if (interval2Max < interval1Min) {
         pointer2++;
         if (pointer2 < inputSize) {
-          interval2Min = inputIntervals[pointer2].min;
-          interval2Max = inputIntervals[pointer2].max;
+          interval2Min = inputIntervals[pointer2].min();
+          interval2Max = inputIntervals[pointer2].max();
           continue;
         } else break;
       } else
@@ -1812,8 +1812,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           pointer1++;
           if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min;
-            interval1Max = intervals[pointer1].max;
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
             continue;
           } else break;
         } else {
@@ -1821,8 +1821,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           pointer2++;
 
           if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min;
-            interval2Max = inputIntervals[pointer2].max;
+            interval2Min = inputIntervals[pointer2].min();
+            interval2Max = inputIntervals[pointer2].max();
             continue;
           } else break;
         }
@@ -1838,23 +1838,23 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           if (interval2Max >= interval1Max) {
             pointer1++;
             if (pointer1 < size) {
-              interval1Min = intervals[pointer1].min;
-              interval1Max = intervals[pointer1].max;
+              interval1Min = intervals[pointer1].min();
+              interval1Max = intervals[pointer1].max();
             } else break;
           }
 
           pointer2++;
           if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min;
-            interval2Max = inputIntervals[pointer2].max;
+            interval2Min = inputIntervals[pointer2].min();
+            interval2Max = inputIntervals[pointer2].max();
             continue;
           } else break;
         } else {
           result.unionAdapt(intervals[pointer1]);
           pointer1++;
           if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min;
-            interval1Max = intervals[pointer1].max;
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
             continue;
           } else break;
         }
@@ -1917,8 +1917,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   public int intervalNo(double value) {
 
     for (int i = 0; i < size; i++)
-      if (intervals[i].min > value) continue;
-      else if (intervals[i].max < value) continue;
+      if (intervals[i].min() > value) continue;
+      else if (intervals[i].max() < value) continue;
       else return i;
 
     return -1;
@@ -1947,11 +1947,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     if (storeLevel == stamp) {
 
-      if (intervals[counter].min == complement) {
+      if (intervals[counter].min() == complement) {
 
-        if (intervals[counter].max != complement) {
+        if (intervals[counter].max() != complement) {
 
-          intervals[counter] = new FloatInterval(next(complement), intervals[counter].max);
+          intervals[counter] = new FloatInterval(next(complement), intervals[counter].max());
 
           assert checkInvariants() == null : checkInvariants();
 
@@ -1995,12 +1995,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         }
       }
 
-      if (intervals[counter].max == complement) {
+      if (intervals[counter].max() == complement) {
 
         // domain like this 1..3, 5, 7..10, and 5 being
         // removed taken care of above.
 
-        intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
+        intervals[counter] = new FloatInterval(intervals[counter].min(), previous(complement));
 
         assert checkInvariants() == null : checkInvariants();
 
@@ -2026,9 +2026,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         intervals = updatedIntervals;
       }
 
-      double max = intervals[counter].max;
+      double max = intervals[counter].max();
 
-      intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
+      intervals[counter] = new FloatInterval(intervals[counter].min(), previous(complement));
 
       intervals[counter + 1] = new FloatInterval(next(complement), max);
 
@@ -2056,14 +2056,14 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
 
-      if (intervals[counter].min == complement) {
+      if (intervals[counter].min() == complement) {
 
-        if (intervals[counter].max != complement) {
+        if (intervals[counter].max() != complement) {
 
           System.arraycopy(intervals, 0, result.intervals, 0, size);
 
           result.intervals[counter] =
-              new FloatInterval(next(complement), result.intervals[counter].max);
+              new FloatInterval(next(complement), result.intervals[counter].max());
 
           result.size = size;
 
@@ -2105,7 +2105,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         }
       }
 
-      if (intervals[counter].max == complement) {
+      if (intervals[counter].max() == complement) {
 
         // domain like this 1..3, 5, 7..10, and 5 being removed taken
         // care of above.
@@ -2113,7 +2113,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         System.arraycopy(intervals, 0, result.intervals, 0, size);
 
         result.intervals[counter] =
-            new FloatInterval(result.intervals[counter].min, previous(complement));
+            new FloatInterval(result.intervals[counter].min(), previous(complement));
 
         result.size = size;
 
@@ -2142,9 +2142,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         System.arraycopy(intervals, counter, result.intervals, counter + 1, size - counter);
       }
 
-      double max = intervals[counter].max;
+      double max = intervals[counter].max();
 
-      result.intervals[counter] = new FloatInterval(intervals[counter].min, previous(complement));
+      result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(complement));
       result.intervals[counter + 1] = new FloatInterval(next(complement), max);
 
       result.size = size + 1;
@@ -2170,13 +2170,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (intervals[0].min > max || intervals[size - 1].max < min) return;
+    if (intervals[0].min() > max || intervals[size - 1].max() < min) return;
 
     int counter = 0;
 
-    while (intervals[counter].max < min) counter++;
+    while (intervals[counter].max() < min) counter++;
 
-    if (intervals[counter].min > max) return;
+    if (intervals[counter].min() > max) return;
 
     if (min <= min() && max >= max()) throw failException;
 
@@ -2184,18 +2184,18 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       int noRemoved = 0;
 
-      if (intervals[counter].min < min) {
+      if (intervals[counter].min() < min) {
         // intervals[counter].min..min-1
 
-        if (intervals[counter].max > max) {
+        if (intervals[counter].max() > max) {
           // max+1..intervals[counter].max
           if (size < intervals.length) {
             // copy elements to make one hole for new interval
 
             for (int i = size; i > counter; i--) intervals[i] = intervals[i - 1];
 
-            intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max);
-            intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
+            intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
+            intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
 
           } else {
             // create new array and copy
@@ -2207,8 +2207,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
             System.arraycopy(oldIntervals, counter + 1, intervals, counter + 2, size - counter - 1);
 
-            intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max);
-            intervals[counter] = new FloatInterval(oldIntervals[counter].min, previous(min));
+            intervals[counter + 1] = new FloatInterval(next(max), oldIntervals[counter].max());
+            intervals[counter] = new FloatInterval(oldIntervals[counter].min(), previous(min));
           }
           size++;
           assert checkInvariants() == null : checkInvariants();
@@ -2217,11 +2217,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           // intervals[counter].max <= max
           // intervals[counter].min..min-1
 
-          intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
+          intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
 
           int position = ++counter;
 
-          while (position < size && intervals[position].max <= max) {
+          while (position < size && intervals[position].max() <= max) {
             position++;
             noRemoved++;
           }
@@ -2234,8 +2234,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           size -= noRemoved;
 
-          if (counter < size && intervals[counter].min <= max)
-            intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
+          if (counter < size && intervals[counter].min() <= max)
+            intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
 
           assert checkInvariants() == null : checkInvariants();
 
@@ -2247,17 +2247,17 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       } else {
         // intervals[counter].min >= min
-        if (intervals[counter].max > max) {
+        if (intervals[counter].max() > max) {
           // max+1..intervals[counter].max
 
-          intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
+          intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
 
         } else {
           // intervals[counter] is removed
 
           int position = counter;
 
-          while (position < size && intervals[position].max <= max) {
+          while (position < size && intervals[position].max() <= max) {
             position++;
             noRemoved++;
           }
@@ -2266,8 +2266,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           size -= noRemoved;
 
-          if (counter < size && intervals[counter].min <= max)
-            intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
+          if (counter < size && intervals[counter].min() <= max)
+            intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
         }
         assert checkInvariants() == null : checkInvariants();
         if (singleton()) {
@@ -2298,18 +2298,18 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       System.arraycopy(intervals, 0, result.intervals, 0, counter);
 
-      if (intervals[counter].min < min) {
+      if (intervals[counter].min() < min) {
         // intervals[counter].min..min-1
 
-        if (intervals[counter].max > max) {
+        if (intervals[counter].max() > max) {
           // max+1..intervals[counter].max
           // copy elements to make one hole for new interval
 
           if (size - counter >= 0)
             System.arraycopy(intervals, counter, result.intervals, counter + 1, size - counter);
 
-          result.intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max);
-          result.intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
+          result.intervals[counter + 1] = new FloatInterval(next(max), intervals[counter].max());
+          result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
 
           result.size++;
 
@@ -2320,11 +2320,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
         } else {
 
-          result.intervals[counter] = new FloatInterval(intervals[counter].min, previous(min));
+          result.intervals[counter] = new FloatInterval(intervals[counter].min(), previous(min));
 
           int position = ++counter;
 
-          while (position < size && intervals[position].max <= max) {
+          while (position < size && intervals[position].max() <= max) {
             position++;
             noRemoved++;
           }
@@ -2332,9 +2332,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           for (int i = counter; i + noRemoved < size; i++)
             result.intervals[i] = intervals[i + noRemoved];
 
-          if (counter + noRemoved < size && intervals[counter + noRemoved].min <= max)
+          if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max)
             result.intervals[counter] =
-                new FloatInterval(next(max), intervals[counter + noRemoved].max);
+                new FloatInterval(next(max), intervals[counter + noRemoved].max());
 
           result.size -= noRemoved;
 
@@ -2350,14 +2350,14 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       } else {
 
-        if (intervals[counter].max > max) {
+        if (intervals[counter].max() > max) {
           // max+1..intervals[counter].max
 
           if (size - (counter + 1) >= 0)
             System.arraycopy(
                 intervals, counter + 1, result.intervals, counter + 1, size - (counter + 1));
 
-          result.intervals[counter] = new FloatInterval(next(max), intervals[counter].max);
+          result.intervals[counter] = new FloatInterval(next(max), intervals[counter].max());
 
           assert checkInvariants() == null : checkInvariants();
           assert result.checkInvariants() == null : result.checkInvariants();
@@ -2374,7 +2374,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           int position = counter;
 
-          while (position < size && intervals[position].max <= max) {
+          while (position < size && intervals[position].max() <= max) {
             position++;
             noRemoved++;
           }
@@ -2388,9 +2388,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           //                  result.intervals[counter] = new Interval(max + 1,
           //                                  intervals[counter].max);
 
-          if (counter + noRemoved < size && intervals[counter + noRemoved].min <= max)
+          if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max)
             result.intervals[counter] =
-                new FloatInterval(next(max), intervals[counter + noRemoved].max);
+                new FloatInterval(next(max), intervals[counter + noRemoved].max());
 
           assert checkInvariants() == null : checkInvariants();
           assert result.checkInvariants() == null : result.checkInvariants();
@@ -2429,16 +2429,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     // Chance for no event
     // traverse within while loop until certain that change will occur
 
-    while (pointer2 < inputSize && inputIntervals[pointer2].max + shift < intervals[pointer1].min)
-      pointer2++;
+    while (pointer2 < inputSize
+        && inputIntervals[pointer2].max() + shift < intervals[pointer1].min()) pointer2++;
 
     if (pointer2 == inputSize) throw failException;
 
-    while (intervals[pointer1].min >= inputIntervals[pointer2].min + shift
-        && intervals[pointer1].max <= inputIntervals[pointer2].max + shift
+    while (intervals[pointer1].min() >= inputIntervals[pointer2].min() + shift
+        && intervals[pointer1].max() <= inputIntervals[pointer2].max() + shift
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max > inputIntervals[pointer2].max + shift
+      while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift
           && ++pointer2 < input.size)
         ;
 
@@ -2457,24 +2457,24 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     pointer2 = 0;
 
-    double interval1Min = intervals[pointer1].min;
-    double interval1Max = intervals[pointer1].max;
-    double interval2Min = inputIntervals[pointer2].min + shift;
-    double interval2Max = inputIntervals[pointer2].max + shift;
+    double interval1Min = intervals[pointer1].min();
+    double interval1Max = intervals[pointer1].max();
+    double interval2Min = inputIntervals[pointer2].min() + shift;
+    double interval2Max = inputIntervals[pointer2].max() + shift;
     while (true) {
 
       if (interval1Max < interval2Min) {
         pointer1++;
         if (pointer1 < size) {
-          interval1Min = intervals[pointer1].min;
-          interval1Max = intervals[pointer1].max;
+          interval1Min = intervals[pointer1].min();
+          interval1Max = intervals[pointer1].max();
           continue;
         } else break;
       } else if (interval2Max < interval1Min) {
         pointer2++;
         if (pointer2 < inputSize) {
-          interval2Min = inputIntervals[pointer2].min + shift;
-          interval2Max = inputIntervals[pointer2].max + shift;
+          interval2Min = inputIntervals[pointer2].min() + shift;
+          interval2Max = inputIntervals[pointer2].max() + shift;
           continue;
         } else break;
       } else
@@ -2487,20 +2487,20 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           pointer1++;
           if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min;
-            interval1Max = intervals[pointer1].max;
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
             continue;
           } else break;
         } else {
           result.unionAdapt(
               new FloatInterval(
-                  inputIntervals[pointer2].min + shift, inputIntervals[pointer2].max + shift));
+                  inputIntervals[pointer2].min() + shift, inputIntervals[pointer2].max() + shift));
 
           pointer2++;
 
           if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min + shift;
-            interval2Max = inputIntervals[pointer2].max + shift;
+            interval2Min = inputIntervals[pointer2].min() + shift;
+            interval2Max = inputIntervals[pointer2].max() + shift;
             continue;
           } else break;
         }
@@ -2517,23 +2517,23 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
             pointer1++;
             if (pointer1 < size) {
               // shift has been removed.
-              interval1Min = intervals[pointer1].min;
-              interval1Max = intervals[pointer1].max;
+              interval1Min = intervals[pointer1].min();
+              interval1Max = intervals[pointer1].max();
             } else break;
           }
 
           pointer2++;
           if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min + shift;
-            interval2Max = inputIntervals[pointer2].max + shift;
+            interval2Min = inputIntervals[pointer2].min() + shift;
+            interval2Max = inputIntervals[pointer2].max() + shift;
             continue;
           } else break;
         } else {
           result.unionAdapt(intervals[pointer1]);
           pointer1++;
           if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min;
-            interval1Max = intervals[pointer1].max;
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
             continue;
           } else break;
         }
@@ -2603,7 +2603,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   public double leftElement(int intervalNo) {
 
     assert (intervalNo < size);
-    return intervals[intervalNo].min;
+    return intervals[intervalNo].min();
   }
 
   /** It returns the left most element of the given interval. */
@@ -2611,7 +2611,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   public double rightElement(int intervalNo) {
 
     assert (intervalNo < size);
-    return intervals[intervalNo].max;
+    return intervals[intervalNo].max();
   }
 
   /**
@@ -2812,16 +2812,16 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     for (int i = 0; i < size; i++)
       if (this.intervals[i] == null) return "size of the domain is not set up properly";
 
-    if (this.intervals[0].min > this.intervals[size - 1].max)
+    if (this.intervals[0].min() > this.intervals[size - 1].max())
       return "Min value is larger than max value " + this;
 
     for (int i = 0; i < size; i++)
-      if (this.intervals[i].min > this.intervals[i].max)
+      if (this.intervals[i].min() > this.intervals[i].max())
         return "One of the intervals not properly build. Min value is larger than max value "
             + this;
 
     for (int i = 0; i < size - 1; i++)
-      if (next(this.intervals[i].max) == this.intervals[i + 1].min)
+      if (next(this.intervals[i].max()) == this.intervals[i + 1].min())
         return "Two consequtive intervals should be merged. Improper representation" + this;
 
     // Fine, all invariants hold.
@@ -2840,11 +2840,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     if (counter == -1) return;
 
-    if (intervals[counter].min == value) {
+    if (intervals[counter].min() == value) {
 
-      if (intervals[counter].max != value) {
+      if (intervals[counter].max() != value) {
 
-        intervals[counter] = new FloatInterval(next(value), intervals[counter].max);
+        intervals[counter] = new FloatInterval(next(value), intervals[counter].max());
 
         assert checkInvariants() == null : checkInvariants();
 
@@ -2863,12 +2863,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       return;
     }
 
-    if (intervals[counter].max == value) {
+    if (intervals[counter].max() == value) {
 
       // domain like this 1..3, 5, 7..10, and 5 being
       // removed taken care of above.
 
-      intervals[counter] = new FloatInterval(intervals[counter].min, previous(value));
+      intervals[counter] = new FloatInterval(intervals[counter].min(), previous(value));
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -2884,8 +2884,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       intervals = updatedIntervals;
     }
 
-    double max = intervals[counter].max;
-    intervals[counter] = new FloatInterval(intervals[counter].min, previous(value));
+    double max = intervals[counter].max();
+    intervals[counter] = new FloatInterval(intervals[counter].min(), previous(value));
     intervals[counter + 1] = new FloatInterval(next(value), max);
 
     // One interval has been split, size increased by one.
@@ -2898,18 +2898,18 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   public void subtractAdapt(double minValue, double maxValue) {
 
     int current = 0;
-    while (current < size && intervals[current].max < minValue) current++;
+    while (current < size && intervals[current].max() < minValue) current++;
 
     if (current == size) return;
 
-    if (minValue <= intervals[current].min) {
+    if (minValue <= intervals[current].min()) {
 
-      if (maxValue < intervals[current].min) return;
+      if (maxValue < intervals[current].min()) return;
 
       // removing will not create more intervals.
-      if (intervals[current].max > maxValue) {
+      if (intervals[current].max() > maxValue) {
 
-        intervals[current] = new FloatInterval(next(maxValue), intervals[current].max);
+        intervals[current] = new FloatInterval(next(maxValue), intervals[current].max());
 
         assert checkInvariants() == null : checkInvariants();
 
@@ -2917,15 +2917,15 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         // at least one complete interval is being removed.
 
         int maxCurrent = current;
-        while (maxCurrent < size && intervals[maxCurrent].max <= maxValue) maxCurrent++;
+        while (maxCurrent < size && intervals[maxCurrent].max() <= maxValue) maxCurrent++;
 
         if (maxCurrent == size) {
           size = current;
           return;
         }
 
-        if (maxValue >= intervals[maxCurrent].min)
-          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max);
+        if (maxValue >= intervals[maxCurrent].min())
+          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max());
 
         int i = current;
         for (; maxCurrent < size; i++, maxCurrent++) {
@@ -2939,7 +2939,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       // minValue > intervals[current].min
 
-      if (maxValue < intervals[current].max) {
+      if (maxValue < intervals[current].max()) {
         // one additional interval is being created.
 
         if (intervals.length == size + 1) {
@@ -2951,8 +2951,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
         for (int i = size; i > current; i--) intervals[i] = intervals[i - 1];
 
-        intervals[current] = new FloatInterval(intervals[current].min, previous(minValue));
-        intervals[current + 1] = new FloatInterval(next(maxValue), intervals[current + 1].max);
+        intervals[current] = new FloatInterval(intervals[current].min(), previous(minValue));
+        intervals[current + 1] = new FloatInterval(next(maxValue), intervals[current + 1].max());
 
         size++;
 
@@ -2961,19 +2961,19 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         // maxValue >= intervals[current].max
 
         // at least one complete interval is being removed.
-        intervals[current] = new FloatInterval(intervals[current].min, previous(minValue));
+        intervals[current] = new FloatInterval(intervals[current].min(), previous(minValue));
         current++;
 
         int maxCurrent = current;
-        while (maxCurrent < size && intervals[maxCurrent].max <= maxValue) maxCurrent++;
+        while (maxCurrent < size && intervals[maxCurrent].max() <= maxValue) maxCurrent++;
 
         if (maxCurrent == size) {
           size = current;
           return;
         }
 
-        if (intervals[maxCurrent].min <= maxValue)
-          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max);
+        if (intervals[maxCurrent].min() <= maxValue)
+          intervals[maxCurrent] = new FloatInterval(next(maxValue), intervals[maxCurrent].max());
 
         int i = current;
         for (; maxCurrent < size; i++, maxCurrent++) {
@@ -3013,7 +3013,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatInterval[] inputIntervals = input.intervals;
     int inputSize = input.size;
     // Chance for no event
-    while (pointer2 < inputSize && inputIntervals[pointer2].max < intervals[pointer1].min)
+    while (pointer2 < inputSize && inputIntervals[pointer2].max() < intervals[pointer1].min())
       pointer2++;
 
     if (pointer2 == inputSize) {
@@ -3022,11 +3022,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     }
 
     // traverse within while loop until certain that change will occur
-    while (intervals[pointer1].min >= inputIntervals[pointer2].min
-        && intervals[pointer1].max <= inputIntervals[pointer2].max
+    while (intervals[pointer1].min() >= inputIntervals[pointer2].min()
+        && intervals[pointer1].max() <= inputIntervals[pointer2].max()
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max > inputIntervals[pointer2].max && ++pointer2 < inputSize)
+      while (intervals[pointer1].max() > inputIntervals[pointer2].max() && ++pointer2 < inputSize)
         ;
 
       if (pointer2 == inputSize) break;
@@ -3043,25 +3043,25 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     pointer2 = 0;
 
-    double interval1Min = intervals[pointer1].min;
-    double interval1Max = intervals[pointer1].max;
-    double interval2Min = inputIntervals[pointer2].min;
-    double interval2Max = inputIntervals[pointer2].max;
+    double interval1Min = intervals[pointer1].min();
+    double interval1Max = intervals[pointer1].max();
+    double interval2Min = inputIntervals[pointer2].min();
+    double interval2Max = inputIntervals[pointer2].max();
 
     while (true) {
 
       if (interval1Max < interval2Min) {
         pointer1++;
         if (pointer1 < size) {
-          interval1Min = intervals[pointer1].min;
-          interval1Max = intervals[pointer1].max;
+          interval1Min = intervals[pointer1].min();
+          interval1Max = intervals[pointer1].max();
           continue;
         } else break;
       } else if (interval2Max < interval1Min) {
         pointer2++;
         if (pointer2 < inputSize) {
-          interval2Min = inputIntervals[pointer2].min;
-          interval2Max = inputIntervals[pointer2].max;
+          interval2Min = inputIntervals[pointer2].min();
+          interval2Max = inputIntervals[pointer2].max();
           continue;
         } else break;
       } else
@@ -3074,8 +3074,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           pointer1++;
           if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min;
-            interval1Max = intervals[pointer1].max;
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
             continue;
           } else break;
         } else {
@@ -3083,8 +3083,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           pointer2++;
 
           if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min;
-            interval2Max = inputIntervals[pointer2].max;
+            interval2Min = inputIntervals[pointer2].min();
+            interval2Max = inputIntervals[pointer2].max();
             continue;
           } else break;
         }
@@ -3100,23 +3100,23 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           if (interval2Max >= interval1Max) {
             pointer1++;
             if (pointer1 < size) {
-              interval1Min = intervals[pointer1].min;
-              interval1Max = intervals[pointer1].max;
+              interval1Min = intervals[pointer1].min();
+              interval1Max = intervals[pointer1].max();
             } else break;
           }
 
           pointer2++;
           if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[pointer2].min;
-            interval2Max = inputIntervals[pointer2].max;
+            interval2Min = inputIntervals[pointer2].min();
+            interval2Max = inputIntervals[pointer2].max();
             continue;
           } else break;
         } else {
           result.unionAdapt(intervals[pointer1]);
           pointer1++;
           if (pointer1 < size) {
-            interval1Min = intervals[pointer1].min;
-            interval1Max = intervals[pointer1].max;
+            interval1Min = intervals[pointer1].min();
+            interval1Max = intervals[pointer1].max();
             continue;
           } else break;
         }
@@ -3172,46 +3172,46 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert (min <= max) : "Min value greater than max value " + min + " > " + max;
 
-    if (max < intervals[0].min) {
+    if (max < intervals[0].min()) {
       size = 0;
       return IntDomain.GROUND;
     }
 
-    double currentMax = intervals[size - 1].max;
+    double currentMax = intervals[size - 1].max();
     if (min > currentMax) {
       size = 0;
       return IntDomain.GROUND;
     }
 
-    if (min <= intervals[0].min && max >= currentMax) return IntDomain.NONE;
+    if (min <= intervals[0].min() && max >= currentMax) return IntDomain.NONE;
 
     FloatIntervalDomain result = new FloatIntervalDomain(size + 1);
     int pointer = 0;
 
     // pointer is always smaller than size as domains intersect
-    while (intervals[pointer].max < min) pointer++;
+    while (intervals[pointer].max() < min) pointer++;
 
-    if (intervals[pointer].min > max) {
+    if (intervals[pointer].min() > max) {
       size = 0;
       return IntDomain.GROUND;
     }
 
-    if (intervals[pointer].min >= min)
-      if (intervals[pointer].max <= max) result.unionAdapt(intervals[pointer]);
-      else result.unionAdapt(new FloatInterval(intervals[pointer].min, max));
-    else if (intervals[pointer].max <= max)
-      result.unionAdapt(new FloatInterval(min, intervals[pointer].max));
+    if (intervals[pointer].min() >= min)
+      if (intervals[pointer].max() <= max) result.unionAdapt(intervals[pointer]);
+      else result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
+    else if (intervals[pointer].max() <= max)
+      result.unionAdapt(new FloatInterval(min, intervals[pointer].max()));
     else result.unionAdapt(new FloatInterval(min, max));
 
     pointer++;
 
     while (pointer < size)
-      if (intervals[pointer].max <= max) result.unionAdapt(intervals[pointer++]);
+      if (intervals[pointer].max() <= max) result.unionAdapt(intervals[pointer++]);
       else break;
 
     if (pointer < size)
-      if (intervals[pointer].min <= max)
-        result.unionAdapt(new FloatInterval(intervals[pointer].min, max));
+      if (intervals[pointer].min() <= max)
+        result.unionAdapt(new FloatInterval(intervals[pointer].min(), max));
 
     // Copy all intervals
     if (result.size <= intervals.length)
@@ -3259,13 +3259,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     FloatInterval interval2 = input.intervals[pointer2];
 
     while (true) {
-      if (interval1.max < interval2.min) {
+      if (interval1.max() < interval2.min()) {
         pointer1++;
         if (pointer1 < size1) {
           interval1 = intervals[pointer1];
           continue;
         } else break;
-      } else if (interval2.max < interval1.min) {
+      } else if (interval2.max() < interval1.min()) {
         pointer2++;
         if (pointer2 < size2) {
           interval2 = input.intervals[pointer2];
@@ -3274,18 +3274,18 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       } else
       // interval1.max >= interval2.min
       // interval2.max >= interval1.min
-      if (interval1.min <= interval2.min) {
+      if (interval1.min() <= interval2.min()) {
 
-        if (interval1.max <= interval2.max) {
+        if (interval1.max() <= interval2.max()) {
 
-          temp += next(interval1.max - interval2.min);
+          temp += next(interval1.max() - interval2.min());
           pointer1++;
           if (pointer1 < size1) {
             interval1 = intervals[pointer1];
             continue;
           } else break;
         } else {
-          temp += next(interval2.max - interval2.min);
+          temp += next(interval2.max() - interval2.min());
           pointer2++;
           if (pointer2 < size2) {
             interval2 = input.intervals[pointer2];
@@ -3298,15 +3298,15 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       // interval2.max >= interval1.min
       // interval1.min > interval2.min
       {
-        if (interval2.max <= interval1.max) {
-          temp += next(interval2.max - interval1.min);
+        if (interval2.max() <= interval1.max()) {
+          temp += next(interval2.max() - interval1.min());
           pointer2++;
           if (pointer2 < size2) {
             interval2 = input.intervals[pointer2];
             continue;
           } else break;
         } else {
-          temp += next(interval1.max - interval1.min);
+          temp += next(interval1.max() - interval1.min());
           pointer1++;
           if (pointer1 < size1) {
             interval1 = intervals[pointer1];
@@ -3326,7 +3326,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     for (int m = 0; m < size; m++) {
       FloatInterval i = intervals[m];
-      if (i.max >= max) if (min >= i.min) return true;
+      if (i.max() >= max) if (min >= i.min()) return true;
     }
 
     return false;

@@ -231,15 +231,7 @@ public class ChannelReif extends Constraint implements SatisfiedPresent {
     return id() + " : ChannelReif(" + x + ", " + Arrays.asList(item) + " )";
   }
 
-  static class Item {
-
-    final int value;
-    final IntVar b;
-
-    public Item(IntVar b, int v) {
-      this.b = b;
-      this.value = v;
-    }
+  record Item(IntVar b, int value) {
 
     public String toString() {
 

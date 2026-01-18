@@ -734,11 +734,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         depthExcludePaths--;
 
-        if (consistent) {
-          return true;
-        } else {
-          return false;
-        }
+        return consistent;
       }
     }
   }

@@ -149,9 +149,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
         continue;
       } else break LOOP;
     }
-    if (b[i].min() == 1 && c[i].satisfied()) return true;
-
-    return false;
+    return b[i].min() == 1 && c[i].satisfied();
   }
 
   @Override

@@ -1063,7 +1063,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       res.append("\\hline  ").append(s2).append(" \\\\").append("\n");
       res.append("\\hline Domain ").append(s3).append(" \\\\").append("\n");
       res.append("\\hline " + "\n");
-      res.append("\\end{tabular} \\\\ \n\\vspace{10mm} " + "\n");
+      res.append(
+          """
+              \\end{tabular} \\\\\s
+              \\vspace{10mm}\s
+              """);
     }
 
     res.append("\\end{minipage}\n\\\\\n\\vspace{.7cm} \n");

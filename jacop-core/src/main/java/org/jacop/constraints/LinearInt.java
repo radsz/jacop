@@ -527,9 +527,7 @@ public class LinearInt extends PrimitiveConstraint {
 
       long d = min / a;
 
-      boolean boundsChanged = false;
-
-      if (d == x.min() || d == x.max()) boundsChanged = true;
+      boolean boundsChanged = d == x.min() || d == x.max();
 
       x.domain.inComplement(store.level, x, long2int(d));
 

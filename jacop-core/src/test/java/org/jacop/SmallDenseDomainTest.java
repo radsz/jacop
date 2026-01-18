@@ -524,6 +524,7 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
+  @Test
   public void testinterval26() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});

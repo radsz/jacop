@@ -65,7 +65,7 @@ public class IntDomainTest {
   }
 
   @Parameterized.Parameters
-  public static Collection parametricTest() {
+  public static Collection<?> parametricTest() {
     return Arrays.asList(
         new String[] {"prepareSmallDenseDomain"}, new String[] {"prepareIntervalDomain"});
   }

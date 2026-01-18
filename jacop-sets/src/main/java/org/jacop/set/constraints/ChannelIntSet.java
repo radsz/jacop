@@ -167,11 +167,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       }
     }
 
-    if (allGround()) {
-      return true;
-    }
-
-    return false;
+    return allGround();
   }
 
   boolean allGround() {

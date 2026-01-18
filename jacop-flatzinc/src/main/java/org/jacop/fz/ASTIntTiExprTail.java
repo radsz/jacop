@@ -38,23 +38,14 @@ public class ASTIntTiExprTail extends SimpleNode {
 
   public String toString() {
     String limits = type == 1 ? "" + low + ".." + high : "";
-    String typeS = null;
-    switch (type) {
-      case 0:
-        typeS = "(int): ";
-        break;
-      case 1:
-        typeS = "(interval): ";
-        break;
-      case 2:
-        typeS = "(list): ";
-        break;
-      case 3:
-        typeS = "(range): ";
-        break;
-      default:
-        throw new RuntimeException("Internal parsing error; " + getClass().getName());
-    }
+    String typeS =
+        switch (type) {
+          case 0 -> "(int): ";
+          case 1 -> "(interval): ";
+          case 2 -> "(list): ";
+          case 3 -> "(range): ";
+          default -> throw new RuntimeException("Internal parsing error; " + getClass().getName());
+        };
     return super.toString() + typeS + limits;
   }
 }

@@ -226,7 +226,7 @@ public abstract class FloatDomain extends Domain {
   /*
    * Finds result interval for addition of {a..b} - {c..d}
    */
-  public static final FloatIntervalDomain addBounds(double a, double b, double c, double d) {
+  public static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
     // Changing constants to smallest encapsulating intervals to
     // limit rounding effects problem
@@ -249,7 +249,7 @@ public abstract class FloatDomain extends Domain {
   /*
    * Finds result interval for subtraction of {a..b} - {c..d}
    */
-  public static final FloatIntervalDomain subBounds(double a, double b, double c, double d) {
+  public static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
 
     // Changing constants to smallest encapsulating intervals to
     // limit rounding effects problem
@@ -272,7 +272,7 @@ public abstract class FloatDomain extends Domain {
   /*
    * Finds result interval for multiplication of {a..b} * {c..d}
    */
-  public static final FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
+  public static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
     // System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
 
@@ -400,7 +400,7 @@ public abstract class FloatDomain extends Domain {
   /*
    * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
    */
-  public static final FloatIntervalDomain divBounds(double a, double b, double c, double d) {
+  public static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
 
     // System.out.println ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
 
@@ -531,7 +531,7 @@ public abstract class FloatDomain extends Domain {
    * @param i Interval which needs to be added to the domain.
    */
   public void unionAdapt(FloatInterval i) {
-    unionAdapt(i.min, i.max);
+    unionAdapt(i.min(), i.max());
   }
 
   /**
@@ -584,7 +584,7 @@ public abstract class FloatDomain extends Domain {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
-      if (isIntersecting(next.min, next.max)) return true;
+      if (isIntersecting(next.min(), next.max())) return true;
     }
     /*
     }
@@ -621,7 +621,7 @@ public abstract class FloatDomain extends Domain {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
-      if (!contains(next.min, next.max)) return false;
+      if (!contains(next.min(), next.max())) return false;
     }
     /*
     }
@@ -791,10 +791,10 @@ public abstract class FloatDomain extends Domain {
     // if (!domain.isSparseRepresentation()) {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     FloatInterval first = enumer.nextElement();
-    FloatDomain result = this.subtract(first.min, first.max);
+    FloatDomain result = this.subtract(first.min(), first.max());
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
-      result.subtractAdapt(next.min, next.max);
+      result.subtractAdapt(next.min(), next.max());
     }
     return result;
     /*
@@ -840,7 +840,7 @@ public abstract class FloatDomain extends Domain {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
-      result.unionAdapt(next.min, next.max);
+      result.unionAdapt(next.min(), next.max());
     }
     return result;
     /*
@@ -998,7 +998,7 @@ public abstract class FloatDomain extends Domain {
    * @return the left bound of the specified interval.
    */
   public double leftElement(int intervalNo) {
-    return getInterval(intervalNo).min;
+    return getInterval(intervalNo).min();
   }
 
   /**
@@ -1008,7 +1008,7 @@ public abstract class FloatDomain extends Domain {
    * @return the right bound of the specified interval.
    */
   public double rightElement(int intervalNo) {
-    return getInterval(intervalNo).max;
+    return getInterval(intervalNo).max();
   }
 
   /**
@@ -1048,7 +1048,7 @@ public abstract class FloatDomain extends Domain {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
-      if (!contains(next.min, next.max)) return false;
+      if (!contains(next.min(), next.max())) return false;
     }
     return true;
     /*
@@ -1085,8 +1085,7 @@ public abstract class FloatDomain extends Domain {
 
     FloatDomain domain = (FloatDomain) value;
 
-    if (eq(domain)) return true;
-    else return false;
+    return eq(domain);
   }
 
   /**

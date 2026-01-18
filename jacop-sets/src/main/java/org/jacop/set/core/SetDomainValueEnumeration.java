@@ -65,8 +65,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public boolean hasMoreElements() {
-    if (currentLevel == maxLevel + 1) return false;
-    return true;
+    return currentLevel != maxLevel + 1;
   }
 
   /** The function nextElement has to return a Set. Use nextSetElement instead. */

@@ -1056,10 +1056,8 @@ public class Store {
 
         for (int i = 0; i < size; i++) {
 
-          if (vars[i].level() >= level) {
-            assert trailManager.isRecognizedAsChanged(vars[i].index)
-                : "Variable position " + i + " not properly recorded to have changed ";
-          }
+          assert vars[i].level() < level || trailManager.isRecognizedAsChanged(vars[i].index)
+              : "Variable position " + i + " not properly recorded to have changed ";
         }
       }
     }

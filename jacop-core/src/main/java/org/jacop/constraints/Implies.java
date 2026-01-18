@@ -209,11 +209,4 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
     return result.toString();
   }
-
-  @Override
-  public void queueVariable(int level, Var variable) {
-
-    // queueForward.queueForward(level, variable);
-
-  }
 }

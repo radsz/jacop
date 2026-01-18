@@ -540,7 +540,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           for (int h = 0; h < mustBeCoveredNow.size; h++) {
             inv = mustBeCoveredNow.intervals[h];
             // go through each value of the interval
-            for (int v = inv.min; v <= inv.max; v++) {
+            for (int v = inv.min(); v <= inv.max(); v++) {
               cardinalityV = 0;
               last = -1;
               // count the cardinality of v among Y
@@ -733,7 +733,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         // for each interval of UBS
         if (inv != null)
           // For each value of the interval
-          for (int v = inv.min; v <= inv.max; v++) {
+          for (int v = inv.min(); v <= inv.max(); v++) {
             lbTmp = lb0;
             weight = 0;
             ubTmp = 0;
@@ -772,8 +772,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                   if (lbVubV.getSize() > 0)
                     for (Interval a : lbVubV.intervals) {
                       if (a != null) {
-                        max = Math.min(weight + a.max, ub0);
-                        min = Math.max(lbTmp + a.min, lb0);
+                        max = Math.min(weight + a.max(), ub0);
+                        min = Math.max(lbTmp + a.min(), lb0);
 
                         if (min <= max) {
                           lbVubV = (IntervalDomain) lbVubV.union(min, max);
@@ -806,7 +806,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         inv = pureUbs.intervals[h];
         if (inv != null) {
 
-          for (int v = inv.min; v <= inv.max; v++) {
+          for (int v = inv.min(); v <= inv.max(); v++) {
             if (debugAll) IO.println(">>>>>>>>>>>>>>>>>>>" + v + "  ");
             if (ubV.get(v) < n.min()) {
               if (debugAll) IO.println(v + " must be be present in S");
@@ -1064,9 +1064,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         if (n.value() == lb0 && lb0 == ub0) return true;
       }
 
-      if (allYGrounded && allXGrounded)
-        assert (n.value() == lb0)
-            : " Domain of N or value of timestamp LBoUTS was not maintenated properly";
+      assert !allYGrounded || !allXGrounded || (n.value() == lb0)
+          : " Domain of N or value of timestamp LBoUTS was not maintenated properly";
     }
     return false;
   }

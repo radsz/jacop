@@ -64,10 +64,10 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
       for (int i = 0; i < domain.size; i++) {
 
-        int intervalSize = domain.intervals[i].max - domain.intervals[i].min + 1;
+        int intervalSize = domain.intervals[i].max() - domain.intervals[i].min() + 1;
         if (intervalSize <= position) {
           position -= intervalSize;
-        } else return domain.intervals[i].min + position;
+        } else return domain.intervals[i].min() + position;
       }
 
       assert false : "Indomain Median does not work properly.";
@@ -94,11 +94,11 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
         Interval next = enumer.nextElement();
 
-        int intervalSize = next.max - next.min + 1;
+        int intervalSize = next.max() - next.min() + 1;
 
         if (intervalSize <= position) {
           position -= intervalSize;
-        } else return next.min + position;
+        } else return next.min() + position;
       }
     }
 

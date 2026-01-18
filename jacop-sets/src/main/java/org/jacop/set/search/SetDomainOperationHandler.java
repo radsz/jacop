@@ -53,10 +53,9 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
 
   @Override
   public void inValue(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof SetVar)) {
+    if (!(var instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
-    SetVar setVar = (SetVar) var;
     SetDomain setDomain = (SetDomain) setVar.dom();
     if (leftBranch) {
       // Left branch: add element to GLB (Greatest Lower Bound)
@@ -69,10 +68,9 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
 
   @Override
   public void inComplement(Store store, Var var, int value, boolean leftBranch) {
-    if (!(var instanceof SetVar)) {
+    if (!(var instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
-    SetVar setVar = (SetVar) var;
     SetDomain setDomain = (SetDomain) setVar.dom();
     if (leftBranch) {
       // Left branch: remove from GLB (add to LUB complement)
@@ -85,10 +83,9 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
 
   @Override
   public String getDomainString(Var var) {
-    if (!(var instanceof SetVar)) {
+    if (!(var instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
-    SetVar setVar = (SetVar) var;
     return setVar.dom().toString();
   }
 }

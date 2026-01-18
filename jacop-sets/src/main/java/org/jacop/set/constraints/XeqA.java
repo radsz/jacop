@@ -139,9 +139,7 @@ public class XeqA extends PrimitiveConstraint {
 
     if (!a.domain.card().contains(1)) return true;
 
-    if (!a.domain.lub().isIntersecting(x.domain)) return true;
-
-    return false;
+    return !a.domain.lub().isIntersecting(x.domain);
   }
 
   @Override

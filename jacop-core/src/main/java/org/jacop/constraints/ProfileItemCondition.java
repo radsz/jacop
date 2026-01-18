@@ -72,7 +72,7 @@ class ProfileItemCondition extends ProfileItem {
       for (Iterator<int[]> e = rectangles.listIterator(0); e.hasNext(); ) {
         int[] el = e.next();
 
-        if (exI.i2 == el[0] && exI.cond.min() == 0) rectHight += el[1];
+        if (exI.i2() == el[0] && exI.cond().min() == 0) rectHight += el[1];
       }
     }
 

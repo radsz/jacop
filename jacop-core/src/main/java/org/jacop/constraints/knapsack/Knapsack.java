@@ -774,9 +774,7 @@ public class Knapsack extends Constraint
 
     if (tree.alreadyObtainedProfit != knapsackProfit.value()) return false;
 
-    if (tree.alreadyUsedCapacity != knapsackCapacity.value()) return false;
-
-    return true;
+    return tree.alreadyUsedCapacity == knapsackCapacity.value();
   }
 
   @Override

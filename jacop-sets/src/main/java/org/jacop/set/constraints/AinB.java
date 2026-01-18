@@ -121,8 +121,7 @@ public class AinB extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
 
-    if (a.singleton() && b.singleton() && !a.domain.subtract(b.domain).isEmpty()) return true;
-    else return false;
+    return a.singleton() && b.singleton() && !a.domain.subtract(b.domain).isEmpty();
   }
 
   @Override

@@ -63,7 +63,7 @@ public class PerfectSquare extends ExampleFD {
    *     accommodate all other squares. The squares which must fit inside the master square are
    *     listed in the second array.
    */
-  public static final int[][][] squares() {
+  public static int[][][] squares() {
 
     return new int[][][] {
       {{20}, {2, 3, 4, 5, 6, 7, 8}},

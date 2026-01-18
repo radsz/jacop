@@ -37,13 +37,7 @@ package org.jacop.constraints.netflow.simplex;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
-public class Danzig implements PivotRule {
-
-  public final NetworkSimplex network;
-
-  public Danzig(NetworkSimplex network) {
-    this.network = network;
-  }
+public record Danzig(NetworkSimplex network) implements PivotRule {
 
   /**
    * Finds the lower arc which violates optimality the most (If all lower arcs satisfy optimality

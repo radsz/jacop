@@ -91,9 +91,4 @@ class DisjointConditionalProfile extends ProfileConditional {
       }
     }
   }
-
-  @Override
-  int max() {
-    return super.max();
-  }
 }

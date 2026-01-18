@@ -1640,15 +1640,7 @@ class GlobalConstraints implements ParserTreeConstants {
     return tt;
   }
 
-  private static class Pair {
-
-    private final int a;
-    private final int b;
-
-    Pair(int a, int b) {
-      this.a = a;
-      this.b = b;
-    }
+  private record Pair(int a, int b) {
 
     int first() {
       return a;

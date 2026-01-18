@@ -31,7 +31,6 @@
 package org.jacop.fz;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -320,28 +319,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (solveKind == 1) minimize = true;
 
     if (options.debug()) {
-      String solve = "notKnown";
-      switch (solveKind) {
-        case 0:
-          solve = "%% satisfy";
-          break; // satisfy
-        case 1:
-          Var costMin =
-              (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
-                  ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                  : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-          solve = "%% minimize(" + costMin + ") ";
-          break; // minimize
-        case 2:
-          Var costMax =
-              (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
-                  ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                  : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-          solve = "%% maximize(" + costMax + ") ";
-          break; // maximize
-        default:
-          throw new RuntimeException("Internal error in " + getClass().getName());
-      }
+      String solve =
+          switch (solveKind) {
+            case 0 -> "%% satisfy"; // satisfy
+            case 1 -> {
+              Var costMin =
+                  (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
+                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
+                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
+              yield "%% minimize(" + costMin + ") ";
+            }
+            case 2 -> {
+              Var costMax =
+                  (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
+                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
+                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
+              yield "%% maximize(" + costMax + ") ";
+            }
+            default -> throw new RuntimeException("Internal error in " + getClass().getName());
+          };
       IO.println(solve + " : " + si);
     }
 
@@ -731,7 +727,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (!options.getOutputFilename().isEmpty()) {
         String st = "=====UNSATISFIABLE=====";
         try {
-          Files.write(Path.of(options.getOutputFilename()), st.getBytes(StandardCharsets.UTF_8));
+          Files.writeString(Path.of(options.getOutputFilename()), st);
         } catch (IOException e1) {
           e1.printStackTrace();
         }
@@ -1043,29 +1039,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (solveKind == 1) minimize = true;
 
     if (options.debug()) {
-      String solve = "notKnown";
-      switch (solveKind) {
-        case 0:
-          solve = "%% satisfy";
-          break; // satisfy
-        case 1:
-          Var costMin =
-              (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
-                  ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                  : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-          solve = "%% minimize(" + costMin + ") ";
-          break; // minimize
-
-        case 2:
-          Var costMax =
-              (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
-                  ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
-                  : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-          solve = "%% maximize(" + costMax + ") ";
-          break; // maximize
-        default:
-          throw new RuntimeException("Internal error in " + getClass().getName());
-      }
+      String solve =
+          switch (solveKind) {
+            case 0 -> "%% satisfy"; // satisfy
+            case 1 -> {
+              Var costMin =
+                  (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
+                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
+                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
+              yield "%% minimize(" + costMin + ") ";
+            }
+            case 2 -> {
+              Var costMax =
+                  (getCost((ASTSolveExpr) kind.jjtGetChild(0)) != null)
+                      ? getCost((ASTSolveExpr) kind.jjtGetChild(0))
+                      : getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
+              yield "%% maximize(" + costMax + ") ";
+            }
+            default -> throw new RuntimeException("Internal error in " + getClass().getName());
+          };
       IO.println(solve + " : " + si);
     }
 
@@ -1929,9 +1921,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!options.getOutputFilename().isEmpty() && !lastSolution.isEmpty()) {
       try {
         IO.println("%%Output filename " + options.getOutputFilename());
-        Files.write(
+        Files.writeString(
             Path.of(options.getOutputFilename()),
-            lastSolution.getBytes(StandardCharsets.UTF_8),
+            lastSolution,
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING);
       } catch (IOException e) {

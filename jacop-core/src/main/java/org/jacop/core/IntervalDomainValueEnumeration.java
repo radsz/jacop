@@ -58,7 +58,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
     maxIntervalNo = domain.size - 1;
     if (maxIntervalNo >= 0) {
       i = domain.intervals[intervalNo];
-      current = i.min;
+      current = i.min();
     }
   }
 
@@ -72,7 +72,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
     int v;
 
-    if (current < i.max) {
+    if (current < i.max()) {
       v = current;
       current++;
       return v;
@@ -82,7 +82,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
         intervalNo++;
         v = current;
         i = domain.intervals[intervalNo];
-        current = i.min;
+        current = i.min();
         return v;
       } else {
         i = null;
@@ -98,8 +98,8 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
     if (intervalNo == -1) {
 
       for (int j = 0; j < maxIntervalNo; j++)
-        if (domain.intervals[j].min > current) {
-          current = domain.intervals[j].min;
+        if (domain.intervals[j].min() > current) {
+          current = domain.intervals[j].min();
           intervalNo = j;
           i = domain.intervals[j];
           return;

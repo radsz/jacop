@@ -102,11 +102,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    * <p>Equality of references makes it faster TODO make sure this is what we want
    */
   public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    } else {
-      return false;
-    }
+    return o == this;
   }
 
   /**

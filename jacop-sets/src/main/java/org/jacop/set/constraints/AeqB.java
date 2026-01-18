@@ -102,17 +102,13 @@ public class AeqB extends PrimitiveConstraint {
     if (!a.domain.lub().contains(b.domain.glb()) || !b.domain.lub().contains(a.domain.glb()))
       return true;
 
-    if (a.singleton() && b.singleton() && !a.domain.glb().eq(b.domain.glb())) return true;
-
-    return false;
+    return a.singleton() && b.singleton() && !a.domain.glb().eq(b.domain.glb());
   }
 
   @Override
   public boolean satisfied() {
 
-    if (grounded() && a.domain.glb().eq(b.domain.glb())) return true;
-
-    return false;
+    return grounded() && a.domain.glb().eq(b.domain.glb());
   }
 
   @Override

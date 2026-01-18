@@ -52,48 +52,43 @@ public class IntCostVariableHandler implements CostVariableHandler {
 
   @Override
   public double getCostValue(Var var) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     return intVar.dom().min();
   }
 
   @Override
   public Constraint createCostConstraint(Var var, double costValue) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     int intCostValue = (int) costValue;
     return new XltC(intVar, intCostValue);
   }
 
   @Override
   public void updateCostDomain(Store store, Var var, double costValue) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     int intCostValue = (int) costValue;
     intVar.domain.inMax(store.level, intVar, intCostValue - 1);
   }
 
   @Override
   public double getMinCostValue(Var var) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     return intVar.dom().min();
   }
 
   @Override
   public double getMaxCostValue(Var var) {
-    if (!(var instanceof IntVar)) {
+    if (!(var instanceof IntVar intVar)) {
       throw new IllegalArgumentException("IntCostVariableHandler can only handle IntVar");
     }
-    IntVar intVar = (IntVar) var;
     return intVar.dom().max();
   }
 

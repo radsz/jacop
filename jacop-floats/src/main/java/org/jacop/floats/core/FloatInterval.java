@@ -38,19 +38,14 @@ import java.util.Locale;
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
+ * @param min It specifies the minimal value in the interval.
+ * @param max It specifies the maximal value in the interval.
  */
-public final class FloatInterval implements Cloneable {
-
-  /** It specifies the minimal value in the interval. */
-  public final double min;
-
-  /** It specifies the maximal value in the interval. */
-  public final double max;
+public record FloatInterval(double min, double max) implements Cloneable {
 
   /** It creates the largest possible interval. */
   public FloatInterval() {
-    min = FloatDomain.MinFloat;
-    max = FloatDomain.MaxFloat;
+    this(FloatDomain.MinFloat, FloatDomain.MaxFloat);
   }
 
   /**
@@ -59,12 +54,9 @@ public final class FloatInterval implements Cloneable {
    * @param min the minimal value in the interval (the left bound).
    * @param max the maximal value in the interval (the right bound).
    */
-  public FloatInterval(double min, double max) {
+  public FloatInterval {
 
     assert (min <= max) : "min value " + min + " is larger than max value " + max;
-
-    this.min = min;
-    this.max = max;
   }
 
   @Override
@@ -90,6 +82,7 @@ public final class FloatInterval implements Cloneable {
    *
    * @return the maximal value from the interval.
    */
+  @Override
   public double max() {
     return max;
   }
@@ -99,6 +92,7 @@ public final class FloatInterval implements Cloneable {
    *
    * @return the minimal value from the interval.
    */
+  @Override
   public double min() {
     return min;
   }
@@ -131,7 +125,7 @@ public final class FloatInterval implements Cloneable {
   @Override
   public String toString() {
 
-    java.util.Locale locale = Locale.of("ENGLISH", "GERMANY");
+    Locale locale = Locale.of("ENGLISH", "GERMANY");
     long p;
     String form;
     if (FloatDomain.format() == Double.MAX_VALUE) {

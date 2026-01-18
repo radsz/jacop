@@ -967,13 +967,14 @@ public class VariablesParameters implements ParserTreeConstants {
   String parseAnnExpr(SimpleNode node, int i) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSCALARFLATEXPR) {
-      switch (((ASTScalarFlatExpr) child).getType()) {
-        case 2: // ident
-          return ((ASTScalarFlatExpr) child).getIdent();
-        default: // string & float;
-          throw new IllegalArgumentException(
-              "Not supported scalar in annotation; compilation aborted.");
-      }
+      // string & float;
+      return switch (((ASTScalarFlatExpr) child).getType()) {
+        case 2 -> // ident
+            ((ASTScalarFlatExpr) child).getIdent();
+        default ->
+            throw new IllegalArgumentException(
+                "Not supported scalar in annotation; compilation aborted.");
+      };
     } else {
       throw new IllegalArgumentException("Not supported annotation type; compilation aborted.");
     }
@@ -1075,12 +1076,10 @@ public class VariablesParameters implements ParserTreeConstants {
           return true;
         case 2: // ident
           Integer n = dictionary.checkInt(((ASTScalarFlatExpr) child).getIdent());
-          if (n != null) return true;
-          else return false;
+          return n != null;
         case 3: // array acces
           int[] an = dictionary.getIntArray(((ASTScalarFlatExpr) child).getIdent());
-          if (an != null) return true;
-          else return false;
+          return an != null;
         default: // string & float;
           throw new IllegalArgumentException(
               "Not supported scalar in parameter; compilation aborted.");
@@ -1101,12 +1100,10 @@ public class VariablesParameters implements ParserTreeConstants {
         //      return true;
         case 2: // ident
           Double n = dictionary.checkFloat(((ASTScalarFlatExpr) child).getIdent());
-          if (n != null) return true;
-          else return false;
+          return n != null;
         case 3: // array acces
           double[] an = dictionary.getFloatArray(((ASTScalarFlatExpr) child).getIdent());
-          if (an != null) return true;
-          else return false;
+          return an != null;
         case 5: // float
           return true;
         default: // string & float;
@@ -1122,25 +1119,23 @@ public class VariablesParameters implements ParserTreeConstants {
   boolean constant_set(SimpleNode node, int i) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSETLITERAL) { // SCALARFLATEXPR) {
-      switch (((ASTSetLiteral) child).getType()) {
-        case 0: // interval
-        case 1: // list
-        case 2: // range set
-          return true;
-        default: // string & float;
-          throw new IllegalArgumentException(
-              "Not supported scalar in parameter; compilation aborted.");
-      }
+      // string & float;
+      return switch (((ASTSetLiteral) child).getType()) { // interval
+        // list
+        case 0, 1, 2 -> // range set
+            true;
+        default ->
+            throw new IllegalArgumentException(
+                "Not supported scalar in parameter; compilation aborted.");
+      };
     } else if (child.getId() == JJTSCALARFLATEXPR) {
       switch (((ASTScalarFlatExpr) child).getType()) {
         case 2: // ident
           IntDomain n = dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
-          if (n != null) return true;
-          else return false;
+          return n != null;
         case 3: // array acces
           IntDomain[] an = dictionary.getSetArray(((ASTScalarFlatExpr) child).getIdent());
-          if (an != null) return true;
-          else return false;
+          return an != null;
         default: // int, bool, string & float;
           throw new IllegalArgumentException(
               "Not supported scalar in parameter; compilation aborted.");
@@ -1154,21 +1149,22 @@ public class VariablesParameters implements ParserTreeConstants {
   int getScalarFlatExpr(SimpleNode node, int i) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSCALARFLATEXPR) {
-      switch (((ASTScalarFlatExpr) child).getType()) {
-        case 0: // int
-          return ((ASTScalarFlatExpr) child).getInt();
-        case 1: // bool
-          return ((ASTScalarFlatExpr) child).getInt();
-        case 2: // ident
-          return dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
-        case 3: // array acces
-          return dictionary
-              .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
-              ((ASTScalarFlatExpr) child).getInt()];
-        default: // string & float;
-          throw new IllegalArgumentException(
-              "Not supported scalar in parameter; compilation aborted.");
-      }
+      // string & float;
+      return switch (((ASTScalarFlatExpr) child).getType()) {
+        case 0 -> // int
+            ((ASTScalarFlatExpr) child).getInt();
+        case 1 -> // bool
+            ((ASTScalarFlatExpr) child).getInt();
+        case 2 -> // ident
+            dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
+        case 3 -> // array acces
+            dictionary
+                .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
+                ((ASTScalarFlatExpr) child).getInt()];
+        default ->
+            throw new IllegalArgumentException(
+                "Not supported scalar in parameter; compilation aborted.");
+      };
     } else {
       throw new IllegalArgumentException(
           "Not supported parameter assignment; compilation aborted.");
@@ -1179,13 +1175,14 @@ public class VariablesParameters implements ParserTreeConstants {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
 
     if (child.getId() == JJTSCALARFLATEXPR) {
-      switch (((ASTScalarFlatExpr) child).getType()) {
-        case 5: // float
-          return ((ASTScalarFlatExpr) child).getFloat();
-        default: // string & float;
-          throw new IllegalArgumentException(
-              "Not supported scalar in parameter; compilation aborted.");
-      }
+      // string & float;
+      return switch (((ASTScalarFlatExpr) child).getType()) {
+        case 5 -> // float
+            ((ASTScalarFlatExpr) child).getFloat();
+        default ->
+            throw new IllegalArgumentException(
+                "Not supported scalar in parameter; compilation aborted.");
+      };
     } else {
       throw new IllegalArgumentException(
           "Not supported parameter assignment; compilation aborted.");
@@ -1465,22 +1462,22 @@ public class VariablesParameters implements ParserTreeConstants {
           throw new IllegalArgumentException("Set type not supported; compilation aborted.");
       }
     } else if (child.getId() == JJTSCALARFLATEXPR) {
-      switch (((ASTScalarFlatExpr) child).getType()) {
-        case 0: // int
-        case 1: // bool
-          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-        case 2: // ident
-          return dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
-        case 3: // array access
-          return dictionary
-              .getSetArray(((ASTScalarFlatExpr) child).getIdent())[
-              ((ASTScalarFlatExpr) child).getInt()];
-        case 4: // string
-        case 5: // float
-          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-        default:
-          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-      }
+      // bool
+      // float
+      return switch (((ASTScalarFlatExpr) child).getType()) { // int
+        case 0, 1 ->
+            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+        case 2 -> // ident
+            dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
+        case 3 -> // array access
+            dictionary
+                .getSetArray(((ASTScalarFlatExpr) child).getIdent())[
+                ((ASTScalarFlatExpr) child).getInt()]; // string
+        case 4, 5 ->
+            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+        default ->
+            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+      };
     }
     return new IntervalDomain();
   }

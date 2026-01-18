@@ -140,9 +140,7 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
     for (int i = 0; i < n; i++) {
       if (!b[i].singleton()) return false;
     }
-    if (!s.singleton()) return false;
-
-    return true;
+    return s.singleton();
   }
 
   @Override

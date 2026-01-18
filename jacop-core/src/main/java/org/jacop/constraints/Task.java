@@ -40,15 +40,7 @@ import org.jacop.core.IntervalDomain;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-class Task {
-
-  final IntVar start, dur, res;
-
-  Task(IntVar start, IntVar duration, IntVar resourceUsage) {
-    this.start = start;
-    this.dur = duration;
-    this.res = resourceUsage;
-  }
+record Task(IntVar start, IntVar dur, IntVar res) {
 
   long areaMax() {
     return dur.max() * res.max();
@@ -68,10 +60,6 @@ class Task {
     IntDomain sDom = start.dom();
     int dDomMin = dur.dom().min();
     return new IntervalDomain(sDom.min() + dDomMin, sDom.max() + dDomMin);
-  }
-
-  IntVar dur() {
-    return dur;
   }
 
   int ect() {
@@ -105,14 +93,6 @@ class Task {
       t.stop = ect;
       return true;
     } else return false;
-  }
-
-  IntVar res() {
-    return res;
-  }
-
-  IntVar start() {
-    return start;
   }
 
   boolean nonZeroTask() {

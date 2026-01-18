@@ -147,7 +147,7 @@ public class IntervalGaussSeidel {
       IO.println("dominant = " + dominant + " ===================================");
       for (FloatInterval[] floatIntervals : A) {
         for (FloatInterval floatInterval : floatIntervals) {
-          if (floatInterval.min <= 0 && floatInterval.max() >= 0) IO.print("0 ");
+          if (floatInterval.min() <= 0 && floatInterval.max() >= 0) IO.print("0 ");
           else if (floatInterval.min() > 0) IO.print("+ ");
           else if (floatInterval.min() < 0) IO.print("- ");
           else IO.print("? ");

@@ -65,8 +65,6 @@ public class RegEdge {
    */
   public boolean check(TimeStamp<Integer>[] activeLevels) {
 
-    if (org.isActive(activeLevels) && dest.isActive(activeLevels)) return true;
-
-    return false;
+    return org.isActive(activeLevels) && dest.isActive(activeLevels);
   }
 }

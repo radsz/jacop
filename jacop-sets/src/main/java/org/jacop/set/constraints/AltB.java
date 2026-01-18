@@ -169,7 +169,7 @@ public class AltB extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
     if (a.domain.singleton() && b.domain.singleton())
-      if (setLexLT(a.domain.glb(), b.domain.glb())) return true;
+      return setLexLT(a.domain.glb(), b.domain.glb());
     return false;
   }
 

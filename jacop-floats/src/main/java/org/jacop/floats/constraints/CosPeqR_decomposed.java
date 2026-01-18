@@ -75,7 +75,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
 
     StringBuilder result = new StringBuilder("Decomposition of CosPeqR(" + p + ", " + q + "): { ");
 
-    for (Constraint c : constraints) result.append(c).append(System.getProperty("line.separator"));
+    for (Constraint c : constraints) result.append(c).append(System.lineSeparator());
     result.append("}");
 
     return result.toString();

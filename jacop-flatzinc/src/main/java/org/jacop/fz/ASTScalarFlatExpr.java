@@ -69,28 +69,17 @@ public class ASTScalarFlatExpr extends SimpleNode {
     String val = "";
 
     if (type != -1) {
-      switch (type) {
-        case 0:
-          val = "(int): " + intValue;
-          break;
-        case 1:
-          val = "(bool): " + intValue;
-          break;
-        case 2:
-          val = "(ident): " + ident;
-          break;
-        case 3:
-          val = "(array access): " + ident + "[" + intValue + "]";
-          break;
-        case 4:
-          val = "(string): " + st;
-          break;
-        case 5:
-          val = "(float): " + doubleValue;
-          break;
-        default:
-          throw new RuntimeException("Internal parsing error; " + getClass().getName());
-      }
+      val =
+          switch (type) {
+            case 0 -> "(int): " + intValue;
+            case 1 -> "(bool): " + intValue;
+            case 2 -> "(ident): " + ident;
+            case 3 -> "(array access): " + ident + "[" + intValue + "]";
+            case 4 -> "(string): " + st;
+            case 5 -> "(float): " + doubleValue;
+            default ->
+                throw new RuntimeException("Internal parsing error; " + getClass().getName());
+          };
     }
 
     return super.toString() + val;

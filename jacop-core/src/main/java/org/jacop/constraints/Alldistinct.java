@@ -256,8 +256,7 @@ public class Alldistinct extends Constraint
 
     maximumMatchingNotRecomputed = true;
 
-    if (stampValues.value() - 1 == stampNotGroundedVariables.value()) permutationConsistency = true;
-    else permutationConsistency = false;
+    permutationConsistency = stampValues.value() - 1 == stampNotGroundedVariables.value();
 
     // Store all changed Variable variables locally
     LinkedHashSet<IntVar> fdvs = variableQueue;

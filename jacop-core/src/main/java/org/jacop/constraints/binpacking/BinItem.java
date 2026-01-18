@@ -38,18 +38,11 @@ import org.jacop.core.IntVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-class BinItem {
+record BinItem(IntVar bin, int weight) {
 
-  public final IntVar bin;
-
-  public final int weight;
-
-  BinItem(IntVar bin, int weight) {
+  BinItem {
 
     if (bin == null) throw new IllegalArgumentException("Bin variable is null");
-
-    this.bin = bin;
-    this.weight = weight;
   }
 
   public String toString() {

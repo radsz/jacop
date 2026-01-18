@@ -48,23 +48,14 @@ public class ASTVarDeclItem extends SimpleNode {
   public String toString() {
     String limits = "";
     if (kind > 1) limits = "[" + index1 + ".." + index2 + "]";
-    String kindS = null;
-    switch (kind) {
-      case 0:
-        kindS = "(var): ";
-        break;
-      case 1:
-        kindS = "(non-var): ";
-        break;
-      case 2:
-        kindS = "(array-var): ";
-        break;
-      case 3:
-        kindS = "(array-non-var): ";
-        break;
-      default:
-        throw new RuntimeException("Internal parsing error; " + getClass().getName());
-    }
+    String kindS =
+        switch (kind) {
+          case 0 -> "(var): ";
+          case 1 -> "(non-var): ";
+          case 2 -> "(array-var): ";
+          case 3 -> "(array-non-var): ";
+          default -> throw new RuntimeException("Internal parsing error; " + getClass().getName());
+        };
     return super.toString() + kindS + id + limits;
   }
 }

@@ -115,9 +115,7 @@ public class AeqS extends PrimitiveConstraint {
 
     if (!a.domain.lub().contains(set)) return true;
 
-    if (a.singleton() && !(a.domain.glb().eq(set))) return true;
-
-    return false;
+    return a.singleton() && !(a.domain.glb().eq(set));
   }
 
   @Override

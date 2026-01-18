@@ -38,18 +38,7 @@ import org.jacop.core.IntVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-class ExclusiveItem {
-
-  final IntVar cond;
-
-  final int i1;
-  final int i2;
-
-  ExclusiveItem(int a, int b, IntVar c) {
-    i1 = a;
-    i2 = b;
-    cond = c;
-  }
+record ExclusiveItem(int i1, int i2, IntVar cond) {
 
   IntVar condition() {
     return cond;

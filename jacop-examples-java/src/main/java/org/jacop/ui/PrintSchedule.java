@@ -194,9 +194,7 @@ public class PrintSchedule {
   }
 
   String tab(int i) {
-    StringBuilder s = new StringBuilder();
-    for (int k = 0; k < i; k++) s.append(" ");
-    return s.toString();
+    return " ".repeat(Math.max(0, i));
   }
 
   @Override

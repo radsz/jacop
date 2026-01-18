@@ -31,7 +31,6 @@
 package org.jacop.fz;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +98,7 @@ public class Fz2jacop {
       if (!opt.getOutputFilename().isEmpty()) {
         String st = "=====UNSATISFIABLE=====";
         try {
-          Files.write(Path.of(opt.getOutputFilename()), st.getBytes(StandardCharsets.UTF_8));
+          Files.writeString(Path.of(opt.getOutputFilename()), st);
         } catch (IOException e1) {
           e1.printStackTrace();
         }

@@ -233,18 +233,14 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     assert set.checkInvariants() == null : set.checkInvariants();
 
-    if (this.lub.contains(set)) return true;
-
-    return false;
+    return this.lub.contains(set);
   }
 
   public boolean contains(SetDomain domain) {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
 
-    if (this.lub.contains(domain.lub())) return true;
-
-    return false;
+    return this.lub.contains(domain.lub());
   }
 
   /** It checks if value belongs to the domain. */
@@ -269,8 +265,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    * @return true if suppled domain has the same elements as this domain.
    */
   public boolean eq(SetDomain domain) {
-    if (domain.glb().eq(this.glb) && domain.lub().eq(this.lub)) return true;
-    return false;
+    return domain.glb().eq(this.glb) && domain.lub().eq(this.lub);
   }
 
   /** Returns the number of elements in the domain. */
@@ -465,8 +460,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    */
   @Override
   public boolean isEmpty() {
-    if (glb.isEmpty() && lub.isEmpty()) return true;
-    return false;
+    return glb.isEmpty() && lub.isEmpty();
   }
 
   /**
@@ -1113,7 +1107,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   @Override
   public void addDom(Interval i) {
 
-    this.lub = this.lub.union(i.min, i.max);
+    this.lub = this.lub.union(i.min(), i.max());
     this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
   }
 

@@ -637,9 +637,7 @@ public class MDD {
       position = diagram[position] + delta;
     }
 
-    if (diagram[position] == TERMINAL) return true;
-
-    return false;
+    return diagram[position] == TERMINAL;
   }
 
   /**
@@ -660,9 +658,7 @@ public class MDD {
       position = diagram[position] + delta;
     }
 
-    if (diagram[position] == TERMINAL) return true;
-
-    return false;
+    return diagram[position] == TERMINAL;
   }
 
   @Override

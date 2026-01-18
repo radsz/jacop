@@ -183,7 +183,7 @@ public class QCP extends ExampleFD {
     store = new Store();
     store.queueNo = 4;
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
 
     // Get problem size n from second program argument.
     IntVar[][] x = new IntVar[n][n];
@@ -220,7 +220,7 @@ public class QCP extends ExampleFD {
    */
   public boolean searchWithShaving() {
 
-    Shaving<IntVar> shaving = new Shaving<IntVar>();
+    Shaving<IntVar> shaving = new Shaving<>();
     shaving.setStore(store);
     shaving.quickShave = true;
 
@@ -228,11 +228,11 @@ public class QCP extends ExampleFD {
 
     long begin = System.currentTimeMillis();
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
     search.setPrintInfo(true);
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<IntVar>());
+        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMiddle<>());
 
     search.setConsistencyListener(shaving);
     search.setExitChildListener(shaving);
@@ -270,10 +270,10 @@ public class QCP extends ExampleFD {
     IO.println(transform.variablesTransformationScope);
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<>());
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
 

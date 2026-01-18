@@ -273,19 +273,13 @@ public class NetworkSimplex {
         // supply node
         Arc arc = node.artificial;
         arc.sister.set(-LARGE_COST, delta);
-        if (arc.index == DELETED_ARC) {
-          /*addArc(arc);*/
-          assert false;
-        }
+        assert arc.index != DELETED_ARC;
         if (arc.index != TREE_ARC) lower[arc.index] = arc.sister;
       } else if (delta < 0) {
         // demand node
         Arc arc = node.artificial;
         arc.set(-LARGE_COST, -delta);
-        if (arc.index == DELETED_ARC) {
-          /*addArc(arc);*/
-          assert false;
-        }
+        assert arc.index != DELETED_ARC;
         if (arc.index != TREE_ARC) lower[arc.index] = arc;
       } else {
         it.remove();

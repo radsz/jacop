@@ -140,8 +140,6 @@ public class Config extends Properties {
   public boolean check() {
 
     // check it is a power of 2
-    if (Integer.bitCount(MAX_NUMBER_OF_DATABASES) != 1) return false;
-
-    return true;
+    return Integer.bitCount(MAX_NUMBER_OF_DATABASES) == 1;
   }
 }

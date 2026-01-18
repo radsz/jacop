@@ -198,9 +198,7 @@ public class XorBool extends PrimitiveConstraint {
     for (IntVar e : x) sum += e.value();
 
     if ((sum & 1) == 1 && y.min() == 1) return true;
-    else if ((sum & 1) == 0 && y.max() == 0) return true;
-
-    return false;
+    else return (sum & 1) == 0 && y.max() == 0;
   }
 
   @Override
@@ -213,9 +211,7 @@ public class XorBool extends PrimitiveConstraint {
     for (IntVar e : x) sum += e.value();
 
     if ((sum & 1) == 1 && y.min() == 0) return true;
-    else if ((sum & 1) == 0 && y.min() == 1) return true;
-
-    return false;
+    else return (sum & 1) == 0 && y.min() == 1;
   }
 
   @Override

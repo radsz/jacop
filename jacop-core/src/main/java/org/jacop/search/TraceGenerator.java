@@ -779,8 +779,7 @@ public class TraceGenerator<T extends Var>
 
           AttributesImpl vAtts = new AttributesImpl();
           vAtts.addAttribute("", "", "index", "CDATA", "" + (i + 1));
-          if (tracedVar.get(i) instanceof IntVar) {
-            IntVar v = (IntVar) tracedVar.get(i);
+          if (tracedVar.get(i) instanceof IntVar v) {
             if (v.singleton()) { // IntVar
               vAtts.addAttribute("", "", "value", "CDATA", "" + v.value());
               hdVis.startElement("", "", "integer", vAtts);
@@ -850,15 +849,16 @@ public class TraceGenerator<T extends Var>
 
   String intDomainToString(IntDomain domain) {
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
 
     for (IntervalEnumeration enumer = domain.intervalEnumeration(); enumer.hasMoreElements(); ) {
       Interval next = enumer.nextElement();
-      if (next.singleton()) result.append(next.min);
-      else if (next.max - next.min >= 2) result.append(next.min).append(" .. ").append(next.max);
+      if (next.singleton()) result.append(next.min());
+      else if (next.max() - next.min() >= 2)
+        result.append(next.min()).append(" .. ").append(next.max());
       else
         // two elements interval represented as two single entries.
-        result.append(next.min).append(" ").append(next.max);
+        result.append(next.min()).append(" ").append(next.max());
 
       if (enumer.hasMoreElements()) result.append(" ");
     }
@@ -882,7 +882,7 @@ public class TraceGenerator<T extends Var>
         return intDomainToString(lub);
       }
 
-      StringBuffer result = new StringBuffer();
+      StringBuilder result = new StringBuilder();
       IntDomain glb = (IntDomain) glbMethod.invoke(domain);
       IntDomain lub = (IntDomain) lubMethod.invoke(domain);
       result.append("( ");

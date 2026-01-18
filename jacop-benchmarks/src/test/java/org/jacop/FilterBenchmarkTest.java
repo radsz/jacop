@@ -66,7 +66,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
   }
 
   @Parameterized.Parameters
-  public static Collection testData() {
+  public static Collection<?> testData() {
     return Arrays.asList(
         new Object[][] {
           {new int[] {1, 1}, new DFQ(), "experiment1", 13},

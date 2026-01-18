@@ -120,10 +120,9 @@ public class TupleUtils {
     for (int i = 0; i < sortedTs.length; i++) {
       position[i] = findPositionForInsert(sortedTs[i]);
 
-      insert[i] = true;
-
-      if (smallerEqualTuple(tuples[position[i]], sortedTs[i])
-          && smallerEqualTuple(sortedTs[i], tuples[position[i]])) insert[i] = false;
+      insert[i] =
+          !smallerEqualTuple(tuples[position[i]], sortedTs[i])
+              || !smallerEqualTuple(sortedTs[i], tuples[position[i]]);
 
       if (insert[i]) insertNo++;
       else reusedTuples[i] = tuples[position[i]];

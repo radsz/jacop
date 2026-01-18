@@ -58,13 +58,13 @@ class CumulativeProfiles {
     for (Task task : Ts) {
       t = task;
 
-      tDurMin = t.dur.min();
-      tResMin = t.res.min();
+      tDurMin = t.dur().min();
+      tResMin = t.res().min();
 
       if (doMaxProfile) {
         strt = t.est();
         stp = t.lastCT();
-        value = t.res.max();
+        value = t.res().max();
         if (trace) IO.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
         maxProfile.addToProfile(strt, stp, value);
       }

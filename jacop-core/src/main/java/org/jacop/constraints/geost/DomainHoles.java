@@ -100,16 +100,15 @@ public class DomainHoles extends InternalConstraint {
         holeDimension = i;
 
         // implies that there is at least one hole in the domain
-        switch (minlex) {
-          case PRUNEMAX:
-            // last infeasible point is lower bound of last interval
-            holeBound = v.domain.getInterval(v.domain.noIntervals() - 1).min;
-            break;
-          case PRUNEMIN:
-            // first infeasible point is upper bound of first interval
-            holeBound = v.domain.getInterval(0).max;
-            break;
-        }
+        holeBound =
+            switch (minlex) {
+              case PRUNEMAX ->
+                  // last infeasible point is lower bound of last interval
+                  v.domain.getInterval(v.domain.noIntervals() - 1).min();
+              case PRUNEMIN ->
+                  // first infeasible point is upper bound of first interval
+                  v.domain.getInterval(0).max();
+            };
       }
     }
 

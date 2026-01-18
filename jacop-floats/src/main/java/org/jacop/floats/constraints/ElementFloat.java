@@ -233,8 +233,7 @@ public class ElementFloat extends Constraint
 
   boolean disjoint(FloatDomain v1, double v2) {
     if (v1.min() > v2 || v2 > v1.max()) return true;
-    else if (!v1.contains(v2)) return true;
-    else return false;
+    else return !v1.contains(v2);
   }
 
   @Override
@@ -308,15 +307,12 @@ public class ElementFloat extends Constraint
       if (duplicate == null) {
 
         if (!index.singleton()) return false;
-        else if (list[index.value() - 1 - indexOffset] == v) return true;
+        else return list[index.value() - 1 - indexOffset] == v;
 
       } else {
 
-        if (duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v)
-          return true;
+        return duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v;
       }
-
-      return false;
 
     } else return false;
   }

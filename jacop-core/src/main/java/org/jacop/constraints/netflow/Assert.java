@@ -281,7 +281,7 @@ public class Assert {
       if (arc.sister.capacity > 0 && reduced > 0) s.append("\n").append(arc);
     }
     // System.out.println(s);
-    if (!s.isEmpty()) assert (false) : "non-optimal arcs:" + s;
+    assert s.isEmpty() : "non-optimal arcs:" + s;
 
     return true;
   }

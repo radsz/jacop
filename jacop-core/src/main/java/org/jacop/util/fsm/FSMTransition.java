@@ -81,9 +81,7 @@ public class FSMTransition {
 
     FSMTransition compareTo = (FSMTransition) o;
 
-    if (compareTo.successor.equals(successor) && compareTo.domain.eq(domain)) return true;
-
-    return false;
+    return compareTo.successor.equals(successor) && compareTo.domain.eq(domain);
   }
 
   @Override

@@ -92,13 +92,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   public void unionAdapt(Interval i) {
 
     if (min < max) {
-      if (i.min < min) min = i.min;
+      if (i.min() < min) min = i.min();
 
-      if (i.max > max) max = i.max;
+      if (i.max() > max) max = i.max();
     } else {
 
-      min = i.min;
-      max = i.max;
+      min = i.min();
+      max = i.max();
     }
   }
 
@@ -194,21 +194,15 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public boolean contains(IntDomain domain) {
 
-    if (isEmpty())
-      if (domain.isEmpty()) return true;
-      else return false;
+    if (isEmpty()) return domain.isEmpty();
 
-    if (min <= domain.min() && max >= domain.max()) return true;
-
-    return false;
+    return min <= domain.min() && max >= domain.max();
   }
 
   @Override
   public boolean contains(int value) {
 
-    if (min <= value && max >= value) return true;
-
-    return false;
+    return min <= value && max >= value;
   }
 
   /**
@@ -239,10 +233,7 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     if (domain.isEmpty() && isEmpty()) return true;
 
-    if (min == domain.min() && max == domain.max() && (max - min + 1) == domain.getSize())
-      return true;
-
-    return false;
+    return min == domain.min() && max == domain.max() && (max - min + 1) == domain.getSize();
   }
 
   @Override
@@ -591,17 +582,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public boolean isIntersecting(IntDomain domain) {
 
-    if (domain.min() > this.max || domain.max() < this.min) return false;
-
-    return true;
+    return domain.min() <= this.max && domain.max() >= this.min;
   }
 
   @Override
   public boolean isIntersecting(int min, int max) {
 
-    if (min > this.max || max < this.min) return false;
-
-    return true;
+    return min <= this.max && max >= this.min;
   }
 
   @Override
@@ -994,10 +981,10 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       Interval next = enumer.nextElement();
 
-      if (next.max < this.min || this.max < next.min) continue;
+      if (next.max() < this.min || this.max < next.min()) continue;
 
-      int min = Math.max(next.min, this.min);
-      int max = Math.min(next.max, this.max);
+      int min = Math.max(next.min(), this.min);
+      int max = Math.min(next.max(), this.max);
 
       result += max - min + 1;
     }
@@ -1016,8 +1003,6 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public boolean contains(int min, int max) {
 
-    if (min <= min() && max >= max()) return true;
-
-    return false;
+    return min <= min() && max >= max();
   }
 }

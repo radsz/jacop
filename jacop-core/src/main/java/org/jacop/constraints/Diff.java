@@ -689,7 +689,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           // for (ProfileItem p : barrier) System.out.print(p + " ");
           for (Interval v : toAdd) {
             // System.out.println("\n*** adding " + v);
-            barrier.addToProfile(v.min, v.max, minimalAfter);
+            barrier.addToProfile(v.min(), v.max(), minimalAfter);
           }
           // for (ProfileItem p : barrier) System.out.print(p + " ");
           // System.out.println("minimalAfter = " + minimalAfter);
@@ -870,13 +870,5 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return result.append(")").toString();
   }
 
-  static class Pair {
-    final int Min;
-    final int Max;
-
-    Pair(int i1, int i2) {
-      Min = i1;
-      Max = i2;
-    }
-  }
+  record Pair(int Min, int Max) {}
 }

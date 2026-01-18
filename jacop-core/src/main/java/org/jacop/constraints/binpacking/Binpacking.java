@@ -125,14 +125,14 @@ public class Binpacking extends Constraint
 
     binMap = Var.positionMapping(load, false, this.getClass());
 
-    Comparator<BinItem> weightComparator = (o1, o2) -> (o2.weight - o1.weight);
+    Comparator<BinItem> weightComparator = (o1, o2) -> (o2.weight() - o1.weight());
     Arrays.sort(item, weightComparator);
 
     itemMap =
         Var.positionMapping(
-            Arrays.stream(item).map(i -> i.bin).toArray(IntVar[]::new), false, this.getClass());
+            Arrays.stream(item).map(i -> i.bin()).toArray(IntVar[]::new), false, this.getClass());
 
-    setScope(Stream.concat(Arrays.stream(item).map(i -> i.bin), Arrays.stream(load)));
+    setScope(Stream.concat(Arrays.stream(item).map(i -> i.bin()), Arrays.stream(load)));
   }
 
   /**
@@ -193,7 +193,7 @@ public class Binpacking extends Constraint
     if (firstConsistencyCheck) {
 
       Arrays.stream(item)
-          .map(i -> i.bin)
+          .map(i -> i.bin())
           .forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
 
       firstConsistencyCheck = false;
@@ -202,7 +202,7 @@ public class Binpacking extends Constraint
     boolean pruneLB = LBpruning && LBpruningStamp.value();
     if (pruneLB) {
       BitSet binUsed = new BitSet(load.length + minBinNumber);
-      for (BinItem itemEl : item) if (itemEl.bin.singleton()) binUsed.set(itemEl.bin.value());
+      for (BinItem itemEl : item) if (itemEl.bin().singleton()) binUsed.set(itemEl.bin().value());
       if (binUsed.cardinality() == load.length) {
         // do not prune number of bins when all of them are already used.
         pruneLB = false;
@@ -248,9 +248,9 @@ public class Binpacking extends Constraint
           // System.out.println (itemEl.bin + " prunned =
           // "+itemEl.bin.dom().recentDomainPruning(store.level));
 
-          if (itemEl.bin.dom().contains(i + minBinNumber)) {
-            possible += itemEl.weight;
-            if (itemEl.bin.singleton()) required += itemEl.weight;
+          if (itemEl.bin().dom().contains(i + minBinNumber)) {
+            possible += itemEl.weight();
+            if (itemEl.bin().singleton()) required += itemEl.weight();
             else // not singleton
             candidates[candidatesLength++] = itemEl;
           }
@@ -263,15 +263,15 @@ public class Binpacking extends Constraint
 
         for (int l = 0; l < candidatesLength; l++) {
           BinItem bi = candidates[l];
-          if (required + bi.weight > load[i].max())
-            bi.bin.domain.inComplement(store.level, bi.bin, i + minBinNumber);
-          else if (possible - bi.weight < load[i].min())
-            bi.bin.domain.inValue(store.level, bi.bin, i + minBinNumber);
+          if (required + bi.weight() > load[i].max())
+            bi.bin().domain.inComplement(store.level, bi.bin(), i + minBinNumber);
+          else if (possible - bi.weight() < load[i].min())
+            bi.bin().domain.inValue(store.level, bi.bin(), i + minBinNumber);
         }
 
         // Rule 3.2 "Search Pruning"
         int[] Cj = new int[candidatesLength];
-        for (int l = 0; l < candidatesLength; l++) Cj[l] = candidates[l].weight;
+        for (int l = 0; l < candidatesLength; l++) Cj[l] = candidates[l].weight();
 
         // if (no_sum(Cj, load[i].min() - required, load[i].max() - required))
         //     throw Store.failException;
@@ -290,9 +290,12 @@ public class Binpacking extends Constraint
           System.arraycopy(Cj, j + 1, CjMinusI, j, (Cj.length - j - 1));
 
           if (no_sum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j]))
-            candidates[j].bin.domain.inComplement(store.level, candidates[j].bin, i + minBinNumber);
+            candidates[j]
+                .bin()
+                .domain
+                .inComplement(store.level, candidates[j].bin(), i + minBinNumber);
           if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required))
-            candidates[j].bin.domain.inValue(store.level, candidates[j].bin, i + minBinNumber);
+            candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), i + minBinNumber);
         }
       }
     }
@@ -325,10 +328,10 @@ public class Binpacking extends Constraint
     int[] a = new int[load.length];
 
     for (BinItem itemI : item) {
-      if (itemI.bin.singleton()) {
-        int p = itemI.bin.value() - minBinNumber;
-        a[p] += itemI.weight;
-      } else unpacked[unpackedLength++] = itemI.weight;
+      if (itemI.bin().singleton()) {
+        int p = itemI.bin().value() - minBinNumber;
+        a[p] += itemI.weight();
+      } else unpacked[unpackedLength++] = itemI.weight();
     }
     if (unpackedLength == 0) return;
 
@@ -355,7 +358,7 @@ public class Binpacking extends Constraint
   private int getNumberBins(BinItem[] item) {
     int min = IntDomain.MaxInt, max = 0;
     for (BinItem anItem : item) {
-      IntVar bin = anItem.bin;
+      IntVar bin = anItem.bin();
       int bmin = bin.min(), bmax = bin.max();
       max = (max > bmax) ? max : bmax;
       min = (min < bmin) ? min : bmin;
@@ -408,7 +411,7 @@ public class Binpacking extends Constraint
     result.append(" : binpacking([");
 
     for (int i = 0; i < item.length; i++) {
-      result.append(item[i].bin);
+      result.append(item[i].bin());
       if (i < item.length - 1) result.append(", ");
     }
     result.append("], [");
@@ -418,7 +421,7 @@ public class Binpacking extends Constraint
     }
     result.append("], [");
     for (int i = 0; i < item.length; i++) {
-      result.append(item[i].weight);
+      result.append(item[i].weight());
       if (i < item.length - 1) result.append(", ");
     }
     result.append("], ").append(LBpruning).append(")");

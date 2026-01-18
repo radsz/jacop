@@ -136,7 +136,4 @@ public class In extends PrimitiveConstraint {
   public Var getGuideVariable() {
     return x;
   }
-
-  @Override
-  public void supplyGuideFeedback(boolean feedback) {}
 }

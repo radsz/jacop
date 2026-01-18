@@ -43,16 +43,13 @@ public class ASTSolveExpr extends SimpleNode {
     String val = "";
 
     if (type != -1) {
-      switch (type) {
-        case 0:
-          val = "(ident): " + ident;
-          break;
-        case 1:
-          val = "(array access): " + ident + "[" + index + "]";
-          break;
-        default:
-          throw new RuntimeException("Internal parsing error; " + getClass().getName());
-      }
+      val =
+          switch (type) {
+            case 0 -> "(ident): " + ident;
+            case 1 -> "(array access): " + ident + "[" + index + "]";
+            default ->
+                throw new RuntimeException("Internal parsing error; " + getClass().getName());
+          };
     }
 
     return super.toString() + val;

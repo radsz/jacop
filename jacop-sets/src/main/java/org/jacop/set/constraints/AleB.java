@@ -160,7 +160,7 @@ public class AleB extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
     if (a.domain.singleton() && b.domain.singleton())
-      if (setLexLE(a.domain.glb(), b.domain.glb())) return true;
+      return setLexLE(a.domain.glb(), b.domain.glb());
     return false;
   }
 

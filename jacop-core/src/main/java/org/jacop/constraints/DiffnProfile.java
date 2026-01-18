@@ -80,9 +80,4 @@ class DiffnProfile extends Profile {
       }
     }
   }
-
-  @Override
-  public int max() {
-    return super.max();
-  }
 }

@@ -194,10 +194,9 @@ public class IfThenBool extends PrimitiveConstraint {
 
     if (!y.singleton()) return false;
 
-    if (x.singleton(1) && y.singleton(1) && z.singleton(0)) return true;
+    return x.singleton(1) && y.singleton(1) && z.singleton(0);
 
     // 1 0 1
-    return false;
   }
 
   @Override
@@ -210,10 +209,9 @@ public class IfThenBool extends PrimitiveConstraint {
 
     if (!y.singleton()) return false;
 
-    if (x.singleton(1) && y.singleton(1) && z.singleton(1)) return true;
+    return x.singleton(1) && y.singleton(1) && z.singleton(1);
 
     // 1 0 0
-    return false;
   }
 
   @Override

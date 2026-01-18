@@ -83,7 +83,7 @@ public class DisjointConditional extends Diff {
 
     setScope(
         Stream.concat(
-            Rectangle.getStream(this.rectangles), exclusionList.stream().map(i -> i.cond)));
+            Rectangle.getStream(this.rectangles), exclusionList.stream().map(i -> i.cond())));
   }
 
   /**
@@ -582,7 +582,7 @@ public class DisjointConditional extends Diff {
     }
 
     for (ExclusiveItem ei : exclusionList) {
-      IntVar v = ei.cond;
+      IntVar v = ei.cond();
       if (!v.singleton()) {
         queueVariable(store.level, v);
       }
@@ -665,15 +665,15 @@ public class DisjointConditional extends Diff {
 
               exclude = minForbiddenInterval(s, i, r, ConsideredRect, minI);
 
-              if (exclude.max != -1) {
+              if (exclude.max() != -1) {
                 // Domain Update = Domainset.complement(new
                 // FD(exclude.Min-
                 // r.length[i].min()+1,
                 // exclude.Max-1));
-                int min = exclude.min - r.length[i].min();
-                if (min + 1 < exclude.max) {
+                int min = exclude.min() - r.length[i].min();
+                if (min + 1 < exclude.max()) {
                   IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, min);
-                  Update.unionAdapt(exclude.max, IntDomain.MaxInt);
+                  Update.unionAdapt(exclude.max(), IntDomain.MaxInt);
 
                   if (traceNarr)
                     IO.print(
