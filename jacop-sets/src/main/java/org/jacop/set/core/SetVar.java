@@ -65,7 +65,7 @@ public class SetVar extends Var {
    * @param dom the domain of the variable being created.
    */
   public SetVar(Store store, String name, SetDomain dom) {
-    dom.searchConstraints = new ArrayList<Constraint>();
+    dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[SetDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[SetDomain.eventsInclusion.length];
     //		dom.modelConstraintsToEvaluate[0] = 0;

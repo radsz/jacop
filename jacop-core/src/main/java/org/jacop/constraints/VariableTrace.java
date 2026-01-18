@@ -70,9 +70,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     numberId = idNumber.incrementAndGet();
 
     vars = new Var[vs.length];
-    for (int i = 0; i < vs.length; i++) {
-      vars[i] = vs[i];
-    }
+    System.arraycopy(vs, 0, vars, 0, vs.length);
 
     setScope(vars);
   }
@@ -83,7 +81,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
    * @param vs variables to be traced
    */
   public VariableTrace(List<Var> vs) {
-    this(vs.toArray(new Var[vs.size()]));
+    this(vs.toArray(new Var[0]));
   }
 
   public void impose(Store store) {

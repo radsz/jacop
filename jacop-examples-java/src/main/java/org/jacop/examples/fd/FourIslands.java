@@ -67,7 +67,7 @@ public class FourIslands extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     FourIslands example = new FourIslands();
 
@@ -101,10 +101,10 @@ public class FourIslands extends ExampleFD {
     int iNorthWest = 0, iNorthEast = 1, iSouthWest = 2, iSouthEast = 3;
 
     // arrays of variables
-    IntVar island[] = new IntVar[4];
-    IntVar export[] = new IntVar[4];
-    IntVar attraction[] = new IntVar[4];
-    IntVar location[] = new IntVar[4];
+    IntVar[] island = new IntVar[4];
+    IntVar[] export = new IntVar[4];
+    IntVar[] attraction = new IntVar[4];
+    IntVar[] location = new IntVar[4];
 
     for (int i = 0; i < 4; i++) {
       island[i] = new IntVar(store, islandNames[i], 0, 3);
@@ -164,9 +164,9 @@ public class FourIslands extends ExampleFD {
 
     // based on values assigned two maps directions
     // an array of possible values for an island skern
-    int aSkern[] = {0, 1, 2, 3};
+    int[] aSkern = {0, 1, 2, 3};
     // an array of possible values for jai alai stadium
-    int aStadion[] = {2, 3, 0, 1};
+    int[] aStadion = {2, 3, 0, 1};
 
     IntVar iI3 = new IntVar(store, "clue4", 1, 4);
 
@@ -177,8 +177,8 @@ public class FourIslands extends ExampleFD {
     // connected by an east-west bridge.
 
     // Similar to clue 4.
-    int aBananas[] = {0, 1, 2, 3};
-    int aRayou[] = {1, 0, 3, 2};
+    int[] aBananas = {0, 1, 2, 3};
+    int[] aRayou = {1, 0, 3, 2};
 
     IntVar iI2 = new IntVar(store, "clue5", 1, 4);
 
@@ -190,8 +190,8 @@ public class FourIslands extends ExampleFD {
     // not connected by a bridge.
 
     // Similar to clue no 4.
-    int aIceIsland[] = {0, 1, 3, 2};
-    int aStadionIsland[] = {3, 2, 0, 1};
+    int[] aIceIsland = {0, 1, 3, 2};
+    int[] aStadionIsland = {3, 2, 0, 1};
 
     IntVar iI = new IntVar(store, "clue6", 1, 4);
 

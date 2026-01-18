@@ -72,7 +72,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
   //	int subListSize;
   /** It stores variables which need to be labelled. */
-  public List<List<T>> searchVariables = new ArrayList<List<T>>();
+  public List<List<T>> searchVariables = new ArrayList<>();
 
   ComparatorVariable<T> mainComparator = null;
   ComparatorVariable<T> tieBreakingComparator = null;

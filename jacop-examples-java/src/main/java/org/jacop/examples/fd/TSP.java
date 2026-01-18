@@ -52,7 +52,7 @@ public class TSP extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     TSP example = new TSP();
 

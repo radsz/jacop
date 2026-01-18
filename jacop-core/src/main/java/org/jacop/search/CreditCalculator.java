@@ -125,18 +125,18 @@ public class CreditCalculator<T extends Var>
     StringBuffer desc = new StringBuffer();
 
     desc.append("credit-right\n");
-    for (int k : creditsRight) desc.append(String.valueOf(k)).append(" ");
+    for (int k : creditsRight) desc.append(k).append(" ");
 
     desc.append("\n");
 
     desc.append("credit-left\n");
-    for (int j : creditsLeft) desc.append(String.valueOf(j)).append(" ");
+    for (int j : creditsLeft) desc.append(j).append(" ");
 
     desc.append("\n");
 
-    desc.append("currentLevel ").append(String.valueOf(currentLevel)).append("\n");
-    desc.append("currentBacktracks ").append(String.valueOf(currentBacktracks)).append("\n");
-    desc.append("leftChild? ").append(String.valueOf(leftChild));
+    desc.append("currentLevel ").append(currentLevel).append("\n");
+    desc.append("currentBacktracks ").append(currentBacktracks).append("\n");
+    desc.append("leftChild? ").append(leftChild);
     return desc.toString();
   }
 

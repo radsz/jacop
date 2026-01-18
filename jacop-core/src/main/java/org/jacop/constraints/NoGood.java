@@ -60,10 +60,10 @@ public class NoGood extends Constraint {
   static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables in no-good constraint. */
-  protected IntVar listOfVars[];
+  protected IntVar[] listOfVars;
 
   /** It specifies a list of values in no-good constraint. */
-  protected int listOfValues[];
+  protected int[] listOfValues;
 
   private IntVar firstWatch;
   private int firstValue;
@@ -94,8 +94,7 @@ public class NoGood extends Constraint {
     checkInputForNullness(
         new String[] {"listOfVars", "listOfValues"}, new Object[] {listOfVars, listOfValues});
     commonInitialization(
-        listOfVars.toArray(new IntVar[listOfVars.size()]),
-        listOfValues.stream().mapToInt(i -> i).toArray());
+        listOfVars.toArray(new IntVar[0]), listOfValues.stream().mapToInt(i -> i).toArray());
   }
 
   private void commonInitialization(IntVar[] listOfVars, int[] listOfValues) {
@@ -128,10 +127,7 @@ public class NoGood extends Constraint {
 
       if (listOfVars.length == 1) {
 
-        firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
-
         // store.in(firstWatch, Domain.domain.complement(firstValue));
-        return;
       } else {
         // check if it still active no-good
         for (int i = 0; i < listOfVars.length; i++)
@@ -147,10 +143,10 @@ public class NoGood extends Constraint {
                 "The NoGood learnt for one model is used in different model (model created across many store levels)");
           }
 
-        firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
         // store.in(firstWatch, Domain.domain.complement(firstValue));
-        return;
       }
+      firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
+      return;
     }
 
     // no good satisfied

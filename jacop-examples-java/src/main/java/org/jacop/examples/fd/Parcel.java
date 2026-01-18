@@ -50,7 +50,7 @@ public class Parcel extends ExampleFD {
    *
    * @param args no parameters
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Parcel example = new Parcel();
 
@@ -94,7 +94,7 @@ public class Parcel extends ExampleFD {
     // index city and next city
     IntVar[] costs = new IntVar[noCities];
     // Denotes load of person at each city
-    IntVar loads[] = new IntVar[noCities];
+    IntVar[] loads = new IntVar[noCities];
 
     for (int i = 0; i < cities.length; i++) {
       cities[i] = new IntVar(store, "cities[" + i + "]", 1, cities.length);
@@ -132,8 +132,8 @@ public class Parcel extends ExampleFD {
     // Constraints below make sure that at no city the load
     // constraint is violated. Load is always between [0..15].
     for (int i = 0; i < cities.length; i++) {
-      IntVar tripLoads[] = new IntVar[i + 1];
-      for (int j = 0; j <= i; j++) tripLoads[j] = loads[j];
+      IntVar[] tripLoads = new IntVar[i + 1];
+      System.arraycopy(loads, 0, tripLoads, 0, i + 1);
       IntVar partialLoad = new IntVar(store, "partialLoad[0-" + i + "]", 0, 15);
       store.impose(new SumInt(tripLoads, "==", partialLoad));
     }

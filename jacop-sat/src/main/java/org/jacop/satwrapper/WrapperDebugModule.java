@@ -55,7 +55,7 @@ public final class WrapperDebugModule
         WrapperComponent {
 
   private Core core;
-  private MapClause mapClause = new MapClause();
+  private final MapClause mapClause = new MapClause();
 
   // the associate wrapper
   private SatWrapper wrapper;

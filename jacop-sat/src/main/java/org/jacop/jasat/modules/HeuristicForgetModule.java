@@ -64,7 +64,7 @@ public final class HeuristicForgetModule
 
   // lists of learnt clauses, indexed by their LBD
   @SuppressWarnings("unchecked")
-  private LinkedList<Integer>[] learntClauses = (LinkedList<Integer>[]) new LinkedList[6];
+  private final LinkedList<Integer>[] learntClauses = (LinkedList<Integer>[]) new LinkedList[6];
 
   /**
    * When a forget() event occurs, this component will try to find clauses that can be forgotten,
@@ -152,7 +152,7 @@ public final class HeuristicForgetModule
     this.core = core;
 
     // reset lists of clauses
-    for (int i = 0; i < learntClauses.length; ++i) learntClauses[i] = new LinkedList<Integer>();
+    for (int i = 0; i < learntClauses.length; ++i) learntClauses[i] = new LinkedList<>();
 
     core.forgetModules[core.numForgetModules++] = this;
     core.explanationModules[core.numExplanationModules++] = this;

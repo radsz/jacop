@@ -116,9 +116,7 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
     this.valuesDomainComplement = valuesDomain.complement();
 
     extendedCounter = new Bounds[counter.length + 1];
-    for (int i = 0; i < counter.length; i++) {
-      extendedCounter[i] = counter[i];
-    }
+    System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
     extendedCounter[counter.length] = counterRest;
 
     setScope(Arrays.stream(list));
@@ -133,7 +131,7 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
    * @param ub maximal number of variables equal to a value.
    */
   public CountValuesBounds(List<? extends IntVar> list, int[] lb, int[] ub, int[] values) {
-    this(list.toArray(new IntVar[list.size()]), lb, ub, values);
+    this(list.toArray(new IntVar[0]), lb, ub, values);
   }
 
   // registers the constraint in the constraint store and
@@ -344,7 +342,15 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
       StringBuilder result = new StringBuilder();
 
-      result.append(min + "(" + lb + ").." + max + "(" + ub + ")");
+      result
+          .append(min)
+          .append("(")
+          .append(lb)
+          .append(")..")
+          .append(max)
+          .append("(")
+          .append(ub)
+          .append(")");
       return result.toString();
     }
   }

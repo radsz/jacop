@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.filters;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.*;
 import org.jacop.constraints.diffn.Diffn;
@@ -62,7 +63,7 @@ public class FilterBenchmark {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -85,7 +86,7 @@ public class FilterBenchmark {
    */
   public static void schedule() {
 
-    int dfqEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
+    int[][] dfqEx = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
     for (int[] dfqEx1 : dfqEx) {
       int a = dfqEx1[0], m = dfqEx1[1];
       Store store = new Store();
@@ -93,7 +94,7 @@ public class FilterBenchmark {
       experiment1(store, dfq, a, m);
     }
 
-    int firEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
+    int[][] firEx = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
     for (int[] element : firEx) {
       int a = element[0], m = element[1];
       FIR fir = new FIR();
@@ -101,7 +102,7 @@ public class FilterBenchmark {
       experiment1(store, fir, a, m);
     }
 
-    int arEx[][] = {{1, 1}, {1, 2}, {1, 3}, {2, 3}, {2, 4}};
+    int[][] arEx = {{1, 1}, {1, 2}, {1, 3}, {2, 3}, {2, 4}};
     for (int[] item : arEx) {
       int a = item[0], m = item[1];
       AR ar = new AR(1, 1);
@@ -109,7 +110,7 @@ public class FilterBenchmark {
       experiment2(store, ar, a, m);
     }
 
-    int ewfEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
+    int[][] ewfEx = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
     for (int[] value : ewfEx) {
       int a = value[0], m = value[1];
       EWF ewf = new EWF();
@@ -117,7 +118,7 @@ public class FilterBenchmark {
       experiment1(store, ewf, a, m);
     }
 
-    int ewfEx2[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
+    int[][] ewfEx2 = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
     for (int[] ints : ewfEx2) {
       int a = ints[0], m = ints[1];
       EWF ewf = new EWF(1, 1);
@@ -125,7 +126,7 @@ public class FilterBenchmark {
       experiment1(store, ewf, a, m);
     }
 
-    int dctEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {4, 4}};
+    int[][] dctEx = {{1, 1}, {1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {4, 4}};
     for (int[] ex : dctEx) {
       int a = ex[0], m = ex[1];
       DCT dct = new DCT();
@@ -140,7 +141,7 @@ public class FilterBenchmark {
    */
   public static void pipeMulSchedule() {
 
-    int dfqEx[][] = {{1, 1}, {1, 2}};
+    int[][] dfqEx = {{1, 1}, {1, 2}};
     for (int[] element : dfqEx) {
       int a = element[0], m = element[1];
       Store store = new Store();
@@ -148,7 +149,7 @@ public class FilterBenchmark {
       experiment1PM(store, dfq, a, m);
     }
 
-    int firEx[][] = {{1, 1}, {2, 1}, {2, 2}};
+    int[][] firEx = {{1, 1}, {2, 1}, {2, 2}};
     for (int[] item : firEx) {
       int a = item[0], m = item[1];
       FIR fir = new FIR();
@@ -156,7 +157,7 @@ public class FilterBenchmark {
       experiment1PM(store, fir, a, m);
     }
 
-    int arEx[][] = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
+    int[][] arEx = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
     for (int[] value : arEx) {
       int a = value[0], m = value[1];
       AR ar = new AR();
@@ -164,7 +165,7 @@ public class FilterBenchmark {
       experiment2PM(store, ar, a, m);
     }
 
-    int ewfEx[][] = {{2, 1}, {3, 1}, {3, 2}};
+    int[][] ewfEx = {{2, 1}, {3, 1}, {3, 2}};
     for (int[] ints : ewfEx) {
       int a = ints[0], m = ints[1];
       EWF ewf = new EWF();
@@ -172,7 +173,7 @@ public class FilterBenchmark {
       experiment1PM(store, ewf, a, m);
     }
 
-    int dctEx[][] = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
+    int[][] dctEx = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
     for (int[] ex : dctEx) {
       int a = ex[0], m = ex[1];
       DCT dct = new DCT();
@@ -187,7 +188,7 @@ public class FilterBenchmark {
    */
   public static void chainingSchedule() {
 
-    int dfqEx[][] = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
+    int[][] dfqEx = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
     for (int[] element : dfqEx) {
       int a = element[0], m = element[1], s = element[2];
       Store store = new Store();
@@ -195,7 +196,7 @@ public class FilterBenchmark {
       experiment1C(store, dfq, a, m, s);
     }
 
-    int firEx[][] = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
+    int[][] firEx = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
     for (int[] item : firEx) {
       int a = item[0], m = item[1], s = item[2];
       FIR fir = new FIR();
@@ -203,7 +204,7 @@ public class FilterBenchmark {
       experiment1C(store, fir, a, m, s);
     }
 
-    int arEx[][] = {
+    int[][] arEx = {
       {2, 2, 2}, {2, 3, 2}, {4, 4, 2}, {1, 1, 3}, {1, 2, 3}, {2, 2, 3}, {2, 3, 3}, {2, 4, 3},
       {3, 4, 3}, {2, 2, 4}, {2, 3, 4}, {3, 4, 4}
     };
@@ -214,7 +215,7 @@ public class FilterBenchmark {
       experiment1C(store, ar, a, m, s);
     }
 
-    int ewfEx[][] = {
+    int[][] ewfEx = {
       {2, 1, 2}, {3, 1, 2}, {1, 1, 3}, {2, 1, 3}, {3, 1, 3}, {1, 1, 4}, {2, 1, 4}, {3, 1, 4}
     };
     for (int[] ints : ewfEx) {
@@ -224,7 +225,7 @@ public class FilterBenchmark {
       experiment1C(store, ewf, a, m, s);
     }
 
-    int dctEx[][] = {
+    int[][] dctEx = {
       {2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {4, 2, 2}, {4, 3, 2}, {5, 4, 2}, {1, 1, 3}, {2, 1, 3},
       {3, 2, 3}, {4, 2, 3}, {5, 3, 3}
     };
@@ -244,7 +245,7 @@ public class FilterBenchmark {
 
     // **************** Pipeline schedules
 
-    int dfqEx[][] = {{1, 3}, {2, 3}};
+    int[][] dfqEx = {{1, 3}, {2, 3}};
     for (int[] dfqEx1 : dfqEx) {
       int a = dfqEx1[0], m = dfqEx1[1];
       Store store = new Store();
@@ -252,7 +253,7 @@ public class FilterBenchmark {
       experiment1P(store, dfqP, a, m);
     }
 
-    int firEx[][] = {{2, 2}, {3, 3}, {3, 4}};
+    int[][] firEx = {{2, 2}, {3, 3}, {3, 4}};
     for (int[] element : firEx) {
       int a = element[0], m = element[1];
       FIR firP = new FIR();
@@ -260,7 +261,7 @@ public class FilterBenchmark {
       experiment1P(store, firP, a, m);
     }
 
-    int arEx[][] = {{2, 4}, {2, 6}, {3, 8}};
+    int[][] arEx = {{2, 4}, {2, 6}, {3, 8}};
     for (int[] item : arEx) {
       int a = item[0], m = item[1];
       AR arP = new AR();
@@ -268,7 +269,7 @@ public class FilterBenchmark {
       experiment1P(store, arP, a, m);
     }
 
-    int ewfEx[][] = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
+    int[][] ewfEx = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
     for (int[] value : ewfEx) {
       int a = value[0], m = value[1];
       EWF ewfP = new EWF();
@@ -276,7 +277,7 @@ public class FilterBenchmark {
       experiment1P(store, ewfP, a, m);
     }
 
-    int dctEx[][] = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
+    int[][] dctEx = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
     for (int[] ints : dctEx) {
       int a = ints[0], m = ints[1];
       DCT dctP = new DCT();
@@ -284,7 +285,7 @@ public class FilterBenchmark {
       experiment1P(store, dctP, a, m);
     }
 
-    int fftEx[][] = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
+    int[][] fftEx = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
     for (int[] ex : fftEx) {
       int a = ex[0], m = ex[1];
       FFT fftP = new FFT();
@@ -392,7 +393,7 @@ public class FilterBenchmark {
         new SimpleMatrixSelect<IntVar>(
             vars,
             new SmallestMin<IntVar>(),
-            new MostConstrainedStatic<IntVar>(),
+            new MostConstrainedStatic<>(),
             new IndomainMin<IntVar>(),
             0);
 
@@ -941,19 +942,19 @@ public class FilterBenchmark {
     IntVar mulDelay = new IntVar(store, filter.mulDel(), filter.mulDel());
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar T[] = new IntVar[delays.length];
-    IntVar R[] = new IntVar[delays.length];
-    int D[] = new int[delays.length];
+    IntVar[] T = new IntVar[delays.length];
+    IntVar[] R = new IntVar[delays.length];
+    int[] D = new int[delays.length];
 
-    IntVar Tadd[] = new IntVar[filter.noAdd()];
-    IntVar Radd[] = new IntVar[filter.noAdd()];
-    IntVar Dadd[] = new IntVar[filter.noAdd()];
-    IntVar ResAdd[] = new IntVar[filter.noAdd()];
+    IntVar[] Tadd = new IntVar[filter.noAdd()];
+    IntVar[] Radd = new IntVar[filter.noAdd()];
+    IntVar[] Dadd = new IntVar[filter.noAdd()];
+    IntVar[] ResAdd = new IntVar[filter.noAdd()];
 
-    IntVar Tmul[] = new IntVar[filter.noMul()];
-    IntVar Rmul[] = new IntVar[filter.noMul()];
-    IntVar Dmul[] = new IntVar[filter.noMul()];
-    IntVar ResMul[] = new IntVar[filter.noMul()];
+    IntVar[] Tmul = new IntVar[filter.noMul()];
+    IntVar[] Rmul = new IntVar[filter.noMul()];
+    IntVar[] Dmul = new IntVar[filter.noMul()];
+    IntVar[] ResMul = new IntVar[filter.noMul()];
 
     int j = 0, k = 0;
     for (int i = 0; i < delays.length; i++) {
@@ -1006,9 +1007,9 @@ public class FilterBenchmark {
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
     Ts = new ArrayList<IntVar>();
-    for (IntVar v : T) Ts.add(v);
+    Ts.addAll(Arrays.asList(T));
     Rs = new ArrayList<IntVar>();
-    for (IntVar v : R) Rs.add(v);
+    Rs.addAll(Arrays.asList(R));
     Ds = new ArrayList<Integer>();
     for (Integer v : D) Ds.add(v);
 
@@ -1047,19 +1048,19 @@ public class FilterBenchmark {
     // the effective delay is 1; filter.mulDel(), filter.mulDel());
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar T[] = new IntVar[delays.length];
-    IntVar R[] = new IntVar[delays.length];
-    int D[] = new int[delays.length];
+    IntVar[] T = new IntVar[delays.length];
+    IntVar[] R = new IntVar[delays.length];
+    int[] D = new int[delays.length];
 
-    IntVar Tadd[] = new IntVar[filter.noAdd()];
-    IntVar Radd[] = new IntVar[filter.noAdd()];
-    IntVar Dadd[] = new IntVar[filter.noAdd()];
-    IntVar ResAdd[] = new IntVar[filter.noAdd()];
+    IntVar[] Tadd = new IntVar[filter.noAdd()];
+    IntVar[] Radd = new IntVar[filter.noAdd()];
+    IntVar[] Dadd = new IntVar[filter.noAdd()];
+    IntVar[] ResAdd = new IntVar[filter.noAdd()];
 
-    IntVar Tmul[] = new IntVar[filter.noMul()];
-    IntVar Rmul[] = new IntVar[filter.noMul()];
-    IntVar Dmul[] = new IntVar[filter.noMul()];
-    IntVar ResMul[] = new IntVar[filter.noMul()];
+    IntVar[] Tmul = new IntVar[filter.noMul()];
+    IntVar[] Rmul = new IntVar[filter.noMul()];
+    IntVar[] Dmul = new IntVar[filter.noMul()];
+    IntVar[] ResMul = new IntVar[filter.noMul()];
 
     int j = 0, k = 0;
     for (int i = 0; i < delays.length; i++) {
@@ -1112,9 +1113,9 @@ public class FilterBenchmark {
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
     Ts = new ArrayList<IntVar>();
-    for (IntVar v : T) Ts.add(v);
+    Ts.addAll(Arrays.asList(T));
     Rs = new ArrayList<IntVar>();
-    for (IntVar v : R) Rs.add(v);
+    Rs.addAll(Arrays.asList(R));
     Ds = new ArrayList<Integer>();
     for (Integer v : D) Ds.add(v);
 
@@ -1153,24 +1154,24 @@ public class FilterBenchmark {
     IntVar mulDelay = new IntVar(store, filter.mulDel(), filter.mulDel());
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar T[] = new IntVar[delays.length];
-    IntVar Tclock[] = new IntVar[delays.length];
-    IntVar Tstep[] = new IntVar[delays.length];
-    IntVar R[] = new IntVar[delays.length];
-    int D[] = new int[delays.length];
+    IntVar[] T = new IntVar[delays.length];
+    IntVar[] Tclock = new IntVar[delays.length];
+    IntVar[] Tstep = new IntVar[delays.length];
+    IntVar[] R = new IntVar[delays.length];
+    int[] D = new int[delays.length];
 
-    IntVar Tadd[] = new IntVar[filter.noAdd()];
-    IntVar TaddClock[] = new IntVar[filter.noAdd()];
-    IntVar Radd[] = new IntVar[filter.noAdd()];
-    IntVar Dadd[] = new IntVar[filter.noAdd()];
-    IntVar ResAdd[] = new IntVar[filter.noAdd()];
+    IntVar[] Tadd = new IntVar[filter.noAdd()];
+    IntVar[] TaddClock = new IntVar[filter.noAdd()];
+    IntVar[] Radd = new IntVar[filter.noAdd()];
+    IntVar[] Dadd = new IntVar[filter.noAdd()];
+    IntVar[] ResAdd = new IntVar[filter.noAdd()];
 
-    IntVar Tmul[] = new IntVar[filter.noMul()];
-    IntVar TmulClock[] = new IntVar[filter.noMul()];
-    IntVar Rmul[] = new IntVar[filter.noMul()];
-    IntVar Dmul[] = new IntVar[filter.noMul()];
-    IntVar DmulClock[] = new IntVar[filter.noMul()];
-    IntVar ResMul[] = new IntVar[filter.noMul()];
+    IntVar[] Tmul = new IntVar[filter.noMul()];
+    IntVar[] TmulClock = new IntVar[filter.noMul()];
+    IntVar[] Rmul = new IntVar[filter.noMul()];
+    IntVar[] Dmul = new IntVar[filter.noMul()];
+    IntVar[] DmulClock = new IntVar[filter.noMul()];
+    IntVar[] ResMul = new IntVar[filter.noMul()];
 
     int j = 0, k = 0;
     for (int i = 0; i < delays.length; i++) {
@@ -1238,9 +1239,9 @@ public class FilterBenchmark {
     store.impose(new Cumulative(Tmul, Dmul, ResMul, limitMul, true, false));
 
     Ts = new ArrayList<IntVar>();
-    for (IntVar v : T) Ts.add(v);
+    Ts.addAll(Arrays.asList(T));
     Rs = new ArrayList<IntVar>();
-    for (IntVar v : R) Rs.add(v);
+    Rs.addAll(Arrays.asList(R));
     Ds = new ArrayList<Integer>();
     for (Integer v : D) Ds.add(v);
 
@@ -1282,21 +1283,21 @@ public class FilterBenchmark {
     store.impose(new XmulCeqZ(pipe, 3, pipe3));
     IntVar one = new IntVar(store, 1, 1);
 
-    IntVar T[] = new IntVar[delays.length];
-    IntVar Ta[] = new IntVar[delays.length];
-    IntVar Tb[] = new IntVar[delays.length];
-    IntVar R[] = new IntVar[delays.length];
-    int D[] = new int[delays.length];
+    IntVar[] T = new IntVar[delays.length];
+    IntVar[] Ta = new IntVar[delays.length];
+    IntVar[] Tb = new IntVar[delays.length];
+    IntVar[] R = new IntVar[delays.length];
+    int[] D = new int[delays.length];
 
-    IntVar Tadd[] = new IntVar[3 * filter.noAdd()];
-    IntVar Radd[] = new IntVar[3 * filter.noAdd()];
-    IntVar Dadd[] = new IntVar[3 * filter.noAdd()];
-    IntVar ResAdd[] = new IntVar[3 * filter.noAdd()];
+    IntVar[] Tadd = new IntVar[3 * filter.noAdd()];
+    IntVar[] Radd = new IntVar[3 * filter.noAdd()];
+    IntVar[] Dadd = new IntVar[3 * filter.noAdd()];
+    IntVar[] ResAdd = new IntVar[3 * filter.noAdd()];
 
-    IntVar Tmul[] = new IntVar[3 * filter.noMul()];
-    IntVar Rmul[] = new IntVar[3 * filter.noMul()];
-    IntVar Dmul[] = new IntVar[3 * filter.noMul()];
-    IntVar ResMul[] = new IntVar[3 * filter.noMul()];
+    IntVar[] Tmul = new IntVar[3 * filter.noMul()];
+    IntVar[] Rmul = new IntVar[3 * filter.noMul()];
+    IntVar[] Dmul = new IntVar[3 * filter.noMul()];
+    IntVar[] ResMul = new IntVar[3 * filter.noMul()];
 
     int j = 0, k = 0;
 
@@ -1376,14 +1377,14 @@ public class FilterBenchmark {
     store.impose(new Diffn(Tmul, Rmul, Dmul, ResMul));
 
     Ts = new ArrayList<IntVar>();
-    for (IntVar v : T) Ts.add(v);
-    for (IntVar v : Ta) Ts.add(v);
-    for (IntVar v : Tb) Ts.add(v);
+    Ts.addAll(Arrays.asList(T));
+    Ts.addAll(Arrays.asList(Ta));
+    Ts.addAll(Arrays.asList(Tb));
 
     Rs = new ArrayList<IntVar>();
-    for (IntVar v : R) Rs.add(v);
-    for (IntVar v : R) Rs.add(v);
-    for (IntVar v : R) Rs.add(v);
+    Rs.addAll(Arrays.asList(R));
+    Rs.addAll(Arrays.asList(R));
+    Rs.addAll(Arrays.asList(R));
 
     Ds = new ArrayList<Integer>();
     for (Integer v : D) Ds.add(v);

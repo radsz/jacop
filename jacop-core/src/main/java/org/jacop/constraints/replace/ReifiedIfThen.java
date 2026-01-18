@@ -58,7 +58,7 @@ public class ReifiedIfThen implements Replaceable<Reified> {
   @Override
   public DecomposedConstraint<Constraint> replace(Reified constraint) {
 
-    return new DecomposedConstraint<Constraint>() {
+    return new DecomposedConstraint<>() {
       @Override
       public void imposeDecomposition(Store store) {
         decompose(store).forEach(store::impose);

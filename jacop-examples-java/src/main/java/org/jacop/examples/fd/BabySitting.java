@@ -62,7 +62,7 @@ public class BabySitting extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     BabySitting example = new BabySitting();
 
@@ -90,8 +90,8 @@ public class BabySitting extends ExampleFD {
     int ikeith = 0, ilibby = 1, imargo = 2, inora = 3, iotto = 4;
 
     // FDV's in the model
-    IntVar surname[] = new IntVar[5];
-    IntVar name[] = new IntVar[5];
+    IntVar[] surname = new IntVar[5];
+    IntVar[] name = new IntVar[5];
 
     for (int i = 0; i < 5; i++) {
       // Values encode actual age of the child.

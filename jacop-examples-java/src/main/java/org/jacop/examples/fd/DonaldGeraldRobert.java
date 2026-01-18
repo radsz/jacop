@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
@@ -56,7 +57,7 @@ public class DonaldGeraldRobert extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     DonaldGeraldRobert example = new DonaldGeraldRobert();
 
@@ -91,7 +92,7 @@ public class DonaldGeraldRobert extends ExampleFD {
 
     IntVar[] digits = {d, o, n, a, l, g, e, r, b, t};
 
-    for (IntVar v : digits) vars.add(v);
+    vars.addAll(Arrays.asList(digits));
 
     // Imposing inequalities constraints between letters
     store.impose(new Alldifferent(digits));

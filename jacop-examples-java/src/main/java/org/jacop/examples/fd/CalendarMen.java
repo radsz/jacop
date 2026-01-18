@@ -58,7 +58,7 @@ public class CalendarMen extends ExampleFD {
    *
    * @param args no arguments read.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     CalendarMen example = new CalendarMen();
 
@@ -78,7 +78,7 @@ public class CalendarMen extends ExampleFD {
    *
    * @param args no arguments read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CalendarMen example = new CalendarMen();
 
@@ -189,9 +189,9 @@ public class CalendarMen extends ExampleFD {
     // Three sets of variables, the same values at different sets denote
     // relation between appropriate variables.
 
-    IntVar first[] = new IntVar[12];
-    IntVar last[] = new IntVar[12];
-    IntVar sport[] = new IntVar[12];
+    IntVar[] first = new IntVar[12];
+    IntVar[] last = new IntVar[12];
+    IntVar[] sport = new IntVar[12];
 
     for (int i = 0; i < 12; i++) {
       first[i] = new IntVar(store, firstNames[i], 1, 12);
@@ -225,7 +225,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XneqY(I_1_2, I_1_3));
     store.impose(new XneqY(I_1_1, I_1_3));
 
-    int lista_1[] = {4, 7, 10};
+    int[] lista_1 = {4, 7, 10};
 
     store.impose(Element.choose(I_1_1, lista_1, first[iFrancisco]));
 
@@ -263,7 +263,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XplusCeqZ(X1, 1, X2));
     store.impose(new XplusCeqZ(X1, 2, X3));
 
-    IntVar lista_2[] = {X1, X2, X3};
+    IntVar[] lista_2 = {X1, X2, X3};
 
     store.impose(Element.choose(I_2_1, lista_2, first[iKarl]));
 
@@ -304,7 +304,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XneqY(D2, D3));
     store.impose(new XneqY(D1, D3));
 
-    int lista_4[] = {6, 9, 12};
+    int[] lista_4 = {6, 9, 12};
 
     store.impose(Element.choose(D1, lista_4, first[iIvor]));
     store.impose(Element.choose(D2, lista_4, last[iO_Rourke]));
@@ -356,7 +356,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XneqY(I_9_2, I_9_3));
     store.impose(new XneqY(I_9_1, I_9_3));
 
-    int lista_9[] = {1, 5, 9};
+    int[] lista_9 = {1, 5, 9};
 
     store.impose(Element.choose(I_9_1, lista_9, first[iGriff]));
     store.impose(Element.choose(I_9_2, lista_9, last[iReede]));
@@ -389,7 +389,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XplusCeqZ(W1, 1, W2));
     store.impose(new XplusCeqZ(W1, 2, W3));
 
-    IntVar lista_10[] = {W1, W2, W3};
+    IntVar[] lista_10 = {W1, W2, W3};
 
     store.impose(Element.choose(I_10_1, lista_10, first[iBrett]));
     store.impose(Element.choose(I_10_2, lista_10, first[iEd]));
@@ -422,7 +422,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XplusCeqZ(Q1, 1, Q2));
     store.impose(new XplusCeqZ(Q1, 2, Q3));
 
-    IntVar lista_11[] = {Q1, Q2, Q3};
+    IntVar[] lista_11 = {Q1, Q2, Q3};
 
     store.impose(Element.choose(K1, lista_11, first[iEd]));
     store.impose(Element.choose(K2, lista_11, last[iUhler]));
@@ -444,7 +444,7 @@ public class CalendarMen extends ExampleFD {
     store.impose(new XneqY(L2, L3));
     store.impose(new XneqY(L1, L3));
 
-    int lista_12[] = {4, 6, 8};
+    int[] lista_12 = {4, 6, 8};
 
     store.impose(Element.choose(L1, lista_12, first[iDabney]));
     store.impose(Element.choose(L2, lista_12, last[iNelsen]));
@@ -557,9 +557,9 @@ public class CalendarMen extends ExampleFD {
         itennis = 10,
         ivolleyball = 11;
 
-    IntVar firstname[] = new IntVar[12];
-    IntVar surname[] = new IntVar[12];
-    IntVar sport[] = new IntVar[12];
+    IntVar[] firstname = new IntVar[12];
+    IntVar[] surname = new IntVar[12];
+    IntVar[] sport = new IntVar[12];
 
     for (int i = 0; i < 12; i++) {
       firstname[i] = new IntVar(store, firstnameID[i], 1, 12);

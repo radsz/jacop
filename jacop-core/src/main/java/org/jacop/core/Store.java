@@ -188,7 +188,7 @@ public class Store {
    * variable is not created to reduce memory consumption. If it exists then it will be used by
    * functions looking for a variable given the name.
    */
-  public Map<String, Var> variablesHashMap = new HashMap<String, Var>();
+  public Map<String, Var> variablesHashMap = new HashMap<>();
 
   /** It is used by Extensional MDD constraints. It is to represent G_yes. */
   public SparseSet sparseSet;
@@ -242,7 +242,7 @@ public class Store {
    * imposition. It makes it possible to replace constraints into other constraints. It can be very
    * useful for efficiency or testing purposes.
    */
-  private Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
+  private final Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
 
   /** It specifies the default constructor of the store. */
   public Store() {
@@ -1102,11 +1102,11 @@ public class Store {
 
     // first BooleanVar
     for (Var v : variablesHashMap.values()) {
-      if (v instanceof BooleanVar) result.append(v + "\n");
+      if (v instanceof BooleanVar) result.append(v).append("\n");
     }
 
     // all other variables
-    for (int i = 0; i < size; i++) result.append(vars[i] + "\n");
+    for (int i = 0; i < size; i++) result.append(vars[i]).append("\n");
 
     int i = 0;
     for (MutableVar var : mutableVariables) {
@@ -1121,7 +1121,7 @@ public class Store {
       result.append(var.value()).append("\n");
     }
 
-    for (Constraint c : getConstraints()) result.append("*** Constraint:\n").append(c + "\n");
+    for (Constraint c : getConstraints()) result.append("*** Constraint:\n").append(c).append("\n");
 
     result.append("\n*** Constraints for evaluation:\n{").append(toStringChangedEl()).append(" }");
 
@@ -1130,7 +1130,7 @@ public class Store {
 
   public Set<Constraint> getConstraints() {
 
-    Set<Constraint> constraints = new HashSet<Constraint>();
+    Set<Constraint> constraints = new HashSet<>();
 
     for (Var v : variablesHashMap.values()) {
       Domain d = v.dom();
@@ -1159,7 +1159,7 @@ public class Store {
 
   public void activityManagement(boolean m) {
     variableActivityManagement = m;
-    variablesPrunned = new HashSet<Var>();
+    variablesPrunned = new HashSet<>();
   }
 
   void updateActivities(Constraint constraint) {
@@ -1178,7 +1178,7 @@ public class Store {
 
     StringBuffer c = new StringBuffer();
 
-    for (int i = 0; i < queueNo; i++) c.append(changed[i].toString() + "\n");
+    for (int i = 0; i < queueNo; i++) c.append(changed[i].toString()).append("\n");
 
     return c.toString();
   }
@@ -1205,13 +1205,13 @@ public class Store {
     // first BooleanVar
     for (String key : new TreeSet<>(variablesHashMap.keySet())) {
       Var v = variablesHashMap.get(key);
-      if (v instanceof BooleanVar) result.append(v + ",");
+      if (v instanceof BooleanVar) result.append(v).append(",");
     }
 
     // all other variables
     TreeSet<Var> orderedVariables = new TreeSet<>(Comparator.comparing(Var::id));
-    for (int i = 0; i < size; i++) orderedVariables.add(vars[i]);
-    for (Var var : orderedVariables) result.append(var + ",");
+    orderedVariables.addAll(Arrays.asList(vars).subList(0, size));
+    for (Var var : orderedVariables) result.append(var).append(",");
 
     int i = 0;
     for (MutableVar var : mutableVariables) {

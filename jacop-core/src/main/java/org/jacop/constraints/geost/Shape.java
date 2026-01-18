@@ -82,7 +82,7 @@ public class Shape {
   public Shape(int id, DBox box) {
     this.no = id;
 
-    this.boxes = new ArrayList<DBox>(1);
+    this.boxes = new ArrayList<>(1);
     boxes.add(box);
 
     this.boundingBox = box;
@@ -103,7 +103,7 @@ public class Shape {
     this.no = id;
 
     boundingBox = new DBox(origin, length);
-    boxes = new ArrayList<DBox>(1);
+    boxes = new ArrayList<>(1);
     boxes.add(boundingBox);
 
     assert checkInvariants() == null : checkInvariants();
@@ -201,7 +201,7 @@ public class Shape {
      * box of all components
      */
     if (holes == null) {
-      holes = new SimpleArrayList<DBox>();
+      holes = new SimpleArrayList<>();
     } else {
       if (!holes.isEmpty()) {
         for (DBox hole : holes) {
@@ -217,7 +217,7 @@ public class Shape {
      * and add an extra unit to the boxes, which thus corresponds to a quarter unit
      */
     final int dimension = boundingBox.origin.length;
-    Collection<DBox> rescaledBoxes = new ArrayList<DBox>(boxes.size());
+    Collection<DBox> rescaledBoxes = new ArrayList<>(boxes.size());
     for (DBox b : boxes) {
       DBox scaled = DBox.newBox(dimension);
       for (int i = 0; i < dimension; i++) {
@@ -262,7 +262,7 @@ public class Shape {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("Shape(" + no + ",");
+    builder.append("Shape(").append(no).append(",");
     for (DBox b : boxes) builder.append(b).append(", ");
     builder.deleteCharAt(builder.length() - 1);
     builder.deleteCharAt(builder.length() - 1);
@@ -280,7 +280,7 @@ public class Shape {
 
     if (area < 0) {
       int holeArea = 0;
-      Collection<DBox> actualHoles = new LinkedList<DBox>();
+      Collection<DBox> actualHoles = new LinkedList<>();
       actualHoles = boundingBox.subtractAll(boxes, actualHoles);
       for (DBox hole : actualHoles) {
         holeArea += (hole.area());
@@ -303,8 +303,8 @@ public class Shape {
    * @return non overlapping representation of the shape.
    */
   public Collection<DBox> noOverlapRepresentation() {
-    Collection<DBox> actualHoles = new ArrayList<DBox>();
+    Collection<DBox> actualHoles = new ArrayList<>();
     actualHoles = boundingBox.subtractAll(boxes, actualHoles);
-    return boundingBox.subtractAll(actualHoles, new ArrayList<DBox>());
+    return boundingBox.subtractAll(actualHoles, new ArrayList<>());
   }
 }

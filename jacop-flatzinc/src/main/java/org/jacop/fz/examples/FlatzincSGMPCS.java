@@ -45,7 +45,7 @@ public class FlatzincSGMPCS {
 
   FlatzincSGMPCS() {}
 
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     FlatzincSGMPCS run = new FlatzincSGMPCS();
 

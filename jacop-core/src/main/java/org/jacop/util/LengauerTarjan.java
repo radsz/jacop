@@ -26,7 +26,7 @@ package org.jacop.util;
 
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.BitSet;
 
@@ -215,7 +215,7 @@ public class LengauerTarjan {
       out = new FileOutputStream(filenameExt);
 
       // Connect print stream to the output stream
-      p = new PrintStream(out, false, "UTF-8");
+      p = new PrintStream(out, false, StandardCharsets.UTF_8);
 
       p.print("digraph ");
       p.print(filename);
@@ -230,8 +230,6 @@ public class LengauerTarjan {
       p.println("}");
 
       // p.close(); not needed; aouto close
-    } catch (UnsupportedEncodingException _) {
-      System.err.println("Unsupported encoding for file writing");
     } catch (Exception _) {
       System.err.println("Error writing to file");
     }

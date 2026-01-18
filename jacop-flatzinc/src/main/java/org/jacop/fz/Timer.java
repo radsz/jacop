@@ -31,5 +31,5 @@ package org.jacop.fz;
 
 interface Timer {
 
-  public abstract long getCPUTime();
+  long getCPUTime();
 }

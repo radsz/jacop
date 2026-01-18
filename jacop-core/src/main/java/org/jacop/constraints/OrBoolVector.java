@@ -80,10 +80,10 @@ public class OrBoolVector extends PrimitiveConstraint {
 
     this.numberId = idNumber.incrementAndGet();
 
-    Set<IntVar> varSet = new HashSet<IntVar>();
-    Arrays.stream(list).forEach(varSet::add);
+    Set<IntVar> varSet = new HashSet<>();
+    varSet.addAll(Arrays.asList(list));
     this.l = varSet.size();
-    this.list = varSet.toArray(new IntVar[varSet.size()]);
+    this.list = varSet.toArray(new IntVar[0]);
     this.result = result;
 
     assert (checkInvariants() == null) : checkInvariants();
@@ -101,7 +101,7 @@ public class OrBoolVector extends PrimitiveConstraint {
    * @param result variable which is equal 0 if none of x is equal to zero.
    */
   public OrBoolVector(List<? extends IntVar> list, IntVar result) {
-    this(list.toArray(new IntVar[list.size()]), result);
+    this(list.toArray(new IntVar[0]), result);
   }
 
   /**
@@ -141,7 +141,7 @@ public class OrBoolVector extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<Integer>(store, 0);
+    position = new TimeStamp<>(store, 0);
   }
 
   public void consistency(Store store) {
@@ -290,7 +290,7 @@ public class OrBoolVector extends PrimitiveConstraint {
   @Override
   public List<Constraint> decompose(Store store) {
 
-    constraints = new ArrayList<Constraint>();
+    constraints = new ArrayList<>();
 
     PrimitiveConstraint[] orConstraints = new PrimitiveConstraint[l];
 

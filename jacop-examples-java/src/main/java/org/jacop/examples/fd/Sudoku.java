@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
@@ -52,7 +53,7 @@ public class Sudoku extends ExampleFD {
    *
    * @param args not used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Sudoku example = new Sudoku();
 
@@ -68,7 +69,7 @@ public class Sudoku extends ExampleFD {
    *
    * @param args not used.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     Sudoku example = new Sudoku();
 
@@ -139,7 +140,9 @@ public class Sudoku extends ExampleFD {
 
         List<IntVar> block = new ArrayList<IntVar>();
         for (int k = 0; k < noColumns; k++)
-          for (int m = 0; m < noRows; m++) block.add(elements[i * noColumns + k][j * noRows + m]);
+          block.addAll(
+              Arrays.asList(elements[i * noColumns + k])
+                  .subList(0 + j * noRows + 0, noRows + j * noRows + 0));
 
         store.impose(new Alldistinct(block));
       }
@@ -198,7 +201,9 @@ public class Sudoku extends ExampleFD {
 
         List<IntVar> block = new ArrayList<IntVar>();
         for (int k = 0; k < noColumns; k++)
-          for (int m = 0; m < noRows; m++) block.add(elements[i * noColumns + k][j * noRows + m]);
+          block.addAll(
+              Arrays.asList(elements[i * noColumns + k])
+                  .subList(0 + j * noRows + 0, noRows + j * noRows + 0));
 
         for (int k = 0; k < noColumns * noRows; k++)
           for (int m = k + 1; m < noColumns * noRows; m++)

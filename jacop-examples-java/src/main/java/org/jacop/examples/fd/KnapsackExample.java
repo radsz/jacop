@@ -67,7 +67,7 @@ public class KnapsackExample extends ExampleFD {
    * @param args the capacity of the knapsack, 4 strings denoting the item (weight, profit,
    *     maximumQuantity, name), the number of strings total must be equal to 1+4*noOfItems.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     KnapsackExample example = new KnapsackExample();
 
@@ -121,7 +121,7 @@ public class KnapsackExample extends ExampleFD {
     vars = new ArrayList<IntVar>();
 
     // I-th variable represents if i-th item is taken
-    IntVar quantity[] = new IntVar[noItems];
+    IntVar[] quantity = new IntVar[noItems];
 
     // Each quantity variable has a domain from 0 to max value
     for (int i = 0; i < quantity.length; i++) {
@@ -183,7 +183,7 @@ public class KnapsackExample extends ExampleFD {
     vars = new ArrayList<IntVar>();
 
     // I-th variable represents if i-th item is taken
-    IntVar quantity[] = new IntVar[noItems];
+    IntVar[] quantity = new IntVar[noItems];
 
     // Each quantity variable has a domain from 0 to max value
     for (int i = 0; i < quantity.length; i++) {
@@ -244,7 +244,7 @@ public class KnapsackExample extends ExampleFD {
     vars = new ArrayList<IntVar>();
 
     // I-th variable represents if i-th item is taken
-    IntVar quantity[] = new IntVar[noItems];
+    IntVar[] quantity = new IntVar[noItems];
 
     // Each quantity variable has a domain from 0 to max value
     for (int i = 0; i < quantity.length; i++) {
@@ -328,7 +328,7 @@ public class KnapsackExample extends ExampleFD {
     vars = new ArrayList<IntVar>();
 
     // I-th variable represents if i-th item is taken
-    IntVar quantity[] = new IntVar[noItems];
+    IntVar[] quantity = new IntVar[noItems];
 
     // Each quantity variable has a domain from 0 to 1
     for (int i = 0; i < quantity.length; i++) {

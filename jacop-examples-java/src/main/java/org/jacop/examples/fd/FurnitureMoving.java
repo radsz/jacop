@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
@@ -62,7 +63,7 @@ public class FurnitureMoving extends ExampleFD {
    *
    * @param args command arguments (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -104,8 +105,8 @@ public class FurnitureMoving extends ExampleFD {
     IntVar[] resources = new IntVar[4];
     endTimes = new IntVar[4];
 
-    int durationsInts[] = {30, 10, 15, 15}; // duration of task
-    int resourcesInts[] = {3, 1, 3, 2}; // resources: num persons required for each task
+    int[] durationsInts = {30, 10, 15, 15}; // duration of task
+    int[] resourcesInts = {3, 1, 3, 2}; // resources: num persons required for each task
     for (int i = 0; i < durationsInts.length; i++) {
       // converts to FDV
       durations[i] = new IntVar(store, "dur_" + i, durationsInts[i], durationsInts[i]);
@@ -127,9 +128,9 @@ public class FurnitureMoving extends ExampleFD {
 
     vars = new ArrayList<IntVar>();
 
-    for (IntVar s : starts) vars.add(s);
+    vars.addAll(Arrays.asList(starts));
 
-    for (IntVar e : endTimes) vars.add(e);
+    vars.addAll(Arrays.asList(endTimes));
 
     vars.add(numPersons);
 

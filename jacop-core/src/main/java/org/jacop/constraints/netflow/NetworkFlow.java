@@ -96,7 +96,7 @@ public class NetworkFlow extends Constraint
 
     this.network = new Pruning(nodes, arcs, statistics);
     this.map = Var.createEmptyPositioning();
-    this.queue = new HashSet<IntVar>();
+    this.queue = new HashSet<>();
     this.costVariable = costVariable;
 
     for (VarHandler ds : flowVariables) {
@@ -117,7 +117,7 @@ public class NetworkFlow extends Constraint
         new VarHandler() {
           @Override
           public List<IntVar> listVariables() {
-            return Arrays.asList(costVariable);
+            return Collections.singletonList(costVariable);
           }
 
           @Override

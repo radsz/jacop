@@ -589,11 +589,10 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (singleton) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
         var.domainHasChanged(IntDomain.BOUND);
-        return;
       }
+      return;
 
     } else {
 
@@ -692,11 +691,10 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
         if (previousMin != min || previousMax != max) {
           var.domainHasChanged(IntDomain.BOUND);
-          return;
         } else {
           var.domainHasChanged(IntDomain.ANY);
-          return;
         }
+        return;
       }
 
     } else {
@@ -726,11 +724,10 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
         if (previousMin != result.min || previousMax != result.max) {
           var.domainHasChanged(IntDomain.BOUND);
-          return;
         } else {
           var.domainHasChanged(IntDomain.ANY);
-          return;
         }
+        return;
       }
     }
   }
@@ -876,12 +873,11 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (singleton) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
         if (boundEvent) var.domainHasChanged(IntDomain.BOUND);
         else var.domainHasChanged(IntDomain.ANY);
-        return;
       }
+      return;
 
     } else {
 
@@ -989,12 +985,11 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (singleton) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
         if (boundEvent) var.domainHasChanged(IntDomain.BOUND);
         else var.domainHasChanged(IntDomain.ANY);
-        return;
       }
+      return;
 
     } else {
 
@@ -1500,8 +1495,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     if (shiftLeft > 0) {
       result = result >>> shiftLeft;
-      result = result >>> Math.max(0, 63 + this.min - max);
-    } else result = result >>> Math.max(0, 63 + this.min - max);
+    }
+    result = result >>> Math.max(0, 63 + this.min - max);
 
     if (result != 0) return true;
     else return false;
@@ -2233,8 +2228,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       if (temp < 0) {
         if (number == 0) return min + pos;
         number--;
-        temp = temp << 1;
-      } else temp = temp << 1;
+      }
+      temp = temp << 1;
       pos++;
     }
 

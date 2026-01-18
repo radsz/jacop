@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -57,7 +58,7 @@ public class ArchFriends extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     ArchFriends example = new ArchFriends();
 
@@ -86,8 +87,8 @@ public class ArchFriends extends ExampleFD {
 
     // Variables shoe and shop
 
-    IntVar shoe[] = new IntVar[4];
-    IntVar shop[] = new IntVar[4];
+    IntVar[] shoe = new IntVar[4];
+    IntVar[] shop = new IntVar[4];
 
     // Each variable has a domain 1..4 as there are four different
     // shoes and shops. Values 1 to 4 within variables shoe
@@ -98,8 +99,8 @@ public class ArchFriends extends ExampleFD {
       shop[i] = new IntVar(store, shopNames[i], 1, 4);
     }
 
-    for (IntVar v : shoe) vars.add(v);
-    for (IntVar v : shop) vars.add(v);
+    vars.addAll(Arrays.asList(shoe));
+    vars.addAll(Arrays.asList(shop));
 
     // Each shoe, shop have to have a unique identifier.
     store.impose(new Alldifferent(shoe));

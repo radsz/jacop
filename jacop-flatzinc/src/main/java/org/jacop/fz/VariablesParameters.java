@@ -97,7 +97,7 @@ public class VariablesParameters implements ParserTreeConstants {
   void generateParameters(SimpleNode node, Tables table) {
 
     dictionary = table;
-    annotations = new HashSet<String>();
+    annotations = new HashSet<>();
 
     int type = getType(node);
 
@@ -141,7 +141,7 @@ public class VariablesParameters implements ParserTreeConstants {
   void generateVariables(SimpleNode node, Tables table, Store store) {
 
     dictionary = table;
-    annotations = new HashSet<String>();
+    annotations = new HashSet<>();
     boolean var_introduced = false;
     boolean output_var = false;
     boolean is_defined_var = false;
@@ -476,7 +476,7 @@ public class VariablesParameters implements ParserTreeConstants {
   void generateArrayParameters(SimpleNode node, Tables table) {
 
     dictionary = table;
-    annotations = new HashSet<String>();
+    annotations = new HashSet<>();
     //      boolean output_array = false;
     //      OutputArrayAnnotation outArrayAnn=null;
 
@@ -531,8 +531,8 @@ public class VariablesParameters implements ParserTreeConstants {
   void generateArrayVariables(SimpleNode node, Tables table, Store store) {
 
     dictionary = table;
-    annotations = new HashSet<String>();
-    indexBounds = new ArrayList<IntDomain>();
+    annotations = new HashSet<>();
+    indexBounds = new ArrayList<>();
     boolean var_introduced = false;
     boolean output_array = false;
     OutputArrayAnnotation outArrayAnn = null;
@@ -1053,14 +1053,12 @@ public class VariablesParameters implements ParserTreeConstants {
             // System.out.println("<=====================");
 
           }
-          j++;
-          if (j < count) child = (SimpleNode) node.jjtGetChild(j);
         } else {
           // simple annotation id
           annotations.add(parseAnnExpr((SimpleNode) child.jjtGetChild(0), 0));
-          j++;
-          if (j < count) child = (SimpleNode) node.jjtGetChild(j);
         }
+        j++;
+        if (j < count) child = (SimpleNode) node.jjtGetChild(j);
       }
     }
     // System.out.println(annotations +", "+indexBounds);

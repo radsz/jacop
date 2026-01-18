@@ -54,7 +54,7 @@ public class Conference extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Conference example = new Conference();
 

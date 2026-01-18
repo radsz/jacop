@@ -46,10 +46,10 @@ import org.jacop.core.Var;
 public class IndomainHierarchical<T extends Var> implements Indomain<T> {
 
   /** It defines the default indomain if there is no mapping provided. */
-  private Indomain<T> defIndomain;
+  private final Indomain<T> defIndomain;
 
   /** It defines for each variable and indomain method which should be used. */
-  private Map<T, Indomain<T>> hashmap;
+  private final Map<T, Indomain<T>> hashmap;
 
   /**
    * Constructor which specifies the mapping and default indomain to be used if mapping does not
@@ -60,7 +60,7 @@ public class IndomainHierarchical<T extends Var> implements Indomain<T> {
    */
   public IndomainHierarchical(Map<T, Indomain<T>> hashmap, Indomain<T> defIndomain) {
 
-    this.hashmap = new HashMap<T, Indomain<T>>(hashmap);
+    this.hashmap = new HashMap<>(hashmap);
     this.defIndomain = defIndomain;
   }
 

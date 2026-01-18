@@ -34,6 +34,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.constraints.SumInt;
@@ -335,10 +336,11 @@ public class MineSweeper extends ExampleFD {
     int lineCount = 0;
 
     try (BufferedReader inr =
-        new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 
       String str;
-      while ((str = inr.readLine()) != null && str.length() > 0) {
+      while ((str = inr.readLine()) != null && !str.isEmpty()) {
 
         str = str.trim();
 
@@ -355,7 +357,7 @@ public class MineSweeper extends ExampleFD {
           problem = new int[r][c];
         } else {
           // the problem matrix
-          String row[] = str.split("");
+          String[] row = str.split("");
           for (int j = 1; j <= c; j++) {
             String s = row[j];
             if (s.equals(".")) {
@@ -384,7 +386,7 @@ public class MineSweeper extends ExampleFD {
    *
    * @param args the filename containing the problem description.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();

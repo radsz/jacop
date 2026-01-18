@@ -69,10 +69,10 @@ public class MultivariateIntervalNewton {
     this.x = new FloatVar[x.length];
     System.arraycopy(x, 0, this.x, 0, x.length);
 
-    eval = new Stack<Constraint>();
+    eval = new Stack<>();
 
-    Set<FloatVar> vars = new HashSet<FloatVar>();
-    for (FloatVar v : x) vars.add(v);
+    Set<FloatVar> vars = new HashSet<>();
+    vars.addAll(Arrays.asList(x));
 
     fprime = new FloatVar[f.length][x.length];
     Derivative.init(store);
@@ -309,11 +309,17 @@ public class MultivariateIntervalNewton {
   public String toString() {
     StringBuilder s = new StringBuilder("MultivariateIntervalNewton:\n");
 
-    s.append(Arrays.asList(f) + "\n");
-    s.append(Arrays.asList(x) + "\n");
+    s.append(Arrays.asList(f)).append("\n");
+    s.append(Arrays.asList(x)).append("\n");
     for (int i = 0; i < fprime.length; i++)
       for (int j = 0; j < fprime[i].length; j++)
-        s.append("f" + i + "/d" + x[j] + " = " + fprime[i][j] + "\n");
+        s.append("f")
+            .append(i)
+            .append("/d")
+            .append(x[j])
+            .append(" = ")
+            .append(fprime[i][j])
+            .append("\n");
     // for (int i = 0; i < xInit.length; i++)
     //     s.append(xInit[i] + ", ");
     s.append("\n");

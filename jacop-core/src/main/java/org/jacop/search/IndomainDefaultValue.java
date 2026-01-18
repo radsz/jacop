@@ -48,10 +48,10 @@ import org.jacop.core.Var;
 public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
 
   /** It defines the default indomain if there is no mapping provided. */
-  private Indomain<T> defIndomain;
+  private final Indomain<T> defIndomain;
 
   /** It defines for each variable and a value which should be used. */
-  private Map<T, Integer> defValue;
+  private final Map<T, Integer> defValue;
 
   /**
    * Constructor which specifies default values to be used if values are not in the domain a defualt

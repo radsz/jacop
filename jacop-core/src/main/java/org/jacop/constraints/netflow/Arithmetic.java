@@ -63,8 +63,8 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
   List<Constraint> decomposition;
 
   public Arithmetic() {
-    this.eqns = new ArrayList<int[]>();
-    this.vars = new ArrayList<IntVar>();
+    this.eqns = new ArrayList<>();
+    this.vars = new ArrayList<>();
     this.map = Var.createEmptyPositioning();
 
     vars.add(NULL_VAR);
@@ -144,13 +144,13 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
     if (decomposition == null) {
 
-      decomposition = new ArrayList<Constraint>();
+      decomposition = new ArrayList<>();
 
       // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
       for (int[] eqn : eqns) {
-        List<IntVar> variables = new ArrayList<IntVar>();
-        List<Integer> weights = new ArrayList<Integer>();
+        List<IntVar> variables = new ArrayList<>();
+        List<Integer> weights = new ArrayList<>();
 
         for (int i = 0; i < eqn.length; i++)
           if (eqn[i] != 0) {
@@ -165,13 +165,13 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
       return decomposition;
     } else {
 
-      List<Constraint> result = new ArrayList<Constraint>();
+      List<Constraint> result = new ArrayList<>();
 
       // final IntVar ZERO = new IntVar(store, "Zero", 0, 0);
 
       for (int[] eqn : eqns) {
-        List<IntVar> variables = new ArrayList<IntVar>();
-        List<Integer> weights = new ArrayList<Integer>();
+        List<IntVar> variables = new ArrayList<>();
+        List<Integer> weights = new ArrayList<>();
 
         for (int i = 0; i < eqn.length; i++)
           if (eqn[i] != 0) {
@@ -211,7 +211,7 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
     if (decomposition == null || decomposition.size() > 1) {
 
-      decomposition = new ArrayList<Constraint>();
+      decomposition = new ArrayList<>();
       int[] sum = new int[vars.size()];
       for (int[] eqn : eqns) for (int i = 0; i < eqn.length; i++) sum[i] += eqn[i];
 

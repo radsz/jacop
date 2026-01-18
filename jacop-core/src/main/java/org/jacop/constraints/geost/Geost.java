@@ -345,7 +345,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * It is used inside flushQueue function to separate timeconsistency execution from object update
    * (potentially expensive if for example object frame is recomputed).
    */
-  SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<GeostObject>();
+  SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<>();
 
   /**
    * It is set by queueVariable after a time variable has been changed. It indicates that we should
@@ -410,15 +410,15 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     this.externalConstraints = constraints.clone();
 
     this.numberId = idNumber.incrementAndGet();
-    this.variableQueue = new LinkedHashSet<Var>();
+    this.variableQueue = new LinkedHashSet<>();
 
     // objectQueue = new LinkedHashSet<GeostObject>( objects.size() );
     // objectQueue.addAll(objects);
 
-    objectQueue = new SimpleHashSet<GeostObject>(objects.length);
+    objectQueue = new SimpleHashSet<>(objects.length);
     for (GeostObject o : objects) objectQueue.add(o);
 
-    Map<Integer, Shape> idShapeMap = new HashMap<Integer, Shape>();
+    Map<Integer, Shape> idShapeMap = new HashMap<>();
 
     // add all shapes to the register
     for (Shape s : shapes) {
@@ -429,7 +429,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // make sure that all objects have the same dimension
     // make sure that IDs are unique
     // make sure that the shapes used are defined
-    Set<Integer> objectIds = new HashSet<Integer>();
+    Set<Integer> objectIds = new HashSet<>();
     int dim = -1;
     int idMax = 0;
 
@@ -548,14 +548,14 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     inConsistency = false;
 
-    temporaryObjectSet = new SimpleHashSet<GeostObject>();
+    temporaryObjectSet = new SimpleHashSet<>();
 
     backtracking = false;
-    workingList = new SimpleArrayList<DBox>();
+    workingList = new SimpleArrayList<>();
 
     assert (checkInvariants() == null) : checkInvariants();
 
-    groundedVars = new SimpleArrayList<Var>();
+    groundedVars = new SimpleArrayList<>();
 
     setScope(variableObjectMap.keySet());
 
@@ -597,7 +597,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
   protected void genInternalConstraints() {
 
-    internalConstraints = new ArrayList<InternalConstraint>();
+    internalConstraints = new ArrayList<>();
 
     int constraintCount = 0;
 
@@ -618,8 +618,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     // initialize array used to stored filtered constraints. Has to be large enough to store all
     // constraints
-    stillUsefulInternalConstraints =
-        internalConstraints.toArray(new InternalConstraint[internalConstraints.size()]);
+    stillUsefulInternalConstraints = internalConstraints.toArray(new InternalConstraint[0]);
 
     /*
      * TODO reuse different scopes if equal so that quadratic use of memory is avoided
@@ -630,7 +629,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // find out if all constraints apply on the whole collection of objects
     allLinked = true;
 
-    Set<Object> scope = new HashSet<Object>();
+    Set<Object> scope = new HashSet<>();
 
     for (ExternalConstraint ec : externalConstraints) {
 
@@ -640,8 +639,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
         int prevSize = scope.size();
 
-        List<GeostObject> constraintScopeArr = new ArrayList<GeostObject>(constraintScope.length);
-        for (GeostObject o : constraintScope) constraintScopeArr.add(o);
+        List<GeostObject> constraintScopeArr = new ArrayList<>(constraintScope.length);
+        constraintScopeArr.addAll(Arrays.asList(constraintScope));
 
         boolean changed = scope.addAll(constraintScopeArr);
 
@@ -669,15 +668,14 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         domainHolesConstraints[o.no] = new DomainHoles(o);
 
         // collect related constraints
-        Set<InternalConstraint> relatedConstraints = new HashSet<InternalConstraint>();
+        Set<InternalConstraint> relatedConstraints = new HashSet<>();
         for (ExternalConstraint ec : externalConstraints)
           relatedConstraints.addAll(ec.getObjectConstraints(o));
         objectConstraints[o.no] = relatedConstraints;
       }
     } else {
 
-      Set<InternalConstraint> commonConstraints = new HashSet<InternalConstraint>();
-      commonConstraints.addAll(internalConstraints);
+      Set<InternalConstraint> commonConstraints = new HashSet<>(internalConstraints);
 
       for (GeostObject o : objects) {
         domainHolesConstraints[o.no] = new DomainHoles(o);
@@ -1493,18 +1491,18 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     this.store = store;
 
-    lastLevelLastVar = new TimeStamp<Integer>(store, store.level);
+    lastLevelLastVar = new TimeStamp<>(store, store.level);
     lastLevelLastVar.update(-1);
 
     genInternalConstraints();
 
     store.registerRemoveLevelLateListener(this);
 
-    setStart = new TimeStamp<Integer>(store, store.level);
+    setStart = new TimeStamp<>(store, store.level);
     setStart.update(0);
 
-    objectList = new SimpleArrayList<GeostObject>();
-    updatedObjectSet = new HashSet<GeostObject>();
+    objectList = new SimpleArrayList<>();
+    updatedObjectSet = new HashSet<>();
   }
 
   @Override
@@ -1660,7 +1658,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   public List<Long> getStatistics() {
 
-    List<Long> stats = new ArrayList<Long>();
+    List<Long> stats = new ArrayList<>();
 
     stats.add(pruneMinCount);
     stats.add(pruneMaxCount);

@@ -279,7 +279,6 @@ public class Lex extends Constraint implements Stateful {
                   // Only one way of enforcing <lex relation.
                   a.domain.inGLB(store.level, a, previousElinLUBofA);
                 }
-                return;
               } else {
 
                 // noSmaller == 0.
@@ -308,8 +307,8 @@ public class Lex extends Constraint implements Stateful {
                 // because
                 // adding them will make a !<lex b.
 
-                return;
               }
+              return;
             }
 
             if (!enumerGLBofB.hasMoreElements()) {
@@ -344,7 +343,6 @@ public class Lex extends Constraint implements Stateful {
                     b.domain.inGLB(store.level, b, b.domain.lub().max());
                 }
 
-                return;
               } else {
                 // noSmaller == 1, one way of fixing lex.
 
@@ -356,9 +354,8 @@ public class Lex extends Constraint implements Stateful {
                   // Only one way of enforcing <lex relation.
                   a.domain.inGLB(store.level, a, previousElinLUBofA);
                 }
-
-                return;
               }
+              return;
             }
 
             nextElinGLBofA = enumerGLBofA.nextElement();
@@ -483,8 +480,8 @@ public class Lex extends Constraint implements Stateful {
 
     super.impose(store);
 
-    smallerDifference = new TimeStamp<IntDomain>(store, a.domain.lub().subtract(b.domain.glb()));
-    inDifference = new TimeStamp<IntDomain>(store, b.domain.lub().subtract(a.domain.glb()));
+    smallerDifference = new TimeStamp<>(store, a.domain.lub().subtract(b.domain.glb()));
+    inDifference = new TimeStamp<>(store, b.domain.lub().subtract(a.domain.glb()));
 
     assert (!a.domain.lub().contains(Integer.MIN_VALUE))
         : "Lex constraint does not allow Integer.MIN_VALUE in the domain";

@@ -60,8 +60,8 @@ public class PrintSchedule {
    * @param r resource usage of the operations.
    */
   public PrintSchedule(String[] name, IntVar[] t, int[] d, IntVar[] r) {
-    n = new ArrayList<String>();
-    for (String s : name) n.add(s);
+    n = new ArrayList<>();
+    n.addAll(Arrays.asList(name));
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -80,7 +80,7 @@ public class PrintSchedule {
    * @param r resource usage of the operations.
    */
   public PrintSchedule(String[] name, IntVar[] t, IntVar[] d, IntVar[] r) {
-    n = new ArrayList<String>();
+    n = new ArrayList<>();
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -123,8 +123,8 @@ public class PrintSchedule {
    */
   public PrintSchedule(
       List<String> name, List<? extends IntVar> t, int[] d, List<? extends IntVar> r) {
-    n = new ArrayList<String>();
-    for (String s : name) n.add(s);
+    n = new ArrayList<>();
+    n.addAll(name);
 
     this.t = new IntVar[t.size()];
     for (int i = 0; i < t.size(); i++) this.t[i] = t.get(i);
@@ -143,8 +143,8 @@ public class PrintSchedule {
    * @param r resource usage of the operations.
    */
   public PrintSchedule(List<String> name, IntVar[] t, int[] d, IntVar[] r) {
-    n = new ArrayList<String>();
-    for (String s : name) n.add(s);
+    n = new ArrayList<>();
+    n.addAll(name);
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -163,8 +163,8 @@ public class PrintSchedule {
    * @param r resource usage of the operations.
    */
   public PrintSchedule(List<String> name, IntVar[] t, IntVar[] d, IntVar[] r) {
-    n = new ArrayList<String>();
-    for (String s : name) n.add(s);
+    n = new ArrayList<>();
+    n.addAll(name);
 
     this.t = new IntVar[t.length];
     System.arraycopy(t, 0, this.t, 0, t.length);
@@ -205,7 +205,7 @@ public class PrintSchedule {
 
     List<?>[] TaskArr = new ArrayList[n.size()];
     for (int i = 0; i < n.size(); i++) {
-      List<Object> V = new ArrayList<Object>();
+      List<Object> V = new ArrayList<>();
 
       V.add(n.get(i));
       V.add(t[i]);
@@ -246,9 +246,9 @@ public class PrintSchedule {
       int start = ((IntVar) TaskArr[j].get(1)).min();
       int dur = (Integer) TaskArr[j].get(2);
 
-      List<List<Integer>> Line = new ArrayList<List<Integer>>(resSize);
+      List<List<Integer>> Line = new ArrayList<>(resSize);
 
-      for (int n = 0; n < resSize; n++) Line.add(new ArrayList<Integer>());
+      for (int n = 0; n < resSize; n++) Line.add(new ArrayList<>());
 
       while (start <= i && j < TaskArr.length) {
         int res = ((IntVar) TaskArr[j].get(3)).min();
@@ -265,7 +265,7 @@ public class PrintSchedule {
         for (int ri = 0; ri < integers.size(); ri++)
           result.append("[").append(TaskArr[integers.get(ri)].getFirst()).append("]");
 
-        if (integers.size() == 0) result.append("-");
+        if (integers.isEmpty()) result.append("-");
         //		s = s + "-";
 
         result.append(tab(16 - result.length() + sp));

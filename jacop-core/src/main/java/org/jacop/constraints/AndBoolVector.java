@@ -76,11 +76,10 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     this.numberId = idNumber.incrementAndGet();
 
-    Set<IntVar> varSet = new HashSet<>();
-    varSet.addAll(Arrays.asList(list));
+    Set<IntVar> varSet = new HashSet<>(Arrays.asList(list));
 
     this.l = varSet.size();
-    this.list = varSet.toArray(new IntVar[varSet.size()]);
+    this.list = varSet.toArray(new IntVar[0]);
     this.result = result;
 
     assert (checkInvariants() == null) : checkInvariants();
@@ -99,7 +98,7 @@ public class AndBoolVector extends PrimitiveConstraint {
    */
   public AndBoolVector(List<? extends IntVar> list, IntVar result) {
 
-    this(list.toArray(new IntVar[list.size()]), result);
+    this(list.toArray(new IntVar[0]), result);
   }
 
   /**

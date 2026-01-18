@@ -199,7 +199,7 @@ public class AleB extends PrimitiveConstraint {
   public String toString() {
 
     StringBuilder result = new StringBuilder();
-    result.append(id() + " : AleB(");
+    result.append(id()).append(" : AleB(");
     result.append(a).append(", ").append(b);
     result.append(")");
     return result.toString();

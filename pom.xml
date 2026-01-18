@@ -589,9 +589,6 @@ setup to run configuration. -->
                 <artifactId>maven-jdeps-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
-                    <jdepsArgs>
-                        <arg>--ignore-missing-deps</arg>
-                    </jdepsArgs>
                     <multiRelease>25</multiRelease>
                     <include>org.jacop.*</include>
                     <dependenciesToAnalyzeExcludes>
@@ -620,7 +617,6 @@ setup to run configuration. -->
                     </dependency>
                 </dependencies>
                 <configuration>
-                    <encoding>UTF-8</encoding>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>

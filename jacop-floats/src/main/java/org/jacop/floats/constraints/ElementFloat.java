@@ -71,7 +71,7 @@ public class ElementFloat extends Constraint
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@literal >=1}) if indexOffset is equal to 0.
    */
-  public double list[];
+  public double[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
@@ -80,7 +80,7 @@ public class ElementFloat extends Constraint
    * It specifies for each value what are the possible values of the index variable (it takes into
    * account indexOffset.
    */
-  Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<Double, IntDomain>();
+  Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<>();
 
   boolean indexHasChanged = true;
   boolean valueHasChanged = true;
@@ -256,9 +256,9 @@ public class ElementFloat extends Constraint
       firstConsistencyCheck = false;
     }
 
-    duplicates = new ArrayList<IntDomain>();
+    duplicates = new ArrayList<>();
 
-    Map<Double, IntDomain> map = new HashMap<Double, IntDomain>();
+    Map<Double, IntDomain> map = new HashMap<>();
 
     for (int pos = 0; pos < list.length; pos++) {
 
@@ -334,7 +334,7 @@ public class ElementFloat extends Constraint
       if (i < list.length - 1) result.append(", ");
     }
 
-    result.append("], ").append(value).append(", " + indexOffset + " )");
+    result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
 
     return result.toString();
   }

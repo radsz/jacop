@@ -52,11 +52,11 @@ public class Circuit extends Alldiff implements Stateful {
   static AtomicInteger idNumber = new AtomicInteger(0);
   int chainLength = 0;
   boolean firstConsistencyCheck = true;
-  MutableVar graph[];
+  MutableVar[] graph;
   int idd = 0;
   int sccLength = 0;
   int[] val;
-  Hashtable<Var, Integer> valueIndex = new Hashtable<Var, Integer>();
+  Hashtable<Var, Integer> valueIndex = new Hashtable<>();
 
   int firstConsistencyLevel;
 
@@ -93,7 +93,7 @@ public class Circuit extends Alldiff implements Stateful {
    * @param list variables which must form a circuit.
    */
   public Circuit(List<? extends IntVar> list) {
-    this(list.toArray(new IntVar[list.size()]));
+    this(list.toArray(new IntVar[0]));
   }
 
   @Override
@@ -113,7 +113,7 @@ public class Circuit extends Alldiff implements Stateful {
       store.propagationHasOccurred = false;
 
       LinkedHashSet<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       alldifferent(store, fdvs);
 

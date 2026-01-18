@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Element;
 import org.jacop.constraints.XeqY;
@@ -87,7 +88,7 @@ public class SiblingUproar extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     SiblingUproar example = new SiblingUproar();
 
@@ -165,11 +166,11 @@ public class SiblingUproar extends ExampleFD {
         iwashing_the_windows = 4;
 
     // Creation of FDV's array
-    IntVar children[] = new IntVar[5];
-    IntVar angryat[] = new IntVar[5];
-    IntVar reason[] = new IntVar[5];
-    IntVar way[] = new IntVar[5];
-    IntVar chore[] = new IntVar[5];
+    IntVar[] children = new IntVar[5];
+    IntVar[] angryat = new IntVar[5];
+    IntVar[] reason = new IntVar[5];
+    IntVar[] way = new IntVar[5];
+    IntVar[] chore = new IntVar[5];
 
     // All variables can have five values, as they are five children, five
     // types of activities, etc.
@@ -222,13 +223,13 @@ public class SiblingUproar extends ExampleFD {
     store.impose(Element.choose(x5, angryat, y5));
     store.impose(Element.choose(y5, children, x5));
 
-    IntVar xs[] = {x1, x2, x3, x4, x5};
+    IntVar[] xs = {x1, x2, x3, x4, x5};
     // The same relation as for angry at and children.
     store.impose(new Alldifferent(xs));
 
-    for (IntVar v : xs) vars.add(v);
-    IntVar ys[] = {y1, y2, y3, y4, y5};
-    for (IntVar v : ys) vars.add(v);
+    vars.addAll(Arrays.asList(xs));
+    IntVar[] ys = {y1, y2, y3, y4, y5};
+    vars.addAll(Arrays.asList(ys));
 
     // 1. No one was originally angry at the sibling who was angry at him or
     // her.
@@ -276,7 +277,7 @@ public class SiblingUproar extends ExampleFD {
     store.impose(new XneqY(Z, way[ihid_violin]));
     vars.add(Z);
 
-    IntVar all[] = {
+    IntVar[] all = {
       children[iPaula], angryat[jPaula], reason[ihogged_television], chore[icleaning_the_attic], Z
     }; // piatka
     // rodzenstwa

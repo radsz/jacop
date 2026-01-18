@@ -93,11 +93,11 @@ public class CumulativeOptional extends Cumulative {
       List<? extends IntVar> opt) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit,
-        opt.toArray(new IntVar[opt.size()]));
+        opt.toArray(new IntVar[0]));
   }
 
   @Override
@@ -157,8 +157,11 @@ public class CumulativeOptional extends Cumulative {
         .append(" ]")
         .append(", limit = ")
         .append(limit)
-        .append(", " + java.util.Arrays.asList(opt))
-        .append(", quad=" + doQuadraticEdgeFind + " )");
+        .append(", ")
+        .append(Arrays.asList(opt))
+        .append(", quad=")
+        .append(doQuadraticEdgeFind)
+        .append(" )");
 
     return result.toString();
   }

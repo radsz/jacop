@@ -67,7 +67,7 @@ public class ProfileOptional {
   boolean debug = false;
   List<Event> utilizationProfile;
   boolean existsOpt = true;
-  private Comparator<Event> eventComparator =
+  private final Comparator<Event> eventComparator =
       (Event o1, Event o2) -> {
         int dateDiff = o1.date() - o2.date();
         return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;

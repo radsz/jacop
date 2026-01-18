@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.*;
 import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
@@ -72,7 +73,7 @@ public class WhoKilledAgatha extends ExampleFD {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     WhoKilledAgatha example = new WhoKilledAgatha();
     example.model();
@@ -157,21 +158,17 @@ public class WhoKilledAgatha extends ExampleFD {
     vars.add(the_killer);
 
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        vars.add(hates[i][j]);
-      }
+      vars.addAll(Arrays.asList(hates[i]).subList(0, n));
     }
 
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        vars.add(richer[i][j]);
-      }
+      vars.addAll(Arrays.asList(richer[i]).subList(0, n));
     }
 
     // "No one hates everyone. "
     for (int i = 0; i < n; i++) {
       // MiniZinc: sum(j in r) (hates[i,j]) <= 2
-      IntVar a[] = new IntVar[n];
+      IntVar[] a = new IntVar[n];
       for (int j = 0; j < n; j++) {
         a[j] = new IntVar(store, "a" + i + "-" + j, 0, 1);
         a[j] = hates[i][j];

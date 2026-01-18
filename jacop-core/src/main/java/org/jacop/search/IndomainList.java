@@ -43,9 +43,9 @@ import org.jacop.core.IntVar;
  */
 public class IndomainList<T extends IntVar> implements Indomain<T> {
 
-  private Indomain<T> defIndomain;
+  private final Indomain<T> defIndomain;
 
-  private int[] order;
+  private final int[] order;
 
   /**
    * It creates an IndomainList heuristic for choosing the values.
@@ -58,7 +58,7 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
 
     this.order = new int[order.length];
 
-    for (int i = 0; i < order.length; i++) this.order[i] = order[i];
+    System.arraycopy(order, 0, this.order, 0, order.length);
 
     this.defIndomain = defIndomain;
   }

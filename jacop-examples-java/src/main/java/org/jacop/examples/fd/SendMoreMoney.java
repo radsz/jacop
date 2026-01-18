@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -58,7 +59,7 @@ public class SendMoreMoney extends ExampleFD {
    *
    * @param args no arguments used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     SendMoreMoney exampleBasic = new SendMoreMoney();
 
@@ -86,7 +87,7 @@ public class SendMoreMoney extends ExampleFD {
     store = new Store();
 
     // Creating an array for FDVs
-    IntVar letters[] = new IntVar[8];
+    IntVar[] letters = new IntVar[8];
 
     // Creating FDV (finite domain variables)
     // with indexes for accessing
@@ -102,7 +103,7 @@ public class SendMoreMoney extends ExampleFD {
     letters[iR] = new IntVar(store, "R", 0, 9);
     letters[iY] = new IntVar(store, "Y", 0, 9);
 
-    for (IntVar x : letters) vars.add(x);
+    vars.addAll(Arrays.asList(letters));
 
     // Imposing inequalities constraints between letters
     // This nested loop imposes inequality constraint
@@ -116,7 +117,7 @@ public class SendMoreMoney extends ExampleFD {
     // Each letter is SEND number has a different value
     // which depends on the position of this letter
     // SEND = 1000 * S + 100 * E + N * 10 + D * 1
-    IntVar numbersSEND[] = new IntVar[4];
+    IntVar[] numbersSEND = new IntVar[4];
     IntVar valueSEND = new IntVar(store, "SEND", 0, 9999);
 
     // Creates FDV for each position in SEND with
@@ -147,7 +148,7 @@ public class SendMoreMoney extends ExampleFD {
     // Each letter in MORE number has a different value
     // which depends on the position of this letter
     // MORE = 1000 * M + 100 * O + R * 10 + E * 1
-    IntVar numbersMORE[] = new IntVar[4];
+    IntVar[] numbersMORE = new IntVar[4];
     IntVar valueMORE = new IntVar(store, "MORE", 0, 9999);
 
     // Creates FDV for each position in MORE with
@@ -178,7 +179,7 @@ public class SendMoreMoney extends ExampleFD {
     // Each letter in MONEY number has a different value
     // which depends on the position of this letter
     // MONEY = 10000 * M + 1000 * O + N * 100 + E * 10 + Y * 1
-    IntVar numbersMONEY[] = new IntVar[5];
+    IntVar[] numbersMONEY = new IntVar[5];
     IntVar valueMONEY = new IntVar(store, "MONEY", 0, 99999);
 
     // Creates FDV for each position in MONEY with
@@ -263,12 +264,12 @@ public class SendMoreMoney extends ExampleFD {
     IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
 
     // Creating arrays for FDVs
-    IntVar digits[] = {s, e, n, d, m, o, r, y};
-    IntVar send[] = {s, e, n, d};
-    IntVar more[] = {m, o, r, e};
-    IntVar money[] = {m, o, n, e, y};
+    IntVar[] digits = {s, e, n, d, m, o, r, y};
+    IntVar[] send = {s, e, n, d};
+    IntVar[] more = {m, o, r, e};
+    IntVar[] money = {m, o, n, e, y};
 
-    for (IntVar v : digits) vars.add(v);
+    vars.addAll(Arrays.asList(digits));
 
     store.impose(new Alldiff(digits));
 

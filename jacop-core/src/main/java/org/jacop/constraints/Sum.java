@@ -94,7 +94,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
    * @param sum the sum variable.
    */
   public Sum(List<? extends IntVar> list, IntVar sum) {
-    this(list.toArray(new IntVar[list.size()]), sum);
+    this(list.toArray(new IntVar[0]), sum);
   }
 
   @Override
@@ -185,8 +185,8 @@ public class Sum extends Constraint implements SatisfiedPresent {
   @Override
   public void impose(Store store) {
 
-    sumGrounded = new TimeStamp<Integer>(store, 0);
-    nextGroundedPosition = new TimeStamp<Integer>(store, 0);
+    sumGrounded = new TimeStamp<>(store, 0);
+    nextGroundedPosition = new TimeStamp<>(store, 0);
 
     super.impose(store);
   }

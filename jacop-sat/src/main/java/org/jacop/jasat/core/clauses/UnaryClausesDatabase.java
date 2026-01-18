@@ -147,7 +147,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
   @Override
   public String toString(String prefix) {
     StringBuilder sb = new StringBuilder().append("unary clause database\n");
-    for (int i = 0; i < currentIndex; ++i) sb.append("[" + clauses[i] + "]\n");
+    for (int i = 0; i < currentIndex; ++i) sb.append("[").append(clauses[i]).append("]\n");
     return sb.toString();
   }
 

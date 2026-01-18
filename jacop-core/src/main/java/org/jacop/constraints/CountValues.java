@@ -110,9 +110,7 @@ public class CountValues extends Constraint implements SatisfiedPresent {
     this.valuesDomainComplement = valuesDomain.complement();
 
     extendedCounter = new IntVar[counter.length + 1];
-    for (int i = 0; i < counter.length; i++) {
-      extendedCounter[i] = counter[i];
-    }
+    System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
     extendedCounter[counter.length] = counterRest;
 
     setScope(Stream.concat(Arrays.stream(list), Arrays.stream(counter)));
@@ -126,7 +124,7 @@ public class CountValues extends Constraint implements SatisfiedPresent {
    * @param counter number of variables equal to values.
    */
   public CountValues(List<? extends IntVar> list, IntVar[] counter, int[] values) {
-    this(list.toArray(new IntVar[list.size()]), counter, values);
+    this(list.toArray(new IntVar[0]), counter, values);
   }
 
   // registers the constraint in the constraint store and

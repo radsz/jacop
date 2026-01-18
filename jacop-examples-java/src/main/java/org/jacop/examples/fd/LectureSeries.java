@@ -67,7 +67,7 @@ public class LectureSeries extends ExampleFD {
    *
    * @param args no arguments is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     LectureSeries example = new LectureSeries();
 
@@ -96,10 +96,10 @@ public class LectureSeries extends ExampleFD {
     String[] subjectsNames = {"College", "Hygiene", "Art", "Nutrition", "Study"};
     int /* iCollege = 0, */ iHygiene = 1, iArt = 2, iNutrition = 3, iStudy = 4;
 
-    IntVar first[] = new IntVar[5];
-    IntVar last[] = new IntVar[5];
-    IntVar days[] = new IntVar[5];
-    IntVar subjects[] = new IntVar[5];
+    IntVar[] first = new IntVar[5];
+    IntVar[] last = new IntVar[5];
+    IntVar[] days = new IntVar[5];
+    IntVar[] subjects = new IntVar[5];
 
     // FDV's creation
     // FDV's with the same value from different groups are related.

@@ -68,7 +68,7 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public final FloatVar list[];
+  public final FloatVar[] list;
 
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   private final int indexOffset;
@@ -109,7 +109,7 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
    */
   public ElementFloatVariable(IntVar index, List<? extends FloatVar> list, FloatVar value) {
 
-    this(index, list.toArray(new FloatVar[list.size()]), value, 0);
+    this(index, list.toArray(new FloatVar[0]), value, 0);
   }
 
   /**
@@ -123,7 +123,7 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
   public ElementFloatVariable(
       IntVar index, List<? extends FloatVar> list, FloatVar value, int indexOffset) {
 
-    this(index, list.toArray(new FloatVar[list.size()]), value, indexOffset);
+    this(index, list.toArray(new FloatVar[0]), value, indexOffset);
   }
 
   /**

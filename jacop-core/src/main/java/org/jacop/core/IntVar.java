@@ -124,7 +124,7 @@ public class IntVar extends Var {
 
   private void commonInitialization(Store store, String name, IntDomain dom) {
 
-    dom.searchConstraints = new ArrayList<Constraint>();
+    dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
 

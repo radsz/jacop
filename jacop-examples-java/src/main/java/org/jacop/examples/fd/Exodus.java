@@ -79,7 +79,7 @@ public class Exodus extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Exodus example = new Exodus();
 
@@ -108,9 +108,9 @@ public class Exodus extends ExampleFD {
     int iet = 0, ika = 1, ili = 2, imo = 3, iye = 4;
 
     // Arrays of FDVs'
-    IntVar name[] = new IntVar[5];
-    IntVar story[] = new IntVar[5];
-    IntVar country[] = new IntVar[5];
+    IntVar[] name = new IntVar[5];
+    IntVar[] story = new IntVar[5];
+    IntVar[] country = new IntVar[5];
 
     // Creation of FDVs with appropriate name and bounding domain.
     for (int i = 0; i < 5; i++) {
@@ -179,7 +179,7 @@ public class Exodus extends ExampleFD {
     // Simple or can be used. It is also possible to use auxilary variable y
     // with the domain 2..3 and impose constraint XplusYeqZ(country[ika], y,
     // story[iburn])
-    PrimitiveConstraint wiekburning[] = new PrimitiveConstraint[2];
+    PrimitiveConstraint[] wiekburning = new PrimitiveConstraint[2];
     wiekburning[0] = new XplusCeqZ(country[ika], 2, story[iburn]);
     wiekburning[1] = new XplusCeqZ(country[ika], 3, story[iburn]);
 

@@ -59,7 +59,7 @@ public class DollarAndTicket extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     DollarAndTicket example = new DollarAndTicket();
 
@@ -91,9 +91,9 @@ public class DollarAndTicket extends ExampleFD {
     // Creating indexes for ease of referring.
     int ibobcats = 0, icheetahs = 1, ikickers = 2, istars = 3, iwolves = 4;
 
-    IntVar firstname[] = new IntVar[5];
-    IntVar surname[] = new IntVar[5];
-    IntVar team[] = new IntVar[5];
+    IntVar[] firstname = new IntVar[5];
+    IntVar[] surname = new IntVar[5];
+    IntVar[] team = new IntVar[5];
 
     // Each variable has a domain being created by subsequent calls to
     // addDom function.
@@ -159,7 +159,7 @@ public class DollarAndTicket extends ExampleFD {
     IntVar girlIndex = new IntVar(store, "girlIndex", 1, 3);
     // First three indexes of firstname denote girls name
     // (the ordering of names is important here).
-    IntVar girlFirstname[] = {firstname[0], firstname[1], firstname[2]};
+    IntVar[] girlFirstname = {firstname[0], firstname[1], firstname[2]};
 
     vars.add(girlIndex);
 

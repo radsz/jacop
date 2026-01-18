@@ -70,7 +70,7 @@ public class StonesOfHeaven extends ExampleFD {
    *
    * @param args command arguments (none here)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     StonesOfHeaven example = new StonesOfHeaven();
 
@@ -99,10 +99,10 @@ public class StonesOfHeaven extends ExampleFD {
     String[] DynastyNames = {"Ching", "Ming", "Sung", "Tang"};
     int iChing = 0, /* iMing = 1, */ iSung = 2, iTang = 3;
 
-    IntVar Color[] = new IntVar[4];
-    IntVar Country[] = new IntVar[4];
-    IntVar Item[] = new IntVar[4];
-    IntVar Dynasty[] = new IntVar[4];
+    IntVar[] Color = new IntVar[4];
+    IntVar[] Country = new IntVar[4];
+    IntVar[] Item = new IntVar[4];
+    IntVar[] Dynasty = new IntVar[4];
 
     for (int i = 0; i < 4; i++) {
       Color[i] = new IntVar(store, ColorNames[i], 1, 4);

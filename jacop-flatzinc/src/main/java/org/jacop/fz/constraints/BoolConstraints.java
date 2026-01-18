@@ -239,7 +239,7 @@ class BoolConstraints implements ParserTreeConstants {
         sat.generate_clause_reif(a1, a2, r);
       } else sat.generate_clause(a1, a2);
     } else { // not SAT generation, use CP constraints
-      ArrayList<IntVar> a1reduced = new ArrayList<IntVar>();
+      ArrayList<IntVar> a1reduced = new ArrayList<>();
       for (IntVar var : a1)
         if (var.min() == 1)
           if (reified || implied) {
@@ -249,7 +249,7 @@ class BoolConstraints implements ParserTreeConstants {
           } else return; // already satisfied since a variable is both negated and not negated
         else if (var.max() != 0) a1reduced.add(var);
 
-      ArrayList<IntVar> a2reduced = new ArrayList<IntVar>();
+      ArrayList<IntVar> a2reduced = new ArrayList<>();
       for (IntVar intVar : a2)
         if (intVar.max() == 0)
           if (reified || implied) {
@@ -259,7 +259,7 @@ class BoolConstraints implements ParserTreeConstants {
           } else return; // already satisfied since a variable is both negated and not negated
         else if (intVar.min() != 1) a2reduced.add(intVar);
 
-      if (a1reduced.size() == 0 && a2reduced.size() == 0)
+      if (a1reduced.isEmpty() && a2reduced.isEmpty())
         if (reified || implied) {
           IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
           r.domain.inValue(store.level, r, 0);
@@ -267,9 +267,9 @@ class BoolConstraints implements ParserTreeConstants {
         } else throw Store.failException;
 
       PrimitiveConstraint c;
-      if (a1reduced.size() == 0) {
+      if (a1reduced.isEmpty()) {
         c = new AndBool(a2reduced, support.dictionary.getConstant(0)).decompose(store).getFirst();
-      } else if (a2reduced.size() == 0) {
+      } else if (a2reduced.isEmpty()) {
         if (reified) {
           IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
           support.poseDC(new OrBool(a1reduced, b));

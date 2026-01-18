@@ -52,7 +52,7 @@ class LexicalAnalyzer {
   static final int EOF = 9;
   static final int Operator = 10;
   static final int Beginning = 11;
-  private StreamTokenizer input;
+  private final StreamTokenizer input;
 
   /**
    * Constructor creating a Lexical Analyzer.

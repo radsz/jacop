@@ -57,13 +57,13 @@ public class CumulativeUnary extends Cumulative {
   final TaskView[] tvr;
   boolean doProfile = false;
   boolean doEdgeFind = true;
-  private Comparator<TaskView> taskIncLctComparator =
+  private final Comparator<TaskView> taskIncLctComparator =
       (o1, o2) -> (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
 
-  private Comparator<TaskView> taskIncLstComparator =
+  private final Comparator<TaskView> taskIncLstComparator =
       (o1, o2) -> (o1.lst() == o2.lst()) ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
 
-  private Comparator<TaskView> taskIncEctComparator =
+  private final Comparator<TaskView> taskIncEctComparator =
       (o1, o2) -> (o1.ect() == o2.ect()) ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
 
   /**
@@ -159,9 +159,9 @@ public class CumulativeUnary extends Cumulative {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit);
   }
 
@@ -183,9 +183,9 @@ public class CumulativeUnary extends Cumulative {
       boolean doProfile) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit,
         doProfile);
   }

@@ -26,7 +26,7 @@ public class SmallDenseDomainTest {
 
   @Mock IntVar var;
   IntDomain intervalDomain;
-  private Method prepareMethod;
+  private final Method prepareMethod;
 
   @SuppressWarnings("unchecked")
   public SmallDenseDomainTest(String prepareMethodName) throws NoSuchMethodException {

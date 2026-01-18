@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.qcp;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -55,7 +56,7 @@ public class QCP extends ExampleFD {
   public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
 
   /** It contains constraints which can be used to guide shaving. */
-  public List<Constraint> shavingConstraints = new ArrayList<Constraint>();
+  public List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** It contains the order of the QCP being solved. */
   public int n = 0;
@@ -134,13 +135,14 @@ public class QCP extends ExampleFD {
   @Override
   public void model() {
 
-    String lines[] = new String[100];
+    String[] lines = new String[100];
 
     /* read from file args[0] or qcp.txt */
     try {
 
       BufferedReader in =
-          new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
+          new BufferedReader(
+              new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
       String str;
 
       while ((str = in.readLine()) != null) {
@@ -161,7 +163,7 @@ public class QCP extends ExampleFD {
 
     n = n - 1;
     /* Creating constraint store */
-    int numbers[][] = new int[n][n];
+    int[][] numbers = new int[n][n];
 
     // Transforms strings into ints
     for (int i = 1; i < n + 1; i++) {
@@ -269,7 +271,7 @@ public class QCP extends ExampleFD {
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<IntVar>());
+            vars.toArray(new IntVar[1]), new SmallestDomain<IntVar>(), new IndomainMin<>());
 
     search = new DepthFirstSearch<IntVar>();
     search.getSolutionListener().searchAll(true);

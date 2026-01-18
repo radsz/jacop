@@ -31,6 +31,7 @@
 package org.jacop.examples.set;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Not;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -59,7 +60,7 @@ public class Gardner extends ExampleSet {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Gardner example = new Gardner();
     example.model();
@@ -83,7 +84,7 @@ public class Gardner extends ExampleSet {
 
     vars = new ArrayList<SetVar>();
 
-    for (SetVar d : days) vars.add(d);
+    vars.addAll(Arrays.asList(days));
 
     // all_different(days)
     for (int i = 0; i < days.length - 1; i++)
@@ -122,8 +123,7 @@ public class Gardner extends ExampleSet {
     Search<SetVar> label = new DepthFirstSearch<SetVar>();
 
     SelectChoicePoint<SetVar> select =
-        new SimpleSelect<SetVar>(
-            vars.toArray(new SetVar[vars.size()]), null, new IndomainSetMin<SetVar>());
+        new SimpleSelect<SetVar>(vars.toArray(new SetVar[0]), null, new IndomainSetMin<SetVar>());
 
     //	label.setSolutionListener(new SimpleSolutionListener());
     label.getSolutionListener().searchAll(false);

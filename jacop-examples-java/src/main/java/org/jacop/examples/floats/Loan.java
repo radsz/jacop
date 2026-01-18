@@ -46,7 +46,7 @@ public class Loan {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Loan example = new Loan();
 

@@ -297,7 +297,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     StringBuffer buf = new StringBuffer();
 
     if (noSolutions > 1) {
-      buf.append("\nNo of solutions : " + noSolutions);
+      buf.append("\nNo of solutions : ").append(noSolutions);
       buf.append("\nLast Solution : [");
     } else buf.append("\nSolution : [");
 

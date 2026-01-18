@@ -49,16 +49,16 @@ public class SumWeightDom extends Constraint
   static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables being summed. */
-  public IntVar list[];
+  public IntVar[] list;
 
   /** It specifies a list of weights associated with the variables being summed. */
-  public int weights[];
+  public int[] weights;
 
   /** It specifies variable for the overall sum. */
   public int sum;
 
   /** It specifies variable queue of grounded varibales since last run. */
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   /** Current minimal value of the expression */
   int lMin;
@@ -112,7 +112,7 @@ public class SumWeightDom extends Constraint
   public SumWeightDom(List<? extends IntVar> list, List<Integer> weights, int sum) {
     checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {{list}, {weights}});
     commonInitialization(
-        list.toArray(new IntVar[list.size()]), weights.stream().mapToInt(i -> i).toArray(), sum);
+        list.toArray(new IntVar[0]), weights.stream().mapToInt(i -> i).toArray(), sum);
   }
 
   /**

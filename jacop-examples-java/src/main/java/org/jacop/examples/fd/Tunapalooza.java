@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -70,7 +71,7 @@ public class Tunapalooza extends ExampleFD {
    *
    * @param args no arguments are used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Tunapalooza example = new Tunapalooza();
 
@@ -101,11 +102,11 @@ public class Tunapalooza extends ExampleFD {
     IntVar vendor = new IntVar(store, "vendor", 1, 4);
 
     // arrays of variables
-    IntVar types[] = {country, grunge, reggae, metal};
-    IntVar places[] = {carnival, information, mosh, vendor};
+    IntVar[] types = {country, grunge, reggae, metal};
+    IntVar[] places = {carnival, information, mosh, vendor};
 
-    for (IntVar v : types) vars.add(v);
-    for (IntVar v : places) vars.add(v);
+    vars.addAll(Arrays.asList(types));
+    vars.addAll(Arrays.asList(places));
 
     // All types and places have to be associated with different band.
     store.impose(new Alldifferent(types));
@@ -141,10 +142,10 @@ public class Tunapalooza extends ExampleFD {
     store.impose(new Reified(new XneqC(vendor, Yellow), statement3));
 
     IntVar two = new IntVar(store, "2", 2, 2);
-    IntVar sum[] = {statement1, statement2, statement3};
+    IntVar[] sum = {statement1, statement2, statement3};
     store.impose(new SumInt(sum, "==", two));
 
-    for (IntVar v : sum) vars.add(v);
+    vars.addAll(Arrays.asList(sum));
 
     // 5. The country and speed metal acts are, in some order, Retread Ed
     // and the Flat Tires

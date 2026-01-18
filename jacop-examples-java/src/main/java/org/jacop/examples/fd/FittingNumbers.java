@@ -56,7 +56,7 @@ public class FittingNumbers extends ExampleFD {
    *
    * @param args commans arguments (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     FittingNumbers example = new FittingNumbers();
 

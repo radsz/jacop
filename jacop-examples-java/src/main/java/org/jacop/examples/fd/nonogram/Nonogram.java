@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.nonogram;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 import org.jacop.constraints.ExtensionalSupportMDD;
@@ -144,7 +145,7 @@ public class Nonogram extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Nonogram example = new Nonogram();
 
@@ -159,7 +160,7 @@ public class Nonogram extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     Nonogram example = new Nonogram();
 
@@ -169,8 +170,8 @@ public class Nonogram extends ExampleFD {
 
     for (int i = 0; i <= 150; i++) {
 
-      String no = String.valueOf(i);
-      while (no.length() < 3) no = "0" + no;
+      StringBuilder no = new StringBuilder(String.valueOf(i));
+      while (no.length() < 3) no.insert(0, "0");
 
       IO.println("Problem file data" + no + ".nin");
       example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
@@ -184,13 +185,14 @@ public class Nonogram extends ExampleFD {
 
   public void readFromFile(String filename) {
 
-    String lines[] = new String[100];
+    String[] lines = new String[100];
 
     int[] dimensions = new int[2];
 
     /* read from file args[0] or qcp.txt */
     try (BufferedReader in =
-        new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
 
       String str;
 

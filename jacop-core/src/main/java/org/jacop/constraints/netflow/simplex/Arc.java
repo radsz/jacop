@@ -205,8 +205,7 @@ public final class Arc {
 
     ArcCompanion comp = forward ? companion : sister.companion;
     //		String x = (companion == null) ? "" : ", offset=" + companion.flowOffset;
-    String compstr =
-        (comp == null) ? "" : ", forward = " + forward + ", companion = " + comp.toString();
+    String compstr = (comp == null) ? "" : ", forward = " + forward + ", companion = " + comp;
 
     return "["
         + tail.name

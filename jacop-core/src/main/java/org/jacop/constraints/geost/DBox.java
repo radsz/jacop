@@ -45,8 +45,7 @@ public class DBox {
    * previously used boxes that are not used anymore. The user should use dispatchBox() to get rid
    * of a box that is not needed anymore, and newBox(dimension) to get a new one.
    */
-  public static final SimpleArrayList<SimpleArrayList<DBox>> freeBoxes =
-      new SimpleArrayList<SimpleArrayList<DBox>>();
+  public static final SimpleArrayList<SimpleArrayList<DBox>> freeBoxes = new SimpleArrayList<>();
 
   /** It specifies point in n-dimensional space where the dbox originates from. */
   public final int[] origin;
@@ -94,7 +93,7 @@ public class DBox {
 
     if (size <= dimension)
       for (int i = size; i <= dimension; i++) {
-        freeBoxes.add(new SimpleArrayList<DBox>());
+        freeBoxes.add(new SimpleArrayList<>());
       }
   }
 
@@ -214,7 +213,7 @@ public class DBox {
     }
     Collection<DBox> resultWork = result;
 
-    Collection<DBox> resultStep = new SimpleArrayList<DBox>();
+    Collection<DBox> resultStep = new SimpleArrayList<>();
 
     /*
      * proceed hole by hole: for each hole, subtract it to each remaining piece.
@@ -548,7 +547,7 @@ public class DBox {
     Collection<DBox> resultWork = result;
     resultWork.add(this.copyInto(newBox(origin.length)));
 
-    Collection<DBox> resultStep = new SimpleArrayList<DBox>();
+    Collection<DBox> resultStep = new SimpleArrayList<>();
 
     /*
      * proceed hole by hole: for each hole, subtract it to each remaining piece.

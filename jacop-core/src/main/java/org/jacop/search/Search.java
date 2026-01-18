@@ -54,84 +54,84 @@ public interface Search<T extends Var> {
    *
    * @param child the array containing all children searches.
    */
-  public void setChildSearch(Search<? extends Var>[] child);
+  void setChildSearch(Search<? extends Var>[] child);
 
   /**
    * It adds another child search to this one.
    *
    * @param child the search which is being added as child search.
    */
-  public void addChildSearch(Search<? extends Var> child);
+  void addChildSearch(Search<? extends Var> child);
 
   /**
    * It returns number of backtracks performed by the search.
    *
    * @return the number of backtracks.
    */
-  public int getBacktracks();
+  int getBacktracks();
 
   /**
    * It returns the cost variable.
    *
    * @return cost variable.
    */
-  public Var getCostVariable();
+  Var getCostVariable();
 
   /**
    * It returns the value of the cost int variable for the best solution.
    *
    * @return the cost value.
    */
-  public int getCostValue();
+  int getCostValue();
 
   /**
    * It returns the value of the cost float variable for the best solution.
    *
    * @return the cost value.
    */
-  public double getCostValueFloat();
+  double getCostValueFloat();
 
   /**
    * It sets the optimization flag.
    *
    * @param value true if the search should optimize, false otherwise.
    */
-  public void setOptimize(boolean value);
+  void setOptimize(boolean value);
 
   /**
    * It returns number of decisions performed by the search.
    *
    * @return the number of decisions.
    */
-  public int getDecisions();
+  int getDecisions();
 
   /**
    * It returns the maximum depth reached by a search.
    *
    * @return the maximum depth.
    */
-  public int getMaximumDepth();
+  int getMaximumDepth();
 
   /**
    * It returns number of search nodes explored by the search.
    *
    * @return number of search nodes.
    */
-  public int getNodes();
+  int getNodes();
 
   /**
    * It returns number of wrong decisions performed by the search.
    *
    * @return number of wrong decisions.
    */
-  public int getWrongDecisions();
+  int getWrongDecisions();
 
   /**
    * It returns the solution (an assignment of values to variables).
    *
    * @return an array constituting the assignments.
    */
-  public Domain[] getSolution();
+  Domain[] getSolution();
 
   /**
    * It returns the solution specified by the search. The first solution has an index 1.
@@ -139,7 +139,7 @@ public interface Search<T extends Var> {
    * @param no the solution we are interested in.
    * @return an array constituting the assignments.
    */
-  public Domain[] getSolution(int no);
+  Domain[] getSolution(int no);
 
   /**
    * It returns the order of variables used by functions returning a solution in terms of the
@@ -147,7 +147,7 @@ public interface Search<T extends Var> {
    *
    * @return an array of variables as used by functions getSolution.
    */
-  public T[] getVariables();
+  T[] getVariables();
 
   /**
    * This function is called recursively to assign variables one by one.
@@ -164,7 +164,7 @@ public interface Search<T extends Var> {
    *
    * @return true if the solution was found.
    */
-  public boolean labeling();
+  boolean labeling();
 
   /**
    * It performs search using supplied choice point selection heuristic.
@@ -173,7 +173,7 @@ public interface Search<T extends Var> {
    * @param select the selection choice point heuristic.
    * @return true if the solution was found.
    */
-  public boolean labeling(Store store, SelectChoicePoint<T> select);
+  boolean labeling(Store store, SelectChoicePoint<T> select);
 
   /**
    * It performs search using supplied choice point selection heuristic, as well as costVariable as
@@ -184,163 +184,163 @@ public interface Search<T extends Var> {
    * @param costVar variable to specify cost.
    * @return true if the solution was found.
    */
-  public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar);
+  boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar);
 
   /**
    * It decides if a solution is assigned to store after search exits.
    *
    * @param value defines if solution is assigned.
    */
-  public void setAssignSolution(boolean value);
+  void setAssignSolution(boolean value);
 
   /**
    * It turns on the backtrack out.
    *
    * @param out defines how many backtracks are performed before the search exits.
    */
-  public void setBacktracksOut(long out);
+  void setBacktracksOut(long out);
 
   /**
    * It turns on the decisions out.
    *
    * @param out defines how many decisions are made before the search exits.
    */
-  public void setDecisionsOut(long out);
+  void setDecisionsOut(long out);
 
   /**
    * It turns on the nodes out.
    *
    * @param out defines how many nodes are visited before the search exits.
    */
-  public void setNodesOut(long out);
+  void setNodesOut(long out);
 
   /**
    * It decides if information about search is printed.
    *
    * @param value defines if info is printed to standard output.
    */
-  public void setPrintInfo(boolean value);
+  void setPrintInfo(boolean value);
 
   /**
    * It turns on the timeout.
    *
    * @param out defines how many seconds before the search exits.
    */
-  public void setTimeOut(long out);
+  void setTimeOut(long out);
 
   /**
    * It turns on the timeout.
    *
    * @param out defines how many miliseconds before the search exits.
    */
-  public void setTimeOutMilliseconds(long out);
+  void setTimeOutMilliseconds(long out);
 
   /**
    * It turns on the wrong decisions out.
    *
    * @param out defines how many wrong decisions are made before the search exits.
    */
-  public void setWrongDecisionsOut(long out);
+  void setWrongDecisionsOut(long out);
 
-  public String toString();
+  String toString();
 
   /**
    * It returns the root Solution Listener.
    *
    * @return the root Solution Listener.
    */
-  public SolutionListener<T> getSolutionListener();
+  SolutionListener<T> getSolutionListener();
 
   /**
    * It returns the root of the SolutionListener.
    *
    * @param listener the root of the SolutionListener.
    */
-  public void setSolutionListener(SolutionListener<T> listener);
+  void setSolutionListener(SolutionListener<T> listener);
 
   /**
    * It returns the root of the Consistency Listener.
    *
    * @return the root Consistency Listener.
    */
-  public ConsistencyListener getConsistencyListener();
+  ConsistencyListener getConsistencyListener();
 
   /**
    * It sets the root of the Consistency Listener.
    *
    * @param listener the new root.
    */
-  public void setConsistencyListener(ConsistencyListener listener);
+  void setConsistencyListener(ConsistencyListener listener);
 
   /**
    * It returns the root of the ExitChildListener.
    *
    * @return the root of ExitChildListener.
    */
-  public ExitChildListener<T> getExitChildListener();
+  ExitChildListener<T> getExitChildListener();
 
   /**
    * It sets the root of the ExitChild listener.
    *
    * @param listener the new root.
    */
-  public void setExitChildListener(ExitChildListener<T> listener);
+  void setExitChildListener(ExitChildListener<T> listener);
 
   /**
    * It returns the root of the ExitListener.
    *
    * @return the root of ExitListener.
    */
-  public ExitListener getExitListener();
+  ExitListener getExitListener();
 
   /**
    * It sets the root of the Exit Listener.
    *
    * @param listener the new root.
    */
-  public void setExitListener(ExitListener listener);
+  void setExitListener(ExitListener listener);
 
   /**
    * It returns the root of the TimeOutListener.
    *
    * @return the root of the TimeOutListener.
    */
-  public TimeOutListener getTimeOutListener();
+  TimeOutListener getTimeOutListener();
 
   /**
    * It sets the root of the TimeOutListener.
    *
    * @param listener the new root.
    */
-  public void setTimeOutListener(TimeOutListener listener);
+  void setTimeOutListener(TimeOutListener listener);
 
   /**
    * It returns the root of the InitializationListener.
    *
    * @return the root of the InitializeListener.
    */
-  public InitializeListener getInitializeListener();
+  InitializeListener getInitializeListener();
 
   /**
    * It sets the root of the InitializeListener.
    *
    * @param listener the new root.
    */
-  public void setInitializeListener(InitializeListener listener);
+  void setInitializeListener(InitializeListener listener);
 
   /**
    * It sets the select choice point object.
    *
    * @param select the choice point heuristic used by search.
    */
-  public void setSelectChoicePoint(SelectChoicePoint<T> select);
+  void setSelectChoicePoint(SelectChoicePoint<T> select);
 
   /**
    * It sets the reference to the store in the context of which the search operates.
    *
    * @param store the store in which context the search operates.
    */
-  public void setStore(Store store);
+  void setStore(Store store);
 
   /**
    * It sets the reference to the cost variable. It does not automatically mean that the search
@@ -348,7 +348,7 @@ public interface Search<T extends Var> {
    *
    * @param cost variable used as a cost metric.
    */
-  public void setCostVar(Var cost);
+  void setCostVar(Var cost);
 
   /**
    * If the search is called by a master search then the search may need to obtain some information
@@ -356,14 +356,14 @@ public interface Search<T extends Var> {
    *
    * @param master master search which will be/is calling that slave search.
    */
-  public void setMasterSearch(Search<? extends Var> master);
+  void setMasterSearch(Search<? extends Var> master);
 
   /**
    * It returns the string id of the search.
    *
    * @return the string id of the search.
    */
-  public String id();
+  String id();
 
   /**
    * The first solution has index 0.
@@ -371,15 +371,15 @@ public interface Search<T extends Var> {
    * @param no the solution number which we want to enforce in the store.
    * @return true if the store is consistent after imposing the solution.
    */
-  public boolean assignSolution(int no);
+  boolean assignSolution(int no);
 
   /**
    * It assigns the last solution.
    *
    * @return true if the store is consistent after imposing the last solution.
    */
-  public boolean assignSolution();
+  boolean assignSolution();
 
   /** It prints all solutions. */
-  public void printAllSolutions();
+  void printAllSolutions();
 }

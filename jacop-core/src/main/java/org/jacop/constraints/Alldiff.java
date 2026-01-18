@@ -62,9 +62,9 @@ public class Alldiff extends Alldifferent {
   // without passing store argument every time their function is called.
   Store store;
 
-  private Comparator<Element> maxVariable = (o1, o2) -> (o1.var.max() - o2.var.max());
+  private final Comparator<Element> maxVariable = (o1, o2) -> (o1.var.max() - o2.var.max());
 
-  private Comparator<Element> minVariable = (o1, o2) -> (o1.var.min() - o2.var.min());
+  private final Comparator<Element> minVariable = (o1, o2) -> (o1.var.min() - o2.var.min());
 
   private int[] t; // holds the critical capacity pointers; that is, t[i] points to the
   // predecessor of i in the bounds list.
@@ -121,7 +121,7 @@ public class Alldiff extends Alldifferent {
    * @param variables variables which are constrained to take different values.
    */
   public Alldiff(List<? extends IntVar> variables) {
-    this(variables.toArray(new IntVar[variables.size()]));
+    this(variables.toArray(new IntVar[0]));
   }
 
   @Override

@@ -68,7 +68,7 @@ public class ElementVariable extends Constraint
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public IntVar list[];
+  public IntVar[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
@@ -76,7 +76,7 @@ public class ElementVariable extends Constraint
 
   IntDomain indexRange;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
 
@@ -119,7 +119,7 @@ public class ElementVariable extends Constraint
    * @param value a value of the index-th element from list
    */
   public ElementVariable(IntVar index, List<? extends IntVar> list, IntVar value) {
-    this(index, list.toArray(new IntVar[list.size()]), value, 0);
+    this(index, list.toArray(new IntVar[0]), value, 0);
   }
 
   /**
@@ -131,7 +131,7 @@ public class ElementVariable extends Constraint
    * @param indexOffset shift applied to index variable.
    */
   public ElementVariable(IntVar index, List<? extends IntVar> list, IntVar value, int indexOffset) {
-    this(index, list.toArray(new IntVar[list.size()]), value, indexOffset);
+    this(index, list.toArray(new IntVar[0]), value, indexOffset);
   }
 
   /**
@@ -181,7 +181,7 @@ public class ElementVariable extends Constraint
         firstConsistencyLevel = store.level;
         valueHasChanged = true;
         indexHasChanged = true;
-        for (IntVar var : list) variableQueue.add(var);
+        variableQueue.addAll(Arrays.asList(list));
 
         supports = new IntDomain[list.length];
         IntDomain temp = value.domain.cloneLight();
@@ -327,7 +327,7 @@ public class ElementVariable extends Constraint
         List<Integer> array = duplicates.get(list[i]);
         if (array != null) array.add(i);
         else {
-          array = new ArrayList<Integer>();
+          array = new ArrayList<>();
           array.add(i);
           duplicates.put(list[i], array);
         }

@@ -79,7 +79,7 @@ public class DeBruijn extends ExampleFD {
    *
    * @param args between 2 and 3 arguments are used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     int base = 2;
     int n = 4;

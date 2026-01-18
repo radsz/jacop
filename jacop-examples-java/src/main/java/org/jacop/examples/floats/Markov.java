@@ -44,7 +44,7 @@ public class Markov {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Markov example = new Markov();
 
@@ -103,8 +103,8 @@ public class Markov {
             0.0));
 
     FloatVar[] vars = new FloatVar[7];
-    for (int i = 0; i < 3; i++) vars[i] = p[i];
-    for (int i = 0; i < 3; i++) vars[i + 3] = mean_first_return_time[i];
+    System.arraycopy(p, 0, vars, 0, 3);
+    System.arraycopy(mean_first_return_time, 0, vars, 3, 3);
     vars[6] = tot_cost;
 
     IO.println(

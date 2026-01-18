@@ -89,7 +89,7 @@ public class Rectangle {
    * @param list it specifies for each dimension (one after the other) its origin and length.
    */
   public Rectangle(List<? extends IntVar> list) {
-    this(list.toArray(new IntVar[list.size()]));
+    this(list.toArray(new IntVar[0]));
   }
 
   public static Stream<Var> getStream(Rectangle[] scope) {

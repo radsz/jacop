@@ -214,7 +214,7 @@ public final class IntHashMap<E> {
     assert tableValue.length == tableKey.length;
 
     // new map for temporary use
-    IntHashMap<E> temp = new IntHashMap<E>(tableKey.length * 2);
+    IntHashMap<E> temp = new IntHashMap<>(tableKey.length * 2);
 
     // insert all data in the new map
     for (int index = 0; index < tableKey.length; ++index) {
@@ -271,7 +271,7 @@ public final class IntHashMap<E> {
    * @return the set of keys of the map
    */
   public Set<Integer> keySet() {
-    return new Set<Integer>() {
+    return new Set<>() {
 
       public Iterator<Integer> iterator() {
         return new KeysIterator();
@@ -346,7 +346,7 @@ public final class IntHashMap<E> {
    * @return iterator for enumeration of elements in this map
    */
   public Iterable<Map.Entry<Integer, E>> entrySet() {
-    return new Iterable<Map.Entry<Integer, E>>() {
+    return new Iterable<>() {
 
       public Iterator<Map.Entry<Integer, E>> iterator() {
         return new EntryIterator();
@@ -432,9 +432,9 @@ public final class IntHashMap<E> {
       if (!hasNext) return null;
       // the next int
       Map.Entry<Integer, E> answer =
-          new Map.Entry<Integer, E>() {
-            int key = current;
-            E value = currentValue;
+          new Map.Entry<>() {
+            final int key = current;
+            final E value = currentValue;
 
             public Integer getKey() {
               return key;

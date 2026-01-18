@@ -88,9 +88,7 @@ public class IntervalGaussSeidel {
       double[] tempb = new double[A.length];
       for (int i = 0; i < A.length; i++) {
         tempb[i] = b[row[i]];
-        for (int j = 0; j < A[i].length; j++) {
-          tempA[i][j] = A[row[i]][j];
-        }
+        System.arraycopy(A[row[i]], 0, tempA[i], 0, A[i].length);
       }
 
       A = tempA;
@@ -242,8 +240,8 @@ public class IntervalGaussSeidel {
     StringBuilder s = new StringBuilder();
 
     for (int i = 0; i < A.length; i++) {
-      for (int j = 0; j < A[i].length; j++) s.append(A[i][j] + " ");
-      s.append(" = " + b[i] + "\n");
+      for (int j = 0; j < A[i].length; j++) s.append(A[i][j]).append(" ");
+      s.append(" = ").append(b[i]).append("\n");
     }
 
     return s.toString();

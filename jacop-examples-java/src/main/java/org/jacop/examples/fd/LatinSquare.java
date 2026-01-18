@@ -57,7 +57,7 @@ public class LatinSquare extends ExampleFD {
    *
    * @param args size of the problem
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     LatinSquare example = new LatinSquare();
 

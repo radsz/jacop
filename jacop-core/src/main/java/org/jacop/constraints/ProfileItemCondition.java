@@ -42,7 +42,7 @@ import java.util.LinkedList;
  */
 class ProfileItemCondition extends ProfileItem {
 
-  LinkedList<int[]> rectangles = new LinkedList<int[]>();
+  LinkedList<int[]> rectangles = new LinkedList<>();
 
   ProfileItemCondition() {}
 

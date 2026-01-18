@@ -6,7 +6,7 @@ import java.util.ArrayList;
 
 public class ASTIntLiterals extends SimpleNode {
   // My additions
-  ArrayList<Integer> list = new ArrayList<Integer>();
+  ArrayList<Integer> list = new ArrayList<>();
 
   public ASTIntLiterals(int id) {
     super(id);

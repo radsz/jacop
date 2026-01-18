@@ -54,7 +54,7 @@ public final class DebugModule
 
   private Core core;
 
-  private MapClause mapClause = new MapClause();
+  private final MapClause mapClause = new MapClause();
 
   public void onRestart(int level) {
     printLine(true);

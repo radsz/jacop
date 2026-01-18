@@ -60,17 +60,17 @@ public abstract class Filter {
    * array. The first element of the array denotes the operation which must be executed before the
    * operation denoted by the second element of the array.
    */
-  public int dependencies[][];
+  public int[][] dependencies;
 
   /** It specifies the type of each operation of a given position. */
-  public int ids[];
+  public int[] ids;
 
   /**
    * It denotes the indexes of the operations on which no other operation depends on. The makespan
    * of the schedule executing given filter depends on the maximal execution time of one of this
    * operations.
    */
-  public int last[];
+  public int[] last;
 
   /**
    * It returns the dependencies between operations which need to be satisfy in the final solution.

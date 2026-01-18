@@ -69,7 +69,7 @@ public class BIBD extends ExampleFD {
    *
    * @param args the first parameter denotes n, the second parameter denotes m.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     BIBD example = new BIBD();
 

@@ -143,7 +143,7 @@ public class Binpacking extends Constraint
    * @param w which define size ofitem i.
    */
   public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w) {
-    this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
+    this(bin.toArray(new IntVar[0]), load.toArray(new IntVar[0]), w);
   }
 
   /**
@@ -171,7 +171,7 @@ public class Binpacking extends Constraint
    */
   public Binpacking(List<? extends IntVar> bin, List<? extends IntVar> load, int[] w, int minBin) {
 
-    this(bin.toArray(new IntVar[bin.size()]), load.toArray(new IntVar[load.size()]), w);
+    this(bin.toArray(new IntVar[0]), load.toArray(new IntVar[0]), w);
     minBinNumber = minBin;
   }
 
@@ -217,12 +217,12 @@ public class Binpacking extends Constraint
     //      - load[i] variables have changed,
     //      - item[i] variables have changed (we check both current domain and pruned values)
     IntervalDomain d = new IntervalDomain();
-    while (binQueue.size() != 0) {
+    while (!binQueue.isEmpty()) {
       IntVar var = binQueue.removeFirst();
       int i = binMap.get(var) + minBinNumber;
       d.addDom(new IntervalDomain(i, i));
     }
-    while (itemQueue.size() != 0) {
+    while (!itemQueue.isEmpty()) {
       IntVar var = itemQueue.removeFirst();
       IntDomain pd = var.dom().previousDomain;
       if (pd != null) d.addDom(pd);
@@ -383,7 +383,7 @@ public class Binpacking extends Constraint
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    grounded();
 
     return false;
   }
@@ -421,7 +421,7 @@ public class Binpacking extends Constraint
       result.append(item[i].weight);
       if (i < item.length - 1) result.append(", ");
     }
-    result.append("], " + LBpruning + ")");
+    result.append("], ").append(LBpruning).append(")");
 
     return result.toString();
   }

@@ -111,7 +111,7 @@ public class RestartSearch<T extends Var> {
 
     if (cost != null) {
       lastSolutionListener = lastNotNullSearch.getSolutionListener();
-      lastSolutionListener.setChildrenListeners(new CostListener<T>());
+      lastSolutionListener.setChildrenListeners(new CostListener<>());
     }
 
     generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
@@ -249,9 +249,7 @@ public class RestartSearch<T extends Var> {
   public void setRelaxAndReconstruct(IntVar[] vs, int p) {
 
     rarVars = new IntVar[vs.length];
-    for (int i = 0; i < vs.length; i++) {
-      rarVars[i] = vs[i];
-    }
+    System.arraycopy(vs, 0, rarVars, 0, vs.length);
     probability = p;
   }
 

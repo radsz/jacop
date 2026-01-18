@@ -118,7 +118,7 @@ public class LinearIntDom extends LinearInt {
       Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
     commonInitialization(
         store,
-        variables.toArray(new IntVar[variables.size()]),
+        variables.toArray(new IntVar[0]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
         sum);
@@ -176,7 +176,7 @@ public class LinearIntDom extends LinearInt {
       List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
     commonInitialization(
         variables.getFirst().getStore(),
-        variables.toArray(new IntVar[variables.size()]),
+        variables.toArray(new IntVar[0]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
         sum);

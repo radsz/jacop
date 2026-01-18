@@ -190,7 +190,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
   public void ensureCapacity(int minCapacity) {
     int oldCapacity = elementData.length;
     if (minCapacity > oldCapacity) {
-      Object oldData[] = elementData;
+      Object[] oldData = elementData;
       int newCapacity = (oldCapacity * 3) / 2 + 1;
       if (newCapacity < minCapacity) newCapacity = minCapacity;
       elementData = (V[]) new Object[newCapacity];
@@ -436,7 +436,7 @@ public class SimpleArrayList<V> extends AbstractList<V> {
   public void trimToSize() {
     int oldCapacity = elementData.length;
     if (size < oldCapacity) {
-      Object oldData[] = elementData;
+      Object[] oldData = elementData;
       elementData = (V[]) new Object[size];
       System.arraycopy(oldData, 0, elementData, 0, size);
     }

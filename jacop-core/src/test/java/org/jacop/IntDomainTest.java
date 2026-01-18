@@ -56,7 +56,7 @@ import org.mockito.Mock;
 @RunWith(Parameterized.class)
 public class IntDomainTest {
 
-  private Method prepareMethod;
+  private final Method prepareMethod;
   private @Mock IntVar var;
   private IntDomain intDomain;
 

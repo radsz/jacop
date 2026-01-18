@@ -31,7 +31,6 @@
 package org.jacop.util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -63,10 +62,10 @@ public class MDD {
   private static final boolean debugAll = false;
 
   /** The ordered list of variables participating in MDD. */
-  public IntVar vars[];
+  public IntVar[] vars;
 
   /** The initial domain limits used to create an MDD array representation. */
-  public int domainLimits[];
+  public int[] domainLimits;
 
   /**
    * For each node at given index i-th it specifies all possible outgoing edges. If there was no
@@ -74,7 +73,7 @@ public class MDD {
    * that value is set to NOEDGE. If a given path specifies an allowed tuple than it is terminated
    * with a terminal node.
    */
-  public int diagram[];
+  public int[] diagram;
 
   /**
    * It creates index domain views so operations based on indexes of values can be performed
@@ -162,7 +161,7 @@ public class MDD {
       if (domainLimits[i] < minimumDomainLimits[i]) domainLimits[i] = minimumDomainLimits[i];
     }
 
-    freePosition = 0 + domainLimits[0];
+    freePosition = domainLimits[0];
     diagram = new int[START_SIZE];
 
     mtree(table);
@@ -206,7 +205,7 @@ public class MDD {
       if (maxDomainSize < domainLimits[i]) maxDomainSize = domainLimits[i];
     }
 
-    freePosition = 0 + domainLimits[0];
+    freePosition = domainLimits[0];
 
     diagram = new int[table.length * vars.length * maxDomainSize];
 
@@ -251,7 +250,7 @@ public class MDD {
       domainLimits[i] = vars[i].domain.getSize();
     }
 
-    freePosition = 0 + domainLimits[0];
+    freePosition = domainLimits[0];
     diagram = new int[START_SIZE];
 
     extendable = true;
@@ -436,7 +435,7 @@ public class MDD {
 
         assert (positions[i] != -1)
             : "value specified by tuple "
-                + Arrays.asList(tuple)
+                + List.of(tuple)
                 + "for variable no. "
                 + i
                 + "is already outside its initial domain.";
@@ -594,7 +593,10 @@ public class MDD {
         int[] currentNode = same[level][numberOfChildren].get(j);
         boolean equal = true;
         for (int i = currentNode.length - 1; i >= 0 && equal; i--)
-          if (currentNode[i] != nodeChildren[i]) equal = false;
+          if (currentNode[i] != nodeChildren[i]) {
+            equal = false;
+            break;
+          }
         if (equal) {
           reducedNodes.put(node, domainLimits[level]);
           memorySavings += domainLimits[level];
@@ -668,7 +670,7 @@ public class MDD {
 
     StringBuffer buffer = new StringBuffer("");
     for (int i = 0; i < diagram.length && i < freePosition; i++)
-      buffer.append(String.valueOf(diagram[i])).append(" ");
+      buffer.append(diagram[i]).append(" ");
 
     return buffer.toString().trim();
   }

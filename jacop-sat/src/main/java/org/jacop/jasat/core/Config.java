@@ -84,10 +84,10 @@ public class Config extends Properties {
   public long RESTART_CONFLICT_THRESHOLD = 100;
 
   /** the list of components the solver must add */
-  public List<SolverComponent> mainComponents = new ArrayList<SolverComponent>();
+  public List<SolverComponent> mainComponents = new ArrayList<>();
 
   /** the list of databases the solver must add */
-  public List<AbstractClausesDatabase> clausesDatabases = new ArrayList<AbstractClausesDatabase>();
+  public List<AbstractClausesDatabase> clausesDatabases = new ArrayList<>();
 
   /**
    * constructor for config, that adds some default components. If you want to choose all

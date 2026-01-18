@@ -74,7 +74,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   Map<Integer, long[]>[] supports;
 
   Map<Integer, Integer>[] residues;
-  Set<IntVar> variableQueue = new HashSet<IntVar>();
+  Set<IntVar> variableQueue = new HashSet<>();
   int noNoGround;
 
   /**
@@ -146,8 +146,8 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
     long[] words = new long[nw];
     for (int i = 0; i < x.length; i++) {
-      supports[i] = new HashMap<Integer, long[]>();
-      residues[i] = new HashMap<Integer, Integer>();
+      supports[i] = new HashMap<>();
+      residues[i] = new HashMap<>();
       for (int j = 0; j < n; j++) {
         int v = tuple[j][i];
         if (validTuple(j)) {
@@ -218,7 +218,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
       store.propagationHasOccurred = false;
 
       Set<IntVar> fdvs = variableQueue;
-      variableQueue = new HashSet<IntVar>();
+      variableQueue = new HashSet<>();
 
       updateTable(fdvs);
       filterDomains();
@@ -371,17 +371,17 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     s.append("])");
 
     if (debug) {
-      s.append("\n" + rbs);
+      s.append("\n").append(rbs);
 
       s.append("\nsupports: [");
       for (int i = 0; i < supports.length; i++) {
-        s.append(i + ": {");
+        s.append(i).append(": {");
         Map<Integer, long[]> supi = supports[i];
         for (Map.Entry<Integer, long[]> e : supi.entrySet()) {
-          s.append(" " + e.getKey() + "= [");
+          s.append(" ").append(e.getKey()).append("= [");
           long[] mask = e.getValue();
           for (long l : mask) {
-            s.append("0x%08X".formatted(l) + " ");
+            s.append("0x%08X".formatted(l)).append(" ");
           }
           s.append("]");
         }

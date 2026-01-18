@@ -79,7 +79,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   public boolean onlyIntVarsOfFailedConstraint = false;
 
   /** It stores the variables of the last failed constraints. */
-  public HashSet<IntVar> varsOfFailedConstraint = new HashSet<IntVar>();
+  public HashSet<IntVar> varsOfFailedConstraint = new HashSet<>();
 
   /**
    * It specifies if the quickShave approach should be also used. Quickshave uses variable-value
@@ -95,7 +95,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   public int failures = 0;
 
   /** It contains list of constraints which suggest shaving explorations. */
-  List<Constraint> shavingConstraints = new ArrayList<Constraint>();
+  List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** It specifies if the search is in the left child. */
   boolean leftChild = true;
@@ -151,7 +151,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
         LinkedHashSet<Integer> shaveVarList = current.get(var);
 
         if (shaveVarList == null) {
-          shaveVarList = new LinkedHashSet<Integer>();
+          shaveVarList = new LinkedHashSet<>();
           current.put(var, shaveVarList);
         }
         shaveVarList.add(value);
@@ -219,7 +219,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
             LinkedHashSet<Integer> shaveVarList = shavableCurrent.get(shaveVar);
             if (shaveVarList == null) {
-              shaveVarList = new LinkedHashSet<Integer>();
+              shaveVarList = new LinkedHashSet<>();
               shavableCurrent.put(shaveVar, shaveVarList);
             }
             shaveVarList.add(shaveVal);
@@ -238,7 +238,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
             // shaved.
             LinkedHashSet<Integer> notShaveVarList = notShavable.get(shaveVar);
             if (notShaveVarList == null) {
-              notShaveVarList = new LinkedHashSet<Integer>();
+              notShaveVarList = new LinkedHashSet<>();
               notShavable.put(shaveVar, notShaveVarList);
             }
             notShaveVarList.add(shaveVal);
@@ -249,7 +249,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
       current++;
     }
 
-    while (shavable.size() != 0 && shavable.size() != depth) shavable.removeLast();
+    while (!shavable.isEmpty() && shavable.size() != depth) shavable.removeLast();
 
     depth++;
     shavable.add(shavableCurrent);
@@ -282,7 +282,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
           LinkedHashSet<Integer> shaveVarList = shavableCurrent.get(shaveVar);
 
           if (shaveVarList == null) {
-            shaveVarList = new LinkedHashSet<Integer>();
+            shaveVarList = new LinkedHashSet<>();
             shavableCurrent.put(shaveVar, shaveVarList);
           }
           shaveVarList.add(shaveVal);
@@ -297,7 +297,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
           // record that pair (shaveVar,shareValue) was not shaved.
           LinkedHashSet<Integer> notShaveVarList = notShavable.get(shaveVar);
           if (notShaveVarList == null) {
-            notShaveVarList = new LinkedHashSet<Integer>();
+            notShaveVarList = new LinkedHashSet<>();
             notShavable.put(shaveVar, notShaveVarList);
           }
           notShaveVarList.add(shaveVal);

@@ -74,11 +74,11 @@ public class Optimize<T extends Var> {
 
     Var[] sVar = ((SplitSelectFloat<?>) select).searchVariables;
     variables = new Var[sVar.length];
-    for (int i = 0; i < sVar.length; i++) variables[i] = sVar[i];
+    System.arraycopy(sVar, 0, variables, 0, sVar.length);
 
     search.setSolutionListener(new ResultListener(variables));
 
-    split = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {cost}, null);
+    split = new SplitSelectFloat<>(store, new FloatVar[] {cost}, null);
 
     lastVarValues = new FloatInterval[variables.length];
   }
@@ -119,13 +119,7 @@ public class Optimize<T extends Var> {
       store.impose(choice);
       result = minimize();
 
-      if (result) {
-
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-
-        return result;
-      } else {
+      if (!result) {
 
         if (printInfo) {
           IO.println("% No solution");
@@ -138,12 +132,10 @@ public class Optimize<T extends Var> {
 
         store.impose(new Not(choice));
         result = minimize();
-
-        store.removeLevel(store.level);
-        store.setLevel(store.level - 1);
-
-        return result;
       }
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+      return result;
     } else {
       // System.out.println ("Level = " + store.level + ", FAIL");
 

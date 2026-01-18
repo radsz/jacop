@@ -64,19 +64,19 @@ public class FFT extends Filter {
 
     name = "FFT";
 
-    int dependencies[][] = {{0, 4}, {1, 4}, {2, 5}, {3, 5}, {4, 6}, {4, 7}, {5, 8}, {5, 9}};
+    int[][] dependencies = {{0, 4}, {1, 4}, {2, 5}, {3, 5}, {4, 6}, {4, 7}, {5, 8}, {5, 9}};
     this.dependencies = dependencies;
 
-    int ids[] = {mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId};
+    int[] ids = {mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId};
     this.ids = ids;
 
-    int last[] = {6, 7, 8, 9};
+    int[] last = {6, 7, 8, 9};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(10);
+    List<String> names = new ArrayList<>(10);
 
     names.add("*1");
     names.add("*2");
@@ -93,7 +93,7 @@ public class FFT extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(10);
+    List<String> names = new ArrayList<>(10);
 
     names.add("*1");
     names.add("*2");

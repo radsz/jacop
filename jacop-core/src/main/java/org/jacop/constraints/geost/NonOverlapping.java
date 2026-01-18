@@ -88,7 +88,7 @@ public class NonOverlapping implements ExternalConstraint {
    */
   public NonOverlapping(Collection<GeostObject> objects, int[] selectedDimensions) {
 
-    this(objects.toArray(new GeostObject[objects.size()]), selectedDimensions);
+    this(objects.toArray(new GeostObject[0]), selectedDimensions);
   }
 
   public boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator) {
@@ -115,7 +115,7 @@ public class NonOverlapping implements ExternalConstraint {
       objectConstraintMap = new ObstacleObjectFrame[largestID + 1];
       Arrays.fill(objectConstraintMap, null);
 
-      constraints = new HashSet<ObstacleObjectFrame>();
+      constraints = new HashSet<>();
 
       for (GeostObject o : objects) {
 
@@ -144,7 +144,7 @@ public class NonOverlapping implements ExternalConstraint {
 
   public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
 
-    Collection<InternalConstraint> relatedConstraints = new ArrayList<InternalConstraint>();
+    Collection<InternalConstraint> relatedConstraints = new ArrayList<>();
 
     if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null) {
 

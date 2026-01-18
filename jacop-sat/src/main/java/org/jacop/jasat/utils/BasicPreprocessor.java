@@ -49,10 +49,10 @@ public class BasicPreprocessor {
   private static final int TRIVIAL = 2;
 
   // the core this preprocessor will add clauses to
-  private Core core;
+  private final Core core;
 
   // local clause
-  private MapClause localClause = new MapClause();
+  private final MapClause localClause = new MapClause();
 
   public BasicPreprocessor(Core core) {
     this.core = core;

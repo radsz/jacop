@@ -65,7 +65,7 @@ public class AR extends Filter {
     this.mulDel = mulDel;
     name = "AR";
 
-    int dependencies[][] = {
+    int[][] dependencies = {
       {0, 8}, {1, 8}, {2, 9}, {3, 9}, {4, 10}, {5, 10}, {6, 11}, {7, 11}, {8, 26}, {9, 27},
       {10, 12}, {11, 13}, {12, 15}, {12, 16}, {13, 14}, {13, 17}, {14, 18}, {15, 18}, {16, 19},
       {17, 19}, {18, 21}, {18, 22}, {19, 20}, {19, 23}, {20, 24}, {21, 24}, {22, 25}, {23, 25},
@@ -74,7 +74,7 @@ public class AR extends Filter {
 
     this.dependencies = dependencies;
 
-    int ids[] = {
+    int[] ids = {
       mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId,
       addId, mulId, mulId, mulId, mulId, addId, addId, mulId, mulId, mulId, mulId, addId, addId,
       addId, addId
@@ -82,14 +82,14 @@ public class AR extends Filter {
 
     this.ids = ids;
 
-    int last[] = {12, 13, 26, 27};
+    int[] last = {12, 13, 26, 27};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
 
-    List<String> names = new ArrayList<String>(11);
+    List<String> names = new ArrayList<>(11);
 
     names.add("*1");
     names.add("*2");
@@ -126,7 +126,7 @@ public class AR extends Filter {
   @Override
   public List<String> namesPipeline() {
 
-    List<String> names = new ArrayList<String>(11);
+    List<String> names = new ArrayList<>(11);
 
     names.add("*1");
     names.add("*2");

@@ -31,6 +31,7 @@
 package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.XneqY;
@@ -54,7 +55,7 @@ public class CPvizSudoku {
    *
    * @param args not used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CPvizSudoku example = new CPvizSudoku();
 
@@ -82,7 +83,7 @@ public class CPvizSudoku {
     int noColumns = 3;
 
     Store store = new Store();
-    List<Var> vars = new ArrayList<Var>();
+    List<Var> vars = new ArrayList<>();
 
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
@@ -110,20 +111,22 @@ public class CPvizSudoku {
     for (int i = 0; i < noRows; i++)
       for (int j = 0; j < noColumns; j++) {
 
-        List<IntVar> block = new ArrayList<IntVar>();
+        List<IntVar> block = new ArrayList<>();
         for (int k = 0; k < noColumns; k++)
-          for (int m = 0; m < noRows; m++) block.add(elements[i * noColumns + k][j * noRows + m]);
+          block.addAll(
+              Arrays.asList(elements[i * noColumns + k])
+                  .subList(0 + j * noRows + 0, noRows + j * noRows + 0));
 
         store.impose(new Alldistinct(block));
       }
 
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<IntVar>(
+        new SimpleSelect<>(
             vars.toArray(new IntVar[1]),
             null, // new SmallestMax<IntVar>(),
-            new IndomainMin<IntVar>());
+            new IndomainMin<>());
 
-    DepthFirstSearch<IntVar> search = new DepthFirstSearch<IntVar>();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
     // Trace --->
     IntVar[] el = new IntVar[elements.length * elements[0].length];
@@ -131,7 +134,7 @@ public class CPvizSudoku {
     for (IntVar[] element : elements)
       for (int j = 0; j < elements[0].length; j++) el[k++] = element[j];
 
-    TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(search, varSelect, el);
+    TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, el);
 
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
     // 		search.setConsistencyListener((ConsistencyListener)select);
@@ -193,9 +196,11 @@ public class CPvizSudoku {
     for (int i = 0; i < noRows; i++)
       for (int j = 0; j < noColumns; j++) {
 
-        List<IntVar> block = new ArrayList<IntVar>();
+        List<IntVar> block = new ArrayList<>();
         for (int k = 0; k < noColumns; k++)
-          for (int m = 0; m < noRows; m++) block.add(elements[i * noColumns + k][j * noRows + m]);
+          block.addAll(
+              Arrays.asList(elements[i * noColumns + k])
+                  .subList(0 + j * noRows + 0, noRows + j * noRows + 0));
 
         for (int k = 0; k < noColumns * noRows; k++)
           for (int m = k + 1; m < noColumns * noRows; m++)
@@ -210,15 +215,15 @@ public class CPvizSudoku {
       for (int j = 0; j < elements[0].length; j++) el[k++] = element[j];
 
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<IntVar>(
+        new SimpleSelect<>(
             el,
             null, // new SmallestDomain<IntVar>(),
-            new IndomainMin<IntVar>());
+            new IndomainMin<>());
 
-    DepthFirstSearch<IntVar> search = new DepthFirstSearch<IntVar>();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
     // Trace --->
-    TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(search, varSelect, el);
+    TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, el);
 
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
     // 		search.setConsistencyListener((ConsistencyListener)select);

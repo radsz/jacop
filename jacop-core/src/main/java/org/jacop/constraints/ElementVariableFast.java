@@ -107,7 +107,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
    */
   public ElementVariableFast(IntVar index, List<? extends IntVar> list, IntVar value) {
 
-    this(index, list.toArray(new IntVar[list.size()]), value, 0);
+    this(index, list.toArray(new IntVar[0]), value, 0);
   }
 
   /**
@@ -121,7 +121,7 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
   public ElementVariableFast(
       IntVar index, List<? extends IntVar> list, IntVar value, int indexOffset) {
 
-    this(index, list.toArray(new IntVar[list.size()]), value, indexOffset);
+    this(index, list.toArray(new IntVar[0]), value, indexOffset);
   }
 
   /**

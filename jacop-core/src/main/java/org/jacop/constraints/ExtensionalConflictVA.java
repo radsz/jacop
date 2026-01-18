@@ -127,7 +127,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    * @param tuples the conflict (forbidden) tuples for that constraint.
    */
   public ExtensionalConflictVA(List<? extends IntVar> variables, int[][] tuples) {
-    this(variables.toArray(new IntVar[variables.size()]), tuples);
+    this(variables.toArray(new IntVar[0]), tuples);
   }
 
   /**
@@ -234,7 +234,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    */
   public int[] setFirstValid(int varPosition, int value) {
 
-    int t[] = tuple;
+    int[] t = tuple;
 
     int noVars = list.length;
     for (int i = 0; i < noVars; i++) t[i] = list[i].min();

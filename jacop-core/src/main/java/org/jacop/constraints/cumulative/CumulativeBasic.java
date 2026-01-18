@@ -73,7 +73,7 @@ public class CumulativeBasic extends Constraint {
   boolean possibleZeroTasks = false;
 
   CumulativePrimary cumulativeForConstants = null;
-  private Comparator<Event> eventComparator =
+  private final Comparator<Event> eventComparator =
       (Event o1, Event o2) -> {
         int dateDiff = o1.date() - o2.date();
         return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
@@ -148,9 +148,9 @@ public class CumulativeBasic extends Constraint {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit);
   }
 

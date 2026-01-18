@@ -216,10 +216,10 @@ public class Nooverlap extends Constraint {
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[o1.size()]),
-        o2.toArray(new IntVar[o2.size()]),
-        l1.toArray(new IntVar[l1.size()]),
-        l2.toArray(new IntVar[l2.size()]));
+        o1.toArray(new IntVar[0]),
+        o2.toArray(new IntVar[0]),
+        l1.toArray(new IntVar[0]),
+        l2.toArray(new IntVar[0]));
   }
 
   /**
@@ -407,6 +407,6 @@ public class Nooverlap extends Constraint {
       if (i < rectangle.length - 1) result.append(", ");
       i++;
     }
-    return result.append("], " + strict + ")").toString();
+    return result.append("], ").append(strict).append(")").toString();
   }
 }

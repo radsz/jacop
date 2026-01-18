@@ -51,7 +51,7 @@ public class Wilkinson {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Wilkinson example = new Wilkinson();
 

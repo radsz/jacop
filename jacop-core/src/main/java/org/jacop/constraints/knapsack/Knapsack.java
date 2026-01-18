@@ -155,19 +155,19 @@ public class Knapsack extends Constraint
    * It specifies how many removeLevel functions must be executed before the information about the
    * constraint is being printed out.
    */
-  private int REMOVE_INFO_FROM = 0;
+  private final int REMOVE_INFO_FROM = 0;
 
   /**
    * It specifies how many queueVariable functions must be executed before the information about the
    * constraint is being printed out.
    */
-  private int QUEUE_INFO_FROM = 0;
+  private final int QUEUE_INFO_FROM = 0;
 
   /**
    * It specifies how many consistency functions must be executed before the information about the
    * constraint is being printed out.
    */
-  private int CONSISTENCY_INFO_FROM = 0;
+  private final int CONSISTENCY_INFO_FROM = 0;
 
   /**
    * It constructs an knapsack constraint.
@@ -238,13 +238,13 @@ public class Knapsack extends Constraint
     for (int i = 0; i < quantity.length; i++) {
       if (itemPar.get(quantity[i]) != null) {
         KnapsackItem ki = itemPar.get(quantity[i]);
-        Integer nw = ki.getWeight() + weights[i];
-        Integer np = ki.getProfit() + profits[i];
+        int nw = ki.getWeight() + weights[i];
+        int np = ki.getProfit() + profits[i];
         itemPar.put(quantity[i], new KnapsackItem(quantity[i], nw, np));
       } else itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
     }
 
-    items = itemPar.values().toArray(new KnapsackItem[itemPar.size()]);
+    items = itemPar.values().toArray(new KnapsackItem[0]);
     this.knapsackCapacity = knapsackCapacity;
     this.knapsackProfit = knapsackProfit;
     this.updateLimit = (int) (quantity.length / (Math.log(quantity.length) / Math.log(2)));
@@ -277,11 +277,10 @@ public class Knapsack extends Constraint
       /* use the array to update */
       if (list.size() > updateLimit) {
         tree.recompute();
-        needCriticalUpdate = true;
       } else {
         tree.updateFromList(list, 0);
-        needCriticalUpdate = true;
       }
+      needCriticalUpdate = true;
 
       /* and then, we delete it */
       hashForUpdate.put(level, null);
@@ -373,13 +372,12 @@ public class Knapsack extends Constraint
         // there were too many updates to use incremental recomputation
         if (list.size() > updateLimit) {
           tree.recompute();
-          needCriticalUpdate = true;
         } else {
           // there were few updates so each change is propagated up to the root.
           tree.updateFromList(list, positionOfAlreadyUpdated);
           positionOfAlreadyUpdated = list.size();
-          needCriticalUpdate = true;
         }
+        needCriticalUpdate = true;
       }
     }
 
@@ -786,7 +784,7 @@ public class Knapsack extends Constraint
 
     StringBuilder result = new StringBuilder();
 
-    result.append(id() + " : Knapsack( [");
+    result.append(id()).append(" : Knapsack( [");
     for (int i = 0; i < items.length; i++) {
       result.append(items[i].toString());
       if (i < items.length - 1) result.append(", ");
@@ -843,7 +841,7 @@ public class Knapsack extends Constraint
 
     for (TreeLeaf leaf : leaves)
       assert (leaf.slice == leaf.quantity.min())
-          : "Slice variable has not been adjusted to leaf quantity" + leaf.toString();
+          : "Slice variable has not been adjusted to leaf quantity" + leaf;
 
     int overallProfit = 0;
     int overallCapacity = 0;

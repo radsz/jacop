@@ -52,7 +52,7 @@ public class GeostExample extends ExampleFD {
    *
    * @param args no parameters read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     GeostExample example = new GeostExample();
     example.model();
@@ -63,30 +63,30 @@ public class GeostExample extends ExampleFD {
 
     store = new Store();
 
-    List<Shape> shapes = new ArrayList<Shape>();
-    List<GeostObject> objects = new ArrayList<GeostObject>();
-    List<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
+    List<Shape> shapes = new ArrayList<>();
+    List<GeostObject> objects = new ArrayList<>();
+    List<ExternalConstraint> constraints = new ArrayList<>();
 
     // Object O1- shapes 1, 2, 3 and 4
-    List<DBox> shape1 = new ArrayList<DBox>();
+    List<DBox> shape1 = new ArrayList<>();
     shape1.add(new DBox(new int[] {0, 0}, new int[] {2, 1}));
     shape1.add(new DBox(new int[] {0, 1}, new int[] {1, 2}));
     shape1.add(new DBox(new int[] {1, 2}, new int[] {3, 1}));
     shapes.add(new Shape(0, shape1));
 
-    List<DBox> shape2 = new ArrayList<DBox>();
+    List<DBox> shape2 = new ArrayList<>();
     shape2.add(new DBox(new int[] {0, 0}, new int[] {3, 1}));
     shape2.add(new DBox(new int[] {0, 1}, new int[] {1, 3}));
     shape2.add(new DBox(new int[] {2, 1}, new int[] {1, 1}));
     shapes.add(new Shape(1, shape2));
 
-    List<DBox> shape3 = new ArrayList<DBox>();
+    List<DBox> shape3 = new ArrayList<>();
     shape3.add(new DBox(new int[] {0, 0}, new int[] {2, 1}));
     shape3.add(new DBox(new int[] {1, 1}, new int[] {1, 2}));
     shape3.add(new DBox(new int[] {2, 2}, new int[] {3, 1}));
     shapes.add(new Shape(2, shape3));
 
-    List<DBox> shape4 = new ArrayList<DBox>();
+    List<DBox> shape4 = new ArrayList<>();
     shape4.add(new DBox(new int[] {0, 0}, new int[] {3, 1}));
     shape4.add(new DBox(new int[] {0, 1}, new int[] {1, 1}));
     shape4.add(new DBox(new int[] {2, 1}, new int[] {1, 3}));
@@ -103,13 +103,13 @@ public class GeostExample extends ExampleFD {
     objects.add(o1);
 
     //  Object o2- shapes 5 and 6
-    List<DBox> shape5 = new ArrayList<DBox>();
+    List<DBox> shape5 = new ArrayList<>();
     shape5.add(new DBox(new int[] {0, 0}, new int[] {2, 1}));
     shape5.add(new DBox(new int[] {1, 1}, new int[] {1, 1}));
     shape5.add(new DBox(new int[] {0, 2}, new int[] {2, 1}));
     shapes.add(new Shape(4, shape5));
 
-    List<DBox> shape6 = new ArrayList<DBox>();
+    List<DBox> shape6 = new ArrayList<>();
     shape6.add(new DBox(new int[] {0, 0}, new int[] {3, 1}));
     shape6.add(new DBox(new int[] {0, 1}, new int[] {1, 1}));
     shape6.add(new DBox(new int[] {2, 1}, new int[] {1, 1}));
@@ -126,11 +126,11 @@ public class GeostExample extends ExampleFD {
     objects.add(o2);
 
     //  Object o3- shapes 7 and 8
-    List<DBox> shape7 = new ArrayList<DBox>();
+    List<DBox> shape7 = new ArrayList<>();
     shape7.add(new DBox(new int[] {0, 0}, new int[] {3, 2}));
     shapes.add(new Shape(6, shape7));
 
-    List<DBox> shape8 = new ArrayList<DBox>();
+    List<DBox> shape8 = new ArrayList<>();
     shape8.add(new DBox(new int[] {0, 0}, new int[] {2, 3}));
     shapes.add(new Shape(7, shape8));
 
@@ -145,7 +145,7 @@ public class GeostExample extends ExampleFD {
     objects.add(o3);
 
     //  Object o4- shape 9
-    List<DBox> shape9 = new ArrayList<DBox>();
+    List<DBox> shape9 = new ArrayList<>();
     shape9.add(new DBox(new int[] {0, 0}, new int[] {1, 4}));
     shapes.add(new Shape(8, shape9));
 

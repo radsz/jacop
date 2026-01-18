@@ -31,6 +31,7 @@
 package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
@@ -61,7 +62,7 @@ public class CPvizSendMoreMoney {
    * This creates a standard model using simple basic constraints.
    */
 
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     // 		SendMoreMoney exampleBasic = new SendMoreMoney();
 
@@ -81,11 +82,11 @@ public class CPvizSendMoreMoney {
 
   public void model() {
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     store = new Store();
 
     // Creating an array for IntVars
-    IntVar letters[] = new IntVar[8];
+    IntVar[] letters = new IntVar[8];
 
     // Creating IntVar (finite domain variables)
     // with indexes for accessing
@@ -100,7 +101,7 @@ public class CPvizSendMoreMoney {
     letters[iR] = new IntVar(store, "R", 0, 9);
     letters[iY] = new IntVar(store, "Y", 0, 9);
 
-    for (IntVar x : letters) vars.add(x);
+    vars.addAll(Arrays.asList(letters));
 
     // Imposing inequalities constraints between letters
     // This nested loop imposes inequality constraint
@@ -157,13 +158,13 @@ public class CPvizSendMoreMoney {
     // 	public boolean search() {
 
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     // Trace --->
 
-    TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(search, varSelect);
+    TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect);
 
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true);
     select.addTracedVar(letters[iE]);
@@ -185,7 +186,7 @@ public class CPvizSendMoreMoney {
 
   public void modelGlobal() {
 
-    vars = new ArrayList<IntVar>();
+    vars = new ArrayList<>();
     store = new Store();
 
     // Creating IntVar (finite domain variables)
@@ -203,12 +204,12 @@ public class CPvizSendMoreMoney {
     IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
 
     // Creating arrays for IntVars
-    IntVar digits[] = {s, e, n, d, m, o, r, y};
-    IntVar send[] = {s, e, n, d, valueSEND};
-    IntVar more[] = {m, o, r, e, valueMORE};
-    IntVar money[] = {m, o, n, e, y, valueMONEY};
+    IntVar[] digits = {s, e, n, d, m, o, r, y};
+    IntVar[] send = {s, e, n, d, valueSEND};
+    IntVar[] more = {m, o, r, e, valueMORE};
+    IntVar[] money = {m, o, n, e, y, valueMONEY};
 
-    for (IntVar v : digits) vars.add(v);
+    vars.addAll(Arrays.asList(digits));
 
     // Imposing inequalities constraints between letters
     // Only one global constraint
@@ -245,13 +246,13 @@ public class CPvizSendMoreMoney {
     store.consistency();
 
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<IntVar>(vars.toArray(new IntVar[1]), null, new IndomainMin<IntVar>());
+        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
 
-    search = new DepthFirstSearch<IntVar>();
+    search = new DepthFirstSearch<>();
 
     // Trace --->
     TraceGenerator<IntVar> select =
-        new TraceGenerator<IntVar>(search, varSelect, new IntVar[] {s, e, n, d, m, o, r, y});
+        new TraceGenerator<>(search, varSelect, new IntVar[] {s, e, n, d, m, o, r, y});
 
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true, new IntVar[]
     // {s, e, n, d, m, o, r, y});

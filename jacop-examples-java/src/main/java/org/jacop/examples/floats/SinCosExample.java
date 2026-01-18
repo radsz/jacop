@@ -45,7 +45,7 @@ public class SinCosExample {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     SinCosExample example = new SinCosExample();
 

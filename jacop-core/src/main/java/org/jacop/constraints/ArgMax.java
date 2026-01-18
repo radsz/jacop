@@ -48,7 +48,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables among which a maximum value is being searched for. */
-  public final IntVar list[];
+  public final IntVar[] list;
 
   /** It specifies variable max which stores the maximum value present in the list. */
   public final IntVar maxIndex;
@@ -98,7 +98,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
   }
 
   public ArgMax(List<? extends IntVar> variables, IntVar maxIndex) {
-    this(variables.toArray(new IntVar[variables.size()]), maxIndex);
+    this(variables.toArray(new IntVar[0]), maxIndex);
   }
 
   @Override
@@ -248,7 +248,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     }
 
     result.append("], ").append(this.maxIndex);
-    result.append(", " + indexOffset + ")");
+    result.append(", ").append(indexOffset).append(")");
 
     return result.toString();
   }

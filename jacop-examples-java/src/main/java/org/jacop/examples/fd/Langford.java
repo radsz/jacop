@@ -52,7 +52,7 @@ public class Langford extends ExampleFD {
    *
    * @param args the first parameter denotes n, the second parameter denotes m.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     Langford example = new Langford();
     if (args.length > 1) {
@@ -86,7 +86,7 @@ public class Langford extends ExampleFD {
    *
    * @param args the first parameter denotes n, the second parameter denotes m.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Langford exampleDual = new Langford();
     if (args.length > 1) {

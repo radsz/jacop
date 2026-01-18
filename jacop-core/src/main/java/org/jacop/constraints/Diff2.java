@@ -55,7 +55,7 @@ public class Diff2 extends Diff {
   /** It specifies a list of pairs of rectangles which can overlap. */
   public int[] exclusiveList = new int[0];
 
-  Diff2Var EvalRects[];
+  Diff2Var[] EvalRects;
   boolean exceptionListPresent = false;
 
   /**
@@ -144,10 +144,10 @@ public class Diff2 extends Diff {
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[o1.size()]),
-        o2.toArray(new IntVar[o2.size()]),
-        l1.toArray(new IntVar[l1.size()]),
-        l2.toArray(new IntVar[l2.size()]));
+        o1.toArray(new IntVar[0]),
+        o2.toArray(new IntVar[0]),
+        l1.toArray(new IntVar[0]),
+        l2.toArray(new IntVar[0]));
   }
 
   /**
@@ -229,9 +229,9 @@ public class Diff2 extends Diff {
 
     exceptionListPresent = true;
 
-    List<Integer> list = new ArrayList<Integer>(exclusiveList.size() * 2);
+    List<Integer> list = new ArrayList<>(exclusiveList.size() * 2);
 
-    for (List<Integer> pair : exclusiveList) for (Integer item : pair) list.add(item);
+    for (List<Integer> pair : exclusiveList) list.addAll(pair);
 
     this.exclusiveList = new int[list.size()];
     for (int i = 0; i < list.size(); i++) this.exclusiveList[i] = list.get(i);
@@ -256,9 +256,9 @@ public class Diff2 extends Diff {
 
     exceptionListPresent = true;
 
-    List<Integer> list = new ArrayList<Integer>(exclusive.size() * 2);
+    List<Integer> list = new ArrayList<>(exclusive.size() * 2);
 
-    for (List<Integer> pair : exclusive) for (Integer item : pair) list.add(item);
+    for (List<Integer> pair : exclusive) list.addAll(pair);
 
     this.exclusiveList = new int[list.size()];
     for (int i = 0; i < list.size(); i++) this.exclusiveList[i] = list.get(i);
@@ -268,12 +268,12 @@ public class Diff2 extends Diff {
 
   private Rectangle[] onList(int index, int[] exclusiveList) {
 
-    List<Rectangle> list = new ArrayList<Rectangle>();
+    List<Rectangle> list = new ArrayList<>();
 
     for (int i = 0; i < rectangles.length; i++)
       if (notOverlapping(index + 1, i + 1, exclusiveList)) list.add(rectangles[i]);
 
-    return list.toArray(new Rectangle[list.size()]);
+    return list.toArray(new Rectangle[0]);
   }
 
   boolean notOverlapping(int i, int j, int[] exclusiveList) {
@@ -341,9 +341,9 @@ public class Diff2 extends Diff {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-        List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-        List<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
-        List<Rectangle> OverlappingRects = new ArrayList<Rectangle>();
+        List<IntRectangle> UsedRect = new ArrayList<>();
+        List<Rectangle> ProfileCandidates = new ArrayList<>();
+        List<Rectangle> OverlappingRects = new ArrayList<>();
         boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
 
         needToNarrow = needToNarrow || ntN;
@@ -377,10 +377,10 @@ public class Diff2 extends Diff {
     long commonArea = 0;
     int totalNumberOfRectangles = 0;
     int dim = r.dim();
-    int startMin[] = new int[dim];
-    int stopMax[] = new int[dim];
-    int minLength[] = new int[dim];
-    int r_min[] = new int[dim], r_max[] = new int[dim];
+    int[] startMin = new int[dim];
+    int[] stopMax = new int[dim];
+    int[] minLength = new int[dim];
+    int[] r_min = new int[dim], r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MaxInt;
@@ -406,7 +406,7 @@ public class Diff2 extends Diff {
         boolean use = true, minLength0 = false;
         int s_min, s_max, start, stop;
         int m = 0, j = 0;
-        int sOriginMin[] = new int[dim], sOriginMax[] = new int[dim], sLengthMin[] = new int[dim];
+        int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
 
         while (overlap && m < dim) {
           // check if domains of r and s overlap

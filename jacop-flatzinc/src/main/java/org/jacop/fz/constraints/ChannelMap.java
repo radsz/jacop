@@ -89,13 +89,13 @@ class ChannelMap {
       Map<Integer, IntVar> vb = e.getValue();
       Set<Map.Entry<Integer, IntVar>> es = vb.entrySet();
 
-      result.append(var + "[");
+      result.append(var).append("[");
 
       for (Map.Entry<Integer, IntVar> ei : es) {
         int val = ei.getKey();
         IntVar bb = ei.getValue();
 
-        result.append("[" + val + ", " + bb + "]");
+        result.append("[").append(val).append(", ").append(bb).append("]");
       }
     }
     result.append("]");

@@ -66,8 +66,8 @@ public class Derivative {
     // zero = new FloatVar(store, 0.0, 0.0);
     // one  = new FloatVar(store, 1.0, 1.0);
 
-    derivateConstraints = new HashSet<Constraint>();
-    eval = new Stack<Constraint>();
+    derivateConstraints = new HashSet<>();
+    eval = new Stack<>();
     definitionConstraint = Var.createEmptyPositioning();
   }
 
@@ -76,7 +76,7 @@ public class Derivative {
 
     // System.out.println ("Var = " + f);
 
-    List<Constraint> constraints = new ArrayList<Constraint>();
+    List<Constraint> constraints = new ArrayList<>();
 
     if (f == x) return new FloatVar(store, 1.0, 1.0);
     else if (vars.contains(f)) return new FloatVar(store, 0.0, 0.0);
@@ -113,7 +113,7 @@ public class Derivative {
       eval.pop();
 
       return v;
-    } else if (constraints.size() == 0 && f.singleton()) return new FloatVar(store, 0.0, 0.0);
+    } else if (constraints.isEmpty() && f.singleton()) return new FloatVar(store, 0.0, 0.0);
     else {
 
       Constraint c = resolveConstraint(f, constraints);
@@ -158,7 +158,7 @@ public class Derivative {
     // if there is no definition use heuristic to resolve it
     // basically we look for a constraint on a list of possibel constraints
     // that has output equal variable defining the function
-    List<Constraint> resolved = new ArrayList<Constraint>();
+    List<Constraint> resolved = new ArrayList<>();
     if (c == null)
       for (Constraint cc : cs) {
         if (cc instanceof PmulQeqR qeqR) {

@@ -164,7 +164,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   protected void setScope(Set<? extends Var> set) {
-    setScope(set.toArray(new Var[set.size()]));
+    setScope(set.toArray(new Var[0]));
   }
 
   protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
@@ -218,7 +218,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public String id() {
     String constraintType = this.getClass().getSimpleName();
-    if (constraintType.equals("")) constraintType = this.getClass().getName() + "#";
+    if (constraintType.isEmpty()) constraintType = this.getClass().getName() + "#";
     return constraintType + numberId;
   }
 

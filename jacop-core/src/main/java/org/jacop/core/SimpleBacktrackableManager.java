@@ -231,8 +231,8 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     result.append("Last trail").append(currentlyChanged).append("\n");
     result.append("Last stored trail ");
 
-    if (levelInfo.size() > 0) result.append("stored for ").append(levelInfo.getLast()).append(" ");
-    if (trail.size() > 0) {
+    if (!levelInfo.isEmpty()) result.append("stored for ").append(levelInfo.getLast()).append(" ");
+    if (!trail.isEmpty()) {
       int[] lastTrail = trail.getLast();
       if (lastTrail == emptyLevel) result.append(" Empty ");
       if (lastTrail == fullLevel) result.append(" Full ");

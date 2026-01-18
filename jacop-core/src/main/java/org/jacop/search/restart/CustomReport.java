@@ -51,9 +51,7 @@ public class CustomReport {
 
   public void addVariables(Var[] vs) {
     vars = new Var[vs.length];
-    for (int i = 0; i < vs.length; i++) {
-      vars[i] = vs[i];
-    }
+    System.arraycopy(vs, 0, vars, 0, vs.length);
   }
 
   public void report() {

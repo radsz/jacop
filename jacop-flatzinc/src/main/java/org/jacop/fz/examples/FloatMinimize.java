@@ -50,7 +50,7 @@ public class FloatMinimize {
 
   FloatMinimize() {}
 
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     FloatMinimize run = new FloatMinimize();
 

@@ -66,12 +66,12 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
     if (decomposition == null) {
 
-      decomposition = new ArrayList<Constraint>();
+      decomposition = new ArrayList<>();
 
       if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
 
         int n = xVars.length;
-        List<IntVar> costs = new ArrayList<IntVar>(n * (n - 1));
+        List<IntVar> costs = new ArrayList<>(n * (n - 1));
         for (int i = 0; i < n; i++) {
           for (int j = 0; j < i; j++) {
             IntVar v;
@@ -89,12 +89,12 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
       return decomposition;
     } else {
 
-      List<Constraint> result = new ArrayList<Constraint>();
+      List<Constraint> result = new ArrayList<>();
 
       if (violationMeasure == ViolationMeasure.DECOMPOSITION_BASED) {
 
         int n = xVars.length;
-        List<IntVar> costs = new ArrayList<IntVar>(n * (n - 1));
+        List<IntVar> costs = new ArrayList<>(n * (n - 1));
         for (int i = 0; i < n; i++) {
           for (int j = 0; j < i; j++) {
             IntVar v;
@@ -121,7 +121,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
     if (decomposition == null || decomposition.size() > 1) {
 
-      decomposition = new ArrayList<Constraint>();
+      decomposition = new ArrayList<>();
 
       // compute union of all domains
       IntDomain all = new IntervalDomain();
@@ -167,7 +167,7 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
       result.append(xVars[i]);
       if (i < xVars.length - 1) result.append(", ");
     }
-    result.append("], " + costVar + ", " + violationMeasure + ")");
+    result.append("], ").append(costVar).append(", ").append(violationMeasure).append(")");
 
     return result.toString();
   }

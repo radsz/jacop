@@ -1176,9 +1176,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         } else break;
       }
 
-      if (interval1.min > value) {
-        break;
-      } else {
+      if (interval1.min <= value) {
 
         if (interval1.min != value) {
 
@@ -1200,9 +1198,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         } else {
           result.removeInterval(pointer1);
         }
-
-        break;
       }
+      break;
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -1260,9 +1257,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         }
       }
 
-      assert temp.checkInvariants() == null : temp.checkInvariants();
-      return temp;
-
     } else {
 
       for (int m = size - 1; m >= 0; m--) {
@@ -1272,10 +1266,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           temp.unionAdapt(new Interval(value, value));
         }
       }
-
-      assert temp.checkInvariants() == null : temp.checkInvariants();
-      return temp;
     }
+    assert temp.checkInvariants() == null : temp.checkInvariants();
+    return temp;
   }
 
   /**
@@ -1958,14 +1951,13 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           i1++;
           if (i1 == max1) break;
           currentDomain1 = intervals[i1];
-          continue;
         } else {
           result.unionAdapt(new Interval(min, currentDomain2.max));
           i2++;
           if (i2 == max2) break;
           currentDomain2 = intervalDomain.intervals[i2];
-          continue;
         }
+        continue;
       }
 
       if (i1 < max1) for (; i1 < max1; i1++) result.unionAdapt(intervals[i1]);
@@ -2019,7 +2011,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         if (currentInterval1.max > max) {
           result.unionAdapt(new Interval(tempMin, currentInterval1.max));
           i1++;
-          break;
         } else {
 
           // (min..max) can cover multiple intervals.
@@ -2037,9 +2028,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             result.unionAdapt(new Interval(tempMin, currentInterval1.max));
             i1++;
           } else result.unionAdapt(new Interval(tempMin, max));
-
-          break;
         }
+        break;
       }
 
       if (i1 < size) for (; i1 < size; i1++) result.unionAdapt(intervals[i1]);
@@ -2241,7 +2231,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       if (currentInterval1.max > max) {
         result.unionAdapt(new Interval(tempMin, currentInterval1.max));
         i1++;
-        break;
       } else {
 
         // (min..max) can cover multiple intervals.
@@ -2259,9 +2248,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           result.unionAdapt(new Interval(tempMin, currentInterval1.max));
           i1++;
         } else result.unionAdapt(new Interval(tempMin, max));
-
-        break;
       }
+      break;
     }
 
     if (i1 < size) for (; i1 < size; i1++) result.unionAdapt(intervals[i1]);
@@ -2378,8 +2366,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         }
 
         result.append("} ").append("(").append(domain.stamp()).append(") ");
-      } else
-        result.append(intervals[0]).append("(").append(String.valueOf(domain.stamp())).append(") ");
+      } else result.append(intervals[0]).append("(").append(domain.stamp()).append(") ");
 
       result.append("constraints: ");
 
@@ -3365,11 +3352,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (counter == 0) {
             var.domainHasChanged(IntDomain.BOUND);
-            return;
           } else {
             var.domainHasChanged(IntDomain.ANY);
-            return;
           }
+          return;
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
 
@@ -3392,11 +3378,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (counter == 0 || counter == size) {
             var.domainHasChanged(IntDomain.BOUND);
-            return;
           } else {
             var.domainHasChanged(IntDomain.ANY);
-            return;
           }
+          return;
         }
       }
 
@@ -3416,11 +3401,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
         if (counter == size - 1) {
           var.domainHasChanged(IntDomain.BOUND);
-          return;
         } else {
           var.domainHasChanged(IntDomain.ANY);
-          return;
         }
+        return;
       }
 
       if (size + 1 < intervals.length) {
@@ -3440,9 +3424,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       size++;
 
       assert checkInvariants() == null : checkInvariants();
-
-      var.domainHasChanged(IntDomain.ANY);
-      return;
 
     } else {
 
@@ -3483,11 +3464,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (counter == 0) {
             var.domainHasChanged(IntDomain.BOUND);
-            return;
           } else {
             var.domainHasChanged(IntDomain.ANY);
-            return;
           }
+          return;
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
           System.arraycopy(intervals, 0, result.intervals, 0, counter);
@@ -3505,11 +3485,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (counter == 0 || counter == size - 1) {
             var.domainHasChanged(IntDomain.BOUND);
-            return;
           } else {
             var.domainHasChanged(IntDomain.ANY);
-            return;
           }
+          return;
         }
       }
 
@@ -3533,11 +3512,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         }
         if (counter == size - 1) {
           var.domainHasChanged(IntDomain.BOUND);
-          return;
         } else {
           var.domainHasChanged(IntDomain.ANY);
-          return;
         }
+        return;
       }
 
       // if domain like this 1..3 and value 2 being removed, or
@@ -3565,9 +3543,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
        * var.domain = result;
        */
 
-      var.domainHasChanged(IntDomain.ANY);
-      return;
     }
+    var.domainHasChanged(IntDomain.ANY);
+    return;
   }
 
   @Override
@@ -3602,12 +3580,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             intervals[counter + 1] = new Interval(max + 1, intervals[counter].max);
             intervals[counter] = new Interval(intervals[counter].min, min - 1);
 
-            size++;
-
-            assert checkInvariants() == null : checkInvariants();
-
-            var.domainHasChanged(IntDomain.ANY);
-
           } else {
             // create new array and copy
 
@@ -3620,13 +3592,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
             intervals[counter + 1] = new Interval(max + 1, oldIntervals[counter].max);
             intervals[counter] = new Interval(oldIntervals[counter].min, min - 1);
-
-            size++;
-
-            assert checkInvariants() == null : checkInvariants();
-
-            var.domainHasChanged(IntDomain.ANY);
           }
+          size++;
+          assert checkInvariants() == null : checkInvariants();
+          var.domainHasChanged(IntDomain.ANY);
         } else {
           // intervals[counter].max <= max
           // intervals[counter].min..min-1
@@ -3666,16 +3635,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           intervals[counter] = new Interval(max + 1, intervals[counter].max);
 
-          assert checkInvariants() == null : checkInvariants();
-
-          if (singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-          if (max() < min || max < min()) var.domainHasChanged(IntDomain.BOUND);
-          else var.domainHasChanged(IntDomain.ANY);
-          return;
-
         } else {
           // intervals[counter] is removed
 
@@ -3692,18 +3651,15 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (counter < size && intervals[counter].min <= max)
             intervals[counter] = new Interval(max + 1, intervals[counter].max);
-
-          assert checkInvariants() == null : checkInvariants();
-
-          if (singleton()) {
-            var.domainHasChanged(IntDomain.GROUND);
-            return;
-          }
-
-          if (max() < min || max < min()) var.domainHasChanged(IntDomain.BOUND);
-          else var.domainHasChanged(IntDomain.ANY);
+        }
+        assert checkInvariants() == null : checkInvariants();
+        if (singleton()) {
+          var.domainHasChanged(IntDomain.GROUND);
           return;
         }
+        if (max() < min || max < min()) var.domainHasChanged(IntDomain.BOUND);
+        else var.domainHasChanged(IntDomain.ANY);
+        return;
       }
 
     } else {
@@ -3723,7 +3679,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       int noRemoved = 0;
 
-      for (int i = 0; i < counter; i++) result.intervals[i] = intervals[i];
+      System.arraycopy(intervals, 0, result.intervals, 0, counter);
 
       if (intervals[counter].min < min) {
         // intervals[counter].min..min-1
@@ -3732,7 +3688,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           // max+1..intervals[counter].max
           // copy elements to make one hole for new interval
 
-          for (int i = size; i > counter; i--) result.intervals[i] = intervals[i - 1];
+          if (size - counter >= 0)
+            System.arraycopy(intervals, counter, result.intervals, counter + 1, size - counter);
 
           result.intervals[counter + 1] = new Interval(max + 1, intervals[counter].max);
           result.intervals[counter] = new Interval(intervals[counter].min, min - 1);
@@ -3778,7 +3735,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         if (intervals[counter].max > max) {
           // max+1..intervals[counter].max
 
-          for (int i = counter + 1; i < size; i++) result.intervals[i] = intervals[i];
+          if (size - (counter + 1) >= 0)
+            System.arraycopy(
+                intervals, counter + 1, result.intervals, counter + 1, size - (counter + 1));
 
           result.intervals[counter] = new Interval(max + 1, intervals[counter].max);
 
@@ -3792,7 +3751,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (result.max() < min || max < result.min()) var.domainHasChanged(IntDomain.BOUND);
           else var.domainHasChanged(IntDomain.ANY);
-          return;
 
         } else {
           // intervals[counter] is removed
@@ -3822,8 +3780,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           if (result.singleton()) var.domainHasChanged(IntDomain.GROUND);
           else if (result.max() < min || max < result.min()) var.domainHasChanged(IntDomain.BOUND);
           else var.domainHasChanged(IntDomain.ANY);
-          return;
         }
+        return;
       }
     }
   }
@@ -4599,8 +4557,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
         assert checkInvariants() == null : checkInvariants();
 
-        return;
-
       } else {
         // if domain like this 1..3, 5, 7..10, and 5 being removed.
 
@@ -4612,8 +4568,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         // just decreased, e.g. domain like 1..3, 5, 7..9 and 5
         // being removed.
 
-        return;
       }
+      return;
     }
 
     if (intervals[counter].max == value) {
@@ -4668,8 +4624,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
         assert checkInvariants() == null : checkInvariants();
 
-        return;
-
       } else {
         // at least one complete interval is being removed.
 
@@ -4690,9 +4644,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         }
 
         size = i;
-
-        return;
       }
+      return;
     } else {
 
       // minValue > intervals[current].min
@@ -4713,8 +4666,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         intervals[current + 1] = new Interval(maxValue + 1, intervals[current + 1].max);
 
         size++;
-
-        return;
 
       } else {
         // minValue > intervals[current].min
@@ -4742,9 +4693,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         }
 
         size = i;
-
-        return;
       }
+      return;
     }
   }
 
@@ -5222,7 +5172,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         // interval1.min > min
         {
           if (max <= interval1.max) {
-            temp += max - interval1.min - +1;
+            temp += max - interval1.min - 1;
             break;
           } else {
             temp += interval1.max - interval1.min + 1;

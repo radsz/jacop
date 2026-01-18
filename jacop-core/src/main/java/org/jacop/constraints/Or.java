@@ -50,7 +50,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
   public final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies a list of constraints from which one constraint must be satisfied. */
-  public PrimitiveConstraint listOfC[];
+  public PrimitiveConstraint[] listOfC;
 
   /** It specifies if during the consistency execution a propagation has occurred. */
   private boolean propagation;
@@ -69,7 +69,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
     this.listOfC = Arrays.copyOf(listOfC, listOfC.length);
     setScope(listOfC);
     setConstraintScope(listOfC);
-    queueForward = new QueueForward<PrimitiveConstraint>(listOfC, arguments());
+    queueForward = new QueueForward<>(listOfC, arguments());
     // KKU, 2019-01-30; next line is wrong! it will always give queueIndex = 0 since primitive
     // constraints have queueIndex = 0
     // Then... if this constraint is reified, the reified will get queueIndex = 0 as well.
@@ -83,7 +83,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
    * @param listOfC list of primitive constraints which at least one of them has to be satisfied.
    */
   public Or(List<PrimitiveConstraint> listOfC) {
-    this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
+    this(listOfC.toArray(new PrimitiveConstraint[0]));
   }
 
   /**

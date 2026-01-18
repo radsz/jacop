@@ -84,7 +84,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null || constraints.size() == 0) constraints = decompose(store);
+    if (constraints == null || constraints.isEmpty()) constraints = decompose(store);
 
     for (Constraint c : constraints) store.impose(c);
   }
@@ -92,7 +92,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
   @Override
   public List<Constraint> decompose(Store store) {
 
-    constraints = new ArrayList<Constraint>();
+    constraints = new ArrayList<>();
 
     FloatVar pPlus = new FloatVar(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
     Constraint c1 = new PplusCeqR(p, FloatDomain.PI / 2, pPlus);

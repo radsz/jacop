@@ -112,7 +112,7 @@ public class BooleanVar extends IntVar {
     assert (dom.min >= 0 && dom.min <= dom.max && dom.max <= 1)
         : "Boolean variable can only get value between 0..1";
 
-    dom.searchConstraints = new ArrayList<Constraint>();
+    dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[3][];
     dom.modelConstraintsToEvaluate = new int[3];
     dom.modelConstraintsToEvaluate[0] = 0;
@@ -126,7 +126,7 @@ public class BooleanVar extends IntVar {
     store.putVariable(this);
 
     if (store.pointer4GroundedBooleanVariables == null) {
-      store.pointer4GroundedBooleanVariables = new TimeStamp<Integer>(store, 0);
+      store.pointer4GroundedBooleanVariables = new TimeStamp<>(store, 0);
       // Boolean Time stamp will be updated manually by store.
       store.timeStamps.remove(store.pointer4GroundedBooleanVariables);
       store.changeHistory4BooleanVariables = new BooleanVar[100];

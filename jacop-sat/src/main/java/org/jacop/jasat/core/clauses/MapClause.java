@@ -49,7 +49,7 @@ import org.jacop.jasat.utils.MemoryPool;
 public final class MapClause implements Iterable<Integer> {
 
   /** the literals of the clause */
-  public Map<Integer, Boolean> literals = new HashMap<Integer, Boolean>();
+  public Map<Integer, Boolean> literals = new HashMap<>();
 
   /** the literal that will be asserted due to unit propagation of the conflict clause. */
   public int assertedLiteral;
@@ -312,7 +312,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   private final class ClauseIterator implements Iterator<Integer> {
-    private Iterator<Integer> it;
+    private final Iterator<Integer> it;
 
     {
       it = literals.keySet().iterator();

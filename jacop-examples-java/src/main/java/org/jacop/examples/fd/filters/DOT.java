@@ -66,21 +66,21 @@ public class DOT extends Filter {
 
     name = "DOT";
 
-    int dependencies[][] = {
+    int[][] dependencies = {
       {0, 6}, {1, 6}, {2, 7}, {3, 7}, {4, 8}, {5, 8}, {6, 9}, {7, 9}, {9, 10}, {8, 10}
     };
     this.dependencies = dependencies;
 
-    int ids[] = {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
+    int[] ids = {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
     this.ids = ids;
 
-    int last[] = {10};
+    int[] last = {10};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(34);
+    List<String> names = new ArrayList<>(34);
 
     names.add("*0");
     names.add("*1");
@@ -99,7 +99,7 @@ public class DOT extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(34);
+    List<String> names = new ArrayList<>(34);
 
     names.add("*0");
     names.add("*1");

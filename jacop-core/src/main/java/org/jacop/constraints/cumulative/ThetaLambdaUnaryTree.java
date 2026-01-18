@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 /*
  * Implements ThetaLambdaUnaryTree and operations on this tree for Cumulative constraint
@@ -198,7 +199,8 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
   public void printTree(String name) {
 
-    try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
+    try (PrintStream out =
+        new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
       out.print(toGraph(name));
       // out.close(); not needed; auto close
     } catch (IOException _) {
@@ -210,18 +212,23 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
     StringBuilder result = new StringBuilder();
 
-    result.append("digraph ThetaLambdaUnaryTree" + name);
+    result.append("digraph ThetaLambdaUnaryTree").append(name);
     result.append(" {");
     result.append("graph [  fontsize = 12,");
     result.append("size = \"5,5\" ];\n");
 
     for (int i = 0; i < treeSize; i++) {
-      result.append("node_" + i + " [shape = box, label = \"" + tree[i] + "\"]\n");
+      result
+          .append("node_")
+          .append(i)
+          .append(" [shape = box, label = \"")
+          .append(tree[i])
+          .append("\"]\n");
     }
 
     result.append(treeToGraph(root()));
 
-    result.append("label =\"\n\nThetaLambdaUnaryTree" + name + "\n\"");
+    result.append("label =\"\n\nThetaLambdaUnaryTree").append(name).append("\n\"");
 
     result.append("}");
 
@@ -237,11 +244,11 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     } else {
       String s = "node_" + i + " -> "; // "[label = \""+ tree[i] +"\"] -> ";
       if (exist(left(i))) {
-        result.append(s + "node_" + left(i) + "\n");
+        result.append(s).append("node_").append(left(i)).append("\n");
         result.append(treeToGraph(left(i)));
       }
       if (exist(right(i))) {
-        result.append(s + "node_" + right(i) + "\n");
+        result.append(s).append("node_").append(right(i)).append("\n");
         result.append(treeToGraph(right(i)));
       }
 
@@ -255,7 +262,12 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
     result.append("ThetaLambdaUnaryTree\n");
     for (int i = 0; i < treeSize; i++)
-      result.append("Node " + i + "\n============\n" + tree[i] + "\n============\n");
+      result
+          .append("Node ")
+          .append(i)
+          .append("\n============\n")
+          .append(tree[i])
+          .append("\n============\n");
 
     return result.toString();
   }

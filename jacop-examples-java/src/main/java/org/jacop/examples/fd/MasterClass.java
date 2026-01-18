@@ -67,7 +67,7 @@ public class MasterClass extends ExampleFD {
    *
    * @param args no arguments is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     MasterClass example = new MasterClass();
 
@@ -104,9 +104,9 @@ public class MasterClass extends ExampleFD {
 
     // FDV's arrays
 
-    IntVar zglos[] = new IntVar[5];
-    IntVar zimie[] = new IntVar[5];
-    IntVar znazwisko[] = new IntVar[5];
+    IntVar[] zglos = new IntVar[5];
+    IntVar[] zimie = new IntVar[5];
+    IntVar[] znazwisko = new IntVar[5];
 
     // FDV creation
     for (int i = 0; i < 5; i++) {

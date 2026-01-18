@@ -134,7 +134,7 @@ public class FloatVar extends Var {
 
   private void commonInitialization(Store store, String name, FloatDomain dom) {
 
-    dom.searchConstraints = new ArrayList<Constraint>();
+    dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[FloatDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[FloatDomain.eventsInclusion.length];
 

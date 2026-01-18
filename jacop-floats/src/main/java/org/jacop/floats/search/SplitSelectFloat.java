@@ -77,7 +77,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, null);
 
-    currentIndex = new TimeStamp<Integer>(store, 0);
+    currentIndex = new TimeStamp<>(store, 0);
   }
 
   /**
@@ -99,7 +99,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, tieBreakerVarSelect, null);
 
-    currentIndex = new TimeStamp<Integer>(store, 0);
+    currentIndex = new TimeStamp<>(store, 0);
   }
 
   @Override

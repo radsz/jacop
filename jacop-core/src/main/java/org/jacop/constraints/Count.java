@@ -102,7 +102,7 @@ public class Count extends PrimitiveConstraint {
    * @param counter number of variables equal to val.
    */
   public Count(List<? extends IntVar> list, IntVar counter, int value) {
-    this(list.toArray(new IntVar[list.size()]), counter, value);
+    this(list.toArray(new IntVar[0]), counter, value);
   }
 
   // registers the constraint in the constraint store and

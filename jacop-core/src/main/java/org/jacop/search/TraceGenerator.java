@@ -33,7 +33,7 @@ package org.jacop.search;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -85,7 +85,7 @@ public class TraceGenerator<T extends Var>
   public final String visFilename;
 
   /** It specifies the list of variables that are being traced. */
-  public List<Var> tracedVar = new ArrayList<Var>();
+  public List<Var> tracedVar = new ArrayList<>();
 
   public Map<Var, Integer> varIndex = Var.createEmptyPositioning();
   ConsistencyListener[] consistencyListeners;
@@ -107,7 +107,7 @@ public class TraceGenerator<T extends Var>
   /** An xml handler for visualization file. */
   TransformerHandler hdVis;
 
-  Stack<SearchNode> searchStack = new Stack<SearchNode>();
+  Stack<SearchNode> searchStack = new Stack<>();
   SearchNode currentSearchNode;
   int searchNodeId = 1;
   int visualisationNodeId = 1;
@@ -489,10 +489,10 @@ public class TraceGenerator<T extends Var>
     try {
       printWriter =
           new OutputStreamWriter(
-              new FileOutputStream(treeFilename), Charset.forName("UTF-8").newEncoder());
+              new FileOutputStream(treeFilename), StandardCharsets.UTF_8.newEncoder());
     } catch (FileNotFoundException e) {
       e.printStackTrace();
-      printWriter = new OutputStreamWriter(System.out, Charset.forName("UTF-8").newEncoder());
+      printWriter = new OutputStreamWriter(System.out, StandardCharsets.UTF_8.newEncoder());
     }
 
     StreamResult streamResult = new StreamResult(printWriter);
@@ -528,10 +528,7 @@ public class TraceGenerator<T extends Var>
       hdTree.startElement("", "", "root", atts);
       hdTree.endElement("", "", "root");
 
-    } catch (TransformerConfigurationException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (SAXException e) {
+    } catch (TransformerConfigurationException | SAXException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
@@ -544,10 +541,10 @@ public class TraceGenerator<T extends Var>
     try {
       printWriter =
           new OutputStreamWriter(
-              new FileOutputStream(visFilename), Charset.forName("UTF-8").newEncoder());
+              new FileOutputStream(visFilename), StandardCharsets.UTF_8.newEncoder());
     } catch (FileNotFoundException e) {
       e.printStackTrace();
-      printWriter = new OutputStreamWriter(System.out, Charset.forName("UTF-8").newEncoder());
+      printWriter = new OutputStreamWriter(System.out, StandardCharsets.UTF_8.newEncoder());
     }
 
     StreamResult streamResult = new StreamResult(printWriter);
@@ -579,7 +576,7 @@ public class TraceGenerator<T extends Var>
       hdVis.startElement("", "", "visualization", atts);
 
       // visualizer
-      if (tracedVar.size() != 0) {
+      if (!tracedVar.isEmpty()) {
         AttributesImpl visAtt = new AttributesImpl();
         visAtt.addAttribute("", "", "id", "CDATA", "1");
         visAtt.addAttribute("", "", "type", "CDATA", "vector");
@@ -601,10 +598,7 @@ public class TraceGenerator<T extends Var>
 
       generateVisualizationNode(0, true);
 
-    } catch (TransformerConfigurationException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (SAXException e) {
+    } catch (TransformerConfigurationException | SAXException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
@@ -775,7 +769,7 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", "tree_node", "CDATA", "" + searchNodeId);
       hdVis.startElement("", "", "state", atts);
 
-      if (tracedVar.size() != 0) {
+      if (!tracedVar.isEmpty()) {
         AttributesImpl visAtts = new AttributesImpl();
         visAtts.addAttribute("", "", "id", "CDATA", "" + visualizerState);
         hdVis.startElement("", "", "visualizer_state", visAtts);

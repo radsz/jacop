@@ -31,6 +31,7 @@
 package org.jacop.examples.fd.muca;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -92,7 +93,7 @@ public class MUCA extends ExampleFD {
   public List<IntVar> bidCosts;
 
   /** It specifies the sequence of transitions used by an auctioneer. */
-  public IntVar transitions[];
+  public IntVar[] transitions;
 
   /** It specifies the maximal number of transformations used by the auctioneer. */
   public int maxNoTransformations;
@@ -101,16 +102,16 @@ public class MUCA extends ExampleFD {
    * For each transition and each good it specifies the delta change of that good before the
    * transition takes place.
    */
-  public IntVar deltasI[][];
+  public IntVar[][] deltasI;
 
   /**
    * For each transition and each good it specifies the delta change of that good after the
    * transition takes place.
    */
-  public IntVar deltasO[][];
+  public IntVar[][] deltasO;
 
   /** It specifies the number of goods after the last transition. */
-  public IntVar sum[];
+  public IntVar[] sum;
 
   /** It reads auction problem description from the file. */
   public String filename = "src/main/java/org/jacop/examples/fd/muca/testset3.auct";
@@ -894,7 +895,7 @@ public class MUCA extends ExampleFD {
       store.impose(new IfThen(new XeqC(transitions[i], 0), new XeqC(transitions[i + 1], 0)));
     // for each set of transformations create an among
 
-    IntVar usedTransformation[] = new IntVar[noAvailableTransformations];
+    IntVar[] usedTransformation = new IntVar[noAvailableTransformations];
 
     for (int i = 0; i < noAvailableTransformations; i++) {
 
@@ -975,7 +976,7 @@ public class MUCA extends ExampleFD {
         }
       }
 
-      int tuples[][] = new int[tuples4transitions.size()][];
+      int[][] tuples = new int[tuples4transitions.size()][];
       for (int i = 0; i < tuples4transitions.size(); i++) {
         tuples[i] = tuples4transitions.get(i);
       }
@@ -1013,11 +1014,11 @@ public class MUCA extends ExampleFD {
 
     for (int g = 0; g < noGoods; g++) {
 
-      IntVar weights[] = new IntVar[usedTransformation.length + 1];
+      IntVar[] weights = new IntVar[usedTransformation.length + 1];
       weights[0] =
           new IntVar(
               store,
-              String.valueOf(initialQuantity.get(g)) + "of-g" + g,
+              initialQuantity.get(g) + "of-g" + g,
               initialQuantity.get(g),
               initialQuantity.get(g));
 
@@ -1106,7 +1107,9 @@ public class MUCA extends ExampleFD {
 
     try {
 
-      br = new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
+      br =
+          new BufferedReader(
+              new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
 
       // the first line represents the input goods
       String line = br.readLine();

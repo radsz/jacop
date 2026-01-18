@@ -908,7 +908,10 @@ public abstract class IntDomain extends Domain {
 
       if (modelConstraintsToEvaluate[pruningEvent] > 0)
         for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
-          if (pruningEventConstraints[i] == c) alreadyImposed = true;
+          if (pruningEventConstraints[i] == c) {
+            alreadyImposed = true;
+            break;
+          }
 
       int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
 
@@ -1154,14 +1157,13 @@ public abstract class IntDomain extends Domain {
           Constraint firstSatisfied = searchConstraints.get(searchConstraintsToEvaluate);
           searchConstraints.set(searchConstraintsToEvaluate, c);
           searchConstraints.add(firstSatisfied);
-          searchConstraintsToEvaluate++;
         } else {
           searchConstraints =
               new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
           searchConstraintsCloned = true;
           searchConstraints.add(c);
-          searchConstraintsToEvaluate++;
         }
+        searchConstraintsToEvaluate++;
       }
     }
   }

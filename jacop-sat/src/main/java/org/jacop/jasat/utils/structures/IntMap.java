@@ -38,7 +38,7 @@ public final class IntMap<E> {
 
   /** initializes the map */
   public IntMap() {
-    map = new IntTrie<MapNode>(new MapNode());
+    map = new IntTrie<>(new MapNode());
   }
 
   /**

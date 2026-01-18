@@ -80,15 +80,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
               // b < p.Min
               if (i > 0) {
                 p = get(i - 1);
-                if (a == p.max && val == p.value) {
-                  // !!! a == p.Max
-                  // p.Max = b;
-                  int[] r = {index, val};
-                  add(i, new ProfileItemCondition(a, b, val, r));
-                } else {
-                  int[] r = {index, val}; // OK
-                  add(i, new ProfileItemCondition(a, b, val, r));
-                }
+                int[] r = {index, val}; // OK
+                add(i, new ProfileItemCondition(a, b, val, r));
               } else {
                 if (trace)
                   IO.println(
@@ -162,13 +155,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                           + i);
                 // !!!
                 // previous.setMax(new1.Max);
-                if (new1.min == a) {
-                  add(i, new1);
-                  i++;
-                } else {
-                  add(i, new1);
-                  i++;
-                }
+                add(i, new1);
+                i++;
               } else {
                 if (trace) IO.println("4b. Adding " + new1);
                 // !!!
@@ -198,13 +186,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                           + i);
                 // !!!
                 // previous.setMax(new2.Max);
-                if (new2.min == a) {
-                  add(i, new2);
-                  i++;
-                } else {
-                  add(i, new2);
-                  i++;
-                }
+                add(i, new2);
+                i++;
               } else {
                 if (trace) IO.println("5b. Adding " + new2);
                 // !!!
@@ -221,12 +204,11 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 // System.out.println("adding "+index+", ["+a+",
                 // "+b+")="+val);
                 addToProfile(index, new3.min, new3.max, val, exList);
-                i++;
               } else {
                 // rest of the old profile
                 add(i, new3);
-                i++;
               }
+              i++;
             }
             notFound = false;
           }

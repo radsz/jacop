@@ -65,7 +65,7 @@ public final class Utils {
     if (size > 4) {
       System.arraycopy(array, 0, answer, 0, size);
     } else {
-      for (int i = 0; i < size; ++i) answer[i] = array[i];
+      if (size >= 0) System.arraycopy(array, 0, answer, 0, size);
     }
 
     // store the old array (if not too large)
@@ -139,7 +139,7 @@ public final class Utils {
 
     for (int i = 0; i < clause.length - 1; ++i) {
       int literal = clause[i];
-      sb.append(literal + " ");
+      sb.append(literal).append(" ");
     }
     sb.append(clause[clause.length - 1]);
     return sb.toString();

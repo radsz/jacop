@@ -91,7 +91,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
    * the collection of holes that are included in all possible shapes, enlarged to include the whole
    * domain that can be covered for any feasible choice of the origin
    */
-  private SimpleArrayList<DBox> extendedHoles;
+  private final SimpleArrayList<DBox> extendedHoles;
 
   /**
    * It creates an internal constraint to enforce non-overlapping relation with this obstacle
@@ -112,7 +112,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     // check whether time should be used or not
     useTime = selectedDimensions[selectedDimensions.length - 1] == obstacle.dimension;
 
-    extendedHoles = new SimpleArrayList<DBox>();
+    extendedHoles = new SimpleArrayList<>();
   }
 
   /**
@@ -156,7 +156,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
       frame.clear();
 
     } else {
-      frame = new LinkedList<DBox>();
+      frame = new LinkedList<>();
       frameBoundingBox = DBox.newBox(obstacle.dimension);
     }
 
@@ -281,7 +281,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
           for (DBox b : shape.boxes) {
             display.display2DBox(b, Color.black);
           }
-          Collection<DBox> rescaledBoxes = new ArrayList<DBox>(shape.boxes.size());
+          Collection<DBox> rescaledBoxes = new ArrayList<>(shape.boxes.size());
 
           for (DBox b : shape.boxes) {
             int dim = b.origin.length;
@@ -509,9 +509,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
   @Override
   public Collection<Var> definingVariables() {
 
-    Collection<Var> variables = new ArrayList<Var>(obstacle.dimension);
+    Collection<Var> variables = new ArrayList<>(obstacle.dimension);
 
-    for (int i = 0; i < obstacle.dimension; i++) variables.add(obstacle.coords[i]);
+    variables.addAll(Arrays.asList(obstacle.coords).subList(0, obstacle.dimension));
 
     variables.add(obstacle.shapeID);
     variables.add(obstacle.start);

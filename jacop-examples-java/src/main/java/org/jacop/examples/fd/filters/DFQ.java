@@ -62,20 +62,20 @@ public class DFQ extends Filter {
 
     name = "DFQ";
 
-    int dependencies[][] = {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
+    int[][] dependencies = {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
 
     this.dependencies = dependencies;
 
-    int ids[] = {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
+    int[] ids = {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
     this.ids = ids;
 
-    int last[] = {7, 8, 10};
+    int[] last = {7, 8, 10};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(11);
+    List<String> names = new ArrayList<>(11);
 
     names.add("*1");
     names.add("*2");
@@ -94,7 +94,7 @@ public class DFQ extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(11);
+    List<String> names = new ArrayList<>(11);
 
     names.add("*1");
     names.add("*2");

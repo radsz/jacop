@@ -62,7 +62,7 @@ public class Pruning extends Network {
   // Decrease in score upon successful pruning
   private static final int FAIL_SCORE = 2;
   public int numActiveArcs;
-  private Statistics statistics;
+  private final Statistics statistics;
 
   // int z;
   //
@@ -78,8 +78,8 @@ public class Pruning extends Network {
   // assert (count == numActiveArcs) : count + " != " + numActiveArcs
   // + "  (" + z + ")";
   // }
-  private PriorityQueue<ArcCompanion> queue;
-  private PruningStrategy strategy;
+  private final PriorityQueue<ArcCompanion> queue;
+  private final PruningStrategy strategy;
 
   public Pruning(List<Node> nodes, List<Arc> arcs, Statistics statistics) {
 

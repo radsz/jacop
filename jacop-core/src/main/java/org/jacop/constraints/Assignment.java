@@ -55,13 +55,13 @@ public class Assignment extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables d. */
-  public final IntVar d[];
+  public final IntVar[] d;
 
   /** It specifies a shift applied to variables d. */
   public int shiftD = 0;
 
   /** It specifies a list of variables x. */
-  public IntVar x[];
+  public IntVar[] x;
 
   /** It specifies a shift applied to variables x. */
   public int shiftX = 0;
@@ -69,7 +69,7 @@ public class Assignment extends Constraint
   Map<IntVar, Integer> ds;
   Map<IntVar, Integer> xs;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   IntervalDomain rangeX;
@@ -115,7 +115,7 @@ public class Assignment extends Constraint
    * @param shiftD shift for parameter ds
    */
   public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds, int shiftX, int shiftD) {
-    this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), shiftX, shiftD);
+    this(xs.toArray(new IntVar[0]), ds.toArray(new IntVar[0]), shiftX, shiftD);
   }
 
   /**
@@ -126,7 +126,7 @@ public class Assignment extends Constraint
    * @param ds arraylist of d variables
    */
   public Assignment(List<? extends IntVar> xs, List<? extends IntVar> ds) {
-    this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), 0, 0);
+    this(xs.toArray(new IntVar[0]), ds.toArray(new IntVar[0]), 0, 0);
   }
 
   /**
@@ -137,7 +137,7 @@ public class Assignment extends Constraint
    * @param min shift
    */
   public Assignment(List<? extends Var> xs, List<? extends Var> ds, int min) {
-    this(xs.toArray(new IntVar[xs.size()]), ds.toArray(new IntVar[ds.size()]), min, min);
+    this(xs.toArray(new IntVar[0]), ds.toArray(new IntVar[0]), min, min);
   }
 
   /**
@@ -173,9 +173,9 @@ public class Assignment extends Constraint
 
     if (firstConsistencyCheck) {
 
-      rangeX = new IntervalDomain(0 + shiftX, x.length - 1 + shiftX);
+      rangeX = new IntervalDomain(shiftX, x.length - 1 + shiftX);
 
-      rangeD = new IntervalDomain(0 + shiftD, x.length - 1 + shiftD);
+      rangeD = new IntervalDomain(shiftD, x.length - 1 + shiftD);
 
       for (int i = 0; i < x.length; i++) {
 
@@ -228,7 +228,7 @@ public class Assignment extends Constraint
 
       LinkedHashSet<IntVar> fdvs = variableQueue;
 
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       for (IntVar V : fdvs) {
 
@@ -340,7 +340,7 @@ public class Assignment extends Constraint
       if (i < d.length - 1) result.append(", ");
     }
     result.append("], ");
-    result.append(shiftX + ", " + shiftD + ")");
+    result.append(shiftX).append(", ").append(shiftD).append(")");
 
     return result.toString();
   }

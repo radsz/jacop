@@ -70,7 +70,7 @@ public class SocialGolfer extends ExampleSet {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     SocialGolfer example = new SocialGolfer();
 
@@ -254,7 +254,7 @@ public class SocialGolfer extends ExampleSet {
 
     SelectChoicePoint<SetVar> select =
         new SimpleSelect<SetVar>(
-            vars.toArray(new SetVar[vars.size()]),
+            vars.toArray(new SetVar[0]),
             new MinLubCard<SetVar>(),
             new MaxGlbCard<SetVar>(),
             new IndomainSetMin<SetVar>());

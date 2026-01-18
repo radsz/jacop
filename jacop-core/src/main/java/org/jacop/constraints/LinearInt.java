@@ -141,11 +141,7 @@ public class LinearInt extends PrimitiveConstraint {
       Store store, List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
     checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
     commonInitialization(
-        store,
-        list.toArray(new IntVar[list.size()]),
-        weights.stream().mapToInt(i -> i).toArray(),
-        rel,
-        sum);
+        store, list.toArray(new IntVar[0]), weights.stream().mapToInt(i -> i).toArray(), rel, sum);
     numberId = idNumber.incrementAndGet();
   }
 
@@ -198,7 +194,7 @@ public class LinearInt extends PrimitiveConstraint {
     checkInputForNullness(new String[] {"list", "weights"}, new Object[] {list, weights});
     commonInitialization(
         list.getFirst().getStore(),
-        list.toArray(new IntVar[list.size()]),
+        list.toArray(new IntVar[0]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
         sum);

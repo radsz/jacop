@@ -90,7 +90,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     this.temporaryArray = new int[maxNoOfIntervals * 2];
     this.intervalCutOffValue = Math.max(noOfObjects / 2, this.cutOffValue + 1);
     this.addingToIntervals = false;
-    this.intervalBasedTrail = new ArrayList<Boolean>();
+    this.intervalBasedTrail = new ArrayList<>();
   }
 
   @Override
@@ -159,7 +159,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       IO.println("Level being set" + level);
       IO.println("Last Level info " + levelInfo);
       IO.println("Intervals? " + intervalBasedTrail);
-      if (trail.size() != 0) IO.println("LastTrail " + trail.getLast());
+      if (!trail.isEmpty()) IO.println("LastTrail " + trail.getLast());
       IO.println(super.toString());
     }
 

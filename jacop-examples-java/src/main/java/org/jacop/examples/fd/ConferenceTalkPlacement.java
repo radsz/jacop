@@ -59,7 +59,7 @@ public class ConferenceTalkPlacement {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     int noOfParallelTracks = 6;
     int noOfTimeSlots = 6;
@@ -143,7 +143,7 @@ public class ConferenceTalkPlacement {
     List<Integer> costsList = new ArrayList<>();
     for (Map<Integer, Integer> elH : costs.values()) costsList.addAll(elH.values());
 
-    Integer[] sortedArray = costsList.toArray(new Integer[costsList.size()]);
+    Integer[] sortedArray = costsList.toArray(new Integer[0]);
     Arrays.sort(sortedArray);
 
     int noOfTalksInOneTimeSlot = noOfParallelTracks;
@@ -217,7 +217,7 @@ public class ConferenceTalkPlacement {
     store.impose(new SumInt(pairCosts, "==", cost));
 
     vars = new ArrayList<>();
-    for (IntVar intVar : talkPlacement) vars.add(intVar);
+    vars.addAll(Arrays.asList(talkPlacement));
 
     // store.print();
   }

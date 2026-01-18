@@ -63,7 +63,7 @@ public class Golf extends ExampleFD {
    *
    * @param args no arguments is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Golf example = new Golf();
 
@@ -96,9 +96,9 @@ public class Golf extends ExampleFD {
     int iMaint = 0, iCaddy = 1, iClerk = 2 /*, iCook = 3 */;
 
     // FDV's arrays
-    IntVar FN[] = new IntVar[4];
-    IntVar LN[] = new IntVar[4];
-    IntVar Jobs[] = new IntVar[4];
+    IntVar[] FN = new IntVar[4];
+    IntVar[] LN = new IntVar[4];
+    IntVar[] Jobs = new IntVar[4];
 
     // Creating all FDVs.
     for (int i = 0; i < 4; i++) {

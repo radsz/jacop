@@ -50,7 +50,7 @@ public class CurveFitting {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CurveFitting example = new CurveFitting();
 
@@ -134,8 +134,8 @@ public class CurveFitting {
     }
 
     FloatVar[] vars = new FloatVar[2 * n + 1];
-    for (int i = 0; i < n; i++) vars[i] = Ex[i];
-    for (int i = n; i < 2 * n; i++) vars[i] = Ey[i - n];
+    System.arraycopy(Ex, 0, vars, 0, n);
+    System.arraycopy(Ey, n - n, vars, n, 2 * n - n);
     vars[2 * n] = b1;
 
     IO.println(

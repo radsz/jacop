@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
@@ -56,7 +57,7 @@ public class BuildingBlocks extends ExampleFD {
    *
    * @param args args for the program (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     BuildingBlocks example = new BuildingBlocks();
 
@@ -99,52 +100,52 @@ public class BuildingBlocks extends ExampleFD {
     IntVar Y = new IntVar(store, "Y", 1, 4);
 
     // array of letters.
-    IntVar letters[] = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, R, S, T, U, W, V, X, Y};
+    IntVar[] letters = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, R, S, T, U, W, V, X, Y};
 
-    for (IntVar v : letters) vars.add(v);
+    vars.addAll(Arrays.asList(letters));
 
     // First word, each letter on a different block.
-    IntVar bake[] = {B, A, K, E};
+    IntVar[] bake = {B, A, K, E};
     store.impose(new Alldifferent(bake));
 
-    IntVar onyx[] = {O, N, Y, X};
+    IntVar[] onyx = {O, N, Y, X};
     store.impose(new Alldifferent(onyx));
 
-    IntVar echo[] = {E, C, H, O};
+    IntVar[] echo = {E, C, H, O};
     store.impose(new Alldifferent(echo));
 
-    IntVar oval[] = {O, V, A, L};
+    IntVar[] oval = {O, V, A, L};
     store.impose(new Alldifferent(oval));
 
-    IntVar grid[] = {G, R, I, D};
+    IntVar[] grid = {G, R, I, D};
     store.impose(new Alldifferent(grid));
 
-    IntVar smug[] = {S, M, U, G};
+    IntVar[] smug = {S, M, U, G};
     store.impose(new Alldifferent(smug));
 
-    IntVar jump[] = {J, U, M, P};
+    IntVar[] jump = {J, U, M, P};
     store.impose(new Alldifferent(jump));
 
-    IntVar torn[] = {T, O, R, N};
+    IntVar[] torn = {T, O, R, N};
     store.impose(new Alldifferent(torn));
 
-    IntVar luck[] = {L, U, C, K};
+    IntVar[] luck = {L, U, C, K};
     store.impose(new Alldifferent(luck));
 
-    IntVar viny[] = {V, I, N, Y};
+    IntVar[] viny = {V, I, N, Y};
     store.impose(new Alldifferent(viny));
 
-    IntVar lush[] = {L, U, S, H};
+    IntVar[] lush = {L, U, S, H};
     store.impose(new Alldifferent(lush));
 
-    IntVar wrap[] = {W, R, A, P};
+    IntVar[] wrap = {W, R, A, P};
     store.impose(new Alldifferent(wrap));
 
     // auxilary variables
     IntVar one = new IntVar(store, "one", 1, 1);
     IntVar six = new IntVar(store, "six", 6, 6);
 
-    IntVar ones[] = new IntVar[24];
+    IntVar[] ones = new IntVar[24];
     for (int i = 0; i < 24; i++) ones[i] = one;
 
     // Each block can not contain more than six letters.

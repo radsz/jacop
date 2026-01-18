@@ -68,7 +68,7 @@ public class InArea implements ExternalConstraint {
     this.allowedArea = area;
 
     if (holes != null) this.holes = holes;
-    else this.holes = new ArrayList<DBox>(0);
+    else this.holes = new ArrayList<>(0);
 
     assert checkInvariants() == null : checkInvariants();
   }
@@ -90,7 +90,7 @@ public class InArea implements ExternalConstraint {
 
   public Collection<InternalConstraint> genInternalConstraints(Geost geost) {
 
-    constraints = new HashSet<InternalConstraint>(holes.size() + 1);
+    constraints = new HashSet<>(holes.size() + 1);
 
     constraints.add(new AllowedArea(geost, allowedArea.origin, allowedArea.length));
 

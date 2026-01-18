@@ -87,7 +87,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
     List<Var> vs = new ArrayList<>();
     for (PrimitiveConstraint primitiveConstraint : c) {
       Set<Var> cvs = primitiveConstraint.arguments();
-      for (Var v : cvs) vs.add(v);
+      vs.addAll(cvs);
     }
 
     setScope(Stream.concat(Arrays.stream(b), vs.stream()));
@@ -100,7 +100,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
    * @param c constraints for selection.
    */
   public Conditional(List<? extends IntVar> b, List<? extends PrimitiveConstraint> c) {
-    this(b.toArray(new IntVar[b.size()]), c.toArray(new PrimitiveConstraint[c.size()]));
+    this(b.toArray(new IntVar[0]), c.toArray(new PrimitiveConstraint[0]));
   }
 
   @Override

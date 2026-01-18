@@ -88,11 +88,11 @@ public final class SatWrapper extends Constraint
         SatisfiedPresent {
 
   // registered CP variables
-  public final Set<IntVar> registeredVars = new HashSet<IntVar>();
+  public final Set<IntVar> registeredVars = new HashSet<>();
   // association from CP variables to their SAT bridge (replaces IntVar.satBridge field)
-  private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<IntVar, SatCPBridge>();
+  private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<>();
   // model clauses waiting to be added to the SAT solver
-  private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<int[]>();
+  private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<>();
   // sat solver instance
   public Core core;
 

@@ -81,11 +81,11 @@ public class Increasing extends Constraint {
    * @param x variables which must be in increasing order.
    */
   public Increasing(List<? extends IntVar> x) {
-    this(x.toArray(new IntVar[x.size()]));
+    this(x.toArray(new IntVar[0]));
   }
 
   public Increasing(List<? extends IntVar> x, boolean strict) {
-    this(x.toArray(new IntVar[x.size()]), strict);
+    this(x.toArray(new IntVar[0]), strict);
   }
 
   @Override
@@ -138,7 +138,7 @@ public class Increasing extends Constraint {
       result.append(x[i]);
       if (i < n - 1) result.append(", ");
     }
-    result.append("], " + (strict == 1 ? "strict" : "non-strict") + ")");
+    result.append("], ").append(strict == 1 ? "strict" : "non-strict").append(")");
 
     return result.toString();
   }

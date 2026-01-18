@@ -34,6 +34,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,10 +65,10 @@ public class CrossWord extends ExampleFD {
   // * - black wall
   // letter - letter which must be in crossword
   // _ - unknown letter, any letter is accepted.
-  List<Integer> wordSizes = new ArrayList<Integer>();
+  List<Integer> wordSizes = new ArrayList<>();
   IntVar[][] x; // the solution
   IntVar blank;
-  Map<Integer, MDD> mdds = new HashMap<Integer, MDD>();
+  Map<Integer, MDD> mdds = new HashMap<>();
 
   char[][] crosswordTemplate = {
     {'*', '_', '_', '_', '_'},
@@ -82,7 +83,7 @@ public class CrossWord extends ExampleFD {
    *
    * @param args no arguments used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     String filename = "";
     if (args.length == 1) {
@@ -152,7 +153,7 @@ public class CrossWord extends ExampleFD {
         } else word.add(x[i][j]);
       }
 
-      if (word.size() > 0) {
+      if (!word.isEmpty()) {
         if (wordSizes.contains(word.size())) {
           MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
           store.impose(new ExtensionalSupportMDD(mdd4word));
@@ -179,7 +180,7 @@ public class CrossWord extends ExampleFD {
         } else word.add(x[i][j]);
       }
 
-      if (word.size() > 0) {
+      if (!word.isEmpty()) {
         if (wordSizes.contains(word.size())) {
           MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
           store.impose(new ExtensionalSupportMDD(mdd4word));
@@ -231,10 +232,11 @@ public class CrossWord extends ExampleFD {
       MDD resultForWordSize = new MDD(list);
 
       try (BufferedReader inr =
-          new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+          new BufferedReader(
+              new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 
         String str;
-        while ((str = inr.readLine()) != null && str.length() > 0) {
+        while ((str = inr.readLine()) != null && !str.isEmpty()) {
 
           str = str.trim();
 

@@ -137,14 +137,13 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
       if (place > occ) {
         place -= occ;
         occLevel -= 1;
-        occ = this.getPascalNbr(occLevel, occPlace);
       } else {
         ret.unionAdapt(v);
         ++added;
         occLevel -= 1;
         occPlace -= 1;
-        occ = this.getPascalNbr(occLevel, occPlace);
       }
+      occ = this.getPascalNbr(occLevel, occPlace);
     }
     return ret;
   }

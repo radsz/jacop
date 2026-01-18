@@ -32,7 +32,7 @@ package org.jacop.constraints.netflow;
 
 import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
@@ -67,10 +67,7 @@ public class DomainStructure implements VarHandler {
    */
   public DomainStructure(IntVar variable, List<Domain> domList, List<Arc> arcList) {
 
-    this(
-        variable,
-        domList.toArray(new IntDomain[domList.size()]),
-        arcList.toArray(new Arc[arcList.size()]));
+    this(variable, domList.toArray(new IntDomain[0]), arcList.toArray(new Arc[0]));
   }
 
   public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs) {
@@ -221,7 +218,7 @@ public class DomainStructure implements VarHandler {
   }
 
   public List<IntVar> listVariables() {
-    return Arrays.asList(variable);
+    return Collections.singletonList(variable);
   }
 
   public boolean isGrounded(int arcID) {

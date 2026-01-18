@@ -167,9 +167,6 @@ public class XinA extends PrimitiveConstraint {
         if (possibleEvent != null) return possibleEvent;
       }
 
-      if (var == x) return IntDomain.ANY;
-      else return SetDomain.GLB;
-
     }
     // If notConsistency function mode
     else {
@@ -177,10 +174,9 @@ public class XinA extends PrimitiveConstraint {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
         if (possibleEvent != null) return possibleEvent;
       }
-
-      if (var == x) return IntDomain.ANY;
-      else return SetDomain.GLB;
     }
+    if (var == x) return IntDomain.ANY;
+    else return SetDomain.GLB;
   }
 
   @Override

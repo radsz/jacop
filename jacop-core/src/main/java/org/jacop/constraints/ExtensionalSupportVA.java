@@ -69,7 +69,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   /** It represents values which are supported for a variable. */
   int[][] values;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   private int[][] tuplesFromConstructor;
 
   /**
@@ -82,7 +82,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     this.list = new IntVar[list.length];
 
-    for (int i = 0; i < list.length; i++) this.list[i] = list[i];
+    System.arraycopy(list, 0, this.list, 0, list.length);
 
     this.numberId = idNumber.incrementAndGet();
 
@@ -99,7 +99,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   public ExtensionalSupportVA(List<? extends IntVar> variables, int[][] tuples) {
 
-    this(variables.toArray(new IntVar[variables.size()]), tuples);
+    this(variables.toArray(new IntVar[0]), tuples);
   }
 
   /**
@@ -129,7 +129,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   @Override
   public void removeLevel(int level) {
-    variableQueue = new LinkedHashSet<IntVar>();
+    variableQueue = new LinkedHashSet<>();
 
     if (level == levelOfFirstConsistencyCheck) {
       firstConsistencyCheck = true;
@@ -490,7 +490,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   public int[] setFirstValid(int varPosition, int value) {
 
-    int t[] = new int[list.length];
+    int[] t = new int[list.length];
 
     int noVars = list.length;
     for (int i = 0; i < noVars; i++) t[i] = list[i].min();

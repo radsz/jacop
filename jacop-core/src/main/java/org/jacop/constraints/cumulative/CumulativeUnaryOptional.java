@@ -144,11 +144,11 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
       List<? extends IntVar> opt) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit,
-        opt.toArray(new IntVar[opt.size()]));
+        opt.toArray(new IntVar[0]));
   }
 
   /**
@@ -171,11 +171,11 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
       boolean doProfile) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit,
-        opt.toArray(new IntVar[opt.size()]),
+        opt.toArray(new IntVar[0]),
         doProfile);
   }
 
@@ -238,7 +238,8 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         .append(" ]")
         .append(", limit = ")
         .append(limit)
-        .append(", " + Arrays.asList(opt))
+        .append(", ")
+        .append(Arrays.asList(opt))
         .append(" )");
 
     return result.toString();

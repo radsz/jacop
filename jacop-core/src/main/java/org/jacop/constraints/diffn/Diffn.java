@@ -504,7 +504,7 @@ public class Diffn extends Nooverlap {
 
     Interval eBlock = e.block();
 
-    if (sweepLine.size() == 0) {
+    if (sweepLine.isEmpty()) {
       sweepLine.add(eBlock);
       return;
     }
@@ -538,7 +538,7 @@ public class Diffn extends Nooverlap {
 
   private boolean blocking(List<Interval> sweepLine, int start, int end, int length) {
 
-    if (sweepLine.size() == 0) return false;
+    if (sweepLine.isEmpty()) return false;
 
     int s = start;
     for (Interval sweepLineElement : sweepLine) {

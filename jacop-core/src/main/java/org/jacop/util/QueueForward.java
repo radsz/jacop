@@ -54,7 +54,7 @@ public class QueueForward<T extends Constraint> {
     forwardMap = Var.createEmptyPositioning();
 
     for (Var var : variables) {
-      forwardMap.put(var, new ArrayList<T>());
+      forwardMap.put(var, new ArrayList<>());
       for (T constraint : constraints) {
 
         if (constraint instanceof UsesQueueVariable && constraint.arguments().contains(var)) {
@@ -92,15 +92,15 @@ public class QueueForward<T extends Constraint> {
   }
 
   public QueueForward(T constraint, Collection<Var> vars) {
-    this(Arrays.asList(constraint), vars);
+    this(Collections.singletonList(constraint), vars);
   }
 
   public QueueForward(Collection<T> constraints, Var var) {
-    this(constraints, Arrays.asList(var));
+    this(constraints, Collections.singletonList(var));
   }
 
   public QueueForward(T constraint, Var var) {
-    this(Arrays.asList(constraint), Arrays.asList(var));
+    this(Collections.singletonList(constraint), Collections.singletonList(var));
   }
 
   public boolean isEmpty() {

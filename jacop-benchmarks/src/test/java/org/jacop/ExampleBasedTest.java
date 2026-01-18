@@ -134,8 +134,8 @@ public class ExampleBasedTest {
 
     for (int i = 0; i <= 150; i = i + 10) {
 
-      String no = String.valueOf(i);
-      while (no.length() < 3) no = "0" + no;
+      StringBuilder no = new StringBuilder(String.valueOf(i));
+      while (no.length() < 3) no.insert(0, "0");
 
       IO.println("Problem file data" + no + ".nin");
       example.readFromFile("src/test/resources/nonogramRepository/data" + no + ".nin");
@@ -297,7 +297,7 @@ public class ExampleBasedTest {
   @Test
   public void testCryptogram() {
 
-    String lines[][] = {
+    String[][] lines = {
       {"CRACK", "HACK", "ERROR"},
       {"PEAR", "APPLE", "GRAPE"},
       {"CRACKS", "TRACKS", "RACKET"},
@@ -313,7 +313,7 @@ public class ExampleBasedTest {
       {"IS", "THIS", "HERE"}
     };
 
-    int noSol[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    int[] noSol = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
     for (int i = 0; i < lines.length; i++) {
 

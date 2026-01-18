@@ -182,7 +182,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   public Iterator<Integer> iterator() {
-    List<Integer> list = new ArrayList<Integer>();
+    List<Integer> list = new ArrayList<>();
     for (int i = 0; i < numElem; ++i) list.add(array[i]);
     return list.iterator();
   }

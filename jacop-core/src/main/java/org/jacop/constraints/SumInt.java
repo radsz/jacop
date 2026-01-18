@@ -76,7 +76,7 @@ public class SumInt extends PrimitiveConstraint {
   boolean reified = true;
 
   /** It specifies a list of variables being summed. */
-  IntVar x[];
+  IntVar[] x;
 
   /** It specifies variable for the overall sum. */
   IntVar sum;
@@ -135,7 +135,7 @@ public class SumInt extends PrimitiveConstraint {
    */
   @Deprecated
   public SumInt(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
+    this(store, variables.toArray(new IntVar[0]), rel, sum);
   }
 
   /**
@@ -157,7 +157,7 @@ public class SumInt extends PrimitiveConstraint {
    * @param sum variable containing the sum of weighted variables.
    */
   public SumInt(List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(variables.toArray(new IntVar[variables.size()]), rel, sum);
+    this(variables.toArray(new IntVar[0]), rel, sum);
   }
 
   @Override

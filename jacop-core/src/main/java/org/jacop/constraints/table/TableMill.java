@@ -47,7 +47,7 @@ public class TableMill {
 
   public static int[][] linear(IntVar[] x, int[] w, int b) {
 
-    ArrayList<int[]> support = new ArrayList<int[]>();
+    ArrayList<int[]> support = new ArrayList<>();
     int[] assignment = new int[x.length];
 
     ArrayList<int[]> table = linearSupport(x, w, b, 0, 0, support, assignment);
@@ -82,7 +82,7 @@ public class TableMill {
 
   public static int[][] elementSupport(IntVar index, int[] list, IntVar value, int offset) {
 
-    ArrayList<int[]> support = new ArrayList<int[]>();
+    ArrayList<int[]> support = new ArrayList<>();
     IntDomain valDom = value.domain;
     for (ValueEnumeration val = index.domain.valueEnumeration(); val.hasMoreElements(); ) {
       int e = val.nextElement();

@@ -60,7 +60,7 @@ public class RegularExpressionParser {
   /** The constant denoting sum expression. */
   public static final int Sum = 4;
 
-  private LexicalAnalyzer lexer; // lexical analyzer that parser uses
+  private final LexicalAnalyzer lexer; // lexical analyzer that parser uses
   private int token;
 
   /**

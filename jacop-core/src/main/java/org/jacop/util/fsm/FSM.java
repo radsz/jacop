@@ -75,8 +75,8 @@ public class FSM {
   /** It creates a Finite State Machine used by Regular constraint constructor. */
   public FSM() {
 
-    finalStates = new HashSet<FSMState>();
-    allStates = new HashSet<FSMState>();
+    finalStates = new HashSet<>();
+    allStates = new HashSet<>();
   }
 
   /**
@@ -169,7 +169,7 @@ public class FSM {
 
     result.allStates.add(result.initState);
 
-    List<FSMState> set = new ArrayList<FSMState>();
+    List<FSMState> set = new ArrayList<>();
 
     set.add(result.initState);
 
@@ -250,17 +250,14 @@ public class FSM {
    */
   public void resize() {
 
-    Set<FSMState> finalStates = new HashSet<FSMState>();
-    Set<FSMState> states = new HashSet<FSMState>();
-
     int id = 0;
 
     for (FSMState s : this.allStates) {
       s.id = id++;
     }
 
-    finalStates.addAll(this.finalStates);
-    states.addAll(this.allStates);
+    Set<FSMState> finalStates = new HashSet<>(this.finalStates);
+    Set<FSMState> states = new HashSet<>(this.allStates);
 
     this.finalStates = finalStates;
     this.allStates = states;
@@ -283,15 +280,15 @@ public class FSM {
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<FSMState>();
+    Set<FSMState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<FSMState>();
+    Set<FSMState> tmp = new HashSet<>();
 
     // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
-    FSMState array[] = new FSMState[stateNumber];
+    FSMState[] array = new FSMState[stateNumber];
     for (FSMState s : this.allStates) array[s.id] = s;
 
     // ----- compute the reachable region of the graph -----
@@ -355,7 +352,7 @@ public class FSM {
 
     IntervalDomain dom;
     int[] tuple = new int[levels];
-    List<int[]> result = new ArrayList<int[]>();
+    List<int[]> result = new ArrayList<>();
 
     for (int i = 0; i < stateNumber; i++)
       for (int j = 0; j < stateNumber; j++)
@@ -431,15 +428,15 @@ public class FSM {
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<FSMState>();
+    Set<FSMState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<FSMState>();
+    Set<FSMState> tmp = new HashSet<>();
 
     // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
-    FSMState array[] = new FSMState[stateNumber];
+    FSMState[] array = new FSMState[stateNumber];
     for (FSMState s : this.allStates) {
       array[s.id] = s;
     }
@@ -587,15 +584,15 @@ public class FSM {
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<FSMState>();
+    Set<FSMState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<FSMState>();
+    Set<FSMState> tmp = new HashSet<>();
 
     // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
-    FSMState array[] = new FSMState[stateNumber];
+    FSMState[] array = new FSMState[stateNumber];
     for (FSMState s : this.allStates) {
       array[s.id] = s;
     }
@@ -678,7 +675,7 @@ public class FSM {
             // There is an arc from state i to state j at level 0.
             ValueEnumeration enumer = outarc[l][i][j].valueEnumeration();
 
-            for (; enumer.hasMoreElements(); ) {
+            while (enumer.hasMoreElements()) {
 
               int nextElement = enumer.nextElement();
 

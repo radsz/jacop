@@ -62,15 +62,15 @@ public class SatTranslation {
 
   public void generate_clause(IntVar[] a1, IntVar[] a2) {
 
-    List<IntVar> a1reduced = new ArrayList<IntVar>();
+    List<IntVar> a1reduced = new ArrayList<>();
     for (IntVar var : a1)
       if (var.min() == 1) return;
       else if (var.max() != 0) a1reduced.add(var);
-    List<IntVar> a2reduced = new ArrayList<IntVar>();
+    List<IntVar> a2reduced = new ArrayList<>();
     for (IntVar intVar : a2)
       if (intVar.max() == 0) return;
       else if (intVar.min() != 1) a2reduced.add(intVar);
-    if (a1reduced.size() == 0 && a2reduced.size() == 0) throw Store.failException;
+    if (a1reduced.isEmpty() && a2reduced.isEmpty()) throw Store.failException;
     if (debug) IO.println("% generate clause, positive: " + a1reduced + ", negative: " + a2reduced);
 
     for (IntVar v : a1reduced) clauses.register(v);
@@ -84,7 +84,7 @@ public class SatTranslation {
       a2IsOne[i] = clauses.cpVarToBoolVar(a2reduced.get(i), 1, true);
 
     int[] clause = new int[a1reduced.size() + a2reduced.size()];
-    for (int i = 0; i < a1reduced.size(); ++i) clause[i] = a1IsOne[i];
+    System.arraycopy(a1IsOne, 0, clause, 0, a1reduced.size());
     for (int i = 0; i < a2reduced.size(); ++i) clause[a1reduced.size() + i] = -a2IsOne[i];
     clauses.addModelClause(clause);
 
@@ -100,7 +100,7 @@ public class SatTranslation {
     // for all i: -ai \/ r
     // for all i:  bi \/ r
     IntVar[] bs = new IntVar[b.length + 1];
-    for (int i = 0; i < b.length; i++) bs[i] = b[i];
+    System.arraycopy(b, 0, bs, 0, b.length);
     bs[b.length] = r;
     generate_clause(a, bs);
     for (IntVar var : a) generate_clause(new IntVar[] {r}, new IntVar[] {var});
@@ -162,9 +162,7 @@ public class SatTranslation {
     } else { // must be a.length > 3
       IntVar[] as = new IntVar[a.length - 2];
       BooleanVar t = new BooleanVar(store);
-      for (int i = 3; i < a.length; i++) {
-        as[i - 3] = a[i];
-      }
+      System.arraycopy(a, 3, as, 0, a.length - 3);
       as[as.length - 1] = t;
       generate_xor(a[0], a[1], a[2], t);
       generate_xor(as, c);
@@ -455,7 +453,7 @@ public class SatTranslation {
 
     StringBuilder buffer = new StringBuilder();
 
-    for (int j : clause) buffer.append(j + " ");
+    for (int j : clause) buffer.append(j).append(" ");
 
     buffer.append("\n");
     return buffer.toString();

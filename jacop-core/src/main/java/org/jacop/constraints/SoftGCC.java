@@ -331,11 +331,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     if (decomposition == null) {
 
-      decomposition = new ArrayList<Constraint>();
+      decomposition = new ArrayList<>();
 
       if (violationMeasure == ViolationMeasure.VALUE_BASED) {
 
-        List<IntVar> costs = new ArrayList<IntVar>(countedValue.length);
+        List<IntVar> costs = new ArrayList<>(countedValue.length);
 
         for (int i = 0; i < countedValue.length; i++) {
 
@@ -375,7 +375,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             decomposition.add(new Count(xVars, hardCounter, countedValue[i]));
 
-            List<int[]> tuples = new ArrayList<int[]>();
+            List<int[]> tuples = new ArrayList<>();
 
             for (ValueEnumeration hard = hardCounter.domain.valueEnumeration();
                 hard.hasMoreElements(); ) {
@@ -415,11 +415,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       return decomposition;
     } else {
 
-      List<Constraint> result = new ArrayList<Constraint>();
+      List<Constraint> result = new ArrayList<>();
 
       if (violationMeasure == ViolationMeasure.VALUE_BASED) {
 
-        List<IntVar> costs = new ArrayList<IntVar>(countedValue.length);
+        List<IntVar> costs = new ArrayList<>(countedValue.length);
 
         for (int i = 0; i < countedValue.length; i++) {
 
@@ -459,7 +459,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             result.add(new Count(xVars, hardCounter, countedValue[i]));
 
-            List<int[]> tuples = new ArrayList<int[]>();
+            List<int[]> tuples = new ArrayList<>();
 
             for (ValueEnumeration hard = hardCounter.domain.valueEnumeration();
                 hard.hasMoreElements(); ) {
@@ -504,7 +504,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     if (decomposition == null || decomposition.size() > 1) {
 
-      decomposition = new ArrayList<Constraint>();
+      decomposition = new ArrayList<>();
 
       // compute union of all domains
       IntDomain all = new IntervalDomain();
@@ -555,7 +555,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     if (hardCounters == null)
       for (int i = 0; i < hardLowerBound.length; i++) {
-        result.append(hardLowerBound[i] + ".." + hardUpperBound[i]);
+        result.append(hardLowerBound[i]).append("..").append(hardUpperBound[i]);
         if (i < hardLowerBound.length - 1) result.append(", ");
       }
     else
@@ -567,7 +567,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     if (softCounters == null)
       for (int i = 0; i < softLowerBound.length; i++) {
-        result.append(softLowerBound[i] + ".." + softUpperBound[i]);
+        result.append(softLowerBound[i]).append("..").append(softUpperBound[i]);
         if (i < softLowerBound.length - 1) result.append(", ");
       }
     else
@@ -577,7 +577,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       }
     result.append("], ");
 
-    result.append(costVar + ", " + violationMeasure + ")");
+    result.append(costVar).append(", ").append(violationMeasure).append(")");
 
     return result.toString();
   }
@@ -612,8 +612,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           // Arcs between x and d nodes.
           IntVar var = xVars[i];
 
-          List<Arc> arcs = new ArrayList<Arc>();
-          List<Domain> domains = new ArrayList<Domain>();
+          List<Arc> arcs = new ArrayList<>();
+          List<Domain> domains = new ArrayList<>();
 
           IntDomain vardom = var.domain;
           for (int j = 0; j < m; j++) {

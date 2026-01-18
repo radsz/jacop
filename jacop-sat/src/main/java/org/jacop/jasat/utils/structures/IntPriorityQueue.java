@@ -40,10 +40,10 @@ package org.jacop.jasat.utils.structures;
 public final class IntPriorityQueue {
 
   // O(1) access to the Node of any int in the PriorityQueue
-  private final IntHashMap<Node> map = new IntHashMap<Node>();
+  private final IntHashMap<Node> map = new IntHashMap<>();
 
   // the root of the priority queue
-  private Node root = null;
+  private final Node root = null;
 
   /**
    * the priority of i is now the old priority (or 0) + the amount. The priority stays {@literal >=}

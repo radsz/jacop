@@ -108,7 +108,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     super.impose(store);
 
-    this.G_no_size = new TimeStamp<Integer>(store, 0);
+    this.G_no_size = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
 

@@ -49,7 +49,7 @@ public class MultiVarHandler implements VarHandler {
 
   public MultiVarHandler(IntVar variable, VarHandler... handlers) {
     this.variable = variable;
-    this.handlers = new ArrayList<VarHandler>(Arrays.asList(handlers));
+    this.handlers = new ArrayList<>(Arrays.asList(handlers));
   }
 
   public void add(VarHandler handler) {

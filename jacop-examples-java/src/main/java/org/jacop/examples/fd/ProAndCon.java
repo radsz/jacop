@@ -66,7 +66,7 @@ public class ProAndCon extends ExampleFD {
    *
    * @param args command arguments (none here)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     ProAndCon example = new ProAndCon();
 
@@ -81,16 +81,16 @@ public class ProAndCon extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    String surname[] = {"Mr._Akerman", "Ms._Baird", "Mr._Chatham", "Ms._Duval", "Mr._Etting"};
+    String[] surname = {"Mr._Akerman", "Ms._Baird", "Mr._Chatham", "Ms._Duval", "Mr._Etting"};
 
     int iAkerman = 0, iBaird = 1, iChatham = 2, iDuval = 3, iEtting = 4;
     int iMotion1 = 0, iMotion2 = 1, iMotion3 = 2, iMotion4 = 3, iMotion5 = 4;
 
     // Votes are encoded as two dimensional array - one index for person,
     // one index for group
-    IntVar vote[][] = new IntVar[5][5];
+    IntVar[][] vote = new IntVar[5][5];
     // Sums votes for each group
-    IntVar sum4Group[] = new IntVar[5];
+    IntVar[] sum4Group = new IntVar[5];
 
     for (int i = 0; i < 5; i++) {
       // Each motion (group of votes) has no of yes votes associated.
@@ -157,9 +157,9 @@ public class ProAndCon extends ExampleFD {
     // We transform unique binary vectors into unique numbers on which we
     // can impose all different.
 
-    int weights[] = {1, 2, 4, 8, 16};
+    int[] weights = {1, 2, 4, 8, 16};
 
-    IntVar weightedVotes[] = new IntVar[5];
+    IntVar[] weightedVotes = new IntVar[5];
     for (int i = 0; i < 5; i++)
       weightedVotes[i] = new IntVar(store, "weightedVotes4" + surname[i], 1, 32);
 
@@ -188,7 +188,7 @@ public class ProAndCon extends ExampleFD {
 
     // We will use Reified constraints to encode this clue.
 
-    IntVar reified[] = new IntVar[5];
+    IntVar[] reified = new IntVar[5];
     for (int i = 0; i < 5; i++) {
       reified[i] = new IntVar(store, "agreeOnVote" + i, 0, 1);
       store.impose(new Reified(new XeqY(vote[iBaird][i], vote[iDuval][i]), reified[i]));

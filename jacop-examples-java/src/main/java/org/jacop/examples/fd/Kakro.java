@@ -67,7 +67,7 @@ public class Kakro extends ExampleFD {
    *
    * @param args no parameters
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Kakro example = new Kakro();
 

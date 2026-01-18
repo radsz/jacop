@@ -213,7 +213,11 @@ public class Matrix {
     boolean square = true;
 
     int n = M.length;
-    for (double[] doubles : M) if (doubles.length != n) square = false;
+    for (double[] doubles : M)
+      if (doubles.length != n) {
+        square = false;
+        break;
+      }
 
     return square;
   }

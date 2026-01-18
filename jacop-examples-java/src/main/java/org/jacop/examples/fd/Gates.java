@@ -54,7 +54,7 @@ public class Gates extends ExampleFD {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();

@@ -1427,7 +1427,7 @@ public class PerfectSquare extends ExampleFD {
    *
    * @param args program parameters, the first one denotes the problem no to be solved.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     if (args.length == 0) {
 
@@ -1476,7 +1476,7 @@ public class PerfectSquare extends ExampleFD {
    * @param args program parameters, the first one denotes the problem no to be solved.
    * @return true if the solution was found, false otherwise.
    */
-  public static boolean testUsingGeost(String args[]) {
+  public static boolean testUsingGeost(String[] args) {
 
     if (args.length == 0) {
 
@@ -1510,7 +1510,7 @@ public class PerfectSquare extends ExampleFD {
    *
    * @param args program parameters, the first one denotes the problem no to be solved.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     PerfectSquare example = new PerfectSquare();
 
@@ -1866,10 +1866,10 @@ public class PerfectSquare extends ExampleFD {
 
     StringBuilder result = new StringBuilder();
 
-    result.append(
-        "Solution to PerfectSquare problem of master size equal to "
-            + squares()[problemNo][0][0]
-            + "\n\n");
+    result
+        .append("Solution to PerfectSquare problem of master size equal to ")
+        .append(squares()[problemNo][0][0])
+        .append("\n\n");
 
     IntVar[] xl = size;
     IntVar[] yl = size;

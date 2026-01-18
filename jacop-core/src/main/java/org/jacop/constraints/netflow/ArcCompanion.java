@@ -81,13 +81,13 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   }
 
   public String toString() {
-    String str = "[offset = " + flowOffset;
-    if (xVar != null) str += ", xVar = " + xVar.id;
-    if (wVar != null) str += ", wVar = " + wVar.id;
+    StringBuilder str = new StringBuilder("[offset = " + flowOffset);
+    if (xVar != null) str.append(", xVar = ").append(xVar.id);
+    if (wVar != null) str.append(", wVar = ").append(wVar.id);
     if (structure != null) {
-      str += ", sVar = " + structure.variable.id;
-      str += ", domain = {";
-      for (IntDomain d : structure.domains) str += d + " ";
+      str.append(", sVar = ").append(structure.variable.id);
+      str.append(", domain = {");
+      for (IntDomain d : structure.domains) str.append(d).append(" ");
     }
     return str + "}]";
   }
@@ -165,10 +165,10 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       if (wVar != null) {
         return Arrays.asList(xVar, wVar);
       } else {
-        return Arrays.asList(xVar);
+        return List.of(xVar);
       }
     } else if (wVar != null) {
-      return Arrays.asList(wVar);
+      return List.of(wVar);
     } else {
       return Collections.emptyList();
     }

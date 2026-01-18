@@ -53,7 +53,7 @@ public class Min extends Constraint implements SatisfiedPresent {
   static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables among which the minimum value is being searched for. */
-  public FloatVar list[];
+  public FloatVar[] list;
 
   /** It specifies variable min, which stores the minimum value within the whole list. */
   public FloatVar min;
@@ -84,7 +84,7 @@ public class Min extends Constraint implements SatisfiedPresent {
    */
   public Min(List<? extends FloatVar> list, FloatVar min) {
 
-    this(list.toArray(new FloatVar[list.size()]), min);
+    this(list.toArray(new FloatVar[0]), min);
   }
 
   @Override

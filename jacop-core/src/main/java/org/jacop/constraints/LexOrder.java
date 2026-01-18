@@ -79,7 +79,7 @@ public class LexOrder extends Constraint
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
-  SimpleHashSet<Integer> indexQueue = new SimpleHashSet<Integer>();
+  SimpleHashSet<Integer> indexQueue = new SimpleHashSet<>();
   Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
   Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
   private Store store;
@@ -204,7 +204,7 @@ public class LexOrder extends Constraint
       store.propagationHasOccurred = false;
 
       SimpleHashSet<Integer> index = indexQueue;
-      indexQueue = new SimpleHashSet<Integer>();
+      indexQueue = new SimpleHashSet<>();
 
       while (!index.isEmpty()) {
         int i = index.removeFirst();

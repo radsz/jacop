@@ -155,7 +155,7 @@ public class Assert {
 
   public static boolean checkStructure(NetworkSimplex g) {
     List<Arc> allArcsForDebug = allArcsForDebug(g);
-    List<Arc> tree = new ArrayList<Arc>();
+    List<Arc> tree = new ArrayList<>();
 
     long del_cost = 0L;
     int N = g.nodes.length + 1;
@@ -238,7 +238,7 @@ public class Assert {
     assert (N == x);
 
     for (Node node : g.nodes) {
-      List<Arc> adjArcs = new ArrayList<Arc>();
+      List<Arc> adjArcs = new ArrayList<>();
       int count = -1;
       for (Arc arc : allArcsForDebug) {
         if (arc.index != NetworkSimplex.DELETED_ARC && (arc.head == node || arc.tail() == node)) {
@@ -270,18 +270,18 @@ public class Assert {
   }
 
   public static boolean checkOptimality(NetworkSimplex g) {
-    String s = "";
+    StringBuilder s = new StringBuilder();
     for (Arc arc : allArcsForDebug(g)) {
       if (arc.index == -3) continue;
 
       // System.out.println("@@ " + arc);
       int reduced = arc.reducedCost();
 
-      if (arc.capacity > 0 && reduced < 0) s += "\n" + arc;
-      if (arc.sister.capacity > 0 && reduced > 0) s += "\n" + arc;
+      if (arc.capacity > 0 && reduced < 0) s.append("\n").append(arc);
+      if (arc.sister.capacity > 0 && reduced > 0) s.append("\n").append(arc);
     }
     // System.out.println(s);
-    if (!s.isEmpty()) assert (false) : "non-optimal arcs:" + s;
+    if (s.length() > 0) assert (false) : "non-optimal arcs:" + s;
 
     return true;
   }
@@ -307,7 +307,7 @@ public class Assert {
   }
 
   public static List<Arc> allArcsForDebug(NetworkSimplex g) {
-    List<Arc> arcs = new ArrayList<Arc>(g.allArcs);
+    List<Arc> arcs = new ArrayList<>(g.allArcs);
     for (Node node : g.nodes) arcs.add(node.artificial);
     return arcs;
   }

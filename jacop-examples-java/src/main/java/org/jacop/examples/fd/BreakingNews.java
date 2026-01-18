@@ -62,7 +62,7 @@ public class BreakingNews extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     BreakingNews example = new BreakingNews();
 
@@ -99,9 +99,9 @@ public class BreakingNews extends ExampleFD {
 
     // Arrays to store variables.
 
-    IntVar reporter[] = new IntVar[4];
-    IntVar location[] = new IntVar[4];
-    IntVar story[] = new IntVar[4];
+    IntVar[] reporter = new IntVar[4];
+    IntVar[] location = new IntVar[4];
+    IntVar[] story = new IntVar[4];
 
     // All variables are created with domain 1..4. Variables from
     // different arrays with the same values denote the same person.
@@ -152,7 +152,7 @@ public class BreakingNews extends ExampleFD {
 
     // 5. Bayonne is either the place that Corey went or the place
     // where the whale was beached, or both.
-    PrimitiveConstraint orConstraint[] = new PrimitiveConstraint[3];
+    PrimitiveConstraint[] orConstraint = new PrimitiveConstraint[3];
     orConstraint[0] = new XeqY(location[iBayonne], reporter[iCorey]);
     orConstraint[1] = new XeqY(location[iBayonne], story[ibeached]);
     orConstraint[2] =

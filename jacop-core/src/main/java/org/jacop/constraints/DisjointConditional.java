@@ -54,7 +54,7 @@ public class DisjointConditional extends Diff {
   public ExclusiveList exclusionList = new ExclusiveList();
 
   List<? extends IntVar>[] condVariables;
-  DisjointCondVar evalRects[];
+  DisjointCondVar[] evalRects;
 
   /**
    * It specifies a diff constraint.
@@ -170,10 +170,10 @@ public class DisjointConditional extends Diff {
       List<? extends IntVar> exceptionCondition) {
 
     this(
-        o1.toArray(new IntVar[o1.size()]),
-        o2.toArray(new IntVar[o2.size()]),
-        l1.toArray(new IntVar[l1.size()]),
-        l2.toArray(new IntVar[l2.size()]),
+        o1.toArray(new IntVar[0]),
+        o2.toArray(new IntVar[0]),
+        l1.toArray(new IntVar[0]),
+        l2.toArray(new IntVar[0]),
         exceptionIndices,
         exceptionCondition);
   }
@@ -415,10 +415,10 @@ public class DisjointConditional extends Diff {
     long area = 0;
     int totalNumberOfRectangles = 0;
     int dim = r.dim();
-    int startMin[] = new int[dim];
-    int stopMax[] = new int[dim];
-    int minLength[] = new int[dim];
-    int r_min[] = new int[dim], r_max[] = new int[dim];
+    int[] startMin = new int[dim];
+    int[] stopMax = new int[dim];
+    int[] minLength = new int[dim];
+    int[] r_min = new int[dim], r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MaxInt;
@@ -442,7 +442,7 @@ public class DisjointConditional extends Diff {
       boolean use = true, minLength0 = false;
       int s_min, s_max, start, stop;
       int m = 0, j = 0;
-      int sOriginMin[] = new int[dim], sOriginMax[] = new int[dim], sLengthMin[] = new int[dim];
+      int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
 
       while (overlap && m < dim) {
         // check if domains of r and s overlap
@@ -608,10 +608,10 @@ public class DisjointConditional extends Diff {
     int rLengthJMin = r.length[j].min(), rLengthIMin = r.length[i].min();
     int barierSize = 0;
 
-    if (ProfileCandidates.size() != 0 && doProfile)
+    if (!ProfileCandidates.isEmpty() && doProfile)
       profileNarrowingCondition(i, r, ProfileCandidates);
 
-    if (UsedRect.size() != 0) {
+    if (!UsedRect.isEmpty()) {
 
       IntRectangle[] UsedRectArray = new IntRectangle[UsedRect.size()];
 
@@ -649,7 +649,7 @@ public class DisjointConditional extends Diff {
           }
         }
 
-        if (ConsideredRect.size() != 0
+        if (!ConsideredRect.isEmpty()
             && rSize < (rectSize + (rLengthJMin - 1) * ConsideredRect.size())) {
 
           IntDomain rOriginDom = r.origin[i].dom();
@@ -710,7 +710,7 @@ public class DisjointConditional extends Diff {
         }
       }
 
-      if (ConsideredRectDur.size() != 0
+      if (!ConsideredRectDur.isEmpty()
           && rSize < (barierSize + (rLengthJMin - 1) * ConsideredRectDur.size())) {
 
         IntRectangle[] rects = new IntRectangle[ConsideredRectDur.size()];
@@ -968,7 +968,7 @@ public class DisjointConditional extends Diff {
             ProfileCandidates,
             exclusionList);
 
-        if (Profile.size() != 0) {
+        if (!Profile.isEmpty()) {
           if (trace) {
             IO.println(" *** " + r + "\n" + ProfileCandidates);
             IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
@@ -989,7 +989,7 @@ public class DisjointConditional extends Diff {
     while (sat && i < rectangles.length) {
       recti = rectangles[i];
       int j = 0;
-      Rectangle toEvaluate[] = ((DisjointCondVarValue) evalRects[i].value()).Rects;
+      Rectangle[] toEvaluate = ((DisjointCondVarValue) evalRects[i].value()).Rects;
       while (sat && j < toEvaluate.length) {
         rectj = toEvaluate[j];
         sat = sat && !recti.domOverlap(rectj);

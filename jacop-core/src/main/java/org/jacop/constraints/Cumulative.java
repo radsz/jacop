@@ -78,15 +78,15 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
    */
   private Profile minProfile = null;
 
-  private CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
-  private Task Ts[];
-  private Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
+  private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
+  private final Task[] Ts;
+  private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
 
-  private Comparator<IntDomain> domainMinComparator = (o1, o2) -> (o1.min() - o2.min());
+  private final Comparator<IntDomain> domainMinComparator = (o1, o2) -> (o1.min() - o2.min());
 
-  private Comparator<Task> taskAscEctComparator = (o1, o2) -> (o1.ect() - o2.ect());
+  private final Comparator<Task> taskAscEctComparator = (o1, o2) -> (o1.ect() - o2.ect());
 
-  private Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
+  private final Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
 
   /**
    * It creates a cumulative constraint.
@@ -197,9 +197,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit,
         true,
         true);
@@ -242,9 +242,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       boolean profile) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit,
         edgeFinding,
         profile);
@@ -284,7 +284,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     long a = 0;
     boolean afterS = true;
 
-    if (S.size() > 0) {
+    if (!S.isEmpty()) {
       if (debug) IO.println("Checking if " + l + " can be after " + S);
       for (Task t : S) {
         startS = Math.min(startS, t.est());
@@ -305,9 +305,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int a = 0;
     boolean beforeS = true;
 
-    if (S.size() > 0) {
-      if (debug)
-        IO.println("Checking if " + l.toString() + " can be before tasks in " + S.toString());
+    if (!S.isEmpty()) {
+      if (debug) IO.println("Checking if " + l.toString() + " can be before tasks in " + S);
       for (Task t : S) {
         completionS = Math.max(completionS, t.lct());
         a += t.areaMin();
@@ -334,7 +333,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     long a = 0, larea = 0;
     boolean betweenS = true;
 
-    if (S.size() > 0) {
+    if (!S.isEmpty()) {
       if (debug) IO.println("Checking if " + l + " can be between tasks in " + S);
       for (Task t : S) {
         completionS = Math.max(completionS, t.lct());
@@ -444,9 +443,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       // update upper bound if tt cannot be the last in S
       for (Task t : S) notLast(store, t, S);
 
-      if (S.size() != 0 && !fitTasksAfter(S, est0)) throw Store.failException;
+      if (!S.isEmpty() && !fitTasksAfter(S, est0)) throw Store.failException;
 
-      while (S.size() != 0 && L.size() != 0) {
+      while (!S.isEmpty() && !L.isEmpty()) {
         // Select task l from L with the maximal area
         int indexOfl = maxArea(L);
         Task l = L.get(indexOfl);
@@ -610,9 +609,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       // update lower bound if tt cannot be the first in S
       for (Task t : S) notFirst(store, t, S);
 
-      if (S.size() != 0 && !fitTasksBefore(S, lct0)) throw Store.failException;
+      if (!S.isEmpty() && !fitTasksBefore(S, lct0)) throw Store.failException;
 
-      while (S.size() != 0 && L.size() != 0) {
+      while (!S.isEmpty() && !L.isEmpty()) {
         // Select task l from L with the maximal area
         int indexOfl = maxArea(L);
         Task l = L.get(indexOfl);

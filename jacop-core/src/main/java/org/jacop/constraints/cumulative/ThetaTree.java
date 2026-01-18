@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 /*
  * Implements ThetaTree and operations on this tree for Cumulative constraint
@@ -53,7 +54,7 @@ class ThetaTree extends Tree {
   // list of ordered tasks
   private TaskView[] orderedTasks;
 
-  private ThetaNode empty = new ThetaNode();
+  private final ThetaNode empty = new ThetaNode();
 
   public ThetaTree() {}
 
@@ -252,7 +253,8 @@ class ThetaTree extends Tree {
 
   public void printTree(String name) {
 
-    try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
+    try (PrintStream out =
+        new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
       out.print(toGraph(name));
       // out.close(); not needed; auto close
     } catch (IOException _) {

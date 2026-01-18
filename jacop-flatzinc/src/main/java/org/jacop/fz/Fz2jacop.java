@@ -31,7 +31,7 @@
 package org.jacop.fz;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -96,10 +96,10 @@ public class Fz2jacop {
 
     } catch (FailException _) {
       IO.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
-      if (!opt.getOutputFilename().equals("")) {
+      if (!opt.getOutputFilename().isEmpty()) {
         String st = "=====UNSATISFIABLE=====";
         try {
-          Files.write(Path.of(opt.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
+          Files.write(Path.of(opt.getOutputFilename()), st.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e1) {
           e1.printStackTrace();
         }
@@ -113,12 +113,10 @@ public class Fz2jacop {
       }
     } catch (ArithmeticException e) {
       System.err.println("%% Evaluation of model resulted in an overflow.");
-      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.toString());
+      if (e.getStackTrace().length > 0) IO.println("%%\t" + e);
     } catch (IllegalArgumentException e) {
-      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.toString());
-    } catch (ParseException e) {
-      IO.println("%% Parser exception " + e);
-    } catch (TokenMgrError e) {
+      if (e.getStackTrace().length > 0) IO.println("%%\t" + e);
+    } catch (ParseException | TokenMgrError e) {
       IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
       IO.println("%% JaCoP internal error. Array out of bound exception " + e);

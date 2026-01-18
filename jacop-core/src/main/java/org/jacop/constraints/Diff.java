@@ -53,7 +53,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   static AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the list of rectangles which are of interest for this diff constraint. */
-  public Rectangle rectangles[];
+  public Rectangle[] rectangles;
 
   protected Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
       (dim ->
@@ -184,10 +184,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[o1.size()]),
-        o2.toArray(new IntVar[o2.size()]),
-        l1.toArray(new IntVar[l1.size()]),
-        l2.toArray(new IntVar[l2.size()]));
+        o1.toArray(new IntVar[0]),
+        o2.toArray(new IntVar[0]),
+        l1.toArray(new IntVar[0]),
+        l2.toArray(new IntVar[0]));
   }
 
   /**
@@ -264,10 +264,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     long commonArea = 0;
     int totalNumberOfRectangles = 0;
     int dim = r.dim;
-    int startMin[] = new int[dim];
-    int stopMax[] = new int[dim];
-    int minLength[] = new int[dim];
-    int r_min[] = new int[dim], r_max[] = new int[dim];
+    int[] startMin = new int[dim];
+    int[] stopMax = new int[dim];
+    int[] minLength = new int[dim];
+    int[] r_min = new int[dim], r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       startMin[i] = IntDomain.MaxInt;
       stopMax[i] = 0;
@@ -278,7 +278,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       r_max[i] = rOriginDom.max() + r.length[i].max();
     }
 
-    int sOriginMin[] = new int[dim], sOriginMax[] = new int[dim], sLengthMin[] = new int[dim];
+    int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
 
     for (Rectangle s : rectangles) {
 
@@ -449,12 +449,12 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MaxInt);
 
-    if (ProfileCandidates.size() != 0 && doProfile) profileNarrowing(i, r, ProfileCandidates);
+    if (!ProfileCandidates.isEmpty() && doProfile) profileNarrowing(i, r, ProfileCandidates);
 
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MaxInt);
 
-    if (UsedRect.size() != 0) {
+    if (!UsedRect.isEmpty()) {
 
       IntRectangle[] UsedRectArray = new IntRectangle[UsedRect.size()];
 
@@ -499,7 +499,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           }
         }
 
-        if (ConsideredRect.size() != 0
+        if (!ConsideredRect.isEmpty()
         // && rSize < (rectSize + (rLengthJMin - 1) *
         // ConsideredRect.size())
         ) {
@@ -813,7 +813,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         Profile.make(
             j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), ProfileCandidates);
 
-        if (Profile.size() != 0) {
+        if (!Profile.isEmpty()) {
           if (trace) {
             IO.println(r + "\n" + ProfileCandidates);
             IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);

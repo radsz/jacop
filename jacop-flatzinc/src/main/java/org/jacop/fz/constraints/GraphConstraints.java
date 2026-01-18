@@ -31,6 +31,7 @@
 package org.jacop.fz.constraints;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import org.jacop.constraints.*;
 import org.jacop.core.*;
@@ -413,7 +414,7 @@ class GraphConstraints implements ParserTreeConstants {
       Object constraint = cons.newInstance(store, g, type, index_min, c, cost);
       support.pose((Constraint) constraint);
 
-    } catch (java.lang.ClassNotFoundException _) {
+    } catch (ClassNotFoundException | InvocationTargetException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     } catch (java.lang.NoSuchMethodException _) {
@@ -423,9 +424,6 @@ class GraphConstraints implements ParserTreeConstants {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     } catch (java.lang.IllegalAccessException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    } catch (java.lang.reflect.InvocationTargetException _) {
       throw new RuntimeException(
           "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
     }

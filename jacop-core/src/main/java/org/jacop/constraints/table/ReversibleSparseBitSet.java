@@ -65,9 +65,9 @@ public class ReversibleSparseBitSet {
   void init(Store store, long[] w) {
     int n = w.length;
 
-    limit = new TimeStamp<Integer>(store, n - 1);
+    limit = new TimeStamp<>(store, n - 1);
 
-    words = new TimeStamp<long[]>(store, w);
+    words = new TimeStamp<>(store, w);
 
     index = new int[n];
     for (int i = 0; i < n; i++) index[i] = i;
@@ -176,18 +176,18 @@ public class ReversibleSparseBitSet {
 
     long[] wrds = words.value();
     int n = limit.value() + 1;
-    s.append("limit = " + (n - 1) + "\n");
+    s.append("limit = ").append(n - 1).append("\n");
     for (int i = 0; i < n; i++) {
       int offset = index[i];
-      s.append(offset + ": ");
+      s.append(offset).append(": ");
       s.append("0x%08X".formatted(wrds[offset]));
       if (i < n - 1) s.append(", ");
     }
 
     s.append("\nmask: ");
     for (int i = 0; i < mask.length; i++) {
-      s.append(i + ": ");
-      s.append("0x%08X".formatted(mask[i]) + ", ");
+      s.append(i).append(": ");
+      s.append("0x%08X".formatted(mask[i])).append(", ");
     }
     return s.toString();
   }

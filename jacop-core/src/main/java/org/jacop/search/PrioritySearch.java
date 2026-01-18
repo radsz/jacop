@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import org.jacop.constraints.XltC;
@@ -105,7 +106,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           && dfs[i].heuristic == null)
         throw new RuntimeException("heuristic in depth first search must be set");
 
-      search[2 * i + 1] = new LinkingSearch<T>(this);
+      search[2 * i + 1] = new LinkingSearch<>(this);
       DepthFirstSearch<T> last = lastSearch(dfs[i]);
       last.addChildSearch(search[2 * i + 1]);
       search[2 * i + 1].setMasterSearch(last);
@@ -217,7 +218,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         StringBuffer buf = new StringBuffer();
 
-        buf.append("Depth First Search " + id + "\n");
+        buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
         buf.append("Nodes : ").append(nodes).append("\n");
         buf.append("Decisions : ").append(decisions).append("\n");
@@ -583,14 +584,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           vs = getVariables((PrioritySearch<T>) ps.search[2 * j]);
         }
 
-        for (T v : vs) vars.add(v);
+        vars.addAll(Arrays.asList(vs));
 
       } else {
         java.util.Map<T, Integer> position = heuristic.getVariablesMapping();
 
-        for (T current : position.keySet()) {
-          vars.add(current);
-        }
+        vars.addAll(position.keySet());
       }
     }
 
@@ -635,11 +634,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         .append(comparator.getClass().getName());
 
     if (tieBreak == null) b.append(", null");
-    else b.append(", " + tieBreak.getClass().getName());
+    else b.append(", ").append(tieBreak.getClass().getName());
 
     b.append(", [");
     for (int i = 0; i < search.length / 2; i++) {
-      b.append(search[2 * i] + ", ");
+      b.append(search[2 * i]).append(", ");
     }
     b.append("])");
 
@@ -781,24 +780,16 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
             noSolutions += childSearch.getSolutionListener().solutionsNo();
             constraineCostFromChild(childSearch);
-            if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
 
-            master.solutionListener.executeAfterSolution(this, null);
-
-            visited.set(index, false);
-            return false;
           } else { // no child search
 
             constraineCost();
             noSolutions++;
-
-            if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
-
-            master.solutionListener.executeAfterSolution(this, null);
-
-            visited.set(index, false);
-            return false;
           }
+          if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
+          master.solutionListener.executeAfterSolution(this, null);
+          visited.set(index, false);
+          return false;
         } else if (master.childSearches != null) { // no optimization and child search
           DepthFirstSearch<T> childSearch = null;
 

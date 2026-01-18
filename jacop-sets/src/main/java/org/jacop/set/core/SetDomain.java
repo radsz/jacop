@@ -325,7 +325,10 @@ public abstract class SetDomain extends Domain {
 
       if (modelConstraintsToEvaluate[pruningEvent] > 0)
         for (int i = pruningEventConstraints.length - 1; i >= 0 && !alreadyImposed; i--)
-          if (pruningEventConstraints[i] == C) alreadyImposed = true;
+          if (pruningEventConstraints[i] == C) {
+            alreadyImposed = true;
+            break;
+          }
 
       int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
 
@@ -395,7 +398,7 @@ public abstract class SetDomain extends Domain {
         result.modelConstraints = modelConstraints;
 
         result.searchConstraints =
-            new ArrayList<Constraint>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+            new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
         result.searchConstraintsCloned = true;
         result.stamp = storeLevel;
         result.previousDomain = this;
@@ -419,14 +422,13 @@ public abstract class SetDomain extends Domain {
           Constraint firstSatisfied = searchConstraints.get(searchConstraintsToEvaluate);
           searchConstraints.set(searchConstraintsToEvaluate, C);
           searchConstraints.add(firstSatisfied);
-          searchConstraintsToEvaluate++;
         } else {
           searchConstraints =
-              new ArrayList<Constraint>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+              new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
           searchConstraintsCloned = true;
           searchConstraints.add(C);
-          searchConstraintsToEvaluate++;
         }
+        searchConstraintsToEvaluate++;
       }
     }
   }
@@ -553,9 +555,12 @@ public abstract class SetDomain extends Domain {
         }
 
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-        for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
-          newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
-        }
+        System.arraycopy(
+            modelConstraintsToEvaluate,
+            0,
+            newModelConstraintsToEvaluate,
+            0,
+            modelConstraintsToEvaluate.length);
 
         newModelConstraintsToEvaluate[pruningEvent]--;
 
@@ -592,9 +597,12 @@ public abstract class SetDomain extends Domain {
         }
 
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-        for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
-          newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
-        }
+        System.arraycopy(
+            modelConstraintsToEvaluate,
+            0,
+            newModelConstraintsToEvaluate,
+            0,
+            modelConstraintsToEvaluate.length);
 
         newModelConstraintsToEvaluate[pruningEvent]--;
 
@@ -634,9 +642,12 @@ public abstract class SetDomain extends Domain {
         }
 
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
-        for (int k = 0; k < modelConstraintsToEvaluate.length; k++) {
-          newModelConstraintsToEvaluate[k] = modelConstraintsToEvaluate[k];
-        }
+        System.arraycopy(
+            modelConstraintsToEvaluate,
+            0,
+            newModelConstraintsToEvaluate,
+            0,
+            modelConstraintsToEvaluate.length);
 
         newModelConstraintsToEvaluate[pruningEvent]--;
 

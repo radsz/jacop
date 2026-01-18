@@ -43,7 +43,6 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 import org.jacop.search.Search;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -145,47 +144,5 @@ public class QueueForwardTest {
     } else IO.println("*** No");
 
     assertEquals(false, result);
-  }
-
-  @Test
-  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-  public void testQueueForwardNoException() {
-    // This test requires Fz2jacop from jacop-flatzinc module
-    // Moved to jacop-flatzinc module to avoid circular dependency
-  }
-
-  @Test
-  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-  public void testConstraintImposition() {
-    // This test requires Fz2jacop from jacop-flatzinc module
-    // Moved to jacop-flatzinc module to avoid circular dependency
-  }
-
-  @Test
-  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-  public void testBoundEventCorrection() {
-    // This test requires Fz2jacop from jacop-flatzinc module
-    // Moved to jacop-flatzinc module to avoid circular dependency
-  }
-
-  @Test
-  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-  public void testWolfCabbage() {
-    // This test requires Fz2jacop from jacop-flatzinc module
-    // Moved to jacop-flatzinc module to avoid circular dependency
-  }
-
-  @Test
-  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-  public void testPatternSetMining() {
-    // This test requires Fz2jacop from jacop-flatzinc module
-    // Moved to jacop-flatzinc module to avoid circular dependency
-  }
-
-  @Test
-  @Ignore("Requires jacop-flatzinc module and test resources - moved to jacop-flatzinc module")
-  public void testRemoveConstraint() {
-    // This test requires Fz2jacop from jacop-flatzinc module
-    // Moved to jacop-flatzinc module to avoid circular dependency
   }
 }

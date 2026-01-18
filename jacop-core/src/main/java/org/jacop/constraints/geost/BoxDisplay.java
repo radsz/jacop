@@ -214,6 +214,7 @@ public class BoxDisplay extends JFrame {
       for (int i = 2; shouldDraw && i < b.origin.length; i++) {
         if (b.origin[i] > 0 || b.origin[i] + b.length[i] < 0) {
           shouldDraw = false;
+          break;
         }
       }
     }

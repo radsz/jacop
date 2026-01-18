@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,7 +62,7 @@ public class Cryptogram extends ExampleFD {
   /** It specifies the file which contains the puzzle to be solved. */
   public String filename;
 
-  public String lines[] = new String[maxInputLines];
+  public String[] lines = new String[maxInputLines];
 
   public int noLines;
 
@@ -81,7 +82,7 @@ public class Cryptogram extends ExampleFD {
    *
    * @param args no arguments read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Cryptogram example = new Cryptogram();
 
@@ -99,11 +100,12 @@ public class Cryptogram extends ExampleFD {
       try {
 
         BufferedReader in =
-            new BufferedReader(new InputStreamReader(new FileInputStream(filename), "UTF-8"));
+            new BufferedReader(
+                new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
         String str;
 
         while ((str = in.readLine()) != null)
-          if (!str.trim().equals("")) {
+          if (!str.trim().isEmpty()) {
 
             int commentPosition = str.indexOf("//");
             if (commentPosition == 0) continue;

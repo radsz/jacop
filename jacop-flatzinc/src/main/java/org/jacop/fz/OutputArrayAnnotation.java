@@ -118,7 +118,7 @@ public class OutputArrayAnnotation {
         if (v.singleton()) {
           IntDomain glb = var.dom().glb();
           if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
-            s.append(glb.min() + ".." + glb.max());
+            s.append(glb.min()).append("..").append(glb.max());
           } else {
             s.append("{");
             for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {

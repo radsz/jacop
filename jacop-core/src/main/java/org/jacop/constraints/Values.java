@@ -84,7 +84,7 @@ public class Values extends Constraint implements SatisfiedPresent {
    * @param count specifies the number of different values in the list.
    */
   public Values(List<? extends IntVar> list, IntVar count) {
-    this(list.toArray(new IntVar[list.size()]), count);
+    this(list.toArray(new IntVar[0]), count);
   }
 
   @Override

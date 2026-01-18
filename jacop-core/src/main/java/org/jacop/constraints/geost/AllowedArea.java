@@ -204,7 +204,7 @@ public class AllowedArea extends InternalConstraint {
 
   @Override
   public Collection<Var> definingVariables() {
-    return new ArrayList<Var>(0);
+    return new ArrayList<>(0);
   }
 
   @Override

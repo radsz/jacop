@@ -63,26 +63,26 @@ public class FIR extends Filter {
 
     name = "FIR";
 
-    int dependencies[][] = {
+    int[][] dependencies = {
       {0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}, {9, 10}, {10, 2}, {11, 12},
       {12, 3}, {13, 14}, {14, 4}, {15, 16}, {16, 5}, {17, 18}, {18, 6}, {19, 20}, {20, 7}, {21, 22},
       {22, 8}
     };
     this.dependencies = dependencies;
 
-    int ids[] = {
+    int[] ids = {
       addId, mulId, addId, addId, addId, addId, addId, addId, addId, addId, mulId, addId, mulId,
       addId, mulId, addId, mulId, addId, mulId, addId, mulId, addId, mulId
     };
     this.ids = ids;
 
-    int last[] = {8};
+    int[] last = {8};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(23);
+    List<String> names = new ArrayList<>(23);
 
     names.add("+1");
     names.add("*2");
@@ -113,7 +113,7 @@ public class FIR extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(23);
+    List<String> names = new ArrayList<>(23);
 
     names.add("+1");
     names.add("*2");

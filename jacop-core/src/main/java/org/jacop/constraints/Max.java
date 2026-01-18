@@ -54,7 +54,7 @@ public class Max extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a list of variables among which a maximum value is being searched for. */
-  public final IntVar list[];
+  public final IntVar[] list;
 
   /** It specifies variable max which stores the maximum value present in the list. */
   public final IntVar max;
@@ -95,7 +95,7 @@ public class Max extends Constraint implements SatisfiedPresent {
    * @param variables the array of variables for which the maximum value is imposed.
    */
   public Max(List<? extends IntVar> variables, IntVar max) {
-    this(variables.toArray(new IntVar[variables.size()]), max);
+    this(variables.toArray(new IntVar[0]), max);
   }
 
   @Override

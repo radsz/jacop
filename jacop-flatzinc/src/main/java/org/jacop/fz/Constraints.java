@@ -158,24 +158,16 @@ public class Constraints implements ParserTreeConstants {
 
         try {
           throw e.getCause();
-        } catch (FailException fe) {
+        } catch (FailException
+            | TrivialSolution
+            | StackOverflowError
+            | OutOfMemoryError
+            | ArrayIndexOutOfBoundsException
+            | TokenMgrError
+            | ParseException
+            | IllegalArgumentException
+            | ArithmeticException fe) {
           throw fe;
-        } catch (ArithmeticException ae) {
-          throw ae;
-        } catch (IllegalArgumentException ie) {
-          throw ie;
-        } catch (ParseException pe) {
-          throw pe;
-        } catch (TokenMgrError te) {
-          throw te;
-        } catch (ArrayIndexOutOfBoundsException ie) {
-          throw ie;
-        } catch (OutOfMemoryError me) {
-          throw me;
-        } catch (StackOverflowError stack) {
-          throw stack;
-        } catch (TrivialSolution trivial) {
-          throw trivial;
         }
       }
     }

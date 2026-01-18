@@ -86,9 +86,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public Network(List<Node> nodes, List<Arc> arcs) {
 
     super(nodes, arcs);
-    this.deletedArcs = new ArrayList<Arc>();
-    this.modifiedArcs = new ArrayList<ArcCompanion>();
-    this.lastModifiedArcs = new LinkedHashSet<ArcCompanion>();
+    this.deletedArcs = new ArrayList<>();
+    this.modifiedArcs = new ArrayList<>();
+    this.lastModifiedArcs = new LinkedHashSet<>();
     this.costOffset = 0L;
     // this.isMinimizing = true;
 
@@ -97,8 +97,8 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public void initialize(Store store) {
 
     this.store = store;
-    this.deletedSize = new TimeStamp<Integer>(store, 0);
-    this.modifiedSize = new TimeStamp<Integer>(store, 0);
+    this.deletedSize = new TimeStamp<>(store, 0);
+    this.modifiedSize = new TimeStamp<>(store, 0);
   }
 
   // adds an arc at its lower or upper bound

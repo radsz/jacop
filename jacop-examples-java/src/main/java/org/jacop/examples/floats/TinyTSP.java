@@ -49,7 +49,7 @@ public class TinyTSP {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     TinyTSP example = new TinyTSP();
 
@@ -89,7 +89,7 @@ public class TinyTSP {
 
     FloatVar route = new FloatVar(store, "route", 0.0, MAX_FLOAT);
     FloatVar[] var = new FloatVar[N + 1];
-    for (int i = 0; i < N; i++) var[i] = dist[i];
+    System.arraycopy(dist, 0, var, 0, N);
     var[N] = route;
 
     store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));

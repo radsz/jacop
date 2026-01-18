@@ -65,10 +65,10 @@ public class Linear extends Constraint
   public byte relationType;
 
   /** It specifies a list of variables being summed. */
-  public IntVar list[];
+  public IntVar[] list;
 
   /** It specifies a list of weights associated with the variables being summed. */
-  public int weights[];
+  public int[] weights;
 
   /** It specifies variable for the overall sum. */
   public int sum;
@@ -88,10 +88,10 @@ public class Linear extends Constraint
   boolean reified = true;
 
   /** The sum of grounded variables. */
-  private TimeStamp<Integer> sumGrounded;
+  private final TimeStamp<Integer> sumGrounded;
 
   /** The position for the next grounded variable. */
-  private TimeStamp<Integer> nextGroundedPosition;
+  private final TimeStamp<Integer> nextGroundedPosition;
 
   /**
    * It constructs the constraint Linear.
@@ -142,8 +142,8 @@ public class Linear extends Constraint
       i++;
     }
 
-    sumGrounded = new TimeStamp<Integer>(store, 0);
-    nextGroundedPosition = new TimeStamp<Integer>(store, 0);
+    sumGrounded = new TimeStamp<>(store, 0);
+    nextGroundedPosition = new TimeStamp<>(store, 0);
     int capacity = list.length * 4 / 3 + 1;
     if (capacity < 16) capacity = 16;
 
@@ -179,7 +179,7 @@ public class Linear extends Constraint
       Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
     this(
         store,
-        variables.toArray(new IntVar[variables.size()]),
+        variables.toArray(new IntVar[0]),
         weights.stream().mapToInt(i -> i).toArray(),
         rel,
         sum);

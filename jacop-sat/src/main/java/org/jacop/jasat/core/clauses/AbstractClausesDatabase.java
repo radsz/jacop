@@ -261,7 +261,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    * @return a String representation of the database
    */
   public String toString(String prefix) {
-    return prefix + toString();
+    return prefix + this;
   }
 
   /** print the content of the Database in a nice way */

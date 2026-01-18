@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -99,7 +100,7 @@ public class Diet extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Diet diet = new Diet();
     diet.model();
@@ -171,7 +172,7 @@ public class Diet extends ExampleFD {
     // store.impose( new SumWeight(x, price, cost) );
 
     vars = new ArrayList<IntVar>();
-    for (IntVar v : x) vars.add(v);
+    vars.addAll(Arrays.asList(x));
   }
 
   /** Imposes the model of the problem. */
@@ -200,6 +201,6 @@ public class Diet extends ExampleFD {
     }
 
     vars = new ArrayList<IntVar>();
-    for (IntVar v : x) vars.add(v);
+    vars.addAll(Arrays.asList(x));
   }
 }

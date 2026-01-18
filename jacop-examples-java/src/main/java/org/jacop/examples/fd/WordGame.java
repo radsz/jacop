@@ -34,6 +34,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Scanner;
 import org.jacop.constraints.ExtensionalSupportMDD;
@@ -63,7 +64,7 @@ public class WordGame {
 
   public static String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
 
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Store store = new Store();
 
@@ -141,9 +142,10 @@ public class WordGame {
     MDD resultForWordSize = new MDD(list);
 
     try (BufferedReader inr =
-        new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
       String str;
-      while ((str = inr.readLine()) != null && str.length() > 0) {
+      while ((str = inr.readLine()) != null && !str.isEmpty()) {
         str = str.trim();
         // ignore comments starting with either # or %
         if (str.startsWith("#") || str.startsWith("%")) {

@@ -50,7 +50,7 @@ public class Cyclohexane {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Cyclohexane example = new Cyclohexane();
 

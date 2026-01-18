@@ -64,7 +64,7 @@ public class BlueberryMuffins extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     BlueberryMuffins example = new BlueberryMuffins();
 
@@ -113,10 +113,10 @@ public class BlueberryMuffins extends ExampleFD {
 
     // Arrays for variables.
 
-    IntVar person[] = new IntVar[4];
-    IntVar last[] = new IntVar[4];
-    IntVar profession[] = new IntVar[4];
-    IntVar muffins[] = new IntVar[4];
+    IntVar[] person = new IntVar[4];
+    IntVar[] last = new IntVar[4];
+    IntVar[] profession = new IntVar[4];
+    IntVar[] muffins = new IntVar[4];
 
     // All variables are created with domain 0..3. Variables from
     // different arrays with the same values denote the same person.

@@ -90,44 +90,45 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    * The array which stores the first computed matching, which may not take into account the lower
    * bound of count variables.
    */
-  private int[] match1;
+  private final int[] match1;
 
   /**
    * The array which stores the second computed matching, which may not take into account the upper
    * bound of count variables.
    */
-  private int[] match2;
+  private final int[] match2;
 
   /**
    * The array which stores the third proper matching, constructed from the first one and second one
    * so both lower and upper bounds are respected.
    */
-  private int[] match3;
+  private final int[] match3;
 
-  private int[] match1XOrder;
-  private int[] match2XOrder;
-  private int[] nbOfMatchPerY;
-  private int[] compOfY;
-  private XDomain[] xDomain;
-  private int[][] yDomain;
-  private int xSize;
-  private int ySize;
-  private ArrayDeque<Integer> S1;
-  private ArrayDeque<Component> S2;
-  private PriorityQueue<XDomain> pFirst, pSecond;
-  private PriorityQueue<Integer> pCount;
+  private final int[] match1XOrder;
+  private final int[] match2XOrder;
+  private final int[] nbOfMatchPerY;
+  private final int[] compOfY;
+  private final XDomain[] xDomain;
+  private final int[][] yDomain;
+  private final int xSize;
+  private final int ySize;
+  private final ArrayDeque<Integer> S1;
+  private final ArrayDeque<Component> S2;
+  private final PriorityQueue<XDomain> pFirst;
+  private final PriorityQueue<XDomain> pSecond;
+  private final PriorityQueue<Integer> pCount;
   private int[] domainHash;
-  private Map<IntVar, Integer> xNodesHash;
-  private Set<IntVar> xVariableToChange;
+  private final Map<IntVar, Integer> xNodesHash;
+  private final Set<IntVar> xVariableToChange;
   private int stampValue;
-  private Comparator<XDomain> compareLowerBound =
+  private final Comparator<XDomain> compareLowerBound =
       (o1, o2) -> {
         if (o1.min() < o2.min()) return -1;
         else if (o1.min() > o2.min()) return 1;
         return 0;
       };
 
-  private Comparator<XDomain> sortPriorityMinOrder =
+  private final Comparator<XDomain> sortPriorityMinOrder =
       (o1, o2) -> {
         if (o1.max() < o2.max()) return -1;
         else if (o1.max() > o2.max()) return 1;
@@ -135,7 +136,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         return 0;
       };
 
-  private Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
+  private final Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
   private Set<IntVar> zeroCounters;
 
   /**
@@ -202,7 +203,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    */
   public GCC(List<? extends IntVar> x, List<? extends IntVar> counters) {
 
-    this(x.toArray(new IntVar[x.size()]), counters.toArray(new IntVar[counters.size()]));
+    this(x.toArray(new IntVar[0]), counters.toArray(new IntVar[0]));
   }
 
   private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
@@ -295,7 +296,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       // Fix suggested by Radek (moved from queueVariable)
       Set<Var> changedVariablesCopy = this.changedVariables;
-      this.changedVariables = new HashSet<Var>();
+      this.changedVariables = new HashSet<>();
       for (Var var : changedVariablesCopy) {
         // if v is singleton and is an X variable
         if (var.singleton() && xNodesHash.containsKey(var)) {
@@ -480,7 +481,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int i = 0;
     do {
 
-      Integer j = venum.nextElement();
+      int j = venum.nextElement();
       domainHash[i++] = j;
 
     } while (venum.hasMoreElements());
@@ -511,7 +512,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     if (!grounded()) return false;
 
-    int count[] = new int[domainHash.length];
+    int[] count = new int[domainHash.length];
 
     for (IntVar xVar : x) {
       int xValue = xVar.value();

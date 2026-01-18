@@ -67,11 +67,11 @@ public class Decreasing extends Increasing {
    * @param x variables which must be in decreasing order.
    */
   public Decreasing(List<? extends IntVar> x) {
-    this(x.toArray(new IntVar[x.size()]));
+    this(x.toArray(new IntVar[0]));
   }
 
   public Decreasing(List<? extends IntVar> x, boolean strict) {
-    this(x.toArray(new IntVar[x.size()]), strict);
+    this(x.toArray(new IntVar[0]), strict);
   }
 
   @Override
@@ -84,7 +84,7 @@ public class Decreasing extends Increasing {
       result.append(x[i]);
       if (i > 0) result.append(", ");
     }
-    result.append("], " + (strict == 1 ? "strict" : "non-strict") + ")");
+    result.append("], ").append(strict == 1 ? "strict" : "non-strict").append(")");
 
     return result.toString();
   }

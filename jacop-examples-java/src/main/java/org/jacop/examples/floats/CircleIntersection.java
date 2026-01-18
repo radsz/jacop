@@ -51,7 +51,7 @@ public class CircleIntersection {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CircleIntersection example = new CircleIntersection();
 

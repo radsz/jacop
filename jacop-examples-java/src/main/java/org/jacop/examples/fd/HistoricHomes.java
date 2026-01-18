@@ -60,7 +60,7 @@ public class HistoricHomes extends ExampleFD {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     HistoricHomes example = new HistoricHomes();
 
@@ -77,7 +77,7 @@ public class HistoricHomes extends ExampleFD {
 
     IO.println("Program to solve Historic Homes logic puzzle");
 
-    String streetName[] = {
+    String[] streetName = {
       "street_Azalea_Drive",
       "street_Crepe_Myrtle_Court",
       "street_Jasmine_Boulevard",
@@ -90,12 +90,12 @@ public class HistoricHomes extends ExampleFD {
         iMagnolia_Street = 3,
         iOleander_Road = 4;
 
-    String orderName[] = {"1st", "2nd", "3rd", "4th", "5th"};
+    String[] orderName = {"1st", "2nd", "3rd", "4th", "5th"};
 
     int i1st = 0, i2nd = 1, i3rd = 2, i4th = 3, i5th = 4;
 
-    IntVar order[] = new IntVar[5];
-    IntVar street[] = new IntVar[5];
+    IntVar[] order = new IntVar[5];
+    IntVar[] street = new IntVar[5];
 
     for (int i = 0; i < 5; i++) {
 

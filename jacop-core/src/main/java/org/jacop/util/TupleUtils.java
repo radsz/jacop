@@ -101,12 +101,12 @@ public class TupleUtils {
       tuples = new int[sortedTs.length][];
       for (int i = 0; i < sortedTs.length; i++) {
         tuples[i] = new int[sortedTs[i].length];
-        for (int j = 0; j < sortedTs[i].length; j++) tuples[i][j] = sortedTs[i][j];
+        System.arraycopy(sortedTs[i], 0, tuples[i], 0, sortedTs[i].length);
       }
       tupleNumber = sortedTs.length;
 
       int[][] reusedTuples = new int[sortedTs.length][];
-      for (int i = 0; i < sortedTs.length; i++) reusedTuples[i] = tuples[i];
+      System.arraycopy(tuples, 0, reusedTuples, 0, sortedTs.length);
 
       return reusedTuples;
     }
@@ -146,8 +146,12 @@ public class TupleUtils {
 
     tuplesBeforeExtension[position[previousPosition]] = new int[sortedTs[previousPosition].length];
 
-    for (int j = 0; j < sortedTs[previousPosition].length; j++)
-      tuplesBeforeExtension[position[previousPosition]][j] = sortedTs[previousPosition][j];
+    System.arraycopy(
+        sortedTs[previousPosition],
+        0,
+        tuplesBeforeExtension[position[previousPosition]],
+        0,
+        sortedTs[previousPosition].length);
 
     reusedTuples[previousPosition] = tuplesBeforeExtension[position[previousPosition]];
 
@@ -164,8 +168,12 @@ public class TupleUtils {
 
       tuplesBeforeExtension[position[i] + performedInserts] = new int[sortedTs[i].length];
 
-      for (int j = 0; j < sortedTs[i].length; j++)
-        tuplesBeforeExtension[position[i] + performedInserts][j] = sortedTs[i][j];
+      System.arraycopy(
+          sortedTs[i],
+          0,
+          tuplesBeforeExtension[position[i] + performedInserts],
+          0,
+          sortedTs[i].length);
 
       reusedTuples[i] = tuplesBeforeExtension[position[i] + performedInserts];
 

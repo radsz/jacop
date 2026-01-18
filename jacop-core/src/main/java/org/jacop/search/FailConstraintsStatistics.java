@@ -45,8 +45,8 @@ import org.jacop.core.Store;
 public class FailConstraintsStatistics implements ConsistencyListener {
 
   // data structures to collect fail constraint statistics
-  public Map<String, Integer> failConstraintsStatistics = new HashMap<String, Integer>();
-  public Map<String, Integer> failConstraintsIdStatistics = new HashMap<String, Integer>();
+  public Map<String, Integer> failConstraintsStatistics = new HashMap<>();
+  public Map<String, Integer> failConstraintsIdStatistics = new HashMap<>();
   public long otherFails;
 
   Store store;
@@ -106,11 +106,11 @@ public class FailConstraintsStatistics implements ConsistencyListener {
 
     c.append("*** Failed classes of constraints ***\n");
     for (Entry<String, Integer> cls : sortByValues(failConstraintsStatistics))
-      c.append(cls.getKey() + "\t" + cls.getValue() + "\n");
+      c.append(cls.getKey()).append("\t").append(cls.getValue()).append("\n");
     c.append("*** Failed constraints ***\n");
     for (Entry<String, Integer> constraint : sortByValues(failConstraintsIdStatistics))
-      c.append(constraint.getKey() + "\t" + constraint.getValue() + "\n");
-    c.append("*** Fails not caused by constraints " + otherFails + "\n");
+      c.append(constraint.getKey()).append("\t").append(constraint.getValue()).append("\n");
+    c.append("*** Fails not caused by constraints ").append(otherFails).append("\n");
 
     return c.toString();
   }

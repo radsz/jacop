@@ -53,7 +53,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
   protected Map<IntVar, Integer> positionMapping;
   protected TimeStamp<Integer> grounded;
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   protected Alldifferent() {}
 
@@ -78,7 +78,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
    * @param variables variables which are constrained to take different values.
    */
   public Alldifferent(List<? extends IntVar> variables) {
-    this(variables.toArray(new IntVar[variables.size()]));
+    this(variables.toArray(new IntVar[0]));
   }
 
   @Override
@@ -90,7 +90,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       store.propagationHasOccurred = false;
 
       LinkedHashSet<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       for (IntVar Q : fdvs)
         if (Q.singleton()) {

@@ -30,10 +30,7 @@
 
 package org.jacop.fz.constraints;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
@@ -72,8 +69,8 @@ public class Support implements ParserTreeConstants {
   SatTranslation sat;
   boolean intPresent = true;
   boolean floatPresent = true;
-  ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
-  ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
+  ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   ReificationConstraints reif = new ReificationConstraints(this);
   ImplicationConstraints imply = new ImplicationConstraints(this);
 
@@ -454,8 +451,8 @@ public class Support implements ParserTreeConstants {
 
   IntVar[] unique(IntVar[] vs) {
 
-    LinkedHashSet<IntVar> varSet = new LinkedHashSet<IntVar>();
-    for (IntVar v : vs) varSet.add(v);
+    LinkedHashSet<IntVar> varSet = new LinkedHashSet<>();
+    varSet.addAll(Arrays.asList(vs));
 
     int l = varSet.size();
     IntVar[] rs = new IntVar[l];
@@ -531,7 +528,7 @@ public class Support implements ParserTreeConstants {
     for (Constraint c : delayedConstraints) {
       store.impose(c);
       if (options.debug()) {
-        String s = "% " + c.toString();
+        String s = "% " + c;
         IO.println(s.replaceAll("\n", "\n% "));
       }
     }
@@ -548,7 +545,7 @@ public class Support implements ParserTreeConstants {
       Alldistinct ad = new Alldistinct(v);
       store.impose(ad);
       if (options.debug()) {
-        String s = "% " + ad.toString();
+        String s = "% " + ad;
         IO.println(s.replaceAll("\n", "\n% "));
       }
     }
@@ -571,7 +568,7 @@ public class Support implements ParserTreeConstants {
 
     store.imposeDecompositionWithConsistency(c);
     if (options.debug()) {
-      String s = "% " + c.toString();
+      String s = "% " + c;
       IO.println(s.replaceAll("\n", "\n% "));
     }
   }
@@ -583,7 +580,7 @@ public class Support implements ParserTreeConstants {
     else store.imposeWithConsistency(c);
 
     if (options.debug()) {
-      String s = "% " + c.toString();
+      String s = "% " + c;
       IO.println(s.replaceAll("\n", "\n% "));
     }
   }
@@ -610,7 +607,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n1.incrementAndGet();
+      final int numberId = n1.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -647,7 +644,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n2.incrementAndGet();
+      final int numberId = n2.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -684,7 +681,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n3.incrementAndGet();
+      final int numberId = n3.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -723,7 +720,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n4.incrementAndGet();
+      final int numberId = n4.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {

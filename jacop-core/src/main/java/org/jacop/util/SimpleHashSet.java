@@ -173,7 +173,7 @@ public class SimpleHashSet<E> {
       }
       return result;
     } else {
-      e = table[i] = new Entry<E>(element);
+      e = table[i] = new Entry<>(element);
 
       if (firstEntry == null) {
         firstEntry = e;
@@ -209,7 +209,7 @@ public class SimpleHashSet<E> {
   @Override
   @SuppressWarnings("unchecked")
   public Object clone() {
-    SimpleHashSet<E> result = new SimpleHashSet<E>();
+    SimpleHashSet<E> result = new SimpleHashSet<>();
 
     result.table = new Entry[table.length];
     result.size = size;
@@ -218,7 +218,7 @@ public class SimpleHashSet<E> {
     for (int i = table.length - 1; i >= 0; i--) {
       Entry<E> e = table[i];
       if (e != null) {
-        result.table[i] = new Entry<E>(e.element);
+        result.table[i] = new Entry<>(e.element);
         e = e.next;
       }
 

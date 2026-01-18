@@ -45,5 +45,5 @@ public interface RemoveLevelLate {
    *
    * @param level the level which is being removed.
    */
-  public void removeLevelLate(int level);
+  void removeLevelLate(int level);
 }

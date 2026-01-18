@@ -54,7 +54,7 @@ public class SixHumpCamelFunction {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 

@@ -54,10 +54,10 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
     StringBuilder buf = new StringBuilder("\n");
 
     if (search.getCostVariable() != null)
-      buf.append("Solution cost " + search.getCostVariable() + "\n");
+      buf.append("Solution cost ").append(search.getCostVariable()).append("\n");
 
     if (noSolutions > 1) {
-      buf.append("No of solutions : " + noSolutions);
+      buf.append("No of solutions : ").append(noSolutions);
       buf.append("\nLast Solution : [");
     } else buf.append("\nSolution : [");
 

@@ -53,7 +53,7 @@ public class CPvizGardner {
 
   CPvizGardner() {}
 
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CPvizGardner run = new CPvizGardner();
     run.examples();

@@ -127,7 +127,7 @@ public class SumBool extends PrimitiveConstraint {
    */
   @Deprecated
   public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(store, variables.toArray(new IntVar[variables.size()]), rel, sum);
+    this(store, variables.toArray(new IntVar[0]), rel, sum);
   }
 
   /*
@@ -147,7 +147,7 @@ public class SumBool extends PrimitiveConstraint {
    * @param sum       variable containing the sum of weighted variables.
    */
   public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(variables.toArray(new IntVar[variables.size()]), rel, sum);
+    this(variables.toArray(new IntVar[0]), rel, sum);
   }
 
   @Override
@@ -354,7 +354,7 @@ public class SumBool extends PrimitiveConstraint {
       if (intVar.max() != 0) ls.add(intVar);
     }
 
-    return ls.toArray(new IntVar[ls.size()]);
+    return ls.toArray(new IntVar[0]);
   }
 
   @Override

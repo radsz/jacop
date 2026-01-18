@@ -75,7 +75,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     super(geost, obstacle, selectedDimensions);
 
-    preshiftedElems = new SimpleArrayList<DBox>();
+    preshiftedElems = new SimpleArrayList<>();
 
     assert obstacle.shapeID.singleton()
         : "Polymorphism not supperted by this simple internal constraint. Use ObstacleObjectFrame instead.";

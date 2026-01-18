@@ -69,7 +69,7 @@ public class Queens extends ExampleFD {
    *
    * @param args first argument specifies the size of the chessboard.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Queens example = new Queens();
 
@@ -87,7 +87,7 @@ public class Queens extends ExampleFD {
    *
    * @param args first argument specifies the size of the chessboard.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     Queens example = new Queens();
 
@@ -130,7 +130,7 @@ public class Queens extends ExampleFD {
     // I-th queen variable represents the placement
     // of a queen in i-th column
     // There are n columns so there are n variables
-    IntVar queens[] = new IntVar[numberQ];
+    IntVar[] queens = new IntVar[numberQ];
 
     // Each queen variable has a domain from 1 to numberQ
     // Value of queen variable represents the row
@@ -178,7 +178,7 @@ public class Queens extends ExampleFD {
 
     // Global model
 
-    IntVar queens[] = new IntVar[numberQ];
+    IntVar[] queens = new IntVar[numberQ];
 
     for (int i = 0; i < numberQ; i++) {
       queens[i] = new IntVar(store, "Q" + (i + 1), 1, numberQ);
@@ -209,7 +209,7 @@ public class Queens extends ExampleFD {
 
     IntVar[] values = new IntVar[numberQ];
 
-    IntVar queensRows[] = new IntVar[numberQ];
+    IntVar[] queensRows = new IntVar[numberQ];
 
     for (int i = 0; i < numberQ; i++) {
       queensRows[i] = new IntVar(store, "Qrows" + (i + 1), 1, numberQ);
@@ -232,7 +232,7 @@ public class Queens extends ExampleFD {
     // I-th queen variable represents the placement
     // of a queen in i-th column
     // There are n columns so there are n variables
-    IntVar queens[] = new IntVar[numberQ];
+    IntVar[] queens = new IntVar[numberQ];
 
     for (int i = 0; i < numberQ; i++) {
       queens[i] = new IntVar(store, "Q" + (i + 1), 1, numberQ);

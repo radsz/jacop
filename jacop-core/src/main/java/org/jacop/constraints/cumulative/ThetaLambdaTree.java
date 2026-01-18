@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import org.jacop.core.IntVar;
 
 /*
@@ -54,7 +55,7 @@ class ThetaLambdaTree extends Tree {
   // list of ordered tasks
   private TaskView[] orderedTasks;
 
-  private ThetaLambdaNode empty = new ThetaLambdaNode();
+  private final ThetaLambdaNode empty = new ThetaLambdaNode();
 
   public ThetaLambdaTree(IntVar capacity) {
     C = capacity;
@@ -286,7 +287,8 @@ class ThetaLambdaTree extends Tree {
 
   public void printTree(String name) {
 
-    try (PrintStream out = new PrintStream(new FileOutputStream(name + ".dot"), true, "UTF-8")) {
+    try (PrintStream out =
+        new PrintStream(new FileOutputStream(name + ".dot"), true, StandardCharsets.UTF_8)) {
       out.print(toGraph(name));
       // out.close(); not needed; auto close
     } catch (IOException _) {

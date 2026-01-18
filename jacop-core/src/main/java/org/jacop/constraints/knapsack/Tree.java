@@ -574,7 +574,7 @@ public class Tree {
 
     if (!exhaustedRightItems) {
 
-      if (currentNode.rightNeighbor == null) IO.println("Problem " + toString());
+      if (currentNode.rightNeighbor == null) IO.println("Problem " + this);
 
       double efficiencyLoss =
           profitOfItemChecked / (double) weightOfItemChecked
@@ -804,24 +804,23 @@ public class Tree {
             - currentProfit
             - profitFromCriticalTaken;
 
+    double efficiencyLoss;
     if (!exhaustedLeftItems) {
 
-      double efficiencyLoss =
+      efficiencyLoss =
           -profitOfItemChecked / (double) weightOfItemChecked
               + currentNode.leftNeighbor.getPSum() / (double) currentNode.leftNeighbor.getWSum();
-      lastWeight /= efficiencyLoss;
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
-      return currentWeight + (int) Math.ceil(lastWeight);
 
     } else {
 
-      double efficiencyLoss = profitOfItemChecked / (double) weightOfItemChecked;
-      lastWeight /= efficiencyLoss;
+      efficiencyLoss = profitOfItemChecked / (double) weightOfItemChecked;
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
-      return currentWeight + (int) Math.ceil(lastWeight);
     }
+    lastWeight /= efficiencyLoss;
+    return currentWeight + (int) Math.ceil(lastWeight);
   }
 
   /**

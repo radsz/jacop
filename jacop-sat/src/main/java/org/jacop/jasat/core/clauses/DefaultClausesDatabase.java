@@ -531,7 +531,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
                 + " watches also on "
                 + j
                 + " "
-                + new MapClause(clause).toString();
+                + new MapClause(clause);
       }
     }
 

@@ -45,7 +45,7 @@ import org.jacop.core.ValueEnumeration;
  */
 public class RegStateDom extends RegState {
 
-  private IntDomain[] toSucDom;
+  private final IntDomain[] toSucDom;
 
   /**
    * It constructs a state.

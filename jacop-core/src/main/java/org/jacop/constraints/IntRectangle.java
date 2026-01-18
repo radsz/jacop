@@ -133,7 +133,7 @@ class IntRectangle {
   public String toString() {
     StringBuilder s = new StringBuilder("[");
     for (int i = 0; i < dim; i++) {
-      s.append(origin[i] + ", ");
+      s.append(origin[i]).append(", ");
     }
     for (int i = 0; i < dim; i++) {
       s.append(length[i]);

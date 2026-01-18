@@ -57,7 +57,7 @@ public class WolfGoatCabbage extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     WolfGoatCabbage example;
     int numberInnerMoves = 1;

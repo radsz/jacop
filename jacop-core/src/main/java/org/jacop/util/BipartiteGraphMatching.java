@@ -124,7 +124,7 @@ public class BipartiteGraphMatching {
   // Returns true if there is an augmenting path, else returns false
   boolean bfs() {
 
-    Queue<Integer> Q = new LinkedList<Integer>();
+    Queue<Integer> Q = new LinkedList<>();
 
     // First layer of vertices (set distance as 0)
     for (int u = 1; u <= m; u++) {
@@ -144,7 +144,7 @@ public class BipartiteGraphMatching {
     dist[NIL] = INF;
 
     // Q is going to contain vertices of left side only.
-    while (Q.size() > 0) {
+    while (!Q.isEmpty()) {
       int u = Q.remove();
 
       // If this node is not NIL and can provide a shorter path to NIL

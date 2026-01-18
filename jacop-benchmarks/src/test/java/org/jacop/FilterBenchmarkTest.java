@@ -52,13 +52,13 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class FilterBenchmarkTest extends FilterBenchmark {
 
-  private int[] resourcesConfiguration;
-  private Filter filter;
-  private int costExp;
-  private String experiment;
+  private final int[] resourcesConfiguration;
+  private final Filter filter;
+  private final int costExp;
+  private final String experiment;
 
   public FilterBenchmarkTest(
-      int resourcesConfiguration[], Filter filterTest, String experiment, int costExp) {
+      int[] resourcesConfiguration, Filter filterTest, String experiment, int costExp) {
     this.resourcesConfiguration = resourcesConfiguration;
     this.filter = filterTest;
     this.experiment = experiment;

@@ -47,7 +47,7 @@ import org.jacop.satwrapper.WrapperComponent;
 public final class DomainTranslator implements WrapperComponent {
 
   // variables that have already been translated to clauses
-  public Set<IntVar> translatedVars = new HashSet<IntVar>();
+  public Set<IntVar> translatedVars = new HashSet<>();
   // wrapper
   private SatWrapper wrapper;
 
@@ -70,7 +70,7 @@ public final class DomainTranslator implements WrapperComponent {
       // the domain for the variable
       SatCPBridge domain = wrapper.getSatBridge(variable);
       // the clause
-      LinkedList<Integer> clause = new LinkedList<Integer>();
+      LinkedList<Integer> clause = new LinkedList<>();
 
       /*
        * special case: singleton

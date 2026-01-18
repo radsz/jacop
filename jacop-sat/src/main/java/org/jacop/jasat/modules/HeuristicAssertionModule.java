@@ -49,7 +49,7 @@ public final class HeuristicAssertionModule implements SolverComponent {
   private Trail trail;
 
   // the activity count
-  private ActivityModule activity;
+  private final ActivityModule activity;
 
   public HeuristicAssertionModule(ActivityModule activity) {
     this.activity = activity;

@@ -45,7 +45,7 @@ import org.jacop.core.TimeStamp;
  */
 public class RegStateInt extends RegState {
 
-  private int[] toSucDom;
+  private final int[] toSucDom;
 
   /**
    * It constructs an integer based representation of the state.

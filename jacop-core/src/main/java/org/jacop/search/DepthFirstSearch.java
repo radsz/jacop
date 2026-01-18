@@ -74,7 +74,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public ConsistencyListener consistencyListener;
 
   /** It is executed when a solution is found. */
-  public SolutionListener<T> solutionListener = new SimpleSolutionListener<T>();
+  public SolutionListener<T> solutionListener = new SimpleSolutionListener<>();
 
   /** It is executed when search is started, before entering the search. */
   public InitializeListener initializeListener;
@@ -668,7 +668,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         store.removeLevel(depth);
 
-        Object args[] = {depth, fdv, val};
+        Object[] args = {depth, fdv, val};
 
         if (SwitchesPruningLogging.traceSearchTree) {
           SwitchesPruningLogging.log(
@@ -849,7 +849,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         StringBuffer buf = new StringBuffer();
 
-        buf.append("Depth First Search " + id + "\n");
+        buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
         buf.append("Nodes : ").append(nodes).append("\n");
         buf.append("Decisions : ").append(decisions).append("\n");
@@ -940,7 +940,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         StringBuffer buf = new StringBuffer();
 
-        buf.append("Depth First Search " + id + "\n");
+        buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
         buf.append("Nodes : ").append(nodes).append("\n");
         buf.append("Decisions : ").append(decisions).append("\n");
@@ -1061,7 +1061,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         StringBuffer buf = new StringBuffer();
 
-        buf.append("Depth First Search " + id + "\n");
+        buf.append("Depth First Search ").append(id).append("\n");
         buf.append("\n");
         buf.append("Nodes : ").append(nodes).append("\n");
         buf.append("Decisions : ").append(decisions).append("\n");
@@ -1166,9 +1166,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     StringBuffer buf = new StringBuffer();
 
-    buf.append(id + ": DFS(");
+    buf.append(id).append(": DFS(");
 
-    buf.append(heuristic + ")");
+    buf.append(heuristic).append(")");
 
     return buf.toString();
   }
@@ -1177,11 +1177,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     StringBuffer buf = new StringBuffer();
 
-    buf.append("Depth First Search " + id + "\n");
+    buf.append("Depth First Search ").append(id).append("\n");
 
     buf.append(heuristic);
 
-    buf.append("\n" + solutionListener.toString());
+    buf.append("\n").append(solutionListener.toString());
 
     if (costVariable != null) {
       CostVariableHandler costHandler =
@@ -1190,13 +1190,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         DomainOperationHandler domainHandler =
             SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
         if (domainHandler != null) {
-          buf.append("Cost " + domainHandler.getDomainString(costVariable) + "\n");
+          buf.append("Cost ").append(domainHandler.getDomainString(costVariable)).append("\n");
         } else {
           double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-          buf.append("Cost " + cost + "\n");
+          buf.append("Cost ").append(cost).append("\n");
         }
       } else if (costVariable instanceof IntVar) {
-        buf.append("Cost " + costValue + "\n");
+        buf.append("Cost ").append(costValue).append("\n");
       }
     }
 

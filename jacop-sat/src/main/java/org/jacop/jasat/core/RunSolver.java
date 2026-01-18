@@ -52,11 +52,11 @@ import org.jacop.jasat.utils.structures.IntVec;
 public final class RunSolver {
 
   private static String filename;
-  private static OptParse<Config> parser = new OptParse<Config>();
-  private static String helpString = "usage : RunSolver [option [option...]] <filename>";
+  private static final OptParse<Config> parser = new OptParse<>();
+  private static final String helpString = "usage : RunSolver [option [option...]] <filename>";
   // set the verbosity
-  private static OptHandler<Config> verboseHandler =
-      new OptHandler<Config>() {
+  private static final OptHandler<Config> verboseHandler =
+      new OptHandler<>() {
         {
           shortOpt = 'v';
           longOpt = "verbosity";
@@ -76,7 +76,7 @@ public final class RunSolver {
         }
       };
   // prints help
-  private static OptHandler<Config> helpHandler =
+  private static final OptHandler<Config> helpHandler =
       new OptHandler<Config>() {
         {
           shortOpt = 'h';
@@ -91,7 +91,7 @@ public final class RunSolver {
           return null;
         }
       };
-  private static OptHandler<Config> timeoutHandler =
+  private static final OptHandler<Config> timeoutHandler =
       new OptHandler<Config>() {
         {
           shortOpt = 't';
@@ -108,7 +108,7 @@ public final class RunSolver {
           return e;
         }
       };
-  private static OptHandler<Config> debugHandler =
+  private static final OptHandler<Config> debugHandler =
       new OptHandler<Config>() {
         {
           shortOpt = 'd';
@@ -129,6 +129,46 @@ public final class RunSolver {
     parser.addHandler(verboseHandler);
     parser.addHandler(timeoutHandler);
     parser.addHandler(debugHandler);
+  }
+
+  /**
+   * parse the file which name is filename, and returns a stream on success
+   *
+   * @return an input stream for the content of the file
+   */
+  private static InputStream readFile() {
+    try {
+      File file = new File(filename);
+      if (!file.exists()) {
+        System.err.printf("error: file %s does not exists\n", filename);
+        System.exit(1);
+      }
+      return new BufferedInputStream(new FileInputStream(file));
+    } catch (FileNotFoundException e) {
+      IO.println(e.getMessage());
+      System.exit(42);
+      return null; // never reached
+    }
+  }
+
+  /** on forced exit, print solution */
+  private static void protectOnTermination(final Core core) {
+    Thread handler =
+        new Thread() {
+          @Override
+          public void run() {
+            if (!core.isStopped) {
+              // solver still running
+              core.logc("(forced) exiting...");
+              core.stop();
+              core.currentState = SolverState.UNKNOWN;
+              core.printSolution();
+            }
+            return;
+          }
+        };
+    handler.setDaemon(true);
+    Runtime.getRuntime().addShutdownHook(handler);
   }
 
   /**
@@ -226,45 +266,5 @@ public final class RunSolver {
 
     // return with good exit code
     System.exit(core.getReturnCode());
-  }
-
-  /**
-   * parse the file which name is filename, and returns a stream on success
-   *
-   * @return an input stream for the content of the file
-   */
-  private static InputStream readFile() {
-    try {
-      File file = new File(filename);
-      if (!file.exists()) {
-        System.err.printf("error: file %s does not exists\n", filename);
-        System.exit(1);
-      }
-      return new BufferedInputStream(new FileInputStream(file));
-    } catch (FileNotFoundException e) {
-      IO.println(e.getMessage());
-      System.exit(42);
-      return null; // never reached
-    }
-  }
-
-  /** on forced exit, print solution */
-  private static void protectOnTermination(final Core core) {
-    Thread handler =
-        new Thread() {
-          @Override
-          public void run() {
-            if (!core.isStopped) {
-              // solver still running
-              core.logc("(forced) exiting...");
-              core.stop();
-              core.currentState = SolverState.UNKNOWN;
-              core.printSolution();
-            }
-            return;
-          }
-        };
-    handler.setDaemon(true);
-    Runtime.getRuntime().addShutdownHook(handler);
   }
 }

@@ -107,9 +107,9 @@ public class GeostObject {
     this.duration = duration;
     this.end = end;
 
-    variables = new ArrayList<Var>();
+    variables = new ArrayList<>();
 
-    for (int i = 0; i < dimension; i++) variables.add(coords[i]);
+    variables.addAll(Arrays.asList(coords).subList(0, dimension));
 
     variables.add(shapeID);
     variables.add(start);

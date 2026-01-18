@@ -78,7 +78,7 @@ class GlobalConstraints implements ParserTreeConstants {
   boolean useCumulativeUnary = false;
 
   java.util.Comparator<ArrayList<Integer>> rowComparator =
-      new java.util.Comparator<ArrayList<Integer>>() {
+      new java.util.Comparator<>() {
         @Override
         public int compare(ArrayList<Integer> o1, ArrayList<Integer> o2) {
           for (int i = 0; i < o1.size(); i++) {
@@ -109,9 +109,9 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
 
     // Filter non-existing tasks
-    ArrayList<IntVar> start = new ArrayList<IntVar>();
-    ArrayList<IntVar> duration = new ArrayList<IntVar>();
-    ArrayList<IntVar> resource = new ArrayList<IntVar>();
+    ArrayList<IntVar> start = new ArrayList<>();
+    ArrayList<IntVar> duration = new ArrayList<>();
+    ArrayList<IntVar> resource = new ArrayList<>();
     for (int i = 0; i < str.length; i++) {
       if (!res[i].singleton(0) && !dur[i].singleton(0)) {
         start.add(str[i]);
@@ -120,9 +120,9 @@ class GlobalConstraints implements ParserTreeConstants {
       }
     }
 
-    IntVar[] s = start.toArray(new IntVar[start.size()]);
-    IntVar[] d = duration.toArray(new IntVar[duration.size()]);
-    IntVar[] r = resource.toArray(new IntVar[resource.size()]);
+    IntVar[] s = start.toArray(new IntVar[0]);
+    IntVar[] d = duration.toArray(new IntVar[0]);
+    IntVar[] r = resource.toArray(new IntVar[0]);
 
     /* !!! IMPORTANT !!!  Cumulative constraint is added after all other constraints are posed since
      * it has expensive consistency method that do not need to be executed during model
@@ -161,7 +161,7 @@ class GlobalConstraints implements ParserTreeConstants {
         // for (int i = 0; i < r.length; i++)
         //   support.pose(new XlteqY(r[i], b));
       } else if (allVarGround(d) && allVarGround(r)) {
-        HashSet<Integer> diff = new HashSet<Integer>();
+        HashSet<Integer> diff = new HashSet<>();
         for (IntVar e : r) diff.add(e.min());
         double n = (double) r.length;
         double k = (double) diff.size();
@@ -200,9 +200,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
     int limit = b.max() / 2 + 1;
 
-    ArrayList<IntVar> start = new ArrayList<IntVar>();
-    ArrayList<IntVar> dur = new ArrayList<IntVar>();
-    ArrayList<IntVar> res = new ArrayList<IntVar>();
+    ArrayList<IntVar> start = new ArrayList<>();
+    ArrayList<IntVar> dur = new ArrayList<>();
+    ArrayList<IntVar> res = new ArrayList<>();
 
     for (int i = 0; i < r.length; i++) {
       if (r[i].min() >= limit) {
@@ -348,7 +348,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // are duplicated.
     IntVar[] xx = removeDuplicates(x);
     IntVar[] ss = new IntVar[s.length];
-    HashSet<IntVar> varSet = new HashSet<IntVar>();
+    HashSet<IntVar> varSet = new HashSet<>();
     for (int i = 0; i < s.length; i++) {
       if (varSet.contains(s[i]) && s[i].singleton())
         ss[i] = new IntVar(store, s[i].min(), s[i].max());
@@ -375,7 +375,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // could be constants that have the same value and
     // are duplicated.
     IntVar[] xx = new IntVar[x.length];
-    HashSet<IntVar> varSet = new HashSet<IntVar>();
+    HashSet<IntVar> varSet = new HashSet<>();
     for (int i = 0; i < x.length; i++) {
       if (varSet.contains(x[i]) && x[i].singleton())
         xx[i] = new IntVar(store, x[i].min(), x[i].max());
@@ -418,7 +418,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // =========> remove all non-existing-values counters
     IntDomain gcc_dom = new IntervalDomain();
     for (IntVar v : x) gcc_dom = gcc_dom.union(v.dom());
-    ArrayList<Var> c_list = new ArrayList<Var>();
+    ArrayList<Var> c_list = new ArrayList<>();
     for (int i = 0; i < c.length; i++)
       if (gcc_dom.contains(i + index_min)) c_list.add(c[i]);
       else support.pose(new XeqC(c[i], 0));
@@ -482,7 +482,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
     IntVar[][] r = new IntVar[v.length / 4][4];
-    for (int i = 0; i < r.length; i++) for (int j = 0; j < 4; j++) r[i][j] = v[4 * i + j];
+    for (int i = 0; i < r.length; i++) System.arraycopy(v, 4 * i + 0, r[i], 0, 4);
 
     // support.pose(new Diff2(r));
     support.pose(new Diffn(r, false));
@@ -523,12 +523,12 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
-    ArrayList<IntVar> xs = new ArrayList<IntVar>();
+    ArrayList<IntVar> xs = new ArrayList<>();
     for (IntVar v : x) {
       if (v.domain.contains(y)) // y >= v.min() && y <= v.max())
       xs.add(v);
     }
-    if (xs.size() == 0) {
+    if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
       return;
     } else if (c.singleton()) support.pose(new CountBounds(xs, y, c.value(), c.value()));
@@ -617,11 +617,11 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
-    ArrayList<IntVar> xs = new ArrayList<IntVar>();
+    ArrayList<IntVar> xs = new ArrayList<>();
     for (IntVar v : x) {
       if (v.domain.isIntersecting(y.domain)) xs.add(v);
     }
-    if (xs.size() == 0) {
+    if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
       return;
     } else if (y.singleton()) support.pose(new Count(xs, c, y.value()));
@@ -798,7 +798,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // ========== remove duplicated tuples in the table =============
     ArrayList<Integer>[] tl = new ArrayList[t.length];
     for (int i = 0; i < t.length; i++) {
-      ArrayList<Integer> tmp = new ArrayList<Integer>(t.length);
+      ArrayList<Integer> tmp = new ArrayList<>(t.length);
       for (int j = 0; j < t[i].length; j++) {
         tmp.add(t[i][j]);
       }
@@ -944,9 +944,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
         for (int i = 0; i < rs.length; i++) {
           r[i + k][0] = val;
-          for (int j = 0; j < rs[i].length; j++) {
-            r[i + k][j + 1] = rs[i][j];
-          }
+          System.arraycopy(rs[i], 0, r[i + k], 1, rs[i].length);
         }
         k += rs.length;
       }
@@ -1175,14 +1173,14 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // keep only **unique** variables in the original order
     ArrayList<IntVar> xx = new ArrayList<>();
-    HashSet<IntVar> varSet = new HashSet<IntVar>();
+    HashSet<IntVar> varSet = new HashSet<>();
     for (IntVar intVar : x) {
       if (!varSet.contains(intVar)) {
         xx.add(intVar);
         varSet.add(intVar);
       }
     }
-    IntVar[] xs = xx.toArray(new IntVar[xx.size()]);
+    IntVar[] xs = xx.toArray(new IntVar[0]);
     // System.out.println("% x.length = " + x.length + ", xs.length = " + xs.length);
 
     support.pose(new SeqPrecedeChain(xs));
@@ -1258,10 +1256,10 @@ class GlobalConstraints implements ParserTreeConstants {
     // System.out.println("kind = " + java.util.Arrays.asList(kind));
     // System.out.println("===================");
 
-    ArrayList<Shape> shapes = new ArrayList<Shape>();
+    ArrayList<Shape> shapes = new ArrayList<>();
 
     // dummy shape to have right indexes for kind (starting from 1)
-    ArrayList<DBox> dummy = new ArrayList<DBox>();
+    ArrayList<DBox> dummy = new ArrayList<>();
     int[] offsetDummy = new int[dim];
     int[] sizeDummy = new int[dim];
     for (int k = 0; k < dim; k++) {
@@ -1273,7 +1271,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // create all shapes (starting with id=1)
     for (int i = 0; i < shape.length; i++) {
-      ArrayList<DBox> shape_i = new ArrayList<DBox>();
+      ArrayList<DBox> shape_i = new ArrayList<>();
 
       for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements(); ) {
         int j = e.nextElement();
@@ -1293,13 +1291,13 @@ class GlobalConstraints implements ParserTreeConstants {
     // for (int i = 0; i < shapes.size(); i++)
     //      System.out.println("*** " + shapes.get(i));
 
-    ArrayList<GeostObject> objects = new ArrayList<GeostObject>();
+    ArrayList<GeostObject> objects = new ArrayList<>();
 
     for (int i = 0; i < kind.length; i++) {
 
       IntVar[] coords = new IntVar[dim];
 
-      for (int k = 0; k < dim; k++) coords[k] = xx[i * dim + k];
+      System.arraycopy(xx, i * dim + 0, coords, 0, dim);
 
       // System.out.println("coords = " + java.util.Arrays.asList(coords));
 
@@ -1315,7 +1313,7 @@ class GlobalConstraints implements ParserTreeConstants {
     //      System.out.println(objects.get(i));
     // System.out.println("===========");
 
-    ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
+    ArrayList<ExternalConstraint> constraints = new ArrayList<>();
     int[] dimensions = new int[dim + 1];
     for (int i = 0; i < dim + 1; i++) dimensions[i] = i;
 
@@ -1349,10 +1347,10 @@ class GlobalConstraints implements ParserTreeConstants {
     // System.out.println("kind = " + java.util.Arrays.asList(kind));
     // System.out.println("===================");
 
-    ArrayList<Shape> shapes = new ArrayList<Shape>();
+    ArrayList<Shape> shapes = new ArrayList<>();
 
     // dummy shape to have right indexes for kind (starting from 1)
-    ArrayList<DBox> dummy = new ArrayList<DBox>();
+    ArrayList<DBox> dummy = new ArrayList<>();
     int[] offsetDummy = new int[dim];
     int[] sizeDummy = new int[dim];
     for (int k = 0; k < dim; k++) {
@@ -1364,7 +1362,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // create all shapes (starting with id=1)
     for (int i = 0; i < shape.length; i++) {
-      ArrayList<DBox> shape_i = new ArrayList<DBox>();
+      ArrayList<DBox> shape_i = new ArrayList<>();
 
       for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements(); ) {
         int j = e.nextElement();
@@ -1384,13 +1382,13 @@ class GlobalConstraints implements ParserTreeConstants {
     // for (int i = 0; i < shapes.size(); i++)
     //      System.out.println("*** " + shapes.get(i));
 
-    ArrayList<GeostObject> objects = new ArrayList<GeostObject>();
+    ArrayList<GeostObject> objects = new ArrayList<>();
 
     for (int i = 0; i < kind.length; i++) {
 
       IntVar[] coords = new IntVar[dim];
 
-      for (int k = 0; k < dim; k++) coords[k] = xx[i * dim + k];
+      System.arraycopy(xx, i * dim + 0, coords, 0, dim);
 
       // System.out.println("coords = " + java.util.Arrays.asList(coords));
 
@@ -1406,7 +1404,7 @@ class GlobalConstraints implements ParserTreeConstants {
     //      System.out.println(objects.get(i));
     // System.out.println("===========");
 
-    ArrayList<ExternalConstraint> constraints = new ArrayList<ExternalConstraint>();
+    ArrayList<ExternalConstraint> constraints = new ArrayList<>();
     int[] dimensions = new int[dim + 1];
     for (int i = 0; i < dim + 1; i++) dimensions[i] = i;
 
@@ -1446,8 +1444,8 @@ class GlobalConstraints implements ParserTreeConstants {
         xn.add(x[i]);
       }
     }
-    b = bn.toArray(new IntVar[bn.size()]);
-    x = xn.toArray(new IntVar[xn.size()]);
+    b = bn.toArray(new IntVar[0]);
+    x = xn.toArray(new IntVar[0]);
 
     int n = x.length;
     if (n == 2) {
@@ -1576,7 +1574,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // no diplicated variables allowed in a constraint and
     // we create a new vector with all different variables
     IntVar[] xs = new IntVar[x.length];
-    HashSet<IntVar> varSet = new HashSet<IntVar>();
+    HashSet<IntVar> varSet = new HashSet<>();
     for (int i = 0; i < x.length; i++) {
       if (varSet.contains(x[i])) {
         if (x[i].singleton()) xs[i] = new IntVar(store, x[i].min(), x[i].max());

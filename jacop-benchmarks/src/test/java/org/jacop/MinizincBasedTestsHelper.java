@@ -61,7 +61,7 @@ public class MinizincBasedTestsHelper {
   protected static final String listFileName = "list.txt";
   protected static final boolean printInfo = false;
   protected static Fz2jacop fz2jacop;
-  private static int counter = 0;
+  private static final int counter = 0;
   protected String testFilename;
   String timeCategory;
 
@@ -171,7 +171,7 @@ public class MinizincBasedTestsHelper {
       result.add("==========");
     } else result = res;
 
-    if (result.size() == 0)
+    if (result.isEmpty())
       fail(
           "\n"
               + "File path: "

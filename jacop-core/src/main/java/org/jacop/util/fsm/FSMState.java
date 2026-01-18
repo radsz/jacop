@@ -59,7 +59,7 @@ public class FSMState {
   /** It creates a state with id equl to the number of instances FSMState created. */
   public FSMState() {
     this.id = FSM.idNumber.incrementAndGet();
-    transitions = new HashSet<FSMTransition>();
+    transitions = new HashSet<>();
   }
 
   /**
@@ -69,7 +69,7 @@ public class FSMState {
    */
   public FSMState(FSMState a) {
     this.id = a.id;
-    transitions = new HashSet<FSMTransition>();
+    transitions = new HashSet<>();
   }
 
   /**
@@ -113,6 +113,6 @@ public class FSMState {
 
   @Override
   public String toString() {
-    return "state_" + String.valueOf(id);
+    return "state_" + id;
   }
 }

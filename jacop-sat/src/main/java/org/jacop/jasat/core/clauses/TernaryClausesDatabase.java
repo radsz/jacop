@@ -56,8 +56,8 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
   private int[] clauses = new int[INITIAL_SIZE];
 
   // some util array
-  private int[] curValues = new int[3];
-  private int[] curLit = new int[3];
+  private final int[] curValues = new int[3];
+  private final int[] curLit = new int[3];
 
   // current clause index
   private int currentIndex = 0;

@@ -108,7 +108,7 @@ public class AtMost extends PrimitiveConstraint {
    * @param counter number of variables equal to val.
    */
   public AtMost(List<? extends IntVar> list, int counter, int value) {
-    this(list.toArray(new IntVar[list.size()]), counter, value);
+    this(list.toArray(new IntVar[0]), counter, value);
   }
 
   @Override

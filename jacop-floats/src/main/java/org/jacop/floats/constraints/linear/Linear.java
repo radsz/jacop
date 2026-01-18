@@ -74,10 +74,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public byte relationType;
 
   /** It specifies a list of variables being summed. */
-  public FloatVar list[];
+  public FloatVar[] list;
 
   /** It specifies a list of weights associated with the variables being summed. */
-  public double weights[];
+  public double[] weights;
 
   /** It specifies variable for the overall sum. */
   public double sum;
@@ -86,7 +86,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
 
   // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
-  SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<FloatVar>();
+  SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
 
   boolean reified = true;
 
@@ -149,7 +149,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         new String[] {"variables", "weights", "rel"}, new Object[] {variables, weights, rel});
     commonInitialization(
         store,
-        variables.toArray(new FloatVar[variables.size()]),
+        variables.toArray(new FloatVar[0]),
         weights.stream().mapToDouble(i -> i).toArray(),
         rel,
         sum);
@@ -170,7 +170,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     this.sum = sum;
 
-    noSat = new TimeStamp<Boolean>(store, false);
+    noSat = new TimeStamp<>(store, false);
 
     Map<FloatVar, Double> parameters = new LinkedHashMap<>();
 
@@ -235,7 +235,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       varMap.put(this.list[i], leafNodes[i]);
     }
 
-    java.util.Arrays.sort(leafNodes, new VarWeightComparator<VariableNode>());
+    java.util.Arrays.sort(leafNodes, new VarWeightComparator<>());
     // System.out.println (java.util.Arrays.asList(leafNodes));
 
     RootBNode root = buildBinaryTree(leafNodes);

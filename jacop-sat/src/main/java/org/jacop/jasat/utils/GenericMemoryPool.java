@@ -44,10 +44,10 @@ import java.util.ArrayDeque;
 public final class GenericMemoryPool<E> {
 
   // pool of <E> objects
-  private ArrayDeque<E> set = new ArrayDeque<E>();
+  private final ArrayDeque<E> set = new ArrayDeque<>();
 
   // factory used to create new instances if none is available
-  private Factory<E> factory;
+  private final Factory<E> factory;
 
   public GenericMemoryPool(Factory<E> factory) {
     this.factory = factory;

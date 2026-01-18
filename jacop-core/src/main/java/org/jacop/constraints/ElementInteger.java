@@ -89,7 +89,7 @@ public class ElementInteger extends Constraint
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public int list[];
+  public int[] list;
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
@@ -337,9 +337,9 @@ public class ElementInteger extends Constraint
     }
 
     if (checkDuplicates) {
-      duplicates = new ArrayList<IntDomain>();
+      duplicates = new ArrayList<>();
 
-      TreeMap<Integer, IntervalDomain> map = new TreeMap<Integer, IntervalDomain>();
+      TreeMap<Integer, IntervalDomain> map = new TreeMap<>();
 
       for (int pos = 0; pos < list.length; pos++) {
 
@@ -417,7 +417,7 @@ public class ElementInteger extends Constraint
       if (i < list.length - 1) result.append(", ");
     }
 
-    result.append("], ").append(value).append(", " + indexOffset + " )");
+    result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
 
     return result.toString();
   }

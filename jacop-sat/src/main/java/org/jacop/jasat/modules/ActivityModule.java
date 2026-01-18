@@ -61,7 +61,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   // solver instance
   public Core core;
   // number by which activity bump rate is multiplied
-  private int BUMP_INCREASE_FACTOR = 2;
+  private final int BUMP_INCREASE_FACTOR = 2;
   // the rates, for each variable and polarity.
   private int[] posActivities;
   private int[] negActivities;
@@ -95,7 +95,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   private Integer[] priorities = new Integer[50];
   private int prioritiesIndex = 0;
   // set of literals that are in priorities
-  private BitSet prioritizedVars = new BitSet();
+  private final BitSet prioritizedVars = new BitSet();
   // used to update sorting of priorities sometimes
   private int conflictCount = 0;
 

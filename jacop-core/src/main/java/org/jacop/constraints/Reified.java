@@ -58,7 +58,7 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 
-  private boolean needRemoveLevelLate = false;
+  private final boolean needRemoveLevelLate = false;
 
   /**
    * It creates Reified constraint.

@@ -65,7 +65,7 @@ public class DCT extends Filter {
 
     name = "DCT";
 
-    int dependencies[][] = {
+    int[][] dependencies = {
       {0, 8}, {0, 16}, {0, 17}, {1, 8}, {1, 19}, {1, 20}, {2, 9}, {2, 22}, {2, 23}, {3, 9}, {3, 25},
       {3, 26}, {4, 10}, {4, 11}, {5, 10}, {5, 11}, {6, 12}, {6, 13}, {7, 12}, {7, 13}, {8, 14},
       {8, 18}, {9, 14}, {9, 24}, {10, 27}, {11, 15}, {11, 29}, {12, 28}, {13, 15}, {13, 31},
@@ -77,7 +77,7 @@ public class DCT extends Filter {
 
     this.dependencies = dependencies;
 
-    int ids[] = {
+    int[] ids = {
       addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
       addId, addId, addId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
       mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId,
@@ -86,13 +86,13 @@ public class DCT extends Filter {
 
     this.ids = ids;
 
-    int last[] = {40, 41, 42, 43, 44, 45, 46, 47};
+    int[] last = {40, 41, 42, 43, 44, 45, 46, 47};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(48);
+    List<String> names = new ArrayList<>(48);
 
     names.add("-1");
     names.add("-2");
@@ -148,7 +148,7 @@ public class DCT extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(48);
+    List<String> names = new ArrayList<>(48);
 
     names.add("-1");
     names.add("-2");

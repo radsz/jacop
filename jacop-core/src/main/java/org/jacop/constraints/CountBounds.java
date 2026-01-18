@@ -103,7 +103,7 @@ public class CountBounds extends PrimitiveConstraint {
    * @param ub maximal number of occurences of value at list.
    */
   public CountBounds(List<? extends IntVar> list, int value, int lb, int ub) {
-    this(list.toArray(new IntVar[list.size()]), value, lb, ub);
+    this(list.toArray(new IntVar[0]), value, lb, ub);
   }
 
   // registers the constraint in the constraint store and

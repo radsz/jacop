@@ -113,7 +113,7 @@ public class SGMPCSearch {
     System.arraycopy(vars, 0, this.vars, 0, vars.length);
     this.cost = cost;
 
-    search = new SimpleImprovementSearch<IntVar>(store, vars, cost);
+    search = new SimpleImprovementSearch<>(store, vars, cost);
   }
 
   public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
@@ -161,7 +161,7 @@ public class SGMPCSearch {
     IntVar[] v;
     if (costPosition == vars.length) {
       v = new IntVar[vars.length + 1];
-      for (int i = 0; i < vars.length; i++) v[i] = vars[i];
+      System.arraycopy(vars, 0, v, 0, vars.length);
       v[vars.length] = cost;
     } else v = vars;
 
@@ -197,7 +197,7 @@ public class SGMPCSearch {
     elite = new int[e][];
     for (int i = 0; i < e; i++) {
       elite[i] = new int[solutionPool[i].length];
-      for (int j = 0; j < elite[i].length; j++) elite[i][j] = solutionPool[i][j];
+      System.arraycopy(solutionPool[i], 0, elite[i], 0, elite[i].length);
     }
 
     if (trace) {
@@ -410,13 +410,13 @@ public class SGMPCSearch {
     elite = new int[e][];
     for (int i = 0; i < e; i++) {
       elite[i] = new int[solutions[i].length];
-      for (int j = 0; j < elite[i].length; j++) elite[i][j] = solutions[i][j];
+      System.arraycopy(solutions[i], 0, elite[i], 0, elite[i].length);
     }
   }
 
   void replaceEliteSolution(int n, int[] solution, int searchCost) {
 
-    for (int i = 0; i < elite[n].length - 1; i++) elite[n][i] = solution[i];
+    if (elite[n].length - 1 >= 0) System.arraycopy(solution, 0, elite[n], 0, elite[n].length - 1);
     elite[n][costPosition] = searchCost;
   }
 

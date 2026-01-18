@@ -81,7 +81,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   // FIXME, check if timestamp over IntervalDomain is not better/cleaner.
   private MutableVar lbS;
   private MutableVar futureLbS;
-  private LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<Integer>();
+  private final LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<>();
   // Time stamps
   private TimeStamp<Integer> lb0TS;
   private TimeStamp<Integer> ub0TS;
@@ -122,10 +122,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    * @param n how many variables from list x are equal to at least one variable from list y.
    */
   public AmongVar(List<? extends IntVar> listOfX, List<? extends IntVar> listOfY, IntVar n) {
-    this(
-        listOfX.toArray(new IntVar[listOfX.size()]),
-        listOfY.toArray(new IntVar[listOfY.size()]),
-        n);
+    this(listOfX.toArray(new IntVar[0]), listOfY.toArray(new IntVar[0]), n);
   }
 
   @Override
@@ -441,8 +438,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // pureUbs ubs usually equals to ubs \ lbs and is used upon calculating
     // the lbV and ubV hashtables
     IntervalDomain pureUbs = new IntervalDomain();
-    Hashtable<Integer, Integer> lbV = new Hashtable<Integer, Integer>();
-    Hashtable<Integer, Integer> ubV = new Hashtable<Integer, Integer>();
+    Hashtable<Integer, Integer> lbV = new Hashtable<>();
+    Hashtable<Integer, Integer> ubV = new Hashtable<>();
 
     // Take the lbs domain computed on the previous level
     // it contain the Y values that will be or must be present in S domain
@@ -475,7 +472,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     boolean firstTimeWhileLoop = true;
 
-    while (variableQueueY.size() > 0 || firstTimeWhileLoop) {
+    while (!variableQueueY.isEmpty() || firstTimeWhileLoop) {
 
       // ----------------------------------------------------------
       if (debugAll) {
@@ -486,7 +483,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
       pureUbs.clear();
       // Construction of lbSDom
-      while (variableQueueY.size() > 0) {
+      while (!variableQueueY.isEmpty()) {
         for (Integer yi : this.variableQueueY) {
           y = this.listOfY[yi];
           if (y.singleton()) {
@@ -1021,11 +1018,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     lbS = new MutableDomain(store);
     futureLbS = new MutableDomain(store);
 
-    lb0TS = new TimeStamp<Integer>(store, 0);
-    ub0TS = new TimeStamp<Integer>(store, listOfX.length);
+    lb0TS = new TimeStamp<>(store, 0);
+    ub0TS = new TimeStamp<>(store, listOfX.length);
 
-    xGrounded = new TimeStamp<Integer>(store, gx);
-    yGrounded = new TimeStamp<Integer>(store, 0);
+    xGrounded = new TimeStamp<>(store, gx);
+    yGrounded = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
 

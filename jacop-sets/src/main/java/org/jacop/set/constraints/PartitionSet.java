@@ -100,7 +100,7 @@ public class PartitionSet extends Constraint implements UsesQueueVariable {
       store.propagationHasOccurred = false;
 
       LinkedHashSet<Integer> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<Integer>();
+      variableQueue = new LinkedHashSet<>();
 
       for (Integer i : fdvs)
         if (i != null) {
@@ -140,7 +140,7 @@ public class PartitionSet extends Constraint implements UsesQueueVariable {
   public String toString() {
 
     StringBuilder result = new StringBuilder();
-    result.append(id() + " : PartitionSet(");
+    result.append(id()).append(" : PartitionSet(");
     result.append(Arrays.asList(s)).append(", ").append(u);
     result.append(")");
     return result.toString();

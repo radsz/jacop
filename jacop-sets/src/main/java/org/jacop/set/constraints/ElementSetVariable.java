@@ -66,7 +66,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
    * It specifies list of variables within an element constraint list[index - indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  public final SetVar list[];
+  public final SetVar[] list;
 
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   private final int indexOffset;
@@ -107,7 +107,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
    */
   public ElementSetVariable(IntVar index, List<? extends SetVar> list, SetVar value) {
 
-    this(index, list.toArray(new SetVar[list.size()]), value, 0);
+    this(index, list.toArray(new SetVar[0]), value, 0);
   }
 
   /**
@@ -121,7 +121,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
   public ElementSetVariable(
       IntVar index, List<? extends SetVar> list, SetVar value, int indexOffset) {
 
-    this(index, list.toArray(new SetVar[list.size()]), value, indexOffset);
+    this(index, list.toArray(new SetVar[0]), value, indexOffset);
   }
 
   /**

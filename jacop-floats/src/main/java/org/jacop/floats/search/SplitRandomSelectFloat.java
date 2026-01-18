@@ -80,7 +80,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, null);
 
-    currentIndex = new TimeStamp<Integer>(store, 0);
+    currentIndex = new TimeStamp<>(store, 0);
 
     generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
   }
@@ -104,7 +104,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, tieBreakerVarSelect, null);
 
-    currentIndex = new TimeStamp<Integer>(store, 0);
+    currentIndex = new TimeStamp<>(store, 0);
 
     generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
   }

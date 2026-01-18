@@ -150,6 +150,6 @@ public class Stretch extends DecomposedConstraint<Constraint> {
 
     fsm.resize();
 
-    return Arrays.asList(new Regular(fsm, x));
+    return List.of(new Regular(fsm, x));
   }
 }

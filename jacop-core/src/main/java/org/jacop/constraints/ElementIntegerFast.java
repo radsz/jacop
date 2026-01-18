@@ -78,7 +78,9 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    */
   private TimeStamp<Short> order;
 
-  private short detect = 0, ascending = 1, descending = 2; // , none = 3;
+  private final short detect = 0;
+  private final short ascending = 1;
+  private final short descending = 2; // , none = 3;
 
   /**
    * It constructs an element constraint.

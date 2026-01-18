@@ -69,7 +69,7 @@ public class ValuePrecede extends Constraint
   protected final int t;
   private final Map<IntVar, Integer> varMap;
   Store store;
-  private int n;
+  private final int n;
   /*
    * Defines variables alpha, beta, gamma for the algorithm
    */
@@ -116,7 +116,7 @@ public class ValuePrecede extends Constraint
    * @param x list of arguments x's.
    */
   public ValuePrecede(int s, int t, List<? extends IntVar> x) {
-    this(s, t, x.toArray(new IntVar[x.size()]));
+    this(s, t, x.toArray(new IntVar[0]));
   }
 
   // registers the constraint in the constraint store and
@@ -162,7 +162,7 @@ public class ValuePrecede extends Constraint
       store.propagationHasOccurred = false;
 
       LinkedHashSet<IntVar> fdvs = varQueue;
-      varQueue = new LinkedHashSet<IntVar>();
+      varQueue = new LinkedHashSet<>();
 
       for (IntVar v : fdvs) {
         int i = varMap.get(v);
@@ -293,7 +293,7 @@ public class ValuePrecede extends Constraint
 
     StringBuilder resultString = new StringBuilder(id());
 
-    resultString.append(" : ValuePrecede(" + s + ", " + t + ", [");
+    resultString.append(" : ValuePrecede(").append(s).append(", ").append(t).append(", [");
     int lx = x.length;
     for (int i = 0; i < lx; i++) {
       resultString.append(x[i]);

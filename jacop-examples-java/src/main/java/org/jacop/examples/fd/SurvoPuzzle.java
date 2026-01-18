@@ -28,7 +28,9 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.SumInt;
@@ -93,7 +95,7 @@ public class SurvoPuzzle extends ExampleFD {
    *
    * @param args the first argument specifies the filename containing the puzzle to be solved.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     String filename = "";
     if (args.length == 1) {
@@ -102,7 +104,7 @@ public class SurvoPuzzle extends ExampleFD {
     }
 
     SurvoPuzzle m = new SurvoPuzzle();
-    if (filename.length() > 0) {
+    if (!filename.isEmpty()) {
       m.readFile(filename);
     }
 
@@ -195,7 +197,7 @@ public class SurvoPuzzle extends ExampleFD {
 
     vars = new ArrayList<IntVar>();
 
-    for (IntVar v : x_arr) vars.add(v);
+    vars.addAll(Arrays.asList(x_arr));
   }
 
   /**
@@ -213,12 +215,13 @@ public class SurvoPuzzle extends ExampleFD {
     IO.println("readFile(" + file + ")");
 
     try (BufferedReader inr =
-        new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 
       String str;
       int lineCount = 0;
       List<List<Integer>> MatrixI = new ArrayList<List<Integer>>();
-      while ((str = inr.readLine()) != null && str.length() > 0) {
+      while ((str = inr.readLine()) != null && !str.isEmpty()) {
 
         str = str.trim();
 
@@ -229,7 +232,7 @@ public class SurvoPuzzle extends ExampleFD {
         }
 
         str = str.replace("_", "");
-        String row[] = str.split("\\s+");
+        String[] row = str.split("\\s+");
         IO.println(str);
 
         // first line: column names: Ignore but count them

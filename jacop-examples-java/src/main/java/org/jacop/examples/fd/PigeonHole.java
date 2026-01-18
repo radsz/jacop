@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -56,7 +57,7 @@ public class PigeonHole extends ExampleFD {
    *
    * @param args the number of pigeons.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     PigeonHole example = new PigeonHole();
 
@@ -88,7 +89,7 @@ public class PigeonHole extends ExampleFD {
 
     store.impose(new Alldiff(numbers));
 
-    for (IntVar v : numbers) vars.add(v);
+    vars.addAll(Arrays.asList(numbers));
   }
 
   /** It specifies inefficient model which uses only primitive constraints. */
@@ -105,6 +106,6 @@ public class PigeonHole extends ExampleFD {
     for (int i = 0; i < noPigeons; i++)
       for (int j = i + 1; j < noPigeons; j++) store.impose(new XneqY(numbers[i], numbers[j]));
 
-    for (IntVar v : numbers) vars.add(v);
+    vars.addAll(Arrays.asList(numbers));
   }
 }

@@ -31,7 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -69,7 +69,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
    * @param result result variable.
    */
   public OrBool(List<? extends IntVar> a, IntVar result) {
-    this(a.toArray(new IntVar[a.size()]), result);
+    this(a.toArray(new IntVar[0]), result);
   }
 
   /**
@@ -91,7 +91,7 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
   @Override
   public List<PrimitiveConstraint> decompose(Store store) {
-    return Arrays.asList(c);
+    return Collections.singletonList(c);
   }
 
   public String toString() {
@@ -105,6 +105,6 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
       else if (x.max() == 0) continue;
       else result.add(x);
 
-    return result.toArray(new IntVar[result.size()]);
+    return result.toArray(new IntVar[0]);
   }
 }

@@ -93,7 +93,7 @@ public class Member extends PrimitiveConstraint {
    * @param e variable to be checkd on the list.
    */
   public Member(List<? extends IntVar> list, IntVar e) {
-    this(list.toArray(new IntVar[list.size()]), e);
+    this(list.toArray(new IntVar[0]), e);
   }
 
   @Override
@@ -202,7 +202,7 @@ public class Member extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<Integer>(store, 0);
+    position = new TimeStamp<>(store, 0);
   }
 
   @Override

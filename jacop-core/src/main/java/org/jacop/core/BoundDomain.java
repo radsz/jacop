@@ -801,8 +801,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     do {
       if (!domain.singleton()) {
-        result.append(toString()).append("(").append(domain.stamp()).append(") ");
-      } else result.append(min).append("(").append(String.valueOf(domain.stamp())).append(") ");
+        result.append(this).append("(").append(domain.stamp()).append(") ");
+      } else result.append(min).append("(").append(domain.stamp()).append(") ");
 
       result.append("constraints: ");
 

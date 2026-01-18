@@ -52,7 +52,7 @@ public class In extends PrimitiveConstraint {
   public IntDomain dom;
 
   /** It specifies all the values which can not be taken by a variable. */
-  private IntDomain DomComplement;
+  private final IntDomain DomComplement;
 
   /**
    * It constructs an In constraint to restrict the domain of the variable.

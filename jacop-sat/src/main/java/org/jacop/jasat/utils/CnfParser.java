@@ -49,10 +49,10 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   public int numVars = 0;
 
   // stream from which to read values
-  private InputStream stream;
+  private final InputStream stream;
 
   // memory pool
-  private MemoryPool pool;
+  private final MemoryPool pool;
 
   // current char
   private int c = 0;

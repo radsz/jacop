@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -76,7 +77,7 @@ public class Flowers extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Flowers example = new Flowers();
 
@@ -117,14 +118,14 @@ public class Flowers extends ExampleFD {
     // variables. One denotes a day and the
     // other denotes the week.
 
-    IntVar wifeT[] = new IntVar[4];
-    IntVar wifeD[] = new IntVar[4];
-    IntVar husbandT[] = new IntVar[4];
-    IntVar husbandD[] = new IntVar[4];
-    IntVar flowerT[] = new IntVar[4];
-    IntVar flowerD[] = new IntVar[4];
-    IntVar occasionT[] = new IntVar[4];
-    IntVar occasionD[] = new IntVar[4];
+    IntVar[] wifeT = new IntVar[4];
+    IntVar[] wifeD = new IntVar[4];
+    IntVar[] husbandT = new IntVar[4];
+    IntVar[] husbandD = new IntVar[4];
+    IntVar[] flowerT = new IntVar[4];
+    IntVar[] flowerD = new IntVar[4];
+    IntVar[] occasionT = new IntVar[4];
+    IntVar[] occasionD = new IntVar[4];
 
     for (int i = 0; i < 4; i++) {
       // Days in February are from 1 to 28.
@@ -171,7 +172,7 @@ public class Flowers extends ExampleFD {
 
     // Channeling constraints between day number and week.
 
-    int el[] = {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4};
+    int[] el = {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4};
 
     store.impose(Element.choose(wifeD[iEmma], el, wifeT[iEmma]));
     store.impose(Element.choose(wifeD[iKristin], el, wifeT[iKristin]));
@@ -196,7 +197,7 @@ public class Flowers extends ExampleFD {
     // 2. The woman who received flowers for Valentine's Day had them
     // delivered
     // on either Friday the 11th or Monday the 14th.
-    PrimitiveConstraint ogr2[] = {
+    PrimitiveConstraint[] ogr2 = {
       new XeqC(occasionD[iWalentynki], 11), new XeqC(occasionD[iWalentynki], 14)
     };
     store.impose(new Or(ogr2));
@@ -209,7 +210,7 @@ public class Flowers extends ExampleFD {
     // 4. Lynn received flowers either the week before or the week after
     // the woman who received violets.
 
-    PrimitiveConstraint ogr4[] = {
+    PrimitiveConstraint[] ogr4 = {
       new XplusCeqZ(wifeT[iLynn], 1, flowerT[iViolets]),
       new XplusCeqZ(wifeT[iLynn], -1, flowerT[iViolets])
     };
@@ -220,19 +221,19 @@ public class Flowers extends ExampleFD {
     // on Thursday the 24th (in which case she is the woman who received
     // flowers to celebrate her birthday).
 
-    PrimitiveConstraint and5a[] = {
+    PrimitiveConstraint[] and5a = {
       new XeqC(husbandD[iJustin], 7),
       new XeqC(flowerD[iRoses], 7),
       new XeqY(husbandD[iJustin], flowerD[iRoses])
     };
 
-    PrimitiveConstraint and5b[] = {
+    PrimitiveConstraint[] and5b = {
       new XeqC(husbandD[iJustin], 24),
       new XeqC(occasionD[iUrodziny], 24),
       new XeqY(husbandD[iJustin], occasionD[iUrodziny])
     };
 
-    PrimitiveConstraint ogr5[] = {new And(and5a), new And(and5b)};
+    PrimitiveConstraint[] ogr5 = {new And(and5a), new And(and5b)};
 
     store.impose(new Or(ogr5));
 
@@ -243,14 +244,14 @@ public class Flowers extends ExampleFD {
 
     // 7. Toni's husband is either Doug or Shane.
 
-    PrimitiveConstraint ogr7[] = {
+    PrimitiveConstraint[] ogr7 = {
       new XeqY(wifeD[iToni], husbandD[iShane]), new XeqY(wifeD[iToni], husbandD[iDoug])
     };
     store.impose(new Or(ogr7));
 
     // 8. One woman received either chrysanthemums or white roses for
     // her wedding anniversary.
-    PrimitiveConstraint ogr8[] = {
+    PrimitiveConstraint[] ogr8 = {
       new XeqY(occasionD[iRocznica], flowerD[iChrys]),
       new XeqY(occasionD[iRocznica], flowerD[iRoses])
     };
@@ -260,32 +261,32 @@ public class Flowers extends ExampleFD {
     // (in which case she is the one who received daisies) or
     // Friday the 18th (in which case she received them from Doug).
 
-    PrimitiveConstraint and9a[] = {
+    PrimitiveConstraint[] and9a = {
       new XeqC(wifeD[iKristin], 1),
       new XeqC(flowerD[iDaises], 1),
       new XeqY(wifeD[iKristin], flowerD[iDaises])
     };
 
-    PrimitiveConstraint and9b[] = {
+    PrimitiveConstraint[] and9b = {
       new XeqC(wifeD[iKristin], 18),
       new XeqC(husbandD[iDoug], 18),
       new XeqY(wifeD[iKristin], husbandD[iDoug])
     };
 
-    PrimitiveConstraint ogr9[] = {new And(and9a), new And(and9b)};
+    PrimitiveConstraint[] ogr9 = {new And(and9a), new And(and9b)};
     store.impose(new Or(ogr9));
 
     // 10. Shane's wife received flowers during the second week of the
     // month.
     store.impose(new XeqC(husbandT[iShane], 2));
 
-    for (IntVar v : wifeT) vars.add(v);
-    for (IntVar v : wifeD) vars.add(v);
-    for (IntVar v : husbandT) vars.add(v);
-    for (IntVar v : husbandD) vars.add(v);
-    for (IntVar v : occasionT) vars.add(v);
-    for (IntVar v : occasionD) vars.add(v);
-    for (IntVar v : flowerT) vars.add(v);
-    for (IntVar v : flowerD) vars.add(v);
+    vars.addAll(Arrays.asList(wifeT));
+    vars.addAll(Arrays.asList(wifeD));
+    vars.addAll(Arrays.asList(husbandT));
+    vars.addAll(Arrays.asList(husbandD));
+    vars.addAll(Arrays.asList(occasionT));
+    vars.addAll(Arrays.asList(occasionD));
+    vars.addAll(Arrays.asList(flowerT));
+    vars.addAll(Arrays.asList(flowerD));
   }
 }

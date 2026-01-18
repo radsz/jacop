@@ -31,7 +31,7 @@
 package org.jacop.fz;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -286,7 +286,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   ArrayList<SearchItem<T>> parseSearchAnnotations(ArrayList<SearchItem<T>> search_seq) {
-    ArrayList<SearchItem<T>> ns = new ArrayList<SearchItem<T>>();
+    ArrayList<SearchItem<T>> ns = new ArrayList<>();
 
     for (SearchItem<T> s : search_seq)
       if (s.search_type.equals("restart_none")) continue;
@@ -350,7 +350,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     label = null;
     optimization = false;
-    list_seq_searches = new ArrayList<Search<T>>();
+    list_seq_searches = new ArrayList<>();
 
     label = null;
     if (si != null) {
@@ -454,7 +454,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (si == null) {
       defaultSearch = true;
-      si = new SearchItem<T>(store, dictionary);
+      si = new SearchItem<>(store, dictionary);
       si.explore = "complete";
       if (final_search[0] != null) {
         label = final_search[0];
@@ -521,7 +521,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   printSearch(label);
                 }
 
-                rs = new RestartSearch<T>(store, label, variable_selection, restartCalculator);
+                rs = new RestartSearch<>(store, label, variable_selection, restartCalculator);
                 rs.setRestartsLimit(options.getRestartLimit());
                 int to = options.getTimeOut();
                 if (to > 0) rs.setTimeOutMilliseconds(to);
@@ -566,7 +566,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 }
 
                 rs =
-                    new RestartSearch<T>(
+                    new RestartSearch<>(
                         store, label, variable_selection, restartCalculator, (T) cost);
                 rs.setRestartsLimit(options.getRestartLimit());
                 int to = options.getTimeOut();
@@ -616,7 +616,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 }
 
                 rs =
-                    new RestartSearch<T>(
+                    new RestartSearch<>(
                         store, label, variable_selection, restartCalculator, (T) max_cost);
                 rs.setRestartsLimit(options.getRestartLimit());
                 int to = options.getTimeOut();
@@ -728,10 +728,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (interrupted) IO.println("%% =====INTERRUPTED=====");
     else if (si.exploration().equals("complete")) {
       IO.println("=====UNSATISFIABLE=====");
-      if (!options.getOutputFilename().equals("")) {
+      if (!options.getOutputFilename().isEmpty()) {
         String st = "=====UNSATISFIABLE=====";
         try {
-          Files.write(Path.of(options.getOutputFilename()), st.getBytes(Charset.forName("UTF-8")));
+          Files.write(Path.of(options.getOutputFilename()), st.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e1) {
           e1.printStackTrace();
         }
@@ -856,15 +856,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (set_search_variables.length != 0) {
       // add set search containing all variables to be sure that they get a value
-      DepthFirstSearch<T> setSearch = new DepthFirstSearch<T>();
+      DepthFirstSearch<T> setSearch = new DepthFirstSearch<>();
 
       if (opt.debug()) setSearch.setConsistencyListener(failStatistics);
 
       SelectChoicePoint<SetVar> setSelect =
           (options.freeSearch() || options.complementarySearch())
-              ? new SimpleSelect<SetVar>(
-                  set_search_variables, new AFCMaxDeg<SetVar>(store), new IndomainSetMin<SetVar>())
-              : new SimpleSelect<SetVar>(set_search_variables, null, new IndomainSetMin<SetVar>());
+              ? new SimpleSelect<>(
+                  set_search_variables, new AFCMaxDeg<>(store), new IndomainSetMin<>())
+              : new SimpleSelect<>(set_search_variables, null, new IndomainSetMin<>());
 
       if (variable_selection == null) variable_selection = (SelectChoicePoint<T>) setSelect;
       setSearch.setSelectChoicePoint((SelectChoicePoint<T>) setSelect);
@@ -874,7 +874,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (int_search_variables.length == 0
           && bool_search_variables.length == 0
           && float_search_variables.length == 0)
-        setSearch.setSolutionListener(new CostListener<T>());
+        setSearch.setSolutionListener(new CostListener<>());
 
       if (costVariable != null) {
         intSearch.setCostVar(costVariable);
@@ -894,9 +894,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // add search containing int variables to be sure that they get a value
       SelectChoicePoint<IntVar> intSelect =
           (options.freeSearch() || options.complementarySearch())
-              ? new SimpleSelect<IntVar>(
-                  int_search_variables, new AFCMaxDeg<IntVar>(store), new IndomainMin<IntVar>())
-              : new SimpleSelect<IntVar>(int_search_variables, null, new IndomainMin<IntVar>());
+              ? new SimpleSelect<>(
+                  int_search_variables, new AFCMaxDeg<>(store), new IndomainMin<>())
+              : new SimpleSelect<>(int_search_variables, null, new IndomainMin<>());
 
       if (variable_selection == null) variable_selection = (SelectChoicePoint<T>) intSelect;
       intSearch.setSelectChoicePoint((SelectChoicePoint<T>) intSelect);
@@ -904,7 +904,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (lastSearch != null) lastSearch.addChildSearch(intSearch);
       lastSearch = intSearch;
       if (bool_search_variables.length == 0 && float_search_variables.length == 0) {
-        intSearch.setSolutionListener(new CostListener<T>());
+        intSearch.setSolutionListener(new CostListener<>());
 
         if (costVariable != null) {
           intSearch.setCostVar(costVariable);
@@ -927,12 +927,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // add search containing boolean variables to be sure that they get a value
       SelectChoicePoint<BooleanVar> boolSelect =
           (options.freeSearch() || options.complementarySearch())
-              ? new SimpleSelect<BooleanVar>(
-                  bool_search_variables,
-                  new AFCMax<BooleanVar>(store),
-                  new IndomainMin<BooleanVar>())
-              : new SimpleSelect<BooleanVar>(
-                  bool_search_variables, null, new IndomainMin<BooleanVar>());
+              ? new SimpleSelect<>(bool_search_variables, new AFCMax<>(store), new IndomainMin<>())
+              : new SimpleSelect<>(bool_search_variables, null, new IndomainMin<>());
 
       if (variable_selection == null) variable_selection = (SelectChoicePoint<T>) boolSelect;
       boolSearch.setSelectChoicePoint((SelectChoicePoint<T>) boolSelect);
@@ -940,7 +936,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (lastSearch != null) lastSearch.addChildSearch(boolSearch);
       lastSearch = boolSearch;
       if (float_search_variables.length == 0) {
-        boolSearch.setSolutionListener(new CostListener<T>());
+        boolSearch.setSolutionListener(new CostListener<>());
 
         if (costVariable != null) {
           intSearch.setCostVar(costVariable);
@@ -957,21 +953,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (float_search_variables.length != 0) {
       // add float search containing all variables to be sure that they get a value
-      DepthFirstSearch<T> floatSearch = new DepthFirstSearch<T>();
+      DepthFirstSearch<T> floatSearch = new DepthFirstSearch<>();
 
       if (opt.debug()) floatSearch.setConsistencyListener(failStatistics);
 
       SelectChoicePoint<Var> floatSelect =
           (options.freeSearch() || options.complementarySearch())
-              ? new SplitSelectFloat<Var>(
-                  store, float_search_variables, new LargestDomainFloat<Var>())
-              : new SplitSelectFloat<Var>(store, float_search_variables, null);
+              ? new SplitSelectFloat<>(store, float_search_variables, new LargestDomainFloat<>())
+              : new SplitSelectFloat<>(store, float_search_variables, null);
 
       if (variable_selection == null) variable_selection = (SelectChoicePoint<T>) floatSelect;
       floatSearch.setSelectChoicePoint((SelectChoicePoint<T>) floatSelect);
       floatSearch.setPrintInfo(false);
       if (lastSearch != null) lastSearch.addChildSearch(floatSearch);
-      floatSearch.setSolutionListener(new CostListener<T>());
+      floatSearch.setSolutionListener(new CostListener<>());
 
       if (costVariable != null) {
         intSearch.setCostVar(costVariable);
@@ -1077,7 +1072,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T> masterLabel = null;
     DepthFirstSearch<T> last_search = null;
     SelectChoicePoint<T> masterSelect = null;
-    list_seq_searches = new ArrayList<Search<T>>();
+    list_seq_searches = new ArrayList<>();
 
     for (int i = 0; i < si.getSearchItems().size(); i++) {
       if (i == 0) { // master search
@@ -1141,7 +1136,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   printSearch(label);
                 }
 
-                rs = new RestartSearch<T>(store, masterLabel, masterSelect, restartCalculator);
+                rs = new RestartSearch<>(store, masterLabel, masterSelect, restartCalculator);
                 rs.setRestartsLimit(options.getRestartLimit());
 
                 if (relaxVars != null) rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -1176,11 +1171,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           FloatDomain.intervalPrint(options.getInterval()); // print intervals for float variables
 
           cost = getCost((ASTSolveExpr) kind.jjtGetChild(0));
-          if (cost != null) costVariable = cost;
-          else {
+          if (cost != null) {
+          } else {
             cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
-            costVariable = cost;
           }
+          costVariable = cost;
 
           // result = restart_search(masterLabel, masterSelect, cost, true);
 
@@ -1201,7 +1196,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 }
 
                 rs =
-                    new RestartSearch<T>(
+                    new RestartSearch<>(
                         store, masterLabel, masterSelect, restartCalculator, (T) cost);
                 rs.setRestartsLimit(options.getRestartLimit());
                 if (relaxVars != null) rs.setRelaxAndReconstruct(relaxVars, probability);
@@ -1241,7 +1236,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           if (cost != null) { // maximize
             max_cost = new IntVar(store, "-" + cost.id(), IntDomain.MinInt, IntDomain.MaxInt);
             pose(new XplusYeqC((IntVar) max_cost, (IntVar) cost, 0));
-            costVariable = max_cost;
           } else {
             cost = getCostFloat((ASTSolveExpr) kind.jjtGetChild(0));
             max_cost =
@@ -1252,8 +1246,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     VariablesParameters.MAX_FLOAT);
             pose(
                 new PplusQeqR((FloatVar) max_cost, (FloatVar) cost, new FloatVar(store, 0.0, 0.0)));
-            costVariable = max_cost;
           }
+          costVariable = max_cost;
 
           // result = restart_search(masterLabel, masterSelect, cost, false);
 
@@ -1273,7 +1267,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 }
 
                 rs =
-                    new RestartSearch<T>(
+                    new RestartSearch<>(
                         store, masterLabel, masterSelect, restartCalculator, (T) max_cost);
                 rs.setRestartsLimit(options.getRestartLimit());
 
@@ -1644,7 +1638,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ComparatorVariable<IntVar> tieBreak = vs.v2;
 
     PrioritySearch<T> label =
-        new PrioritySearch<T>(
+        new PrioritySearch<>(
             (T[]) si.vars(),
             (ComparatorVariable<T>) comparator,
             (ComparatorVariable<T>) tieBreak,
@@ -1672,13 +1666,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
 
-    if (dictionary.outputVariables.size() > 0)
+    if (!dictionary.outputVariables.isEmpty())
       for (int i = 0; i < dictionary.outputVariables.size(); i++) {
         Var v = dictionary.outputVariables.get(i);
 
         if (v instanceof BooleanVar var1) {
           // print boolean variables
-          printBuffer.append(v.id() + " = ");
+          printBuffer.append(v.id()).append(" = ");
           if (v.singleton())
             switch (var1.value()) {
               case 0:
@@ -1695,11 +1689,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           printBuffer.append(";\n");
         } else if (v instanceof SetVar var) {
           // print set variables
-          printBuffer.append(v.id() + " = ");
+          printBuffer.append(v.id()).append(" = ");
           if (v.singleton()) {
             IntDomain glb = var.dom().glb();
             if (glb.getSize() > 0 && glb.getSize() == glb.max() - glb.min() + 1) {
-              printBuffer.append(glb.min() + ".." + glb.max());
+              printBuffer.append(glb.min()).append("..").append(glb.max());
             } else {
               printBuffer.append("{");
               for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
@@ -1733,24 +1727,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (costVariable != null)
         if (minimize) {
           if (costVariable instanceof IntVar var1)
-            printBuffer.append("%%%mzn-stat: objective=" + var1.value() + "\n");
+            printBuffer.append("%%%mzn-stat: objective=").append(var1.value()).append("\n");
           else if (costVariable instanceof FloatVar var)
-            printBuffer.append("%%%mzn-stat: objective=" + var.value() + "\n");
+            printBuffer.append("%%%mzn-stat: objective=").append(var.value()).append("\n");
         } else {
           if (costVariable instanceof IntVar var1)
-            printBuffer.append("%%%mzn-stat: objective=" + (-var1.value()) + "\n");
+            printBuffer.append("%%%mzn-stat: objective=").append(-var1.value()).append("\n");
           else if (costVariable instanceof FloatVar var)
-            printBuffer.append("%%%mzn-stat: objective=" + (-var.value()) + "\n");
+            printBuffer.append("%%%mzn-stat: objective=").append(-var.value()).append("\n");
         }
       double cpuTime = getSearchTime_ms();
-      printBuffer.append("%%%mzn-stat: nodes=" + nf.format(nodes) + "\n");
-      printBuffer.append(
-          "%%%mzn-stat: nodesPerSecond="
-              + nf.format((cpuTime == 0) ? 0.0 : (double) nodes / (cpuTime / 1000))
-              + "\n");
+      printBuffer.append("%%%mzn-stat: nodes=").append(nf.format(nodes)).append("\n");
+      printBuffer
+          .append("%%%mzn-stat: nodesPerSecond=")
+          .append(nf.format((cpuTime == 0) ? 0.0 : (double) nodes / (cpuTime / 1000)))
+          .append("\n");
       if (restartCalculator != null)
-        printBuffer.append("%%%%mzn-stat: restarts=" + nf.format(rs.restarts()));
-      printBuffer.append("\n%%%mzn-stat: solveTime=" + nf.format(cpuTime / 1000) + "\n");
+        printBuffer.append("%%%%mzn-stat: restarts=").append(nf.format(rs.restarts()));
+      printBuffer
+          .append("\n%%%mzn-stat: solveTime=")
+          .append(nf.format(cpuTime / 1000))
+          .append("\n");
       printBuffer.append("%%%mzn-stat-end\n");
     }
 
@@ -1910,12 +1907,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     IO.print(lastSolution);
 
-    if (!options.getOutputFilename().equals("") && !lastSolution.isEmpty()) {
+    if (!options.getOutputFilename().isEmpty() && !lastSolution.isEmpty()) {
       try {
         IO.println("%%Output filename " + options.getOutputFilename());
         Files.write(
             Path.of(options.getOutputFilename()),
-            lastSolution.getBytes(Charset.forName("UTF-8")),
+            lastSolution.getBytes(StandardCharsets.UTF_8),
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING);
       } catch (IOException e) {

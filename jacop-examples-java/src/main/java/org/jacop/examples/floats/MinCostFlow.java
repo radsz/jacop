@@ -51,7 +51,7 @@ public class MinCostFlow {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     MinCostFlow example = new MinCostFlow();
 

@@ -144,18 +144,17 @@ public class ForbiddenArea extends InternalConstraint {
 
     if (minlex == Geost.SweepDirection.PRUNEMIN) {
 
-      for (int i = 0; i < dimension; i++) outOrigin[i] = origin[i];
+      System.arraycopy(origin, 0, outOrigin, 0, dimension);
 
       outOrigin[dimension] = Integer.MIN_VALUE;
-      return outOrigin;
 
     } else { // SweepDirection.PRUNEMAX
 
       for (int i = 0; i < dimension; i++) outOrigin[i] = origin[i] + length[i];
 
       outOrigin[dimension] = Integer.MAX_VALUE;
-      return outOrigin;
     }
+    return outOrigin;
   }
 
   @Override
@@ -165,7 +164,7 @@ public class ForbiddenArea extends InternalConstraint {
 
   @Override
   public Collection<Var> definingVariables() {
-    return new ArrayList<Var>(0);
+    return new ArrayList<>(0);
   }
 
   @Override

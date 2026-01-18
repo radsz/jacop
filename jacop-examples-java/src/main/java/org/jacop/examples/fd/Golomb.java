@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
@@ -57,7 +58,7 @@ public class Golomb extends ExampleFD {
   public int bound = -1;
 
   /** It contains all differences between all possible pairs of marks. */
-  public List<IntVar> subs = new ArrayList<IntVar>();
+  public List<IntVar> subs = new ArrayList<>();
 
   /**
    * It executes the program which computes the optimal Golomb ruler.
@@ -65,7 +66,7 @@ public class Golomb extends ExampleFD {
    * @param args the first argument specifies the number of marks, the second argument specifies the
    *     upper bound of the optimal solution.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Golomb example = new Golomb();
 
@@ -86,7 +87,7 @@ public class Golomb extends ExampleFD {
    * @param args the first argument specifies the number of marks, the second argument specifies the
    *     upper bound of the optimal solution.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     Golomb example = new Golomb();
 
@@ -117,7 +118,7 @@ public class Golomb extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    IntVar numbers[] = new IntVar[noMarks];
+    IntVar[] numbers = new IntVar[noMarks];
 
     for (int i = 0; i < numbers.length; i++) {
       // Create FDV for each natural number
@@ -130,7 +131,7 @@ public class Golomb extends ExampleFD {
       else store.impose(new XeqC(numbers[0], 0));
     }
 
-    for (IntVar v : numbers) vars.add(v);
+    vars.addAll(Arrays.asList(numbers));
 
     if (bound > -1) store.impose(new XlteqC(numbers[noMarks - 1], bound));
 

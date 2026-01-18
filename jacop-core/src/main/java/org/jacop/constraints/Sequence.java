@@ -97,14 +97,14 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     fsm.initState = new FSMState();
     fsm.allStates.add(fsm.initState);
 
-    Map<FSMState, Integer> mappingQuantity = new HashMap<FSMState, Integer>();
-    Map<String, FSMState> mappingString = new HashMap<String, FSMState>();
+    Map<FSMState, Integer> mappingQuantity = new HashMap<>();
+    Map<String, FSMState> mappingString = new HashMap<>();
 
     mappingQuantity.put(fsm.initState, 0);
     mappingString.put("", fsm.initState);
 
     for (int i = 0; i < sequence.q; i++) {
-      Map<String, FSMState> mappingStringNext = new HashMap<String, FSMState>();
+      Map<String, FSMState> mappingStringNext = new HashMap<>();
 
       for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
         String stateString = entry.getKey();
@@ -151,7 +151,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
     fsm.resize();
 
-    List<Constraint> constraints = new ArrayList<Constraint>();
+    List<Constraint> constraints = new ArrayList<>();
     constraints.add(new Regular(fsm, sequence.list));
 
     return constraints;

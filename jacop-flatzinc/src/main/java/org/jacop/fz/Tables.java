@@ -52,34 +52,34 @@ import org.jacop.set.core.SetVar;
  */
 public class Tables {
 
-  public Map<IntVar, IntVar> aliasTable = new HashMap<IntVar, IntVar>();
+  public Map<IntVar, IntVar> aliasTable = new HashMap<>();
   // IntVar zero, one;
   Store store;
-  HashMap<Integer, IntVar> constantTable = new HashMap<Integer, IntVar>();
-  HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<Integer, BooleanVar>();
-  HashMap<Double, FloatVar> constantFloatTable = new HashMap<Double, FloatVar>();
+  HashMap<Integer, IntVar> constantTable = new HashMap<>();
+  HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<>();
+  HashMap<Double, FloatVar> constantFloatTable = new HashMap<>();
   // intTable keeps both int & bool (0=false, 1=true) parameters
-  HashMap<String, Integer> intTable = new HashMap<String, Integer>();
-  HashMap<String, Double> floatTable = new HashMap<String, Double>();
+  HashMap<String, Integer> intTable = new HashMap<>();
+  HashMap<String, Double> floatTable = new HashMap<>();
   HashMap<String, int[]> intArrayTable =
-      new HashMap<String, int[]>(); // boolean are also stored here as 0/1 values
-  HashMap<String, double[]> floatArrayTable = new HashMap<String, double[]>();
-  HashMap<String, IntDomain> setTable = new HashMap<String, IntDomain>();
-  HashMap<String, IntDomain[]> setArrayTable = new HashMap<String, IntDomain[]>();
-  HashMap<String, IntVar> variableTable = new HashMap<String, IntVar>();
-  HashMap<String, IntVar[]> variableArrayTable = new HashMap<String, IntVar[]>();
-  HashMap<String, FloatVar> variableFloatTable = new HashMap<String, FloatVar>();
-  HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<String, FloatVar[]>();
-  HashMap<String, SetVar> setVariableTable = new HashMap<String, SetVar>();
-  HashMap<String, SetVar[]> setVariableArrayTable = new HashMap<String, SetVar[]>();
-  ArrayList<Var> outputVariables = new ArrayList<Var>();
-  ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<OutputArrayAnnotation>();
-  ArrayList<Var> defaultSearchVariables = new ArrayList<Var>();
-  ArrayList<Var> defaultSearchFloatVariables = new ArrayList<Var>();
-  ArrayList<Var[]> defaultSearchArrays = new ArrayList<Var[]>();
-  ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<Var[]>();
-  ArrayList<Var> defaultSearchSetVariables = new ArrayList<Var>();
-  ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<Var[]>();
+      new HashMap<>(); // boolean are also stored here as 0/1 values
+  HashMap<String, double[]> floatArrayTable = new HashMap<>();
+  HashMap<String, IntDomain> setTable = new HashMap<>();
+  HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
+  HashMap<String, IntVar> variableTable = new HashMap<>();
+  HashMap<String, IntVar[]> variableArrayTable = new HashMap<>();
+  HashMap<String, FloatVar> variableFloatTable = new HashMap<>();
+  HashMap<String, FloatVar[]> variableFloatArrayTable = new HashMap<>();
+  HashMap<String, SetVar> setVariableTable = new HashMap<>();
+  HashMap<String, SetVar[]> setVariableArrayTable = new HashMap<>();
+  ArrayList<Var> outputVariables = new ArrayList<>();
+  ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<>();
+  ArrayList<Var> defaultSearchVariables = new ArrayList<>();
+  ArrayList<Var> defaultSearchFloatVariables = new ArrayList<>();
+  ArrayList<Var[]> defaultSearchArrays = new ArrayList<>();
+  ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
+  ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
+  ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   int numberBoolVariables = 0;
   int numberFloatVariables = 0;
   int numberSetVariables = 0;
@@ -618,12 +618,12 @@ public class Tables {
 
       // int array || float array
       if (i == indexIntArray) {
-        s.append(tableNames[i] + "\n");
+        s.append(tableNames[i]).append("\n");
         s.append("{");
         java.util.Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           int[] a = (int[]) dictionary[i].get(k);
-          s.append(k + "=[");
+          s.append(k).append("=[");
           for (int j = 0; j < a.length; j++) {
             s.append(a[j]);
             if (j < a.length - 1) s.append(", ");
@@ -634,12 +634,12 @@ public class Tables {
       }
       // float array
       else if (i == indexFloatArray) {
-        s.append(tableNames[i] + "\n");
+        s.append(tableNames[i]).append("\n");
         s.append("{");
         java.util.Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           double[] a = (double[]) dictionary[i].get(k);
-          s.append(k + "=[");
+          s.append(k).append("=[");
           for (int j = 0; j < a.length; j++) {
             s.append(a[j]);
             if (j < a.length - 1) s.append(", ");
@@ -650,11 +650,11 @@ public class Tables {
       }
       // Set Array
       else if (i == indexSetArray) {
-        s.append(tableNames[i] + "\n");
+        s.append(tableNames[i]).append("\n");
         s.append("{");
         java.util.Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
-          s.append(k + "=");
+          s.append(k).append("=");
           IntDomain[] a = (IntDomain[]) dictionary[i].get(k);
           s.append(Arrays.asList(a));
           s.append(", ");
@@ -665,18 +665,18 @@ public class Tables {
       else if (i == indexVariableArray
           || i == indexFloatVariableArray
           || i == indexSetVariableArray) {
-        s.append(tableNames[i] + "\n");
+        s.append(tableNames[i]).append("\n");
         s.append("{");
         java.util.Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           Var[] a = (Var[]) dictionary[i].get(k);
-          s.append(k + "=");
+          s.append(k).append("=");
           s.append(Arrays.asList(a));
           s.append(", ");
         }
         s.append("}\n");
       } else if (i == indexConstantTable) {
-        s.append(tableNames[i] + "\n");
+        s.append(tableNames[i]).append("\n");
         s.append("{");
         java.util.Set<Integer> keys = dictionary[i].keySet();
         for (Integer k : keys) {
@@ -686,33 +686,33 @@ public class Tables {
         }
         s.append("}\n");
       } else {
-        s.append(tableNames[i] + " (" + dictionary[i].size() + ")\n");
-        s.append(dictionary[i] + "\n");
+        s.append(tableNames[i]).append(" (").append(dictionary[i].size()).append(")\n");
+        s.append(dictionary[i]).append("\n");
       }
     }
 
-    s.append("Output variables = " + outputVariables + "\n");
+    s.append("Output variables = ").append(outputVariables).append("\n");
     s.append("Output arrays = [");
     for (OutputArrayAnnotation a : outputArray) {
       s.append(a);
       s.append(", ");
     }
     s.append("]\n");
-    s.append("Search int variables = " + defaultSearchVariables + "\n");
+    s.append("Search int variables = ").append(defaultSearchVariables).append("\n");
     s.append("Search int variable arrays = [");
     for (Var[] a : defaultSearchArrays) {
       s.append(Arrays.asList(a));
       s.append(", ");
     }
     s.append("]\n");
-    s.append("Search float variables = " + defaultSearchFloatVariables + "\n");
+    s.append("Search float variables = ").append(defaultSearchFloatVariables).append("\n");
     s.append("Search float variables arrays = [");
     for (Var[] a : defaultSearchFloatArrays) {
       s.append(Arrays.asList(a));
       s.append(", ");
     }
     s.append("]\n");
-    s.append("Search set variables = " + defaultSearchSetVariables + "\n");
+    s.append("Search set variables = ").append(defaultSearchSetVariables).append("\n");
     s.append("Search set arrays = [");
     for (Var[] a : defaultSearchSetArrays) {
       s.append(Arrays.asList(a));

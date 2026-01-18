@@ -63,7 +63,7 @@ public class FIR16 extends Filter {
 
     name = "FIR16";
 
-    int dependencies[][] = {
+    int[][] dependencies = {
       {0, 17}, {1, 17}, {2, 18}, {3, 19}, {4, 20}, {5, 21}, {6, 22}, {7, 23}, {8, 24}, {9, 25},
       {10, 26}, {11, 27}, {12, 28}, {13, 29}, {14, 30}, {15, 31}, {16, 32}, {17, 18}, {18, 19},
       {19, 20}, {20, 21}, {21, 22}, {22, 23}, {23, 24}, {24, 25}, {25, 26}, {26, 27}, {27, 28},
@@ -71,20 +71,20 @@ public class FIR16 extends Filter {
     };
     this.dependencies = dependencies;
 
-    int ids[] = {
+    int[] ids = {
       mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
       mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
       addId, addId, addId, addId, addId, addId, addId
     };
     this.ids = ids;
 
-    int last[] = {32};
+    int[] last = {32};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(23);
+    List<String> names = new ArrayList<>(23);
 
     names.add("+1");
     names.add("*2");
@@ -115,7 +115,7 @@ public class FIR16 extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(23);
+    List<String> names = new ArrayList<>(23);
 
     names.add("+1");
     names.add("*2");

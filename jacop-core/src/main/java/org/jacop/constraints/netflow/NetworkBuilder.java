@@ -50,9 +50,9 @@ import org.jacop.core.Store;
  */
 public class NetworkBuilder {
 
-  public final List<Node> nodeList = new ArrayList<Node>();
-  public final List<Arc> arcList = new ArrayList<Arc>();
-  public final List<VarHandler> handlerList = new ArrayList<VarHandler>();
+  public final List<Node> nodeList = new ArrayList<>();
+  public final List<Arc> arcList = new ArrayList<>();
+  public final List<VarHandler> handlerList = new ArrayList<>();
   public IntVar costVariable;
   private int nextNodeName = 1;
 
@@ -170,8 +170,8 @@ public class NetworkBuilder {
 
       IntVar var = vars[i];
 
-      List<Arc> arcs = new ArrayList<Arc>();
-      List<Domain> doms = new ArrayList<Domain>();
+      List<Arc> arcs = new ArrayList<>();
+      List<Domain> doms = new ArrayList<>();
 
       IntDomain vardom = var.domain;
       for (int j = 0; j < m; j++) {
@@ -190,7 +190,7 @@ public class NetworkBuilder {
   // list of all variables, excluding the cost variable
   public ArrayList<IntVar> listVariables() {
 
-    ArrayList<IntVar> list = new ArrayList<IntVar>();
+    ArrayList<IntVar> list = new ArrayList<>();
 
     for (VarHandler handler : handlerList) list.addAll(handler.listVariables());
 
@@ -215,12 +215,12 @@ public class NetworkBuilder {
    */
   public List<Constraint> primitiveDecomposition(Store store) {
 
-    List<Constraint> result = new ArrayList<Constraint>();
+    List<Constraint> result = new ArrayList<>();
 
     // @TODO, fix it? Check the remark above.
     for (Node node : nodeList) {
-      List<IntVar> in = new ArrayList<IntVar>();
-      List<IntVar> out = new ArrayList<IntVar>();
+      List<IntVar> in = new ArrayList<>();
+      List<IntVar> out = new ArrayList<>();
 
       for (Arc arc : arcList) {
 
@@ -252,7 +252,7 @@ public class NetworkBuilder {
       }
 
       // added.
-      if (in.size() == 0 || out.size() == 0) continue;
+      if (in.isEmpty() || out.isEmpty()) continue;
 
       if (in.size() == 1) {
         sumC(result, store, out, in.getFirst());
@@ -334,7 +334,7 @@ public class NetworkBuilder {
 
     if (result == null) throw new AssertionError();
 
-    if (vars.size() == 0) {
+    if (vars.isEmpty()) {
       list.add(new XeqY(result, new IntVar(store, 0, 0)));
     } else if (vars.size() == 1) {
       list.add(new XeqY(result, vars.getFirst()));

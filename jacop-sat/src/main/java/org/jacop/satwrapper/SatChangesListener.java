@@ -81,8 +81,8 @@ public final class SatChangesListener
   private Integer[] lowerBounds = new Integer[40];
 
   // set of variables to update
-  private BitSet intVarsToUpdate = new BitSet();
-  private Set<BooleanVar> booleanVarsToUpdate = new HashSet<BooleanVar>();
+  private final BitSet intVarsToUpdate = new BitSet();
+  private final Set<BooleanVar> booleanVarsToUpdate = new HashSet<>();
 
   /** clears all sets, so that elements occurring in them later result only from later events */
   public void clear() {
@@ -159,8 +159,7 @@ public final class SatChangesListener
           lowerBounds[cpVarIndex] = cpValue;
         } else {
           // 'x!=v', remember that this value is excluded
-          if (excludedValues[cpVarIndex] == null)
-            excludedValues[cpVarIndex] = new HashSet<Integer>();
+          if (excludedValues[cpVarIndex] == null) excludedValues[cpVarIndex] = new HashSet<>();
           excludedValues[cpVarIndex].add(cpValue);
         }
       } else {

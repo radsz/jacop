@@ -59,7 +59,7 @@ public class Zebra extends ExampleFD {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Zebra example = new Zebra();
 
@@ -88,11 +88,11 @@ public class Zebra extends ExampleFD {
     String[] drinkNames = {"tea", "coffee", "milk", "juice", "water"};
     int itea = 0, icoffee = 1, imilk = 2, ijuice = 3 /* , iwater = 4 */;
 
-    IntVar color[] = new IntVar[5];
-    IntVar nationality[] = new IntVar[5];
-    IntVar drink[] = new IntVar[5];
-    IntVar pet[] = new IntVar[5];
-    IntVar profession[] = new IntVar[5];
+    IntVar[] color = new IntVar[5];
+    IntVar[] nationality = new IntVar[5];
+    IntVar[] drink = new IntVar[5];
+    IntVar[] pet = new IntVar[5];
+    IntVar[] profession = new IntVar[5];
 
     for (int i = 0; i < 5; i++) {
       color[i] = new IntVar(store, colorNames[i], 1, 5);

@@ -64,7 +64,7 @@ public class Steiner extends ExampleSet {
    *
    * @param args prameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Steiner example = new Steiner();
     example.n = 7;
@@ -131,9 +131,7 @@ public class Steiner extends ExampleSet {
 
       SelectChoicePoint<SetVar> select =
           new SimpleSelect<SetVar>(
-              vars.toArray(new SetVar[vars.size()]),
-              new MaxCardDiff<SetVar>(),
-              new IndomainSetMax<SetVar>());
+              vars.toArray(new SetVar[0]), new MaxCardDiff<SetVar>(), new IndomainSetMax<SetVar>());
 
       label.getSolutionListener().searchAll(true);
       label.getSolutionListener().recordSolutions(true);

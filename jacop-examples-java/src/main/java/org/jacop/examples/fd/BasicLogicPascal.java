@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XneqC;
@@ -54,7 +55,7 @@ public class BasicLogicPascal extends ExampleFD {
    *
    * @param args no arguments are read.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     BasicLogicPascal example = new BasicLogicPascal();
 
@@ -86,12 +87,12 @@ public class BasicLogicPascal extends ExampleFD {
     IntVar valuePASCAL = new IntVar(store, "v(PASCAL)", 0, 999999);
 
     // Creating arrays for FDVs
-    IntVar digits[] = {b, a, s, i, l, o, g, c, p};
-    IntVar basic[] = {b, a, s, i, c};
-    IntVar logic[] = {l, o, g, i, c};
-    IntVar pascal[] = {p, a, s, c, a, l};
+    IntVar[] digits = {b, a, s, i, l, o, g, c, p};
+    IntVar[] basic = {b, a, s, i, c};
+    IntVar[] logic = {l, o, g, i, c};
+    IntVar[] pascal = {p, a, s, c, a, l};
 
-    for (IntVar v : digits) vars.add(v);
+    vars.addAll(Arrays.asList(digits));
 
     // Imposing inequalities constraints between letters
     // Only one global constraint

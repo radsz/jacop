@@ -115,7 +115,7 @@ public final class Core implements SolverComponent {
   // the maximum variable allowed
   private int maxVariable = 0;
   // a time counter
-  private Map<String, Long> timeMap = new HashMap<String, Long>();
+  private final Map<String, Long> timeMap = new HashMap<>();
 
   /**
    * creates the solver, which in turn creates all inner components and connect them together.
@@ -358,7 +358,7 @@ public final class Core implements SolverComponent {
   public final void unitPropagate() {
     // propagate until there remain no unit clauses or a conflict occurs
     while (currentState != SolverState.CONFLICT && !toPropagate.isEmpty()) {
-      assert toPropagate.size() > 0;
+      assert !toPropagate.isEmpty();
 
       // find the next literal to propagate
       int literalToPropagate = toPropagate.pop();

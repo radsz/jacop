@@ -58,7 +58,7 @@ public class DefaultSearchVars {
 
   Tables dictionary;
 
-  private Comparator<Var> domainSizeComparator =
+  private final Comparator<Var> domainSizeComparator =
       (o1, o2) -> {
         int v1 = o1.getSize();
         int v2 = o2.getSize();
@@ -79,10 +79,10 @@ public class DefaultSearchVars {
 
     // ==== Collect ALL OUTPUT variables ====
 
-    LinkedHashSet<IntVar> int_vars = new LinkedHashSet<IntVar>();
-    LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<BooleanVar>();
-    LinkedHashSet<SetVar> set_vars = new LinkedHashSet<SetVar>();
-    LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<FloatVar>();
+    LinkedHashSet<IntVar> int_vars = new LinkedHashSet<>();
+    LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<>();
+    LinkedHashSet<SetVar> set_vars = new LinkedHashSet<>();
+    LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<>();
 
     // collect output arrays
     for (int i = 0; i < dictionary.outputArray.size(); i++)
@@ -103,10 +103,10 @@ public class DefaultSearchVars {
       } else if (v instanceof SetVar var1) set_vars.add(var1);
       else if (v instanceof FloatVar var) float_vars.add(var);
     }
-    int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
-    bool_search_variables = bool_vars.toArray(new BooleanVar[bool_vars.size()]);
-    set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
-    float_search_variables = float_vars.toArray(new FloatVar[float_vars.size()]);
+    int_search_variables = int_vars.toArray(new IntVar[0]);
+    bool_search_variables = bool_vars.toArray(new BooleanVar[0]);
+    set_search_variables = set_vars.toArray(new SetVar[0]);
+    float_search_variables = float_vars.toArray(new FloatVar[0]);
 
     Arrays.sort(int_search_variables, domainSizeComparator);
   }
@@ -117,11 +117,11 @@ public class DefaultSearchVars {
    */
   void defaultVars() {
 
-    LinkedHashSet<IntVar> int_vars = new LinkedHashSet<IntVar>();
-    LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<BooleanVar>();
+    LinkedHashSet<IntVar> int_vars = new LinkedHashSet<>();
+    LinkedHashSet<BooleanVar> bool_vars = new LinkedHashSet<>();
     Set<Map.Entry<IntVar, IntVar>> aliasEntries = dictionary.aliasTable.entrySet();
 
-    Set<IntVar> aliasVars = new LinkedHashSet<IntVar>();
+    Set<IntVar> aliasVars = new LinkedHashSet<>();
     // collect all boolean variables with int var alias
     for (Map.Entry<IntVar, IntVar> e : aliasEntries) {
       IntVar b = e.getKey();
@@ -143,25 +143,25 @@ public class DefaultSearchVars {
           bool_vars.add((BooleanVar) v);
         else int_vars.add((IntVar) v);
     }
-    int_search_variables = int_vars.toArray(new IntVar[int_vars.size()]);
-    bool_search_variables = bool_vars.toArray(new BooleanVar[bool_vars.size()]);
+    int_search_variables = int_vars.toArray(new IntVar[0]);
+    bool_search_variables = bool_vars.toArray(new BooleanVar[0]);
 
     Arrays.sort(int_search_variables, domainSizeComparator);
 
-    LinkedHashSet<SetVar> set_vars = new LinkedHashSet<SetVar>();
+    LinkedHashSet<SetVar> set_vars = new LinkedHashSet<>();
     for (int i = 0; i < dictionary.defaultSearchSetArrays.size(); i++)
       for (Var v : dictionary.defaultSearchSetArrays.get(i)) set_vars.add((SetVar) v);
     for (Var v : dictionary.defaultSearchSetVariables) set_vars.add((SetVar) v);
 
-    set_search_variables = set_vars.toArray(new SetVar[set_vars.size()]);
+    set_search_variables = set_vars.toArray(new SetVar[0]);
 
-    LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<FloatVar>();
+    LinkedHashSet<FloatVar> float_vars = new LinkedHashSet<>();
 
     for (int i = 0; i < dictionary.defaultSearchFloatArrays.size(); i++)
       for (Var v : dictionary.defaultSearchFloatArrays.get(i)) float_vars.add((FloatVar) v);
     for (Var v : dictionary.defaultSearchFloatVariables) float_vars.add((FloatVar) v);
 
-    float_search_variables = float_vars.toArray(new FloatVar[float_vars.size()]);
+    float_search_variables = float_vars.toArray(new FloatVar[0]);
     // ==== End collect guessed search variables ====
   }
 
@@ -186,22 +186,22 @@ public class DefaultSearchVars {
     StringBuilder buf = new StringBuilder();
 
     buf.append("%% default int search variables = array1d(1..");
-    buf.append(int_search_variables.length + ", ");
+    buf.append(int_search_variables.length).append(", ");
     buf.append(Arrays.asList(int_search_variables));
     buf.append(")\n");
 
     buf.append("%% default boolean search variables = array1d(1..");
-    buf.append(bool_search_variables.length + ", ");
+    buf.append(bool_search_variables.length).append(", ");
     buf.append(Arrays.asList(bool_search_variables));
     buf.append(")\n");
 
     buf.append("%% default set search variables = array1d(1..");
-    buf.append(set_search_variables.length + ", ");
+    buf.append(set_search_variables.length).append(", ");
     buf.append(Arrays.asList(set_search_variables));
     buf.append(")\n");
 
     buf.append("%% default float search variables = array1d(1..");
-    buf.append(float_search_variables.length + ", ");
+    buf.append(float_search_variables.length).append(", ");
     buf.append(Arrays.asList(float_search_variables));
     buf.append(")\n");
 

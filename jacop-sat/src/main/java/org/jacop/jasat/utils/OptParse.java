@@ -45,7 +45,7 @@ public class OptParse<E> {
   public String[] realArgs;
 
   // handlers
-  private Map<String, OptHandler<E>> handlers = new HashMap<String, OptHandler<E>>();
+  private final Map<String, OptHandler<E>> handlers = new HashMap<>();
 
   // the main help string
   private String mainHelp = "";

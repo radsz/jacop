@@ -67,7 +67,7 @@ public class CPvizNewspaper {
    *
    * @param args no argument is used.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CPvizNewspaper example = new CPvizNewspaper();
 
@@ -82,7 +82,7 @@ public class CPvizNewspaper {
 
     // Creating constraint store
     store = new Store();
-    vars = new ArrayList<Var>();
+    vars = new ArrayList<>();
 
     // algy[0], bertie[0], charlie[0], digby[0]
     // - when a person starts reading guardian
@@ -252,10 +252,9 @@ public class CPvizNewspaper {
     // 	public static boolean label() {
 
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<IntVar>(
-            vars.toArray(new IntVar[1]), new SmallestMax<IntVar>(), new IndomainMin<IntVar>());
+        new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestMax<>(), new IndomainMin<>());
 
-    DepthFirstSearch<IntVar> search = new DepthFirstSearch<IntVar>();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
 
     // Trace --->
     IntVar[] abcd = new IntVar[16];
@@ -265,7 +264,7 @@ public class CPvizNewspaper {
     for (IntVar v : charlie) abcd[i++] = v;
     for (IntVar v : digby) abcd[i++] = v;
 
-    TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(search, varSelect, abcd);
+    TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, abcd);
 
     // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, abcd);
     // 		search.setConsistencyListener((ConsistencyListener)select);

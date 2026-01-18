@@ -81,7 +81,7 @@ public class Alldistinct extends Constraint
   boolean backtrackOccured = true;
   // Any variable which matched edge ends up deleted is added to this
   // structure to obtain a new matched edge
-  LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<>();
   // failure (inconsistency) discovered during imposition
   boolean impositionFailure = false;
   // each fdv has a matched value in maximal matching
@@ -100,7 +100,7 @@ public class Alldistinct extends Constraint
   boolean permutationConsistency = true;
   // Until pointer stampValues it stores all values still in domain of
   // at least one variable
-  Integer potentialFreeValues[];
+  Integer[] potentialFreeValues;
   // Represents for each Variable a scc to which it belongs.
   // This can change from a lot from matching to matching.
   // Variable may belong to different components given different matching.
@@ -142,7 +142,7 @@ public class Alldistinct extends Constraint
   Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
   Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   int vn;
   IntVar guideVariable = null;
   int guideValue;
@@ -164,10 +164,10 @@ public class Alldistinct extends Constraint
 
     this.list = new IntVar[list.length];
 
-    for (int i = 0; i < list.length; i++) this.list[i] = list[i];
+    System.arraycopy(list, 0, this.list, 0, list.length);
 
-    valueMapVariable = new HashMap<Integer, SimpleArrayList<IntVar>>();
-    stamps = new HashMap<Integer, TimeStamp<Integer>>();
+    valueMapVariable = new HashMap<>();
+    stamps = new HashMap<>();
     matching = Var.createEmptyPositioning();
     sccStamp = Var.createEmptyPositioning();
 
@@ -183,7 +183,7 @@ public class Alldistinct extends Constraint
 
     potentialFreeValues = new Integer[sum.getSize()];
 
-    valueIndex = new HashMap<Integer, Integer>(sum.getSize(), 0.5f);
+    valueIndex = new HashMap<>(sum.getSize(), 0.5f);
     int m = 0;
 
     for (ValueEnumeration enumer = sum.valueEnumeration(); enumer.hasMoreElements(); ) {
@@ -195,7 +195,7 @@ public class Alldistinct extends Constraint
       valueIndex.put(valueInteger, m);
       m++;
 
-      currentSimpleArrayList = new SimpleArrayList<IntVar>();
+      currentSimpleArrayList = new SimpleArrayList<>();
       for (IntVar intVar : this.list)
         if (intVar.domain.contains(value)) currentSimpleArrayList.add(intVar);
       valueMapVariable.put(valueInteger, currentSimpleArrayList);
@@ -211,7 +211,7 @@ public class Alldistinct extends Constraint
    */
   public Alldistinct(List<? extends IntVar> list) {
 
-    this(list.toArray(new IntVar[list.size()]));
+    this(list.toArray(new IntVar[0]));
   }
 
   // Right now accepts as input potential free values
@@ -223,7 +223,7 @@ public class Alldistinct extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    variableQueue = new LinkedHashSet<IntVar>();
+    variableQueue = new LinkedHashSet<>();
     backtrackOccured = true;
   }
 
@@ -349,7 +349,7 @@ public class Alldistinct extends Constraint
       IO.println("Maximum Matching " + matching);
     }
 
-    for (; iter.hasNext(); ) {
+    while (iter.hasNext()) {
 
       IntVar V = iter.next();
       IntDomain vPrunedDomain = V.recentDomainPruning();
@@ -893,7 +893,7 @@ public class Alldistinct extends Constraint
 
       while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
-        if (path.size() == 0) {
+        if (path.isEmpty()) {
           // If last element from path is null - no path yet
           // then look for free value to start a path from
           while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
@@ -910,9 +910,9 @@ public class Alldistinct extends Constraint
 
         if (debugAll) IO.println("First element of the path " + path);
 
-        if (path.size() == 0)
+        if (path.isEmpty())
           // no possibility to start new path
-          if (allpaths.size() == 0)
+          if (allpaths.isEmpty())
             // no path was found last execution
             // failed to find maximum matching
             return false;
@@ -1020,7 +1020,7 @@ public class Alldistinct extends Constraint
 
       if (debugAll) IO.println("Allpaths " + allpaths);
 
-      if (allpaths.size() == 0) return false;
+      if (allpaths.isEmpty()) return false;
 
       // Use all paths to create better matching
 
@@ -1108,7 +1108,7 @@ public class Alldistinct extends Constraint
 
     // the initial maximum matching needs to be computed
     // search may return to this matching
-    for (IntVar var : list) freeVariables.add(var);
+    freeVariables.addAll(Arrays.asList(list));
 
     LinkedHashSet<IntVar> fdvs = new LinkedHashSet<IntVar>(freeVariables);
 
@@ -1272,7 +1272,7 @@ public class Alldistinct extends Constraint
 
       Var component;
 
-      while (true) {
+      do {
         component = l.removeLast();
 
         if (debugAll) IO.println("Component part  " + component + "id " + lowx);
@@ -1280,10 +1280,7 @@ public class Alldistinct extends Constraint
         sccStamp.get(component).update(lowx);
         fdvs.remove(component);
 
-        if (component == x) {
-          break;
-        }
-      }
+      } while (component != x);
     }
   }
 

@@ -208,7 +208,7 @@ public class AltB extends PrimitiveConstraint {
   public String toString() {
 
     StringBuilder result = new StringBuilder();
-    result.append(id() + " : AltB(");
+    result.append(id()).append(" : AltB(");
     result.append(a).append(", ").append(b);
     result.append(")");
     return result.toString();

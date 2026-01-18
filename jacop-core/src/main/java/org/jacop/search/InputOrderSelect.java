@@ -82,7 +82,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
     valueOrdering = indomain;
 
-    currentIndex = new TimeStamp<Integer>(store, 0);
+    currentIndex = new TimeStamp<>(store, 0);
   }
 
   /**

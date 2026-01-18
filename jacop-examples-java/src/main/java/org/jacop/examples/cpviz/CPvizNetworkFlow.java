@@ -51,7 +51,7 @@ public class CPvizNetworkFlow {
 
   CPvizNetworkFlow() {}
 
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CPvizNetworkFlow run = new CPvizNetworkFlow();
 

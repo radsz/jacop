@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XgtY;
@@ -58,7 +59,7 @@ public class LeastDiff extends ExampleFD {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     LeastDiff example = new LeastDiff();
 
@@ -90,9 +91,9 @@ public class LeastDiff extends ExampleFD {
     cost = new IntVar(store, "diff", 0, 99999);
 
     // Creating arrays for FDVs
-    IntVar digits[] = {a, b, c, d, e, f, g, h, i, j};
-    IntVar abcde[] = {a, b, c, d, e};
-    IntVar fghij[] = {f, g, h, i, j};
+    IntVar[] digits = {a, b, c, d, e, f, g, h, i, j};
+    IntVar[] abcde = {a, b, c, d, e};
+    IntVar[] fghij = {f, g, h, i, j};
 
     // Creating and imposing constraints
 
@@ -120,7 +121,7 @@ public class LeastDiff extends ExampleFD {
     // It would be niced with a constraint XminusYeqZ(...), though
     store.impose(new XplusYeqZ(cost, value_fghij, value_abcde));
 
-    vars = new ArrayList<IntVar>();
-    for (IntVar v : digits) vars.add(v);
+    vars = new ArrayList<>();
+    vars.addAll(Arrays.asList(digits));
   }
 }

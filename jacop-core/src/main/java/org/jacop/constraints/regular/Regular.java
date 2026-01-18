@@ -32,7 +32,7 @@ package org.jacop.constraints.regular;
 
 import java.io.*;
 import java.lang.reflect.Array;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.RemoveLevelLate;
@@ -111,7 +111,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * given variable or a domain size to pickup first variables which may result in failure faster.
    * It does not have to be fully correct ordering.
    */
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   Map<IntVar, Integer> mapping;
 
@@ -194,9 +194,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     int[][] outdeg = new int[levels + 1][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<FSMState>();
+    Set<FSMState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<FSMState>();
+    Set<FSMState> tmp = new HashSet<>();
 
     // Initialization of the future state array
     // and the time-stamps with the number of active states
@@ -1047,42 +1047,41 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     // todo use StringBuffer in toLatex function. */
 
-    String res = "\\begin{minipage}[b]{.4\\textwidth} \n";
-    res += addDescription + "\n";
-    res += "\\end{minipage} \n\\begin{minipage}[b]{.55\\textwidth} \n";
+    StringBuilder res = new StringBuilder("\\begin{minipage}[b]{.4\\textwidth} \n");
+    res.append(addDescription).append("\n");
+    res.append("\\end{minipage} \n\\begin{minipage}[b]{.55\\textwidth} \n");
     if (list != null) {
-      String s1 = "";
-      String s2 = "";
-      String s3 = "";
+      StringBuilder s1 = new StringBuilder();
+      StringBuilder s2 = new StringBuilder();
+      StringBuilder s3 = new StringBuilder();
       for (Var v : list) {
-        s1 += "c|";
-        s2 += "& $" + v.id() + "$ ";
-        s3 += "& " + v.dom() + " ";
+        s1.append("c|");
+        s2.append("& $").append(v.id()).append("$ ");
+        s3.append("& ").append(v.dom()).append(" ");
       }
-      res += "\\begin{tabular}{|c|" + s1 + "}" + "\n";
-      res += "\\hline  " + s2 + " \\\\" + "\n";
-      res += "\\hline Domain " + s3 + " \\\\" + "\n";
-      res += "\\hline " + "\n";
-      res += "\\end{tabular} \\\\ \n\\vspace{10mm} " + "\n";
+      res.append("\\begin{tabular}{|c|").append(s1).append("}").append("\n");
+      res.append("\\hline  ").append(s2).append(" \\\\").append("\n");
+      res.append("\\hline Domain ").append(s3).append(" \\\\").append("\n");
+      res.append("\\hline " + "\n");
+      res.append("\\end{tabular} \\\\ \n\\vspace{10mm} " + "\n");
     }
 
-    res += "\\end{minipage}\n\\\\\n\\vspace{.7cm} \n";
-    res += "\\resizebox{!}{.17\\textheight}{\n\\resizebox{.17\\textwidth}{!}{ \n";
-    res += "\\tikzstyle{stateS}= [circle, fill=black!40, minimum size=25pt]";
-    res += "\\tikzstyle{active}= [draw, fill=black!40, minimum size=25pt]";
-    res += "\\tikzstyle{ann} = [above, text width=5em, text centered]";
-    res += "\\tikzstyle{n}= [circle, fill=black!15, minimum size=15pt]";
-    res += "\\begin{tikzpicture}[shorten >=1pt,node distance=2cm,auto]" + "\n";
+    res.append("\\end{minipage}\n\\\\\n\\vspace{.7cm} \n");
+    res.append("\\resizebox{!}{.17\\textheight}{\n\\resizebox{.17\\textwidth}{!}{ \n");
+    res.append("\\tikzstyle{stateS}= [circle, fill=black!40, minimum size=25pt]");
+    res.append("\\tikzstyle{active}= [draw, fill=black!40, minimum size=25pt]");
+    res.append("\\tikzstyle{ann} = [above, text width=5em, text centered]");
+    res.append("\\tikzstyle{n}= [circle, fill=black!15, minimum size=15pt]");
+    res.append("\\begin{tikzpicture}[shorten >=1pt,node distance=2cm,auto]" + "\n");
     RegState init = this.stateLevels[0][0];
-    res +=
-        "\\node[active,initial] (q_"
-            + init.level
-            + init.id
-            + ") {$q_{"
-            + init.level
-            + init.id
-            + "}$};"
-            + "\n";
+    res.append("\\node[active,initial] (q_")
+        .append(init.level)
+        .append(init.id)
+        .append(") {$q_{")
+        .append(init.level)
+        .append(init.id)
+        .append("}$};")
+        .append("\n");
     RegState curState;
     String style;
     for (int l = 1; l < list.length + 1; l++)
@@ -1094,72 +1093,68 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         else style = "stateS";
 
         if (i > 0)
-          res +=
-              "\\node["
-                  + style
-                  + "] (q_"
-                  + l
-                  + i
-                  + ") [below of=q_"
-                  + l
-                  + (i - 1)
-                  + "] {$q_{"
-                  + l
-                  + i
-                  + "}$};"
-                  + "\n";
+          res.append("\\node[")
+              .append(style)
+              .append("] (q_")
+              .append(l)
+              .append(i)
+              .append(") [below of=q_")
+              .append(l)
+              .append(i - 1)
+              .append("] {$q_{")
+              .append(l)
+              .append(i)
+              .append("}$};")
+              .append("\n");
         else
-          res +=
-              "\\node["
-                  + style
-                  + "] (q_"
-                  + l
-                  + i
-                  + ") [right of=q_"
-                  + (l - 1)
-                  + i
-                  + "] {$q_{"
-                  + l
-                  + i
-                  + "}$};"
-                  + "\n";
+          res.append("\\node[")
+              .append(style)
+              .append("] (q_")
+              .append(l)
+              .append(i)
+              .append(") [right of=q_")
+              .append(l - 1)
+              .append(i)
+              .append("] {$q_{")
+              .append(l)
+              .append(i)
+              .append("}$};")
+              .append("\n");
       }
 
-    res += "\\path[ann,->]";
+    res.append("\\path[ann,->]");
     for (int i = 0; i < stateLevels.length; i++)
       for (int r = 0; r < this.activeLevels[i].value(); r++) {
         RegState s = stateLevels[i][r];
         for (int j = 0; j < s.outDegree; j++) {
           if (dNames != null)
-            res +=
-                "     (q_"
-                    + s.level
-                    + s.id
-                    + ")   edge node    {$"
-                    + dNames.get(s.sucDomToString(j))
-                    + "$}    (q_"
-                    + s.successors[j].level
-                    + s.successors[j].id
-                    + ")"
-                    + "\n";
+            res.append("     (q_")
+                .append(s.level)
+                .append(s.id)
+                .append(")   edge node    {$")
+                .append(dNames.get(s.sucDomToString(j)))
+                .append("$}    (q_")
+                .append(s.successors[j].level)
+                .append(s.successors[j].id)
+                .append(")")
+                .append("\n");
           else
-            res +=
-                "     (q_"
-                    + s.level
-                    + s.id
-                    + ")   edge node    {"
-                    + s.sucDomToString(j)
-                    + "}    (q_"
-                    + s.successors[j].level
-                    + s.successors[j].id
-                    + ")"
-                    + "\n";
+            res.append("     (q_")
+                .append(s.level)
+                .append(s.id)
+                .append(")   edge node    {")
+                .append(s.sucDomToString(j))
+                .append("}    (q_")
+                .append(s.successors[j].level)
+                .append(s.successors[j].id)
+                .append(")")
+                .append("\n");
         }
       }
-    res += ";\n";
-    res += "\\end{tikzpicture}\\\\ " + "\n";
-    res += "}\n }\n";
-    return res;
+    res.append(";\n");
+    res.append("\\end{tikzpicture}\\\\ " + "\n");
+    res.append("}\n }\n");
+    return res.toString();
   }
 
   /**
@@ -1172,7 +1167,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     File f = new File(fileName);
     try (FileOutputStream fs = new FileOutputStream(f)) {
       IO.println("save latex file " + fileName);
-      fs.write(this.toLatex(desc).getBytes("UTF-8"));
+      fs.write(this.toLatex(desc).getBytes(StandardCharsets.UTF_8));
       fs.flush();
       // fs.close(); not needed; auto close
     } catch (FileNotFoundException e) {
@@ -1202,7 +1197,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   public void uppendToLatexFile(String desc, String fileName) {
     try (OutputStreamWriter char_output =
             new OutputStreamWriter(
-                new FileOutputStream(fileName), Charset.forName("UTF-8").newEncoder());
+                new FileOutputStream(fileName), StandardCharsets.UTF_8.newEncoder());
         BufferedWriter fs = new BufferedWriter(char_output)) {
 
       IO.println("save latex file " + fileName);
@@ -1236,7 +1231,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     this.stateLevels = new RegState[levels + 1][];
 
     List<RegState>[] layeredGraph =
-        (ArrayList<RegState>[]) Array.newInstance(new ArrayList<RegState>().getClass(), levels + 1);
+        (ArrayList<RegState>[]) Array.newInstance(ArrayList.class, levels + 1);
     for (int i = 0; i < layeredGraph.length; i++) layeredGraph[i] = new ArrayList<RegState>();
 
     this.activeLevelsTemp = new int[this.list.length + 1];

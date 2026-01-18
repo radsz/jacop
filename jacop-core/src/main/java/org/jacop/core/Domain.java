@@ -62,7 +62,7 @@ public abstract class Domain {
    * It specifies constraints which are attached to current domain, each array has different pruning
    * event.
    */
-  public Constraint modelConstraints[][];
+  public Constraint[][] modelConstraints;
 
   /**
    * It specifies the first position of a constraint which is satisfied. All constraints at earlier
@@ -306,9 +306,7 @@ public abstract class Domain {
    */
   public List<Constraint> constraints() {
 
-    List<Constraint> result = new ArrayList<Constraint>();
-
-    result.addAll(searchConstraints);
+    List<Constraint> result = new ArrayList<>(searchConstraints);
 
     if (modelConstraints != null)
       for (int i = 0; i < modelConstraints.length; i++) {

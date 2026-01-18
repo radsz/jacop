@@ -190,8 +190,8 @@ public class Match extends Constraint implements SatisfiedPresent {
   public String toString() {
 
     StringBuilder ret = new StringBuilder(id());
-    ret.append(" : Match(" + a + ", [ ");
-    for (Var fdv : list) ret.append(fdv + " ");
+    ret.append(" : Match(").append(a).append(", [ ");
+    for (Var fdv : list) ret.append(fdv).append(" ");
     ret.append("] )");
     return ret.toString();
   }

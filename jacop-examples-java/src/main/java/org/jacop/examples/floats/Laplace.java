@@ -44,7 +44,7 @@ public class Laplace {
    *
    * @param args no arguments
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     Laplace example = new Laplace();
 

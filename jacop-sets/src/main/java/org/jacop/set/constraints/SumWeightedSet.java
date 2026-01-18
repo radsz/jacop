@@ -93,9 +93,12 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
     this.increasingCosts = true;
     for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++)
-      if (weights[i] > weights[i + 1]) this.increasingCosts = false;
+      if (weights[i] > weights[i + 1]) {
+        this.increasingCosts = false;
+        break;
+      }
 
-    elementWeights = new HashMap<Integer, Integer>(weights.length);
+    elementWeights = new HashMap<>(weights.length);
     ValueEnumeration enumer = a.domain.lub().valueEnumeration();
     int i = 0;
 
@@ -168,7 +171,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
       enumer = potentialEl.valueEnumeration();
 
-      Integer el, weight;
+      int el, weight;
       boolean change = false;
       while (enumer.hasMoreElements()) {
 
@@ -261,18 +264,18 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
     StringBuilder ret = new StringBuilder(id());
 
-    ret.append(" : SumWeightedSet(" + a + ", < ");
+    ret.append(" : SumWeightedSet(").append(a).append(", < ");
     for (Map.Entry<Integer, Integer> entries : elementWeights.entrySet()) {
       int el = entries.getKey();
       int weight = entries.getValue();
-      ret.append("<" + el + "," + weight + "> ");
+      ret.append("<").append(el).append(",").append(weight).append("> ");
     }
     ret.append(">, ");
     if (totalWeight.singleton()) {
-      ret.append(totalWeight.min() + " )");
+      ret.append(totalWeight.min()).append(" )");
       return ret.toString();
     } else {
-      ret.append(totalWeight.dom() + " )");
+      ret.append(totalWeight.dom()).append(" )");
       return ret.toString();
     }
   }

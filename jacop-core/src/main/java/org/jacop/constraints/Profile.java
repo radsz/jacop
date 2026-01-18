@@ -132,7 +132,6 @@ public class Profile extends ArrayList<ProfileItem> {
                             + " at position "
                             + i);
                   p.max = b;
-                  if (maxProfileItemHeight < val) maxProfileItemHeight = val;
                 } else {
                   if (trace)
                     IO.println(
@@ -147,8 +146,8 @@ public class Profile extends ArrayList<ProfileItem> {
                             + " at position "
                             + (i + 1));
                   add(i + 1, new ProfileItem(type, a, b, val));
-                  if (maxProfileItemHeight < val) maxProfileItemHeight = val;
                 }
+                if (maxProfileItemHeight < val) maxProfileItemHeight = val;
               }
               i++;
               notFound = false;

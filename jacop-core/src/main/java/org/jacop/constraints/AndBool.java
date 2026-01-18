@@ -70,7 +70,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
    * @param result variable.
    */
   public AndBool(List<? extends IntVar> a, IntVar result) {
-    this(a.toArray(new IntVar[a.size()]), result);
+    this(a.toArray(new IntVar[0]), result);
   }
 
   /**
@@ -105,6 +105,6 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
       else if (x.min() == 1) continue;
       else result.add(x);
 
-    return result.toArray(new IntVar[result.size()]);
+    return result.toArray(new IntVar[0]);
   }
 }

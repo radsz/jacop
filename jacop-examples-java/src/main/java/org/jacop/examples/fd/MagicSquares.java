@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.*;
 import org.jacop.core.IntVar;
@@ -59,7 +60,7 @@ public class MagicSquares extends ExampleFD {
    *
    * @param args the first argument allows to specify the size of magic square.
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     MagicSquares example = new MagicSquares();
 
@@ -92,7 +93,7 @@ public class MagicSquares extends ExampleFD {
    *
    * @param args the first argument allows to specify the size of magic square.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     MagicSquares example = new MagicSquares();
 
@@ -118,7 +119,7 @@ public class MagicSquares extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    IntVar squares[] = new IntVar[number * number];
+    IntVar[] squares = new IntVar[number * number];
 
     IntVar k =
         new IntVar(
@@ -129,28 +130,28 @@ public class MagicSquares extends ExampleFD {
         squares[i * number + j] =
             new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
 
-    for (int i = 0; i < number; i++) vars.add(squares[(i) * number + i]);
+    vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
     for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
-    for (IntVar v : squares) vars.add(v);
+    vars.addAll(Arrays.asList(squares));
 
     // Imposing inequalities constraints between squares
     store.impose(new Alldiff(squares));
 
-    IntVar row[] = new IntVar[number];
+    IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
-      for (int j = 0; j < number; j++) row[j] = squares[i * number + j];
+      System.arraycopy(squares, i * number + 0, row, 0, number);
       store.impose(new SumInt(row, "==", k));
     }
 
-    IntVar column[] = new IntVar[number];
+    IntVar[] column = new IntVar[number];
 
     for (int j = 0; j < number; j++) {
       for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
       store.impose(new SumInt(column, "==", k));
     }
 
-    IntVar diagonal[] = new IntVar[number];
+    IntVar[] diagonal = new IntVar[number];
 
     for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
 
@@ -174,7 +175,7 @@ public class MagicSquares extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    IntVar squares[] = new IntVar[number * number];
+    IntVar[] squares = new IntVar[number * number];
 
     IntVar k =
         new IntVar(
@@ -185,23 +186,23 @@ public class MagicSquares extends ExampleFD {
         squares[i * number + j] =
             new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
 
-    for (int i = 0; i < number; i++) vars.add(squares[(i) * number + i]);
+    vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
     for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
-    for (IntVar v : squares) vars.add(v);
+    vars.addAll(Arrays.asList(squares));
 
     // Imposing inequalities constraints between squares
     store.impose(new Alldiff(squares));
 
-    IntVar row[] = new IntVar[number];
+    IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
-      for (int j = 0; j < number; j++) row[j] = squares[i * number + j];
+      System.arraycopy(squares, i * number + 0, row, 0, number);
       Constraint cx = new SumInt(row, "==", k);
       store.impose(cx);
       guidingShaving.add(cx);
     }
 
-    IntVar column[] = new IntVar[number];
+    IntVar[] column = new IntVar[number];
 
     for (int j = 0; j < number; j++) {
       for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
@@ -211,7 +212,7 @@ public class MagicSquares extends ExampleFD {
       guidingShaving.add(cx);
     }
 
-    IntVar diagonal[] = new IntVar[number];
+    IntVar[] diagonal = new IntVar[number];
 
     for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
 
@@ -238,7 +239,7 @@ public class MagicSquares extends ExampleFD {
     store = new Store();
     vars = new ArrayList<IntVar>();
 
-    IntVar squares[] = new IntVar[number * number];
+    IntVar[] squares = new IntVar[number * number];
 
     IntVar k =
         new IntVar(
@@ -249,25 +250,25 @@ public class MagicSquares extends ExampleFD {
         squares[i * number + j] =
             new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
 
-    for (int i = 0; i < number; i++) vars.add(squares[(i) * number + i]);
+    vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
     for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
-    for (IntVar v : squares) vars.add(v);
+    vars.addAll(Arrays.asList(squares));
 
-    IntVar row[] = new IntVar[number];
+    IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
-      for (int j = 0; j < number; j++) row[j] = squares[i * number + j];
+      System.arraycopy(squares, i * number + 0, row, 0, number);
       store.impose(new SumInt(row, "==", k));
     }
 
-    IntVar column[] = new IntVar[number];
+    IntVar[] column = new IntVar[number];
 
     for (int j = 0; j < number; j++) {
       for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
       store.impose(new SumInt(column, "==", k));
     }
 
-    IntVar diagonal[] = new IntVar[number];
+    IntVar[] diagonal = new IntVar[number];
 
     for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
 

@@ -64,7 +64,7 @@ public class EWF extends Filter {
 
     name = "EWF";
 
-    int dependencies[][] = {
+    int[][] dependencies = {
       {0, 2}, {0, 15}, {0, 17}, {1, 4}, {1, 8}, {1, 11}, {2, 3}, {2, 7}, {2, 9}, {3, 4}, {4, 5},
       {4, 6}, {4, 10}, {5, 7}, {6, 8}, {7, 9}, {7, 10}, {8, 11}, {8, 13}, {8, 19}, {9, 12},
       {10, 13}, {11, 14}, {12, 15}, {14, 16}, {15, 17}, {15, 18}, {15, 29}, {16, 20}, {16, 28},
@@ -74,20 +74,20 @@ public class EWF extends Filter {
 
     this.dependencies = dependencies;
 
-    int ids[] = {
+    int[] ids = {
       addId, addId, addId, addId, addId, mulId, mulId, addId, addId, addId, addId, addId, mulId,
       addId, mulId, addId, addId, addId, addId, addId, addId, mulId, addId, addId, mulId, mulId,
       mulId, addId, addId, addId, addId, addId, addId, addId
     };
     this.ids = ids;
 
-    int last[] = {13, 24, 28, 29, 30, 31, 32, 33};
+    int[] last = {13, 24, 28, 29, 30, 31, 32, 33};
     this.last = last;
   }
 
   @Override
   public List<String> names() {
-    List<String> names = new ArrayList<String>(34);
+    List<String> names = new ArrayList<>(34);
 
     names.add("+1");
     names.add("+2");
@@ -129,7 +129,7 @@ public class EWF extends Filter {
 
   @Override
   public List<String> namesPipeline() {
-    List<String> names = new ArrayList<String>(34);
+    List<String> names = new ArrayList<>(34);
 
     names.add("+1");
     names.add("+2");

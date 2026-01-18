@@ -77,7 +77,7 @@ public class SimpleTable extends Constraint
    */
   Map<Integer, Long>[] supports;
 
-  Set<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  Set<IntVar> variableQueue = new LinkedHashSet<>();
   int noNoGround;
 
   /**
@@ -171,7 +171,7 @@ public class SimpleTable extends Constraint
 
     long wrds = 0;
     for (int i = 0; i < x.length; i++) {
-      supports[i] = new HashMap<Integer, Long>();
+      supports[i] = new HashMap<>();
       for (int j = 0; j < n; j++) {
         int v = tuple[j][i];
         if (validTuple(j)) {
@@ -187,7 +187,7 @@ public class SimpleTable extends Constraint
         }
       }
     }
-    words = new TimeStamp<Long>(store, wrds);
+    words = new TimeStamp<>(store, wrds);
   }
 
   @Override
@@ -198,7 +198,7 @@ public class SimpleTable extends Constraint
       store.propagationHasOccurred = false;
 
       Set<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       updateTable(fdvs);
       filterDomains();
@@ -366,16 +366,16 @@ public class SimpleTable extends Constraint
     s.append("])");
 
     if (debug) {
-      s.append("\n0:" + "0x%08X".formatted(words.value()));
+      s.append("\n0:").append("0x%08X".formatted(words.value()));
 
       s.append("\nsupports: [");
       for (int i = 0; i < supports.length; i++) {
-        s.append(i + ": {");
+        s.append(i).append(": {");
         Map<Integer, Long> supi = supports[i];
         for (Map.Entry<Integer, Long> e : supi.entrySet()) {
-          s.append(" " + e.getKey() + "= [");
+          s.append(" ").append(e.getKey()).append("= [");
           Long mask = e.getValue();
-          s.append("0x%08X".formatted(mask) + " ");
+          s.append("0x%08X".formatted(mask)).append(" ");
           s.append("]");
         }
         s.append("} ");

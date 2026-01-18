@@ -51,7 +51,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
   /**
    * It specifies a list of constraints which must be satisfied to keep And constraint satisfied.
    */
-  protected final PrimitiveConstraint listOfC[];
+  protected final PrimitiveConstraint[] listOfC;
 
   private final QueueForward<PrimitiveConstraint> queueForward;
   private boolean propagation;
@@ -63,7 +63,7 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
    * @param listOfC arraylist of constraints
    */
   public And(List<PrimitiveConstraint> listOfC) {
-    this(listOfC.toArray(new PrimitiveConstraint[listOfC.size()]));
+    this(listOfC.toArray(new PrimitiveConstraint[0]));
   }
 
   /**

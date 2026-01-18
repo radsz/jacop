@@ -31,6 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.*;
 import org.jacop.core.BooleanVar;
@@ -76,7 +77,7 @@ public class NonTransitiveDice extends ExampleFD {
   public int currentBest = 16;
 
   /** It contains constraints which can be used for shaving guidance. */
-  public List<Constraint> shavingConstraints = new ArrayList<Constraint>();
+  public List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** If true then faces on non consequtive faces can be the same. */
   public boolean reuseOfNumbers = false;
@@ -88,7 +89,7 @@ public class NonTransitiveDice extends ExampleFD {
    * @param args the first argument specifies number of dices, the second argument specifies the
    *     number of sides of each dice.
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     //		int sols = 0;
 
@@ -169,7 +170,7 @@ public class NonTransitiveDice extends ExampleFD {
     store = new Store();
     int noNumbers = noDices * noSides;
 
-    IntVar faces[] = new IntVar[noDices * noSides];
+    IntVar[] faces = new IntVar[noDices * noSides];
 
     for (int i = 0; i < faces.length; i++) {
       // Create FDV for each face
@@ -190,7 +191,7 @@ public class NonTransitiveDice extends ExampleFD {
         // is smaller than the previous one
         store.impose(new XltY(faces[i * noSides + j], faces[i * noSides + j + 1]));
 
-    IntVar wins[][][] = new IntVar[noDices][noSides][noSides];
+    IntVar[][][] wins = new IntVar[noDices][noSides][noSides];
 
     for (int i = 0; i < noDices; i++)
       for (int j = 0; j < noSides; j++)
@@ -233,7 +234,7 @@ public class NonTransitiveDice extends ExampleFD {
         } else if ((j + 1) * (noSides - m) > ((noSides * noSides) / 2))
           for (int i = 0; i < noDices; i++) store.impose(new XeqC(wins[i][j][m], 1));
 
-    IntVar winningSum[] = new IntVar[noDices];
+    IntVar[] winningSum = new IntVar[noDices];
     for (int i = 0; i < noDices; i++) {
       winningSum[i] =
           new IntVar(
@@ -242,9 +243,9 @@ public class NonTransitiveDice extends ExampleFD {
               noSides * noSides / 2 + 1,
               noSides * noSides);
 
-      IntVar matrix[] = new IntVar[noSides * noSides];
+      IntVar[] matrix = new IntVar[noSides * noSides];
       for (int j = 0; j < noSides; j++)
-        for (int m = 0; m < noSides; m++) matrix[j * noSides + m] = wins[i][j][m];
+        System.arraycopy(wins[i][j], 0, matrix, j * noSides + 0, noSides);
 
       store.impose(new SumInt(matrix, "==", winningSum[i]));
     }
@@ -270,7 +271,7 @@ public class NonTransitiveDice extends ExampleFD {
       // consequtive dices
       // should be different?
 
-      IntVar sides_two_consequtive_dices[] = new IntVar[noSides * 2];
+      IntVar[] sides_two_consequtive_dices = new IntVar[noSides * 2];
 
       for (int i = 0; i < noDices; i++) {
 
@@ -308,7 +309,7 @@ public class NonTransitiveDice extends ExampleFD {
     }
 
     for (int i = 0; i < noDices; i++)
-      for (int j = 0; j < noSides; j++) for (int m = 0; m < noSides; m++) vars.add(wins[i][j][m]);
+      for (int j = 0; j < noSides; j++) vars.addAll(Arrays.asList(wins[i][j]).subList(0, noSides));
   }
 
   /**

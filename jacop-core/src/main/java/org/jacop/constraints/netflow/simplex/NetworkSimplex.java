@@ -66,14 +66,14 @@ public class NetworkSimplex {
 
   public NetworkSimplex(List<Node> nodes, List<Arc> arcs) {
 
-    this.allArcs = new ArrayList<Arc>(arcs);
+    this.allArcs = new ArrayList<>(arcs);
 
-    this.nodes = nodes.toArray(new Node[nodes.size()]);
-    this.lower = allArcs.toArray(new Arc[allArcs.size()]);
+    this.nodes = nodes.toArray(new Node[0]);
+    this.lower = allArcs.toArray(new Arc[0]);
     this.root = new Node("(root)", 0);
     this.numArcs = lower.length;
     this.pivotRule = new Danzig(this);
-    this.infeasibleNodes = new LinkedHashSet<Node>();
+    this.infeasibleNodes = new LinkedHashSet<>();
 
     // initialize index pointers
     for (int i = 0; i < lower.length; i++) lower[i].index = lower[i].sister.index = i;

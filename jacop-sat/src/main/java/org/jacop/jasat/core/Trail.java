@@ -60,8 +60,8 @@ public final class Trail implements SolverComponent {
   // the levels at which variables are set
   private int[] levels;
 
-  private int ASSERTED_MASK = Integer.MIN_VALUE; // 100000....000
-  private int LEVEL_MASK = Integer.MAX_VALUE >>> 1; // 011111....111
+  private final int ASSERTED_MASK = Integer.MIN_VALUE; // 100000....000
+  private final int LEVEL_MASK = Integer.MAX_VALUE >>> 1; // 011111....111
 
   /**
    * It adds a variable to the trail.

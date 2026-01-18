@@ -84,9 +84,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
     setScope(scope);
     setConstraintScope(scope);
-    queueForward =
-        new QueueForward<PrimitiveConstraint>(
-            new PrimitiveConstraint[] {condC, thenC, elseC}, arguments());
+    queueForward = new QueueForward<>(new PrimitiveConstraint[] {condC, thenC, elseC}, arguments());
     this.queueIndex =
         Integer.max(Integer.max(condC.queueIndex, thenC.queueIndex), elseC.queueIndex);
   }

@@ -59,7 +59,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
   public static Set<Var> getDubletonsSkipSingletons(Var[] parameters) {
     List<Var> notGroundedParametersList =
         Arrays.stream(parameters).filter(i -> !i.singleton()).collect(Collectors.toList());
-    Set<Var> notGroundedParametersSet = new HashSet<Var>(notGroundedParametersList);
+    Set<Var> notGroundedParametersSet = new HashSet<>(notGroundedParametersList);
     if (notGroundedParametersSet.size() != notGroundedParametersList.size()) {
       notGroundedParametersSet.stream().forEach(i -> notGroundedParametersList.remove(i));
       return new HashSet<>(notGroundedParametersList);

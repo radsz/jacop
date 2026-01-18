@@ -65,8 +65,8 @@ public class NoGoodsCollector<T extends IntVar>
 
     if (noSolutions == 0) {
       timeOut = true;
-      noGoodsVariables = new ArrayList<List<T>>();
-      noGoodsValues = new ArrayList<List<Integer>>();
+      noGoodsVariables = new ArrayList<>();
+      noGoodsValues = new ArrayList<>();
     }
 
     if (timeOutListeners != null)
@@ -115,9 +115,9 @@ public class NoGoodsCollector<T extends IntVar>
   public void rightChild(T var, int value, boolean status) {
 
     if (timeOut) {
-      List<T> newNoGoodVar = new ArrayList<T>();
+      List<T> newNoGoodVar = new ArrayList<>();
       newNoGoodVar.add(var);
-      List<Integer> newNoGoodVal = new ArrayList<Integer>();
+      List<Integer> newNoGoodVal = new ArrayList<>();
       newNoGoodVal.add(value);
 
       noGoodsVariables.add(newNoGoodVar);

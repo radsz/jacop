@@ -34,6 +34,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -80,7 +81,7 @@ public class CarSequencing extends ExampleFD {
    * It specifies if the given class (the first dimension) requires given option (the second
    * dimension).
    */
-  public boolean required[][];
+  public boolean[][] required;
 
   /**
    * It specifies if the slide based decomposition of the regular constraint should be applied. This
@@ -372,16 +373,17 @@ public class CarSequencing extends ExampleFD {
    */
   public static String[] readFile(String file) {
 
-    List<String> result = new ArrayList<String>();
+    List<String> result = new ArrayList<>();
 
     IO.println("readFile(" + file + ")");
 
     try (BufferedReader inr =
-        new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
 
       String str;
 
-      while ((str = inr.readLine()) != null && str.length() > 0) {
+      while ((str = inr.readLine()) != null && !str.isEmpty()) {
 
         str = str.trim();
 
@@ -399,7 +401,7 @@ public class CarSequencing extends ExampleFD {
       IO.println(e);
     }
 
-    return result.toArray(new String[result.size()]);
+    return result.toArray(new String[0]);
   } // end readFile
 
   /**
@@ -407,7 +409,7 @@ public class CarSequencing extends ExampleFD {
    *
    * @param args parameters (none)
    */
-  public static void main(String args[]) {
+  static void main(String[] args) {
 
     CarSequencing example = new CarSequencing();
 
@@ -427,7 +429,7 @@ public class CarSequencing extends ExampleFD {
    *
    * @param args parameters (none)
    */
-  public static void test(String args[]) {
+  public static void test(String[] args) {
 
     CarSequencing example = new CarSequencing();
 

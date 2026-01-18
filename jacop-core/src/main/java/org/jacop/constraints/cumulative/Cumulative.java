@@ -131,9 +131,9 @@ public class Cumulative extends CumulativeBasic {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
-        durations.toArray(new IntVar[durations.size()]),
-        resources.toArray(new IntVar[resources.size()]),
+        starts.toArray(new IntVar[0]),
+        durations.toArray(new IntVar[0]),
+        resources.toArray(new IntVar[0]),
         limit);
   }
 
@@ -472,7 +472,9 @@ public class Cumulative extends CumulativeBasic {
         .append(" ]")
         .append(", limit = ")
         .append(limit)
-        .append(", quad=" + doQuadraticEdgeFind + " )");
+        .append(", quad=")
+        .append(doQuadraticEdgeFind)
+        .append(" )");
 
     return result.toString();
   }

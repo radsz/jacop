@@ -66,7 +66,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   /** It is a idNumber variable. */
   public final IntVar n;
 
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<IntVar>();
+  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   // number if x that belongs to K (Kset)
   // As search progress this time stamp can only increase
   // because if X was in between lbS and ubS than
@@ -106,7 +106,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
    * @param n number of possible variables equal to a value from Kset.
    */
   public Among(List<? extends IntVar> list, IntervalDomain kSet, IntVar n) {
-    this(list.toArray(new IntVar[list.size()]), kSet, n);
+    this(list.toArray(new IntVar[0]), kSet, n);
   }
 
   @Override

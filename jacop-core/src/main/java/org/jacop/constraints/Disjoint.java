@@ -52,7 +52,7 @@ public class Disjoint extends Diff {
 
   static AtomicInteger idNumber = new AtomicInteger(0);
 
-  Diff2Var evalRects[];
+  Diff2Var[] evalRects;
 
   /**
    * @param rectangles a list of rectangles.
@@ -131,10 +131,10 @@ public class Disjoint extends Diff {
       List<? extends IntVar> l2) {
 
     this(
-        o1.toArray(new IntVar[o1.size()]),
-        o2.toArray(new IntVar[o2.size()]),
-        l1.toArray(new IntVar[l1.size()]),
-        l2.toArray(new IntVar[l2.size()]));
+        o1.toArray(new IntVar[0]),
+        o2.toArray(new IntVar[0]),
+        l1.toArray(new IntVar[0]),
+        l2.toArray(new IntVar[0]));
   }
 
   /**
@@ -238,9 +238,9 @@ public class Disjoint extends Diff {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-        List<IntRectangle> UsedRect = new ArrayList<IntRectangle>();
-        List<Rectangle> ProfileCandidates = new ArrayList<Rectangle>();
-        List<Rectangle> OverlappingRects = new ArrayList<Rectangle>();
+        List<IntRectangle> UsedRect = new ArrayList<>();
+        List<Rectangle> ProfileCandidates = new ArrayList<>();
+        List<Rectangle> OverlappingRects = new ArrayList<>();
         boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
 
         needToNarrow = needToNarrow || ntN;
@@ -274,10 +274,10 @@ public class Disjoint extends Diff {
     long commonArea = 0;
     int totalNumberOfRectangles = 0;
     int dim = r.dim();
-    int startMin[] = new int[dim];
-    int stopMax[] = new int[dim];
-    int minLength[] = new int[dim];
-    int r_min[] = new int[dim], r_max[] = new int[dim];
+    int[] startMin = new int[dim];
+    int[] stopMax = new int[dim];
+    int[] minLength = new int[dim];
+    int[] r_min = new int[dim], r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MaxInt;
@@ -303,7 +303,7 @@ public class Disjoint extends Diff {
         boolean use = true, minLength0 = false;
         int s_min, s_max, start, stop;
         int m = 0, j = 0;
-        int sOriginMin[] = new int[dim], sOriginMax[] = new int[dim], sLengthMin[] = new int[dim];
+        int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
 
         while (overlap && m < dim) {
           // check if domains of r and s overlap
@@ -444,7 +444,7 @@ public class Disjoint extends Diff {
         Profile.make(
             j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), ProfileCandidates);
 
-        if (Profile.size() != 0) {
+        if (!Profile.isEmpty()) {
           if (trace) {
             IO.println(" *** " + r + "\n" + ProfileCandidates);
             IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);

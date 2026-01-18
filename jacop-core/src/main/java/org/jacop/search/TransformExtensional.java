@@ -30,10 +30,7 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.core.*;
@@ -53,7 +50,7 @@ public class TransformExtensional implements InitializeListener {
    * It contains all the information which will become variables in the scope of the extensional
    * constraint produced by this search listener.
    */
-  public List<IntVar> variablesTransformationScope = new ArrayList<IntVar>();
+  public List<IntVar> variablesTransformationScope = new ArrayList<>();
 
   /**
    * The limit of solutions upon reaching the transformation is abandoned and solution progress
@@ -74,12 +71,12 @@ public class TransformExtensional implements InitializeListener {
     //    but are rather tight together.
 
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<IntVar>(
+        new SimpleSelect<>(
             variablesTransformationScope.toArray(new IntVar[1]),
-            new MostConstrainedStatic<IntVar>(),
-            new IndomainMin<IntVar>());
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>());
 
-    Search<IntVar> search = new DepthFirstSearch<IntVar>();
+    Search<IntVar> search = new DepthFirstSearch<>();
 
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
@@ -101,17 +98,20 @@ public class TransformExtensional implements InitializeListener {
         Constraint[][] varConstraints = v.dom().modelConstraints;
         int[] toEvaluate = v.dom().modelConstraintsToEvaluate;
 
-        Set<Constraint> constraintsInQuestion = new HashSet<Constraint>();
+        Set<Constraint> constraintsInQuestion = new HashSet<>();
 
         for (int i = 0; i < toEvaluate.length; i++)
-          for (int j = 0; j < toEvaluate[i]; j++) constraintsInQuestion.add(varConstraints[i][j]);
+          constraintsInQuestion.addAll(Arrays.asList(varConstraints[i]).subList(0, toEvaluate[i]));
 
         for (Constraint checkConstraint : constraintsInQuestion) {
 
           boolean toBeRemoved = true;
 
           for (Var m : checkConstraint.arguments())
-            if (!variablesTransformationScope.contains(m)) toBeRemoved = false;
+            if (!variablesTransformationScope.contains(m)) {
+              toBeRemoved = false;
+              break;
+            }
 
           if (toBeRemoved) checkConstraint.removeConstraint();
         }
