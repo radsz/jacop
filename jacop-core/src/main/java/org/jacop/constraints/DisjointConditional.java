@@ -685,7 +685,7 @@ public class DisjointConditional extends Diff {
         }
 
         if (!ConsideredRect.isEmpty()
-            && rSize < (rectSize + (rLengthJMin - 1) * ConsideredRect.size())) {
+            && rSize < (rectSize + (long) (rLengthJMin - 1) * ConsideredRect.size())) {
 
           IntDomain rOriginDom = r.origin[i].dom();
           int m = 0;

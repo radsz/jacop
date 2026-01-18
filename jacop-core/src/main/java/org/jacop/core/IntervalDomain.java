@@ -3067,7 +3067,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && ++pointer1 < size) {
 
         while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-            && ++pointer2 < inputSize) {}
+            && ++pointer2 < inputSize) {
+          continue;
+        }
 
         if (pointer2 == inputSize) {
           break;
@@ -3393,7 +3395,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             && ++pointer1 < size) {
 
           while (intervals[pointer1].max() > domain.getInterval(pointer2).max()
-              && ++pointer2 < inputSize) {}
+              && ++pointer2 < inputSize) {
+            continue;
+          }
 
           if (pointer2 == inputSize) {
             break;
@@ -3591,7 +3595,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && ++pointer1 < size) {
 
         while (intervals[pointer1].max() > domain.getInterval(pointer2).max()
-            && ++pointer2 < inputSize) {}
+            && ++pointer2 < inputSize) {
+          continue;
+        }
 
         if (pointer2 == inputSize) {
           break;
@@ -4352,7 +4358,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && ++pointer1 < size) {
 
         while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift
-            && ++pointer2 < input.size) {}
+            && ++pointer2 < input.size) {
+          continue;
+        }
 
         if (pointer2 == input.size) {
           break;
@@ -4667,7 +4675,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             && ++pointer1 < size) {
 
           while (intervals[pointer1].max() > domain.getInterval(pointer2).max() + shift
-              && ++pointer2 < inputSize) {}
+              && ++pointer2 < inputSize) {
+            continue;
+          }
 
           if (pointer2 == inputSize) {
             break;
@@ -4860,7 +4870,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && ++pointer1 < size) {
 
         while (intervals[pointer1].max() > domain.getInterval(pointer2).max() + shift
-            && ++pointer2 < inputSize) {}
+            && ++pointer2 < inputSize) {
+          continue;
+        }
 
         if (pointer2 == inputSize) {
           break;
@@ -5409,7 +5421,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && ++pointer1 < size) {
 
         while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-            && ++pointer2 < inputSize) {}
+            && ++pointer2 < inputSize) {
+          continue;
+        }
 
         if (pointer2 == inputSize) {
           break;

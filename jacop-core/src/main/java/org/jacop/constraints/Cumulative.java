@@ -295,7 +295,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         a += t.areaMin();
       }
 
-      afterS = (l.lct() - startS) * limit.max() - a >= l.areaMin();
+      afterS = (long) (l.lct() - startS) * limit.max() - a >= l.areaMin();
 
       if (debug) {
         IO.println(
@@ -319,7 +319,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         a += t.areaMin();
       }
 
-      beforeS = (completionS - l.est()) * limit.max() >= a + l.areaMin();
+      beforeS = (long) (completionS - l.est()) * limit.max() >= a + l.areaMin();
 
       if (debug) {
         IO.println(
@@ -352,7 +352,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       }
       larea = minOverlap(l, startS, completionS);
 
-      betweenS = (completionS - startS) * limit.max() >= a + larea;
+      betweenS = (long) (completionS - startS) * limit.max() >= a + larea;
       if (debug) {
         IO.println(
             "s(S')= "
@@ -499,11 +499,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
         long totalArea = area1;
         int estS = startOfS;
-        after = (l_LCT - startOfS) * limitMax - area1 >= l.areaMin();
+        after = (long) (l_LCT - startOfS) * limitMax - area1 >= l.areaMin();
 
         // larea = l.dur.min()*l.res.min();
         larea = minOverlap(l, startOfS, completionOfS);
-        between = (completionOfS - startOfS) * limitMax >= area2 + larea;
+        between = (long) (completionOfS - startOfS) * limitMax >= area2 + larea;
 
         if (after && between) {
           L.remove(indexOfl);
@@ -518,7 +518,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             int compl = l_LCT;
             a = totalArea;
             startS = estS;
-            slack = (l_LCT - startS) * limitMax - a - l.areaMin();
+            slack = (long) (l_LCT - startS) * limitMax - a - l.areaMin();
 
             int j = 0;
             Task[] tasks = new Task[S.size()];
@@ -542,7 +542,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                 Task t = tasks[j];
                 j++;
                 newCompl = t.lst();
-                slack = slack - (compl - newCompl) * limitMin + t.areaMin();
+                slack = slack - (long) (compl - newCompl) * limitMin + t.areaMin();
                 compl = newCompl;
               }
 
@@ -690,11 +690,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         long totalArea = area1;
         int lctS = completionOfS;
-        before = (completionOfS - l_EST) * limitMax >= area1 + l.areaMin();
+        before = (long) (completionOfS - l_EST) * limitMax >= area1 + l.areaMin();
 
         // larea = l.dur.min()*l.res.min();
         larea = minOverlap(l, startOfS, completionOfS);
-        between = (completionOfS - startOfS) * limitMax >= area2 + larea;
+        between = (long) (completionOfS - startOfS) * limitMax >= area2 + larea;
 
         if (debug) {
           IO.println(
@@ -730,7 +730,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             int startl = l_EST;
             a = totalArea;
             completionS = lctS;
-            slack = (completionS - l_EST) * limitMax - a - l.areaMin();
+            slack = (long) (completionS - l_EST) * limitMax - a - l.areaMin();
 
             int j = 0;
             Task[] tasks = new Task[S.size()];
@@ -755,7 +755,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                 Task t = tasks[j];
                 j++;
                 newStartl = t.ect();
-                slack = slack - (newStartl - startl) * limitMin + t.areaMin();
+                slack = slack - (long) (newStartl - startl) * limitMin + t.areaMin();
                 startl = newStartl;
               }
             }
@@ -848,7 +848,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
 
     int limitMax = limit.max();
-    long availableArea = (lctOfS - est0) * limitMax;
+    long availableArea = (long) (lctOfS - est0) * limitMax;
     if (debug) {
       IO.println("Fit tasks of " + s + " after " + est0 + " = " + (availableArea >= areaS));
     }
@@ -876,7 +876,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
 
     int limitMax = limit.max();
-    long availableArea = (lct0 - estOfS) * limitMax;
+    long availableArea = (long) (lct0 - estOfS) * limitMax;
     if (debug) {
       IO.println(
           "Fit tasks of "
@@ -977,7 +977,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       // tect <= est
       tDur_min = 0;
     }
-    return tDur_min * t.res().min();
+    return (long) tDur_min * t.res().min();
   }
 
   private void notFirst(Store store, Task s, List<Task> S) {
@@ -996,7 +996,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           a += t.areaMin();
         }
       }
-      slack = (completionS - sEST) * limit.max() - a - s.areaMin();
+      slack = (long) (completionS - sEST) * limit.max() - a - s.areaMin();
       // System.out.println("slack = "+ slack);
       if (debug) {
         boolean notBeforeS = slack < 0;
@@ -1038,7 +1038,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           Task t = tasks[j];
           j++;
           newStartl = t.ect();
-          slack = slack - (newStartl - startl) * limitMin + t.areaMin();
+          slack = slack - (long) (newStartl - startl) * limitMin + t.areaMin();
           startl = newStartl;
         }
 
@@ -1077,7 +1077,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           a += t.areaMin();
         }
       }
-      slack = (sLCT - startS) * limit.max() - a - s.areaMin();
+      slack = (long) (sLCT - startS) * limit.max() - a - s.areaMin();
 
       if (debug) {
         boolean notLastInS = slack < 0;
@@ -1119,7 +1119,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           Task t = tasks[j];
           j++;
           newCompl = t.lst();
-          slack = slack - (compl - newCompl) * limitMin + t.areaMin();
+          slack = slack - (long) (compl - newCompl) * limitMin + t.areaMin();
           compl = newCompl;
         }
 

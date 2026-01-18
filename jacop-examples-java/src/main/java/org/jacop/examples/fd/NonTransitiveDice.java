@@ -272,7 +272,7 @@ public class NonTransitiveDice extends ExampleFD {
 
       IntVar[] matrix = new IntVar[noSides * noSides];
       for (int j = 0; j < noSides; j++) {
-        System.arraycopy(wins[i][j], 0, matrix, j * noSides + 0, noSides);
+        System.arraycopy(wins[i][j], 0, matrix, j * noSides, noSides);
       }
 
       store.impose(new SumInt(matrix, "==", winningSum[i]));

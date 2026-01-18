@@ -1989,8 +1989,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && intervals[pointer1].max() <= inputIntervals[pointer2].max()
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-          && ++pointer2 < inputSize) {}
+      while (intervals[pointer1].max() > inputIntervals[pointer2].max() && ++pointer2 < inputSize) {
+        continue;
+      }
 
       if (pointer2 == inputSize) {
         break;
@@ -2751,7 +2752,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && ++pointer1 < size) {
 
       while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift
-          && ++pointer2 < input.size) {}
+          && ++pointer2 < input.size) {
+        continue;
+      }
 
       if (pointer2 == input.size) {
         break;
@@ -3397,8 +3400,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && intervals[pointer1].max() <= inputIntervals[pointer2].max()
         && ++pointer1 < size) {
 
-      while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-          && ++pointer2 < inputSize) {}
+      while (intervals[pointer1].max() > inputIntervals[pointer2].max() && ++pointer2 < inputSize) {
+        continue;
+      }
 
       if (pointer2 == inputSize) {
         break;
@@ -3685,7 +3689,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         pointer2++;
         if (pointer2 < size2) {
           interval2 = input.intervals[pointer2];
-          continue;
         } else {
           break;
         }
@@ -3700,7 +3703,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           pointer1++;
           if (pointer1 < size1) {
             interval1 = intervals[pointer1];
-            continue;
           } else {
             break;
           }
@@ -3709,7 +3711,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           pointer2++;
           if (pointer2 < size2) {
             interval2 = input.intervals[pointer2];
-            continue;
           } else {
             break;
           }

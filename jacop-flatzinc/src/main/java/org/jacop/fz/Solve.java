@@ -1571,11 +1571,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   double getSearchTime_ms() {
     searchTime = timer.getCPUTime() - startCPU;
-    return searchTime / (long) 1e+6;
+    return (double) searchTime / (long) 1e+6;
   }
 
   double getInitTime_ms() {
-    return initTime / (long) 1e+6;
+    return (double) initTime / (long) 1e+6;
   }
 
   boolean anyTimeOutOccured(ArrayList<Search<T>> list_seq_searches) {

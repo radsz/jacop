@@ -64,7 +64,7 @@ public class AlldifferentExceptZero extends Alldifferent
    * @param variables variables which are constrained to take different values.
    */
   public AlldifferentExceptZero(List<? extends IntVar> variables) {
-    this(variables.toArray(new IntVar[variables.size()]));
+    this(variables.toArray(new IntVar[0]));
   }
 
   @Override
@@ -78,7 +78,7 @@ public class AlldifferentExceptZero extends Alldifferent
       LinkedHashSet<IntVar> fdvs = variableQueue;
       variableQueue = new LinkedHashSet<IntVar>();
 
-      for (IntVar Q : fdvs)
+      for (IntVar Q : fdvs) {
         if (Q.singleton()) {
           int qPos = positionMapping.get(Q);
           if (qPos > groundPos) {
@@ -87,16 +87,21 @@ public class AlldifferentExceptZero extends Alldifferent
             positionMapping.put(Q, groundPos);
             positionMapping.put(list[qPos], qPos);
             groundPos++;
-            if (Q.value() != 0)
-              for (int i = groundPos; i < list.length; i++)
+            if (Q.value() != 0) {
+              for (int i = groundPos; i < list.length; i++) {
                 list[i].domain.inComplement(store.level, list[i], Q.min());
+              }
+            }
           } else if (qPos == groundPos) {
             groundPos++;
-            if (Q.value() != 0)
-              for (int i = groundPos; i < list.length; i++)
+            if (Q.value() != 0) {
+              for (int i = groundPos; i < list.length; i++) {
                 list[i].domain.inComplement(store.level, list[i], Q.min());
+              }
+            }
           }
         }
+      }
 
     } while (store.propagationHasOccurred);
     grounded.update(groundPos);
@@ -104,14 +109,17 @@ public class AlldifferentExceptZero extends Alldifferent
     ArrayList<IntVar> vars = new ArrayList<>();
     int j = 0;
     for (int i = groundPos; i < list.length; i++) {
-      if (!list[i].domain.contains(0)) vars.add(list[i]);
+      if (!list[i].domain.contains(0)) {
+        vars.add(list[i]);
+      }
     }
 
     // we only check for more than two variables since two
     // variables with domains of size at least two (they are not
     // ground) are always satisfied.
-    if (vars.size() > 2 && notSatisfied(vars.toArray(new IntVar[vars.size()])))
+    if (vars.size() > 2 && notSatisfied(vars.toArray(new IntVar[0]))) {
       throw store.failException;
+    }
   }
 
   /**
@@ -150,8 +158,11 @@ public class AlldifferentExceptZero extends Alldifferent
     BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, vs.length, valueMap.size());
     int maxNumberDifferent = matcher.hopcroftKarp();
 
-    if (maxNumberDifferent < vs.length) return true; // not satisfied
-    else return false;
+    if (maxNumberDifferent < vs.length) {
+      return true; // not satisfied
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -163,7 +174,9 @@ public class AlldifferentExceptZero extends Alldifferent
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("])");
 

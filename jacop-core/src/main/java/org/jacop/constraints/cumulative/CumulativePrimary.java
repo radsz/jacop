@@ -61,7 +61,7 @@ class CumulativePrimary extends Constraint {
   private Comparator<Event> eventComparator =
       (o1, o2) -> {
         int dateDiff = o1.date() - o2.date();
-        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+        return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
       };
 
   /*
@@ -99,12 +99,14 @@ class CumulativePrimary extends Constraint {
     checkInput(durations, i -> i >= 0, "durations must be greater than 0");
     checkInput(resources, i -> i >= 0, "resources must be greater than 0");
 
-    if (starts.length != durations.length)
+    if (starts.length != durations.length) {
       throw new IllegalArgumentException(
           "Cumulative constraint needs to have starts and durations lists the same length.");
-    if (starts.length != resources.length)
+    }
+    if (starts.length != resources.length) {
       throw new IllegalArgumentException(
           "Cumulative constraint needs to have starts and resources lists the same length.");
+    }
 
     if (limit.min() >= 0) {
       this.limit = limit;
@@ -119,7 +121,9 @@ class CumulativePrimary extends Constraint {
     res = Arrays.copyOf(resources, resources.length);
     start = Arrays.copyOf(starts, starts.length);
     activeMap = new int[start.length];
-    for (int i = 0; i < start.length; i++) activeMap[i] = i;
+    for (int i = 0; i < start.length; i++) {
+      activeMap[i] = i;
+    }
 
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
@@ -141,7 +145,7 @@ class CumulativePrimary extends Constraint {
       IntVar limit) {
 
     this(
-        starts.toArray(new IntVar[starts.size()]),
+        starts.toArray(new IntVar[0]),
         durations.stream().mapToInt(i -> i).toArray(),
         resources.stream().mapToInt(i -> i).toArray(),
         limit);
@@ -170,7 +174,7 @@ class CumulativePrimary extends Constraint {
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : cumulativePrimary([ ");
-    for (int i = 0; i < start.length - 1; i++)
+    for (int i = 0; i < start.length - 1; i++) {
       result
           .append("[")
           .append(start[i])
@@ -179,6 +183,7 @@ class CumulativePrimary extends Constraint {
           .append(", ")
           .append(res[i])
           .append("], ");
+    }
 
     result
         .append("[")
@@ -213,12 +218,13 @@ class CumulativePrimary extends Constraint {
       if (min < max) {
         es[j++] = new Event(profile, k, min, res[k]);
         es[j++] = new Event(profile, k, max, -res[k]);
-        minProfile = (min < minProfile) ? min : minProfile;
-        maxProfile = (max > maxProfile) ? max : maxProfile;
+        minProfile = min < minProfile ? min : minProfile;
+        maxProfile = max > maxProfile ? max : maxProfile;
       }
     }
-    if (j == 0) // no mandatory parts
-    return;
+    if (j == 0) { // no mandatory parts
+      return;
+    }
 
     for (int i = first; i < start.length; i++) {
       // overlapping tasks for pruning
@@ -239,9 +245,9 @@ class CumulativePrimary extends Constraint {
     Arrays.sort(es, 0, N, eventComparator);
 
     if (debugNarr) {
-      System.out.println(Arrays.asList(es));
-      System.out.println("limit.max() = " + limitMax);
-      System.out.println("===========================");
+      IO.println(Arrays.asList(es));
+      IO.println("limit.max() = " + limitMax);
+      IO.println("===========================");
     }
 
     BitSet tasksToPrune = new BitSet(start.length);
@@ -258,20 +264,26 @@ class CumulativePrimary extends Constraint {
 
       Event e = es[i];
       Event ne = null; // next event
-      if (i < N - 1) ne = es[i + 1];
+      if (i < N - 1) {
+        ne = es[i + 1];
+      }
 
       switch (e.type()) {
         case profile: // =========== profile event ===========
           curProfile += e.value();
-          inProfile[e.index] = (e.value() > 0);
+          inProfile[e.index] = e.value() > 0;
 
           if (ne == null || ne.type() != profile || e.date < ne.date()) {
             // check the tasks for pruning only at the end of all profile events
 
-            if (debug) System.out.println("Profile at " + e.date() + ": " + curProfile);
+            if (debug) {
+              IO.println("Profile at " + e.date() + ": " + curProfile);
+            }
 
             // prune limit variable
-            if (curProfile > limit.min()) limit.domain.inMin(store.level, limit, curProfile);
+            if (curProfile > limit.min()) {
+              limit.domain.inMin(store.level, limit, curProfile);
+            }
 
             for (int ti = tasksToPrune.nextSetBit(0);
                 ti >= 0;
@@ -287,17 +299,20 @@ class CumulativePrimary extends Constraint {
               if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
                 // end of excluded interval
 
-                if (debugNarr)
-                  System.out.print(
+                if (debugNarr) {
+                  IO.print(
                       ">>> CumulativePrimary Profile 1. Narrowed "
                           + start[ti]
                           + " \\ "
                           + new IntervalDomain(startExcluded[ti], e.date() - 1));
+                }
 
                 start[ti].domain.inComplement(
                     store.level, start[ti], startExcluded[ti], e.date() - 1);
 
-                if (debugNarr) System.out.println(" => " + start[ti]);
+                if (debugNarr) {
+                  IO.println(" => " + start[ti]);
+                }
 
                 startConsidered[ti] = false;
               }
@@ -325,16 +340,19 @@ class CumulativePrimary extends Constraint {
           if (startConsidered[ti]) {
             // task ends and we remove forbidden area
 
-            if (debugNarr)
-              System.out.print(
+            if (debugNarr) {
+              IO.print(
                   ">>> CumulativePrimary Profile 2. Narrowed "
                       + start[ti]
                       + " inMax "
                       + (startExcluded[ti] - 1));
+            }
 
             start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
 
-            if (debugNarr) System.out.println(" => " + start[ti]);
+            if (debugNarr) {
+              IO.println(" => " + start[ti]);
+            }
           }
 
           startConsidered[ti] = false;
@@ -347,7 +365,9 @@ class CumulativePrimary extends Constraint {
       }
     }
 
-    if (!store.propagationHasOccurred) removeNotUsedProfleTasks();
+    if (!store.propagationHasOccurred) {
+      removeNotUsedProfleTasks();
+    }
   }
 
   private void removeNotUsedProfleTasks() {
@@ -364,8 +384,8 @@ class CumulativePrimary extends Constraint {
       if (!start[k].singleton()) {
         int min = start[k].min();
         int max = start[k].max() + dur[k];
-        minPrune = (min < minPrune) ? min : minPrune;
-        maxPrune = (max > maxPrune) ? max : maxPrune;
+        minPrune = min < minPrune ? min : minPrune;
+        maxPrune = max > maxPrune ? max : maxPrune;
       }
     }
 
@@ -427,8 +447,7 @@ class CumulativePrimary extends Constraint {
     @Override
     public String toString() {
       String result = "(";
-      result +=
-          (type == profile) ? "profile, " : (type == pruneStart) ? "pruneStart, " : "pruneEnd, ";
+      result += type == profile ? "profile, " : type == pruneStart ? "pruneStart, " : "pruneEnd, ";
       result += index + ", " + date + ", " + value + ")\n";
       return result;
     }

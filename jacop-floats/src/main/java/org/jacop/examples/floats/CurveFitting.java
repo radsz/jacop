@@ -139,7 +139,7 @@ public class CurveFitting {
 
     FloatVar[] vars = new FloatVar[2 * n + 1];
     System.arraycopy(Ex, 0, vars, 0, n);
-    System.arraycopy(Ey, n - n, vars, n, 2 * n - n);
+    System.arraycopy(Ey, 0, vars, n, 2 * n - n);
     vars[2 * n] = b1;
 
     IO.println(

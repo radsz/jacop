@@ -530,7 +530,7 @@ public class Diff2 extends Diff {
           commonArea += partialCommonArea;
         }
         if (!exceptionListPresent) {
-          if (commonArea + r.minArea() > (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
+          if (commonArea + r.minArea() > (long) (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
             throw Store.failException;
           }
         }

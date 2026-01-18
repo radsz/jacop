@@ -330,9 +330,9 @@ public class Nooverlap extends Constraint {
     int xMax = r.lct(x);
     int yMin = r.est(y);
     int yMax = r.lct(y);
-    long rSpace = (xMax - xMin) * (yMax - yMin);
+    long rSpace = (long) (xMax - xMin) * (yMax - yMin);
     int xLengthMin = r.length(x).min(), yLengthMin = r.length(y).min();
-    long minArea = xLengthMin * yLengthMin;
+    long minArea = (long) xLengthMin * yLengthMin;
     for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
       Rectangle rectj = rectangle[j];
       xMin = Math.min(xMin, rectj.est(x));
@@ -342,8 +342,8 @@ public class Nooverlap extends Constraint {
       int rjXLength = rectj.length(x).min(), rjYLength = rectj.length(y).min();
       xLengthMin = Math.min(xLengthMin, rjXLength);
       yLengthMin = Math.min(yLengthMin, rjYLength);
-      minArea += rjXLength * rjYLength;
-      if (minArea > (xMax - xMin) * (yMax - yMin)) {
+      minArea += (long) rjXLength * rjYLength;
+      if (minArea > (long) (xMax - xMin) * (yMax - yMin)) {
         throw Store.failException;
       }
     }

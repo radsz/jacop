@@ -86,9 +86,13 @@ public class XneqY extends PrimitiveConstraint {
   @Override
   public void consistency(final Store store) {
 
-    if (y.singleton()) x.domain.inComplement(store.level, x, y.min());
+    if (y.singleton()) {
+      x.domain.inComplement(store.level, x, y.min());
+    }
 
-    if (x.singleton()) y.domain.inComplement(store.level, y, x.min());
+    if (x.singleton()) {
+      y.domain.inComplement(store.level, y, x.min());
+    }
   }
 
   @Override

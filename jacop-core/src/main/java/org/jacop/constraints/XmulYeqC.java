@@ -82,16 +82,20 @@ public class XmulYeqC extends PrimitiveConstraint {
   @Override
   public void consistency(final Store store) {
 
-    if (xSquare) // x^2 = c
-    do {
+    if (xSquare) { // x^2 = c
+      do {
 
         store.propagationHasOccurred = false;
 
-        if (c < 0) throw Store.failException;
+        if (c < 0) {
+          throw Store.failException;
+        }
 
         double sqrtOfC = Math.sqrt((double) c);
 
-        if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC)) throw Store.failException;
+        if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC)) {
+          throw Store.failException;
+        }
 
         int value = (int) sqrtOfC;
 
@@ -101,8 +105,8 @@ public class XmulYeqC extends PrimitiveConstraint {
         x.domain.in(store.level, x, dom);
 
       } while (store.propagationHasOccurred);
-    else // X*Y=C
-    do {
+    } else { // X*Y=C
+      do {
 
         store.propagationHasOccurred = false;
 
@@ -119,9 +123,12 @@ public class XmulYeqC extends PrimitiveConstraint {
         // check bounds, if C is covered.
         Interval cBounds = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
 
-        if (c < cBounds.min() || c > cBounds.max()) throw Store.failException;
+        if (c < cBounds.min() || c > cBounds.max()) {
+          throw Store.failException;
+        }
 
       } while (store.propagationHasOccurred);
+    }
   }
 
   @Override
@@ -152,9 +159,13 @@ public class XmulYeqC extends PrimitiveConstraint {
       store.propagationHasOccurred = false;
 
       if (x.singleton()) {
-        if (c % x.value() == 0) y.domain.inComplement(store.level, y, c / x.value());
+        if (c % x.value() == 0) {
+          y.domain.inComplement(store.level, y, c / x.value());
+        }
       } else if (y.singleton()) {
-        if (c % y.value() == 0) x.domain.inComplement(store.level, x, c / y.value());
+        if (c % y.value() == 0) {
+          x.domain.inComplement(store.level, x, c / y.value());
+        }
       }
 
     } while (store.propagationHasOccurred);
@@ -163,12 +174,12 @@ public class XmulYeqC extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
     IntDomain Xdom = x.dom(), Ydom = y.dom();
-    return (Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c);
+    return Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c;
   }
 
   @Override
   public boolean satisfied() {
-    return (grounded() && (x.min() * y.min() == c));
+    return grounded() && (x.min() * y.min() == c);
   }
 
   @Override

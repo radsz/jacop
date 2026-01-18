@@ -106,7 +106,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   protected void setScope(Set<? extends Var> set) {
-    setScope(set.toArray(new Var[set.size()]));
+    setScope(set.toArray(new Var[0]));
   }
 
   public Set<PrimitiveConstraint> constraintScope;
@@ -135,7 +135,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     if (constraintScope != null && !constraintScope.isEmpty()) {
@@ -147,7 +149,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
               .max()
               .orElseGet(() -> Integer.MIN_VALUE);
 
-      if (eventAcross != Integer.MIN_VALUE) return eventAcross;
+      if (eventAcross != Integer.MIN_VALUE) {
+        return eventAcross;
+      }
     }
 
     return getDefaultConsistencyPruningEvent();
@@ -162,7 +166,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public String id() {
     String constraintType = this.getClass().getSimpleName();
-    if (constraintType.equals("")) constraintType = this.getClass().getName() + "#";
+    if (constraintType.isEmpty()) {
+      constraintType = this.getClass().getName() + "#";
+    }
     return constraintType + numberId;
   }
 
@@ -179,19 +185,20 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     if (constraintScope != null) {
       constraintScope.stream().forEach(i -> i.include(store));
     }
-    if (this instanceof UsesQueueVariable)
+    if (this instanceof UsesQueueVariable) {
       arguments().stream().forEach(i -> queueVariable(store.level, i));
+    }
 
     if (constraintScope != null) {
       Set<RemoveLevelLate> fixpoint = computeFixpoint(this, new HashSet<>());
       fixpoint.forEach(store::registerRemoveLevelLateListener);
     }
 
-    if (this instanceof RemoveLevelLate)
-      store.registerRemoveLevelLateListener((RemoveLevelLate) this);
+    if (this instanceof RemoveLevelLate late) {
+      store.registerRemoveLevelLateListener(late);
+    }
 
-    if (this instanceof Stateful) {
-      Stateful c = (Stateful) this;
+    if (this instanceof Stateful c) {
       if (c.isStateful()) {
         store.registerRemoveLevelListener(c);
       }
@@ -199,8 +206,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
-    if (c instanceof RemoveLevelLate) fixpoint.add((RemoveLevelLate) c);
-    if (c.constraintScope != null) c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
+    if (c instanceof RemoveLevelLate late) {
+      fixpoint.add(late);
+    }
+    if (c.constraintScope != null) {
+      c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
+    }
     return fixpoint;
   }
 
@@ -231,7 +242,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It removes the constraint by removing this constraint from all variables. */
   public void removeConstraint() {
     // Stream version is not used due to large performance overhead.
-    for (Var v : arguments()) if (!v.singleton()) v.removeConstraint(this);
+    for (Var v : arguments()) {
+      if (!v.singleton()) {
+        v.removeConstraint(this);
+      }
+    }
   }
 
   Var watchedVariableGrounded;
@@ -255,7 +270,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public boolean grounded() {
 
-    if (!watchedVariableGrounded()) return false;
+    if (!watchedVariableGrounded()) {
+      return false;
+    }
 
     Optional<Var> stillNotGrounded = arguments().stream().filter(i -> !i.singleton()).findFirst();
 
@@ -274,7 +291,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @return true if all variables in constraint scope are singletons, false otherwise.
    */
   public boolean grounded(Var[] vars) {
-    return !Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isPresent();
+    return Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isEmpty();
   }
 
   /** It produces a string representation of a constraint state. */
@@ -328,7 +345,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It increases the weight of the variables in the constraint scope. */
   public void increaseWeight() {
 
-    if (increaseWeight) arguments().forEach(v -> v.weight++);
+    if (increaseWeight) {
+      arguments().forEach(v -> v.weight++);
+    }
   }
 
   /**
@@ -340,7 +359,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public void setConsistencyPruningEvent(final Var var, final int pruningEvent) {
 
-    if (consistencyPruningEvents == null) consistencyPruningEvents = new Hashtable<>();
+    if (consistencyPruningEvents == null) {
+      consistencyPruningEvents = new Hashtable<>();
+    }
     consistencyPruningEvents.put(var, pruningEvent);
   }
 
@@ -376,7 +397,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It specifies if the constraint consistency function can be prematurely terminated through other
    * than FailureException exception.
    */
-  public boolean earlyTerminationOK = false;
+  public boolean earlyTerminationOK;
 
   /**
    * It specifies if the constraint consistency function requires consistency function executed in
@@ -424,7 +445,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
     if (afcWeight > Double.MAX_VALUE * 1e-50) {
       // re-scale weights
-      for (Constraint c : allConstraints) c.afcWeight *= 1e-150;
+      for (Constraint c : allConstraints) {
+        c.afcWeight *= 1e-150;
+      }
     }
   }
 
@@ -456,8 +479,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   public static int long2int(long value) {
-    if (value > (long) Integer.MAX_VALUE) return Integer.MAX_VALUE;
-    else if (value < (long) Integer.MIN_VALUE) return Integer.MIN_VALUE;
-    else return (int) value;
+    if (value > (long) Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    } else if (value < (long) Integer.MIN_VALUE) {
+      return Integer.MIN_VALUE;
+    } else {
+      return (int) value;
+    }
   }
 }

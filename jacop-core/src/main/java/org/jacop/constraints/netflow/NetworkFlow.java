@@ -106,8 +106,8 @@ public class NetworkFlow extends Constraint
         VarHandler handler = map.get(var);
         if (handler == null) {
           map.put(var, ds);
-        } else if (handler instanceof MultiVarHandler) {
-          ((MultiVarHandler) handler).add(ds);
+        } else if (handler instanceof MultiVarHandler varHandler) {
+          varHandler.add(ds);
         } else {
           map.put(var, new MultiVarHandler(var, handler, ds));
         }
@@ -119,7 +119,7 @@ public class NetworkFlow extends Constraint
         new VarHandler() {
           @Override
           public List<IntVar> listVariables() {
-            return Arrays.asList(costVariable);
+            return Collections.singletonList(costVariable);
           }
 
           @Override
@@ -216,9 +216,9 @@ public class NetworkFlow extends Constraint
   public void consistency(Store store) {
 
     if (SHOW_LEVEL) {
-      System.out.println();
-      System.out.println("--------- Level " + store.level);
-      System.out.println();
+      IO.println();
+      IO.println("--------- Level " + store.level);
+      IO.println();
     }
 
     if (DO_INSTRUMENTATION) {
@@ -240,7 +240,7 @@ public class NetworkFlow extends Constraint
 
       iteration++;
       if (SHOW_LEVEL) {
-        System.out.println("--------- => Iteration " + iteration);
+        IO.println("--------- => Iteration " + iteration);
       }
 
       // recompute flow
@@ -290,12 +290,15 @@ public class NetworkFlow extends Constraint
     // flow, cost weight and structure. Specially structure variables are difficult since
     // they "dynamically" make arcs active/inactive.
     boolean allVarsGround = true;
-    for (IntVar v : map.keySet())
+    for (IntVar v : map.keySet()) {
       if (!v.singleton()) {
         allVarsGround = false;
         break;
       }
-    if (allVarsGround) costVariable.domain.inMax(store.level, costVariable, cost);
+    }
+    if (allVarsGround) {
+      costVariable.domain.inMax(store.level, costVariable, cost);
+    }
   }
 
   @Override
@@ -307,9 +310,9 @@ public class NetworkFlow extends Constraint
   public void removeLevelLate(int level) {
 
     if (SHOW_LEVEL) {
-      System.out.println();
-      System.out.println("######### Level " + level);
-      System.out.println();
+      IO.println();
+      IO.println("######### Level " + level);
+      IO.println();
     }
 
     network.backtrack();
@@ -324,24 +327,38 @@ public class NetworkFlow extends Constraint
 
     result.append(" : NetworkFlow([");
     for (int i = 0; i < network.nodes.length; i++) {
-      result.append("(" + network.nodes[i].name + ", " + network.nodes[i].initialBalance + ")");
-      if (i < network.nodes.length - 1) result.append(", ");
+      result
+          .append("(")
+          .append(network.nodes[i].name)
+          .append(", ")
+          .append(network.nodes[i].initialBalance)
+          .append(")");
+      if (i < network.nodes.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], [");
     for (int i = 0; i < network.allArcs.size(); i++) {
       result.append("(");
-      result.append(network.allArcs.get(i).tail().name + "->" + network.allArcs.get(i).head.name);
-      if (network.allArcs.get(i).companion.wVar == null)
-        result.append(", " + network.allArcs.get(i).cost);
-      else result.append(", " + network.allArcs.get(i).companion.wVar);
-      result.append(", " + network.allArcs.get(i).companion.xVar);
+      result
+          .append(network.allArcs.get(i).tail().name)
+          .append("->")
+          .append(network.allArcs.get(i).head.name);
+      if (network.allArcs.get(i).companion.wVar == null) {
+        result.append(", ").append(network.allArcs.get(i).cost);
+      } else {
+        result.append(", ").append(network.allArcs.get(i).companion.wVar);
+      }
+      result.append(", ").append(network.allArcs.get(i).companion.xVar);
       result.append(")");
-      if (i < network.allArcs.size() - 1) result.append(", ");
+      if (i < network.allArcs.size() - 1) {
+        result.append(", ");
+      }
     }
     result.append("]");
 
-    result.append(", " + costVariable + "}");
+    result.append(", ").append(costVariable).append("}");
     return result.toString();
   }
 }

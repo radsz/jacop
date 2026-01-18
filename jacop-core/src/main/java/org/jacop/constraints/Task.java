@@ -43,11 +43,11 @@ import org.jacop.core.IntervalDomain;
 record Task(IntVar start, IntVar dur, IntVar res) {
 
   long areaMax() {
-    return dur.max() * res.max();
+    return (long) dur.max() * res.max();
   }
 
   long areaMin() {
-    return dur.min() * res.min();
+    return (long) dur.min() * res.min();
   }
 
   IntDomain compl() {

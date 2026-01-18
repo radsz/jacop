@@ -80,8 +80,7 @@ public class OrBoolVector extends PrimitiveConstraint {
 
     this.numberId = idNumber.incrementAndGet();
 
-    Set<IntVar> varSet = new HashSet<>();
-    varSet.addAll(Arrays.asList(list));
+    Set<IntVar> varSet = new HashSet<>(Arrays.asList(list));
     this.l = varSet.size();
     this.list = varSet.toArray(new IntVar[0]);
     this.result = result;

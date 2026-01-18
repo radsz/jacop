@@ -95,7 +95,9 @@ public class PartitionSet extends Constraint {
 
     if (firstConsistencyCheck) {
 
-      for (int i = 0; i < n; i++) s[i].domain.inLUB(store.level, s[i], u);
+      for (int i = 0; i < n; i++) {
+        s[i].domain.inLUB(store.level, s[i], u);
+      }
 
       firstConsistencyCheck = false;
     }
@@ -120,24 +122,30 @@ public class PartitionSet extends Constraint {
       s[i].dom().inLUB(store.level, s[i], lb);
       s[i].dom().inGLB(store.level, s[i], ub);
 
-      if (cardMax < cardMin || cardMax < 0) throw store.failException;
-      if (s[i].dom().card().max() < cardMin || s[i].dom().card().min() > cardMax)
+      if (cardMax < cardMin || cardMax < 0) {
         throw store.failException;
-      if (cardMin > s[i].dom().card().min())
+      }
+      if (s[i].dom().card().max() < cardMin || s[i].dom().card().min() > cardMax) {
+        throw store.failException;
+      }
+      if (cardMin > s[i].dom().card().min()) {
         s[i].domain.inCardinality(store.level, s[i], cardMin, Integer.MAX_VALUE);
-      if (cardMax < s[i].dom().card().max())
+      }
+      if (cardMax < s[i].dom().card().max()) {
         s[i].dom().inCardinality(store.level, s[i], s[i].dom().card().min(), cardMax);
+      }
 
-      if (!s[i].singleton())
+      if (!s[i].singleton()) {
         if (s[i].dom().glb().getSize() == s[i].dom().card().max()) {
-          System.out.println("% 1" + s[i] + " in " + s[i].dom().glb());
+          IO.println("% 1" + s[i] + " in " + s[i].dom().glb());
 
           s[i].domain.inLUB(store.level, s[i], s[i].dom().glb());
         } else if (s[i].dom().lub().getSize() == s[i].dom().card().min()) {
-          System.out.println("% 2");
+          IO.println("% 2");
 
           s[i].domain.inGLB(store.level, s[i], s[i].dom().lub());
         }
+      }
     }
   }
 
@@ -148,7 +156,7 @@ public class PartitionSet extends Constraint {
 
   AunionBeqC[] unionConstraints() {
 
-    IntDomain empty = new org.jacop.core.IntervalDomain();
+    IntDomain empty = new IntervalDomain();
     SetVar tmp1 = new SetVar(s[0].getStore(), new BoundSetDomain(empty, u));
     Store store = s[0].getStore();
     union = new AunionBeqC[s.length - 1];
@@ -172,10 +180,11 @@ public class PartitionSet extends Constraint {
 
     Store store = s[0].getStore();
     ArrayList<AdisjointB> intersect = new ArrayList<>();
-    for (int i = 0; i < s.length; i++)
+    for (int i = 0; i < s.length; i++) {
       for (int j = i + 1; j < s.length; j++) {
         intersect.add(new AdisjointB(s[i], s[j]));
       }
+    }
 
     return intersect;
   }
@@ -202,16 +211,20 @@ public class PartitionSet extends Constraint {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 
   @Override
   public String toString() {
 
     StringBuffer result = new StringBuffer();
-    result.append(id() + " : PartitionSet(");
+    result.append(id()).append(" : PartitionSet(");
     result.append(Arrays.asList(s)).append(", ").append(u);
     result.append(")");
     return result.toString();

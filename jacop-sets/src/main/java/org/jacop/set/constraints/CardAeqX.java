@@ -98,14 +98,19 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
     int min = Math.max(aDom.glb().getSize(), card.min());
     int max = Math.min(aDom.lub().getSize(), card.max());
 
-    if (min > max) throw Store.failException;
+    if (min > max) {
+      throw Store.failException;
+    }
 
     cardinality.domain.in(store.level, cardinality, min, max);
     a.domain.inCardinality(store.level, a, min, max);
 
     // T13 else //T14
-    if (aDom.glb().getSize() == card.max()) a.domain.inLUB(store.level, a, aDom.glb());
-    else if (aDom.lub().getSize() == card.min()) a.domain.inGLB(store.level, a, aDom.lub());
+    if (aDom.glb().getSize() == card.max()) {
+      a.domain.inLUB(store.level, a, aDom.glb());
+    } else if (aDom.lub().getSize() == card.min()) {
+      a.domain.inGLB(store.level, a, aDom.lub());
+    }
   }
 
   @Override
@@ -114,11 +119,16 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == cardinality) return IntDomain.ANY;
-    else return SetDomain.ANY;
+    if (var == cardinality) {
+      return IntDomain.ANY;
+    } else {
+      return SetDomain.ANY;
+    }
   }
 
   @Override
@@ -128,7 +138,7 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
 
   @Override
   public boolean satisfied() {
-    return (grounded() && a.domain.card().eq(cardinality.dom()));
+    return grounded() && a.domain.card().eq(cardinality.dom());
   }
 
   @Override

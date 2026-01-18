@@ -56,7 +56,7 @@ public class IfThenElseBool extends PrimitiveConstraint {
 
   // imposed variable to manifest that constraint has been imposed (top-level)
   // constraint
-  boolean imposed = false;
+  boolean imposed;
 
   Store store;
 
@@ -86,8 +86,11 @@ public class IfThenElseBool extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    if (condVar.min() == 1) thenVar.domain.inValue(store.level, thenVar, 1);
-    else if (condVar.max() == 0) elseVar.domain.inValue(store.level, elseVar, 1);
+    if (condVar.min() == 1) {
+      thenVar.domain.inValue(store.level, thenVar, 1);
+    } else if (condVar.max() == 0) {
+      elseVar.domain.inValue(store.level, elseVar, 1);
+    }
 
     if (imposed) {
 
@@ -111,9 +114,13 @@ public class IfThenElseBool extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    if (condVar.max() == 0) elseVar.domain.inValue(store.level, elseVar, 0);
+    if (condVar.max() == 0) {
+      elseVar.domain.inValue(store.level, elseVar, 0);
+    }
 
-    if (condVar.min() == 1) thenVar.domain.inValue(store.level, thenVar, 0);
+    if (condVar.min() == 1) {
+      thenVar.domain.inValue(store.level, thenVar, 0);
+    }
   }
 
   @Override

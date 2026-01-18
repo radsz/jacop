@@ -52,7 +52,7 @@ public class AllEqual extends PrimitiveConstraint {
   /** It specifies a left hand variable in equality constraint. */
   public final IntVar[] x;
 
-  private int n;
+  private final int n;
 
   private TimeStamp<Integer> position;
 
@@ -106,18 +106,23 @@ public class AllEqual extends PrimitiveConstraint {
     int start = position.value();
 
     for (int i = start; i < n; i++) {
-      if (x[i].singleton())
-        if (start == 0) swap(start++, i);
-        else if (x[0].value() == x[i].value()) {
+      if (x[i].singleton()) {
+        if (start == 0) {
+          swap(start++, i);
+        } else if (x[0].value() == x[i].value()) {
           swap(start++, i);
         } else {
           removeConstraint();
           return;
         }
+      }
     }
 
-    if (start == n - 1) x[start].domain.inComplement(store.level, x[start], x[0].value());
-    else if (start == n) throw Store.failException;
+    if (start == n - 1) {
+      x[start].domain.inComplement(store.level, x[start], x[0].value());
+    } else if (start == n) {
+      throw Store.failException;
+    }
 
     position.update(start);
   }
@@ -135,7 +140,9 @@ public class AllEqual extends PrimitiveConstraint {
 
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
-        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) return false;
+        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) {
+          return false;
+        }
       }
     }
     return true;
@@ -146,7 +153,9 @@ public class AllEqual extends PrimitiveConstraint {
 
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
-        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) return true;
+        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) {
+          return true;
+        }
       }
     }
     return false;

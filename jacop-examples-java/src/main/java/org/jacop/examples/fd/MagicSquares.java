@@ -151,7 +151,7 @@ public class MagicSquares extends ExampleFD {
       }
     }
 
-    vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
+    vars.addAll(Arrays.asList(squares).subList(0, number));
     for (int i = number; i > 0; i--) {
       vars.add(squares[(i - 1) * number + (number - i)]);
     }
@@ -163,7 +163,7 @@ public class MagicSquares extends ExampleFD {
     IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
-      System.arraycopy(squares, i * number + 0, row, 0, number);
+      System.arraycopy(squares, i * number, row, 0, number);
       store.impose(new SumInt(row, "==", k));
     }
 
@@ -178,9 +178,7 @@ public class MagicSquares extends ExampleFD {
 
     IntVar[] diagonal = new IntVar[number];
 
-    for (int i = 0; i < number; i++) {
-      diagonal[i] = squares[i * number + i];
-    }
+    System.arraycopy(squares, 0 * number + 0, diagonal, 0, number);
 
     store.impose(new SumInt(diagonal, "==", k));
 
@@ -217,7 +215,7 @@ public class MagicSquares extends ExampleFD {
       }
     }
 
-    vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
+    vars.addAll(Arrays.asList(squares).subList(0, number));
     for (int i = number; i > 0; i--) {
       vars.add(squares[(i - 1) * number + (number - i)]);
     }
@@ -229,7 +227,7 @@ public class MagicSquares extends ExampleFD {
     IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
-      System.arraycopy(squares, i * number + 0, row, 0, number);
+      System.arraycopy(squares, i * number, row, 0, number);
       Constraint cx = new SumInt(row, "==", k);
       store.impose(cx);
       guidingShaving.add(cx);
@@ -249,9 +247,7 @@ public class MagicSquares extends ExampleFD {
 
     IntVar[] diagonal = new IntVar[number];
 
-    for (int i = 0; i < number; i++) {
-      diagonal[i] = squares[i * number + i];
-    }
+    System.arraycopy(squares, 0 * number + 0, diagonal, 0, number);
 
     Constraint cx = new SumInt(diagonal, "==", k);
     store.impose(cx);
@@ -291,7 +287,7 @@ public class MagicSquares extends ExampleFD {
       }
     }
 
-    vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
+    vars.addAll(Arrays.asList(squares).subList(0, number));
     for (int i = number; i > 0; i--) {
       vars.add(squares[(i - 1) * number + (number - i)]);
     }
@@ -300,7 +296,7 @@ public class MagicSquares extends ExampleFD {
     IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
-      System.arraycopy(squares, i * number + 0, row, 0, number);
+      System.arraycopy(squares, i * number, row, 0, number);
       store.impose(new SumInt(row, "==", k));
     }
 
@@ -315,9 +311,7 @@ public class MagicSquares extends ExampleFD {
 
     IntVar[] diagonal = new IntVar[number];
 
-    for (int i = 0; i < number; i++) {
-      diagonal[i] = squares[i * number + i];
-    }
+    System.arraycopy(squares, 0 * number + 0, diagonal, 0, number);
 
     store.impose(new SumInt(diagonal, "==", k));
 

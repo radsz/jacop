@@ -120,9 +120,13 @@ public class XeqY extends PrimitiveConstraint {
   @Override
   public void notConsistency(final Store store) {
 
-    if (y.singleton()) x.domain.inComplement(store.level, x, y.value());
+    if (y.singleton()) {
+      x.domain.inComplement(store.level, x, y.value());
+    }
 
-    if (x.singleton()) y.domain.inComplement(store.level, y, x.value());
+    if (x.singleton()) {
+      y.domain.inComplement(store.level, y, x.value());
+    }
   }
 
   @Override

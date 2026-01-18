@@ -93,11 +93,17 @@ public class IfThenBool extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    if (x.min() < 0 || x.max() > 1) return "Variable " + x + " does not have boolean domain";
+    if (x.min() < 0 || x.max() > 1) {
+      return "Variable " + x + " does not have boolean domain";
+    }
 
-    if (y.min() < 0 || y.max() > 1) return "Variable " + y + " does not have boolean domain";
+    if (y.min() < 0 || y.max() > 1) {
+      return "Variable " + y + " does not have boolean domain";
+    }
 
-    if (z.min() < 0 || z.max() > 1) return "Variable " + z + " does not have boolean domain";
+    if (z.min() < 0 || z.max() > 1) {
+      return "Variable " + z + " does not have boolean domain";
+    }
 
     return null;
   }
@@ -118,8 +124,12 @@ public class IfThenBool extends PrimitiveConstraint {
     }
 
     if (y.max() == 0) {
-      if (x.singleton()) z.domain.inComplement(store.level, z, x.value());
-      if (z.singleton()) x.domain.inComplement(store.level, x, z.value());
+      if (x.singleton()) {
+        z.domain.inComplement(store.level, z, x.value());
+      }
+      if (z.singleton()) {
+        x.domain.inComplement(store.level, x, z.value());
+      }
     } else if (y.min() == 1) {
       z.domain.inValue(store.level, z, 1);
     }
@@ -159,8 +169,12 @@ public class IfThenBool extends PrimitiveConstraint {
         }
 
         if (x.min() == 1) {
-          if (y.singleton()) z.domain.inComplement(store.level, z, y.value());
-          if (z.singleton()) y.domain.inComplement(store.level, y, z.value());
+          if (y.singleton()) {
+            z.domain.inComplement(store.level, z, y.value());
+          }
+          if (z.singleton()) {
+            y.domain.inComplement(store.level, y, z.value());
+          }
         }
       }
 
@@ -187,12 +201,20 @@ public class IfThenBool extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
 
-    if (!x.singleton()) return false;
-    if (!z.singleton()) return false;
+    if (!x.singleton()) {
+      return false;
+    }
+    if (!z.singleton()) {
+      return false;
+    }
 
-    if (x.singleton(0) && z.singleton(0)) return true;
+    if (x.singleton(0) && z.singleton(0)) {
+      return true;
+    }
 
-    if (!y.singleton()) return false;
+    if (!y.singleton()) {
+      return false;
+    }
 
     return x.singleton(1) && y.singleton(1) && z.singleton(0);
 
@@ -202,12 +224,20 @@ public class IfThenBool extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
 
-    if (!x.singleton()) return false;
-    if (!z.singleton()) return false;
+    if (!x.singleton()) {
+      return false;
+    }
+    if (!z.singleton()) {
+      return false;
+    }
 
-    if (x.singleton(0) && z.singleton(1)) return true;
+    if (x.singleton(0) && z.singleton(1)) {
+      return true;
+    }
 
-    if (!y.singleton()) return false;
+    if (!y.singleton()) {
+      return false;
+    }
 
     return x.singleton(1) && y.singleton(1) && z.singleton(1);
 

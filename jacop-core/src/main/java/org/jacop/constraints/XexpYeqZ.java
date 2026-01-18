@@ -97,15 +97,22 @@ public class XexpYeqZ extends Constraint implements SatisfiedPresent {
 
           int zi;
           long zl;
-          if (xi == 0)
-            if (yi == 0) zi = 1;
-            else if (yi < 0) continue; // 0 to negative exponent is infinity :(
-            else zi = 0;
-          else {
+          if (xi == 0) {
+            if (yi == 0) {
+              zi = 1;
+            } else if (yi < 0) {
+              continue; // 0 to negative exponent is infinity :(
+            } else {
+              zi = 0;
+            }
+          } else {
             zl = toLong(Math.pow(xi, yi));
 
-            if (zl < z.min() || zl > z.max()) continue; // value not in domain of z
-            else zi = long2int(zl);
+            if (zl < z.min() || zl > z.max()) {
+              continue; // value not in domain of z
+            } else {
+              zi = long2int(zl);
+            }
           }
 
           if (z.domain.contains(zi)) {

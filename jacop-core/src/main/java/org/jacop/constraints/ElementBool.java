@@ -106,8 +106,11 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
       if (i >= 0 && i < list.length) {
         int valueOfElement = list[i];
 
-        if (valueOfElement == 0) indexAtZero.unionAdapt(idx);
-        else if (valueOfElement == 1) indexAtOne.unionAdapt(idx);
+        if (valueOfElement == 0) {
+          indexAtZero.unionAdapt(idx);
+        } else if (valueOfElement == 1) {
+          indexAtOne.unionAdapt(idx);
+        }
       }
     }
   }
@@ -221,8 +224,11 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (var == index) indexHasChanged = true;
-    else valueHasChanged = true;
+    if (var == index) {
+      indexHasChanged = true;
+    } else {
+      valueHasChanged = true;
+    }
   }
 
   @Override
@@ -235,10 +241,12 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
-    result.append("], ").append(value).append(", " + indexOffset + " )");
+    result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
 
     return result.toString();
   }

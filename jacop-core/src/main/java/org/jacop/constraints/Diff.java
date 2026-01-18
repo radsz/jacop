@@ -403,7 +403,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           // end for
           commonArea += partialCommonArea;
         }
-        if (commonArea + r.minArea() > (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
+        if (commonArea + r.minArea() > (long) (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
           throw Store.failException;
         }
       }

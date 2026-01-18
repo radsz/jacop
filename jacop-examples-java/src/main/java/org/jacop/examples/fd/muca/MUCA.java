@@ -199,7 +199,7 @@ public class MUCA extends ExampleFD {
     t3.delta = new ArrayList<>();
     t3.delta.add(new Delta(0, 1));
     t3.delta.add(new Delta(1, 0));
-    t3.delta.add(new Delta(1, 01));
+    t3.delta.add(new Delta(1, 1));
 
     bid_2_xor1.add(t3);
 

@@ -387,7 +387,6 @@ setup to run configuration. -->
                         <recipe>org.openrewrite.staticanalysis.CodeCleanup</recipe>
                     </activeRecipes>
                     <checkstyleConfigFile>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</checkstyleConfigFile>
-                    <skip>true</skip>
                 </configuration>
                 <dependencies>
                     <dependency>

@@ -431,7 +431,7 @@ public class Cumulative extends CumulativeBasic {
             Dupd[i] = (int) Math.max(Dupd[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
           }
 
-          if (maxEnergy + t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
+          if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
             LB[i] = Math.max(LB[i], Dupd[i]);
           }
         }
@@ -450,7 +450,7 @@ public class Cumulative extends CumulativeBasic {
 
         if (t.lct() > u.lct()) {
 
-          long rest = t.res().min() * (u.lct() - rt) - minSL;
+          long rest = (long) t.res().min() * (u.lct() - rt) - minSL;
           if (rt <= u.lct() && rest > 0) {
             SLupd[i] = (int) Math.max(SLupd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
           }

@@ -71,8 +71,7 @@ public class MultivariateIntervalNewton {
 
     eval = new Stack<>();
 
-    Set<FloatVar> vars = new HashSet<>();
-    vars.addAll(Arrays.asList(x));
+    Set<FloatVar> vars = new HashSet<>(Arrays.asList(x));
 
     fprime = new FloatVar[f.length][x.length];
     Derivative.init(store);
