@@ -79,12 +79,14 @@ public final class HeuristicForgetModule
 
     // only forget clauses with lbd greater than 2
     LBD:
-    for (int lbd = 5; lbd > 2; --lbd) {
+    for (int lbd = 5; lbd > 2; lbd--) {
       Iterator<Integer> clauseIterator = learntClauses[lbd].iterator();
       while (clauseIterator.hasNext()) {
-        if (numClausesToRemove <= 0) break LBD; // stop forgetting
+        if (numClausesToRemove <= 0) {
+          break LBD; // stop forgetting
 
-        // try to remove this clause
+          // try to remove this clause
+        }
         int clauseId = clauseIterator.next();
         if (core.canRemove(clauseId)) {
           core.removeClause(clauseId);
@@ -97,7 +99,9 @@ public final class HeuristicForgetModule
 
   /** when a restart occurs, it may be a good occasion to forget clauses */
   public void onRestart(int level) {
-    if (shouldTriggerForget()) core.forget();
+    if (shouldTriggerForget()) {
+      core.forget();
+    }
   }
 
   public void onBackjump(int oldLevel, int newLevel) {
@@ -132,7 +136,9 @@ public final class HeuristicForgetModule
    */
   private int numberOfLearntClauses() {
     int answer = 0;
-    for (LinkedList<Integer> learntClause : learntClauses) answer += learntClause.size();
+    for (LinkedList<Integer> learntClause : learntClauses) {
+      answer += learntClause.size();
+    }
     return answer;
   }
 
@@ -152,7 +158,9 @@ public final class HeuristicForgetModule
     this.core = core;
 
     // reset lists of clauses
-    for (int i = 0; i < learntClauses.length; ++i) learntClauses[i] = new LinkedList<>();
+    for (int i = 0; i < learntClauses.length; i++) {
+      learntClauses[i] = new LinkedList<>();
+    }
 
     core.forgetModules[core.numForgetModules++] = this;
     core.explanationModules[core.numExplanationModules++] = this;

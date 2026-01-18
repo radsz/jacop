@@ -50,11 +50,11 @@ import org.jacop.util.SophisticatedLengauerTarjan;
 public class Circuit extends Alldiff implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  int chainLength = 0;
+  int chainLength;
   boolean firstConsistencyCheck = true;
   MutableVar[] graph;
-  int idd = 0;
-  int sccLength = 0;
+  int idd;
+  int sccLength;
   final int[] val;
   final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
 
@@ -80,7 +80,9 @@ public class Circuit extends Alldiff implements Stateful {
     this.queueIndex = 2;
 
     int i = 0;
-    for (Var v : list) valueIndex.put(v, i++);
+    for (Var v : list) {
+      valueIndex.put(v, i++);
+    }
 
     val = new int[list.length];
 
@@ -134,8 +136,11 @@ public class Circuit extends Alldiff implements Stateful {
 
     for (IntVar changedVar : fdvs) {
       if (changedVar.singleton()) {
-        for (IntVar var : list)
-          if (var != changedVar) var.domain.inComplement(store.level, var, changedVar.min());
+        for (IntVar var : list) {
+          if (var != changedVar) {
+            var.domain.inComplement(store.level, var, changedVar.min());
+          }
+        }
       }
     }
   }
@@ -165,7 +170,9 @@ public class Circuit extends Alldiff implements Stateful {
     super.impose(store);
 
     graph = new CircuitVar[list.length];
-    for (int j = 0; j < graph.length; j++) graph[j] = new CircuitVar(store, 0, 0);
+    for (int j = 0; j < graph.length; j++) {
+      graph[j] = new CircuitVar(store, 0, 0);
+    }
   }
 
   int lastNode(Store store, int current) {
@@ -175,10 +182,14 @@ public class Circuit extends Alldiff implements Stateful {
       last = ((CircuitVarValue) graph[current - 1].value()).next;
       if (last != 0) {
         current = last;
-        if (++chainLength > graph.length) throw Store.failException;
+        if (++chainLength > graph.length) {
+          throw Store.failException;
+        }
       }
     } while (last != 0 && last != start);
-    if (last == current) chainLength = 0;
+    if (last == current) {
+      chainLength = 0;
+    }
     return current;
   }
 
@@ -209,7 +220,9 @@ public class Circuit extends Alldiff implements Stateful {
   @Override
   public boolean satisfied() {
 
-    if (grounded.value() != list.length) return false;
+    if (grounded.value() != list.length) {
+      return false;
+    }
 
     boolean sat = super.satisfied(); // alldifferent
 
@@ -220,7 +233,9 @@ public class Circuit extends Alldiff implements Stateful {
         i = list[i].min() - 1;
         no++;
       } while (no < list.length && i != 0);
-      if (no != list.length || i != 0) return false;
+      if (no != list.length || i != 0) {
+        return false;
+      }
     }
     return sat;
   }
@@ -235,7 +250,9 @@ public class Circuit extends Alldiff implements Stateful {
 
   void sccs(Store store) {
 
-    for (int i = 0; i < val.length; i++) val[i] = 0;
+    for (int i = 0; i < val.length; i++) {
+      val[i] = 0;
+    }
     idd = 0;
 
     sccLength = 0;
@@ -250,7 +267,9 @@ public class Circuit extends Alldiff implements Stateful {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("])");
 
@@ -261,7 +280,9 @@ public class Circuit extends Alldiff implements Stateful {
 
   @Override
   public void removeLevel(int level) {
-    if (firstConsistencyLevel == level) firstConsistencyCheck = true;
+    if (firstConsistencyLevel == level) {
+      firstConsistencyCheck = true;
+    }
   }
 
   void updateChains(IntVar v) {
@@ -283,9 +304,14 @@ public class Circuit extends Alldiff implements Stateful {
     sccLength++;
     for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
       t = e.nextElement() - 1;
-      if (val[t] == 0) m = visit(t);
-      else m = val[t];
-      if (m < min) min = m;
+      if (val[t] == 0) {
+        m = visit(t);
+      } else {
+        m = val[t];
+      }
+      if (m < min) {
+        min = m;
+      }
     }
     if (min == val[k]) {
       if (sccLength != list.length && sccLength != 0) {
@@ -301,7 +327,9 @@ public class Circuit extends Alldiff implements Stateful {
   private void dominanceFilter() {
     int n = list.length;
 
-    if (!graphDominance(random.nextInt(n))) reversedGraphDominance(random.nextInt(n));
+    if (!graphDominance(random.nextInt(n))) {
+      reversedGraphDominance(random.nextInt(n));
+    }
   }
 
   private boolean graphDominance(int root) {
@@ -315,14 +343,17 @@ public class Circuit extends Alldiff implements Stateful {
     for (int v = 0; v < n; v++) {
       for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
         int w = e.nextElement() - 1;
-        if (v == root || v == w) graphDominance.addArc(n, w);
-        else graphDominance.addArc(v, w);
+        if (v == root || v == w) {
+          graphDominance.addArc(n, w);
+        } else {
+          graphDominance.addArc(v, w);
+        }
       }
     }
 
     if (graphDominance.dominators(n)) {
       for (int v = 0; v < n; v++) {
-        if (v != root)
+        if (v != root) {
           for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
             int w = e.nextElement() - 1;
             if (v != w && graphDominance.dominatedBy(v, w)) {
@@ -333,9 +364,11 @@ public class Circuit extends Alldiff implements Stateful {
               list[w].domain.inComplement(store.level, list[w], w + 1);
             }
           }
+        }
       }
-    } else // root does not reach all nodes -> FAIL
-    throw Store.failException;
+    } else { // root does not reach all nodes -> FAIL
+      throw Store.failException;
+    }
 
     return pruning;
   }
@@ -352,14 +385,17 @@ public class Circuit extends Alldiff implements Stateful {
     for (int v = 0; v < n; v++) {
       for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
         int w = e.nextElement() - 1;
-        if (w == root || v == w) graphDominance.addArc(n, v);
-        else graphDominance.addArc(w, v);
+        if (w == root || v == w) {
+          graphDominance.addArc(n, v);
+        } else {
+          graphDominance.addArc(w, v);
+        }
       }
     }
 
     if (graphDominance.dominators(n)) {
       for (int v = 0; v < n; v++) {
-        if (v != root)
+        if (v != root) {
           for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
             int w = e.nextElement() - 1;
             if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
@@ -370,9 +406,11 @@ public class Circuit extends Alldiff implements Stateful {
               list[v].domain.inComplement(store.level, list[v], v + 1);
             }
           }
+        }
       }
-    } else // root does not reach all nodes -> FAIL
-    throw Store.failException;
+    } else { // root does not reach all nodes -> FAIL
+      throw Store.failException;
+    }
 
     return pruning;
   }

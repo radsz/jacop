@@ -93,7 +93,7 @@ public abstract class IntDomain extends Domain {
   }; // ANY event
 
   private static final Random generator =
-      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+      Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /**
    * It specifies the previous domain which was used by this domain. The old domain is stored here
@@ -141,10 +141,12 @@ public abstract class IntDomain extends Domain {
 
     int aa = multiplyInt(a, a);
     int bb = multiplyInt(b, b);
-    int min = (aa < bb) ? aa : bb; // Math.min(aa, bb);
-    int max = (aa > bb) ? aa : bb; // Math.max(aa, bb);
+    int min = aa < bb ? aa : bb; // Math.min(aa, bb);
+    int max = aa > bb ? aa : bb; // Math.max(aa, bb);
 
-    if (a < 0 && b > 0) min = 0;
+    if (a < 0 && b > 0) {
+      min = 0;
+    }
 
     return new Interval(min, max);
   }
@@ -163,17 +165,20 @@ public abstract class IntDomain extends Domain {
       min = IntDomain.MinInt;
       max = IntDomain.MaxInt;
       result = new Interval(min, max);
-    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
-    throw Store.failException;
-    else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
+    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) { // case 2
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+
+    } else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
       max = Math.max(Math.abs(a), Math.abs(b));
       min = -max;
       result = new Interval(min, max);
-    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
-    result = divBounds(a, b, 1, d);
-    else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
-    result = divBounds(a, b, c, -1);
-    else if ((c > 0 || d < 0) && c <= d) { // case 5
+    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) { // case 4 a
+      result = divBounds(a, b, 1, d); // can happen if a..b or c..d are not proper intervals
+
+    } else if (c != 0 && d == 0 && (a > 0 || b < 0)) { // case 4 b
+      result = divBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
+
+    } else if ((c > 0 || d < 0) && c <= d) { // case 5
       int ac = a / c;
       int ad = a / d;
       int bc = b / c;
@@ -181,8 +186,9 @@ public abstract class IntDomain extends Domain {
       min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
       max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
       result = new Interval(min, max);
-    } else throw Store.failException; // can happen if a..b or c..d are not proper intervals
-
+    } else {
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+    }
     return result;
   }
 
@@ -199,17 +205,20 @@ public abstract class IntDomain extends Domain {
       min = IntDomain.MinInt;
       max = IntDomain.MaxInt;
       result = new Interval(min, max);
-    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) // case 2
-    throw Store.failException;
-    else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
+    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) { // case 2
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+
+    } else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
       max = Math.max(Math.abs(a), Math.abs(b));
       min = -max;
       result = new Interval(min, max);
-    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) // case 4 a
-    result = divIntBounds(a, b, 1, d);
-    else if (c != 0 && d == 0 && (a > 0 || b < 0)) // case 4 b
-    result = divIntBounds(a, b, c, -1);
-    else if ((c > 0 || d < 0) && c <= d) { // case 5
+    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) { // case 4 a
+      result = divIntBounds(a, b, 1, d); // can happen if a..b or c..d are not proper intervals
+
+    } else if (c != 0 && d == 0 && (a > 0 || b < 0)) { // case 4 b
+      result = divIntBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
+
+    } else if ((c > 0 || d < 0) && c <= d) { // case 5
       double ac = (double) a / c;
       double ad = (double) a / d;
       double bc = (double) b / c;
@@ -218,10 +227,13 @@ public abstract class IntDomain extends Domain {
       double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
       min = (int) Math.round(Math.ceil(low));
       max = (int) Math.round(Math.floor(high));
-      if (min > max) throw Store.failException;
+      if (min > max) {
+        throw Store.failException;
+      }
       result = new Interval(min, max);
-    } else throw Store.failException; // can happen if a..b or c..d are not proper intervals
-
+    } else {
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+    }
     return result;
   }
 
@@ -233,18 +245,22 @@ public abstract class IntDomain extends Domain {
     int min;
     int max;
 
-    if (c == 0) // case 1
-    throw Store.failException;
-    else if (c > 0) {
+    if (c == 0) { // case 1
+      throw Store.failException;
+    } else if (c > 0) {
       min = divRoundUp(a, c);
       max = divRoundDown(b, c);
-      if (min > max) throw Store.failException;
+      if (min > max) {
+        throw Store.failException;
+      }
 
       return new Interval(min, max);
     } else { // c < 0
       min = divRoundUp(b, c);
       max = divRoundDown(a, c);
-      if (min > max) throw Store.failException;
+      if (min > max) {
+        throw Store.failException;
+      }
 
       return new Interval(min, max);
     }
@@ -346,10 +362,14 @@ public abstract class IntDomain extends Domain {
 
     if (!domain.isSparseRepresentation()) {
       IntervalEnumeration enumer = domain.intervalEnumeration();
-      while (enumer.hasMoreElements()) unionAdapt(enumer.nextElement());
+      while (enumer.hasMoreElements()) {
+        unionAdapt(enumer.nextElement());
+      }
     } else {
       ValueEnumeration enumer = domain.valueEnumeration();
-      while (enumer.hasMoreElements()) unionAdapt(enumer.nextElement());
+      while (enumer.hasMoreElements()) {
+        unionAdapt(enumer.nextElement());
+      }
     }
   }
 
@@ -382,12 +402,18 @@ public abstract class IntDomain extends Domain {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        if (isIntersecting(next.min(), next.max())) return true;
+        if (isIntersecting(next.min(), next.max())) {
+          return true;
+        }
       }
     } else {
 
       ValueEnumeration enumer = domain.valueEnumeration();
-      while (enumer.hasMoreElements()) if (contains(enumer.nextElement())) return true;
+      while (enumer.hasMoreElements()) {
+        if (contains(enumer.nextElement())) {
+          return true;
+        }
+      }
     }
 
     return false;
@@ -414,11 +440,17 @@ public abstract class IntDomain extends Domain {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        if (!contains(next.min(), next.max())) return false;
+        if (!contains(next.min(), next.max())) {
+          return false;
+        }
       }
     } else {
       ValueEnumeration enumer = domain.valueEnumeration();
-      while (enumer.hasMoreElements()) if (!contains(enumer.nextElement())) return false;
+      while (enumer.hasMoreElements()) {
+        if (!contains(enumer.nextElement())) {
+          return false;
+        }
+      }
     }
 
     return true;
@@ -578,7 +610,9 @@ public abstract class IntDomain extends Domain {
    */
   public IntDomain subtract(IntDomain domain) {
 
-    if (domain.isEmpty()) return this.cloneLight();
+    if (domain.isEmpty()) {
+      return this.cloneLight();
+    }
 
     if (!domain.isSparseRepresentation()) {
       IntervalEnumeration enumer = domain.intervalEnumeration();
@@ -595,7 +629,9 @@ public abstract class IntDomain extends Domain {
       IntDomain result = this.subtract(first);
       while (enumer.hasMoreElements()) {
         int next = enumer.nextElement();
-        if (result.contains(next)) result.subtractAdapt(next);
+        if (result.contains(next)) {
+          result.subtractAdapt(next);
+        }
       }
       return result;
     }
@@ -618,11 +654,15 @@ public abstract class IntDomain extends Domain {
    */
   public IntDomain union(IntDomain domain) {
 
-    if (this.isEmpty()) return domain.cloneLight();
+    if (this.isEmpty()) {
+      return domain.cloneLight();
+    }
 
     IntDomain result = this.cloneLight();
 
-    if (domain.isEmpty()) return result;
+    if (domain.isEmpty()) {
+      return result;
+    }
 
     if (!domain.isSparseRepresentation()) {
       IntervalEnumeration enumer = domain.intervalEnumeration();
@@ -826,21 +866,27 @@ public abstract class IntDomain extends Domain {
    */
   public boolean eq(IntDomain domain) {
 
-    if (this.getSize() != domain.getSize()) return false;
+    if (this.getSize() != domain.getSize()) {
+      return false;
+    }
 
     // the same size.
     if (!domain.isSparseRepresentation()) {
       IntervalEnumeration enumer = domain.intervalEnumeration();
       while (enumer.hasMoreElements()) {
         Interval next = enumer.nextElement();
-        if (!contains(next.min(), next.max())) return false;
+        if (!contains(next.min(), next.max())) {
+          return false;
+        }
       }
       return true;
     } else {
       ValueEnumeration enumer = domain.valueEnumeration();
       while (enumer.hasMoreElements()) {
         int next = enumer.nextElement();
-        if (!contains(next)) return false;
+        if (!contains(next)) {
+          return false;
+        }
       }
       return true;
     }
@@ -854,12 +900,17 @@ public abstract class IntDomain extends Domain {
   @Override
   public boolean singleton(Domain value) {
 
-    if (getSize() > 1) return false;
+    if (getSize() > 1) {
+      return false;
+    }
 
-    if (isEmpty()) return false;
+    if (isEmpty()) {
+      return false;
+    }
 
-    if (value.getSize() != 1)
+    if (value.getSize() != 1) {
       throw new IllegalArgumentException("An argument should be a singleton domain");
+    }
 
     assert (value instanceof IntDomain)
         : "Can not compare int domains with other types of domains.";
@@ -906,12 +957,14 @@ public abstract class IntDomain extends Domain {
 
       boolean alreadyImposed = false;
 
-      if (modelConstraintsToEvaluate[pruningEvent] > 0)
-        for (int i = pruningEventConstraints.length - 1; i >= 0; i--)
+      if (modelConstraintsToEvaluate[pruningEvent] > 0) {
+        for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
           if (pruningEventConstraints[i] == c) {
             alreadyImposed = true;
             break;
           }
+        }
+      }
 
       int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
 
@@ -1004,11 +1057,12 @@ public abstract class IntDomain extends Domain {
 
       int i;
 
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
         if (pruningEventConstraints[i] == c) {
           isImposed = true;
           break;
         }
+      }
 
       if (isImposed) {
 
@@ -1044,11 +1098,12 @@ public abstract class IntDomain extends Domain {
 
       int i;
 
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
         if (pruningEventConstraints[i] == c) {
           isImposed = true;
           break;
         }
+      }
 
       if (isImposed) {
 
@@ -1084,11 +1139,12 @@ public abstract class IntDomain extends Domain {
 
       int i;
 
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
         if (pruningEventConstraints[i] == c) {
           isImposed = true;
           break;
         }
+      }
 
       // int pruningConstraintsToEvaluate =
       // modelConstraintsToEvaluate[pruningEvent];
@@ -1275,12 +1331,19 @@ public abstract class IntDomain extends Domain {
 
         j = paramEnumer.nextElement();
 
-        if (i < j) return -1;
-        else if (j < i) return 1;
-      } else return 1;
+        if (i < j) {
+          return -1;
+        } else if (j < i) {
+          return 1;
+        }
+      } else {
+        return 1;
+      }
     }
 
-    if (paramEnumer.hasMoreElements()) return -1;
+    if (paramEnumer.hasMoreElements()) {
+      return -1;
+    }
 
     return 0;
   }
@@ -1326,8 +1389,9 @@ public abstract class IntDomain extends Domain {
 
     IntDomain result = union(union);
 
-    if (result.getSize() == getSize()) return Domain.NONE;
-    else {
+    if (result.getSize() == getSize()) {
+      return Domain.NONE;
+    } else {
       setDomain(result);
       // FIXME, how to setup events for domain extending events?
       return IntDomain.ANY;
@@ -1377,7 +1441,9 @@ public abstract class IntDomain extends Domain {
     ValueEnumeration enumer = this.valueEnumeration();
     int i = 0;
 
-    while (enumer.hasMoreElements()) result[i++] = enumer.nextElement();
+    while (enumer.hasMoreElements()) {
+      result[i++] = enumer.nextElement();
+    }
 
     return result;
   }

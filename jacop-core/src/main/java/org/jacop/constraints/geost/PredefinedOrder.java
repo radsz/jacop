@@ -73,12 +73,14 @@ public class PredefinedOrder implements LexicographicalOrder {
 
     dimensionPosition = new int[ordering.length];
 
-    for (int i = 0; i < dimensionPosition.length; i++)
-      for (int j = 0; j < ordering.length; j++)
+    for (int i = 0; i < dimensionPosition.length; i++) {
+      for (int j = 0; j < ordering.length; j++) {
         if (ordering[j] == i) {
           dimensionPosition[i] = j;
           break;
         }
+      }
+    }
 
     actualDimensionOrder = new int[ordering.length];
     recomputeActualDimensionOrder();
@@ -113,7 +115,9 @@ public class PredefinedOrder implements LexicographicalOrder {
     int k = masterOrdering.length;
     int shift = dimensionPosition[mostSignificantDimension];
 
-    for (int i = 0; i < k; i++) actualDimensionOrder[i] = masterOrdering[(i + shift) % k];
+    for (int i = 0; i < k; i++) {
+      actualDimensionOrder[i] = masterOrdering[(i + shift) % k];
+    }
 
     assert actualDimensionOrder[0] == mostSignificantDimension : "wrong setup of precedence levels";
   }
@@ -142,8 +146,11 @@ public class PredefinedOrder implements LexicographicalOrder {
     // note: this can be optimized, there should be a relationship between the relations.
     // But since this function is never called, I will not lose time implementing it better
 
-    for (int i = 0; i < masterOrdering.length; i++)
-      if (actualDimensionOrder[i] == dimension) return i;
+    for (int i = 0; i < masterOrdering.length; i++) {
+      if (actualDimensionOrder[i] == dimension) {
+        return i;
+      }
+    }
 
     assert false : "unreachable code";
     return 0;

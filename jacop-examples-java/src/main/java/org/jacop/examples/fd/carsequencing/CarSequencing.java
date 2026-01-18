@@ -138,15 +138,17 @@ public class CarSequencing extends ExampleFD {
 
     example.maxNoOfCarsPerOption = new int[example.noOption];
 
-    for (int i = 0; i < result.length; i++)
+    for (int i = 0; i < result.length; i++) {
       example.maxNoOfCarsPerOption[i] = Integer.parseInt(result[i]);
+    }
 
     result = pat.split(description[2]);
 
     example.blockSizePerOption = new int[example.noOption];
 
-    for (int i = 0; i < result.length; i++)
+    for (int i = 0; i < result.length; i++) {
       example.blockSizePerOption[i] = Integer.parseInt(result[i]);
+    }
 
     example.noOfCarsPerClass = new int[example.noClass];
     example.required = new boolean[example.noClass][example.noOption];
@@ -160,8 +162,11 @@ public class CarSequencing extends ExampleFD {
 
       example.noOfCarsPerClass[classNo] = Integer.parseInt(result[1]);
 
-      for (int j = 2; j < result.length; j++)
-        if (Integer.parseInt(result[j]) == 1) example.required[classNo][j - 2] = true;
+      for (int j = 2; j < result.length; j++) {
+        if (Integer.parseInt(result[j]) == 1) {
+          example.required[classNo][j - 2] = true;
+        }
+      }
     }
   }
 
@@ -200,9 +205,13 @@ public class CarSequencing extends ExampleFD {
       resultBuffer.append(i).append(" ");
       resultBuffer.append(example.noOfCarsPerClass[i]);
 
-      for (int j = 0; j < example.noOption; j++)
-        if (example.required[i][j]) resultBuffer.append(" 1");
-        else resultBuffer.append(" 0");
+      for (int j = 0; j < example.noOption; j++) {
+        if (example.required[i][j]) {
+          resultBuffer.append(" 1");
+        } else {
+          resultBuffer.append(" 0");
+        }
+      }
 
       result[i + 3] = resultBuffer.toString();
     }
@@ -228,7 +237,9 @@ public class CarSequencing extends ExampleFD {
 
       FSMState nextStateYes = new FSMState();
 
-      if (current < count) currentState.transitions.add(new FSMTransition(yes, nextStateYes));
+      if (current < count) {
+        currentState.transitions.add(new FSMTransition(yes, nextStateYes));
+      }
 
       for (ValueEnumeration enumer = no.valueEnumeration(); enumer.hasMoreElements(); ) {
         int value = enumer.nextElement();
@@ -238,7 +249,9 @@ public class CarSequencing extends ExampleFD {
 
       result.allStates.add(currentState);
 
-      if (current == count) result.finalStates.add(currentState);
+      if (current == count) {
+        result.finalStates.add(currentState);
+      }
 
       currentState = nextStateYes;
 
@@ -419,7 +432,9 @@ public class CarSequencing extends ExampleFD {
 
     String[] description = toStringArray(example);
 
-    for (String line : description) IO.println(line);
+    for (String line : description) {
+      IO.println(line);
+    }
 
     example.searchAllAtOnce();
   }
@@ -439,7 +454,9 @@ public class CarSequencing extends ExampleFD {
 
     String[] description = toStringArray(example);
 
-    for (String line : description) IO.println(line);
+    for (String line : description) {
+      IO.println(line);
+    }
 
     example.searchAllAtOnce();
 
@@ -467,13 +484,18 @@ public class CarSequencing extends ExampleFD {
     for (int i = 0; i < noOption; i++) {
 
       IntervalDomain classesWithGivenOption = new IntervalDomain();
-      for (int j = 0; j < noClass; j++) if (required[j][i]) classesWithGivenOption.unionAdapt(j, j);
+      for (int j = 0; j < noClass; j++) {
+        if (required[j][i]) {
+          classesWithGivenOption.unionAdapt(j, j);
+        }
+      }
 
       // It uses Regular constraint.
-      if (regular)
+      if (regular) {
         store.imposeDecomposition(
             new Sequence(
                 cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]));
+      }
 
       // It uses decomposition of Regular into ternary constraints.
       if (slideDecomposition) {
@@ -482,7 +504,9 @@ public class CarSequencing extends ExampleFD {
                 cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
         List<Constraint> decomposition = c.decompose(store);
 
-        for (Constraint regular : decomposition) store.imposeDecomposition(regular);
+        for (Constraint regular : decomposition) {
+          store.imposeDecomposition(regular);
+        }
       }
 
       // It uses replacement for Regular, namely one extensional support constraint

@@ -54,4 +54,6 @@ public final class SolverState {
       default -> throw new AssertionError("bad SolverState int");
     };
   }
+
+  private SolverState() {}
 }

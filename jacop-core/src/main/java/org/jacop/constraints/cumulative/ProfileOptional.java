@@ -70,7 +70,7 @@ public class ProfileOptional {
   private final Comparator<Event> eventComparator =
       (Event o1, Event o2) -> {
         int dateDiff = o1.date() - o2.date();
-        return (dateDiff == 0) ? (o1.type() - o2.type()) : dateDiff;
+        return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
       };
 
   /**
@@ -84,7 +84,9 @@ public class ProfileOptional {
 
   void updateTasksRes(Store store, TaskView[] ts) {
     int limitMax = limit.max();
-    for (TaskView t : ts) t.res.domain.inMax(store.level, t.res, limitMax);
+    for (TaskView t : ts) {
+      t.res.domain.inMax(store.level, t.res, limitMax);
+    }
   }
 
   TaskView[] filterOptionalTasks(TaskView[] ts, IntVar[] opt) {
@@ -92,13 +94,16 @@ public class ProfileOptional {
     TaskView[] nonOptionalTasks = new TaskView[ts.length];
     int k = 0;
 
-    for (int i = 0; i < ts.length; i++)
+    for (int i = 0; i < ts.length; i++) {
       if (opt[i].min() != 0) {
         nonOptionalTasks[k] = ts[i];
         ts[i].index = k++;
       }
+    }
 
-    if (k == 0) return null;
+    if (k == 0) {
+      return null;
+    }
     TaskView[] t = new TaskView[k];
     System.arraycopy(nonOptionalTasks, 0, t, 0, k);
     return t;
@@ -115,9 +120,13 @@ public class ProfileOptional {
     int min = Integer.MAX_VALUE;
     for (int i = 0; i < ts.length; i++) {
 
-      if (min > ts[i].start().min()) min = ts[i].start().min();
+      if (min > ts[i].start().min()) {
+        min = ts[i].start().min();
+      }
 
-      if (!opt[i].singleton()) existsOpt = true;
+      if (!opt[i].singleton()) {
+        existsOpt = true;
+      }
     }
     return min;
   }
@@ -128,7 +137,9 @@ public class ProfileOptional {
     utilizationProfile = new ArrayList<>();
 
     TaskView[] ts = filterOptionalTasks(tn, opt);
-    if (ts == null) return;
+    if (ts == null) {
+      return;
+    }
 
     int optMin = minStartOpt(tn, opt);
 
@@ -149,22 +160,25 @@ public class ProfileOptional {
       if (min < max && tResMin > 0) {
         es[j++] = new Event(profile, t, min, tResMin);
         es[j++] = new Event(profile, t, max, -tResMin);
-        minProfile = (min < minProfile) ? min : minProfile;
-        maxProfile = (max > maxProfile) ? max : maxProfile;
+        minProfile = min < minProfile ? min : minProfile;
+        maxProfile = max > maxProfile ? max : maxProfile;
       }
     }
-    if (j == 0) return;
+    if (j == 0) {
+      return;
+    }
 
     for (TaskView t : ts) {
       // overlapping tasks for pruning
       // from start to end
       int min = t.est();
       int max = t.lct();
-      if (t.maxNonZero()) // t.dur.max() > 0 && t.res.max() > 0
-      if (!(min > maxProfile || max < minProfile)) {
+      if (t.maxNonZero()) { // t.dur.max() > 0 && t.res.max() > 0
+        if (!(min > maxProfile || max < minProfile)) {
           es[j++] = new Event(pruneStart, t, min, 0);
           es[j++] = new Event(pruneEnd, t, max, 0);
         }
+      }
     }
 
     int N = j;
@@ -206,7 +220,9 @@ public class ProfileOptional {
 
       Event e = es[i];
       Event ne = null; // next event
-      if (i < N - 1) ne = es[i + 1];
+      if (i < N - 1) {
+        ne = es[i + 1];
+      }
 
       switch (e.type()) {
         case profile: // =========== profile event ===========
@@ -220,8 +236,9 @@ public class ProfileOptional {
               ce.value += e.value();
               if (ce.date() > 0
                   && profilePointer > 0
-                  && ce.value == utilizationProfile.get(profilePointer - 1).value())
+                  && ce.value == utilizationProfile.get(profilePointer - 1).value()) {
                 utilizationProfile.remove(profilePointer--);
+              }
             } else {
               utilizationProfile.add(new Event(profile, null, e.date(), ce.value() + e.value()));
               profilePointer++;
@@ -230,15 +247,19 @@ public class ProfileOptional {
           // <==== profile to be used by optional tasks
 
           curProfile += e.value();
-          inProfile[e.task().index] = (e.value() > 0);
+          inProfile[e.task().index] = e.value() > 0;
 
           if (ne == null || ne.type() != profile || e.date < ne.date()) {
             // check the tasks for pruning only at the end of all profile events
 
-            if (debug) IO.println("Profile at " + e.date() + ": " + curProfile);
+            if (debug) {
+              IO.println("Profile at " + e.date() + ": " + curProfile);
+            }
 
             // prune limit variable
-            if (curProfile > limit.min()) limit.domain.inMin(store.level, limit, curProfile);
+            if (curProfile > limit.min()) {
+              limit.domain.inMin(store.level, limit, curProfile);
+            }
 
             for (int ti = tasksToPrune.nextSetBit(0);
                 ti >= 0;
@@ -246,12 +267,14 @@ public class ProfileOptional {
               TaskView t = ts[ti];
 
               int profileValue = curProfile;
-              if (inProfile[ti]) profileValue -= t.res.min();
+              if (inProfile[ti]) {
+                profileValue -= t.res.min();
+              }
               boolean noSpace = limitMax - profileValue < t.res.min();
 
               // ========= Pruning start variable
-              if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
-              if (!startConsidered[ti]) {
+              if (t.exists()) { // t.res.min() > 0 && t.dur.min() > 0
+                if (!startConsidered[ti]) {
                   if (noSpace) {
                     startExcluded[ti] = e.date() - t.dur.min() + 1;
                     startConsidered[ti] = true;
@@ -260,20 +283,24 @@ public class ProfileOptional {
                 if (!noSpace) {
                   // end of excluded interval
 
-                  if (debugNarr)
+                  if (debugNarr) {
                     IO.print(
                         ">>> CumulativeBasic Profile 1. Narrowed "
                             + t.start
                             + " \\ "
                             + new IntervalDomain(startExcluded[ti], (e.date() - 1)));
+                  }
 
                   t.start.domain.inComplement(
                       store.level, t.start, startExcluded[ti], e.date() - 1);
 
-                  if (debugNarr) IO.println(" => " + t.start);
+                  if (debugNarr) {
+                    IO.println(" => " + t.start);
+                  }
 
                   startConsidered[ti] = false;
                 }
+              }
 
               // ========= for duration pruning
               if (noSpace) {
@@ -282,7 +309,9 @@ public class ProfileOptional {
               } else if (barier[ti]) { // free to go
                 barier[ti] = false;
                 lastFree[ti] = e.date();
-                if (e.date() <= t.start.max()) lastStart[ti] = e.date();
+                if (e.date() <= t.start.max()) {
+                  lastStart[ti] = e.date();
+                }
               }
 
               // ========= resource pruning;
@@ -292,8 +321,9 @@ public class ProfileOptional {
               // since tasks with res = 0 are not in the profile :(
               if (limitMax - profileValue < t.res.max()
                   && t.lst() <= e.date()
-                  && e.date() < t.ect())
+                  && e.date() < t.ect()) {
                 t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+              }
             }
           }
 
@@ -304,27 +334,32 @@ public class ProfileOptional {
           TaskView t = e.task();
           int ti = t.index;
 
-          if (inProfile[ti]) profileValue -= t.res.min();
+          if (inProfile[ti]) {
+            profileValue -= t.res.min();
+          }
           boolean noSpace = limitMax - profileValue < t.res.min();
 
           // ========= for start pruning
-          if (t.exists()) // t.res.min() > 0 && t.dur.min() > 0
-          if (noSpace) {
+          if (t.exists()) { // t.res.min() > 0 && t.dur.min() > 0
+            if (noSpace) {
               startExcluded[ti] = e.date();
               startConsidered[ti] = true;
             }
+          }
 
           // ========= for duration pruning
-          if (noSpace) barier[ti] = true;
-          else {
+          if (noSpace) {
+            barier[ti] = true;
+          } else {
             lastStart[ti] = t.start.min();
             lastFree[ti] = t.start.min();
             barier[ti] = false;
           }
 
           // ========= resource pruning
-          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
+          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) {
             t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+          }
 
           tasksToPrune.set(ti);
           break;
@@ -334,46 +369,58 @@ public class ProfileOptional {
           t = e.task();
           ti = t.index;
 
-          if (inProfile[ti]) profileValue -= t.res.min();
+          if (inProfile[ti]) {
+            profileValue -= t.res.min();
+          }
 
           // ========= pruning start variable
-          if (t.exists())
+          if (t.exists()) {
             if (startConsidered[ti]) {
               // task ends and we remove forbidden area
 
-              if (debugNarr)
+              if (debugNarr) {
                 IO.print(
                     ">>> CumulativeBasic Profile 2. Narrowed "
                         + t.start
                         + " inMax "
                         + (startExcluded[ti] - 1));
+              }
 
               t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
 
-              if (debugNarr) IO.println(" => " + t.start);
+              if (debugNarr) {
+                IO.println(" => " + t.start);
+              }
             }
+          }
 
           startConsidered[ti] = false;
 
           // ========= resource pruning
-          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect())
+          if (limitMax - profileValue < t.res.max() && t.lst() <= e.date() && e.date() < t.ect()) {
             t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
+          }
 
           // ========= duration pruning
-          if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min())
+          if (lastStart[ti] >= lastFree[ti] && limitMax - profileValue >= t.res.min()) {
             maxDuration[ti] = Math.max(maxDuration[ti], e.date() - lastStart[ti]);
+          }
 
-          if (lastStart[ti] == Integer.MAX_VALUE) // no room for the task; must have 0 duration
-          maxDuration[ti] = 0;
+          if (lastStart[ti] == Integer.MAX_VALUE) { // no room for the task; must have 0 duration
+            maxDuration[ti] = 0;
+          }
 
           if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
-            if (debugNarr)
+            if (debugNarr) {
               IO.print(
                   ">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration[ti]);
+            }
 
             t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
 
-            if (debugNarr) IO.println(" => " + t.dur);
+            if (debugNarr) {
+              IO.println(" => " + t.dur);
+            }
           }
 
           tasksToPrune.set(ti, false);
@@ -384,7 +431,9 @@ public class ProfileOptional {
       }
     }
 
-    if (existsOpt) pruneOpt(store, tn, opt);
+    if (existsOpt) {
+      pruneOpt(store, tn, opt);
+    }
   }
 
   void pruneOpt(Store store, TaskView[] tn, IntVar[] opt) {
@@ -418,7 +467,9 @@ public class ProfileOptional {
             }
           }
         }
-        if (sMax > utilizationProfile.get(n - 1).date()) continue;
+        if (sMax > utilizationProfile.get(n - 1).date()) {
+          continue;
+        }
 
         if (!ok) {
           opt[i].domain.in(store.level, opt[i], 0, 0);
@@ -459,8 +510,7 @@ public class ProfileOptional {
     @Override
     public String toString() {
       String result = "(";
-      result +=
-          (type == profile) ? "profile, " : (type == pruneStart) ? "pruneStart, " : "pruneEnd, ";
+      result += type == profile ? "profile, " : type == pruneStart ? "pruneStart, " : "pruneEnd, ";
       result += t + ", " + date + ", " + value + ")";
       return result;
     }

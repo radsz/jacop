@@ -115,7 +115,7 @@ public class Knapsack extends Constraint
    * It specifies if the constraint has already discovered to be unsatisfied during the imposition
    * stage.
    */
-  private boolean impositionFailure = false;
+  private boolean impositionFailure;
 
   /**
    * It specifies the position of the last changed item which has been already been recomputed. It
@@ -140,16 +140,16 @@ public class Knapsack extends Constraint
   private boolean needCriticalUpdate = true;
 
   /** It specifies if the constraint is executing the consistency function. */
-  private boolean inConsistency = false;
+  private boolean inConsistency;
 
   /** It counts the number of time the consistency function has been executed. */
-  private int countConsistency = 0;
+  private int countConsistency;
 
   /** It counts the number of times the queueVariable function has been executed. */
-  private int countQueueVariable = 0;
+  private int countQueueVariable;
 
   /** It counts the number of time the removeLevel function has been executed. */
-  private int countRemoveLevel = 0;
+  private int countRemoveLevel;
 
   /**
    * It specifies how many removeLevel functions must be executed before the information about the
@@ -211,13 +211,15 @@ public class Knapsack extends Constraint
         new String[] {"profits", "weights", "quantity", "knapsackCapacity", "knapsackProfit"},
         new Object[][] {{profits}, {weights}, quantity, {knapsackCapacity}, {knapsackProfit}});
 
-    if (profits.length != weights.length)
+    if (profits.length != weights.length) {
       throw new IllegalArgumentException(
           "Constraint Knapsack has profits and weights parameters of different length");
+    }
 
-    if (profits.length != quantity.length)
+    if (profits.length != quantity.length) {
       throw new IllegalArgumentException(
           "Constraint Knapsack has profits and quantity parameters of different length");
+    }
 
     commonInitialization(profits, weights, quantity, knapsackCapacity, knapsackProfit);
   }
@@ -241,7 +243,9 @@ public class Knapsack extends Constraint
         int nw = ki.getWeight() + weights[i];
         int np = ki.getProfit() + profits[i];
         itemPar.put(quantity[i], new KnapsackItem(quantity[i], nw, np));
-      } else itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
+      } else {
+        itemPar.put(quantity[i], new KnapsackItem(quantity[i], weights[i], profits[i]));
+      }
     }
 
     items = itemPar.values().toArray(new KnapsackItem[0]);
@@ -386,8 +390,9 @@ public class Knapsack extends Constraint
     if (knapsackProfit.min() > tree.alreadyObtainedProfit) {
       int minWeight = tree.computeMinWeight(knapsackProfit.min() - tree.alreadyObtainedProfit);
 
-      if (knapsackCapacity.min() < minWeight)
+      if (knapsackCapacity.min() < minWeight) {
         knapsackCapacity.domain.inMin(currentLevel, knapsackCapacity, minWeight);
+      }
     }
 
     // It makes sure that knapsack capacity is within limits of already used capacity and the
@@ -399,15 +404,18 @@ public class Knapsack extends Constraint
         tree.alreadyUsedCapacity,
         tree.alreadyUsedCapacity + tree.root.getWSum());
 
-    if (debugAll) IO.println("Capacity after potential update : " + knapsackCapacity);
+    if (debugAll) {
+      IO.println("Capacity after potential update : " + knapsackCapacity);
+    }
 
     // It computes based on the minimum required capacity the minimum possible profit obtained if
     // that capacity is being used.
     if (knapsackCapacity.min() > tree.alreadyUsedCapacity) {
       int minProfit = tree.computeMinProfit(knapsackCapacity.min() - tree.alreadyUsedCapacity);
 
-      if (knapsackProfit.min() < minProfit)
+      if (knapsackProfit.min() < minProfit) {
         knapsackProfit.domain.inMin(currentLevel, knapsackProfit, minProfit);
+      }
     }
 
     if (needCriticalUpdate) {
@@ -425,7 +433,9 @@ public class Knapsack extends Constraint
         tree.alreadyObtainedProfit,
         tree.alreadyObtainedProfit + (int) Math.ceil(tree.optimalProfit));
 
-    if (debugAll) IO.println("Profit after potential update : " + knapsackProfit);
+    if (debugAll) {
+      IO.println("Profit after potential update : " + knapsackProfit);
+    }
   }
 
   @Override
@@ -433,11 +443,17 @@ public class Knapsack extends Constraint
 
     // it is possible that there changes to variables which have no chance to cause any pruning.
     // it is already the case that constraint is not even notified of ANY pruning events.
-    if (!needConsistency) return;
+    if (!needConsistency) {
+      return;
+    }
 
-    if (impositionFailure) throw Store.failException;
+    if (impositionFailure) {
+      throw Store.failException;
+    }
 
-    if (debugAll) IO.println("Entering consistency " + this);
+    if (debugAll) {
+      IO.println("Entering consistency " + this);
+    }
 
     currentLevel = store.level;
     countConsistency++;
@@ -447,13 +463,16 @@ public class Knapsack extends Constraint
     blockUpdate();
 
     if (debugAll) {
-      if (countConsistency >= CONSISTENCY_INFO_FROM)
+      if (countConsistency >= CONSISTENCY_INFO_FROM) {
         IO.println(displayQuantitiesInEfficiencyOrder());
+      }
     }
 
     assert (sliceInvariant());
 
-    if (debugAll) IO.println("Tree root \n" + tree.root);
+    if (debugAll) {
+      IO.println("Tree root \n" + tree.root);
+    }
 
     // it checks if not too many items exceeding the capacity constraints
     // have been put in knapsack.
@@ -468,14 +487,20 @@ public class Knapsack extends Constraint
       assert (sliceInvariant());
     }
 
-    if (debugAll) IO.println("After single item restrictions " + this);
+    if (debugAll) {
+      IO.println("After single item restrictions " + this);
+    }
 
-    if (debugAll) IO.println("Tree root \n" + tree.root);
+    if (debugAll) {
+      IO.println("Tree root \n" + tree.root);
+    }
 
     assert (checkInvariants());
 
     /* compute mandatory items using jump */
-    if (needMandatory) computeMandatory();
+    if (needMandatory) {
+      computeMandatory();
+    }
 
     blockUpdate();
 
@@ -483,7 +508,9 @@ public class Knapsack extends Constraint
     assert (sliceInvariant());
 
     /* compute forbidden items using jump */
-    if (needForbidden) computeForbidden();
+    if (needForbidden) {
+      computeForbidden();
+    }
 
     blockUpdate();
     assert (checkInvariants());
@@ -495,8 +522,9 @@ public class Knapsack extends Constraint
     needForbidden = false;
 
     if (debugAll) {
-      if (countConsistency >= CONSISTENCY_INFO_FROM)
+      if (countConsistency >= CONSISTENCY_INFO_FROM) {
         IO.println(displayQuantitiesInEfficiencyOrder());
+      }
     }
 
     inConsistency = false;
@@ -514,12 +542,18 @@ public class Knapsack extends Constraint
 
     int criticalLeafPosition = tree.criticalLeaf.positionInTheTree;
 
-    if (leaf.getWMax() == 0) leaf = tree.findPreviousLeafAtLeastOfWeight(leaf, tree.currentWeight);
+    if (leaf.getWMax() == 0) {
+      leaf = tree.findPreviousLeafAtLeastOfWeight(leaf, tree.currentWeight);
+    }
 
-    if (leaf == null) return;
+    if (leaf == null) {
+      return;
+    }
 
     // Perform forbidden reasoning only on the right items.
-    if (leaf.positionInTheTree <= criticalLeafPosition) return;
+    if (leaf.positionInTheTree <= criticalLeafPosition) {
+      return;
+    }
 
     // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
     //				  tree.alreadyObtainedProfit - knapsackProfit.min();
@@ -546,16 +580,21 @@ public class Knapsack extends Constraint
         needUpdate = true;
       }
 
-      if (debugAll)
+      if (debugAll) {
         IO.println(
             "Forbidden check for " + leaf + " finished. Intrusion weight = " + intrusionWeight);
+      }
 
       leaf = tree.findPreviousLeafAtLeastOfWeight(leaf, tree.currentWeight);
 
-      if (leaf == null) break;
+      if (leaf == null) {
+        break;
+      }
 
       // Perform forbidden reasoning only on the right items.
-      if (leaf.positionInTheTree <= criticalLeafPosition) break;
+      if (leaf.positionInTheTree <= criticalLeafPosition) {
+        break;
+      }
     }
   }
 
@@ -568,12 +607,18 @@ public class Knapsack extends Constraint
 
     TreeLeaf leaf = tree.getFirst();
 
-    if (leaf.getWMax() == 0) leaf = tree.findNextLeafAtLeastOfWeight(leaf, tree.currentWeight);
+    if (leaf.getWMax() == 0) {
+      leaf = tree.findNextLeafAtLeastOfWeight(leaf, tree.currentWeight);
+    }
 
-    if (leaf == null) return;
+    if (leaf == null) {
+      return;
+    }
 
     // Perform mandatory reasoning only on the left items.
-    if (leaf.positionInTheTree >= criticalLeafPosition) return;
+    if (leaf.positionInTheTree >= criticalLeafPosition) {
+      return;
+    }
 
     // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
     //				  tree.alreadyObtainedProfit - knapsackProfit.min();
@@ -600,15 +645,20 @@ public class Knapsack extends Constraint
         needUpdate = true;
       }
 
-      if (debugAll)
+      if (debugAll) {
         IO.println("Mandatory check for " + leaf + " finished. MaxWeight = " + replacableWeight);
+      }
 
       leaf = tree.findNextLeafAtLeastOfWeight(leaf, tree.currentWeight);
 
-      if (leaf == null) break;
+      if (leaf == null) {
+        break;
+      }
 
       // Perform mandatory reasoning only on the left items.
-      if (leaf.positionInTheTree >= criticalLeafPosition) break;
+      if (leaf.positionInTheTree >= criticalLeafPosition) {
+        break;
+      }
     }
   }
 
@@ -637,18 +687,25 @@ public class Knapsack extends Constraint
     if (knapsackCapacity.max() >= tree.alreadyUsedCapacity) {
       tree.updateCritical(knapsackCapacity.max() - tree.alreadyUsedCapacity);
       positionOfCriticalItem = new TimeStamp<>(store, tree.criticalLeaf.positionInTheTree);
-    } else impositionFailure = true;
-
-    if (tree.root.getPSum() + tree.alreadyObtainedProfit < knapsackProfit.min())
+    } else {
       impositionFailure = true;
+    }
 
-    if (tree.root.getWSum() + tree.alreadyUsedCapacity < knapsackCapacity.min())
+    if (tree.root.getPSum() + tree.alreadyObtainedProfit < knapsackProfit.min()) {
       impositionFailure = true;
+    }
+
+    if (tree.root.getWSum() + tree.alreadyUsedCapacity < knapsackCapacity.min()) {
+      impositionFailure = true;
+    }
 
     if (debugAll) {
 
-      if (!impositionFailure) IO.println("The impose function is completed. ");
-      else IO.println("The impose function has already detected inconsistency.");
+      if (!impositionFailure) {
+        IO.println("The impose function is completed. ");
+      } else {
+        IO.println("The impose function has already detected inconsistency.");
+      }
 
       IO.println(this);
       IO.println(tree.toString());
@@ -660,7 +717,9 @@ public class Knapsack extends Constraint
   @Override
   public void queueVariable(int level, Var v) {
 
-    if (impositionFailure) return;
+    if (impositionFailure) {
+      return;
+    }
 
     countQueueVariable++;
 
@@ -674,7 +733,9 @@ public class Knapsack extends Constraint
 
     if (v == knapsackCapacity || v == knapsackProfit) {
 
-      if (inConsistency) return;
+      if (inConsistency) {
+        return;
+      }
 
       needConsistency = true;
       needForbidden = true;
@@ -710,7 +771,9 @@ public class Knapsack extends Constraint
       needUpdate = true;
     }
 
-    if (inConsistency) return;
+    if (inConsistency) {
+      return;
+    }
 
     // @TODO What if item changed is critical, make sure the code is correct in that case.
 
@@ -733,7 +796,9 @@ public class Knapsack extends Constraint
       /* for max decreased of forbidden items */
       else {
         needConsistency = true;
-        if (leafForV.positionInTheTree <= tree.criticalRightLeaf) needMandatory = true;
+        if (leafForV.positionInTheTree <= tree.criticalRightLeaf) {
+          needMandatory = true;
+        }
       }
     }
 
@@ -741,7 +806,9 @@ public class Knapsack extends Constraint
       /* for min increased of mandatory items */
       if (leftToCrit) {
         needConsistency = true;
-        if (leafForV.positionInTheTree >= tree.criticalLeftLeaf) needForbidden = true;
+        if (leafForV.positionInTheTree >= tree.criticalLeftLeaf) {
+          needForbidden = true;
+        }
       }
       /* for min increased of forbidden items */
       else {
@@ -766,13 +833,21 @@ public class Knapsack extends Constraint
   @Override
   public boolean satisfied() {
 
-    if (!knapsackProfit.singleton()) return false;
+    if (!knapsackProfit.singleton()) {
+      return false;
+    }
 
-    if (!knapsackCapacity.singleton()) return false;
+    if (!knapsackCapacity.singleton()) {
+      return false;
+    }
 
-    if (tree.root.getWSum() != 0) return false;
+    if (tree.root.getWSum() != 0) {
+      return false;
+    }
 
-    if (tree.alreadyObtainedProfit != knapsackProfit.value()) return false;
+    if (tree.alreadyObtainedProfit != knapsackProfit.value()) {
+      return false;
+    }
 
     return tree.alreadyUsedCapacity == knapsackCapacity.value();
   }
@@ -785,7 +860,9 @@ public class Knapsack extends Constraint
     result.append(id()).append(" : Knapsack( [");
     for (int i = 0; i < items.length; i++) {
       result.append(items[i].toString());
-      if (i < items.length - 1) result.append(", ");
+      if (i < items.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], Capacity: ").append(knapsackCapacity);
     result.append(", Profit: ").append(knapsackProfit);
@@ -804,11 +881,12 @@ public class Knapsack extends Constraint
 
     int alreadyObtainedProfit = 0, alreadyUsedCapacity = 0;
 
-    for (TreeLeaf leave : leaves)
+    for (TreeLeaf leave : leaves) {
       if (leave.slice > 0) {
         alreadyObtainedProfit += leave.slice * leave.getProfitOfOne();
         alreadyUsedCapacity += leave.slice * leave.getWeightOfOne();
       }
+    }
 
     assert (alreadyObtainedProfit == tree.alreadyObtainedProfit)
         : "Already obtained profit is not correctly maintained.";
@@ -825,7 +903,9 @@ public class Knapsack extends Constraint
 
     result.append("[ ");
 
-    for (KnapsackItem item : items) result.append(item.getVariable().domain).append(" ");
+    for (KnapsackItem item : items) {
+      result.append(item.getVariable().domain).append(" ");
+    }
 
     result.append("]");
 
@@ -837,9 +917,10 @@ public class Knapsack extends Constraint
    */
   private boolean checkInvariants() {
 
-    for (TreeLeaf leaf : leaves)
+    for (TreeLeaf leaf : leaves) {
       assert (leaf.slice == leaf.quantity.min())
           : "Slice variable has not been adjusted to leaf quantity" + leaf;
+    }
 
     int overallProfit = 0;
     int overallCapacity = 0;

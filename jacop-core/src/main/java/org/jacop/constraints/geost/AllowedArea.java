@@ -79,8 +79,11 @@ public class AllowedArea extends InternalConstraint {
       return "dimension mismatch between origin and length array.";
     }
 
-    for (int i = 0; i < length.length; i++)
-      if (length[i] < 0) return "negative length on dimension " + i;
+    for (int i = 0; i < length.length; i++) {
+      if (length[i] < 0) {
+        return "negative length on dimension " + i;
+      }
+    }
 
     return null;
   }

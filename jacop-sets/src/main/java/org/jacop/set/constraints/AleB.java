@@ -98,13 +98,25 @@ public class AleB extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    if (a.domain.card().min() > 0)
-      b.domain.inLUB(store.level, b, new IntervalDomain(a.domain.lub().min(), IntDomain.MaxInt));
-    else return; // any b with cardinalirty > 0 is fine since a = {}
+    if (a.domain.card().min() > 0) {
+      b.domain.inLUB(
+          store.level,
+          b,
+          new IntervalDomain(
+              a.domain.lub().min(),
+              IntDomain.MaxInt)); // any b with cardinalirty > 0 is fine since a = {}
 
-    // case for ground domains; check for <= domains
-    if (a.domain.singleton() && b.domain.singleton())
-      if (!setLexLE(a.domain.glb(), b.domain.glb())) throw Store.failException;
+      // case for ground domains; check for <= domains
+    } else {
+      return; // any b with cardinalirty > 0 is fine since a = {}
+
+      // case for ground domains; check for <= domains
+    }
+    if (a.domain.singleton() && b.domain.singleton()) {
+      if (!setLexLE(a.domain.glb(), b.domain.glb())) {
+        throw Store.failException;
+      }
+    }
 
     if (b.domain.glb().getSize() > 0) {
       ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
@@ -118,22 +130,29 @@ public class AleB extends PrimitiveConstraint {
           if (ae == be) {
             if (bGlbEnum.hasMoreElements()) {
               be = bGlbEnum.nextElement();
-              if (!aLubEnum.hasMoreElements()) return; // b has more elements than a
-            } else break;
+              if (!aLubEnum.hasMoreElements()) {
+                return; // b has more elements than a
+              }
+            } else {
+              break;
+            }
           } else if (ae < be) {
             return; // b already greater
           } else { // ae > be
             throw Store.failException;
           }
-        } else // b has more elements and up to now all exqual
-        return;
+        } else { // b has more elements and up to now all exqual
+          return;
+        }
       } while (true);
     }
   }
 
   boolean setLexLE(IntDomain x, IntDomain y) {
 
-    if (x.getSize() == 0 && y.getSize() >= 0) return true;
+    if (x.getSize() == 0 && y.getSize() >= 0) {
+      return true;
+    }
 
     ValueEnumeration xe = x.valueEnumeration();
     ValueEnumeration ye = y.valueEnumeration();
@@ -144,10 +163,15 @@ public class AleB extends PrimitiveConstraint {
       int xv = xe.nextElement();
       int yv = ye.nextElement();
 
-      if (xv < yv) return true;
-      else if (xv > yv) return false;
+      if (xv < yv) {
+        return true;
+      } else if (xv > yv) {
+        return false;
+      }
     }
-    if (!xe.hasMoreElements()) return true;
+    if (!xe.hasMoreElements()) {
+      return true;
+    }
 
     return le;
   }
@@ -159,8 +183,9 @@ public class AleB extends PrimitiveConstraint {
 
   @Override
   public boolean satisfied() {
-    if (a.domain.singleton() && b.domain.singleton())
+    if (a.domain.singleton() && b.domain.singleton()) {
       return setLexLE(a.domain.glb(), b.domain.glb());
+    }
     return false;
   }
 

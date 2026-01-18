@@ -133,7 +133,9 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
           ub = vDomMax;
         }
       }
-      if (lb == ub) maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
+      if (lb == ub) {
+        maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
+      }
 
       // find min/max values for index
       IntervalDomain idxDomain = new IntervalDomain();
@@ -142,12 +144,18 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
         int i = cp - 1 - indexOffset;
 
         if (list[i].max() >= lb) {
-          if (idxDomain.getSize() == 0) idxDomain.unionAdapt(cp, cp);
-          else idxDomain.addLastElement(cp);
+          if (idxDomain.getSize() == 0) {
+            idxDomain.unionAdapt(cp, cp);
+          } else {
+            idxDomain.addLastElement(cp);
+          }
         }
       }
-      if (idxDomain.isEmpty()) throw Store.failException;
-      else maxIndex.domain.in(store.level, maxIndex, idxDomain);
+      if (idxDomain.isEmpty()) {
+        throw Store.failException;
+      } else {
+        maxIndex.domain.in(store.level, maxIndex, idxDomain);
+      }
 
       ub = IntDomain.MinInt;
       pos = -1;
@@ -160,8 +168,9 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
           pos = i;
         }
       }
-      if (list[pos].singleton())
+      if (list[pos].singleton()) {
         maxIndex.domain.in(store.level, maxIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+      }
 
       if (maxIndex.singleton()) {
 
@@ -190,8 +199,11 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
 
           // prune variables before and after minimal index of max value
           IntVar v = list[i];
-          if (cp < im) v.domain.inMax(store.level, v, ub - 1);
-          else v.domain.inMax(store.level, v, ub);
+          if (cp < im) {
+            v.domain.inMax(store.level, v, ub - 1);
+          } else {
+            v.domain.inMax(store.level, v, ub);
+          }
         }
       }
     } while (store.propagationHasOccurred);
@@ -211,11 +223,14 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == maxIndex) return IntDomain.ANY;
-    else {
+    if (var == maxIndex) {
+      return IntDomain.ANY;
+    } else {
       return IntDomain.BOUND;
     }
   }
@@ -228,7 +243,9 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     int MAX = list[maxIndex.value() - 1 - indexOffset].value();
     int i = 0, eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() <= MAX) eq++;
+      if (list[i].singleton() && list[i].value() <= MAX) {
+        eq++;
+      }
       sat = list[i].max() <= MAX;
       i++;
     }
@@ -244,7 +261,9 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     result.append(" : ArgMax(  [ ");
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(this.maxIndex);

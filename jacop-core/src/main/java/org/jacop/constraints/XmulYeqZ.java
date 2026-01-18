@@ -74,7 +74,7 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
 
     numberId = idNumber.incrementAndGet();
 
-    xSquare = (x == y);
+    xSquare = x == y;
 
     this.x = x;
     this.y = y;
@@ -92,8 +92,8 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
   @Override
   public void consistency(Store store) {
 
-    if (xSquare) // X^2 = Z
-    do {
+    if (xSquare) { // X^2 = Z
+      do {
 
         // Bounds for Z
         Interval zBounds = IntDomain.squareBounds(x.min(), x.max());
@@ -105,16 +105,20 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         int xMin = toInt(Math.round(Math.ceil(Math.sqrt((double) z.min()))));
         int xMax = toInt(Math.round(Math.floor(Math.sqrt((double) z.max()))));
 
-        if (xMin > xMax) throw Store.failException;
+        if (xMin > xMax) {
+          throw Store.failException;
+        }
 
         if (x.min() < 0) {
           IntDomain dom = new IntervalDomain(-xMax, -xMin);
           dom.unionAdapt(xMin, xMax);
           x.domain.in(store.level, x, dom);
-        } else x.domain.in(store.level, x, xMin, xMax);
+        } else {
+          x.domain.in(store.level, x, xMin, xMax);
+        }
 
       } while (store.propagationHasOccurred);
-    else { // X*Y=Z
+    } else { // X*Y=Z
 
       if (x.singleton(1)) {
         this.queueIndex = 0;
@@ -156,7 +160,9 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
       } while (store.propagationHasOccurred);
     }
 
-    if (x.singleton(0) || y.singleton(0)) removeConstraint();
+    if (x.singleton(0) || y.singleton(0)) {
+      removeConstraint();
+    }
   }
 
   @Override

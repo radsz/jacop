@@ -91,10 +91,11 @@ public class DBox {
 
     int size = freeBoxes.size();
 
-    if (size <= dimension)
+    if (size <= dimension) {
       for (int i = size; i <= dimension; i++) {
         freeBoxes.add(new SimpleArrayList<>());
       }
+    }
   }
 
   /**
@@ -121,8 +122,11 @@ public class DBox {
 
     SimpleArrayList<DBox> boxes = freeBoxes.get(dimension);
 
-    if (!boxes.isEmpty()) return boxes.pop();
-    else return new DBox(new int[dimension], new int[dimension]);
+    if (!boxes.isEmpty()) {
+      return boxes.pop();
+    } else {
+      return new DBox(new int[dimension], new int[dimension]);
+    }
   }
 
   /**
@@ -145,7 +149,9 @@ public class DBox {
 
     StringBuilder builder = new StringBuilder();
 
-    for (SimpleArrayList<DBox> freeBox : freeBoxes) builder.append(freeBox).append("\n");
+    for (SimpleArrayList<DBox> freeBox : freeBoxes) {
+      builder.append(freeBox).append("\n");
+    }
 
     return builder.toString();
   }
@@ -159,15 +165,16 @@ public class DBox {
    */
   public static DBox boundingBox(Collection<DBox> boxes) {
 
-    if (boxes.isEmpty())
+    if (boxes.isEmpty()) {
       throw new IllegalArgumentException("Boxes parameter can not be an empty collection");
+    }
 
     DBox boundingBox = null;
     int[] mins = null;
     int[] maxes = null;
     int dim = 0;
 
-    for (DBox b : boxes)
+    for (DBox b : boxes) {
       if (mins == null) {
         // initialization of the values
         dim = b.origin.length;
@@ -177,7 +184,9 @@ public class DBox {
         mins = boundingBox.origin;
         maxes = boundingBox.length;
 
-        for (int i = dim - 1; i >= 0; i--) maxes[i] += mins[i];
+        for (int i = dim - 1; i >= 0; i--) {
+          maxes[i] += mins[i];
+        }
 
       } else {
         for (int i = dim - 1; i >= 0; i--) {
@@ -185,9 +194,12 @@ public class DBox {
           maxes[i] = Math.max(maxes[i], b.origin[i] + b.length[i]);
         }
       }
+    }
 
     // replace the maxes by the actual sizes
-    for (int i = dim - 1; i >= 0; i--) maxes[i] = maxes[i] - mins[i];
+    for (int i = dim - 1; i >= 0; i--) {
+      maxes[i] = maxes[i] - mins[i];
+    }
 
     return boundingBox;
   }
@@ -267,11 +279,15 @@ public class DBox {
    */
   public String checkInvariants() {
 
-    if (this.origin.length != this.length.length)
+    if (this.origin.length != this.length.length) {
       return "The dimension mismatch between origin and length arrays";
+    }
 
-    for (int i = 0; i < length.length; i++)
-      if (length[i] < 0) return "negative length on dimension " + i + "encounterred.";
+    for (int i = 0; i < length.length; i++) {
+      if (length[i] < 0) {
+        return "negative length on dimension " + i + "encounterred.";
+      }
+    }
 
     return null;
   }
@@ -299,10 +315,12 @@ public class DBox {
 
       int limit = Math.min(origin.length, pointDim);
 
-      for (int i = limit - 1; i >= 0; i--)
+      for (int i = limit - 1; i >= 0; i--) {
         // looping backwards (comparison with 0 may be faster)
-        if (pointCoordinates[i] < origin[i] || pointCoordinates[i] >= origin[i] + length[i])
+        if (pointCoordinates[i] < origin[i] || pointCoordinates[i] >= origin[i] + length[i]) {
           return false;
+        }
+      }
 
       return true;
     }
@@ -333,7 +351,9 @@ public class DBox {
           Math.min(origin[i] + length[i], other.origin[i] + other.length[i])
               - intersectionOrigin[i];
       // return empty intersection if the size is negative
-      if (intersectionLength[i] <= 0) return null;
+      if (intersectionLength[i] <= 0) {
+        return null;
+      }
     }
 
     return intersection;
@@ -369,7 +389,9 @@ public class DBox {
               - intersectionOrigin[i];
 
       // empty intersection if the size is negative
-      if (intersectionLength[i] <= 0) return null;
+      if (intersectionLength[i] <= 0) {
+        return null;
+      }
     }
 
     return intersection;
@@ -405,7 +427,9 @@ public class DBox {
                   other.origin[i] + other.length[i] + otherOffset[i])
               - intersectionOrigin[i];
       // empty intersection if the size is negative
-      if (intersectionLength[i] <= 0) return null;
+      if (intersectionLength[i] <= 0) {
+        return null;
+      }
     }
 
     return intersection;
@@ -461,7 +485,9 @@ public class DBox {
 
       System.arraycopy(origin, 0, lowerbound, 0, dimension);
 
-      for (int i = dimension - 1; i >= 0; i--) upperbound[i] = origin[i] + length[i];
+      for (int i = dimension - 1; i >= 0; i--) {
+        upperbound[i] = origin[i] + length[i];
+      }
 
       /*
        * for each dimension, create at most 2 outboxes,
@@ -482,8 +508,9 @@ public class DBox {
           // origin is same as lower bound
           System.arraycopy(lowerbound, 0, sliceOrigin, 0, dimension);
           // slice upper bound is same as upper bound, except in the current dimension
-          for (int j = dimension - 1; j >= 0; j--) // reverse loop
-          sliceLength[j] = upperbound[j] - lowerbound[j];
+          for (int j = dimension - 1; j >= 0; j--) { // reverse loop
+            sliceLength[j] = upperbound[j] - lowerbound[j];
+          }
 
           sliceLength[i] = hole.origin[i] - lowerbound[i];
 
@@ -506,8 +533,9 @@ public class DBox {
           System.arraycopy(lowerbound, 0, sliceOrigin, 0, dimension);
           sliceOrigin[i] = hole.origin[i] + hole.length[i];
           // slice upper bound is same as upper bound
-          for (int j = dimension - 1; j >= 0; j--) // reverse loop
-          sliceLength[j] = upperbound[j] - sliceOrigin[j];
+          for (int j = dimension - 1; j >= 0; j--) { // reverse loop
+            sliceLength[j] = upperbound[j] - sliceOrigin[j];
+          }
 
           assert (newBox.checkInvariants() == null) : newBox.checkInvariants();
 
@@ -558,7 +586,9 @@ public class DBox {
 
     for (DBox hole : others) {
 
-      for (DBox piece : resultWork) piece.subtract(hole, resultStep);
+      for (DBox piece : resultWork) {
+        piece.subtract(hole, resultStep);
+      }
 
       // the DBoxes contained in result can be reused
       for (DBox piece : resultWork) {
@@ -574,7 +604,9 @@ public class DBox {
       resultStep = forExchange;
 
       // if there is nothing left, no need to continue
-      if (resultWork.isEmpty()) break;
+      if (resultWork.isEmpty()) {
+        break;
+      }
     }
 
     // now we need to make sure that the correct list contains the boxes
@@ -603,7 +635,9 @@ public class DBox {
     int area = length[0];
 
     // i is not >= 0 since area initial value is length[0]
-    for (int i = origin.length - 1; i > 0; i--) area *= length[i];
+    for (int i = origin.length - 1; i > 0; i--) {
+      area *= length[i];
+    }
 
     return area;
   }
@@ -647,15 +681,23 @@ public class DBox {
 
   public boolean equals(Object obj) {
 
-    if (this == obj) return true;
+    if (this == obj) {
+      return true;
+    }
 
-    if (obj == null) return false;
+    if (obj == null) {
+      return false;
+    }
 
-    if (getClass() != obj.getClass()) return false;
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
 
     DBox other = (DBox) obj;
 
-    if (!Arrays.equals(length, other.length)) return false;
+    if (!Arrays.equals(length, other.length)) {
+      return false;
+    }
 
     return Arrays.equals(origin, other.origin);
   }

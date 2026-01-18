@@ -318,7 +318,9 @@ public class FilterBenchmark {
     IntVar[][] vars = new IntVar[TR.size()][];
     for (int i = 0; i < vars.length; i++) {
       vars[i] = new IntVar[TR.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) vars[i][j] = TR.get(i).get(j);
+      for (int j = 0; j < vars[i].length; j++) {
+        vars[i][j] = TR.get(i).get(j);
+      }
     }
 
     SelectChoicePoint<IntVar> select =
@@ -382,7 +384,9 @@ public class FilterBenchmark {
     IntVar[][] vars = new IntVar[TR.size()][];
     for (int i = 0; i < vars.length; i++) {
       vars[i] = new IntVar[TR.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) vars[i][j] = TR.get(i).get(j);
+      for (int j = 0; j < vars[i].length; j++) {
+        vars[i][j] = TR.get(i).get(j);
+      }
     }
 
     SelectChoicePoint<IntVar> select =
@@ -427,7 +431,7 @@ public class FilterBenchmark {
 
     Div = A / B;
     Rem = A % B;
-    return (Rem > 0) ? Div + 1 : Div;
+    return Rem > 0 ? Div + 1 : Div;
   }
 
   /**
@@ -456,7 +460,9 @@ public class FilterBenchmark {
     IntVar[][] vars = new IntVar[TR.size()][];
     for (int i = 0; i < vars.length; i++) {
       vars[i] = new IntVar[TR.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) vars[i][j] = TR.get(i).get(j);
+      for (int j = 0; j < vars[i].length; j++) {
+        vars[i][j] = TR.get(i).get(j);
+      }
     }
 
     SelectChoicePoint<IntVar> select =
@@ -520,10 +526,14 @@ public class FilterBenchmark {
     makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
 
     IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) varsTs[j] = Ts.get(j);
+    for (int j = 0; j < varsTs.length; j++) {
+      varsTs[j] = Ts.get(j);
+    }
 
     IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
+    for (int j = 0; j < varsRs.length; j++) {
+      varsRs[j] = Rs.get(j);
+    }
 
     SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
@@ -592,11 +602,11 @@ public class FilterBenchmark {
 
     int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
     int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
-    int addLB = (rAdd == 0) ? tAdd : tAdd + 1;
+    int addLB = rAdd == 0 ? tAdd : tAdd + 1;
     int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
-    int mulLB = (rMul == 0) ? tMul : tMul + 1;
-    int pipeLB = (addLB > mulLB) ? addLB : mulLB;
+    int mulLB = rMul == 0 ? tMul : tMul + 1;
+    int pipeLB = addLB > mulLB ? addLB : mulLB;
     IO.println("Lower bound = " + pipeLB);
 
     List<IntVar> cc = new ArrayList<>();
@@ -607,7 +617,9 @@ public class FilterBenchmark {
     IntVar[][] vars = new IntVar[TR.size()][];
     for (int i = 0; i < vars.length; i++) {
       vars[i] = new IntVar[TR.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) vars[i][j] = TR.get(i).get(j);
+      for (int j = 0; j < vars[i].length; j++) {
+        vars[i][j] = TR.get(i).get(j);
+      }
     }
 
     SelectChoicePoint<IntVar> select =
@@ -618,14 +630,23 @@ public class FilterBenchmark {
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
-    if (search.getConsistencyListener() == null) search.setConsistencyListener(credit);
-    else search.getConsistencyListener().setChildrenListeners(credit);
+    if (search.getConsistencyListener() == null) {
+      search.setConsistencyListener(credit);
+    } else {
+      search.getConsistencyListener().setChildrenListeners(credit);
+    }
 
-    if (search.getExitChildListener() == null) search.setExitChildListener(credit);
-    else search.getExitChildListener().setChildrenListeners(credit);
+    if (search.getExitChildListener() == null) {
+      search.setExitChildListener(credit);
+    } else {
+      search.getExitChildListener().setChildrenListeners(credit);
+    }
 
-    if (search.getTimeOutListener() == null) search.setTimeOutListener(credit);
-    else search.getTimeOutListener().setChildrenListeners(credit);
+    if (search.getTimeOutListener() == null) {
+      search.setTimeOutListener(credit);
+    } else {
+      search.getTimeOutListener().setChildrenListeners(credit);
+    }
 
     IO.println(
         "\nVariable store size: "
@@ -682,18 +703,22 @@ public class FilterBenchmark {
 
     int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
     int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
-    int addLB = (rAdd == 0) ? tAdd : tAdd + 1;
+    int addLB = rAdd == 0 ? tAdd : tAdd + 1;
     int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
-    int mulLB = (rMul == 0) ? tMul : tMul + 1;
-    int pipeLB = (addLB > mulLB) ? addLB : mulLB;
+    int mulLB = rMul == 0 ? tMul : tMul + 1;
+    int pipeLB = addLB > mulLB ? addLB : mulLB;
     IO.println("Lower bound = " + pipeLB);
 
     IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) varsTs[j] = Ts.get(j);
+    for (int j = 0; j < varsTs.length; j++) {
+      varsTs[j] = Ts.get(j);
+    }
 
     IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
+    for (int j = 0; j < varsRs.length; j++) {
+      varsRs[j] = Rs.get(j);
+    }
 
     SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
@@ -705,8 +730,11 @@ public class FilterBenchmark {
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
-    if (search.getConsistencyListener() == null) search.setConsistencyListener(credit);
-    else search.getConsistencyListener().setChildrenListeners(credit);
+    if (search.getConsistencyListener() == null) {
+      search.setConsistencyListener(credit);
+    } else {
+      search.getConsistencyListener().setChildrenListeners(credit);
+    }
 
     search.getExitChildListener().setChildrenListeners(credit);
     search.getTimeOutListener().setChildrenListeners(credit);
@@ -764,10 +792,14 @@ public class FilterBenchmark {
     makeConstraints(store, filter, addNum, mulNum);
 
     IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) varsTs[j] = Ts.get(j);
+    for (int j = 0; j < varsTs.length; j++) {
+      varsTs[j] = Ts.get(j);
+    }
 
     IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
+    for (int j = 0; j < varsRs.length; j++) {
+      varsRs[j] = Rs.get(j);
+    }
 
     SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
@@ -838,10 +870,14 @@ public class FilterBenchmark {
     makeConstraintsChain(store, filter, addNum, mulNum, clock);
 
     IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) varsTs[j] = Ts.get(j);
+    for (int j = 0; j < varsTs.length; j++) {
+      varsTs[j] = Ts.get(j);
+    }
 
     IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) varsRs[j] = Rs.get(j);
+    for (int j = 0; j < varsRs.length; j++) {
+      varsRs[j] = Rs.get(j);
+    }
 
     SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
@@ -983,7 +1019,9 @@ public class FilterBenchmark {
     Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
     Ds = new ArrayList<>();
-    for (Integer v : D) Ds.add(v);
+    for (Integer v : D) {
+      Ds.add(v);
+    }
 
     Ns = filter.names();
 
@@ -1089,7 +1127,9 @@ public class FilterBenchmark {
     Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
     Ds = new ArrayList<>();
-    for (Integer v : D) Ds.add(v);
+    for (Integer v : D) {
+      Ds.add(v);
+    }
 
     Ns = filter.names();
 
@@ -1215,7 +1255,9 @@ public class FilterBenchmark {
     Rs = new ArrayList<>();
     Rs.addAll(Arrays.asList(R));
     Ds = new ArrayList<>();
-    for (Integer v : D) Ds.add(v);
+    for (Integer v : D) {
+      Ds.add(v);
+    }
 
     Ns = filter.names();
 
@@ -1359,9 +1401,15 @@ public class FilterBenchmark {
     Rs.addAll(Arrays.asList(R));
 
     Ds = new ArrayList<>();
-    for (Integer v : D) Ds.add(v);
-    for (int v : D) Ds.add(v);
-    for (int v : D) Ds.add(v);
+    for (Integer v : D) {
+      Ds.add(v);
+    }
+    for (int v : D) {
+      Ds.add(v);
+    }
+    for (int v : D) {
+      Ds.add(v);
+    }
 
     Ns = filter.namesPipeline();
     FilterBenchmark.cost = pipe;
@@ -1389,4 +1437,6 @@ public class FilterBenchmark {
     }
     return list;
   }
+
+  protected FilterBenchmark() {}
 }

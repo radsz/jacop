@@ -66,7 +66,7 @@ class DiffnProfile extends Profile {
           && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
         iR.dim = 0;
         if (t.minUse(i, iR)) {
-          if (trace)
+          if (trace) {
             IO.println(
                 "Update profile "
                     + "["
@@ -75,6 +75,7 @@ class DiffnProfile extends Profile {
                     + (iR.origin[j] + iR.length[j])
                     + ")="
                     + t.length(i).min());
+          }
           addToProfile(iR.origin[j], iR.origin[j] + iR.length[j], t.length[i].min());
         }
       }

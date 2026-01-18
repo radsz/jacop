@@ -71,15 +71,21 @@ class TaskNormalView extends TaskView {
   }
 
   void updateEdgeFind(int storeLevel, int est) {
-    if (est > start.min()) start.domain.inMin(storeLevel, start, est);
+    if (est > start.min()) {
+      start.domain.inMin(storeLevel, start, est);
+    }
   }
 
   void updateNotFirstNotLast(int storeLevel, int lct) {
     int max = lct - dur.min();
-    if (max < start.max()) start.domain.inMax(storeLevel, start, max);
+    if (max < start.max()) {
+      start.domain.inMax(storeLevel, start, max);
+    }
   }
 
   void updateDetectable(int storeLevel, int est) {
-    if (est > start.min()) start.domain.inMin(storeLevel, start, est);
+    if (est > start.min()) {
+      start.domain.inMin(storeLevel, start, est);
+    }
   }
 }

@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -81,7 +82,9 @@ public class CosPeqR extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -98,13 +101,17 @@ public class CosPeqR extends Constraint
 
   void boundConsistency(Store store) {
 
-    if (p.max() - p.min() >= 2 * FloatDomain.PI) return;
+    if (p.max() - p.min() >= 2 * FloatDomain.PI) {
+      return;
+    }
 
     do {
 
       store.propagationHasOccurred = false;
 
-      if (satisfied()) return;
+      if (satisfied()) {
+        return;
+      }
 
       double min = p.min();
       double max = p.max();
@@ -230,8 +237,12 @@ public class CosPeqR extends Constraint
 
       pMin = FloatDomain.down(pMin);
       pMax = FloatDomain.up(pMax);
-      if (java.lang.Double.isNaN(pMin)) pMin = 0.0;
-      if (java.lang.Double.isNaN(pMax)) pMax = FloatDomain.PI;
+      if (java.lang.Double.isNaN(pMin)) {
+        pMin = 0.0;
+      }
+      if (java.lang.Double.isNaN(pMax)) {
+        pMax = FloatDomain.PI;
+      }
 
       double low, high;
       double k = Math.floor(p.min() / (2 * FloatDomain.PI));
@@ -273,11 +284,20 @@ public class CosPeqR extends Constraint
   }
 
   int intervalNo(double d) {
-    if (d >= -2.0 * FloatDomain.PI && d <= -FloatDomain.PI) return 1;
-    if (d >= -FloatDomain.PI && d <= 0.0) return 2;
-    if (d >= 0.0 && d <= FloatDomain.PI) return 3;
-    if (d >= FloatDomain.PI && d <= 2 * FloatDomain.PI) return 4;
-    else return 0; // should not return this
+    if (d >= -2.0 * FloatDomain.PI && d <= -FloatDomain.PI) {
+      return 1;
+    }
+    if (d >= -FloatDomain.PI && d <= 0.0) {
+      return 2;
+    }
+    if (d >= 0.0 && d <= FloatDomain.PI) {
+      return 3;
+    }
+    if (d >= FloatDomain.PI && d <= 2 * FloatDomain.PI) {
+      return 4; // should not return this
+    } else {
+      return 0; // should not return this
+    }
   }
 
   @Override
@@ -292,16 +312,18 @@ public class CosPeqR extends Constraint
       double cosMin = Math.cos(p.min()), cosMax = Math.cos(p.max());
 
       FloatInterval minDiff =
-          (cosMin < q.min())
+          cosMin < q.min()
               ? new FloatInterval(cosMin, q.min())
               : new FloatInterval(q.min(), cosMin);
       FloatInterval maxDiff =
-          (cosMax < q.max())
+          cosMax < q.max()
               ? new FloatInterval(cosMax, q.max())
               : new FloatInterval(q.max(), cosMax);
 
       return minDiff.singleton() && maxDiff.singleton();
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -314,7 +336,7 @@ public class CosPeqR extends Constraint
     return result.toString();
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
     if (f.equals(q)) {
       // f = cos(p)
       // f' = -sin(p) * d(p)

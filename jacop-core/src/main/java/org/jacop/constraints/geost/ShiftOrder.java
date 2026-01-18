@@ -58,7 +58,9 @@ public class ShiftOrder implements LexicographicalOrder {
     adjustOrderingToShift();
 
     masterOrdering = new int[noOfDimensions];
-    for (int i = 0; i < noOfDimensions; i++) masterOrdering[i] = i;
+    for (int i = 0; i < noOfDimensions; i++) {
+      masterOrdering[i] = i;
+    }
 
     assert checkInvariants() == null : checkInvariants();
   }
@@ -71,12 +73,17 @@ public class ShiftOrder implements LexicographicalOrder {
    */
   public String checkInvariants() {
 
-    if (noOfDimensions <= 0) return "invalid number of dimensions";
+    if (noOfDimensions <= 0) {
+      return "invalid number of dimensions";
+    }
 
-    if (mostSignificant < 0) return "most significant dimension is negative";
+    if (mostSignificant < 0) {
+      return "most significant dimension is negative";
+    }
 
-    if (mostSignificant >= noOfDimensions)
+    if (mostSignificant >= noOfDimensions) {
       return "most significant dimension larger than or equal to total number of dimensions";
+    }
 
     return null;
   }
@@ -87,8 +94,9 @@ public class ShiftOrder implements LexicographicalOrder {
    */
   private void adjustOrderingToShift() {
 
-    for (int i = 0; i < noOfDimensions; i++)
+    for (int i = 0; i < noOfDimensions; i++) {
       orderingWithShiftConsidered[i] = (i + mostSignificant) % noOfDimensions;
+    }
   }
 
   public int compare(int[] p1, int[] p2) {
@@ -99,8 +107,11 @@ public class ShiftOrder implements LexicographicalOrder {
 
       int lexI = orderingWithShiftConsidered[i];
 
-      if (p1[lexI] < p2[lexI]) return -1;
-      else if (p1[lexI] > p2[lexI]) return 1;
+      if (p1[lexI] < p2[lexI]) {
+        return -1;
+      } else if (p1[lexI] > p2[lexI]) {
+        return 1;
+      }
     }
 
     return 0;

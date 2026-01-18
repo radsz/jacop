@@ -115,12 +115,16 @@ public class Member extends PrimitiveConstraint {
         swap(start, i);
         start++;
       } else {
-        if (x[i].singleton()) numberGround++;
+        if (x[i].singleton()) {
+          numberGround++;
+        }
         d.unionAdapt(x[i].domain);
       }
     }
 
-    if (start == l) throw Store.failException;
+    if (start == l) {
+      throw Store.failException;
+    }
 
     e.domain.in(store.level, e, d);
 
@@ -148,9 +152,13 @@ public class Member extends PrimitiveConstraint {
 
       boolean eGround = e.singleton();
       for (int i = start; i < l; i++) {
-        if (eGround) x[i].domain.inComplement(store.level, x[i], e.value());
+        if (eGround) {
+          x[i].domain.inComplement(store.level, x[i], e.value());
+        }
 
-        if (x[i].singleton()) e.domain.inComplement(store.level, e, x[i].value());
+        if (x[i].singleton()) {
+          e.domain.inComplement(store.level, e, x[i].value());
+        }
 
         if (!x[i].domain.isIntersecting(e.domain)) {
           swap(start, i);
@@ -158,14 +166,17 @@ public class Member extends PrimitiveConstraint {
         }
       }
 
-      if (start == l) removeConstraint();
+      if (start == l) {
+        removeConstraint();
+      }
 
-      if (start == l - 1)
+      if (start == l - 1) {
         if (e.singleton()) {
           x[l - 1].domain.inComplement(store.level, x[l - 1], e.value());
         } else if (x[l - 1].singleton()) {
           e.domain.inComplement(store.level, e, x[l - 1].value());
         }
+      }
 
     } while (store.propagationHasOccurred);
 
@@ -208,7 +219,9 @@ public class Member extends PrimitiveConstraint {
   @Override
   public void impose(Store store) {
 
-    if (x == null) return;
+    if (x == null) {
+      return;
+    }
 
     reified = false;
 
@@ -218,17 +231,22 @@ public class Member extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
 
-    if (e.singleton())
+    if (e.singleton()) {
       for (int i = 0; i < l; i++) {
-        if (x[i].singleton() && x[i].value() == e.value()) return true;
+        if (x[i].singleton() && x[i].value() == e.value()) {
+          return true;
+        }
       }
+    }
     return false;
   }
 
   @Override
   public boolean notSatisfied() {
     for (int i = 0; i < l; i++) {
-      if (x[i].domain.isIntersecting(e.domain)) return false;
+      if (x[i].domain.isIntersecting(e.domain)) {
+        return false;
+      }
     }
     return true;
   }
@@ -241,7 +259,9 @@ public class Member extends PrimitiveConstraint {
 
     for (int i = 0; i < l; i++) {
       result.append(x[i]);
-      if (i < l - 1) result.append(", ");
+      if (i < l - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ");
 

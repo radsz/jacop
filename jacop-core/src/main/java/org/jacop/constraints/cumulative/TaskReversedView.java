@@ -68,16 +68,22 @@ class TaskReversedView extends TaskView {
 
   void updateEdgeFind(int storeLevel, int lct) {
     int max = -lct - dur.min();
-    if (max < start.max()) start.domain.inMax(storeLevel, start, max);
+    if (max < start.max()) {
+      start.domain.inMax(storeLevel, start, max);
+    }
   }
 
   void updateNotFirstNotLast(int storeLevel, int lct) {
     int min = -lct;
-    if (min > start.min()) start.domain.inMin(storeLevel, start, min);
+    if (min > start.min()) {
+      start.domain.inMin(storeLevel, start, min);
+    }
   }
 
   void updateDetectable(int storeLevel, int lct) {
     int max = -lct - dur.min();
-    if (max < start.max()) start.domain.inMax(storeLevel, start, max);
+    if (max < start.max()) {
+      start.domain.inMax(storeLevel, start, max);
+    }
   }
 }

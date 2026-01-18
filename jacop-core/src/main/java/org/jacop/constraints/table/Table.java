@@ -118,7 +118,9 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
             tuplesToRemove[i] = true;
           }
         }
-        if (tuplesToRemove[i]) n++;
+        if (tuplesToRemove[i]) {
+          n++;
+        }
       }
       int k = tuples.length - n;
       this.tuple = new int[k][size];
@@ -173,7 +175,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
     int l = n % 64;
     int m = n / 64;
-    a[m] |= (1L << l);
+    a[m] |= 1L << l;
   }
 
   private boolean validTuple(int index) {
@@ -182,7 +184,9 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     int n = t.length;
     int i = 0;
     while (i < n) {
-      if (!x[i].dom().contains(t[i])) return false;
+      if (!x[i].dom().contains(t[i])) {
+        return false;
+      }
       i++;
     }
     return true;
@@ -201,7 +205,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
     int n = tuple.length;
     int lastWordSize = n % 64;
-    int numberBitSets = n / 64 + ((lastWordSize != 0) ? 1 : 0);
+    int numberBitSets = n / 64 + (lastWordSize != 0 ? 1 : 0);
 
     rbs = new ReversibleSparseBitSet();
 
@@ -225,7 +229,9 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
     } while (store.propagationHasOccurred);
 
-    if (noNoGround == 1) removeConstraint();
+    if (noNoGround == 1) {
+      removeConstraint();
+    }
   }
 
   void updateTable(Set<IntVar> fdvs) {
@@ -243,7 +249,9 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
       } else {
         rp = pd.subtract(cd);
         delta = rp.getSize();
-        if (delta == 0) continue;
+        if (delta == 0) {
+          continue;
+        }
       }
 
       rbs.clearMask();
@@ -254,7 +262,9 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
         ValueEnumeration e = rp.valueEnumeration();
         while (e.hasMoreElements()) {
           long[] bs = xSupport.get(e.nextElement());
-          if (bs != null) rbs.addToMask(bs);
+          if (bs != null) {
+            rbs.addToMask(bs);
+          }
         }
         rbs.reverseMask();
       } else { // reset-based update
@@ -264,20 +274,26 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
           ValueEnumeration e = cd.valueEnumeration();
           while (e.hasMoreElements()) {
             long[] bs = xSupport.get(e.nextElement());
-            if (bs != null) rbs.addToMask(bs);
+            if (bs != null) {
+              rbs.addToMask(bs);
+            }
           }
         } else {
           // updates based on table values
           for (Map.Entry<Integer, long[]> e : xsEntry) {
             Integer val = e.getKey();
             long[] bits = e.getValue();
-            if (cd.contains(val)) rbs.addToMask(bits);
+            if (cd.contains(val)) {
+              rbs.addToMask(bits);
+            }
           }
         }
       }
 
       rbs.intersectWithMask();
-      if (rbs.isEmpty()) throw Store.failException;
+      if (rbs.isEmpty()) {
+        throw Store.failException;
+      }
     }
   }
 
@@ -288,7 +304,9 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     for (int i = 0; i < x.length; i++) {
       IntVar xi = x[i];
       boolean xiSingleton = xi.singleton();
-      if (!xiSingleton) noNoGround++;
+      if (!xiSingleton) {
+        noNoGround++;
+      }
 
       // check only for not assign variables and variables that become single value at this store
       // level
@@ -310,10 +328,15 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
               if ((wrds[index] & bs[index]) == 0L) {
 
                 index = rbs.intersectIndex(bs);
-                if (index == -1) xi.domain.inComplement(store.level, xi, el);
-                else residues[i].put(el, index);
+                if (index == -1) {
+                  xi.domain.inComplement(store.level, xi, el);
+                } else {
+                  residues[i].put(el, index);
+                }
               }
-            } else xi.domain.inComplement(store.level, xi, el);
+            } else {
+              xi.domain.inComplement(store.level, xi, el);
+            }
           }
         } else {
           // filter based on the table values
@@ -330,10 +353,15 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
               if ((wrds[index] & bs[index]) == 0L) {
 
                 index = rbs.intersectIndex(bs);
-                if (index == -1) xi.domain.inComplement(store.level, xi, el);
-                else residues[i].put(el, index);
+                if (index == -1) {
+                  xi.domain.inComplement(store.level, xi, el);
+                } else {
+                  residues[i].put(el, index);
+                }
               }
-            } else xi.domain.inComplement(store.level, xi, el);
+            } else {
+              xi.domain.inComplement(store.level, xi, el);
+            }
           }
           xi.domain.in(store.level, xi, xDom);
         }
@@ -356,17 +384,21 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     StringBuilder s = new StringBuilder(id());
 
     s.append(" : table(");
-    s.append(java.util.Arrays.asList(x));
+    s.append(Arrays.asList(x));
 
     s.append(", [");
     for (int i = 0; i < tuple.length; i++) {
       s.append("[");
       for (int j = 0; j < tuple[i].length; j++) {
         s.append(tuple[i][j]);
-        if (j < tuple[i].length - 1) s.append(", ");
+        if (j < tuple[i].length - 1) {
+          s.append(", ");
+        }
       }
       s.append("]");
-      if (i < tuple.length - 1) s.append(", ");
+      if (i < tuple.length - 1) {
+        s.append(", ");
+      }
     }
     s.append("])");
 

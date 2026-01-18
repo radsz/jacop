@@ -88,8 +88,11 @@ public class OrBoolVector extends PrimitiveConstraint {
 
     assert (checkInvariants() == null) : checkInvariants();
 
-    if (l > 2) queueIndex = 1;
-    else queueIndex = 0;
+    if (l > 2) {
+      queueIndex = 1;
+    } else {
+      queueIndex = 0;
+    }
 
     setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
   }
@@ -112,9 +115,11 @@ public class OrBoolVector extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    for (IntVar var : list)
-      if (var.min() < 0 || var.max() > 1)
+    for (IntVar var : list) {
+      if (var.min() < 0 || var.max() > 1) {
         return "Variable " + var + " does not have boolean domain";
+      }
+    }
 
     return null;
   }
@@ -161,16 +166,24 @@ public class OrBoolVector extends PrimitiveConstraint {
     }
     position.update(start);
 
-    if (start == l) result.domain.inValue(store.level, result, 0);
+    if (start == l) {
+      result.domain.inValue(store.level, result, 0);
+    }
 
     // for case >, then the in() will fail as the constraint should.
-    if (result.min() == 1 && start >= l - 1)
+    if (result.min() == 1 && start >= l - 1) {
       list[index_01].domain.inValue(store.level, list[index_01], 1);
+    }
 
-    if (result.max() == 0 && start < l)
-      for (int i = start; i < l; i++) list[i].domain.inValue(store.level, list[i], 0);
+    if (result.max() == 0 && start < l) {
+      for (int i = start; i < l; i++) {
+        list[i].domain.inValue(store.level, list[i], 0);
+      }
+    }
 
-    if ((l - start) < 3) queueIndex = 0;
+    if ((l - start) < 3) {
+      queueIndex = 0;
+    }
   }
 
   private void swap(int i, int j) {
@@ -202,18 +215,26 @@ public class OrBoolVector extends PrimitiveConstraint {
     }
     position.update(start);
 
-    if (start == l) result.domain.inValue(store.level, result, 1);
+    if (start == l) {
+      result.domain.inValue(store.level, result, 1);
+    }
 
     // for case >, then the in() will fail as the constraint should.
-    if (result.min() == 1 && start < l)
-      for (int i = 0; i < l; i++) list[i].domain.inValue(store.level, list[i], 0);
+    if (result.min() == 1 && start < l) {
+      for (int i = 0; i < l; i++) {
+        list[i].domain.inValue(store.level, list[i], 0);
+      }
+    }
 
-    if (result.max() == 0 && start >= l - 1)
+    if (result.max() == 0 && start >= l - 1) {
       list[index_01].domain.inValue(store.level, list[index_01], 1);
+    }
 
     // } while (store.propagationHasOccurred);
 
-    if ((l - start) < 3) queueIndex = 0;
+    if ((l - start) < 3) {
+      queueIndex = 0;
+    }
   }
 
   @Override
@@ -223,12 +244,14 @@ public class OrBoolVector extends PrimitiveConstraint {
 
     if (result.max() == 0) {
 
-      for (int i = start; i < l; i++)
-        if (list[i].max() != 0) return false;
-        else {
+      for (int i = start; i < l; i++) {
+        if (list[i].max() != 0) {
+          return false;
+        } else {
           swap(start, i);
           start++;
         }
+      }
       position.update(start);
 
       return true;
@@ -237,12 +260,14 @@ public class OrBoolVector extends PrimitiveConstraint {
 
       if (result.min() == 1) {
 
-        for (int i = start; i < l; i++)
-          if (list[i].min() == 1) return true;
-          else if (list[i].max() == 0) {
+        for (int i = start; i < l; i++) {
+          if (list[i].min() == 1) {
+            return true;
+          } else if (list[i].max() == 0) {
             swap(start, i);
             start++;
           }
+        }
       }
       position.update(start);
     }
@@ -259,8 +284,9 @@ public class OrBoolVector extends PrimitiveConstraint {
     int x0 = start;
 
     for (int i = start; i < l; i++) {
-      if (list[i].min() == 1) x1++;
-      else if (list[i].max() == 0) {
+      if (list[i].min() == 1) {
+        x1++;
+      } else if (list[i].max() == 0) {
         x0++;
         swap(start, i);
         start++;
@@ -279,7 +305,9 @@ public class OrBoolVector extends PrimitiveConstraint {
     resultString.append(" : orBool([ ");
     for (int i = 0; i < l; i++) {
       resultString.append(list[i]);
-      if (i < l - 1) resultString.append(", ");
+      if (i < l - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append("], ");
     resultString.append(result);
@@ -311,8 +339,12 @@ public class OrBoolVector extends PrimitiveConstraint {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 }

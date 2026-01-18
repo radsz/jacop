@@ -67,10 +67,12 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
    */
   KnapsackItem(IntVar quantity, int weight, int profit) {
     super();
-    if (weight <= 0)
+    if (weight <= 0) {
       throw new IllegalArgumentException("Weight attribute has to be greater than 0.");
-    if (profit <= 0)
+    }
+    if (profit <= 0) {
       throw new IllegalArgumentException("Profit attribute has to be greater than 0.");
+    }
     this.quantity = quantity;
     this.weight = weight;
     this.profit = profit;
@@ -92,13 +94,19 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
 
     if (comparison == 0) {
 
-      if (that.weight >= weight) return 1;
-      else return -1;
+      if (that.weight >= weight) {
+        return 1;
+      } else {
+        return -1;
+      }
 
     } else {
 
-      if (comparison > 0) return 1;
-      else return -1;
+      if (comparison > 0) {
+        return 1;
+      } else {
+        return -1;
+      }
     }
   }
 

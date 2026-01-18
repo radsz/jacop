@@ -58,13 +58,15 @@ public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
 
   @Override
   public boolean hasMoreElements() {
-    return (bits != 0);
+    return bits != 0;
   }
 
   @Override
   public Interval nextElement() {
 
-    if (bits == 0) throw new IllegalStateException("No more elements");
+    if (bits == 0) {
+      throw new IllegalStateException("No more elements");
+    }
 
     while (bits > 0) {
       current++;

@@ -98,7 +98,9 @@ public abstract class ExampleSet {
 
     boolean result = search.labeling(store, select);
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -132,7 +134,9 @@ public abstract class ExampleSet {
 
     boolean result = search.labeling(store, select, cost);
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -187,8 +191,11 @@ public abstract class ExampleSet {
 
     boolean result = false;
 
-    if (optimal) search.labeling(store, select, cost);
-    else search.labeling(store, select);
+    if (optimal) {
+      search.labeling(store, select, cost);
+    } else {
+      search.labeling(store, select);
+    }
 
     IO.println();
     IO.print(search.getNodes() + "\t");
@@ -197,7 +204,9 @@ public abstract class ExampleSet {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -236,7 +245,9 @@ public abstract class ExampleSet {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -268,7 +279,9 @@ public abstract class ExampleSet {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (!result) IO.println("**** No Solution ****");
+    if (!result) {
+      IO.println("**** No Solution ****");
+    }
 
     return result;
   }
@@ -301,7 +314,9 @@ public abstract class ExampleSet {
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       //	search.printAllSolutions();
-    } else IO.println("Failed to find any solution");
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
@@ -336,9 +351,13 @@ public abstract class ExampleSet {
 
     result = labelMaster.labeling(store, selectMaster);
 
-    if (result) IO.println("Solution found");
+    if (result) {
+      IO.println("Solution found");
+    }
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     long T2 = System.currentTimeMillis();
 

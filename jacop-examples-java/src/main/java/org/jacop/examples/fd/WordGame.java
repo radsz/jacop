@@ -153,7 +153,9 @@ public class WordGame {
           continue;
         }
 
-        if (str.length() != wordSize) continue;
+        if (str.length() != wordSize) {
+          continue;
+        }
 
         for (int i = 0; i < wordSize; i++) {
           tupleForGivenWord[i] = str.charAt(i);
@@ -204,4 +206,6 @@ public class WordGame {
       return returnCode;
     }
   }
+
+  private WordGame() {}
 } // end class

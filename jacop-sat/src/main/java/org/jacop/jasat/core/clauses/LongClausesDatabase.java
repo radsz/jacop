@@ -55,10 +55,10 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   /**
    * Put it one place so there is only one Random generator for the whole SAT solver. TODO: Radek.
    */
-  final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  final Random generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   // the index of the current empty slot.
-  private int currentIndex = 0;
+  private int currentIndex;
   // the pool of clauses
   private int[][] clauses = new int[DEFAULT_INITIAL_NUMBER_OF_CLAUSES][];
   // the small pool of literals of clauses that can be used for watching.
@@ -95,10 +95,12 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
     // get the current watched clauses for the variable
     assert literal != 0;
-    int var = (literal < 0) ? -literal : literal;
+    int var = literal < 0 ? -literal : literal;
 
     // The variable associated with the literal is not watching any clauses.
-    if (watchLists.length <= var || watchLists[var] == null) return;
+    if (watchLists.length <= var || watchLists[var] == null) {
+      return;
+    }
 
     assert watchLists[var] != null;
     int[] varClauses = watchLists[var];
@@ -106,14 +108,14 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     int positionOfFirstAvailablePlace = varClauses[0];
 
     // watched clauses
-    for (int i = 1; i < positionOfFirstAvailablePlace; ++i) {
+    for (int i = 1; i < positionOfFirstAvailablePlace; i++) {
 
       int clauseIndex = varClauses[i];
       int[] cache = literalsCache[clauseIndex];
       int[] clause = clauses[clauseIndex];
 
       // is the literal the first or second watch ?
-      int myWatchPos = (((cache[0] < 0) ? -cache[0] : cache[0]) == var ? 0 : 1);
+      int myWatchPos = (cache[0] < 0 ? -cache[0] : cache[0]) == var ? 0 : 1;
 
       // get watches, and perform some checks
       int otherWatch = cache[1 - myWatchPos];
@@ -130,9 +132,13 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
        */
 
       // clause is satisfied, because of the watch triggering this function.
-      if (cache[myWatchPos] == literal) continue;
+      if (cache[myWatchPos] == literal) {
+        continue;
+      }
       // clause is satisfied, because of the other watch for this clause.
-      if (isSatisfied(cache[otherWatch])) continue;
+      if (isSatisfied(cache[otherWatch])) {
+        continue;
+      }
 
       // maybe watch replacement can be found in cache.
       for (int no = 2; no < SIZE_OF_CLAUSE_CACHE; no++) {
@@ -154,9 +160,13 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
       while (currentPosition < clause.length) {
 
-        if (right == 2) break;
+        if (right == 2) {
+          break;
+        }
 
-        if (isActiveOrSatisfied(clause[currentPosition])) cache[right--] = clause[currentPosition];
+        if (isActiveOrSatisfied(clause[currentPosition])) {
+          cache[right--] = clause[currentPosition];
+        }
 
         currentPosition++;
       }
@@ -164,9 +174,13 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
       currentPosition = 0;
       while (currentPosition <= startingPosition) {
 
-        if (right == 2) break;
+        if (right == 2) {
+          break;
+        }
 
-        if (isActiveOrSatisfied(clause[currentPosition])) cache[right--] = clause[currentPosition];
+        if (isActiveOrSatisfied(clause[currentPosition])) {
+          cache[right--] = clause[currentPosition];
+        }
 
         currentPosition++;
       }
@@ -244,8 +258,11 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
   public int rateThisClause(int[] clause) {
 
-    if (clause.length > (SIZE_OF_CLAUSE_CACHE << 2)) return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
-    else return CLAUSE_RATE_UNSUPPORTED;
+    if (clause.length > (SIZE_OF_CLAUSE_CACHE << 2)) {
+      return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
+    } else {
+      return CLAUSE_RATE_UNSUPPORTED;
+    }
   }
 
   public int size() {
@@ -272,20 +289,20 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
   /** is the literal at position @param literalPos satisfied in current trail ? */
   private boolean isSatisfied(int literal) {
-    return trail.values[(literal < 0) ? -literal : literal] == literal;
+    return trail.values[literal < 0 ? -literal : literal] == literal;
   }
 
   /** is the literal at position @param literalPos satisfied or active ? */
   private boolean isActiveOrSatisfied(int literal) {
 
-    int value = trail.values[(literal < 0) ? -literal : literal];
+    int value = trail.values[literal < 0 ? -literal : literal];
     return value == 0 || value == literal;
   }
 
   /** is the literal at position @param literalPos satisfied or active ? */
   private boolean isActive(int literal) {
 
-    return trail.values[(literal < 0) ? -literal : literal] == 0;
+    return trail.values[literal < 0 ? -literal : literal] == 0;
   }
 
   //

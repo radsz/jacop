@@ -32,6 +32,7 @@
 package org.jacop.satwrapper;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
@@ -104,7 +105,7 @@ public final class SatWrapper extends Constraint
    * TODO : a way to add those only if needed
    */
   // keep track of literals activity, and give search advices (optional)
-  public ActivityModule activity = null;
+  public ActivityModule activity;
   // guide assertions
   public final HeuristicAssertionModule assertionModule = null;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
@@ -120,7 +121,7 @@ public final class SatWrapper extends Constraint
   // the translator of domains
   public DomainTranslator domainTranslator;
   // SAT level to backjump to if failure
-  public int levelToBackjumpTo = 0;
+  public int levelToBackjumpTo;
 
   // maps SAT levels to CP levels and conversely
   public Integer[] satToCpLevels = new Integer[5];
@@ -135,7 +136,7 @@ public final class SatWrapper extends Constraint
 
   // private final ArrayList<Var> registeredVarsArray = new ArrayList<Var>();
   // current level for SAT solver
-  private int currentSatLevel = 0;
+  private int currentSatLevel;
   // next literals to assert during consistency()
   private IntQueue toAssertLiterals;
 
@@ -143,10 +144,10 @@ public final class SatWrapper extends Constraint
   private MapClause clauseToLearn;
 
   // set to true between conflict and explanation
-  private boolean mustBacktrack = false;
+  private boolean mustBacktrack;
 
   // did the solver reach a solution?
-  private boolean hasSolution = false;
+  private boolean hasSolution;
 
   /** creates everything in the right order */
   public SatWrapper() {
@@ -232,7 +233,9 @@ public final class SatWrapper extends Constraint
   @Override
   public void consistency(Store store) {
 
-    if (empty) return;
+    if (empty) {
+      return;
+    }
 
     if (mustBacktrack) {
       core.toPropagate.clear();
@@ -311,7 +314,9 @@ public final class SatWrapper extends Constraint
     satChangesListener.updateCpVariables(store.level);
     satChangesListener.clear();
 
-    if (!toAssertLiterals.isEmpty()) consistency(store);
+    if (!toAssertLiterals.isEmpty()) {
+      consistency(store);
+    }
   }
 
   /** assert the next literal from toAssertLiterals */
@@ -408,11 +413,13 @@ public final class SatWrapper extends Constraint
     core.toPropagate.clear();
 
     // this CP level is of no concern to us
-    if (cpLevel >= cpToSatLevels.length || cpToSatLevels[cpLevel] == null) return;
+    if (cpLevel >= cpToSatLevels.length || cpToSatLevels[cpLevel] == null) {
+      return;
+    }
 
     // find the previous CP level that makes sense for the wrapper (-1 if none)
     int previousCpLevel = -1;
-    for (int i = cpLevel - 1; i >= 0; --i) {
+    for (int i = cpLevel - 1; i >= 0; i--) {
       if (cpToSatLevels[i] != null) {
         previousCpLevel = i;
         break;
@@ -424,7 +431,7 @@ public final class SatWrapper extends Constraint
     // this CP level does not correspond to anything anymore
     cpToSatLevels[cpLevel] = null;
     // the new maximum SAT level
-    int newMaxSatLevel = (previousCpLevel == -1) ? 0 : cpToSatLevels[previousCpLevel];
+    int newMaxSatLevel = previousCpLevel == -1 ? 0 : cpToSatLevels[previousCpLevel];
     assert newMaxSatLevel >= 0;
 
     if (newMaxSatLevel != currentSatLevel) {
@@ -463,7 +470,11 @@ public final class SatWrapper extends Constraint
     /* KK: Do not queue variable when this constraint (wrapper) executes
      *     its consistency method
      */
-    if (store.currentConstraint != null) if (store.currentConstraint.equals(this)) return;
+    if (store.currentConstraint != null) {
+      if (store.currentConstraint.equals(this)) {
+        return;
+      }
+    }
 
     /*
      * update ranges for this variable (assert some literals).
@@ -494,8 +505,12 @@ public final class SatWrapper extends Constraint
       int upperLit = cpVarToBoolVar(v, upper, false);
 
       // if those literals are not yet set, just add them
-      if (lowerLit != 0 && !trail.isSet(lowerLit)) setBoolVariable(lowerLit, false);
-      if (upperLit != 0 && !trail.isSet(upperLit)) setBoolVariable(upperLit, true);
+      if (lowerLit != 0 && !trail.isSet(lowerLit)) {
+        setBoolVariable(lowerLit, false);
+      }
+      if (upperLit != 0 && !trail.isSet(upperLit)) {
+        setBoolVariable(upperLit, true);
+      }
     }
   }
 
@@ -542,7 +557,9 @@ public final class SatWrapper extends Constraint
    * @return literal meaning
    */
   public String showLiteralMeaning(int literal) {
-    if (!isVarLiteral(literal)) return "nothing";
+    if (!isVarLiteral(literal)) {
+      return "nothing";
+    }
 
     return "("
         + boolVarToCpVar(literal)
@@ -553,7 +570,9 @@ public final class SatWrapper extends Constraint
 
   public String showClauseMeaning(Iterable<Integer> literals) {
     StringBuilder answer = new StringBuilder();
-    for (int i : literals) answer.append(showLiteralMeaning(i)).append(", ");
+    for (int i : literals) {
+      answer.append(showLiteralMeaning(i)).append(", ");
+    }
     return answer.toString();
   }
 
@@ -572,7 +591,7 @@ public final class SatWrapper extends Constraint
   }
 
   public boolean satisfied() {
-    return (hasSolution || core.currentState == SolverState.SATISFIABLE);
+    return hasSolution || core.currentState == SolverState.SATISFIABLE;
   }
 
   @Override
@@ -619,7 +638,9 @@ public final class SatWrapper extends Constraint
   public void addModelClause(Collection<Integer> clause) {
     int[] toAdd = pool.getNew(clause.size());
     int index = 0;
-    for (int i : clause) toAdd[index++] = i;
+    for (int i : clause) {
+      toAdd[index++] = i;
+    }
     modelClausesToAdd.add(toAdd);
   }
 
@@ -648,7 +669,9 @@ public final class SatWrapper extends Constraint
     this.store = store;
 
     // make solver quiet, if not debug
-    if (!Store.debug) core.verbosity = 0;
+    if (!Store.debug) {
+      core.verbosity = 0;
+    }
 
     // be warned in case of backtrack
     store.registerRemoveLevelListener(this);
@@ -747,7 +770,9 @@ public final class SatWrapper extends Constraint
      * we must ensure it is very fast (called very often)
      */
     int var = Math.abs(literal);
-    if (var == 0 || var >= boolVarToDomains.length) return false;
+    if (var == 0 || var >= boolVarToDomains.length) {
+      return false;
+    }
     return boolVarToDomains[var] != null;
   }
 
@@ -800,7 +825,7 @@ public final class SatWrapper extends Constraint
     domainTranslator.initialize(this);
   }
 
-  public void toCNF(BufferedWriter output) throws java.io.IOException {
+  public void toCNF(BufferedWriter output) throws IOException {
 
     core.dbStore.toCNF(output);
   }

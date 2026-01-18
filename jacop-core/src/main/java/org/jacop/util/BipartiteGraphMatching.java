@@ -112,11 +112,14 @@ public class BipartiteGraphMatching {
     // Keep updating the result while there is an augmenting path.
     while (bfs()) {
       // Find a free vertex
-      for (int u = 1; u <= m; u++)
+      for (int u = 1; u <= m; u++) {
 
         // If current vertex is free and there is
         // an augmenting path from current vertex
-        if (pairU[u] == NIL && dfs(u)) result++;
+        if (pairU[u] == NIL && dfs(u)) {
+          result++;
+        }
+      }
     }
     return result;
   }
@@ -133,11 +136,12 @@ public class BipartiteGraphMatching {
         // u is not matched
         dist[u] = 0;
         Q.add(u);
-      }
+      } else {
 
-      // Else set distance as infinite so that this vertex
-      // is considered next time
-      else dist[u] = INF;
+        // Else set distance as infinite so that this vertex
+        // is considered next time
+        dist[u] = INF;
+      }
     }
 
     // Initialize distance to NIL as infinite
@@ -174,8 +178,9 @@ public class BipartiteGraphMatching {
 
         // Follow the distances set by BFS
         if (dist[pairV[v]] == dist[u] + 1
-            &&
             // If dfs for pair of v also returns
+            // true
+            && // If dfs for pair of v also returns
             // true
             dfs(pairV[v]) == true) {
           pairV[v] = u;

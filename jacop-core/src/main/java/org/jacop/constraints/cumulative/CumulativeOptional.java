@@ -112,8 +112,11 @@ public class CumulativeOptional extends Cumulative {
 
       if (!store.propagationHasOccurred && doEdgeFind) {
         // overloadCheck();  // not needed if profile propagator is used
-        if (doQuadraticEdgeFind) edgeFindQuad(store);
-        else edgeFind(store);
+        if (doQuadraticEdgeFind) {
+          edgeFindQuad(store);
+        } else {
+          edgeFind(store);
+        }
       }
 
     } while (store.propagationHasOccurred);
@@ -124,13 +127,16 @@ public class CumulativeOptional extends Cumulative {
     TaskView[] nonZeroTasks = new TaskView[ts.length];
     int k = 0;
 
-    for (int i = 0; i < ts.length; i++)
+    for (int i = 0; i < ts.length; i++) {
       if (ts[i].exists() && opt[i].min() != 0) {
         nonZeroTasks[k] = ts[i];
         ts[i].index = k++;
       }
+    }
 
-    if (k == 0) return null;
+    if (k == 0) {
+      return null;
+    }
     TaskView[] t = new TaskView[k];
     System.arraycopy(nonZeroTasks, 0, t, 0, k);
     return t;
@@ -145,11 +151,17 @@ public class CumulativeOptional extends Cumulative {
   public String toString() {
 
     StringBuilder result = new StringBuilder(id());
-    if (doEdgeFind) result.append(" : cumulativeOptional([ ");
-    else if (super.cumulativeForConstants != null) result.append(" : cumulativePrimary([ ");
-    else result.append(" : cumulativeBasic([ ");
+    if (doEdgeFind) {
+      result.append(" : cumulativeOptional([ ");
+    } else if (super.cumulativeForConstants != null) {
+      result.append(" : cumulativePrimary([ ");
+    } else {
+      result.append(" : cumulativeBasic([ ");
+    }
 
-    for (int i = 0; i < taskNormal.length - 1; i++) result.append(taskNormal[i]).append(", ");
+    for (int i = 0; i < taskNormal.length - 1; i++) {
+      result.append(taskNormal[i]).append(", ");
+    }
 
     result.append(taskNormal[taskNormal.length - 1]);
 

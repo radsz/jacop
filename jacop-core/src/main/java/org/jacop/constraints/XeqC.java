@@ -65,9 +65,10 @@ public class XeqC extends PrimitiveConstraint {
 
     checkInputForNullness("x", new Object[] {x});
 
-    if (c < IntDomain.MinInt || c > IntDomain.MaxInt)
+    if (c < IntDomain.MinInt || c > IntDomain.MaxInt) {
       throw new IllegalArgumentException(
           "Constraint XeqC has a  constant c " + c + " that is not in the allowed range.");
+    }
 
     numberId = idNumber.incrementAndGet();
     this.x = x;

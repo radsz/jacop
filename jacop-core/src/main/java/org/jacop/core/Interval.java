@@ -98,7 +98,7 @@ public record Interval(int min, int max) implements Cloneable {
    * @return true if domain has only one value.
    */
   public boolean singleton() {
-    return (min == max);
+    return min == max;
   }
 
   /**
@@ -108,13 +108,15 @@ public record Interval(int min, int max) implements Cloneable {
    * @return true if variable has a singleton domain and it is equal to value c.
    */
   public boolean singleton(int c) {
-    return (min == max && min == c);
+    return min == max && min == c;
   }
 
   @Override
   public String toString() {
     String result = String.valueOf(min);
-    if (max != min) result += ".." + max;
+    if (max != min) {
+      result += ".." + max;
+    }
     return result;
   }
 }

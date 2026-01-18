@@ -56,7 +56,7 @@ public class Store {
   /** It specifies the seed for random number generators. */
   static long seed;
 
-  static boolean seedPresent = false;
+  static boolean seedPresent;
 
   /** It switches on/off debuging of remove level facilities. */
   final boolean removeDebug = false;
@@ -97,16 +97,16 @@ public class Store {
   public List<Var> auxilaryVariables = new ArrayList<>();
 
   /** It stores constraint which is currently re-evaluated. */
-  public Constraint currentConstraint = null;
+  public Constraint currentConstraint;
 
   /** It stores constraint that has recently failed during store.consistency() execution. */
-  public Constraint recentlyFailedConstraint = null;
+  public Constraint recentlyFailedConstraint;
 
   /** It stores current queue, which is being evaluated. */
-  public int currentQueue = 0;
+  public int currentQueue;
 
   /** It specifies long description of the store. */
-  public String description = null;
+  public String description;
 
   /** Id string of the store. */
   public String id = "Store";
@@ -116,20 +116,20 @@ public class Store {
    * changes to the variables are recorded. This is the most important variable. It is assumed that
    * initially this value is equal to zero. Use setLevel function if you want to play with it.
    */
-  public int level = 0;
+  public int level;
 
   /**
    * This variable specifies if there was a new propagation. Any change to any variable will setup
    * this variable to true. Usefull variable to discover the idempodence of the consistency
    * propagator.
    */
-  public boolean propagationHasOccurred = false;
+  public boolean propagationHasOccurred;
 
   /**
    * It specifies the current pointer to put next changed boolean variable. It has to be maintained
    * manually (within removeLevel function).
    */
-  public TimeStamp<Integer> pointer4GroundedBooleanVariables = null;
+  public TimeStamp<Integer> pointer4GroundedBooleanVariables;
 
   /**
    * It stores number of queues used in this store. It has to be at least 1. No constraint can be
@@ -146,16 +146,16 @@ public class Store {
    * and before any changes to variables of this constraint occur. This flag is set by constraints
    * at imposition stage.
    */
-  public boolean raiseLevelBeforeConsistency = false;
+  public boolean raiseLevelBeforeConsistency;
 
   /**
    * It specifies if the weight of variables which are in the scope of the failure constraint should
    * be increased.
    */
-  public boolean variableWeightManagement = false;
+  public boolean variableWeightManagement;
 
   /** Number of calls to consistency methods of constraints. */
-  public long numberConsistencyCalls = 0;
+  public long numberConsistencyCalls;
 
   /**
    * It indicates that consistency function should immediately return fail if last inconsistency was
@@ -164,7 +164,7 @@ public class Store {
   public final boolean strict = true;
 
   /** This flag is set to true when consistency function of the store encounters failure. */
-  public boolean isLastConsistencyFailure = false;
+  public boolean isLastConsistencyFailure;
 
   /**
    * This keeps information about watched constraints by given variable. Watched constraints are
@@ -194,7 +194,7 @@ public class Store {
   public SparseSet sparseSet;
 
   /** It is used by Extensional MDD constraints. It is to represent the size of G_yes. */
-  public int sparseSetSize = 0;
+  public int sparseSetSize;
 
   /**
    * A mutable variable is a special variable which can change value during the search. In the event
@@ -204,10 +204,10 @@ public class Store {
   protected final List<MutableVar> mutableVariables = new ArrayList<>(100);
 
   /** It stores the number of constraints which were imposed to the store. */
-  protected int numberOfConstraints = 0;
+  protected int numberOfConstraints;
 
   /** Number of variables stored within a store. */
-  protected int size = 0;
+  protected int size;
 
   /**
    * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
@@ -224,7 +224,7 @@ public class Store {
    * Variables for accumulated failure count (AFC) for constraints. constraintAFCManagement- opens
    * AFC menagement decay- decay factor allConstraints- all constraints in the store
    */
-  boolean constraintAFCManagement = false;
+  boolean constraintAFCManagement;
 
   Set<Constraint> allConstraints;
   double decay = 0.99d;
@@ -233,7 +233,7 @@ public class Store {
    * Variables for pruning count (variable activity) for constraints. variableActivityManagement-
    * opens activity menagement variablePrunnedConstraints- all constraints in the store
    */
-  boolean variableActivityManagement = false;
+  boolean variableActivityManagement;
 
   Set<Var> variablesPrunned;
 
@@ -263,14 +263,18 @@ public class Store {
 
     changed = new SimpleHashSet[queueNo];
 
-    for (int i = 0; i < queueNo; i++) changed[i] = new SimpleHashSet<>(100);
+    for (int i = 0; i < queueNo; i++) {
+      changed[i] = new SimpleHashSet<>(100);
+    }
 
     trailManager =
         new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
   }
 
   public static long getSeed() {
-    if (seedPresent) return seed;
+    if (seedPresent) {
+      return seed;
+    }
 
     throw new IllegalArgumentException("Not defined seed for random generator");
   }
@@ -309,7 +313,9 @@ public class Store {
 
     for (Var v : c.arguments()) {
       Set<Constraint> forVariable = watchedConstraints.get(v);
-      if (forVariable != null) forVariable.remove(c);
+      if (forVariable != null) {
+        forVariable.remove(c);
+      }
     }
   }
 
@@ -320,11 +326,15 @@ public class Store {
    */
   public int countWatches() {
 
-    if (watchedConstraints == null) return 0;
+    if (watchedConstraints == null) {
+      return 0;
+    }
 
     int count = 0;
 
-    for (Set<Constraint> c : watchedConstraints.values()) count += c.size();
+    for (Set<Constraint> c : watchedConstraints.values()) {
+      count += c.size();
+    }
 
     return count;
   }
@@ -340,8 +350,9 @@ public class Store {
 
     Set<Constraint> forVariable = watchedConstraints.get(v);
 
-    if (forVariable != null) forVariable.add(c);
-    else {
+    if (forVariable != null) {
+      forVariable.add(c);
+    } else {
       forVariable = new HashSet<>();
       forVariable.add(c);
       watchedConstraints.put(v, forVariable);
@@ -367,7 +378,9 @@ public class Store {
 
     propagationHasOccurred = true;
 
-    if (c.queueIndex < currentQueue) currentQueue = c.queueIndex;
+    if (c.queueIndex < currentQueue) {
+      currentQueue = c.queueIndex;
+    }
 
     changed[c.queueIndex].add(c);
   }
@@ -386,7 +399,9 @@ public class Store {
 
     propagationHasOccurred = true;
 
-    if (variableActivityManagement) variablesPrunned.add(var);
+    if (variableActivityManagement) {
+      variablesPrunned.add(var);
+    }
 
     // It records V as being changed so backtracking later on can be invoked for this variable.
     recordChange(var);
@@ -435,7 +450,7 @@ public class Store {
 
       Set<Constraint> list = watchedConstraints.get(var);
 
-      if (list != null)
+      if (list != null) {
         for (Constraint con : list) {
           con.queueVariable(level, var);
 
@@ -443,6 +458,7 @@ public class Store {
             addChanged(con);
           }
         }
+      }
     }
   }
 
@@ -452,7 +468,9 @@ public class Store {
    */
   public void clearChanged() {
 
-    while (currentQueue < queueNo) changed[currentQueue++].clear();
+    while (currentQueue < queueNo) {
+      changed[currentQueue++].clear();
+    }
   }
 
   /**
@@ -464,21 +482,25 @@ public class Store {
    */
   public boolean consistency() {
 
-    if (strict && isLastConsistencyFailure) return false;
+    if (strict && isLastConsistencyFailure) {
+      return false;
+    }
 
     if (raiseLevelBeforeConsistency) {
       raiseLevelBeforeConsistency = false;
       setLevel(level + 1);
     }
 
-    if (this.sparseSetSize > 0 && this.sparseSet == null) sparseSet = new SparseSet(sparseSetSize);
+    if (this.sparseSetSize > 0 && this.sparseSet == null) {
+      sparseSet = new SparseSet(sparseSetSize);
+    }
 
     try {
 
       while (currentQueue < queueNo) {
         // Selects changed constraints from changed queue
         // and evaluates them
-        if (currentQueue < queueNo)
+        if (currentQueue < queueNo) {
           while (!changed[currentQueue].isEmpty()) {
 
             currentConstraint = getFirstChanged();
@@ -492,6 +514,7 @@ public class Store {
               variablesPrunned.clear();
             }
           }
+        }
 
         currentQueue++;
       }
@@ -502,9 +525,13 @@ public class Store {
 
         currentConstraint.cleanAfterFailure();
 
-        if (variableWeightManagement) currentConstraint.increaseWeight();
+        if (variableWeightManagement) {
+          currentConstraint.increaseWeight();
+        }
 
-        if (constraintAFCManagement) currentConstraint.updateAFC(allConstraints, decay);
+        if (constraintAFCManagement) {
+          currentConstraint.updateAFC(allConstraints, decay);
+        }
 
         if (variableActivityManagement) {
           updateActivities(currentConstraint);
@@ -557,10 +584,16 @@ public class Store {
 
       Var key = variablesHashMap.get(id);
 
-      if (key != null) return key;
+      if (key != null) {
+        return key;
+      }
     }
 
-    for (Var v : vars) if (v != null && id.equals(v.id())) return v;
+    for (Var v : vars) {
+      if (v != null && id.equals(v.id())) {
+        return v;
+      }
+    }
 
     return null;
   }
@@ -760,7 +793,11 @@ public class Store {
    * @return true if all variables are singletons, false otherwise.
    */
   public boolean isGround() {
-    for (Var v : vars) if (!v.singleton()) return false;
+    for (Var v : vars) {
+      if (!v.singleton()) {
+        return false;
+      }
+    }
     return true;
   }
 
@@ -827,7 +864,9 @@ public class Store {
 
     // boolean variables are not trailed the same fashion as int variables.
     // return default index specifying that this variable is not stored within vars array.
-    if (var instanceof BooleanVar) return -1;
+    if (var instanceof BooleanVar) {
+      return -1;
+    }
 
     if (size < vars.length) {
 
@@ -984,10 +1023,14 @@ public class Store {
     // It has to inform listeners first, as they may use values of
     // mutables variables, just before they get deleted.
 
-    for (Stateful statefulConstraint : removeLevelListeners) statefulConstraint.removeLevel(rLevel);
+    for (Stateful statefulConstraint : removeLevelListeners) {
+      statefulConstraint.removeLevel(rLevel);
+    }
 
     // It needs to be before as there is a timestamp for number of boolean variables.
-    for (Stateful var : timeStamps) var.removeLevel(rLevel);
+    for (Stateful var : timeStamps) {
+      var.removeLevel(rLevel);
+    }
 
     // Boolean Variables.
 
@@ -1019,10 +1062,13 @@ public class Store {
     // TODO, added functionality.
     trailManager.removeLevel(rLevel);
 
-    for (int i = mutableVariables.size() - 1; i >= 0; i--)
+    for (int i = mutableVariables.size() - 1; i >= 0; i--) {
       mutableVariables.get(i).removeLevel(rLevel);
+    }
 
-    for (RemoveLevelLate c : removeLevelLateListeners) c.removeLevelLate(rLevel);
+    for (RemoveLevelLate c : removeLevelLateListeners) {
+      c.removeLevelLate(rLevel);
+    }
 
     assert checkInvariants() == null : checkInvariants();
   }
@@ -1048,7 +1094,9 @@ public class Store {
     // TODO, functionality added.
     trailManager.setLevel(levelSetTo);
 
-    if (level == levelSetTo) return;
+    if (level == levelSetTo) {
+      return;
+    }
 
     if (removeDebug) {
 
@@ -1062,7 +1110,9 @@ public class Store {
       }
     }
 
-    if (removeDebug) IO.println("Store level changes from " + level + " to " + levelSetTo);
+    if (removeDebug) {
+      IO.println("Store level changes from " + level + " to " + levelSetTo);
+    }
 
     level = levelSetTo;
   }
@@ -1100,11 +1150,15 @@ public class Store {
 
     // first BooleanVar
     for (Var v : variablesHashMap.values()) {
-      if (v instanceof BooleanVar) result.append(v).append("\n");
+      if (v instanceof BooleanVar) {
+        result.append(v).append("\n");
+      }
     }
 
     // all other variables
-    for (int i = 0; i < size; i++) result.append(vars[i]).append("\n");
+    for (int i = 0; i < size; i++) {
+      result.append(vars[i]).append("\n");
+    }
 
     int i = 0;
     for (MutableVar var : mutableVariables) {
@@ -1119,7 +1173,9 @@ public class Store {
       result.append(var.value()).append("\n");
     }
 
-    for (Constraint c : getConstraints()) result.append("*** Constraint:\n").append(c).append("\n");
+    for (Constraint c : getConstraints()) {
+      result.append("*** Constraint:\n").append(c).append("\n");
+    }
 
     result.append("\n*** Constraints for evaluation:\n{").append(toStringChangedEl()).append(" }");
 
@@ -1161,10 +1217,17 @@ public class Store {
   }
 
   void updateActivities(Constraint constraint) {
-    for (Var v : variablesPrunned) v.updateActivity();
+    for (Var v : variablesPrunned) {
+      v.updateActivity();
+    }
 
-    if (decay < 1.0d)
-      for (Var v : constraint.arguments()) if (!variablesPrunned.contains(v)) v.applyDecay();
+    if (decay < 1.0d) {
+      for (Var v : constraint.arguments()) {
+        if (!variablesPrunned.contains(v)) {
+          v.applyDecay();
+        }
+      }
+    }
   }
 
   /**
@@ -1176,7 +1239,9 @@ public class Store {
 
     StringBuilder c = new StringBuilder();
 
-    for (int i = 0; i < queueNo; i++) c.append(changed[i].toString()).append("\n");
+    for (int i = 0; i < queueNo; i++) {
+      c.append(changed[i].toString()).append("\n");
+    }
 
     return c.toString();
   }
@@ -1188,8 +1253,11 @@ public class Store {
    */
   public String checkInvariants() {
 
-    for (int i = 0; i < size; i++)
-      if (vars[i].level() > level) return "Removal of old values was done properly " + vars[i];
+    for (int i = 0; i < size; i++) {
+      if (vars[i].level() > level) {
+        return "Removal of old values was done properly " + vars[i];
+      }
+    }
 
     return null;
   }
@@ -1203,13 +1271,17 @@ public class Store {
     // first BooleanVar
     for (String key : new TreeSet<>(variablesHashMap.keySet())) {
       Var v = variablesHashMap.get(key);
-      if (v instanceof BooleanVar) result.append(v).append(",");
+      if (v instanceof BooleanVar) {
+        result.append(v).append(",");
+      }
     }
 
     // all other variables
     TreeSet<Var> orderedVariables = new TreeSet<>(Comparator.comparing(Var::id));
     orderedVariables.addAll(Arrays.asList(vars).subList(0, size));
-    for (Var var : orderedVariables) result.append(var).append(",");
+    for (Var var : orderedVariables) {
+      result.append(var).append(",");
+    }
 
     int i = 0;
     for (MutableVar var : mutableVariables) {

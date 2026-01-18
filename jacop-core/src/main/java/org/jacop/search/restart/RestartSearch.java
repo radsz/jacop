@@ -62,19 +62,19 @@ public class RestartSearch<T extends Var> {
   final SelectChoicePoint<T> select;
   final Calculator calculator;
   SolutionListener<T> lastSolutionListener;
-  CustomReport reportSolution = null;
+  CustomReport reportSolution;
   Search<T> lastNotNullSearch;
   final Var cost;
   int intCostValue = Integer.MAX_VALUE;
   double floatCostValue = Double.MAX_VALUE;
-  int numberRestarts = 0;
-  boolean atLeastOneSolution = false;
-  boolean timeOutCheck = false;
+  int numberRestarts;
+  boolean atLeastOneSolution;
+  boolean timeOutCheck;
   long timeOut;
   IntVar[] rarVars;
   int probability;
   int[] values;
-  int restartsLimit = 0; // no limit
+  int restartsLimit; // no limit
 
   @SuppressWarnings("unchecked")
   public RestartSearch(
@@ -106,7 +106,9 @@ public class RestartSearch<T extends Var> {
       // find next search
       if (ns.childSearches == null) {
         ns = null;
-      } else ns = (DepthFirstSearch<T>) ns.childSearches[0];
+      } else {
+        ns = (DepthFirstSearch<T>) ns.childSearches[0];
+      }
     } while (ns != null);
 
     if (cost != null) {
@@ -114,7 +116,7 @@ public class RestartSearch<T extends Var> {
       lastSolutionListener.setChildrenListeners(new CostListener<>());
     }
 
-    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   public RestartSearch(
@@ -132,11 +134,16 @@ public class RestartSearch<T extends Var> {
 
         store.setLevel(store.level + 1);
 
-        if (values != null) assignRelaxedVariables();
+        if (values != null) {
+          assignRelaxedVariables();
+        }
       }
 
-      if (cost == null) result = search.labeling(store, select);
-      else result = search.labeling(store, select, cost);
+      if (cost == null) {
+        result = search.labeling(store, select);
+      } else {
+        result = search.labeling(store, select, cost);
+      }
 
       if (rarVars != null) {
         store.removeLevel(store.level);
@@ -150,7 +157,9 @@ public class RestartSearch<T extends Var> {
       atLeastOneSolution |= result;
 
       int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
-      if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) return false;
+      if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) {
+        return false;
+      }
 
       if (timeOutCheck && System.currentTimeMillis() > timeOut) {
         search.timeOutOccured = true;
@@ -158,29 +167,39 @@ public class RestartSearch<T extends Var> {
         return false;
       }
 
-      if (result)
+      if (result) {
         if (cost != null) {
-          if (!calculator.pointsExhausted())
+          if (!calculator.pointsExhausted()) {
             // optimization solution found and no better exists
             result = false;
-          else boundCost();
-        } else break; // single solution for satisfy search found
-      else { // no result
+          } else {
+            boundCost();
+          }
+        } else {
+          break;
+        } // single solution for satisfy search found
+      } else { // no result
         result = true;
         if (calculator.pointsExhausted()) {
           if (cost != null) {
             boundCost();
-          } else result = !atLeastOneSolution;
+          } else {
+            result = !atLeastOneSolution;
+          }
         } else // fail before points are exhausted
-        if (rarVars == null)
+        if (rarVars == null) {
           // restart search fails
           result = false;
-        else if (cost != null) boundCost();
+        } else if (cost != null) {
+          boundCost();
+        }
       }
 
       calculator.newLimit();
 
-      if (result) numberRestarts++;
+      if (result) {
+        numberRestarts++;
+      }
     }
 
     store.removeLevel(store.level);
@@ -191,8 +210,9 @@ public class RestartSearch<T extends Var> {
 
   void boundCost() {
 
-    if (cost instanceof IntVar var) store.impose(new XltC(var, intCostValue));
-    else {
+    if (cost instanceof IntVar var) {
+      store.impose(new XltC(var, intCostValue));
+    } else {
       CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
       if (costHandler != null) {
         Constraint costConstraint = costHandler.createCostConstraint(cost, floatCostValue);
@@ -236,13 +256,17 @@ public class RestartSearch<T extends Var> {
       s.getSolutionListener().recordSolutions(false);
       s.getSolutionListener().searchAll(false);
 
-      if (parentSearch != null)
+      if (parentSearch != null) {
         s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
+      }
 
       parentSearch = s;
       // find next search
-      if (s.childSearches == null) s = null;
-      else s = (DepthFirstSearch<T>) s.childSearches[0];
+      if (s.childSearches == null) {
+        s = null;
+      } else {
+        s = (DepthFirstSearch<T>) s.childSearches[0];
+      }
     } while (s != null);
   }
 
@@ -290,10 +314,13 @@ public class RestartSearch<T extends Var> {
 
       boolean returnCode = super.executeAfterSolution(search, select);
 
-      if (reportSolution != null) reportSolution.report();
+      if (reportSolution != null) {
+        reportSolution.report();
+      }
 
-      if (cost instanceof IntVar var) intCostValue = var.value();
-      else {
+      if (cost instanceof IntVar var) {
+        intCostValue = var.value();
+      } else {
         CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
         if (costHandler != null) {
           floatCostValue = costHandler.getCostValue(cost);

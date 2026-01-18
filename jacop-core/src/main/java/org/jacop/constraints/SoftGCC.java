@@ -222,7 +222,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       ViolationMeasure violationMeasure) {
 
     IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xVars) sum.unionAdapt(xVar.domain);
+    for (IntVar xVar : xVars) {
+      sum.unionAdapt(xVar.domain);
+    }
 
     countedValue = new int[sum.getSize()];
     int i = 0;
@@ -265,7 +267,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       ViolationMeasure violationMeasure) {
 
     IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xVars) sum.unionAdapt(xVar.domain);
+    for (IntVar xVar : xVars) {
+      sum.unionAdapt(xVar.domain);
+    }
 
     countedValue = new int[sum.getSize()];
     int i = 0;
@@ -306,7 +310,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       ViolationMeasure violationMeasure) {
 
     IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xVars) sum.unionAdapt(xVar.domain);
+    for (IntVar xVar : xVars) {
+      sum.unionAdapt(xVar.domain);
+    }
 
     countedValue = new int[sum.getSize()];
     int i = 0;
@@ -352,8 +358,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             for (int j = 0; j <= xVars.length; j++) {
               table[j][0] = j;
               table[j][1] = 0;
-              if (j < softLowerBound[i]) table[j][1] = softLowerBound[i] - j;
-              if (j > softUpperBound[i]) table[j][1] = j - softUpperBound[i];
+              if (j < softLowerBound[i]) {
+                table[j][1] = softLowerBound[i] - j;
+              }
+              if (j > softUpperBound[i]) {
+                table[j][1] = j - softUpperBound[i];
+              }
             }
 
             IntVar v = new IntVar(store, 0, xVars.length);
@@ -369,9 +379,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             IntVar hardCounter;
 
-            if (hardLowerBound != null)
+            if (hardLowerBound != null) {
               hardCounter = new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
-            else hardCounter = hardCounters[i];
+            } else {
+              hardCounter = hardCounters[i];
+            }
 
             decomposition.add(new Count(xVars, hardCounter, countedValue[i]));
 
@@ -388,8 +400,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
                 int softElement = soft.nextElement();
                 int cost;
 
-                if (hardElement > softElement) cost = hardElement - softElement;
-                else cost = softElement - hardElement;
+                if (hardElement > softElement) {
+                  cost = hardElement - softElement;
+                } else {
+                  cost = softElement - hardElement;
+                }
 
                 int[] tuple = {hardElement, softElement, cost};
                 tuples.add(tuple);
@@ -436,8 +451,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             for (int j = 0; j <= xVars.length; j++) {
               table[j][0] = j;
               table[j][1] = 0;
-              if (j < softLowerBound[i]) table[j][1] = softLowerBound[i] - j;
-              if (j > softUpperBound[i]) table[j][1] = j - softUpperBound[i];
+              if (j < softLowerBound[i]) {
+                table[j][1] = softLowerBound[i] - j;
+              }
+              if (j > softUpperBound[i]) {
+                table[j][1] = j - softUpperBound[i];
+              }
             }
 
             IntVar v = new IntVar(store, 0, xVars.length);
@@ -453,9 +472,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             IntVar hardCounter;
 
-            if (hardLowerBound != null)
+            if (hardLowerBound != null) {
               hardCounter = new IntVar(store, hardLowerBound[i], hardUpperBound[i]);
-            else hardCounter = hardCounters[i];
+            } else {
+              hardCounter = hardCounters[i];
+            }
 
             result.add(new Count(xVars, hardCounter, countedValue[i]));
 
@@ -472,8 +493,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
                 int softElement = soft.nextElement();
                 int cost;
 
-                if (hardElement > softElement) cost = hardElement - softElement;
-                else cost = softElement - hardElement;
+                if (hardElement > softElement) {
+                  cost = hardElement - softElement;
+                } else {
+                  cost = softElement - hardElement;
+                }
 
                 int[] tuple = {hardElement, softElement, cost};
                 tuples.add(tuple);
@@ -508,7 +532,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
       // compute union of all domains
       IntDomain all = new IntervalDomain();
-      for (int value : countedValue) all.unionAdapt(value);
+      for (int value : countedValue) {
+        all.unionAdapt(value);
+      }
 
       // create values
       int d = all.getSize();
@@ -529,9 +555,13 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (decomposition == null) decomposition = decompose(store);
+    if (decomposition == null) {
+      decomposition = decompose(store);
+    }
 
-    for (Constraint c : decomposition) store.impose(c);
+    for (Constraint c : decomposition) {
+      store.impose(c);
+    }
   }
 
   @Override
@@ -543,38 +573,52 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     for (int i = 0; i < xVars.length; i++) {
       result.append(xVars[i]);
-      if (i < xVars.length - 1) result.append(", ");
+      if (i < xVars.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < countedValue.length; i++) {
       result.append(countedValue[i]);
-      if (i < countedValue.length - 1) result.append(", ");
+      if (i < countedValue.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
-    if (hardCounters == null)
+    if (hardCounters == null) {
       for (int i = 0; i < hardLowerBound.length; i++) {
         result.append(hardLowerBound[i]).append("..").append(hardUpperBound[i]);
-        if (i < hardLowerBound.length - 1) result.append(", ");
+        if (i < hardLowerBound.length - 1) {
+          result.append(", ");
+        }
       }
-    else
+    } else {
       for (int i = 0; i < hardCounters.length; i++) {
         result.append(hardCounters[i]);
-        if (i < hardCounters.length - 1) result.append(", ");
+        if (i < hardCounters.length - 1) {
+          result.append(", ");
+        }
       }
+    }
     result.append("], [");
 
-    if (softCounters == null)
+    if (softCounters == null) {
       for (int i = 0; i < softLowerBound.length; i++) {
         result.append(softLowerBound[i]).append("..").append(softUpperBound[i]);
-        if (i < softLowerBound.length - 1) result.append(", ");
+        if (i < softLowerBound.length - 1) {
+          result.append(", ");
+        }
       }
-    else
+    } else {
       for (int i = 0; i < softCounters.length; i++) {
         result.append(softCounters[i]);
-        if (i < softCounters.length - 1) result.append(", ");
+        if (i < softCounters.length - 1) {
+          result.append(", ");
+        }
       }
+    }
     result.append("], ");
 
     result.append(costVar).append(", ").append(violationMeasure).append(")");
@@ -596,11 +640,17 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         Node[] valueNodes = new Node[m];
         Node[] countNodes = new Node[m];
 
-        for (int i = 0; i < n; i++) xNodes[i] = addNode(xVars[i].id, 1);
+        for (int i = 0; i < n; i++) {
+          xNodes[i] = addNode(xVars[i].id, 1);
+        }
 
-        for (int i = 0; i < m; i++) valueNodes[i] = addNode(doms[i].toString(), 0);
+        for (int i = 0; i < m; i++) {
+          valueNodes[i] = addNode(doms[i].toString(), 0);
+        }
 
-        for (int i = 0; i < m; i++) countNodes[i] = addNode("c_" + doms[i].toString(), 0);
+        for (int i = 0; i < m; i++) {
+          countNodes[i] = addNode("c_" + doms[i].toString(), 0);
+        }
 
         Node s = addNode("source", 0);
         Node t = addNode("sink", -n);
@@ -643,8 +693,11 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         for (int i = 0; i < doms.length; i++) {
 
           // shortage flow.
-          if (softLowerBound != null) addArc(s, countNodes[i], 1, 0, softLowerBound[i]);
-          else addArc(s, countNodes[i], 1, 0, softCounters[i].max());
+          if (softLowerBound != null) {
+            addArc(s, countNodes[i], 1, 0, softLowerBound[i]);
+          } else {
+            addArc(s, countNodes[i], 1, 0, softCounters[i].max());
+          }
 
           if (softUpperBound != null) {
             if (n - softUpperBound[i] > 0) {
@@ -659,12 +712,17 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           }
 
           // Arcs, from value node to sink using flow equal idNumber.
-          if (hardCounters != null) addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
-          else addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
+          if (hardCounters != null) {
+            addArc(valueNodes[i], countNodes[i], 0, hardCounters[i]);
+          } else {
+            addArc(valueNodes[i], countNodes[i], 0, hardLowerBound[i], hardUpperBound[i]);
+          }
 
-          if (softLowerBound != null)
+          if (softLowerBound != null) {
             addArc(countNodes[i], t, 0, softLowerBound[i], softUpperBound[i]);
-          else addArc(countNodes[i], t, 0, softCounters[i]);
+          } else {
+            addArc(countNodes[i], t, 0, softCounters[i]);
+          }
         }
 
       } else {

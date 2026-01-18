@@ -150,7 +150,9 @@ public class Nonogram extends ExampleFD {
     Nonogram example = new Nonogram();
 
     example.model();
-    if (example.searchAll()) IO.println("Solution(s) found");
+    if (example.searchAll()) {
+      IO.println("Solution(s) found");
+    }
 
     example.printMatrix(example.board);
   }
@@ -165,19 +167,25 @@ public class Nonogram extends ExampleFD {
     Nonogram example = new Nonogram();
 
     example.model();
-    if (example.searchAll()) IO.println("Solution(s) found");
+    if (example.searchAll()) {
+      IO.println("Solution(s) found");
+    }
     example.printMatrix(example.board);
 
     for (int i = 0; i <= 150; i++) {
 
       StringBuilder no = new StringBuilder(String.valueOf(i));
-      while (no.length() < 3) no.insert(0, "0");
+      while (no.length() < 3) {
+        no.insert(0, "0");
+      }
 
       IO.println("Problem file data" + no + ".nin");
       example.readFromFile("ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
       example.model();
 
-      if (example.searchAll()) IO.println("Solution(s) found");
+      if (example.searchAll()) {
+        IO.println("Solution(s) found");
+      }
 
       example.printMatrix(example.board);
     }
@@ -202,13 +210,14 @@ public class Nonogram extends ExampleFD {
       String[] result = pat.split(str);
 
       int current = 0;
-      for (String s : result)
+      for (String s : result) {
         try {
           int currentNo = Integer.parseInt(s);
           dimensions[current++] = currentNo;
         } catch (Exception _) {
 
         }
+      }
 
       lines = new String[dimensions[0] + dimensions[1]];
 
@@ -237,14 +246,18 @@ public class Nonogram extends ExampleFD {
       int[] sequence = new int[result.length];
 
       int current = 0;
-      for (String s : result)
+      for (String s : result) {
         try {
           sequence[current++] = Integer.parseInt(s);
         } catch (Exception _) {
         }
+      }
 
-      if (i < row_rules.length) row_rules[i] = sequence;
-      else col_rules[i - row_rules.length] = sequence;
+      if (i < row_rules.length) {
+        row_rules[i] = sequence;
+      } else {
+        col_rules[i - row_rules.length] = sequence;
+      }
     }
   }
 
@@ -269,7 +282,9 @@ public class Nonogram extends ExampleFD {
     currentState.addTransition(white);
 
     for (int i = 0; i < sequence.length; i++) {
-      if (sequence[i] == 0) continue;
+      if (sequence[i] == 0) {
+        continue;
+      }
       for (int j = 0; j < sequence[i]; j++) {
         // Black transition
         FSMState nextState = new FSMState();
@@ -312,16 +327,19 @@ public class Nonogram extends ExampleFD {
     // Specifying the board with allowed values.
     board = new IntVar[row_rules.length][col_rules.length];
 
-    for (int i = 0; i < board.length; i++)
+    for (int i = 0; i < board.length; i++) {
       for (int j = 0; j < board[0].length; j++) {
         board[i][j] = new IntVar(store, "board[" + i + "][" + j + "]", values.clone());
       }
+    }
 
     // Zigzag based variable ordering.
     for (int m = 0; m < row_rules.length + col_rules.length - 1; m++) {
       for (int j = 0; j <= m && j < col_rules.length; j++) {
         int i = m - j;
-        if (i >= row_rules.length) continue;
+        if (i >= row_rules.length) {
+          continue;
+        }
         vars.add(board[i][j]);
       }
     }
@@ -333,12 +351,17 @@ public class Nonogram extends ExampleFD {
 
       FSM result = this.createAutomaton(row_rules[i]);
 
-      if (slideDecomposition) store.imposeDecomposition(new Regular(result, board[i]));
+      if (slideDecomposition) {
+        store.imposeDecomposition(new Regular(result, board[i]));
+      }
 
-      if (regular) store.impose(new Regular(result, board[i]));
+      if (regular) {
+        store.impose(new Regular(result, board[i]));
+      }
 
-      if (extensionalMDD)
+      if (extensionalMDD) {
         store.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board[i])));
+      }
     }
 
     // Making sure that columns respect the rules.
@@ -347,14 +370,21 @@ public class Nonogram extends ExampleFD {
       FSM result = createAutomaton(col_rules[i]);
       IntVar[] column = new IntVar[row_rules.length];
 
-      for (int j = 0; j < column.length; j++) column[j] = board[j][i];
+      for (int j = 0; j < column.length; j++) {
+        column[j] = board[j][i];
+      }
 
-      if (slideDecomposition) store.imposeDecomposition(new Regular(result, column));
+      if (slideDecomposition) {
+        store.imposeDecomposition(new Regular(result, column));
+      }
 
-      if (regular) store.impose(new Regular(result, column));
+      if (regular) {
+        store.impose(new Regular(result, column));
+      }
 
-      if (extensionalMDD)
+      if (extensionalMDD) {
         store.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column)));
+      }
     }
   }
 
@@ -391,7 +421,9 @@ public class Nonogram extends ExampleFD {
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       search.printAllSolutions();
-    } else IO.println("Failed to find any solution");
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
@@ -407,8 +439,11 @@ public class Nonogram extends ExampleFD {
 
     for (IntVar[] intVars : matrix) {
       for (IntVar intVar : intVars) {
-        if (intVar.value() == black) IO.print("0");
-        else IO.print(" ");
+        if (intVar.value() == black) {
+          IO.print("0");
+        } else {
+          IO.print(" ");
+        }
       }
       IO.println();
     }

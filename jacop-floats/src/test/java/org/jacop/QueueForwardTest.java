@@ -82,7 +82,9 @@ public class QueueForwardTest {
     if (result) {
       IO.println("Solutions: ");
       label.printAllSolutions();
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     assertEquals(true, result);
   }
@@ -112,7 +114,9 @@ public class QueueForwardTest {
     if (result) {
       IO.println("Solutions: ");
       label.printAllSolutions();
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     assertEquals(false, result);
   }
@@ -141,7 +145,9 @@ public class QueueForwardTest {
     if (result) {
       IO.println("Solutions: ");
       label.printAllSolutions();
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     assertEquals(false, result);
   }

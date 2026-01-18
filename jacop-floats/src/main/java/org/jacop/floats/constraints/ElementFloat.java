@@ -124,7 +124,9 @@ public class ElementFloat extends Constraint
       if (oldFD == null) {
         mappingValuesToIndex.put(
             listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
-      } else ((IntervalDomain) oldFD).addLastElement(i + 1 + indexOffset);
+      } else {
+        ((IntervalDomain) oldFD).addLastElement(i + 1 + indexOffset);
+      }
     }
 
     setScope(index, value);
@@ -167,7 +169,9 @@ public class ElementFloat extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -190,10 +194,12 @@ public class ElementFloat extends Constraint
 
       for (IntDomain duplicate : duplicates) {
         if (indexDom.isIntersecting(duplicate)) {
-          if (domValue.isEmpty()) domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-          else
+          if (domValue.isEmpty()) {
+            domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
+          } else {
             ((FloatIntervalDomain) domValue)
                 .addLastElement(list[duplicate.min() - 1 - indexOffset]);
+          }
         }
       }
       indexDom = indexDom.subtract(duplicatesIndexes);
@@ -218,12 +224,15 @@ public class ElementFloat extends Constraint
         int position = e.nextElement() - 1 - indexOffset;
         double val = list[position];
 
-        if (disjoint(value.domain, val))
-          if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-          else
+        if (disjoint(value.domain, val)) {
+          if (indexDom.size == 0) {
+            indexDom.unionAdapt(position + 1 + indexOffset);
+          } else {
             // 	// indexes are in ascending order and can be added at the end if the last element
             // 	// plus 1 is not equal a new value. In such case the max must be changed.
             indexDom.addLastElement(position + 1 + indexOffset);
+          }
+        }
       }
 
       index.domain.in(store.level, index, indexDom.complement());
@@ -232,8 +241,11 @@ public class ElementFloat extends Constraint
   }
 
   boolean disjoint(FloatDomain v1, double v2) {
-    if (v1.min() > v2 || v2 > v1.max()) return true;
-    else return !v1.contains(v2);
+    if (v1.min() > v2 || v2 > v1.max()) {
+      return true;
+    } else {
+      return !v1.contains(v2);
+    }
   }
 
   @Override
@@ -243,7 +255,7 @@ public class ElementFloat extends Constraint
 
   @Override
   public boolean isStateful() {
-    return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
 
   @Override
@@ -266,7 +278,9 @@ public class ElementFloat extends Constraint
       if (indexes == null) {
         indexes = new IntervalDomain(pos + 1 + indexOffset, pos + 1 + indexOffset);
         map.put(el, indexes);
-      } else indexes.unionAdapt(pos + 1 + indexOffset);
+      } else {
+        indexes.unionAdapt(pos + 1 + indexOffset);
+      }
     }
 
     duplicatesIndexes = new IntervalDomain();
@@ -284,8 +298,11 @@ public class ElementFloat extends Constraint
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (var == index) indexHasChanged = true;
-    else valueHasChanged = true;
+    if (var == index) {
+      indexHasChanged = true;
+    } else {
+      valueHasChanged = true;
+    }
   }
 
   @Override
@@ -306,15 +323,20 @@ public class ElementFloat extends Constraint
 
       if (duplicate == null) {
 
-        if (!index.singleton()) return false;
-        else return list[index.value() - 1 - indexOffset] == v;
+        if (!index.singleton()) {
+          return false;
+        } else {
+          return list[index.value() - 1 - indexOffset] == v;
+        }
 
       } else {
 
         return duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v;
       }
 
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -327,7 +349,9 @@ public class ElementFloat extends Constraint
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(", ").append(indexOffset).append(" )");

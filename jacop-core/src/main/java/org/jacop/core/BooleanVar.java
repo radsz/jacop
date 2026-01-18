@@ -145,7 +145,9 @@ public class BooleanVar extends IntVar {
   @Override
   public void putModelConstraint(Constraint constraint, int pruningEvent) {
 
-    if (singleton()) return;
+    if (singleton()) {
+      return;
+    }
 
     if (pruningEvent == Domain.NONE) {
       return;
@@ -165,7 +167,9 @@ public class BooleanVar extends IntVar {
   @Override
   public void putSearchConstraint(Constraint constraint) {
 
-    if (singleton()) return;
+    if (singleton()) {
+      return;
+    }
 
     domain.putSearchConstraint(store.level, this, constraint);
     store.recordBooleanChange(this);
@@ -180,14 +184,20 @@ public class BooleanVar extends IntVar {
   @Override
   public void removeConstraint(Constraint constraint) {
 
-    if (singleton()) return;
+    if (singleton()) {
+      return;
+    }
 
     int i = domain.searchConstraintsToEvaluate - 1;
-    for (; i >= 0; i--)
-      if (domain.searchConstraints.get(i) == constraint)
+    for (; i >= 0; i--) {
+      if (domain.searchConstraints.get(i) == constraint) {
         domain.removeSearchConstraint(store.level, this, i, constraint);
+      }
+    }
 
-    if (i == -1) domain.removeModelConstraint(store.level, this, constraint);
+    if (i == -1) {
+      domain.removeModelConstraint(store.level, this, constraint);
+    }
 
     store.recordBooleanChange(this);
   }
@@ -230,8 +240,11 @@ public class BooleanVar extends IntVar {
    */
   @Override
   public String toString() {
-    if (domain.singleton()) return id + "=" + domain;
-    else return id + "::" + domain;
+    if (domain.singleton()) {
+      return id + "=" + domain;
+    } else {
+      return id + "::" + domain;
+    }
   }
 
   /**

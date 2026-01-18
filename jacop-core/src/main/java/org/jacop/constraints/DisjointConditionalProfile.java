@@ -74,7 +74,7 @@ class DisjointConditionalProfile extends ProfileConditional {
           && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
         R.dim = 0;
         if (t.minUse(i, R)) {
-          if (trace)
+          if (trace) {
             IO.println(
                 "Update profile "
                     + "["
@@ -83,6 +83,7 @@ class DisjointConditionalProfile extends ProfileConditional {
                     + (R.origin[j] + R.length[j])
                     + ")="
                     + t.length(i).min());
+          }
 
           ExclusiveList tExclusive = ExList.listFor(t.index);
           addToProfile(

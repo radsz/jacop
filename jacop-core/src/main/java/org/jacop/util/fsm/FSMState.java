@@ -83,12 +83,20 @@ public class FSMState {
 
     // replace by HashSet contains check.
     FSMState newFSM = null;
-    for (FSMState s : states) if (s.id == this.id) newFSM = s;
-    if (newFSM != null) return newFSM;
+    for (FSMState s : states) {
+      if (s.id == this.id) {
+        newFSM = s;
+      }
+    }
+    if (newFSM != null) {
+      return newFSM;
+    }
 
     newFSM = new FSMState(this);
     states.add(newFSM);
-    for (FSMTransition t : this.transitions) newFSM.transitions.add(t.deepClone(states));
+    for (FSMTransition t : this.transitions) {
+      newFSM.transitions.add(t.deepClone(states));
+    }
     return newFSM;
   }
 

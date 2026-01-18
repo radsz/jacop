@@ -58,7 +58,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   /** It specifies constraint in the Implies constraint. */
   public PrimitiveConstraint c;
 
-  boolean imposed = false;
+  boolean imposed;
   Store store;
 
   /**
@@ -70,9 +70,10 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   public Implies(IntVar b, PrimitiveConstraint c) {
 
     checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
-    if (b.min() > 1 || b.max() < 0)
+    if (b.min() > 1 || b.max() < 0) {
       throw new IllegalArgumentException(
           "Variable b in reified constraint must have domain at most 0..1");
+    }
 
     numberId = idNumber.incrementAndGet();
     this.b = b;
@@ -126,25 +127,35 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == b) return IntDomain.GROUND;
-    else {
+    if (var == b) {
+      return IntDomain.GROUND;
+    } else {
 
       int eventAcross = -1;
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, true);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, false);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
-      if (eventAcross == -1) return Domain.NONE;
-      else return eventAcross;
+      if (eventAcross == -1) {
+        return Domain.NONE;
+      } else {
+        return eventAcross;
+      }
     }
   }
 
@@ -159,25 +170,35 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == b) return IntDomain.GROUND;
-    else {
+    if (var == b) {
+      return IntDomain.GROUND;
+    } else {
 
       int eventAcross = -1;
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, true);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, false);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
-      if (eventAcross == -1) return Domain.NONE;
-      else return eventAcross;
+      if (eventAcross == -1) {
+        return Domain.NONE;
+      } else {
+        return eventAcross;
+      }
     }
   }
 

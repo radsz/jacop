@@ -97,10 +97,13 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      for (int i = 0; i < ni; i++) x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
+      for (int i = 0; i < ni; i++) {
+        x[i].domain.in(store.level, x[i], offsetInt, ns - 1 + offsetSet);
+      }
 
-      for (int i = 0; i < ns; i++)
+      for (int i = 0; i < ns; i++) {
         s[i].domain.inLUB(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
+      }
 
       firstConsistencyCheck = false;
     }
@@ -110,7 +113,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       IntDomain vs = new IntervalDomain(5);
       for (ValueEnumeration e = x[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
         int xd = e.nextElement();
-        if (s[xd - offsetInt].dom().lub().contains(i + offsetInt)) vs.unionAdapt(xd);
+        if (s[xd - offsetInt].dom().lub().contains(i + offsetInt)) {
+          vs.unionAdapt(xd);
+        }
       }
 
       x[i].domain.in(store.level, x[i], vs);
@@ -129,7 +134,9 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
         int se = e.nextElement();
         if (se >= offsetSet
             && se <= ni + offsetInt
-            && x[se - offsetSet].domain.contains(i + offsetSet)) vs.unionAdapt(se);
+            && x[se - offsetSet].domain.contains(i + offsetSet)) {
+          vs.unionAdapt(se);
+        }
       }
 
       s[i].domain.inLUB(store.level, s[i], vs);
@@ -172,10 +179,14 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
 
   boolean allGround() {
     for (int i = 0; i < ni; i++) {
-      if (!x[i].singleton()) return false;
+      if (!x[i].singleton()) {
+        return false;
+      }
     }
     for (int i = 0; i < ns; i++) {
-      if (!s[i].singleton()) return false;
+      if (!s[i].singleton()) {
+        return false;
+      }
     }
 
     return true;
@@ -187,11 +198,16 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var instanceof IntVar) return IntDomain.ANY;
-    else return SetDomain.ANY;
+    if (var instanceof IntVar) {
+      return IntDomain.ANY;
+    } else {
+      return SetDomain.ANY;
+    }
   }
 
   @Override

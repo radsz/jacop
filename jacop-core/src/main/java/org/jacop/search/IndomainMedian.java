@@ -55,8 +55,11 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
     int position = var.getSize();
 
-    if (position % 2 == 0) position = (position >> 1) - 1;
-    else position = position >> 1;
+    if (position % 2 == 0) {
+      position = (position >> 1) - 1;
+    } else {
+      position = position >> 1;
+    }
 
     if (var.domain.domainID() == IntDomain.IntervalDomainID) {
 
@@ -67,7 +70,9 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
         int intervalSize = domain.intervals[i].max() - domain.intervals[i].min() + 1;
         if (intervalSize <= position) {
           position -= intervalSize;
-        } else return domain.intervals[i].min() + position;
+        } else {
+          return domain.intervals[i].min() + position;
+        }
       }
 
       assert false : "Indomain Median does not work properly.";
@@ -98,7 +103,9 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
         if (intervalSize <= position) {
           position -= intervalSize;
-        } else return next.min() + position;
+        } else {
+          return next.min() + position;
+        }
       }
     }
 

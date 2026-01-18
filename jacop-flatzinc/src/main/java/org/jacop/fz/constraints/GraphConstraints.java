@@ -115,8 +115,11 @@ class GraphConstraints implements ParserTreeConstants {
 
     try {
       IntVar[] matchVars = null;
-      if (index_min == 0) for (int i = 0; i < match.length; i++) matchVars = match;
-      else {
+      if (index_min == 0) {
+        for (int i = 0; i < match.length; i++) {
+          matchVars = match;
+        }
+      } else {
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
           matchVars[i] = new IntVar(store, "node_" + i, 0, pattern_type.length - 1);
@@ -176,8 +179,11 @@ class GraphConstraints implements ParserTreeConstants {
 
     try {
       IntVar[] matchVars = null;
-      if (index_min == 0) for (int i = 0; i < match.length; i++) matchVars = match;
-      else {
+      if (index_min == 0) {
+        for (int i = 0; i < match.length; i++) {
+          matchVars = match;
+        }
+      } else {
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
           matchVars[i] = new IntVar(store, "node_" + i, 0, pattern_type.length - 1);
@@ -240,8 +246,11 @@ class GraphConstraints implements ParserTreeConstants {
 
     try {
       IntVar[] matchVars = null;
-      if (index_min == 0) for (int i = 0; i < match.length; i++) matchVars = match;
-      else {
+      if (index_min == 0) {
+        for (int i = 0; i < match.length; i++) {
+          matchVars = match;
+        }
+      } else {
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
           matchVars[i] = new IntVar(store, "node_" + i, 0, target_type.length - 1);
@@ -306,8 +315,11 @@ class GraphConstraints implements ParserTreeConstants {
 
     try {
       IntVar[] matchVars = null;
-      if (index_min == 0) for (int i = 0; i < match.length; i++) matchVars = match;
-      else {
+      if (index_min == 0) {
+        for (int i = 0; i < match.length; i++) {
+          matchVars = match;
+        }
+      } else {
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
           matchVars[i] = new IntVar(store, "node_" + i, 0, target_type.length - 1);

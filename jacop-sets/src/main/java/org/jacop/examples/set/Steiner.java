@@ -94,14 +94,17 @@ public class Steiner extends ExampleSet {
         store.impose(new CardA(s[i], 3));
       }
 
-      for (int i = 0; i < t; i++)
+      for (int i = 0; i < t; i++) {
         for (int j = i + 1; j < t; j++) {
           SetVar temp = new SetVar(store, "temp" + i + "," + j, new BoundSetDomain(1, n));
           store.impose(new AintersectBeqC(s[i], s[j], temp));
           store.impose(new CardA(temp, 0, 1));
         }
+      }
 
-      for (int i = 0; i < s.length - 1; i++) store.impose(new AltB(s[i], s[i + 1]));
+      for (int i = 0; i < s.length - 1; i++) {
+        store.impose(new AltB(s[i], s[i + 1]));
+      }
 
       // implied constraints to get better pruning
       for (int i = 1; i <= n; i++) {
@@ -141,7 +144,9 @@ public class Steiner extends ExampleSet {
       if (result) {
         IO.println("*** Yes");
         label.getSolutionListener().printAllSolutions();
-      } else IO.println("*** No");
+      } else {
+        IO.println("*** No");
+      }
 
       T2 = System.currentTimeMillis();
       T = T2 - T1;

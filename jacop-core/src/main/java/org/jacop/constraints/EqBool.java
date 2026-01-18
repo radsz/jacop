@@ -95,9 +95,11 @@ public class EqBool extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    for (IntVar var : list)
-      if (var.min() < 0 || var.max() > 1)
+    for (IntVar var : list) {
+      if (var.min() < 0 || var.max() > 1) {
         return "Variable " + var + " does not have boolean domain";
+      }
+    }
 
     return null;
   }
@@ -129,28 +131,46 @@ public class EqBool extends PrimitiveConstraint {
     int index_01 = 0;
 
     for (int i = 0; i < list.length; i++) {
-      if (list[i].min() == 1) x1++;
-      else if (list[i].max() == 0) x0++;
-      else index_01 = i;
+      if (list[i].min() == 1) {
+        x1++;
+      } else if (list[i].max() == 0) {
+        x0++;
+      } else {
+        index_01 = i;
+      }
     }
 
     if (result.min() == 1) {
 
-      if (x0 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 0);
-      if (x1 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 1);
+      if (x0 > 0) {
+        for (IntVar intVar : list) {
+          intVar.domain.inValue(store.level, intVar, 0);
+        }
+      }
+      if (x1 > 0) {
+        for (IntVar intVar : list) {
+          intVar.domain.inValue(store.level, intVar, 1);
+        }
+      }
 
     } else {
       if (result.max() == 0) {
-        if (x0 == 0 && x1 == list.length - 1)
+        if (x0 == 0 && x1 == list.length - 1) {
           list[index_01].domain.inValue(store.level, list[index_01], 0);
-        if (x1 == 0 && x0 == list.length - 1)
+        }
+        if (x1 == 0 && x0 == list.length - 1) {
           list[index_01].domain.inValue(store.level, list[index_01], 1);
+        }
       }
     }
 
-    if (x0 > 0 && x1 > 0) result.domain.inValue(store.level, result, 0);
+    if (x0 > 0 && x1 > 0) {
+      result.domain.inValue(store.level, result, 0);
+    }
 
-    if (x0 == list.length || x1 == list.length) result.domain.inValue(store.level, result, 1);
+    if (x0 == list.length || x1 == list.length) {
+      result.domain.inValue(store.level, result, 1);
+    }
   }
 
   @Override
@@ -165,28 +185,46 @@ public class EqBool extends PrimitiveConstraint {
       int index_01 = 0;
 
       for (int i = 0; i < list.length; i++) {
-        if (list[i].min() == 1) x1++;
-        else if (list[i].max() == 0) x0++;
-        else index_01 = i;
+        if (list[i].min() == 1) {
+          x1++;
+        } else if (list[i].max() == 0) {
+          x0++;
+        } else {
+          index_01 = i;
+        }
       }
 
       if (result.min() == 1) {
 
-        if (x0 == 0 && x1 == list.length - 1)
+        if (x0 == 0 && x1 == list.length - 1) {
           list[index_01].domain.inValue(store.level, list[index_01], 0);
-        if (x1 == 0 && x0 == list.length - 1)
+        }
+        if (x1 == 0 && x0 == list.length - 1) {
           list[index_01].domain.inValue(store.level, list[index_01], 1);
+        }
 
       } else {
         if (result.max() == 0) {
-          if (x0 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 0);
-          if (x1 > 0) for (IntVar intVar : list) intVar.domain.inValue(store.level, intVar, 1);
+          if (x0 > 0) {
+            for (IntVar intVar : list) {
+              intVar.domain.inValue(store.level, intVar, 0);
+            }
+          }
+          if (x1 > 0) {
+            for (IntVar intVar : list) {
+              intVar.domain.inValue(store.level, intVar, 1);
+            }
+          }
         }
       }
 
-      if (x0 > 0 && x1 > 0) result.domain.inValue(store.level, result, 1);
+      if (x0 > 0 && x1 > 0) {
+        result.domain.inValue(store.level, result, 1);
+      }
 
-      if (x0 == list.length || x1 == list.length) result.domain.inValue(store.level, result, 0);
+      if (x0 == list.length || x1 == list.length) {
+        result.domain.inValue(store.level, result, 0);
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -194,7 +232,9 @@ public class EqBool extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
 
-    if (!result.singleton()) return false;
+    if (!result.singleton()) {
+      return false;
+    }
 
     if (result.max() == 0) {
 
@@ -203,10 +243,15 @@ public class EqBool extends PrimitiveConstraint {
 
       for (IntVar intVar : list) {
 
-        if (intVar.min() == 1) x1++;
-        else if (intVar.max() == 0) x0++;
+        if (intVar.min() == 1) {
+          x1++;
+        } else if (intVar.max() == 0) {
+          x0++;
+        }
 
-        if (x0 > 0 && x1 > 0) return true;
+        if (x0 > 0 && x1 > 0) {
+          return true;
+        }
       }
 
       return false;
@@ -215,10 +260,15 @@ public class EqBool extends PrimitiveConstraint {
 
       if (result.min() == 1) {
 
-        if (!grounded()) return false;
+        if (!grounded()) {
+          return false;
+        }
 
-        for (int i = 0; i < list.length - 1; i++)
-          if (list[i].value() != list[i + 1].value()) return false;
+        for (int i = 0; i < list.length - 1; i++) {
+          if (list[i].value() != list[i + 1].value()) {
+            return false;
+          }
+        }
 
         return true;
       } else {
@@ -230,7 +280,9 @@ public class EqBool extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
 
-    if (!result.singleton()) return false;
+    if (!result.singleton()) {
+      return false;
+    }
 
     if (result.max() == 0) {
 
@@ -239,10 +291,15 @@ public class EqBool extends PrimitiveConstraint {
 
       for (IntVar intVar : list) {
 
-        if (intVar.min() == 1) x1++;
-        else if (intVar.max() == 0) x0++;
+        if (intVar.min() == 1) {
+          x1++;
+        } else if (intVar.max() == 0) {
+          x0++;
+        }
 
-        if (x0 > 0 && x1 > 0) return false;
+        if (x0 > 0 && x1 > 0) {
+          return false;
+        }
       }
 
       return x0 == list.length || x1 == list.length;
@@ -256,10 +313,15 @@ public class EqBool extends PrimitiveConstraint {
 
         for (IntVar intVar : list) {
 
-          if (intVar.min() == 1) x1++;
-          else if (intVar.max() == 0) x0++;
+          if (intVar.min() == 1) {
+            x1++;
+          } else if (intVar.max() == 0) {
+            x0++;
+          }
 
-          if (x0 > 0 && x1 > 0) return true;
+          if (x0 > 0 && x1 > 0) {
+            return true;
+          }
         }
 
         return false;
@@ -277,7 +339,9 @@ public class EqBool extends PrimitiveConstraint {
     resultString.append(" : eqBool( ");
     for (int i = 0; i < list.length; i++) {
       resultString.append(list[i]);
-      if (i < list.length - 1) resultString.append(", ");
+      if (i < list.length - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append(", ");
     resultString.append(result);
@@ -309,8 +373,12 @@ public class EqBool extends PrimitiveConstraint {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 }

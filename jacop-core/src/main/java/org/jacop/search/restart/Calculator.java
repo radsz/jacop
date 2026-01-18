@@ -40,7 +40,7 @@ import org.jacop.search.ConsistencyListener;
  */
 public abstract class Calculator implements ConsistencyListener {
 
-  long numberFails = 0;
+  long numberFails;
 
   long failLimit;
 
@@ -54,10 +54,15 @@ public abstract class Calculator implements ConsistencyListener {
    */
   public boolean executeAfterConsistency(boolean consistent) {
 
-    if (child != null) child.executeAfterConsistency(consistent);
+    if (child != null) {
+      child.executeAfterConsistency(consistent);
+    }
 
-    if (numberFails >= failLimit) return false;
-    else if (!consistent) numberFails++;
+    if (numberFails >= failLimit) {
+      return false;
+    } else if (!consistent) {
+      numberFails++;
+    }
 
     return consistent;
   }

@@ -58,7 +58,9 @@ public class SimpleCpVarDomain extends SatCPBridge {
     super(variable);
     initialize(wrapper);
     setDomain(variable.min(), variable.max());
-    if (isTranslated) wrapper.domainTranslator.translate(variable);
+    if (isTranslated) {
+      wrapper.domainTranslator.translate(variable);
+    }
   }
 
   // basic constructor
@@ -67,7 +69,9 @@ public class SimpleCpVarDomain extends SatCPBridge {
     this.isTranslated = translate;
     initialize(wrapper);
     setDomain(variable.min(), variable.max());
-    if (isTranslated) wrapper.domainTranslator.translate(variable);
+    if (isTranslated) {
+      wrapper.domainTranslator.translate(variable);
+    }
   }
 
   @Override
@@ -77,8 +81,11 @@ public class SimpleCpVarDomain extends SatCPBridge {
 
     int offset = value - min;
 
-    if (isEquality) return firstVar + 2 * offset;
-    else return firstVar + 2 * offset + 1;
+    if (isEquality) {
+      return firstVar + 2 * offset;
+    } else {
+      return firstVar + 2 * offset + 1;
+    }
   }
 
   @Override
@@ -102,7 +109,9 @@ public class SimpleCpVarDomain extends SatCPBridge {
   @Override
   public void setDomain(int minValue, int maxValue) {
 
-    if (hasSetDomain) return;
+    if (hasSetDomain) {
+      return;
+    }
 
     super.setDomain(minValue, maxValue);
 
@@ -115,7 +124,9 @@ public class SimpleCpVarDomain extends SatCPBridge {
       int newLength = 2 * (firstVar + width);
       wrapper.boolVarToDomains = Arrays.copyOf(wrapper.boolVarToDomains, newLength);
     }
-    for (int i = firstVar; i < firstVar + width; ++i) wrapper.boolVarToDomains[i] = this;
+    for (int i = firstVar; i < firstVar + width; i++) {
+      wrapper.boolVarToDomains[i] = this;
+    }
   }
 
   /** given some literal has a value, what other literals should be asserted ? */
@@ -141,32 +152,40 @@ public class SimpleCpVarDomain extends SatCPBridge {
         // 'x=value' is true
 
         // set false all other equality literals
-        for (int i = min; i <= max; ++i) {
-          if (i == value) continue;
+        for (int i = min; i <= max; i++) {
+          if (i == value) {
+            continue;
+          }
           clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
         }
         // set false all 'x<=d' for d < value (ie x>d)
-        for (int i = min; i < value; ++i) {
+        for (int i = min; i < value; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
         }
         // set true all 'x<=d' for d >= value
-        for (int i = value; i <= max; ++i) {
+        for (int i = value; i <= max; i++) {
           clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
         }
       } else {
         // assertion 'x!=value'
 
-        if (value == min) // 'x!=min' => 'x>min'
-        clauseDatabase.propagate(-cpValueToBoolVar(value, false), literal);
-        if (value == max) // 'x!=max' => 'x<= max-1'
-        clauseDatabase.propagate(cpValueToBoolVar(value - 1, false), literal);
+        if (value == min) { // 'x!=min' => 'x>min'
+          clauseDatabase.propagate(-cpValueToBoolVar(value, false), literal);
+        }
+        if (value == max) { // 'x!=max' => 'x<= max-1'
+          clauseDatabase.propagate(cpValueToBoolVar(value - 1, false), literal);
+        }
 
         // if there were 2 values, and one is falsified, assert the other
-        if (max - min == 1 && value == max)
+        if (max - min == 1 && value == max) {
           clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
-        if (max - min == 1 && value == min)
+        }
+        if (max - min == 1 && value == min) {
           clauseDatabase.propagate(cpValueToBoolVar(max, true), literal);
-        if (value == min + 1) clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
+        }
+        if (value == min + 1) {
+          clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
+        }
       }
     } else {
       // we just asserted 'x<=value' to true or false
@@ -175,22 +194,22 @@ public class SimpleCpVarDomain extends SatCPBridge {
         // assertion 'x<=value'
 
         // set false all 'x=d' for d > value
-        for (int i = value + 1; i <= max; ++i) {
+        for (int i = value + 1; i <= max; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
         }
         // set true all 'x<=d' for d > value
-        for (int i = value + 1; i <= max; ++i) {
+        for (int i = value + 1; i <= max; i++) {
           clauseDatabase.propagate(cpValueToBoolVar(i, false), literal);
         }
       } else {
         // assertion 'x>value'
 
         // set false all 'x=d' for d <= value
-        for (int i = min; i <= value; ++i) {
+        for (int i = min; i <= value; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, true), literal);
         }
         // set false all 'x<=d' for d <= value
-        for (int i = min; i <= value; ++i) {
+        for (int i = min; i <= value; i++) {
           clauseDatabase.propagate(-cpValueToBoolVar(i, false), literal);
         }
       }

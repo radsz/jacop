@@ -54,7 +54,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   /** It specifies constraint condC in the IfThen constraint. */
   public final PrimitiveConstraint thenC;
 
-  boolean imposed = false;
+  boolean imposed;
   Store store;
 
   /**
@@ -118,33 +118,46 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     int eventAcross = -1;
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
@@ -158,33 +171,46 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     int eventAcross = -1;
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
@@ -194,14 +220,18 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     if (mode) {
       if (consistencyPruningEvents != null) {
         Integer possibleEvent = consistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
     }
     // If notConsistency function mode
     else {
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
     }
 
@@ -209,26 +239,37 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
@@ -254,7 +295,9 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
 
     if (imposed) {
       return condC.notSatisfied();
-    } else return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());
+    } else {
+      return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());
+    }
   }
 
   @Override

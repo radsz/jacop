@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  */
 public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
-  PrimitiveConstraint c = null;
+  PrimitiveConstraint c;
 
   /**
    * It constructs and constraint on variables.
@@ -56,11 +56,15 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     IntVar[] r = filter(a);
 
-    if (r == null) c = new XeqC(result, 0);
-    else if (r.length == 1) c = new XeqY(r[0], result);
-    else if (r.length == 2) {
+    if (r == null) {
+      c = new XeqC(result, 0);
+    } else if (r.length == 1) {
+      c = new XeqY(r[0], result);
+    } else if (r.length == 2) {
       c = new AndBoolSimple(r[0], r[1], result);
-    } else c = new AndBoolVector(r, result);
+    } else {
+      c = new AndBoolVector(r, result);
+    }
   }
 
   /**
@@ -100,10 +104,15 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
 
   IntVar[] filter(IntVar[] xs) {
     List<IntVar> result = new ArrayList<>();
-    for (IntVar x : xs)
-      if (x.max() == 0) return null;
-      else if (x.min() == 1) continue;
-      else result.add(x);
+    for (IntVar x : xs) {
+      if (x.max() == 0) {
+        return null;
+      } else if (x.min() == 1) {
+        continue;
+      } else {
+        result.add(x);
+      }
+    }
 
     return result.toArray(new IntVar[0]);
   }

@@ -64,7 +64,9 @@ public class ArchFriends extends ExampleFD {
 
     example.model();
 
-    if (example.searchAllAtOnce()) IO.println("Solution(s) found");
+    if (example.searchAllAtOnce()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override

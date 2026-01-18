@@ -753,14 +753,16 @@ public class IntDomainTest {
   public IntDomain prepareSmallDenseDomain(int[] intervalList) {
     IntDomain domain;
 
-    if (intervalList.length % 2 != 0)
+    if (intervalList.length % 2 != 0) {
       throw new IllegalArgumentException(
           "List must have an even number of elements"
               + " since the domain is a list of intervals and each interval is denoted by two elements");
-    if (intervalList.length < 2)
+    }
+    if (intervalList.length < 2) {
       throw new IllegalArgumentException(
           "List must have at least two elements since the domain"
               + " must have at least one interval and each interval is denoted by two integers.");
+    }
 
     domain = new SmallDenseDomain(intervalList[0], intervalList[1]);
     for (int i = 2; i < intervalList.length; i += 2) {
@@ -780,14 +782,16 @@ public class IntDomainTest {
   public IntDomain prepareIntervalDomain(int[] intervalList) {
     IntDomain domain;
 
-    if (intervalList.length % 2 != 0)
+    if (intervalList.length % 2 != 0) {
       throw new IllegalArgumentException(
           "List must have an even number of elements"
               + " since the domain is a list of intervals and each interval is denoted by two elements");
-    if (intervalList.length < 2)
+    }
+    if (intervalList.length < 2) {
       throw new IllegalArgumentException(
           "List must have at least two elements since the domain"
               + " must have at least one interval and each interval is denoted by two integers.");
+    }
 
     domain = new IntervalDomain(intervalList[0], intervalList[1]);
     for (int i = 2; i < intervalList.length; i += 2) {

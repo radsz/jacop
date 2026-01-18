@@ -92,17 +92,20 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     // this.elements = Arrays.copyOf(elements, elements.length);
 
     this.increasingCosts = true;
-    for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++)
+    for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++) {
       if (weights[i] > weights[i + 1]) {
         this.increasingCosts = false;
         break;
       }
+    }
 
     elementWeights = new HashMap<>(weights.length);
     ValueEnumeration enumer = a.domain.lub().valueEnumeration();
     int i = 0;
 
-    while (enumer.hasMoreElements()) elementWeights.put(enumer.nextElement(), weights[i++]);
+    while (enumer.hasMoreElements()) {
+      elementWeights.put(enumer.nextElement(), weights[i++]);
+    }
 
     setScope(a, totalWeight);
   }
@@ -152,14 +155,16 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
       IntDomain potentialEl = lubA.subtract(glbA);
 
       ValueEnumeration enumer = glbA.valueEnumeration();
-      while (enumer.hasMoreElements()) glbSum += elementWeights.get(enumer.nextElement());
+      while (enumer.hasMoreElements()) {
+        glbSum += elementWeights.get(enumer.nextElement());
+      }
 
       lubSum = glbSum;
 
       int noOfRequiredEl = a.domain.card().min() - glbA.getSize();
       int weightOfLastRequiredEl = 0;
 
-      if (increasingCosts)
+      if (increasingCosts) {
         if (noOfRequiredEl > 0) {
           enumer = potentialEl.valueEnumeration();
           while (noOfRequiredEl > 1) {
@@ -168,6 +173,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
           }
           weightOfLastRequiredEl = elementWeights.get(enumer.nextElement());
         }
+      }
 
       enumer = potentialEl.valueEnumeration();
 
@@ -185,7 +191,9 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
       }
 
       // inLUB above can change GLB due to cardinality constraints. Need to recompute.
-      if (change) continue;
+      if (change) {
+        continue;
+      }
 
       int noOfSkippedEl = a.domain.lub().getSize() - a.domain.card().max();
       int weightOfLastSkippedItem = 0;
@@ -197,13 +205,18 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
         el = enumer.nextElement();
         weight = elementWeights.get(el);
 
-        if (increasingCosts)
-          if (noOfSkippedEl == 0) lubSum += weight;
-          else {
-            if (noOfSkippedEl == 1) weightOfLastSkippedItem = weight;
+        if (increasingCosts) {
+          if (noOfSkippedEl == 0) {
+            lubSum += weight;
+          } else {
+            if (noOfSkippedEl == 1) {
+              weightOfLastSkippedItem = weight;
+            }
             noOfSkippedEl--;
           }
-        else lubSum += weight;
+        } else {
+          lubSum += weight;
+        }
       }
 
       enumer = potentialEl.valueEnumeration();
@@ -219,7 +232,9 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
       }
 
       // inGLB above can change LUB due to cardinality constraints. Need to recompute.
-      if (change) continue;
+      if (change) {
+        continue;
+      }
 
       totalWeight.domain.in(
           store.level,
@@ -237,10 +252,15 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == this.a) return SetDomain.ANY;
-    else return IntDomain.ANY;
+    if (var == this.a) {
+      return SetDomain.ANY;
+    } else {
+      return IntDomain.ANY;
+    }
   }
 
   @Override
@@ -251,11 +271,15 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     ValueEnumeration enumer = a.domain.glb().valueEnumeration();
     int sum = 0;
-    while (enumer.hasMoreElements()) sum += elementWeights.get(enumer.nextElement());
+    while (enumer.hasMoreElements()) {
+      sum += elementWeights.get(enumer.nextElement());
+    }
     return totalWeight.value() == sum;
   }
 

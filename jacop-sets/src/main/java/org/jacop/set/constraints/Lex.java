@@ -105,18 +105,24 @@ public class Lex extends Constraint implements Stateful {
 
     if (strict) {
 
-      if (b.domain.lub().isEmpty()) throw Store.failException;
+      if (b.domain.lub().isEmpty()) {
+        throw Store.failException;
+      }
     }
 
-    if (a.domain.lub().isEmpty()) return;
+    if (a.domain.lub().isEmpty()) {
+      return;
+    }
 
     // Remove all elements from b.lub/b.glb which are smaller than a.lub.min().
-    if (a.domain.card().min() > 0)
+    if (a.domain.card().min() > 0) {
       b.domain.inLUB(store.level, b, new IntervalDomain(a.domain.lub().min(), Integer.MAX_VALUE));
+    }
 
-    if (strict && a.domain.card().singleton(1) && b.domain.card().singleton(1))
+    if (strict && a.domain.card().singleton(1) && b.domain.card().singleton(1)) {
       b.domain.inLUB(
           store.level, b, new IntervalDomain(a.domain.lub().min() + 1, Integer.MAX_VALUE));
+    }
 
     if (a.domain.glb().isEmpty()) {
 
@@ -127,8 +133,9 @@ public class Lex extends Constraint implements Stateful {
         int minA = a.domain.lub().min();
         int maxB = b.domain.lub().max();
 
-        if (strict && minA >= maxB || minA > maxB)
+        if (strict && minA >= maxB || minA > maxB) {
           a.domain.inLUB(store.level, a, IntDomain.emptyIntDomain);
+        }
 
         return;
 
@@ -156,7 +163,7 @@ public class Lex extends Constraint implements Stateful {
           if (nextElinLUBofA == nextElinGLBofB) {
             lastElinLUBofA = nextElinLUBofA;
 
-            if (!enumerGLBofB.hasMoreElements())
+            if (!enumerGLBofB.hasMoreElements()) {
               if (enumerLUBofA.hasMoreElements()) {
                 nextElinLUBofA = enumerLUBofA.nextElement();
                 if ((strict && nextElinLUBofA < b.domain.lub().max())
@@ -172,8 +179,11 @@ public class Lex extends Constraint implements Stateful {
                   return;
                 }
               }
+            }
 
-            if (!enumerLUBofA.hasMoreElements()) return;
+            if (!enumerLUBofA.hasMoreElements()) {
+              return;
+            }
 
             nextElinGLBofB = enumerGLBofB.nextElement();
             nextElinLUBofA = enumerLUBofA.nextElement();
@@ -216,14 +226,16 @@ public class Lex extends Constraint implements Stateful {
             && b.domain.card().max() == 2) {
           // Special case - {y} .. {x, y} <lex {} .. {x, y}
           // exclude x from b.lub.
-          if (b.domain.lub().min() == a.domain.lub().min())
+          if (b.domain.lub().min() == a.domain.lub().min()) {
             b.domain.inLUBComplement(store.level, b, b.domain.lub().min());
+          }
           // force x into a.glb
           a.domain.inGLB(store.level, a, a.domain.lub().min());
         }
 
-        if (b.domain.card().min() == 0)
+        if (b.domain.card().min() == 0) {
           b.domain.inCardinality(store.level, b, 1, Integer.MAX_VALUE);
+        }
 
       } else {
         // a.glb != {}
@@ -254,8 +266,9 @@ public class Lex extends Constraint implements Stateful {
                 && b.domain.card().min() + 1 == b.domain.card().max()
                 && a.domain.card().max() == 2
                 && a.domain.card().min() == b.domain.card().max()
-                && a.domain.glb().eq(b.domain.lub()))
+                && a.domain.glb().eq(b.domain.lub())) {
               b.domain.inLUBComplement(store.level, b, nextElinGLBofA);
+            }
 
             return;
           }
@@ -264,7 +277,9 @@ public class Lex extends Constraint implements Stateful {
             previousElinLUBofA = nextElinLUBofA;
             noSmaller++;
             // if noSmaller = 2 then two ways of fixing and so can exit.
-            if (noSmaller == 2) return;
+            if (noSmaller == 2) {
+              return;
+            }
             nextElinLUBofA = enumerLUBofA.nextElement();
             continue;
           }
@@ -282,25 +297,29 @@ public class Lex extends Constraint implements Stateful {
               } else {
 
                 // noSmaller == 0.
-                if (strict && nextElinGLBofB == b.domain.lub().previousValue(b.domain.lub().max()))
+                if (strict
+                    && nextElinGLBofB == b.domain.lub().previousValue(b.domain.lub().max())) {
                   // only one element left to add to b.lub() to satisfy a <lex b
                   b.domain.inGLB(store.level, b, b.domain.lub().max());
+                }
 
                 if (strict
                     && nextElinGLBofA == a.domain.lub().previousValue(a.domain.lub().max())
-                    && a.domain.lub().max() >= b.domain.lub().max())
+                    && a.domain.lub().max() >= b.domain.lub().max()) {
                   // only one element possible to add to a, and this element is larger or equal to
                   // maximum element in b.lub then remove it.
                   a.domain.inLUBComplement(store.level, a, a.domain.lub().max());
+                }
 
                 if (strict
                     && nextElinGLBofA == a.domain.lub().max()
-                    && nextElinGLBofB == b.domain.lub().max())
+                    && nextElinGLBofB == b.domain.lub().max()) {
                   // if strict and
                   // a has no more elements in aLUB to be added and
                   // b has no more elements in bLUB to be added
                   // then fail.
                   throw Store.failException;
+                }
 
                 // TODO.
                 // a.glb exhausted, possibly there are some elements in a.lub that must be removed
@@ -319,11 +338,12 @@ public class Lex extends Constraint implements Stateful {
 
                 // bGLB exhausted, aGLB not exhausted.
                 // b can not use elements between [nextElinGLBofA..nextElinLUBofA]
-                if (nextElinGLBofA + 1 <= nextElinLUBofA - 1)
+                if (nextElinGLBofA + 1 <= nextElinLUBofA - 1) {
                   b.domain.inLUB(
                       store.level,
                       b,
                       new IntervalDomain(nextElinGLBofA + 1, nextElinLUBofA - 1).complement());
+                }
 
                 // all elements equal up to now in aGLB and bGLB, but bLUB has no sufficiently large
                 // element
@@ -339,8 +359,9 @@ public class Lex extends Constraint implements Stateful {
                   // <lex b.
                   int previous = b.domain.lub().previousValue(b.domain.lub().max());
                   // only one element left in B to make a <lex b true.
-                  if (previous == nextElinGLBofB)
+                  if (previous == nextElinGLBofB) {
                     b.domain.inGLB(store.level, b, b.domain.lub().max());
+                  }
                 }
 
               } else {
@@ -380,7 +401,9 @@ public class Lex extends Constraint implements Stateful {
                   nextElinLUBofA = enumerLUBofA.nextElement();
 
                   if ((strict && nextElinLUBofA >= b.domain.lub().max())
-                      || nextElinLUBofA > b.domain.lub().max()) throw Store.failException;
+                      || nextElinLUBofA > b.domain.lub().max()) {
+                    throw Store.failException;
+                  }
 
                   // "cheating", assuming the worst case for pruning, maximum element added to bGLB.
                   nextElinGLBofB = b.domain.lub().max();
@@ -393,9 +416,10 @@ public class Lex extends Constraint implements Stateful {
                 continue;
                 // END BUGGY
 
-              } else
+              } else {
                 // if noSmaller = 0 and could not fix above then fail.
                 throw Store.failException;
+              }
             }
 
             if (noSmaller == 1) {
@@ -493,8 +517,12 @@ public class Lex extends Constraint implements Stateful {
 
   @Override
   public void removeLevel(int level) {
-    if (inclusionLevel == level) inclusionLevel = -1;
-    if (smallerElLevel == level) smallerElLevel = -1;
+    if (inclusionLevel == level) {
+      inclusionLevel = -1;
+    }
+    if (smallerElLevel == level) {
+      smallerElLevel = -1;
+    }
   }
 
   @Override

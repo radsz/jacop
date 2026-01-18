@@ -103,11 +103,12 @@ public class BIBD extends ExampleFD {
     // Get problem size n from second program argument.
     x = new IntVar[v][b];
 
-    for (int i = 0; i < v; i++)
+    for (int i = 0; i < v; i++) {
       for (int j = 0; j < b; j++) {
         x[i][j] = new BooleanVar(store, "x" + i + "_" + j);
         vars.add(x[i][j]);
       }
+    }
 
     IntVar rVar = new IntVar(store, "r", r, r);
     IntVar kVar = new IntVar(store, "k", k, k);
@@ -119,11 +120,13 @@ public class BIBD extends ExampleFD {
 
     for (int j = 0; j < b; j++) {
       IntVar[] column = new IntVar[v];
-      for (int i = 0; i < v; i++) column[i] = x[i][j];
+      for (int i = 0; i < v; i++) {
+        column[i] = x[i][j];
+      }
       store.impose(new SumInt(column, "==", kVar), 1);
     }
 
-    for (int i = 0; i - 1 < v; i++)
+    for (int i = 0; i - 1 < v; i++) {
       for (int j = i + 1; j < v; j++) {
 
         List<IntVar> result = new ArrayList<>();
@@ -137,5 +140,6 @@ public class BIBD extends ExampleFD {
 
         store.impose(new SumInt(result, "==", lambdaVar), 1);
       }
+    }
   }
 }

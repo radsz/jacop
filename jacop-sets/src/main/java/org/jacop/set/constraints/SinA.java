@@ -93,7 +93,9 @@ public class SinA extends PrimitiveConstraint {
 
     a.domain.inGLB(store.level, a, set);
 
-    if (strict) a.domain.inCardinality(store.level, a, set.getSize() + 1, Integer.MAX_VALUE);
+    if (strict) {
+      a.domain.inCardinality(store.level, a, set.getSize() + 1, Integer.MAX_VALUE);
+    }
   }
 
   @Override
@@ -131,22 +133,30 @@ public class SinA extends PrimitiveConstraint {
 
     // TODO, test it properly.
 
-    if (set.getSize() > a.domain.lub().getSize() + 1) return;
+    if (set.getSize() > a.domain.lub().getSize() + 1) {
+      return;
+    }
 
-    if (!a.domain.lub().contains(set)) return;
+    if (!a.domain.lub().contains(set)) {
+      return;
+    }
 
     IntDomain result = set.subtract(a.domain.glb());
 
-    if (result.isEmpty())
+    if (result.isEmpty()) {
       if (strict) {
-        if (set.getSize() < a.domain.glb().getSize()) throw Store.failException;
-        else {
+        if (set.getSize() < a.domain.glb().getSize()) {
+          throw Store.failException;
+        } else {
           // set contains only elements within a.domain.glb()
           // set does not have less elements a.domain.glb()
           // => a must be equal to set to make strict relation not true.
           a.domain.inGLB(store.level, a, set);
         }
-      } else throw Store.failException;
+      } else {
+        throw Store.failException;
+      }
+    }
 
     if (!strict && result.getSize() == 1) {
       a.domain.inLUBComplement(store.level, a, result.value());

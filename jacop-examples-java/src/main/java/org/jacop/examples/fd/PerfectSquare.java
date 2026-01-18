@@ -1574,8 +1574,8 @@ public class PerfectSquare extends ExampleFD {
       store.impose(new XplusCeqZ(varsY[i], squares()[problemNo][1][i], endY[i]));
     }
 
-    for (int i = 0; i < varsX.length; i++)
-      for (int j = 0; j < varsY.length; j++)
+    for (int i = 0; i < varsX.length; i++) {
+      for (int j = 0; j < varsY.length; j++) {
         if (i != j) {
           PrimitiveConstraint[] orArray = {
             new XlteqY(endX[i], varsX[j]),
@@ -1586,6 +1586,8 @@ public class PerfectSquare extends ExampleFD {
 
           store.impose(new Or(orArray));
         }
+      }
+    }
 
     IntVar limit = new IntVar(store, masterSize, masterSize);
 
@@ -1829,9 +1831,13 @@ public class PerfectSquare extends ExampleFD {
 
       IO.print("Positions of rectangles : (");
 
-      for (int i = 0; i < varsX.length; i++)
-        if (i < varsX.length - 1) IO.print("(" + varsX[i] + ", " + varsY[i] + "), ");
-        else IO.print("(" + varsX[i] + ", " + varsY[i] + ")");
+      for (int i = 0; i < varsX.length; i++) {
+        if (i < varsX.length - 1) {
+          IO.print("(" + varsX[i] + ", " + varsY[i] + "), ");
+        } else {
+          IO.print("(" + varsX[i] + ", " + varsY[i] + ")");
+        }
+      }
 
       IO.println(")");
 
@@ -1871,11 +1877,13 @@ public class PerfectSquare extends ExampleFD {
 
     float picxsize, picysize;
 
-    for (int i = 0; i < xl.length; i++)
-      xlen = (xlen < varsX[i].value() + xl[i].value()) ? varsX[i].value() + xl[i].value() : xlen;
+    for (int i = 0; i < xl.length; i++) {
+      xlen = xlen < varsX[i].value() + xl[i].value() ? varsX[i].value() + xl[i].value() : xlen;
+    }
 
-    for (int i = 0; i < yl.length; i++)
-      ylen = (ylen < varsY[i].value() + yl[i].value()) ? varsY[i].value() + yl[i].value() : ylen;
+    for (int i = 0; i < yl.length; i++) {
+      ylen = ylen < varsY[i].value() + yl[i].value() ? varsY[i].value() + yl[i].value() : ylen;
+    }
 
     float scalefac = 300 / (float) xlen;
 

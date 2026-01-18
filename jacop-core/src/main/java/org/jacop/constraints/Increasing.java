@@ -46,7 +46,7 @@ public class Increasing extends Constraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   // List of decomposed constraints
-  protected List<Constraint> constraints = null;
+  protected List<Constraint> constraints;
   final IntVar[] x;
   final int n;
   byte strict = 0;
@@ -72,7 +72,9 @@ public class Increasing extends Constraint {
   public Increasing(IntVar[] x, boolean strict) {
     this(x);
 
-    if (strict) this.strict = 1;
+    if (strict) {
+      this.strict = 1;
+    }
   }
 
   /**
@@ -108,8 +110,11 @@ public class Increasing extends Constraint {
     List<Constraint> cs = new ArrayList<>();
 
     for (int i = 1; i < n; i++) {
-      if (strict == 1) cs.add(new XltY(x[i - 1], x[i]));
-      else cs.add(new XlteqY(x[i - 1], x[i]));
+      if (strict == 1) {
+        cs.add(new XltY(x[i - 1], x[i]));
+      } else {
+        cs.add(new XlteqY(x[i - 1], x[i]));
+      }
     }
 
     return cs;
@@ -118,9 +123,13 @@ public class Increasing extends Constraint {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c);
+    for (Constraint c : constraints) {
+      store.impose(c);
+    }
   }
 
   @Override
@@ -136,7 +145,9 @@ public class Increasing extends Constraint {
 
     for (int i = 0; i < n; i++) {
       result.append(x[i]);
-      if (i < n - 1) result.append(", ");
+      if (i < n - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ").append(strict == 1 ? "strict" : "non-strict").append(")");
 

@@ -75,9 +75,13 @@ public class QueueForward<T extends Constraint> {
 
       List<T> varConstraints = forwardMap.get(var);
 
-      if (varConstraints == null) continue;
+      if (varConstraints == null) {
+        continue;
+      }
 
-      if (varConstraints.isEmpty()) forwardMap.remove(var);
+      if (varConstraints.isEmpty()) {
+        forwardMap.remove(var);
+      }
     }
 
     isEmpty = forwardMap.isEmpty();
@@ -109,11 +113,15 @@ public class QueueForward<T extends Constraint> {
 
   public void queueForward(int level, Var variable) {
 
-    if (isEmpty) return;
+    if (isEmpty) {
+      return;
+    }
 
     List<T> constraints = forwardMap.get(variable);
 
-    if (constraints == null) return;
+    if (constraints == null) {
+      return;
+    }
 
     for (Constraint constraint : constraints) {
       constraint.queueVariable(level, variable);

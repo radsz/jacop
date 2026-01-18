@@ -67,8 +67,11 @@ public class InArea implements ExternalConstraint {
 
     this.allowedArea = area;
 
-    if (holes != null) this.holes = holes;
-    else this.holes = new ArrayList<>(0);
+    if (holes != null) {
+      this.holes = holes;
+    } else {
+      this.holes = new ArrayList<>(0);
+    }
 
     assert checkInvariants() == null : checkInvariants();
   }
@@ -81,9 +84,13 @@ public class InArea implements ExternalConstraint {
    */
   public String checkInvariants() {
 
-    if (holes == null) return "uninitialized holes set";
+    if (holes == null) {
+      return "uninitialized holes set";
+    }
 
-    if (this.allowedArea == null) return "allowed area is not defined";
+    if (this.allowedArea == null) {
+      return "allowed area is not defined";
+    }
 
     return null;
   }
@@ -94,7 +101,9 @@ public class InArea implements ExternalConstraint {
 
     constraints.add(new AllowedArea(geost, allowedArea.origin, allowedArea.length));
 
-    for (DBox hole : holes) constraints.add(new ForbiddenArea(geost, hole.origin, hole.length));
+    for (DBox hole : holes) {
+      constraints.add(new ForbiddenArea(geost, hole.origin, hole.length));
+    }
 
     return constraints;
   }
@@ -118,8 +127,11 @@ public class InArea implements ExternalConstraint {
 
   public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
 
-    if (ic.getClass() != AllowedArea.class && ic.getClass() != ForbiddenArea.class) return false;
-    else return constraints.contains(ic);
+    if (ic.getClass() != AllowedArea.class && ic.getClass() != ForbiddenArea.class) {
+      return false;
+    } else {
+      return constraints.contains(ic);
+    }
   }
 
   public GeostObject[] getObjectScope() {

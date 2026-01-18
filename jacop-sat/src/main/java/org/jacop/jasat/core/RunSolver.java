@@ -192,7 +192,7 @@ public final class RunSolver {
       input = System.in;
     } else {
       filename = parser.realArgs[0];
-      if (filename.equals("-")) {
+      if ("-".equals(filename)) {
         IO.println("c read from stdin");
         input = System.in;
       } else {
@@ -244,7 +244,9 @@ public final class RunSolver {
 
     // add all clauses to the core through the preprocessor
     BasicPreprocessor preprocessor = new BasicPreprocessor(core);
-    for (IntVec clause : parser) preprocessor.addModelClause(clause);
+    for (IntVec clause : parser) {
+      preprocessor.addModelClause(clause);
+    }
 
     core.markTime("parse");
     core.logc(2, "parsing time (ms): %d", core.getTimeDiff("init_stop"));
@@ -256,11 +258,14 @@ public final class RunSolver {
     core.logc("total time (ms): %d", core.getTimeDiff("init"));
     core.logc(
         "throughput (assignments/s): %d",
-        (core.assignmentNum * 1000 / (core.getTimeDiff("start") + 1)));
+        core.assignmentNum * 1000 / (core.getTimeDiff("start") + 1));
 
     // print results
-    if (core.hasSolution()) core.printSolution();
-    else core.logc("solver state : %s", SolverState.show(core.currentState));
+    if (core.hasSolution()) {
+      core.printSolution();
+    } else {
+      core.logc("solver state : %s", SolverState.show(core.currentState));
+    }
 
     // return with good exit code
     System.exit(core.getReturnCode());

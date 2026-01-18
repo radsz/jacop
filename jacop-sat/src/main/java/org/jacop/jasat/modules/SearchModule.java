@@ -68,13 +68,13 @@ public final class SearchModule
   private long timeout;
 
   // used to stop search
-  private boolean mustStop = false;
+  private boolean mustStop;
 
   // thread used for timeouts
-  private TimerTask task = null;
+  private TimerTask task;
 
   // next clause to learn
-  private MapClause clauseToLearn = null;
+  private MapClause clauseToLearn;
 
   /** search implementation, without timeout (search until solution is found) */
   public SearchModule() {}
@@ -111,7 +111,9 @@ public final class SearchModule
   /** stops search */
   public void onStop() {
     // cancel task
-    if (task != null) task.cancel();
+    if (task != null) {
+      task.cancel();
+    }
     mustStop = true;
   }
 

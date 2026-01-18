@@ -70,13 +70,19 @@ public class Golomb extends ExampleFD {
 
     Golomb example = new Golomb();
 
-    if (args.length != 0) example.noMarks = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.noMarks = Integer.parseInt(args[0]);
+    }
 
-    if (args.length > 1) example.bound = Integer.parseInt(args[1]);
+    if (args.length > 1) {
+      example.bound = Integer.parseInt(args[1]);
+    }
 
     example.model();
 
-    if (example.searchOptimalInfo()) IO.println("Solution(s) found");
+    if (example.searchOptimalInfo()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   /**
@@ -91,23 +97,35 @@ public class Golomb extends ExampleFD {
 
     Golomb example = new Golomb();
 
-    if (args.length != 0) example.noMarks = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.noMarks = Integer.parseInt(args[0]);
+    }
 
-    if (args.length > 1) example.bound = Integer.parseInt(args[1]);
+    if (args.length > 1) {
+      example.bound = Integer.parseInt(args[1]);
+    }
 
     example.model();
 
-    if (example.searchOptimalInfo()) IO.println("Solution(s) found");
+    if (example.searchOptimalInfo()) {
+      IO.println("Solution(s) found");
+    }
 
     Golomb exampleAll = new Golomb();
 
-    if (args.length != 0) exampleAll.noMarks = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      exampleAll.noMarks = Integer.parseInt(args[0]);
+    }
 
-    if (args.length > 1) exampleAll.bound = Integer.parseInt(args[1]);
+    if (args.length > 1) {
+      exampleAll.bound = Integer.parseInt(args[1]);
+    }
 
     exampleAll.model();
 
-    if (exampleAll.searchAllOptimal()) IO.println("Solution(s) found");
+    if (exampleAll.searchAllOptimal()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -127,13 +145,18 @@ public class Golomb extends ExampleFD {
       // Impose constraints that each consequtive number
       // is larger than the previous one
       // Golomb ruler is an ordered sequence of numbers
-      if (i > 0) store.impose(new XltY(numbers[i - 1], numbers[i]));
-      else store.impose(new XeqC(numbers[0], 0));
+      if (i > 0) {
+        store.impose(new XltY(numbers[i - 1], numbers[i]));
+      } else {
+        store.impose(new XeqC(numbers[0], 0));
+      }
     }
 
     vars.addAll(Arrays.asList(numbers));
 
-    if (bound > -1) store.impose(new XlteqC(numbers[noMarks - 1], bound));
+    if (bound > -1) {
+      store.impose(new XlteqC(numbers[noMarks - 1], bound));
+    }
 
     // ArrayList contains all differences
     subs = new ArrayList<>();
@@ -156,8 +179,8 @@ public class Golomb extends ExampleFD {
     }
 
     int index = 0;
-    for (int i = 1; i < noMarks; i++)
-      for (int j = 0; j < i; j++)
+    for (int i = 1; i < noMarks; i++) {
+      for (int j = 0; j < i; j++) {
         //				store.imposePropagators(new XplusClteqZ(subs.get(index++), (noMarks - 1 - i + j)
         //						* (noMarks - i + j) / 2, numbers[noMarks - 1]));
         store.impose(
@@ -165,6 +188,8 @@ public class Golomb extends ExampleFD {
                 subs.get(index++),
                 (noMarks - 1 - i + j) * (noMarks - i + j) / 2,
                 numbers[noMarks - 1]));
+      }
+    }
 
     // symmetry breaking constraint
     // important constraint to reduce search space since
@@ -198,7 +223,9 @@ public class Golomb extends ExampleFD {
 
     boolean result = search.labeling(store, select, cost);
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 

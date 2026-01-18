@@ -41,7 +41,7 @@ public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
 
   final IntervalDomain domain;
 
-  Interval i = null;
+  Interval i;
 
   int intervalNo = -1;
 
@@ -59,7 +59,7 @@ public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
 
   @Override
   public boolean hasMoreElements() {
-    return (intervalNo < maxIntervalNo);
+    return intervalNo < maxIntervalNo;
   }
 
   @Override

@@ -89,7 +89,9 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
     return c.getNestedPruningEvent(var, false);
   }
@@ -105,7 +107,9 @@ public class Not extends PrimitiveConstraint implements UsesQueueVariable {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
     return c.getNestedPruningEvent(var, true);
   }

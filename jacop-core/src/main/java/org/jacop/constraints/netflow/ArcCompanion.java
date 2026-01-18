@@ -82,12 +82,18 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
   public String toString() {
     StringBuilder str = new StringBuilder("[offset = " + flowOffset);
-    if (xVar != null) str.append(", xVar = ").append(xVar.id);
-    if (wVar != null) str.append(", wVar = ").append(wVar.id);
+    if (xVar != null) {
+      str.append(", xVar = ").append(xVar.id);
+    }
+    if (wVar != null) {
+      str.append(", wVar = ").append(wVar.id);
+    }
     if (structure != null) {
       str.append(", sVar = ").append(structure.variable.id);
       str.append(", domain = {");
-      for (IntDomain d : structure.domains) str.append(d).append(" ");
+      for (IntDomain d : structure.domains) {
+        str.append(d).append(" ");
+      }
     }
     return str + "}]";
   }
@@ -349,9 +355,13 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
   public int compareTo(ArcCompanion that) {
     if (this.arc.index == DELETED_ARC) {
-      if (that.arc.index != DELETED_ARC) return 1;
+      if (that.arc.index != DELETED_ARC) {
+        return 1;
+      }
     } else {
-      if (that.arc.index == DELETED_ARC) return -1;
+      if (that.arc.index == DELETED_ARC) {
+        return -1;
+      }
     }
     return that.pruningScore - this.pruningScore;
   }

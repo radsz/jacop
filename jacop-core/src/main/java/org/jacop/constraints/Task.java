@@ -92,7 +92,9 @@ record Task(IntVar start, IntVar dur, IntVar res) {
       t.start = lst;
       t.stop = ect;
       return true;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   boolean nonZeroTask() {

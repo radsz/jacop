@@ -323,12 +323,14 @@ public abstract class SetDomain extends Domain {
 
       boolean alreadyImposed = false;
 
-      if (modelConstraintsToEvaluate[pruningEvent] > 0)
-        for (int i = pruningEventConstraints.length - 1; i >= 0 && !alreadyImposed; i--)
+      if (modelConstraintsToEvaluate[pruningEvent] > 0) {
+        for (int i = pruningEventConstraints.length - 1; i >= 0 && !alreadyImposed; i--) {
           if (pruningEventConstraints[i] == C) {
             alreadyImposed = true;
             break;
           }
+        }
+      }
 
       int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
 
@@ -441,9 +443,13 @@ public abstract class SetDomain extends Domain {
    *     been removed at current level.
    */
   public SetDomain recentDomainPruning(int storeLevel) {
-    if (previousDomain == null) return emptyDomain;
+    if (previousDomain == null) {
+      return emptyDomain;
+    }
 
-    if (stamp < storeLevel) return emptyDomain;
+    if (stamp < storeLevel) {
+      return emptyDomain;
+    }
 
     return previousDomain.subtract(this);
   }
@@ -535,11 +541,12 @@ public abstract class SetDomain extends Domain {
 
       int i;
 
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
         if (pruningEventConstraints[i] == C) {
           isImposed = true;
           break;
         }
+      }
 
       // int pruningConstraintsToEvaluate =
       // modelConstraintsToEvaluate[pruningEvent];
@@ -580,11 +587,12 @@ public abstract class SetDomain extends Domain {
 
       int i;
 
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
         if (pruningEventConstraints[i] == C) {
           isImposed = true;
           break;
         }
+      }
 
       if (isImposed) {
 
@@ -622,11 +630,12 @@ public abstract class SetDomain extends Domain {
 
       int i;
 
-      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--)
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
         if (pruningEventConstraints[i] == C) {
           isImposed = true;
           break;
         }
+      }
 
       // int pruningConstraintsToEvaluate =
       // modelConstraintsToEvaluate[pruningEvent];
@@ -700,13 +709,16 @@ public abstract class SetDomain extends Domain {
 
     while (domain.domainID() == SetDomainID) {
 
-      if (domain.previousDomain != null) domain = domain.previousDomain;
-      else break;
+      if (domain.previousDomain != null) {
+        domain = domain.previousDomain;
+      } else {
+        break;
+      }
     }
 
-    return (domain.modelConstraintsToEvaluate[0]
+    return domain.modelConstraintsToEvaluate[0]
         + domain.modelConstraintsToEvaluate[1]
-        + domain.modelConstraintsToEvaluate[2]);
+        + domain.modelConstraintsToEvaluate[2];
   }
 
   /**
@@ -746,7 +758,9 @@ public abstract class SetDomain extends Domain {
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       S.append(e.next().id());
-      if (e.hasNext()) S.append(", ");
+      if (e.hasNext()) {
+        S.append(", ");
+      }
     }
 
     return S.toString();

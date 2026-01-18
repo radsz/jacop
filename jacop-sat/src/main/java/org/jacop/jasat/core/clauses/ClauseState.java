@@ -45,5 +45,7 @@ public final class ClauseState {
   public static final int UNKNOWN_CLAUSE = 0; // too much non affected literals
 
   public static final int UNSATISFIABLE_CLAUSE = 1; // unsatisfiable clause
-  public static final int SATISFIED_CLAUSE = 2; // satisfied clause
+  public static final int SATISFIED_CLAUSE = 2;
+
+  private ClauseState() {} // satisfied clause
 }

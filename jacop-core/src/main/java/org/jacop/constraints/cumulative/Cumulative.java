@@ -63,13 +63,13 @@ import org.jacop.core.Store;
 public class Cumulative extends CumulativeBasic {
 
   protected final Comparator<TaskView> taskIncEstComparator =
-      (o1, o2) -> (o1.est() == o2.est()) ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
+      (o1, o2) -> o1.est() == o2.est() ? (o1.lct() - o2.lct()) : (o1.est() - o2.est());
   protected final Comparator<TaskView> taskDecLctComparator =
-      (o1, o2) -> (o2.lct() == o1.lct()) ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
+      (o1, o2) -> o2.lct() == o1.lct() ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
   final TaskView[] taskReversed;
   boolean doEdgeFind = true;
-  boolean doQuadraticEdgeFind = false;
-  private Set<Integer> preComputedCapacities = null;
+  boolean doQuadraticEdgeFind;
+  private Set<Integer> preComputedCapacities;
   private int[] preComputedCapMap;
 
   /**
@@ -91,25 +91,32 @@ public class Cumulative extends CumulativeBasic {
     }
 
     // check for possible overflow
-    if (limit != null)
+    if (limit != null) {
       for (Task t : taskNormal) {
         Math.addExact(t.start.max(), t.dur.max());
       }
+    }
 
     String s = System.getProperty("max_edge_find_size");
     int limitOnEdgeFind = 100;
-    if (s != null) limitOnEdgeFind = Integer.parseInt(s);
-    doEdgeFind = (starts.length <= limitOnEdgeFind);
+    if (s != null) {
+      limitOnEdgeFind = Integer.parseInt(s);
+    }
+    doEdgeFind = starts.length <= limitOnEdgeFind;
 
     if (!possibleZeroTasks && grounded(resources)) {
       preComputedCapacities = new LinkedHashSet<>();
-      for (TaskView t : taskNormal) preComputedCapacities.add(t.res.min());
+      for (TaskView t : taskNormal) {
+        preComputedCapacities.add(t.res.min());
+      }
 
       preComputedCapMap = new int[starts.length];
       int capIndex = 0;
       for (int ci : preComputedCapacities) {
         for (TaskView aT : taskNormal) {
-          if (aT.res.min() == ci) preComputedCapMap[aT.index] = capIndex;
+          if (aT.res.min() == ci) {
+            preComputedCapMap[aT.index] = capIndex;
+          }
         }
         capIndex++;
       }
@@ -152,8 +159,11 @@ public class Cumulative extends CumulativeBasic {
 
       if (!store.propagationHasOccurred && doEdgeFind) {
         // overloadCheck();  // not needed if profile propagator is used
-        if (doQuadraticEdgeFind) edgeFindQuad(store);
-        else edgeFind(store);
+        if (doQuadraticEdgeFind) {
+          edgeFindQuad(store);
+        } else {
+          edgeFind(store);
+        }
       }
 
     } while (store.propagationHasOccurred);
@@ -209,7 +219,9 @@ public class Cumulative extends CumulativeBasic {
     // tasks sorted in non-decreasing order of est
     TaskView[] estList = filterZeroTasks(tn); // new TaskView[taskNormal.length];
     // System.arraycopy(tn, 0, estList, 0, estList.length);
-    if (estList == null) return;
+    if (estList == null) {
+      return;
+    }
 
     Arrays.sort(estList, taskIncEstComparator);
 
@@ -241,7 +253,9 @@ public class Cumulative extends CumulativeBasic {
     int n = t.length;
     int[] prec = new int[n];
 
-    for (TaskView aT1 : t) prec[aT1.index] = aT1.ect();
+    for (TaskView aT1 : t) {
+      prec[aT1.index] = aT1.ect();
+    }
 
     for (TaskView aT : t) {
       if (tree.rootNode().env > C * (long) aT.lct()) {
@@ -271,13 +285,17 @@ public class Cumulative extends CumulativeBasic {
     int[] capMap;
     if (preComputedCapacities == null) {
       capacities = new LinkedHashSet<>();
-      for (TaskView aT1 : t) capacities.add(aT1.res.min());
+      for (TaskView aT1 : t) {
+        capacities.add(aT1.res.min());
+      }
 
       capMap = new int[n];
       int capIndex = 0;
       for (int ci : capacities) {
         for (TaskView aT : t) {
-          if (aT.res.min() == ci) capMap[aT.index] = capIndex;
+          if (aT.res.min() == ci) {
+            capMap[aT.index] = capIndex;
+          }
         }
         capIndex++;
       }
@@ -314,7 +332,9 @@ public class Cumulative extends CumulativeBasic {
     }
 
     Integer[] precTaskOrder = new Integer[n];
-    for (int i = 0; i < n; i++) precTaskOrder[i] = i;
+    for (int i = 0; i < n; i++) {
+      precTaskOrder[i] = i;
+    }
     Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> prec[o2] - prec[o1]);
 
     int j = 0;
@@ -325,7 +345,9 @@ public class Cumulative extends CumulativeBasic {
       int precI = prec[precTaskOrder[i]];
 
       // first skip all task j that are lct after prec
-      while (j < n && t[j].lct() > precI) j++;
+      while (j < n && t[j].lct() > precI) {
+        j++;
+      }
 
       if (j < n) {
 
@@ -339,7 +361,9 @@ public class Cumulative extends CumulativeBasic {
           }
           nj++;
         }
-      } else break outer;
+      } else {
+        break outer;
+      }
     }
   }
 
@@ -353,7 +377,9 @@ public class Cumulative extends CumulativeBasic {
 
     long C = (long) limit.max();
     TaskView[] ts = filterZeroTasks(tn);
-    if (ts == null) return;
+    if (ts == null) {
+      return;
+    }
 
     int n = ts.length;
     // sorted by non-decreasing deadline (lct)
@@ -362,14 +388,18 @@ public class Cumulative extends CumulativeBasic {
     int[] LB = new int[n];
     int[] Dupd = new int[n];
     int[] SLupd = new int[n];
-    for (int i = 0; i < n; i++) LB[i] = ts[i].est();
+    for (int i = 0; i < n; i++) {
+      LB[i] = ts[i].est();
+    }
     Arrays.fill(Dupd, Integer.MIN_VALUE);
     Arrays.fill(SLupd, Integer.MIN_VALUE);
     long[] E = new long[n];
 
     Integer[] t1 = new Integer[n];
     Integer[] t2 = new Integer[n];
-    for (int i = 0; i < n; i++) t1[i] = i;
+    for (int i = 0; i < n; i++) {
+      t1[i] = i;
+    }
     System.arraycopy(t1, 0, t2, 0, n);
 
     // tasks t1 sorted by non-incereasing relese dates (est)
@@ -397,11 +427,13 @@ public class Cumulative extends CumulativeBasic {
           }
         } else if (rr != Integer.MIN_VALUE) {
           long rest = maxEnergy - (C - t.res().min()) * (u.lct() - rr);
-          if (rest > 0)
+          if (rest > 0) {
             Dupd[i] = (int) Math.max(Dupd[i], rr + IntDomain.divRoundUp(rest, t.res().max()));
+          }
 
-          if (maxEnergy + t.res.min() * (t.ect() - rr) > C * (u.lct() - rr))
+          if (maxEnergy + t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
             LB[i] = Math.max(LB[i], Dupd[i]);
+          }
         }
         E[i] = Energy;
       }
@@ -419,17 +451,21 @@ public class Cumulative extends CumulativeBasic {
         if (t.lct() > u.lct()) {
 
           long rest = t.res().min() * (u.lct() - rt) - minSL;
-          if (rt <= u.lct() && rest > 0)
+          if (rt <= u.lct() && rest > 0) {
             SLupd[i] = (int) Math.max(SLupd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
+          }
 
-          if (t.ect() >= u.lct() || minSL - t.e() < 0)
+          if (t.ect() >= u.lct() || minSL - t.e() < 0) {
             LB[i] = Math.max(Math.max(LB[i], Dupd[i]), SLupd[i]);
+          }
         }
       }
     }
 
     // update LB's
-    for (int i = 0; i < n; i++) ts[i].updateEdgeFind(store.level, LB[i]);
+    for (int i = 0; i < n; i++) {
+      ts[i].updateEdgeFind(store.level, LB[i]);
+    }
   }
 
   TaskView[] filterZeroTasks(TaskView[] ts) {
@@ -438,17 +474,22 @@ public class Cumulative extends CumulativeBasic {
       TaskView[] nonZeroTasks = new TaskView[ts.length];
       int k = 0;
 
-      for (TaskView t1 : ts)
+      for (TaskView t1 : ts) {
         if (t1.exists()) {
           nonZeroTasks[k] = t1;
           t1.index = k++;
         }
+      }
 
-      if (k == 0) return null;
+      if (k == 0) {
+        return null;
+      }
       TaskView[] t = new TaskView[k];
       System.arraycopy(nonZeroTasks, 0, t, 0, k);
       return t;
-    } else return ts;
+    } else {
+      return ts;
+    }
   }
 
   @Override
@@ -460,11 +501,17 @@ public class Cumulative extends CumulativeBasic {
   public String toString() {
 
     StringBuilder result = new StringBuilder(id());
-    if (doEdgeFind) result.append(" : cumulative([ ");
-    else if (super.cumulativeForConstants != null) result.append(" : cumulativePrimary([ ");
-    else result.append(" : cumulativeBasic([ ");
+    if (doEdgeFind) {
+      result.append(" : cumulative([ ");
+    } else if (super.cumulativeForConstants != null) {
+      result.append(" : cumulativePrimary([ ");
+    } else {
+      result.append(" : cumulativeBasic([ ");
+    }
 
-    for (int i = 0; i < taskNormal.length - 1; i++) result.append(taskNormal[i]).append(", ");
+    for (int i = 0; i < taskNormal.length - 1; i++) {
+      result.append(taskNormal[i]).append(", ");
+    }
 
     result.append(taskNormal[taskNormal.length - 1]);
 

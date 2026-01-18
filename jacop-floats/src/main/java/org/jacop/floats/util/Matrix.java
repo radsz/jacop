@@ -59,19 +59,25 @@ public class Matrix {
   public static FloatIntervalDomain[][] mult(
       FloatInterval[][] F, double[][] b) { // F[m][n] * b[n][p]
 
-    if (F.length == 0) return new FloatIntervalDomain[0][0];
-    if (F[0].length != b.length) return null; // incorrect sizes
-
+    if (F.length == 0) {
+      return new FloatIntervalDomain[0][0];
+    }
+    if (F[0].length != b.length) {
+      return null; // incorrect sizes
+    }
     int n = F[0].length;
     int m = F.length;
     int p = b[0].length;
 
     FloatIntervalDomain[][] result = new FloatIntervalDomain[m][p];
-    for (int i = 0; i < result.length; i++)
-      for (int j = 0; j < result[i].length; j++) result[i][j] = new FloatIntervalDomain(0.0, 0.0);
+    for (int i = 0; i < result.length; i++) {
+      for (int j = 0; j < result[i].length; j++) {
+        result[i][j] = new FloatIntervalDomain(0.0, 0.0);
+      }
+    }
 
-    for (int i = 0; i < m; i++)
-      for (int j = 0; j < p; j++)
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < p; j++) {
         for (int k = 0; k < n; k++) {
           FloatIntervalDomain mBound =
               FloatDomain.mulBounds(F[i][k].min(), F[i][k].max(), b[k][j], b[k][j]);
@@ -79,6 +85,8 @@ public class Matrix {
               FloatDomain.addBounds(
                   result[i][j].min(), result[i][j].max(), mBound.min(), mBound.max());
         }
+      }
+    }
 
     return result;
   }
@@ -92,8 +100,9 @@ public class Matrix {
     // System.out.println ("========");
     // print (M);
 
-    if (!isSquare(M))
+    if (!isSquare(M)) {
       throw new ArithmeticException("Trying to compute determinat on non-square matrix; aborted");
+    }
     if (M.length == 1) {
       return M[0][0];
     }
@@ -112,8 +121,9 @@ public class Matrix {
     double[][] t = new double[m.length][m[0].length];
 
     for (int i = 0; i < m.length; i++) {
-      for (int j = 0; j < m[i].length; j++)
+      for (int j = 0; j < m[i].length; j++) {
         t[i][j] = sign(i) * sign(j) * determinant(subMatrix(m, i, j));
+      }
     }
 
     return t;
@@ -122,7 +132,11 @@ public class Matrix {
   public double[][] transpose(double[][] m) {
 
     double[][] t = new double[m[0].length][m.length];
-    for (int i = 0; i < m.length; i++) for (int j = 0; j < m[i].length; j++) t[j][i] = m[i][j];
+    for (int i = 0; i < m.length; i++) {
+      for (int j = 0; j < m[i].length; j++) {
+        t[j][i] = m[i][j];
+      }
+    }
 
     return t;
   }
@@ -139,9 +153,12 @@ public class Matrix {
   // A*m
   public double[][] mult(double[][] b) { // A[m][n] * b[n][p]
 
-    if (A.length == 0) return new double[0][0];
-    if (A[0].length != b.length) return null; // invalid dims
-
+    if (A.length == 0) {
+      return new double[0][0];
+    }
+    if (A[0].length != b.length) {
+      return null; // invalid dims
+    }
     int n = A[0].length;
     int m = A.length;
     int p = b[0].length;
@@ -161,9 +178,12 @@ public class Matrix {
   // A*m
   public double[] mult(double[] b) { // A[m][n] * b[n]
 
-    if (A.length == 0) return new double[0];
-    if (A[0].length != b.length) return null; // invalid dims
-
+    if (A.length == 0) {
+      return new double[0];
+    }
+    if (A[0].length != b.length) {
+      return null; // invalid dims
+    }
     int m = A.length;
     int p = b.length;
 
@@ -180,7 +200,11 @@ public class Matrix {
   double[][] multiplyByConstant(double[][] m, double c) {
 
     double[][] t = new double[m[0].length][m.length];
-    for (int i = 0; i < m.length; i++) for (int j = 0; j < m[i].length; j++) t[i][j] = m[i][j] * c;
+    for (int i = 0; i < m.length; i++) {
+      for (int j = 0; j < m[i].length; j++) {
+        t[i][j] = m[i][j] * c;
+      }
+    }
 
     return t;
   }
@@ -194,7 +218,9 @@ public class Matrix {
       int l = 0;
       if (i != r) {
         for (int j = 0; j < s[i].length; j++) {
-          if (j != c) subMatrix[k][l++] = s[i][j];
+          if (j != c) {
+            subMatrix[k][l++] = s[i][j];
+          }
         }
         k++;
       }
@@ -205,26 +231,32 @@ public class Matrix {
 
   double sign(int n) {
 
-    if (n % 2 == 0) return 1.0;
-    else return -1.0;
+    if (n % 2 == 0) {
+      return 1.0;
+    } else {
+      return -1.0;
+    }
   }
 
   boolean isSquare(double[][] M) {
     boolean square = true;
 
     int n = M.length;
-    for (double[] doubles : M)
+    for (double[] doubles : M) {
       if (doubles.length != n) {
         square = false;
         break;
       }
+    }
 
     return square;
   }
 
   void print(double[][] M) {
     for (double[] doubles : M) {
-      for (double aDouble : doubles) IO.print(aDouble + " ");
+      for (double aDouble : doubles) {
+        IO.print(aDouble + " ");
+      }
       IO.println();
     }
   }

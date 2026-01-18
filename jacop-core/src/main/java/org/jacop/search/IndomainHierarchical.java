@@ -69,14 +69,16 @@ public class IndomainHierarchical<T extends Var> implements Indomain<T> {
    * mechanism is provided.
    */
   public int indomain(T v) throws RuntimeException {
-    if (hashmap.containsKey(v)) return hashmap.get(v).indomain(v);
-    else {
-      if (defIndomain == null)
+    if (hashmap.containsKey(v)) {
+      return hashmap.get(v).indomain(v);
+    } else {
+      if (defIndomain == null) {
         throw new RuntimeException(
             "Variable "
                 + v
                 + " does not have any indomain"
                 + " associated and default indomain is not defined");
+      }
       return defIndomain.indomain(v);
     }
   }

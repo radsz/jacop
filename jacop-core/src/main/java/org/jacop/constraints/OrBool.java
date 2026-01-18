@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  */
 public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
-  PrimitiveConstraint c = null;
+  PrimitiveConstraint c;
 
   /**
    * It constructs and constraint on variables.
@@ -56,10 +56,15 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
     IntVar[] r = filter(a);
 
-    if (r == null) c = new XeqC(result, 1);
-    else if (r.length == 1) c = new XeqY(r[0], result);
-    else if (r.length == 2) c = new OrBoolSimple(r[0], r[1], result);
-    else c = new OrBoolVector(r, result);
+    if (r == null) {
+      c = new XeqC(result, 1);
+    } else if (r.length == 1) {
+      c = new XeqY(r[0], result);
+    } else if (r.length == 2) {
+      c = new OrBoolSimple(r[0], r[1], result);
+    } else {
+      c = new OrBoolVector(r, result);
+    }
   }
 
   /**
@@ -100,10 +105,15 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
   IntVar[] filter(IntVar[] xs) {
     List<IntVar> result = new ArrayList<>();
-    for (IntVar x : xs)
-      if (x.min() == 1) return null;
-      else if (x.max() == 0) continue;
-      else result.add(x);
+    for (IntVar x : xs) {
+      if (x.min() == 1) {
+        return null;
+      } else if (x.max() == 0) {
+        continue;
+      } else {
+        result.add(x);
+      }
+    }
 
     return result.toArray(new IntVar[0]);
   }

@@ -70,11 +70,14 @@ public class RegStateInt extends RegState {
   public void addTransitions(RegState suc, IntervalDomain val) {
 
     for (int h = 0; h < val.size; h++) {
-      Interval inv = (val).intervals[h];
+      Interval inv = val.intervals[h];
       // for each interval of val
-      if (inv != null)
+      if (inv != null) {
         // For each value of the interval
-        for (int v = inv.min(); v <= inv.max(); v++) addTransition(suc, v);
+        for (int v = inv.min(); v <= inv.max(); v++) {
+          addTransition(suc, v);
+        }
+      }
     }
   }
 
@@ -98,7 +101,7 @@ public class RegStateInt extends RegState {
   @Override
   public boolean isActive(TimeStamp<Integer>[] activeLevels) {
 
-    return (pos < activeLevels[level].value());
+    return pos < activeLevels[level].value();
   }
 
   @Override
@@ -106,7 +109,7 @@ public class RegStateInt extends RegState {
 
     if (pos < outDegree) {
 
-      if (debugAll)
+      if (debugAll) {
         IO.println(
             "remove the SUC arc q_"
                 + level
@@ -117,6 +120,7 @@ public class RegStateInt extends RegState {
                 + this.successors[pos].level
                 + "%"
                 + this.successors[pos].id);
+      }
 
       // must be first, before swap.
       successors[pos].inDegree--;
@@ -148,7 +152,7 @@ public class RegStateInt extends RegState {
   @Override
   public void setSupports(Map<Integer, RegEdge> hashMap, int i) {
 
-    hashMap.computeIfAbsent(toSucDom[i], k -> new RegEdge(this, successors[i]));
+    hashMap.computeIfAbsent(toSucDom[i], _ -> new RegEdge(this, successors[i]));
   }
 
   @Override

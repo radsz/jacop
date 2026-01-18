@@ -41,11 +41,11 @@ import org.jacop.core.MutableVarValue;
  */
 class Diff2VarValue implements MutableVarValue, Cloneable {
 
-  Diff2VarValue previousDiff2VarValue = null;
+  Diff2VarValue previousDiff2VarValue;
 
   Rectangle[] Rects;
 
-  int stamp = 0;
+  int stamp;
 
   // Constructors for temporary Duff2VarValue
   Diff2VarValue() {}
@@ -85,7 +85,9 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
 
   void setValue(List<Rectangle> VR) {
     Rects = new Rectangle[VR.size()];
-    for (int i = 0; i < Rects.length; i++) Rects[i] = VR.get(i);
+    for (int i = 0; i < Rects.length; i++) {
+      Rects[i] = VR.get(i);
+    }
     // System.arraycopy(VR.toArray(),0,Rects,0,Rects.length);
   }
 
@@ -102,9 +104,13 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
 
     StringBuilder s = new StringBuilder();
 
-    for (int i = 0; i < Rects.length; i++)
-      if (i == Rects.length - 1) s.append(Rects[i]);
-      else s.append(Rects[i]).append(",");
+    for (int i = 0; i < Rects.length; i++) {
+      if (i == Rects.length - 1) {
+        s.append(Rects[i]);
+      } else {
+        s.append(Rects[i]).append(",");
+      }
+    }
     return s.toString();
   }
 }

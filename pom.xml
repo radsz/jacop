@@ -384,14 +384,21 @@ setup to run configuration. -->
                     <exportDatatables>true</exportDatatables>
                     <activeRecipes>
                         <recipe>org.openrewrite.java.migrate.UpgradeToJava25</recipe>
+                        <recipe>org.openrewrite.staticanalysis.CodeCleanup</recipe>
                     </activeRecipes>
                     <checkstyleConfigFile>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</checkstyleConfigFile>
+                    <skip>true</skip>
                 </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-migrate-java</artifactId>
                         <version>3.25.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-static-analysis</artifactId>
+                        <version>2.25.0</version>
                     </dependency>
                 </dependencies>
             </plugin>

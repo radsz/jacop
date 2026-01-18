@@ -50,7 +50,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   private final N root;
 
   // size of the Trie
-  private int size = 0;
+  private int size;
 
   /**
    * initializes the Trie with a root node
@@ -83,10 +83,14 @@ public class IntTrie<N extends IntTrie.Node<N>> {
       // least significant bit
       int lsb = j & 1;
       if (lsb == 0) {
-        if (current.son0 == null) current.son0 = current.getNew();
+        if (current.son0 == null) {
+          current.son0 = current.getNew();
+        }
         current = current.son0;
       } else {
-        if (current.son1 == null) current.son1 = current.getNew();
+        if (current.son1 == null) {
+          current.son1 = current.getNew();
+        }
         current = current.son1;
       }
       j = j >> 1; // shift right
@@ -94,10 +98,14 @@ public class IntTrie<N extends IntTrie.Node<N>> {
 
     // we have arrived to the leaf node
     if (isPos) {
-      if (!current.posMember) size++;
+      if (!current.posMember) {
+        size++;
+      }
       current.posMember = true;
     } else {
-      if (!current.negMember) size++;
+      if (!current.negMember) {
+        size++;
+      }
       current.negMember = true;
     }
     return current;
@@ -111,9 +119,14 @@ public class IntTrie<N extends IntTrie.Node<N>> {
    */
   public final boolean contains(int i) {
     N iNode = getNode(i);
-    if (iNode == null) return false;
-    if (i >= 0) return iNode.posMember;
-    else return iNode.negMember;
+    if (iNode == null) {
+      return false;
+    }
+    if (i >= 0) {
+      return iNode.posMember;
+    } else {
+      return iNode.negMember;
+    }
   }
 
   /**
@@ -126,7 +139,9 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   public final N getNode(int i) {
     // is it >= 0 ?
     int j = i;
-    if (j < 0) j = -j;
+    if (j < 0) {
+      j = -j;
+    }
 
     // go down the Trie
     N current = root;
@@ -135,10 +150,14 @@ public class IntTrie<N extends IntTrie.Node<N>> {
       // least significant bit
       int lsb = j & 0x1;
       if (lsb == 0) {
-        if (current.son0 == null) return null;
+        if (current.son0 == null) {
+          return null;
+        }
         current = current.son0;
       } else {
-        if (current.son1 == null) return null;
+        if (current.son1 == null) {
+          return null;
+        }
         current = current.son1;
       }
       j = j >> 1; // shift right
@@ -167,7 +186,9 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     if (i == 0) {
       boolean answer = root.posMember;
       root.posMember = false;
-      if (answer) size--;
+      if (answer) {
+        size--;
+      }
       return answer;
     }
 
@@ -190,14 +211,18 @@ public class IntTrie<N extends IntTrie.Node<N>> {
       // least significant bit
       int lsb = j & 1;
       if (lsb == 0) {
-        if (current.son0 == null) return false;
+        if (current.son0 == null) {
+          return false;
+        }
         if (current.posMember || current.negMember || current.son1 != null) {
           lastGoodNode = current;
           lastBranch = false; // record the '0'
         }
         current = current.son0;
       } else {
-        if (current.son1 == null) return false;
+        if (current.son1 == null) {
+          return false;
+        }
         if (current.posMember || current.negMember || current.son0 != null) {
           lastGoodNode = current;
           lastBranch = true; // record the '1'
@@ -209,8 +234,11 @@ public class IntTrie<N extends IntTrie.Node<N>> {
 
     // we are now at the node containing (maybe) j
     boolean answer = isPos ? current.posMember : current.negMember;
-    if (isPos) current.posMember = false;
-    else current.negMember = false;
+    if (isPos) {
+      current.posMember = false;
+    } else {
+      current.negMember = false;
+    }
     // is the node useless, now ?
     boolean useless =
         current.son0 == null
@@ -220,13 +248,18 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     // clear the nodes that became useless, if there are some
     if (useless) {
       if (current != lastGoodNode) {
-        if (lastBranch) lastGoodNode.son1 = null;
-        else lastGoodNode.son0 = null;
+        if (lastBranch) {
+          lastGoodNode.son1 = null;
+        } else {
+          lastGoodNode.son0 = null;
+        }
       }
     }
 
     // update size and return answer
-    if (answer) size--;
+    if (answer) {
+      size--;
+    }
     return answer;
   }
 
@@ -269,8 +302,8 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     E son0; // node with suffix "0"
     E son1; // node with suffix "1"
 
-    boolean posMember = false; // is this node a leaf with sign +
-    boolean negMember = false; // is this node a leaf with sign -
+    boolean posMember; // is this node a leaf with sign +
+    boolean negMember; // is this node a leaf with sign -
 
     /**
      * allocate a new value of type E

@@ -95,7 +95,7 @@ public class SGMPCSearch {
   int l;
   int strategy = poly;
   // number of consequtive fails when searching for a solution
-  int numberConsecutiveFails = 0;
+  int numberConsecutiveFails;
   // index fro computing Luby number
   int lubyIndex = 1;
   // last found solution
@@ -104,7 +104,7 @@ public class SGMPCSearch {
   long timeOut = 10000;
   final ImproveSolution<IntVar> search;
   final Function<Integer, Comparator<int[]>> solutionComparator =
-      (p) -> Comparator.comparingInt((int[] o) -> o[p]);
+      p -> Comparator.comparingInt((int[] o) -> o[p]);
 
   public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 
@@ -128,17 +128,18 @@ public class SGMPCSearch {
 
   public boolean search() {
 
-    l = (strategy == luby) ? getLuby(1) : 32;
+    l = strategy == luby ? getLuby(1) : 32;
 
     findEliteSolutions();
 
     int bestCostSolution = bestCostSolution();
-    if (trace)
+    if (trace) {
       IO.println(
           "%% Best Cost elite solution is "
               + bestCostSolution
               + " with cost "
               + elite[bestCostSolution][costPosition]);
+    }
 
     improveSolution();
 
@@ -152,18 +153,28 @@ public class SGMPCSearch {
 
     if (elite == null) {
       elite = new int[e][];
-      for (int i = 0; i < e; i++) elite[i] = new int[vars.length + 1];
-    } else return;
+      for (int i = 0; i < e; i++) {
+        elite[i] = new int[vars.length + 1];
+      }
+    } else {
+      return;
+    }
 
     costPosition = vars.length;
-    for (int i = 0; i < vars.length; i++) if (vars[i] == cost) costPosition = i;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == cost) {
+        costPosition = i;
+      }
+    }
 
     IntVar[] v;
     if (costPosition == vars.length) {
       v = new IntVar[vars.length + 1];
       System.arraycopy(vars, 0, v, 0, vars.length);
       v[vars.length] = cost;
-    } else v = vars;
+    } else {
+      v = vars;
+    }
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> select = new SimpleSelect<>(v, null, new IndomainMin<>());
@@ -178,8 +189,9 @@ public class SGMPCSearch {
     int[][] solutionPool = new int[label.getSolutionListener().solutionsNo()][];
     for (int i = 0; i < label.getSolutionListener().solutionsNo(); i++) {
       solutionPool[i] = new int[v.length];
-      for (int j = 0; j < label.getSolution(i + 1).length; j++)
+      for (int j = 0; j < label.getSolution(i + 1).length; j++) {
         solutionPool[i][j] = ((IntDomain) label.getSolution(i + 1)[j]).value();
+      }
     }
 
     if (trace) {
@@ -187,7 +199,9 @@ public class SGMPCSearch {
 
       for (int i = 0; i < solutionPool.length; i++) {
         IO.print("%% Solution " + (i + 1) + ": ");
-        for (int j = 0; j < v.length; j++) IO.print(solutionPool[i][j] + " ");
+        for (int j = 0; j < v.length; j++) {
+          IO.print(solutionPool[i][j] + " ");
+        }
         IO.println();
       }
     }
@@ -205,7 +219,9 @@ public class SGMPCSearch {
 
       for (int i = 0; i < e; i++) {
         IO.print("%% Solution " + (i + 1) + ": ");
-        for (int j = 0; j < v.length; j++) IO.print(elite[i][j] + " ");
+        for (int j = 0; j < v.length; j++) {
+          IO.print(elite[i][j] + " ");
+        }
         IO.println();
       }
     }
@@ -217,8 +233,8 @@ public class SGMPCSearch {
    */
   boolean improveSolution() {
 
-    Random rand = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
-    Random randomSolution = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    Random rand = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
+    Random randomSolution = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
     searchStartTime = System.currentTimeMillis();
 
@@ -228,7 +244,9 @@ public class SGMPCSearch {
 
       long currentTime = System.currentTimeMillis();
       long restTimeOut = (timeOut - (currentTime - searchStartTime)) / 1000;
-      if (restTimeOut <= 0) break;
+      if (restTimeOut <= 0) {
+        break;
+      }
 
       search.setTimeOut(restTimeOut);
 
@@ -243,8 +261,9 @@ public class SGMPCSearch {
           numberConsecutiveFails++;
           updateFailLimit(true);
         } else {
-          if (printInfo)
+          if (printInfo) {
             IO.println("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
+          }
 
           solution = search.getSolution();
 
@@ -275,8 +294,9 @@ public class SGMPCSearch {
           updateFailLimit(true);
         } else {
 
-          if (printInfo)
+          if (printInfo) {
             IO.println("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
+          }
 
           solution = search.getSolution();
 
@@ -338,8 +358,11 @@ public class SGMPCSearch {
   void updateFailLimit(boolean fail) {
 
     if (strategy == poly) {
-      if (fail) l += 32;
-      else l = 32;
+      if (fail) {
+        l += 32;
+      } else {
+        l = 32;
+      }
 
     } else {
       // Luby
@@ -372,11 +395,12 @@ public class SGMPCSearch {
     int currentCost = IntDomain.MaxInt;
     int solution = -1;
 
-    for (int i = 0; i < elite.length; i++)
+    for (int i = 0; i < elite.length; i++) {
       if (currentCost > elite[i][costPosition]) {
         currentCost = elite[i][costPosition];
         solution = i;
       }
+    }
 
     return solution;
   }
@@ -388,11 +412,12 @@ public class SGMPCSearch {
     int currentCost = IntDomain.MinInt;
     int solution = -1;
 
-    for (int i = 0; i < elite.length; i++)
+    for (int i = 0; i < elite.length; i++) {
       if (currentCost < elite[i][costPosition]) {
         currentCost = elite[i][costPosition];
         solution = i;
       }
+    }
 
     return solution;
   }
@@ -416,7 +441,9 @@ public class SGMPCSearch {
 
   void replaceEliteSolution(int n, int[] solution, int searchCost) {
 
-    if (elite[n].length - 1 >= 0) System.arraycopy(solution, 0, elite[n], 0, elite[n].length - 1);
+    if (elite[n].length - 1 >= 0) {
+      System.arraycopy(solution, 0, elite[n], 0, elite[n].length - 1);
+    }
     elite[n][costPosition] = searchCost;
   }
 
@@ -433,8 +460,9 @@ public class SGMPCSearch {
   }
 
   public void setFailStrategy(int strategy) {
-    if (strategy == poly || strategy == luby) this.strategy = strategy;
-    else {
+    if (strategy == poly || strategy == luby) {
+      this.strategy = strategy;
+    } else {
       IO.println("Wrong fail strategy limit; assumed poly");
 
       this.strategy = poly;

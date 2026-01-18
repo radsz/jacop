@@ -62,7 +62,7 @@ public class Nooverlap extends Constraint {
   TimeStamp<BitSet>[] overlapping;
 
   /** current stamp */
-  int stamp = 0;
+  int stamp;
 
   boolean doAreaCheck = true;
 
@@ -171,7 +171,7 @@ public class Nooverlap extends Constraint {
 
     int i = 0;
 
-    for (List<? extends IntVar> r : rectangle)
+    for (List<? extends IntVar> r : rectangle) {
       if (r.size() == 4) {
         this.rectangle[i] =
             new Rectangle(
@@ -185,6 +185,7 @@ public class Nooverlap extends Constraint {
         String s = "\nNot equal sizes of rectangle vectors in Nooverlap";
         throw new IllegalArgumentException(s);
       }
+    }
 
     setScope(Rectangle.getStream(this.rectangle));
   }
@@ -284,8 +285,10 @@ public class Nooverlap extends Constraint {
 
     for (int i = rects.nextSetBit(0); i >= 0; i = rects.nextSetBit(i + 1)) {
       for (int dim = 0; dim < 2; dim++) {
-        int oDim = (dim == 0) ? 1 : 0;
-        if (r.overlap(rectangle[i], dim)) prune(r, rectangle[i], oDim);
+        int oDim = dim == 0 ? 1 : 0;
+        if (r.overlap(rectangle[i], dim)) {
+          prune(r, rectangle[i], oDim);
+        }
       }
     }
   }
@@ -340,11 +343,15 @@ public class Nooverlap extends Constraint {
       xLengthMin = Math.min(xLengthMin, rjXLength);
       yLengthMin = Math.min(yLengthMin, rjYLength);
       minArea += rjXLength * rjYLength;
-      if (minArea > (xMax - xMin) * (yMax - yMin)) throw Store.failException;
+      if (minArea > (xMax - xMin) * (yMax - yMin)) {
+        throw Store.failException;
+      }
     }
     if (xLengthMin > 0 && yLengthMin > 0) {
       int maxNumberRectangles = ((xMax - xMin) / xLengthMin) * ((yMax - yMin) / yLengthMin);
-      if (maxNumberRectangles < rects.cardinality() + 1) throw Store.failException;
+      if (maxNumberRectangles < rects.cardinality() + 1) {
+        throw Store.failException;
+      }
     }
 
     doAreaCheck = rSpace < minArea;
@@ -378,8 +385,9 @@ public class Nooverlap extends Constraint {
   public boolean satisfied() {
     for (int i = 0; i < rectangle.length; i++) {
       for (int j = i + 1; j < rectangle.length; j++) {
-        if (!rectangle[i].noOverlap(rectangle[j], 0) && !rectangle[i].noOverlap(rectangle[j], 0))
+        if (!rectangle[i].noOverlap(rectangle[j], 0) && !rectangle[i].noOverlap(rectangle[j], 0)) {
           return false;
+        }
       }
     }
     return true;
@@ -388,7 +396,9 @@ public class Nooverlap extends Constraint {
   public boolean notSatisfied() {
     for (int i = 0; i < rectangle.length; i++) {
       for (int j = i + 1; j < rectangle.length; j++) {
-        if (rectangle[i].doOverlap(rectangle[j])) return true;
+        if (rectangle[i].doOverlap(rectangle[j])) {
+          return true;
+        }
       }
     }
     return false;
@@ -404,7 +414,9 @@ public class Nooverlap extends Constraint {
     int i = 0;
     for (Rectangle r : rectangle) {
       result.append(r);
-      if (i < rectangle.length - 1) result.append(", ");
+      if (i < rectangle.length - 1) {
+        result.append(", ");
+      }
       i++;
     }
     return result.append("], ").append(strict).append(")").toString();

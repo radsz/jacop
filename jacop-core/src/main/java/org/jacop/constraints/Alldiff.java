@@ -132,7 +132,9 @@ public class Alldiff extends Alldifferent {
   @Override
   public void impose(Store store) {
 
-    if (list.length == 0) return;
+    if (list.length == 0) {
+      return;
+    }
 
     super.impose(store);
     this.store = store;
@@ -149,7 +151,7 @@ public class Alldiff extends Alldifferent {
         LinkedHashSet<IntVar> fdvs = variableQueue;
         variableQueue = new LinkedHashSet<>();
 
-        for (IntVar Q : fdvs)
+        for (IntVar Q : fdvs) {
           if (Q.singleton()) {
             int qPos = positionMapping.get(Q);
             if (qPos > groundPos) {
@@ -158,14 +160,17 @@ public class Alldiff extends Alldifferent {
               positionMapping.put(Q, groundPos);
               positionMapping.put(list[qPos], qPos);
               groundPos++;
-              for (int i = groundPos; i < list.length; i++)
+              for (int i = groundPos; i < list.length; i++) {
                 list[i].domain.inComplement(store.level, list[i], Q.min());
+              }
             } else if (qPos == groundPos) {
               groundPos++;
-              for (int i = groundPos; i < list.length; i++)
+              for (int i = groundPos; i < list.length; i++) {
                 list[i].domain.inComplement(store.level, list[i], Q.min());
+              }
             }
           }
+        }
       }
       grounded.update(groundPos);
 
@@ -198,16 +203,24 @@ public class Alldiff extends Alldifferent {
     int i = 0, j = 0;
     while (true) {
       if (i < n && min <= max) {
-        if (min != last) bounds[++nb] = last = min;
+        if (min != last) {
+          bounds[++nb] = last = min;
+        }
 
         minsorted[i].minrank = nb;
-        if (++i < n) min = minsorted[i].var.min();
+        if (++i < n) {
+          min = minsorted[i].var.min();
+        }
 
       } else {
-        if (max != last) bounds[++nb] = last = max;
+        if (max != last) {
+          bounds[++nb] = last = max;
+        }
 
         maxsorted[j].maxrank = nb;
-        if (++j == n) break;
+        if (++j == n) {
+          break;
+        }
 
         max = maxsorted[j].var.max() + 1;
       }
@@ -292,13 +305,17 @@ public class Alldiff extends Alldifferent {
   }
 
   private int pathmin(int[] v, int i) {
-    while (v[i] < i) i = v[i];
+    while (v[i] < i) {
+      i = v[i];
+    }
 
     return i;
   }
 
   private int pathmax(int[] v, int i) {
-    while (v[i] > i) i = v[i];
+    while (v[i] > i) {
+      i = v[i];
+    }
 
     return i;
   }
@@ -311,7 +328,9 @@ public class Alldiff extends Alldifferent {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("])");

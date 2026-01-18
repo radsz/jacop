@@ -61,10 +61,10 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
 public final class HeuristicRestartModule implements ConflictListener, BackjumpListener {
 
   // should we restart ?
-  public boolean shouldRestart = false;
+  public boolean shouldRestart;
 
   // number of conflicts
-  private long conflictCount = 0;
+  private long conflictCount;
 
   // number of conflicts needed to restart
   private long threshold;
@@ -75,7 +75,9 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
   public void onConflict(MapClause clause, int level) {
     conflictCount++;
 
-    if (conflictCount > threshold) shouldRestart = true;
+    if (conflictCount > threshold) {
+      shouldRestart = true;
+    }
   }
 
   public void onBackjump(int oldLevel, int newLevel) {}

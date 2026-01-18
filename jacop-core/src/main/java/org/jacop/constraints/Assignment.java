@@ -58,13 +58,13 @@ public class Assignment extends Constraint
   public final IntVar[] d;
 
   /** It specifies a shift applied to variables d. */
-  public int shiftD = 0;
+  public int shiftD;
 
   /** It specifies a list of variables x. */
   public final IntVar[] x;
 
   /** It specifies a shift applied to variables x. */
-  public int shiftX = 0;
+  public int shiftX;
 
   final Map<IntVar, Integer> ds;
   final Map<IntVar, Integer> xs;
@@ -165,7 +165,9 @@ public class Assignment extends Constraint
   @Override
   public void removeLevel(int level) {
     variableQueue.clear();
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -183,7 +185,7 @@ public class Assignment extends Constraint
 
         x[i].domain.in(store.level, x[i], shiftD, x.length - 1 + shiftD);
 
-        if (!alreadyRemoved.isEmpty())
+        if (!alreadyRemoved.isEmpty()) {
           for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
               enumer.hasMoreElements(); ) {
 
@@ -191,6 +193,7 @@ public class Assignment extends Constraint
 
             d[xValue - shiftD].domain.inComplement(store.level, d[xValue - shiftD], i + shiftX);
           }
+        }
 
         if (x[i].singleton()) {
           int position = x[i].value() - shiftD;
@@ -204,7 +207,7 @@ public class Assignment extends Constraint
 
         d[i].domain.in(store.level, d[i], shiftX, x.length - 1 + shiftX);
 
-        if (!alreadyRemoved.isEmpty())
+        if (!alreadyRemoved.isEmpty()) {
           for (ValueEnumeration enumer = alreadyRemoved.valueEnumeration();
               enumer.hasMoreElements(); ) {
 
@@ -212,6 +215,7 @@ public class Assignment extends Constraint
 
             x[dValue - shiftX].domain.inComplement(store.level, x[dValue - shiftX], i + shiftD);
           }
+        }
 
         if (d[i].singleton()) {
 
@@ -243,39 +247,47 @@ public class Assignment extends Constraint
 
             vPrunedDomain = vPrunedDomain.intersect(rangeX);
 
-            if (vPrunedDomain.isEmpty()) continue;
+            if (vPrunedDomain.isEmpty()) {
+              continue;
+            }
 
             for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
                 enumer.hasMoreElements(); ) {
 
               int dValue = enumer.nextElement() - shiftX;
 
-              if (dValue >= 0 && dValue < x.length)
+              if (dValue >= 0 && dValue < x.length) {
                 x[dValue].domain.inComplement(store.level, x[dValue], position);
+              }
             }
 
-            if (V.singleton())
+            if (V.singleton()) {
               x[V.value() - shiftX].domain.in(
                   store.level, x[V.value() - shiftX], position, position);
+            }
 
           } else {
             // x variable has been changed
 
             vPrunedDomain = vPrunedDomain.intersect(rangeD);
 
-            if (vPrunedDomain.isEmpty()) continue;
+            if (vPrunedDomain.isEmpty()) {
+              continue;
+            }
 
             for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
                 enumer.hasMoreElements(); ) {
 
               int xValue = enumer.nextElement() - shiftD;
 
-              if (xValue >= 0 && xValue < d.length)
+              if (xValue >= 0 && xValue < d.length) {
                 d[xValue].domain.inComplement(store.level, d[xValue], position);
+              }
 
-              if (V.singleton())
+              if (V.singleton()) {
                 d[V.value() - shiftD].domain.in(
                     store.level, d[V.value() - shiftD], position, position);
+              }
             }
           }
         }
@@ -286,7 +298,9 @@ public class Assignment extends Constraint
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     for (int i = 0; i < x.length; i++) {
       int position = x[i].value() - shiftD;
@@ -331,13 +345,17 @@ public class Assignment extends Constraint
 
     for (int i = 0; i < x.length; i++) {
       result.append(x[i]);
-      if (i < x.length - 1) result.append(", ");
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < d.length; i++) {
       result.append(d[i]);
-      if (i < d.length - 1) result.append(", ");
+      if (i < d.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ");
     result.append(shiftX).append(", ").append(shiftD).append(")");

@@ -188,7 +188,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     if (minCapacity > oldCapacity) {
       Object[] oldData = elementData;
       int newCapacity = (oldCapacity * 3) / 2 + 1;
-      if (newCapacity < minCapacity) newCapacity = minCapacity;
+      if (newCapacity < minCapacity) {
+        newCapacity = minCapacity;
+      }
       elementData = (V[]) new Object[newCapacity];
       System.arraycopy(oldData, 0, elementData, 0, size);
     }
@@ -197,7 +199,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
   /** Private remove method that skips bounds checking and does not return the value removed. */
   private void fastRemove(int index) {
     int numMoved = size - index - 1;
-    if (numMoved > 0) System.arraycopy(elementData, index + 1, elementData, index, numMoved);
+    if (numMoved > 0) {
+      System.arraycopy(elementData, index + 1, elementData, index, numMoved);
+    }
     elementData[--size] = null;
   }
 
@@ -241,9 +245,17 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    */
   public int indexOf(Object elem) {
     if (elem == null) {
-      for (int i = 0; i < size; i++) if (elementData[i] == null) return i;
+      for (int i = 0; i < size; i++) {
+        if (elementData[i] == null) {
+          return i;
+        }
+      }
     } else {
-      for (int i = 0; i < size; i++) if (elem.equals(elementData[i])) return i;
+      for (int i = 0; i < size; i++) {
+        if (elem.equals(elementData[i])) {
+          return i;
+        }
+      }
     }
     return -1;
   }
@@ -259,7 +271,11 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    */
   public int indexOf(Object elem, int lastPosition) {
 
-    for (int i = 0; i <= lastPosition; i++) if (elem == elementData[i]) return i;
+    for (int i = 0; i <= lastPosition; i++) {
+      if (elem == elementData[i]) {
+        return i;
+      }
+    }
 
     return -1;
   }
@@ -282,9 +298,17 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    */
   public int lastIndexOf(Object elem) {
     if (elem == null) {
-      for (int i = size - 1; i >= 0; i--) if (elementData[i] == null) return i;
+      for (int i = size - 1; i >= 0; i--) {
+        if (elementData[i] == null) {
+          return i;
+        }
+      }
     } else {
-      for (int i = size - 1; i >= 0; i--) if (elem.equals(elementData[i])) return i;
+      for (int i = size - 1; i >= 0; i--) {
+        if (elem.equals(elementData[i])) {
+          return i;
+        }
+      }
     }
     return -1;
   }
@@ -301,7 +325,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
     V oldValue = elementData[index];
 
     int numMoved = size - index - 1;
-    if (numMoved > 0) System.arraycopy(elementData, index + 1, elementData, index, numMoved);
+    if (numMoved > 0) {
+      System.arraycopy(elementData, index + 1, elementData, index, numMoved);
+    }
     elementData[--size] = null;
     return oldValue;
   }
@@ -319,17 +345,19 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    */
   public boolean remove(Object o) {
     if (o == null) {
-      for (int index = 0; index < size; index++)
+      for (int index = 0; index < size; index++) {
         if (elementData[index] == null) {
           fastRemove(index);
           return true;
         }
+      }
     } else {
-      for (int index = 0; index < size; index++)
+      for (int index = 0; index < size; index++) {
         if (o.equals(elementData[index])) {
           fastRemove(index);
           return true;
         }
+      }
     }
     return false;
   }
@@ -398,10 +426,13 @@ public class SimpleArrayList<V> extends AbstractList<V> {
    */
   @SuppressWarnings("unchecked")
   public <T> T[] toArray(T[] a) {
-    if (a.length < size)
+    if (a.length < size) {
       a = (T[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(), size);
+    }
     System.arraycopy(elementData, 0, a, 0, size);
-    if (a.length > size) a[size] = null;
+    if (a.length > size) {
+      a[size] = null;
+    }
     return a;
   }
 
@@ -417,7 +448,9 @@ public class SimpleArrayList<V> extends AbstractList<V> {
 
     for (int i = 0; i < elementData.length; i++) {
       buf.append(elementData[i]);
-      if (i + 1 < elementData.length) buf.append(", ");
+      if (i + 1 < elementData.length) {
+        buf.append(", ");
+      }
     }
 
     buf.append("]");

@@ -84,20 +84,20 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
         return activity_j - activity_i;
       };
 
-  private int activitiesIndex = 0;
+  private int activitiesIndex;
   // the bump rate
   private int currentBumpRate;
   // above which value do we rebase values ?
   private int rebaseThreshold;
   // the number of learnt clauses since last bump rate increase
-  private int learntCount = 0;
+  private int learntCount;
   // hand-managed priority queue for literals (always sorted by activity)
   private Integer[] priorities = new Integer[50];
-  private int prioritiesIndex = 0;
+  private int prioritiesIndex;
   // set of literals that are in priorities
   private final BitSet prioritizedVars = new BitSet();
   // used to update sorting of priorities sometimes
-  private int conflictCount = 0;
+  private int conflictCount;
 
   public void onBackjump(int oldLevel, int newLevel) {}
 
@@ -124,7 +124,9 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
 
     // if needed, increase bump rate
-    if (!isModelClause) learntCount++;
+    if (!isModelClause) {
+      learntCount++;
+    }
 
     if (learntCount >= LEARNT_COUNT_TO_INCREASE) {
       increaseBumpRate();
@@ -163,12 +165,14 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   public int getLiteralToAssert() {
 
     // by decreasing activity order
-    for (int i = 0; i < prioritiesIndex; ++i) {
+    for (int i = 0; i < prioritiesIndex; i++) {
       int literal = priorities[i];
       int var = Math.abs(literal);
 
       // var with highest activity
-      if (!core.trail.isSet(var)) return literal;
+      if (!core.trail.isSet(var)) {
+        return literal;
+      }
     }
 
     // no free literal
@@ -183,8 +187,11 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   private int getLiteralActivity(int var, boolean polarity) {
     assert var > 0;
 
-    if (polarity) return posActivities[var];
-    else return negActivities[var];
+    if (polarity) {
+      return posActivities[var];
+    } else {
+      return negActivities[var];
+    }
   }
 
   /**
@@ -195,14 +202,19 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   private int bumpVar(int literal) {
     int var = Math.abs(literal);
     ensureVarSize(var);
-    int curValue = (literal > 0 ? posActivities[var] : negActivities[var]);
+    int curValue = literal > 0 ? posActivities[var] : negActivities[var];
 
     // keep rates under some threshold
-    if (curValue >= rebaseThreshold) rebase(curValue);
+    if (curValue >= rebaseThreshold) {
+      rebase(curValue);
+    }
 
     // increase rate
-    if (literal > 0) return posActivities[var] = curValue + currentBumpRate;
-    else return negActivities[var] = curValue + currentBumpRate;
+    if (literal > 0) {
+      return posActivities[var] = curValue + currentBumpRate;
+    } else {
+      return negActivities[var] = curValue + currentBumpRate;
+    }
   }
 
   // be sure the variable bump can be accessed safely
@@ -242,7 +254,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     // e.g. >> 20 (?)
     // TODO : kind of integer log
     int rebaseFactor = 100 / value;
-    for (int curVar = 1; curVar <= activitiesIndex; ++curVar) {
+    for (int curVar = 1; curVar <= activitiesIndex; curVar++) {
       posActivities[curVar] = posActivities[curVar] * rebaseFactor;
       negActivities[curVar] = negActivities[curVar] * rebaseFactor;
     }

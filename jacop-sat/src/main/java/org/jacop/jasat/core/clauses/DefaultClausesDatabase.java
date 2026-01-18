@@ -74,9 +74,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
   // the array of clauses
   private int[][] clauses = new int[DEFAULT_INITIAL_NUMBER_OF_CLAUSES][];
   // the index of the current empty slot.
-  private int currentIndex = 0;
+  private int currentIndex;
   // number of removed clauses
-  private int numRemoved = 0;
+  private int numRemoved;
 
   /**
    * Notify the watches that this literal is set, updating the watched clauses and propagating
@@ -99,7 +99,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      */
 
     // get the current watched clauses for the variable
-    int var = (literal < 0) ? -literal : literal;
+    int var = literal < 0 ? -literal : literal;
     if (watchLists.length <= var || watchLists[var] == null) {
       return;
     }
@@ -117,7 +117,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     // iterate on watched clauses
     IterateOnWatchedClauses:
-    for (int i = 1, n = watchList[0]; i < n; ++i) {
+    for (int i = 1, n = watchList[0]; i < n; i++) {
 
       // the clause and its index
       int clauseIndex = watchList[i];
@@ -125,7 +125,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       int[] clause = clauses[clauseIndex];
 
       // is the literal the first or second watch ?
-      int myWatchPos = (clause[0] == var || -clause[0] == var) ? 0 : 1;
+      int myWatchPos = clause[0] == var || -clause[0] == var ? 0 : 1;
       int myWatch = clause[myWatchPos];
 
       /*
@@ -138,7 +138,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
       // get the other watch and its value, and perform some checks
       int otherWatch = clause[1 - myWatchPos];
-      int otherValue = trail.values[(otherWatch < 0) ? -otherWatch : otherWatch];
+      int otherValue = trail.values[otherWatch < 0 ? -otherWatch : otherWatch];
 
       assert Math.abs(myWatch) == var;
       assert otherWatch * myWatch != 0; // none is zero
@@ -169,10 +169,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         /*
          * iterate until two watches are found or the whole clause is explored
          */
-        for (int j = 2; j < clause.length && countWatches < 2; ++j) {
+        for (int j = 2; j < clause.length && countWatches < 2; j++) {
 
           int lit = clause[j];
-          int value = trail.values[(lit < 0) ? -lit : lit];
+          int value = trail.values[lit < 0 ? -lit : lit];
           if (value == 0) {
             // new watch, remember it
             if (countWatches == 0) {
@@ -210,7 +210,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             assert conflictClause.isUnsatisfiableIn(trail);
             core.triggerConflictEvent(conflictClause);
             // copy remaining elements of watchList to the newWatchList
-            for (int j = i + 1; j < watchList[0]; ++j) {
+            for (int j = i + 1; j < watchList[0]; j++) {
               newWatchList[newWatchNum++] = watchList[j];
             }
             // stop iterating on watchList
@@ -269,9 +269,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       assert otherValue == 0; // myValue cannot be 0, the literal has just been asserted
       // try to find another watch
       // iterate on all literals but the first (which is the unit literal, otherWatch)
-      for (int j = 2; j < clause.length; ++j) {
+      for (int j = 2; j < clause.length; j++) {
         int lit = clause[j];
-        int value = trail.values[(lit < 0) ? -lit : lit];
+        int value = trail.values[lit < 0 ? -lit : lit];
         if (value == 0 || value == lit) {
           /*
            * case c1)  a watch! burn! we have found another watch and
@@ -345,9 +345,9 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     /*
      * search for watches or literals asserted at current level
      */
-    for (int i = 0; i < clause.length && numFoundWatch < 2; ++i) {
+    for (int i = 0; i < clause.length && numFoundWatch < 2; i++) {
       int literal = clause[i];
-      int value = trail.values[(literal < 0) ? -literal : literal];
+      int value = trail.values[literal < 0 ? -literal : literal];
 
       if (value == 0 || value == literal) {
         if (numFoundWatch == 1) {
@@ -362,7 +362,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         // falsified literal. Maybe it is interesting because of its level
         assert value == -literal;
         assert highestLevel >= secondHighestLevel;
-        int level = trail.getLevel((literal < 0) ? -literal : literal);
+        int level = trail.getLevel(literal < 0 ? -literal : literal);
         if (level >= highestLevel) {
           // shift current, highest and second highest literals
           secondHighestLevel = highestLevel;
@@ -395,8 +395,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         putAt0And1(clause, watch1pos, highestPos);
         // trigger propagation of the first literal if not already fixed literal satisfying the
         // clause.
-        if (trail.values[(clause[0] < 0) ? -clause[0] : clause[0]] == 0)
-          ;
+        if (trail.values[clause[0] < 0 ? -clause[0] : clause[0]] == 0) {}
         core.triggerPropagateEvent(clause[0], clauseId);
         break;
       /*
@@ -494,7 +493,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     int[] clause = clauses[clauseIndex];
     assert doesWatch(clause[0], clauseIndex);
     assert doesWatch(clause[1], clauseIndex);
-    for (int j = 2; j < clause.length; ++j) {
+    for (int j = 2; j < clause.length; j++) {
       assert !doesWatch(clause[j], clauseIndex);
     }
     return null;
@@ -517,14 +516,14 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       return null;
     }
 
-    for (int i = 1, n = watchList[0]; i < n; ++i) {
+    for (int i = 1, n = watchList[0]; i < n; i++) {
 
       // the clause and its index
       int clauseIndex = watchList[i];
       int[] clause = clauses[clauseIndex];
       assert doesWatch(clause[0], clauseIndex);
       assert doesWatch(clause[1], clauseIndex);
-      for (int j = 2; j < clause.length; ++j) {
+      for (int j = 2; j < clause.length; j++) {
         assert !doesWatch(clause[j], clauseIndex)
             : "Too many watches on var "
                 + var

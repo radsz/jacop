@@ -109,8 +109,11 @@ public class CPvizSendMoreMoney {
     // Since there are 8 different letters this will create
     // 0+1+2+3+4+5+6+7 = 28 inequality constraints
 
-    for (int i = 0; i < letters.length; i++)
-      for (int j = i - 1; j >= 0; j--) store.impose(new XneqY(letters[j], letters[i]));
+    for (int i = 0; i < letters.length; i++) {
+      for (int j = i - 1; j >= 0; j--) {
+        store.impose(new XneqY(letters[j], letters[i]));
+      }
+    }
 
     // 		// Main equation of the problem SEND + MORE = MONEY
     // 		store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));

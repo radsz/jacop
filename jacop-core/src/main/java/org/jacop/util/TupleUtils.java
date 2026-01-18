@@ -38,7 +38,7 @@ package org.jacop.util;
  */
 public class TupleUtils {
 
-  int tupleNumber = 0;
+  int tupleNumber;
 
   int[][] tuples;
 
@@ -53,15 +53,18 @@ public class TupleUtils {
 
       boolean change = false;
 
-      for (int j = ts.length - 1; j > i; j--)
+      for (int j = ts.length - 1; j > i; j--) {
         if (!smallerEqualTuple(ts[j - 1], ts[j])) {
           change = true;
           int[] tmp = ts[j - 1];
           ts[j - 1] = ts[j];
           ts[j] = tmp;
         }
+      }
 
-      if (!change) break;
+      if (!change) {
+        break;
+      }
     }
   }
 
@@ -74,13 +77,21 @@ public class TupleUtils {
    */
   public static boolean smallerEqualTuple(int[] left, int[] right) {
 
-    if (right.length < left.length) return false;
+    if (right.length < left.length) {
+      return false;
+    }
 
-    if (right.length > left.length) return true;
+    if (right.length > left.length) {
+      return true;
+    }
 
     for (int i = 0; i < left.length; i++) {
-      if (left[i] < right[i]) return true;
-      if (left[i] > right[i]) return false;
+      if (left[i] < right[i]) {
+        return true;
+      }
+      if (left[i] > right[i]) {
+        return false;
+      }
     }
 
     return true;
@@ -124,22 +135,33 @@ public class TupleUtils {
           !smallerEqualTuple(tuples[position[i]], sortedTs[i])
               || !smallerEqualTuple(sortedTs[i], tuples[position[i]]);
 
-      if (insert[i]) insertNo++;
-      else reusedTuples[i] = tuples[position[i]];
+      if (insert[i]) {
+        insertNo++;
+      } else {
+        reusedTuples[i] = tuples[position[i]];
+      }
     }
 
-    if (insertNo == 0) return reusedTuples;
+    if (insertNo == 0) {
+      return reusedTuples;
+    }
 
     int[][] tuplesBeforeExtension = tuples;
 
-    if (tupleNumber + insertNo > tuples.length) tuples = new int[tuples.length * 2][];
-    else tuples = new int[tuples.length][];
+    if (tupleNumber + insertNo > tuples.length) {
+      tuples = new int[tuples.length * 2][];
+    } else {
+      tuples = new int[tuples.length][];
+    }
 
     int previousPosition = 0;
     int performedInserts = 1;
 
-    for (; previousPosition < insert.length; previousPosition++)
-      if (insert[previousPosition]) break;
+    for (; previousPosition < insert.length; previousPosition++) {
+      if (insert[previousPosition]) {
+        break;
+      }
+    }
 
     System.arraycopy(tuplesBeforeExtension, 0, tuples, 0, position[previousPosition]);
 
@@ -156,7 +178,9 @@ public class TupleUtils {
 
     for (int i = previousPosition + 1; i < sortedTs.length; i++) {
 
-      if (!insert[i]) continue;
+      if (!insert[i]) {
+        continue;
+      }
 
       System.arraycopy(
           tuplesBeforeExtension,
@@ -216,9 +240,13 @@ public class TupleUtils {
       position = (left + right) >> 1;
     }
 
-    if (smallerEqualTuple(tuple, tuples[left])) return left;
+    if (smallerEqualTuple(tuple, tuples[left])) {
+      return left;
+    }
 
-    if (smallerEqualTuple(tuple, tuples[right])) return right;
+    if (smallerEqualTuple(tuple, tuples[right])) {
+      return right;
+    }
 
     return -1;
   }
@@ -237,15 +265,18 @@ public class TupleUtils {
 
       boolean change = false;
 
-      for (int j = result.length - 1; j > i; j--)
+      for (int j = result.length - 1; j > i; j--) {
         if (!smallerEqualTuple(result[j - 1], result[j])) {
           change = true;
           int[] tmp = result[j - 1];
           result[j - 1] = result[j];
           result[j] = tmp;
         }
+      }
 
-      if (!change) break;
+      if (!change) {
+        break;
+      }
     }
 
     return result;

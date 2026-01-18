@@ -47,7 +47,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   public static final BoundDomain emptyDomain = new BoundDomain();
 
   private static final Random generator =
-      (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+      Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /** The minimal value of the domain. */
   public int min;
@@ -92,9 +92,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   public void unionAdapt(Interval i) {
 
     if (min < max) {
-      if (i.min() < min) min = i.min();
+      if (i.min() < min) {
+        min = i.min();
+      }
 
-      if (i.max() > max) max = i.max();
+      if (i.max() > max) {
+        max = i.max();
+      }
     } else {
 
       min = i.min();
@@ -107,9 +111,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   public void addDom(IntDomain domain) {
 
     if (min < max) {
-      if (domain.min() < min) min = domain.min();
+      if (domain.min() < min) {
+        min = domain.min();
+      }
 
-      if (domain.max() > max) max = domain.max();
+      if (domain.max() > max) {
+        max = domain.max();
+      }
     } else {
 
       min = domain.min();
@@ -121,9 +129,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   public void unionAdapt(int min, int max) {
 
     if (this.min < this.max) {
-      if (this.min < min) this.min = min;
+      if (this.min < min) {
+        this.min = min;
+      }
 
-      if (this.max > max) this.max = max;
+      if (this.max > max) {
+        this.max = max;
+      }
     } else {
       this.min = min;
       this.max = max;
@@ -145,8 +157,11 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     BoundDomain cloned;
 
-    if (!isEmpty()) cloned = new BoundDomain(min, max);
-    else cloned = new BoundDomain();
+    if (!isEmpty()) {
+      cloned = new BoundDomain(min, max);
+    } else {
+      cloned = new BoundDomain();
+    }
 
     cloned.stamp = stamp;
     cloned.previousDomain = previousDomain;
@@ -168,8 +183,11 @@ class BoundDomain extends IntDomain implements Cloneable {
    * @return clone of this domain.
    */
   public BoundDomain cloneLight() {
-    if (!isEmpty()) return new BoundDomain(min, max);
-    else return new BoundDomain();
+    if (!isEmpty()) {
+      return new BoundDomain(min, max);
+    } else {
+      return new BoundDomain();
+    }
   }
 
   @Override
@@ -177,12 +195,16 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     if (min == IntDomain.MinInt) {
 
-      if (max == IntDomain.MaxInt) return new BoundDomain();
+      if (max == IntDomain.MaxInt) {
+        return new BoundDomain();
+      }
 
       return new BoundDomain(max + 1, IntDomain.MaxInt);
     }
 
-    if (max == IntDomain.MaxInt) return new BoundDomain(IntDomain.MinInt, min - 1);
+    if (max == IntDomain.MaxInt) {
+      return new BoundDomain(IntDomain.MinInt, min - 1);
+    }
 
     IntervalDomain complement = new IntervalDomain();
     complement.unionAdapt(IntDomain.MinInt, min - 1);
@@ -194,7 +216,9 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public boolean contains(IntDomain domain) {
 
-    if (isEmpty()) return domain.isEmpty();
+    if (isEmpty()) {
+      return domain.isEmpty();
+    }
 
     return min <= domain.min() && max >= domain.max();
   }
@@ -221,7 +245,7 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     div = a / b;
     rem = a % b;
-    return (rem > 0) ? div + 1 : div;
+    return rem > 0 ? div + 1 : div;
   }
 
   @Override
@@ -231,14 +255,18 @@ class BoundDomain extends IntDomain implements Cloneable {
 
   public boolean eq(IntDomain domain) {
 
-    if (domain.isEmpty() && isEmpty()) return true;
+    if (domain.isEmpty() && isEmpty()) {
+      return true;
+    }
 
     return min == domain.min() && max == domain.max() && (max - min + 1) == domain.getSize();
   }
 
   @Override
   public Interval getInterval(int position) {
-    if (position == 0) return new Interval(min, max);
+    if (position == 0) {
+      return new Interval(min, max);
+    }
 
     return null;
   }
@@ -253,18 +281,29 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     assert (min <= max);
 
-    if (this.max < min || this.min > max) throw failException;
+    if (this.max < min || this.min > max) {
+      throw failException;
+    }
 
-    if (min <= this.min && max >= this.max) return;
+    if (min <= this.min && max >= this.max) {
+      return;
+    }
 
     if (stamp == storeLevel) {
 
-      if (this.min < min) this.min = min;
+      if (this.min < min) {
+        this.min = min;
+      }
 
-      if (this.max > max) this.max = max;
+      if (this.max > max) {
+        this.max = max;
+      }
 
-      if (this.min == this.max) var.domainHasChanged(GROUND);
-      else var.domainHasChanged(BOUND);
+      if (this.min == this.max) {
+        var.domainHasChanged(GROUND);
+      } else {
+        var.domainHasChanged(BOUND);
+      }
 
       return;
 
@@ -274,12 +313,16 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       BoundDomain result;
 
-      if (this.min < min)
-        if (this.max > max) result = new BoundDomain(min, max);
-        else result = new BoundDomain(min, this.max);
-      else
+      if (this.min < min) {
+        if (this.max > max) {
+          result = new BoundDomain(min, max);
+        } else {
+          result = new BoundDomain(min, this.max);
+        }
+      } else {
         // case this.min, this.max means no change which is handled above.
         result = new BoundDomain(this.min, max);
+      }
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -302,10 +345,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void inValue(int storeLevel, IntVar var, int value) {
 
-    if (!(value >= min && value <= max)) throw failException;
+    if (!(value >= min && value <= max)) {
+      throw failException;
+    }
 
-    if (min == value && max == value) // ground and equal value already
-    return;
+    if (min == value && max == value) { // ground and equal value already
+      return;
+    }
 
     if (stamp == storeLevel) {
 
@@ -338,20 +384,30 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void inComplement(int storeLevel, Var var, int complement) {
 
-    if (this.max == this.min && this.max == complement) throw failException;
+    if (this.max == this.min && this.max == complement) {
+      throw failException;
+    }
 
     // Can not be removed without changing the code below.
-    if (complement != this.min && complement != this.max) return;
+    if (complement != this.min && complement != this.max) {
+      return;
+    }
 
     if (stamp == storeLevel) {
 
-      if (this.min == complement) this.min++;
-      // Assumes that check that complement must be equal to one of the bounds is
-      // done above.
-      else this.max--;
+      if (this.min == complement) {
+        this.min++;
+      } else {
+        // Assumes that check that complement must be equal to one of the bounds is
+        // done above.
+        this.max--;
+      }
 
-      if (this.min == this.max) var.domainHasChanged(GROUND);
-      else var.domainHasChanged(BOUND);
+      if (this.min == this.max) {
+        var.domainHasChanged(GROUND);
+      } else {
+        var.domainHasChanged(BOUND);
+      }
 
       return;
 
@@ -361,8 +417,11 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       BoundDomain result;
 
-      if (this.min == complement) result = new BoundDomain(this.min + 1, this.max);
-      else result = new BoundDomain(this.min, this.max - 1);
+      if (this.min == complement) {
+        result = new BoundDomain(this.min + 1, this.max);
+      } else {
+        result = new BoundDomain(this.min, this.max - 1);
+      }
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -388,22 +447,34 @@ class BoundDomain extends IntDomain implements Cloneable {
     assert (min <= max);
 
     // all elements are removed so fail.
-    if (this.min >= min && this.max <= max) throw failException;
+    if (this.min >= min && this.max <= max) {
+      throw failException;
+    }
 
     // Can not be removed without changing the code below.
     // none of the elements are removed can ignore the call.
-    if (max < this.min || this.max < min) return;
+    if (max < this.min || this.max < min) {
+      return;
+    }
 
     // For bound domain, creating holes in the domain not possible.
-    if (min > this.min && max < this.max) return;
+    if (min > this.min && max < this.max) {
+      return;
+    }
 
     if (stamp == storeLevel) {
 
-      if (max < this.max) this.min = max + 1;
-      else this.max = min - 1;
+      if (max < this.max) {
+        this.min = max + 1;
+      } else {
+        this.max = min - 1;
+      }
 
-      if (this.min == this.max) var.domainHasChanged(GROUND);
-      else var.domainHasChanged(BOUND);
+      if (this.min == this.max) {
+        var.domainHasChanged(GROUND);
+      } else {
+        var.domainHasChanged(BOUND);
+      }
 
       return;
 
@@ -413,8 +484,11 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       BoundDomain result;
 
-      if (max < this.max) result = new BoundDomain(max + 1, this.max);
-      else result = new BoundDomain(this.min, min - 1);
+      if (max < this.max) {
+        result = new BoundDomain(max + 1, this.max);
+      } else {
+        result = new BoundDomain(this.min, min - 1);
+      }
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -437,17 +511,24 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void inMax(int storeLevel, Var var, int max) {
 
-    if (this.min > max) throw failException;
+    if (this.min > max) {
+      throw failException;
+    }
 
     // If removed the code below has to change.
-    if (max >= this.max) return;
+    if (max >= this.max) {
+      return;
+    }
 
     if (stamp == storeLevel) {
 
       this.max = max;
 
-      if (this.min == this.max) var.domainHasChanged(GROUND);
-      else var.domainHasChanged(BOUND);
+      if (this.min == this.max) {
+        var.domainHasChanged(GROUND);
+      } else {
+        var.domainHasChanged(BOUND);
+      }
 
       return;
 
@@ -478,16 +559,23 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void inMin(int storeLevel, Var var, int min) {
 
-    if (this.max < min) throw failException;
+    if (this.max < min) {
+      throw failException;
+    }
 
-    if (min <= this.min) return;
+    if (min <= this.min) {
+      return;
+    }
 
     if (stamp == storeLevel) {
 
       this.min = min;
 
-      if (this.min == this.max) var.domainHasChanged(GROUND);
-      else var.domainHasChanged(BOUND);
+      if (this.min == this.max) {
+        var.domainHasChanged(GROUND);
+      } else {
+        var.domainHasChanged(BOUND);
+      }
 
       return;
 
@@ -526,47 +614,62 @@ class BoundDomain extends IntDomain implements Cloneable {
     int inputMin = dom.min();
     int inputMax = dom.max();
 
-    if (inputMin > this.max || inputMax < this.min) return emptyDomain;
+    if (inputMin > this.max || inputMax < this.min) {
+      return emptyDomain;
+    }
 
-    if (inputMin >= this.min) // inputMin..
-    if (inputMax <= this.max) // inputMin..inputMax
-      return new BoundDomain(inputMin, inputMax);
-      else // inputMin..max
-      return new BoundDomain(inputMin, this.max);
-    else // min..
-    if (inputMax <= this.max) // min..inputMax
-    return new BoundDomain(this.min, inputMax);
-    else // min..max
-    return new BoundDomain(this.min, this.max);
+    if (inputMin >= this.min) { // inputMin..
+      if (inputMax <= this.max) { // inputMin..inputMax
+        return new BoundDomain(inputMin, inputMax);
+      } else { // inputMin..max
+        return new BoundDomain(inputMin, this.max);
+      }
+    } else // min..
+    if (inputMax <= this.max) { // min..inputMax
+      return new BoundDomain(this.min, inputMax);
+    } else { // min..max
+      return new BoundDomain(this.min, this.max);
+    }
   }
 
   @Override
   public IntDomain intersect(int min, int max) {
 
-    if (min > this.max || max < this.min) return emptyDomain;
+    if (min > this.max || max < this.min) {
+      return emptyDomain;
+    }
 
-    if (min >= this.min) // inputMin..
-    if (max <= this.max) // inputMin..inputMax
-      return new BoundDomain(min, max);
-      else // inputMin..max
-      return new BoundDomain(min, this.max);
-    else // min..
-    if (max <= this.max) // min..inputMax
-    return new BoundDomain(this.min, max);
-    else // min..max
-    return new BoundDomain(this.min, this.max);
+    if (min >= this.min) { // inputMin..
+      if (max <= this.max) { // inputMin..inputMax
+        return new BoundDomain(min, max);
+      } else { // inputMin..max
+        return new BoundDomain(min, this.max);
+      }
+    } else // min..
+    if (max <= this.max) { // min..inputMax
+      return new BoundDomain(this.min, max);
+    } else { // min..max
+      return new BoundDomain(this.min, this.max);
+    }
   }
 
   @Override
   public IntDomain subtract(int value) {
 
-    if (this.max == this.min && this.max == value) return emptyDomain;
+    if (this.max == this.min && this.max == value) {
+      return emptyDomain;
+    }
 
     // Can not be removed without changing the code below.
-    if (value != this.min && value != this.max) return new BoundDomain(this.min, this.max);
+    if (value != this.min && value != this.max) {
+      return new BoundDomain(this.min, this.max);
+    }
 
-    if (this.min == value) return new BoundDomain(this.min + 1, this.max);
-    else return new BoundDomain(this.min, this.max - 1);
+    if (this.min == value) {
+      return new BoundDomain(this.min + 1, this.max);
+    } else {
+      return new BoundDomain(this.min, this.max - 1);
+    }
   }
 
   @Override
@@ -629,8 +732,12 @@ class BoundDomain extends IntDomain implements Cloneable {
 
   @Override
   public int nextValue(int value) {
-    if (value < this.min) return min;
-    if (value < this.max) return value + 1;
+    if (value < this.min) {
+      return min;
+    }
+    if (value < this.max) {
+      return value + 1;
+    }
 
     return value;
   }
@@ -638,15 +745,22 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public int noIntervals() {
 
-    if (isEmpty()) return 0;
-    else return 1;
+    if (isEmpty()) {
+      return 0;
+    } else {
+      return 1;
+    }
   }
 
   @Override
   public IntDomain recentDomainPruning(int storeLevel) {
-    if (previousDomain == null) return emptyDomain;
+    if (previousDomain == null) {
+      return emptyDomain;
+    }
 
-    if (stamp < storeLevel) return emptyDomain;
+    if (stamp < storeLevel) {
+      return emptyDomain;
+    }
 
     return previousDomain.subtract(this);
   }
@@ -697,12 +811,12 @@ class BoundDomain extends IntDomain implements Cloneable {
 
   @Override
   public boolean singleton() {
-    return (min == max);
+    return min == max;
   }
 
   @Override
   public boolean singleton(int c) {
-    return (min == c && max == c);
+    return min == c && max == c;
   }
 
   @Override
@@ -714,15 +828,20 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       BoundDomain dom = (BoundDomain) domain;
 
-      if (dom.previousDomain != null) domain = dom.previousDomain;
-      else break;
+      if (dom.previousDomain != null) {
+        domain = dom.previousDomain;
+      } else {
+        break;
+      }
     }
 
-    if (domain.domainID() == BoundDomainID)
-      return (domain.modelConstraintsToEvaluate[0]
+    if (domain.domainID() == BoundDomainID) {
+      return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
-          + domain.modelConstraintsToEvaluate[2]);
-    else return domain.sizeConstraintsOriginal();
+          + domain.modelConstraintsToEvaluate[2];
+    } else {
+      return domain.sizeConstraintsOriginal();
+    }
   }
 
   @Override
@@ -731,13 +850,21 @@ class BoundDomain extends IntDomain implements Cloneable {
     int inputMin = domain.min();
     int inputMax = domain.max();
 
-    if (inputMin <= this.min && inputMax >= this.max) return emptyDomain;
+    if (inputMin <= this.min && inputMax >= this.max) {
+      return emptyDomain;
+    }
 
-    if (this.min < inputMin && inputMax < this.max) return new BoundDomain(this.min, this.max);
+    if (this.min < inputMin && inputMax < this.max) {
+      return new BoundDomain(this.min, this.max);
+    }
 
-    if (inputMin > this.min) return new BoundDomain(this.min, inputMin - 1);
+    if (inputMin > this.min) {
+      return new BoundDomain(this.min, inputMin - 1);
+    }
 
-    if (inputMax < this.max) return new BoundDomain(inputMax + 1, this.max);
+    if (inputMax < this.max) {
+      return new BoundDomain(inputMax + 1, this.max);
+    }
 
     assert false;
     return null;
@@ -746,13 +873,21 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public BoundDomain subtract(int min, int max) {
 
-    if (min <= this.min && max >= this.max) return emptyDomain;
+    if (min <= this.min && max >= this.max) {
+      return emptyDomain;
+    }
 
-    if (this.min < min && max < this.max) return new BoundDomain(this.min, this.max);
+    if (this.min < min && max < this.max) {
+      return new BoundDomain(this.min, this.max);
+    }
 
-    if (min > this.min) return new BoundDomain(this.min, min - 1);
+    if (min > this.min) {
+      return new BoundDomain(this.min, min - 1);
+    }
 
-    if (max < this.max) return new BoundDomain(max + 1, this.max);
+    if (max < this.max) {
+      return new BoundDomain(max + 1, this.max);
+    }
 
     assert false;
     return null;
@@ -761,9 +896,13 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public String toString() {
 
-    if (min < max) return "{" + min + ".." + max + "}";
-    else if (min == max) return String.valueOf(min);
-    else return "{}";
+    if (min < max) {
+      return "{" + min + ".." + max + "}";
+    } else if (min == max) {
+      return String.valueOf(min);
+    } else {
+      return "{}";
+    }
   }
 
   @Override
@@ -773,7 +912,9 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       s.append(e.next().id());
-      if (e.hasNext()) s.append(", ");
+      if (e.hasNext()) {
+        s.append(", ");
+      }
     }
 
     return s.toString();
@@ -789,11 +930,15 @@ class BoundDomain extends IntDomain implements Cloneable {
     do {
       if (!domain.singleton()) {
         result.append(this).append("(").append(domain.stamp()).append(") ");
-      } else result.append(min).append("(").append(domain.stamp()).append(") ");
+      } else {
+        result.append(min).append("(").append(domain.stamp()).append(") ");
+      }
 
       result.append("constraints: ");
 
-      for (Constraint searchConstraint : domain.searchConstraints) result.append(searchConstraint);
+      for (Constraint searchConstraint : domain.searchConstraints) {
+        result.append(searchConstraint);
+      }
 
       if (domain.domainID() == IntervalDomainID) {
 
@@ -821,39 +966,47 @@ class BoundDomain extends IntDomain implements Cloneable {
     int min = domain.min();
     int max = domain.max();
 
-    if (min < this.min) // min..
-    if (this.max < max) // min..max
-      return new BoundDomain(min, max);
-      else // min..this.max
-      return new BoundDomain(min, this.max);
-    else // this.min..
-    if (this.max < max) // this.min..max
-    return new BoundDomain(this.min, max);
-    else // this.min..this.max
-    return new BoundDomain(this.min, this.max);
+    if (min < this.min) { // min..
+      if (this.max < max) { // min..max
+        return new BoundDomain(min, max);
+      } else { // min..this.max
+        return new BoundDomain(min, this.max);
+      }
+    } else // this.min..
+    if (this.max < max) { // this.min..max
+      return new BoundDomain(this.min, max);
+    } else { // this.min..this.max
+      return new BoundDomain(this.min, this.max);
+    }
   }
 
   @Override
   public IntDomain union(int min, int max) {
 
-    if (min < this.min) // min..
-    if (this.max < max) // min..max
-      return new BoundDomain(min, max);
-      else // min..this.max
-      return new BoundDomain(min, this.max);
-    else // this.min..
-    if (this.max < max) // this.min..max
-    return new BoundDomain(this.min, max);
-    else // this.min..this.max
-    return new BoundDomain(this.min, this.max);
+    if (min < this.min) { // min..
+      if (this.max < max) { // min..max
+        return new BoundDomain(min, max);
+      } else { // min..this.max
+        return new BoundDomain(min, this.max);
+      }
+    } else // this.min..
+    if (this.max < max) { // this.min..max
+      return new BoundDomain(this.min, max);
+    } else { // this.min..this.max
+      return new BoundDomain(this.min, this.max);
+    }
   }
 
   @Override
   public IntDomain union(int value) {
 
-    if (value < this.min) return new BoundDomain(value, this.max);
+    if (value < this.min) {
+      return new BoundDomain(value, this.max);
+    }
 
-    if (value > this.max) return new BoundDomain(this.min, value);
+    if (value > this.max) {
+      return new BoundDomain(this.min, value);
+    }
 
     return new BoundDomain(this.min, this.max);
   }
@@ -866,7 +1019,9 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public int previousValue(int value) {
 
-    if (value > this.min) return value - 1;
+    if (value > this.min) {
+      return value - 1;
+    }
 
     return value;
   }
@@ -879,7 +1034,9 @@ class BoundDomain extends IntDomain implements Cloneable {
    */
   public String checkInvariants() {
 
-    if (this.min > this.max) return "Min value is larger than max value ";
+    if (this.min > this.max) {
+      return "Min value is larger than max value ";
+    }
 
     // Fine, all invariants hold.
     return null;
@@ -894,12 +1051,17 @@ class BoundDomain extends IntDomain implements Cloneable {
   public void subtractAdapt(int complement) {
 
     // Can not be removed without changing the code below.
-    if (complement != this.min && complement != this.max) return;
+    if (complement != this.min && complement != this.max) {
+      return;
+    }
 
-    if (this.min == complement) this.min++;
-    // Assumes that check that complement must be equal to one of the bounds is
-    // done above.
-    else this.max--;
+    if (this.min == complement) {
+      this.min++;
+    } else {
+      // Assumes that check that complement must be equal to one of the bounds is
+      // done above.
+      this.max--;
+    }
   }
 
   @Override
@@ -943,7 +1105,9 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public int intersectAdapt(int minIntersect, int maxIntersect) {
 
-    if (minIntersect <= min && max <= maxIntersect) return Domain.NONE;
+    if (minIntersect <= min && max <= maxIntersect) {
+      return Domain.NONE;
+    }
 
     if (minIntersect > max) {
       // Intersection is empty.
@@ -952,9 +1116,13 @@ class BoundDomain extends IntDomain implements Cloneable {
       return IntDomain.GROUND;
     }
 
-    if (max > maxIntersect) max = maxIntersect;
+    if (max > maxIntersect) {
+      max = maxIntersect;
+    }
 
-    if (min < minIntersect) min = minIntersect;
+    if (min < minIntersect) {
+      min = minIntersect;
+    }
 
     return IntDomain.BOUND;
   }
@@ -962,9 +1130,10 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public int getElementAt(int index) {
 
-    if (this.max - this.min > index)
+    if (this.max - this.min > index) {
       throw new RuntimeException(
           "The domain does not have as many elements as indicated by index " + index);
+    }
 
     return this.min + index;
   }
@@ -981,7 +1150,9 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       Interval next = enumer.nextElement();
 
-      if (next.max() < this.min || this.max < next.min()) continue;
+      if (next.max() < this.min || this.max < next.min()) {
+        continue;
+      }
 
       int min = Math.max(next.min(), this.min);
       int max = Math.min(next.max(), this.max);
@@ -996,8 +1167,11 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public int getRandomValue() {
 
-    if (generator.nextInt(2) == 0) return min();
-    else return max();
+    if (generator.nextInt(2) == 0) {
+      return min();
+    } else {
+      return max();
+    }
   }
 
   @Override

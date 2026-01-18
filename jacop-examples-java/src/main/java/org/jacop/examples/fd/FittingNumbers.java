@@ -76,7 +76,9 @@ public class FittingNumbers extends ExampleFD {
     IntVar[] counters = new IntVar[elements.length];
 
     IntervalDomain sumDomain = new IntervalDomain();
-    for (int j : sum) sumDomain.unionAdapt(j);
+    for (int j : sum) {
+      sumDomain.unionAdapt(j);
+    }
     IntVar sum = new IntVar(store, "sum", sumDomain);
 
     vars.add(sum);

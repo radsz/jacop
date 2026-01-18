@@ -153,27 +153,36 @@ public class AtLeast extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.contains(value))
+      if (v.domain.contains(value)) {
         if (v.singleton()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
     }
 
-    if (numberMayBe + numberEq < counter) throw Store.failException;
-    else if (numberEq >= counter) {
-      if (!reified) removeConstraint();
+    if (numberMayBe + numberEq < counter) {
+      throw Store.failException;
+    } else if (numberEq >= counter) {
+      if (!reified) {
+        removeConstraint();
+      }
     } else if (numberMayBe + numberEq == counter) {
       for (int i = start; i < list.length; i++) {
         IntVar v = list[i];
-        if (!v.singleton() && v.domain.contains(value)) v.domain.inValue(store.level, v, value);
+        if (!v.singleton() && v.domain.contains(value)) {
+          v.domain.inValue(store.level, v, value);
+        }
       }
-      if (!reified) removeConstraint();
+      if (!reified) {
+        removeConstraint();
+      }
     }
 
     equal.update(numberEq);
@@ -188,27 +197,34 @@ public class AtLeast extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.contains(value))
+      if (v.domain.contains(value)) {
         if (v.singleton()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
     }
 
-    if (numberEq > counter - 1) throw Store.failException;
-    else if (numberEq + numberMayBe <= counter - 1) {
-      if (!reified) removeConstraint();
+    if (numberEq > counter - 1) {
+      throw Store.failException;
+    } else if (numberEq + numberMayBe <= counter - 1) {
+      if (!reified) {
+        removeConstraint();
+      }
     } else if (numberEq == counter - 1) {
       for (int i = start; i < list.length; i++) {
         IntVar v = list[i];
         v.domain.inComplement(store.level, v, value, value);
       }
-      if (!reified) removeConstraint();
+      if (!reified) {
+        removeConstraint();
+      }
     }
 
     equal.update(numberEq);
@@ -227,7 +243,11 @@ public class AtLeast extends PrimitiveConstraint {
   public boolean satisfied() {
 
     int numberEq = 0;
-    for (IntVar v : list) if (v.singleton(value)) numberEq++;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        numberEq++;
+      }
+    }
 
     return numberEq >= counter;
   }
@@ -237,9 +257,13 @@ public class AtLeast extends PrimitiveConstraint {
     int numberEq = 0;
     int numberMayBe = 0;
     for (IntVar v : list) {
-      if (v.domain.contains(value))
-        if (v.singleton()) numberEq++;
-        else numberMayBe++;
+      if (v.domain.contains(value)) {
+        if (v.singleton()) {
+          numberEq++;
+        } else {
+          numberMayBe++;
+        }
+      }
     }
 
     return numberEq + numberMayBe <= counter - 1;
@@ -254,7 +278,9 @@ public class AtLeast extends PrimitiveConstraint {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(counter).append(" )");

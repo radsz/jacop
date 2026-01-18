@@ -61,19 +61,27 @@ public class PigeonHole extends ExampleFD {
 
     PigeonHole example = new PigeonHole();
 
-    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
+    if (args.length > 1) {
+      example.noPigeons = Integer.parseInt(args[1]);
+    }
 
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
 
     example = new PigeonHole();
 
-    if (args.length > 1) example.noPigeons = Integer.parseInt(args[1]);
+    if (args.length > 1) {
+      example.noPigeons = Integer.parseInt(args[1]);
+    }
 
     example.modelBasic();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -84,8 +92,9 @@ public class PigeonHole extends ExampleFD {
 
     IntVar[] numbers = new IntVar[noPigeons];
 
-    for (int i = 0; i < noPigeons; i++)
+    for (int i = 0; i < noPigeons; i++) {
       numbers[i] = new IntVar(store, "h" + (i + 1), 1, noPigeons - 1);
+    }
 
     store.impose(new Alldiff(numbers));
 
@@ -100,11 +109,15 @@ public class PigeonHole extends ExampleFD {
 
     IntVar[] numbers = new IntVar[noPigeons];
 
-    for (int i = 0; i < noPigeons; i++)
+    for (int i = 0; i < noPigeons; i++) {
       numbers[i] = new IntVar(store, "h" + (i + 1), 1, noPigeons - 1);
+    }
 
-    for (int i = 0; i < noPigeons; i++)
-      for (int j = i + 1; j < noPigeons; j++) store.impose(new XneqY(numbers[i], numbers[j]));
+    for (int i = 0; i < noPigeons; i++) {
+      for (int j = i + 1; j < noPigeons; j++) {
+        store.impose(new XneqY(numbers[i], numbers[j]));
+      }
+    }
 
     vars.addAll(Arrays.asList(numbers));
   }

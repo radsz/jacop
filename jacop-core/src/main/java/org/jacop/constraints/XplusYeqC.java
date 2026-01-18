@@ -98,15 +98,17 @@ public class XplusYeqC extends PrimitiveConstraint {
       // FIXME, make propagation without object creation, scan x ->, and y <-, at the same time.
       IntDomain xDom = x.dom();
       IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
-      for (int i = xDom.noIntervals() - 1; i >= 0; i--)
+      for (int i = xDom.noIntervals() - 1; i >= 0; i--) {
         yDomIn.unionAdapt(new Interval(c - xDom.rightElement(i), c - xDom.leftElement(i)));
+      }
 
       y.domain.in(store.level, y, yDomIn);
 
       IntDomain yDom = y.domain;
       IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
-      for (int i = yDom.noIntervals() - 1; i >= 0; i--)
+      for (int i = yDom.noIntervals() - 1; i >= 0; i--) {
         xDomIn.unionAdapt(new Interval(c - yDom.rightElement(i), c - yDom.leftElement(i)));
+      }
 
       x.domain.in(store.level, x, xDomIn);
 
@@ -140,8 +142,11 @@ public class XplusYeqC extends PrimitiveConstraint {
 
       store.propagationHasOccurred = false;
 
-      if (x.singleton()) y.domain.inComplement(store.level, y, c - x.value());
-      else if (y.singleton()) x.domain.inComplement(store.level, x, c - y.value());
+      if (x.singleton()) {
+        y.domain.inComplement(store.level, y, c - x.value());
+      } else if (y.singleton()) {
+        x.domain.inComplement(store.level, x, c - y.value());
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -149,7 +154,7 @@ public class XplusYeqC extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
     IntDomain Xdom = x.dom(), Ydom = y.dom();
-    return (Xdom.max() + Ydom.max() < c || Xdom.min() + Ydom.min() > c);
+    return Xdom.max() + Ydom.max() < c || Xdom.min() + Ydom.min() > c;
   }
 
   @Override

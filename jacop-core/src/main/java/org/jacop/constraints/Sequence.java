@@ -89,7 +89,9 @@ public class Sequence extends DecomposedConstraint<Constraint> {
   public static List<Constraint> decomposeByRegular(Sequence sequence) {
 
     IntDomain setComplement = new IntervalDomain();
-    for (IntVar var : sequence.list) setComplement.addDom(var.domain);
+    for (IntVar var : sequence.list) {
+      setComplement.addDom(var.domain);
+    }
     setComplement = setComplement.subtract(sequence.set);
 
     FSM fsm = new FSM();
@@ -142,11 +144,15 @@ public class Sequence extends DecomposedConstraint<Constraint> {
 
       FSMState predecessor = state;
       FSMState successor = mappingString.get(one);
-      if (successor != null) predecessor.addTransition(new FSMTransition(sequence.set, successor));
+      if (successor != null) {
+        predecessor.addTransition(new FSMTransition(sequence.set, successor));
+      }
 
       String zero = description.substring(1) + "0";
       successor = mappingString.get(zero);
-      if (successor != null) predecessor.addTransition(new FSMTransition(setComplement, successor));
+      if (successor != null) {
+        predecessor.addTransition(new FSMTransition(setComplement, successor));
+      }
     }
 
     fsm.resize();
@@ -160,9 +166,13 @@ public class Sequence extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 
   @Override

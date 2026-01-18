@@ -141,9 +141,10 @@ public class MinizincBasedTestsHelper {
             });
         FloatDomain.setFormat(Double.MAX_VALUE);
       }
-    } else
+    } else {
       // fz2jacop compute result
       fz2jacop.callMain(new String[] {"--outputfile", outputFilename, relativePath + filename});
+    }
 
     String result = new String(Files.readAllBytes(Path.of(outputFilename)));
 
@@ -163,15 +164,17 @@ public class MinizincBasedTestsHelper {
     List<String> res =
         computeResult(timeCategory + testFilename + ".fzn"); // path to file name *.fzn
 
-    if (expectedResult.getLast().equals("==========")) {
+    if ("==========".equals(expectedResult.getLast())) {
       int i;
       for (i = 0; i < res.size(); i++) {
         result.add(res.get(i));
       }
       result.add("==========");
-    } else result = res;
+    } else {
+      result = res;
+    }
 
-    if (result.isEmpty())
+    if (result.isEmpty()) {
       fail(
           "\n"
               + "File path: "
@@ -179,6 +182,7 @@ public class MinizincBasedTestsHelper {
               + testFilename
               + ".fzn "
               + " gave no output to compare against.");
+    }
 
     for (int i = 0, j = 0; i < result.size() || j < expectedResult.size(); ) {
       if (i < result.size() && result.get(i).trim().isEmpty()) {
@@ -189,7 +193,7 @@ public class MinizincBasedTestsHelper {
         j++;
         continue;
       }
-      if (result.size() == i)
+      if (result.size() == i) {
         fail(
             "\n"
                 + "File path: "
@@ -199,7 +203,8 @@ public class MinizincBasedTestsHelper {
                 + " gave as a result less textlines that was expected. Expected line "
                 + (j + 1)
                 + " not found.");
-      if (expectedResult.size() == j)
+      }
+      if (expectedResult.size() == j) {
         fail(
             "\n"
                 + "File path: "
@@ -209,6 +214,7 @@ public class MinizincBasedTestsHelper {
                 + " gave as a result more textlines that was expected. Actual line "
                 + (i + 1)
                 + "not found in expected result");
+      }
 
       assertEquals(
           "\n"

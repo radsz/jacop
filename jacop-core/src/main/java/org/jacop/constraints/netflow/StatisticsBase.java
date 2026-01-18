@@ -40,14 +40,14 @@ public class StatisticsBase {
 
   protected static final DecimalFormat DF = new DecimalFormat("0.###");
 
-  public int arcsExamined = 0;
-  public int arcsPruned = 0;
-  public int amountPruned = 0;
-  public long maxScoreSum = 0L;
-  public long minScoreSum = 0L;
+  public int arcsExamined;
+  public int arcsPruned;
+  public int amountPruned;
+  public long maxScoreSum;
+  public long minScoreSum;
 
-  public int consistencyCalls = 0;
-  public int consistencyIterations = 0;
+  public int consistencyCalls;
+  public int consistencyIterations;
 
   protected void toString(StringBuilder str) {
 

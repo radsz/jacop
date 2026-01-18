@@ -112,7 +112,9 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     store.raiseLevelBeforeConsistency = true;
 
-    if (mdd.freePosition > store.sparseSetSize) store.sparseSetSize = mdd.freePosition;
+    if (mdd.freePosition > store.sparseSetSize) {
+      store.sparseSetSize = mdd.freePosition;
+    }
   }
 
   // data structures to support for a given variable
@@ -128,11 +130,15 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
     G_no.setSize(G_no_size.value());
 
     // TODO initialize notSupportedIndexesYes to 0..domainLimits
-    for (IndexDomainView indexDomainView : views) indexDomainView.intializeSupportSweep();
+    for (IndexDomainView indexDomainView : views) {
+      indexDomainView.intializeSupportSweep();
+    }
 
     seekSupport(0, 0);
 
-    for (IndexDomainView view : views) view.removeUnSupportedValues(s);
+    for (IndexDomainView view : views) {
+      view.removeUnSupportedValues(s);
+    }
 
     G_no_size.update(G_no.members);
   }
@@ -146,9 +152,13 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
    */
   public boolean seekSupport(int nodeId, int level) {
 
-    if (G_yes.isMember(nodeId)) return true;
+    if (G_yes.isMember(nodeId)) {
+      return true;
+    }
 
-    if (G_no.isMember(nodeId)) return false;
+    if (G_no.isMember(nodeId)) {
+      return false;
+    }
 
     boolean result = false;
 
@@ -156,8 +166,8 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     for (int i = 0; i < mdd.domainLimits[level]; i++) {
       int shift = nodeId + i;
-      if (mdd.diagram[shift] != MDD.NOEDGE)
-        if (views[level].contains(i))
+      if (mdd.diagram[shift] != MDD.NOEDGE) {
+        if (views[level].contains(i)) {
           if (mdd.diagram[shift] == MDD.TERMINAL || seekSupport(mdd.diagram[shift], level + 1)) {
 
             // ith-value has a support
@@ -175,15 +185,21 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
               // notSupportYet is empty for all variables level..vars.length
 
               int j = level;
-              for (; j < views.length && views[j].isSupported(); j++)
-                ;
-              if (j == views.length) break;
+              for (; j < views.length && views[j].isSupported(); j++) {}
+              if (j == views.length) {
+                break;
+              }
             }
           }
+        }
+      }
     }
 
-    if (result) G_yes.addMember(nodeId);
-    else G_no.addMember(nodeId);
+    if (result) {
+      G_yes.addMember(nodeId);
+    } else {
+      G_no.addMember(nodeId);
+    }
 
     return result;
   }
@@ -207,9 +223,13 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     IntVar[] vars = mdd.vars;
 
-    for (IntVar var : vars) result.append(var).append(" ");
+    for (IntVar var : vars) {
+      result.append(var).append(" ");
+    }
 
-    if (mdd.vars != null) result.append(")").append("size = ").append(mdd.freePosition);
+    if (mdd.vars != null) {
+      result.append(")").append("size = ").append(mdd.freePosition);
+    }
 
     result.append(")\n");
 

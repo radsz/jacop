@@ -30,7 +30,9 @@
 
 package org.jacop.floats.constraints.linear;
 
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -162,9 +164,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     this.store = store;
     queueIndex = 1;
 
-    if (list.length != weights.length)
+    if (list.length != weights.length) {
       throw new IllegalArgumentException(
           "Constraint Linear has parameters list and weights of different length.");
+    }
 
     numberId = idNumber.incrementAndGet();
 
@@ -178,13 +181,16 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       if (weights[i] != 0) {
         // This causes problem for several examples...
         // if (list[i].singleton())
-        if (list[i].min() == list[i].max()) this.sum -= (list[i].value() * weights[i]);
-        else if (parameters.get(list[i]) != null) {
+        if (list[i].min() == list[i].max()) {
+          this.sum -= list[i].value() * weights[i];
+        } else if (parameters.get(list[i]) != null) {
           // variable ordered in the scope of the Linear constraint.
           Double coeff = parameters.get(list[i]);
           Double sumOfCoeff = coeff + weights[i];
           parameters.put(list[i], sumOfCoeff);
-        } else parameters.put(list[i], weights[i]);
+        } else {
+          parameters.put(list[i], weights[i]);
+        }
       }
     }
 
@@ -207,7 +213,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       this.list[1] = new FloatVar(store, 0, 0);
       this.weights[1] = 1;
 
-      if (Math.abs(this.sum) < FloatDomain.precision()) this.sum = 0;
+      if (Math.abs(this.sum) < FloatDomain.precision()) {
+        this.sum = 0;
+      }
     }
 
     if (this.list.length == 1) {
@@ -228,14 +236,17 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     for (int i = 0; i < this.list.length; i++) {
 
-      if (this.weights[i] == 1) leafNodes[i] = new VarNode(store, this.list[i]);
-      else leafNodes[i] = new VarWeightNode(store, this.list[i], this.weights[i]);
+      if (this.weights[i] == 1) {
+        leafNodes[i] = new VarNode(store, this.list[i]);
+      } else {
+        leafNodes[i] = new VarWeightNode(store, this.list[i], this.weights[i]);
+      }
       leafNodes[i].rel = relationType;
 
       varMap.put(this.list[i], leafNodes[i]);
     }
 
-    java.util.Arrays.sort(leafNodes, new VarWeightComparator<>());
+    Arrays.sort(leafNodes, new VarWeightComparator<>());
     // System.out.println (java.util.Arrays.asList(leafNodes));
 
     RootBNode root = buildBinaryTree(leafNodes);
@@ -258,9 +269,11 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       for (int i = 0; i < nodes.length - 1; i += 2) {
         BinaryNode parent;
 
-        if (nodes.length == 2)
+        if (nodes.length == 2) {
           parent = new RootBNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
-        else parent = new BNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        } else {
+          parent = new BNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+        }
 
         parent.left = nodes[i];
         parent.right = nodes[i + 1];
@@ -297,7 +310,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     pruneRelation();
 
-    if (relationType != eq && entailed(relationType)) removeConstraint();
+    if (relationType != eq && entailed(relationType)) {
+      removeConstraint();
+    }
   }
 
   @Override
@@ -308,7 +323,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     pruneRelation();
 
-    if (negRel[relationType] != eq && entailed(negRel[relationType])) removeConstraint();
+    if (negRel[relationType] != eq && entailed(negRel[relationType])) {
+      removeConstraint();
+    }
   }
 
   private void pruneRelation() {
@@ -372,8 +389,11 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     if (reified) {
 
       // check whether constraint has been already diagnosed as not satisfied at this level
-      if (noSat.stamp() < store.level) noSat.update(false);
-      else if (noSat.stamp() == store.level && noSat.value() == true) return false;
+      if (noSat.stamp() < store.level) {
+        noSat.update(false);
+      } else if (noSat.stamp() == store.level && noSat.value() == true) {
+        return false;
+      }
       // ==========
 
       try {
@@ -393,8 +413,11 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     if (reified) {
 
       // check whether constraint has been already diagnosed as not satisfied at this level
-      if (noSat.stamp() < store.level) noSat.update(false);
-      else if (noSat.stamp() == store.level && noSat.value() == true) return true;
+      if (noSat.stamp() < store.level) {
+        noSat.update(false);
+      } else if (noSat.stamp() == store.level && noSat.value() == true) {
+        return true;
+      }
       // ==========
 
       try {
@@ -416,22 +439,34 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       case eq:
         FloatInterval rootInterval = new FloatInterval(b.lb, b.ub);
 
-        if (rootInterval.singleton() && b.lb <= sum && sum <= b.ub) return true;
+        if (rootInterval.singleton() && b.lb <= sum && sum <= b.ub) {
+          return true;
+        }
         break;
       case lt:
-        if (b.ub < sum) return true;
+        if (b.ub < sum) {
+          return true;
+        }
         break;
       case le:
-        if (b.ub <= sum) return true;
+        if (b.ub <= sum) {
+          return true;
+        }
         break;
       case ne:
-        if (b.lb > sum || b.ub < sum) return true;
+        if (b.lb > sum || b.ub < sum) {
+          return true;
+        }
         break;
       case gt:
-        if (b.lb > sum) return true;
+        if (b.lb > sum) {
+          return true;
+        }
         break;
       case ge:
-        if (b.lb >= sum) return true;
+        if (b.lb >= sum) {
+          return true;
+        }
         break;
     }
 
@@ -444,8 +479,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     for (int i = 0; i < list.length; i++) {
       double n1 = list[i].min() * weights[i];
       double n2 = list[i].max() * weights[i];
-      if (Double.isInfinite(n1) || Double.isInfinite(n2))
+      if (Double.isInfinite(n1) || Double.isInfinite(n2)) {
         throw new ArithmeticException("Overflow occurred in floating point operations");
+      }
 
       if (n1 <= n2) {
         sumMin += n1;
@@ -455,8 +491,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         sumMax += n1;
       }
 
-      if (Double.isInfinite(sumMin) || Double.isInfinite(sumMax))
+      if (Double.isInfinite(sumMin) || Double.isInfinite(sumMax)) {
         throw new ArithmeticException("Overflow occurred in floating point operations");
+      }
     }
   }
 
@@ -516,13 +553,17 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < weights.length; i++) {
       result.append(weights[i]);
-      if (i < weights.length - 1) result.append(", ");
+      if (i < weights.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(rel2String()).append(", ").append(sum).append(" )");
@@ -530,19 +571,24 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     return result.toString();
   }
 
-  static class VarWeightComparator<T extends VariableNode>
-      implements java.util.Comparator<T>, java.io.Serializable {
+  static class VarWeightComparator<T extends VariableNode> implements Comparator<T>, Serializable {
 
     VarWeightComparator() {}
 
     public int compare(T o1, T o2) {
       double diff_o1 = 0, diff_o2 = 0;
 
-      if (o1 instanceof VarNode) diff_o1 = o1.max() - o1.min();
-      else diff_o1 = (o1.max() - o1.min()) * ((VarWeightNode) o1).weight;
+      if (o1 instanceof VarNode) {
+        diff_o1 = o1.max() - o1.min();
+      } else {
+        diff_o1 = (o1.max() - o1.min()) * ((VarWeightNode) o1).weight;
+      }
 
-      if (o2 instanceof VarNode) diff_o2 = o2.max() - o2.min();
-      else diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode) o2).weight;
+      if (o2 instanceof VarNode) {
+        diff_o2 = o2.max() - o2.min();
+      } else {
+        diff_o2 = (o2.max() - o2.min()) * ((VarWeightNode) o2).weight;
+      }
 
       return Double.compare(diff_o1, diff_o2);
     }

@@ -73,18 +73,24 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
   private static int weight(int[] array) {
     int weight = 0;
-    for (int i : array) weight += Math.abs(i);
+    for (int i : array) {
+      weight += Math.abs(i);
+    }
     return weight;
   }
 
   private static int[] transform(int[] sum, int[] eqn) {
     int[] result = Arrays.copyOf(sum, sum.length);
-    for (int i = 0; i < eqn.length; i++) result[i] -= 2 * eqn[i];
+    for (int i = 0; i < eqn.length; i++) {
+      result[i] -= 2 * eqn[i];
+    }
     return result;
   }
 
   private static void flip(int[] eqn) {
-    for (int i = 0; i < eqn.length; i++) eqn[i] = -eqn[i];
+    for (int i = 0; i < eqn.length; i++) {
+      eqn[i] = -eqn[i];
+    }
   }
 
   private int lookup(IntVar var) {
@@ -101,12 +107,16 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
   }
 
   public void addEquation(IntVar[] vars, int[] coeffs, int constant) {
-    if (vars.length == 0 || vars.length != coeffs.length) throw new IllegalArgumentException();
+    if (vars.length == 0 || vars.length != coeffs.length) {
+      throw new IllegalArgumentException();
+    }
 
     int max = 1;
     for (IntVar var : vars) {
       int id = lookup(var);
-      if (max <= id) max = id + 1;
+      if (max <= id) {
+        max = id + 1;
+      }
     }
 
     int[] eqn = new int[max];
@@ -152,11 +162,12 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
         List<IntVar> variables = new ArrayList<>();
         List<Integer> weights = new ArrayList<>();
 
-        for (int i = 0; i < eqn.length; i++)
+        for (int i = 0; i < eqn.length; i++) {
           if (eqn[i] != 0) {
             variables.add(vars.get(i));
             weights.add(eqn[i]);
           }
+        }
 
         decomposition.add(new LinearInt(variables, weights, "==", 0));
         // decomposition.add(new SumWeight(variables, weights, ZERO));
@@ -173,11 +184,12 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
         List<IntVar> variables = new ArrayList<>();
         List<Integer> weights = new ArrayList<>();
 
-        for (int i = 0; i < eqn.length; i++)
+        for (int i = 0; i < eqn.length; i++) {
           if (eqn[i] != 0) {
             variables.add(vars.get(i));
             weights.add(eqn[i]);
           }
+        }
 
         result.add(new LinearInt(variables, weights, "==", 0));
       }
@@ -213,10 +225,17 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
       decomposition = new ArrayList<>();
       int[] sum = new int[vars.size()];
-      for (int[] eqn : eqns) for (int i = 0; i < eqn.length; i++) sum[i] += eqn[i];
+      for (int[] eqn : eqns) {
+        for (int i = 0; i < eqn.length; i++) {
+          sum[i] += eqn[i];
+        }
+      }
 
-      for (int it = 0; optimize(sum); it++)
-        if (it > 2 * eqns.size()) throw new AssertionError(it + " iterations");
+      for (int it = 0; optimize(sum); it++) {
+        if (it > 2 * eqns.size()) {
+          throw new AssertionError(it + " iterations");
+        }
+      }
 
       decomposition.add(new ArithmeticBuilder(store, sum).build());
     }
@@ -227,9 +246,13 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (decomposition == null) decomposition = decompose(store);
+    if (decomposition == null) {
+      decomposition = decompose(store);
+    }
 
-    for (Constraint c : decomposition) store.impose(c);
+    for (Constraint c : decomposition) {
+      store.impose(c);
+    }
   }
 
   private class ArithmeticBuilder extends NetworkBuilder {
@@ -251,20 +274,26 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
       Node[] nodes = new Node[eqns.length];
       flip(sum);
 
-      for (int i = 0; i < nodes.length; i++) nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
+      for (int i = 0; i < nodes.length; i++) {
+        nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
+      }
 
       // create arcs
       for (int i = 0; i < nodes.length; i++) {
         int[] eqn = eqns[i];
 
         for (int var = 1; var < eqn.length; var++) {
-          if (eqn[var] == 0) continue;
+          if (eqn[var] == 0) {
+            continue;
+          }
 
           int found = -1;
           for (int j = 1; j < nodes.length; j++) {
             int k = (i + j) % nodes.length;
             int[] eqn2 = eqns[k];
-            if (var >= eqn2.length) continue;
+            if (var >= eqn2.length) {
+              continue;
+            }
 
             if (eqn[var] > 0 && eqn[var] <= -eqn2[var]) {
               found = k;
@@ -276,16 +305,20 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
             }
           }
 
-          int[] eqn2 = (found == -1) ? sum : eqns[found];
+          int[] eqn2 = found == -1 ? sum : eqns[found];
           Node n1 = nodes[i];
-          Node n2 = (found == -1) ? root : nodes[found];
+          Node n2 = found == -1 ? root : nodes[found];
 
           if (eqn[var] > 0) {
             // TODO use variable-view instead
-            for (int cnt = eqn[var]; cnt-- > 0; ) addArc(n2, n1, 0, vars.get(var));
+            for (int cnt = eqn[var]; cnt-- > 0; ) {
+              addArc(n2, n1, 0, vars.get(var));
+            }
           } else {
             // TODO use variable-view instead
-            for (int cnt = -eqn[var]; cnt-- > 0; ) addArc(n1, n2, 0, vars.get(var));
+            for (int cnt = -eqn[var]; cnt-- > 0; ) {
+              addArc(n1, n2, 0, vars.get(var));
+            }
           }
 
           eqn2[var] += eqn[var];
@@ -294,11 +327,19 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
       }
 
       // Assertions
-      for (int[] eqn : eqns)
-        for (int i = 1; i < eqn.length; i++) if (eqn[i] != 0) throw new AssertionError();
+      for (int[] eqn : eqns) {
+        for (int i = 1; i < eqn.length; i++) {
+          if (eqn[i] != 0) {
+            throw new AssertionError();
+          }
+        }
+      }
 
-      for (int i = 1; i < sum.length; i++)
-        if (sum[i] != 0) throw new AssertionError(Arrays.toString(sum));
+      for (int i = 1; i < sum.length; i++) {
+        if (sum[i] != 0) {
+          throw new AssertionError(Arrays.toString(sum));
+        }
+      }
     }
   }
 }

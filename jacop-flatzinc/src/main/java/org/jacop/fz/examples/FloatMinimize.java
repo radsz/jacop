@@ -83,7 +83,7 @@ public class FloatMinimize {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("float_search"))) {
+    if (fl.getSearch().type() == null || (!"float_search".equals(fl.getSearch().type()))) {
       throw new RuntimeException(
           "The problem is not of type float_search and cannot be handled by this method");
     }
@@ -107,9 +107,13 @@ public class FloatMinimize {
       IO.println("Final cost = " + min.getFinalCost());
       IO.println("Variables: ");
       FloatInterval[] values = min.getFinalVarValues();
-      for (int i = 0; i < vars.length; i++) IO.println(vars[i].id() + " = " + values[i]);
+      for (int i = 0; i < vars.length; i++) {
+        IO.println(vars[i].id() + " = " + values[i]);
+      }
       IO.println("Yes");
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;

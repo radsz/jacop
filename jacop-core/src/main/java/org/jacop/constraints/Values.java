@@ -97,7 +97,9 @@ public class Values extends Constraint implements SatisfiedPresent {
 
       Arrays.sort(list, minFDV);
 
-      if (debug) IO.println("Sorted : \n" + this);
+      if (debug) {
+        IO.println("Sorted : \n" + this);
+      }
 
       int minNumberDifferent = 1, minimumMax = list[0].max();
 
@@ -123,7 +125,9 @@ public class Values extends Constraint implements SatisfiedPresent {
           minNumberDifferent++;
           minimumMax = v.max();
         }
-        if (v.max() < minimumMax) minimumMax = v.max();
+        if (v.max() < minimumMax) {
+          minimumMax = v.max();
+        }
 
         adj[i + 1] = new int[v.dom().getSize()];
         int j = 0;
@@ -145,24 +149,37 @@ public class Values extends Constraint implements SatisfiedPresent {
           new BipartiteGraphMatching(adj, list.length, valueMap.size());
       int maxNumberDifferent = matcher.hopcroftKarp();
 
-      if (debug) IO.println("Minimum number of different values = " + minNumberDifferent);
-      if (debug) IO.println("Maximum number of different values = " + maxNumberDifferent);
+      if (debug) {
+        IO.println("Minimum number of different values = " + minNumberDifferent);
+      }
+      if (debug) {
+        IO.println("Maximum number of different values = " + maxNumberDifferent);
+      }
 
       count.domain.in(store.level, count, minNumberDifferent, maxNumberDifferent);
 
-      if (debug)
+      if (debug) {
         IO.println("Number singleton values = " + numberSingleton + " Values = " + singletonValues);
+      }
 
       if (count.max() == singletonValues.getSize() && numberSingleton < list.length) {
-        for (IntVar v : list) if (!v.singleton()) v.domain.in(store.level, v, singletonValues);
+        for (IntVar v : list) {
+          if (!v.singleton()) {
+            v.domain.in(store.level, v, singletonValues);
+          }
+        }
       } else {
 
         int diffMin = count.min() - singletonValues.getSize();
         int diffSingleton = list.length - numberSingleton;
 
-        if (diffMin == diffSingleton)
-          for (IntVar v : list)
-            if (!v.singleton()) v.domain.in(store.level, v, singletonValues.complement());
+        if (diffMin == diffSingleton) {
+          for (IntVar v : list) {
+            if (!v.singleton()) {
+              v.domain.in(store.level, v, singletonValues.complement());
+            }
+          }
+        }
       }
 
     } while (store.propagationHasOccurred);
@@ -174,8 +191,11 @@ public class Values extends Constraint implements SatisfiedPresent {
     StringBuilder result = new StringBuilder(id());
     result.append(" : Values([");
     for (int i = 0; i < list.length; i++) {
-      if (i < list.length - 1) result.append(list[i]).append(", ");
-      else result.append(list[i]);
+      if (i < list.length - 1) {
+        result.append(list[i]).append(", ");
+      } else {
+        result.append(list[i]);
+      }
     }
     result.append("], ").append(count).append(" )");
     return result.toString();

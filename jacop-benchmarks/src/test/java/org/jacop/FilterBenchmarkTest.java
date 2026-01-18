@@ -59,6 +59,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
 
   public FilterBenchmarkTest(
       int[] resourcesConfiguration, Filter filterTest, String experiment, int costExp) {
+    super();
     this.resourcesConfiguration = resourcesConfiguration;
     this.filter = filterTest;
     this.experiment = experiment;

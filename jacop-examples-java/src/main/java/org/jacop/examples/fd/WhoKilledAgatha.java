@@ -78,7 +78,9 @@ public class WhoKilledAgatha extends ExampleFD {
     WhoKilledAgatha example = new WhoKilledAgatha();
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
   } // end main
 
   public void model() {

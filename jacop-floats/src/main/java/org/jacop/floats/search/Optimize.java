@@ -30,11 +30,13 @@
 
 package org.jacop.floats.search;
 
+import java.util.Arrays;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.PlteqC;
+import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.search.Search;
@@ -89,24 +91,32 @@ public class Optimize<T extends Var> {
 
     boolean result = store.consistency();
 
-    if (result)
+    if (result) {
       if (lastCost != null) {
 
-        if (!(lastCost.min() >= cost.min() && lastCost.max() <= cost.max()))
+        if (!(lastCost.min() >= cost.min() && lastCost.max() <= cost.max())) {
           result = search.labeling(store, select);
-        else printLastSolution();
+        } else {
+          printLastSolution();
+        }
 
-      } else result = search.labeling(store, select);
+      } else {
+        result = search.labeling(store, select);
+      }
+    }
 
     PrimitiveConstraint choice = split.getChoiceConstraint(0);
 
-    if (choice == null) return true;
+    if (choice == null) {
+      return true;
+    }
 
     double selValue = ((PlteqC) choice).c;
-    if (Double.isNaN(costValue)) // costValue != Double.NaN)
-    if (costValue < selValue) {
+    if (Double.isNaN(costValue)) { // costValue != Double.NaN)
+      if (costValue < selValue) {
         choice = new PlteqC(cost, costValue);
       }
+    }
 
     if (result) {
 
@@ -124,9 +134,7 @@ public class Optimize<T extends Var> {
         if (printInfo) {
           IO.println("% No solution");
 
-          FloatInterval f =
-              new FloatInterval(
-                  org.jacop.floats.core.FloatDomain.next(((PlteqC) choice).c), cost.max());
+          FloatInterval f = new FloatInterval(FloatDomain.next(((PlteqC) choice).c), cost.max());
           IO.println("% Checking interval " + f);
         }
 
@@ -151,7 +159,9 @@ public class Optimize<T extends Var> {
     IO.print("[");
     for (int i = 0; i < lastVarValues.length; i++) {
       IO.print(variables[i].id() + " = " + lastVarValues[i]);
-      if (i < lastVarValues.length - 1) IO.print(", ");
+      if (i < lastVarValues.length - 1) {
+        IO.print(", ");
+      }
     }
     IO.println("]");
     IO.println("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
@@ -179,7 +189,7 @@ public class Optimize<T extends Var> {
 
       costValue = cost.max();
 
-      IO.println(java.util.Arrays.asList(var));
+      IO.println(Arrays.asList(var));
       IO.println("% Found solution with cost " + cost);
 
       lastCost = new FloatInterval(cost.min(), cost.max());

@@ -69,25 +69,36 @@ public class Laplace {
 
     FloatVar[][] x = new FloatVar[r + 1][c + 1];
 
-    for (int i = 0; i < r + 1; i++)
-      for (int j = 0; j < c + 1; j++)
-        if (i == 0) x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
-        else if (i == r || j == 0 || j == c)
+    for (int i = 0; i < r + 1; i++) {
+      for (int j = 0; j < c + 1; j++) {
+        if (i == 0) {
+          x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, Z);
+        } else if (i == r || j == 0 || j == c) {
           x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", M, M);
-        else x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
+        } else {
+          x[i][j] = new FloatVar(store, "r[" + i + "][" + j + "]", Z, M);
+        }
+      }
+    }
 
-    for (int i = 1; i < r; i++)
-      for (int j = 1; j < c; j++)
+    for (int i = 1; i < r; i++) {
+      for (int j = 1; j < c; j++) {
         store.impose(
             new LinearFloat(
                 new FloatVar[] {x[i][j], x[i - 1][j], x[i][j - 1], x[i + 1][j], x[i][j + 1]},
                 new double[] {-4.0, 1.0, 1.0, 1.0, 1.0},
                 "==",
                 0.0));
+      }
+    }
 
     FloatVar[] xs = new FloatVar[(r + 1) * (c + 1)];
     int n = 0;
-    for (int i = 0; i < r + 1; i++) for (int j = 0; j < c + 1; j++) xs[n++] = x[i][j];
+    for (int i = 0; i < r + 1; i++) {
+      for (int j = 0; j < c + 1; j++) {
+        xs[n++] = x[i][j];
+      }
+    }
 
     // solve minimize cost;
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
@@ -100,7 +111,9 @@ public class Laplace {
     label.labeling(store, s);
 
     for (int i = 0; i < r + 1; i++) {
-      for (int j = 0; j < c + 1; j++) System.out.printf("%.2f\t", x[i][j].value());
+      for (int j = 0; j < c + 1; j++) {
+        System.out.printf("%.2f\t", x[i][j].value());
+      }
       IO.println();
     }
 

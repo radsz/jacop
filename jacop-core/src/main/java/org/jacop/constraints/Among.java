@@ -134,7 +134,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
       int posVar = position.get(var);
 
-      if (posVar < currentLB || posVar > currentUB) continue;
+      if (posVar < currentLB || posVar > currentUB) {
+        continue;
+      }
 
       if (kSet.contains(var.domain)) {
 
@@ -184,7 +186,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     // Not needed, in method will fail in such case
     // if (Math.max(n.min(), currentLB) > Math.min(n.max(), currentUB))
     // 	throw Store.failException;
-    if (currentLB > currentUB) throw Store.failException;
+    if (currentLB > currentUB) {
+      throw Store.failException;
+    }
 
     // n.domain.in(store.level, n, Math.max(n.min(), currentLB), Math.min(n.max(),
     // 		currentUB));
@@ -212,7 +216,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
           }
           var.domain.in(store.level, var, var.domain.subtract(kSet));
           var.removeConstraint(this);
-          if (debugAll) IO.println("lb >> The value after in of " + var.id + ": " + var.domain);
+          if (debugAll) {
+            IO.println("lb >> The value after in of " + var.id + ": " + var.domain);
+          }
         }
       }
 
@@ -220,7 +226,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       upperBorder.update(currentLB);
 
       // The constrain became satisfied
-      if (debugAll) IO.println("Simple Among is satisfied");
+      if (debugAll) {
+        IO.println("Simple Among is satisfied");
+      }
     }
 
     if (currentUB == n.min() && n.domain.singleton()) {
@@ -237,10 +245,14 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       lowerBorder.update(currentUB);
 
       // The constrain became satisfied
-      if (debugAll) IO.println("Simple Among is satisfied");
+      if (debugAll) {
+        IO.println("Simple Among is satisfied");
+      }
     }
 
-    if (debugAll) IO.println(this);
+    if (debugAll) {
+      IO.println(this);
+    }
   }
 
   @Override
@@ -261,16 +273,20 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (debugAll) IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    if (debugAll) {
+      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    }
 
-    if (var != n) variableQueue.add((IntVar) var);
+    if (var != n) {
+      variableQueue.add((IntVar) var);
+    }
   }
 
   @Override
   public boolean satisfied() {
-    return (Objects.equals(lowerBorder.value(), upperBorder.value())
+    return Objects.equals(lowerBorder.value(), upperBorder.value())
         && n.min() == lowerBorder.value()
-        && n.singleton());
+        && n.singleton();
   }
 
   @Override
@@ -280,7 +296,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     result.append(": Among([");
 
-    for (IntVar var : this.list) result.append(var).append(" ");
+    for (IntVar var : this.list) {
+      result.append(var).append(" ");
+    }
 
     result.append("], ").append(this.kSet).append(", ");
     result.append(n).append(")\n");

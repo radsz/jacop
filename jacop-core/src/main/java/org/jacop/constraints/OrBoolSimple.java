@@ -83,16 +83,21 @@ public class OrBoolSimple extends PrimitiveConstraint {
 
   public void consistency(Store store) {
     // a OR b = result
-    if (a.max() == 0 && b.max() == 0) result.domain.inValue(store.level, result, 0);
-    else if (a.min() == 1 || b.min() == 1) {
+    if (a.max() == 0 && b.max() == 0) {
+      result.domain.inValue(store.level, result, 0);
+    } else if (a.min() == 1 || b.min() == 1) {
       result.domain.inValue(store.level, result, 1);
       removeConstraint();
     } else if (result.max() == 0) {
       a.domain.inValue(store.level, a, 0);
       b.domain.inValue(store.level, b, 0);
-    } else if (result.min() == 1)
-      if (a.max() == 0) b.domain.inValue(store.level, b, 1);
-      else if (b.max() == 0) a.domain.inValue(store.level, a, 1);
+    } else if (result.min() == 1) {
+      if (a.max() == 0) {
+        b.domain.inValue(store.level, b, 1);
+      } else if (b.max() == 0) {
+        a.domain.inValue(store.level, a, 1);
+      }
+    }
   }
 
   @Override
@@ -101,13 +106,18 @@ public class OrBoolSimple extends PrimitiveConstraint {
     if (a.min() == 1 || b.min() == 1) {
       result.domain.inValue(store.level, result, 0);
       removeConstraint();
-    } else if (a.max() == 0 && b.max() == 0) result.domain.inValue(store.level, result, 1);
-    else if (result.min() == 1) {
+    } else if (a.max() == 0 && b.max() == 0) {
+      result.domain.inValue(store.level, result, 1);
+    } else if (result.min() == 1) {
       a.domain.inValue(store.level, a, 0);
       b.domain.inValue(store.level, b, 0);
-    } else if (result.max() == 0)
-      if (a.max() == 0) b.domain.inValue(store.level, b, 1);
-      else if (b.max() == 0) a.domain.inValue(store.level, a, 1);
+    } else if (result.max() == 0) {
+      if (a.max() == 0) {
+        b.domain.inValue(store.level, b, 1);
+      } else if (b.max() == 0) {
+        a.domain.inValue(store.level, a, 1);
+      }
+    }
   }
 
   @Override
@@ -144,9 +154,11 @@ public class OrBoolSimple extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    for (IntVar var : new IntVar[] {a, b})
-      if (var.min() < 0 || var.max() > 1)
+    for (IntVar var : new IntVar[] {a, b}) {
+      if (var.min() < 0 || var.max() > 1) {
         return "Variable " + var + " does not have boolean domain";
+      }
+    }
 
     return null;
   }

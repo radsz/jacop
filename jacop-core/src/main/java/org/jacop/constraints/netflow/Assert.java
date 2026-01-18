@@ -46,7 +46,9 @@ public class Assert {
 
     List<Arc> allArcsForDebug = allArcsForDebug(g);
     int sum = 0;
-    for (Node n : g.nodes) sum += n.balance;
+    for (Node n : g.nodes) {
+      sum += n.balance;
+    }
 
     assert (sum == 0) : "sum != 0";
     assert (g.root.balance == 0) : "root balance != 0";
@@ -56,24 +58,37 @@ public class Assert {
       int out = 0, in = 0;
 
       for (Arc a : allArcsForDebug) {
-        if (!a.forward) a = a.sister;
+        if (!a.forward) {
+          a = a.sister;
+        }
 
         if (a.companion != null) {
           // lower capacity
-          if (a.head == n) del_in += a.companion.flowOffset;
-          else if (a.tail() == n) del_out += a.companion.flowOffset;
+          if (a.head == n) {
+            del_in += a.companion.flowOffset;
+          } else if (a.tail() == n) {
+            del_out += a.companion.flowOffset;
+          }
         }
 
         if (a.index == -3) {
           // deleted arc
-          if (a.head == n) del_in += a.sister.capacity;
-          else if (a.tail() == n) del_out += a.sister.capacity;
-          else continue;
+          if (a.head == n) {
+            del_in += a.sister.capacity;
+          } else if (a.tail() == n) {
+            del_out += a.sister.capacity;
+          } else {
+            continue;
+          }
         } else {
           // available arc
-          if (a.head == n) in += a.sister.capacity;
-          else if (a.tail() == n) out += a.sister.capacity;
-          else continue;
+          if (a.head == n) {
+            in += a.sister.capacity;
+          } else if (a.tail() == n) {
+            out += a.sister.capacity;
+          } else {
+            continue;
+          }
         }
         //				System.out.println("  " + a);
       }
@@ -115,9 +130,15 @@ public class Assert {
     {
       int out = 0, in = 0;
       for (Arc a : allArcsForDebug) {
-        if (!a.forward) a = a.sister;
-        if (a.head == g.root) in += a.sister.capacity;
-        if (a.tail() == g.root) out += a.sister.capacity;
+        if (!a.forward) {
+          a = a.sister;
+        }
+        if (a.head == g.root) {
+          in += a.sister.capacity;
+        }
+        if (a.tail() == g.root) {
+          out += a.sister.capacity;
+        }
       }
 
       assert (0 == out - in)
@@ -222,7 +243,7 @@ public class Assert {
     assert (0 == g.root.potential);
     assert (0 == g.root.depth);
     int x = 1;
-    for (Node i = g.root.thread; i != g.root; i = i.thread, ++x) {
+    for (Node i = g.root.thread; i != g.root; i = i.thread, x++) {
 
       Node p = i.parent;
 
@@ -272,13 +293,19 @@ public class Assert {
   public static boolean checkOptimality(NetworkSimplex g) {
     StringBuilder s = new StringBuilder();
     for (Arc arc : allArcsForDebug(g)) {
-      if (arc.index == -3) continue;
+      if (arc.index == -3) {
+        continue;
+      }
 
       // System.out.println("@@ " + arc);
       int reduced = arc.reducedCost();
 
-      if (arc.capacity > 0 && reduced < 0) s.append("\n").append(arc);
-      if (arc.sister.capacity > 0 && reduced > 0) s.append("\n").append(arc);
+      if (arc.capacity > 0 && reduced < 0) {
+        s.append("\n").append(arc);
+      }
+      if (arc.sister.capacity > 0 && reduced > 0) {
+        s.append("\n").append(arc);
+      }
     }
     // System.out.println(s);
     assert s.isEmpty() : "non-optimal arcs:" + s;
@@ -303,12 +330,18 @@ public class Assert {
 
     boolean asserts = false;
     assert (asserts = true);
-    if (!asserts) throw new AssertionError("Assertions disabled");
+    if (!asserts) {
+      throw new AssertionError("Assertions disabled");
+    }
   }
 
   public static List<Arc> allArcsForDebug(NetworkSimplex g) {
     List<Arc> arcs = new ArrayList<>(g.allArcs);
-    for (Node node : g.nodes) arcs.add(node.artificial);
+    for (Node node : g.nodes) {
+      arcs.add(node.artificial);
+    }
     return arcs;
   }
+
+  private Assert() {}
 }

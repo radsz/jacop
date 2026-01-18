@@ -47,7 +47,9 @@ public class ASTVarDeclItem extends SimpleNode {
 
   public String toString() {
     String limits = "";
-    if (kind > 1) limits = "[" + index1 + ".." + index2 + "]";
+    if (kind > 1) {
+      limits = "[" + index1 + ".." + index2 + "]";
+    }
     String kindS =
         switch (kind) {
           case 0 -> "(var): ";

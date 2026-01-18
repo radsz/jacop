@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import java.util.Arrays;
 import org.jacop.constraints.Circuit;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -77,7 +78,9 @@ public class TinyTSP {
     };
 
     IntVar[] visit = new IntVar[N];
-    for (int i = 0; i < N; i++) visit[i] = new IntVar(store, "visit[" + i + "]", 1, N);
+    for (int i = 0; i < N; i++) {
+      visit[i] = new IntVar(store, "visit[" + i + "]", 1, N);
+    }
 
     store.impose(new Circuit(visit));
 
@@ -114,8 +117,8 @@ public class TinyTSP {
     label.labeling(store, s, route);
 
     IO.println(route);
-    IO.println(java.util.Arrays.asList(dist));
-    IO.println(java.util.Arrays.asList(visit));
+    IO.println(Arrays.asList(dist));
+    IO.println(Arrays.asList(visit));
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 

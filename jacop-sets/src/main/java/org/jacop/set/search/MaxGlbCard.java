@@ -51,8 +51,12 @@ public class MaxGlbCard<T extends SetVar> implements ComparatorVariable<T> {
 
     int right = var.dom().glb().getSize();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
+    if (left > right) {
+      return 1;
+    }
+    if (left < right) {
+      return -1;
+    }
 
     return 0;
   }

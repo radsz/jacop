@@ -60,7 +60,7 @@ public final class IntHashMap<E> {
   private E[][] tableValue;
 
   // number of elements
-  private int cardinal = 0;
+  private int cardinal;
 
   /**
    * builds a new map with given size
@@ -72,7 +72,7 @@ public final class IntHashMap<E> {
     tableKey = new int[size][];
     tableValue = (E[][]) new Object[size][];
 
-    for (int i = 0; i < size; ++i) {
+    for (int i = 0; i < size; i++) {
       tableKey[i] = new int[MAX_BUCKET_SIZE + 2];
       tableKey[i][0] = 0;
       tableValue[i] = (E[]) new Object[MAX_BUCKET_SIZE + 2];
@@ -88,7 +88,9 @@ public final class IntHashMap<E> {
   public void clear() {
     cardinal = 0;
 
-    for (int i = 0; i < tableKey.length; ++i) tableKey[i][0] = 0;
+    for (int i = 0; i < tableKey.length; i++) {
+      tableKey[i][0] = 0;
+    }
   }
 
   /**
@@ -114,8 +116,11 @@ public final class IntHashMap<E> {
     int index = hash(key, tableKey.length);
     int i = find(key, index);
 
-    if (i == -1) return null;
-    else return tableValue[index][i];
+    if (i == -1) {
+      return null;
+    } else {
+      return tableValue[index][i];
+    }
   }
 
   /**
@@ -205,7 +210,9 @@ public final class IntHashMap<E> {
   }
 
   public boolean containsKey(Object arg0) {
-    if (Integer.class.isInstance(arg0)) return containsKey((Integer) arg0);
+    if (Integer.class.isInstance(arg0)) {
+      return containsKey((Integer) arg0);
+    }
     return false;
   }
 
@@ -217,8 +224,8 @@ public final class IntHashMap<E> {
     IntHashMap<E> temp = new IntHashMap<>(tableKey.length * 2);
 
     // insert all data in the new map
-    for (int index = 0; index < tableKey.length; ++index) {
-      for (int i = 1; i <= tableKey[index][0]; ++i) {
+    for (int index = 0; index < tableKey.length; index++) {
+      for (int i = 1; i <= tableKey[index][0]; i++) {
 
         int key = tableKey[index][i];
         E value = tableValue[index][i];
@@ -246,9 +253,11 @@ public final class IntHashMap<E> {
 
     int[] bucketKey = tableKey[index];
 
-    for (int i = 1; i <= bucketKey[0]; ++i) {
+    for (int i = 1; i <= bucketKey[0]; i++) {
       // we found the key
-      if (bucketKey[i] == key) return i;
+      if (bucketKey[i] == key) {
+        return i;
+      }
     }
 
     // the key is not in the table
@@ -278,14 +287,18 @@ public final class IntHashMap<E> {
       }
 
       public boolean add(Integer arg0) {
-        if (containsKey(arg0)) return true;
+        if (containsKey(arg0)) {
+          return true;
+        }
         put(arg0, null);
         return false;
       }
 
       public boolean addAll(Collection<? extends Integer> arg0) {
         boolean and = true;
-        for (int i : arg0) and = and && add(i);
+        for (int i : arg0) {
+          and = and && add(i);
+        }
         return and;
       }
 
@@ -299,7 +312,9 @@ public final class IntHashMap<E> {
 
       public boolean containsAll(Collection<?> arg0) {
         for (Object o : arg0) {
-          if (!containsKey(o)) return false;
+          if (!containsKey(o)) {
+            return false;
+          }
         }
         return true;
       }
@@ -318,7 +333,9 @@ public final class IntHashMap<E> {
 
       public boolean removeAll(Collection<?> arg0) {
         boolean or = false;
-        for (Object o : arg0) or = or || remove(o);
+        for (Object o : arg0) {
+          or = or || remove(o);
+        }
         return or;
       }
 
@@ -355,8 +372,8 @@ public final class IntHashMap<E> {
    * @author simon
    */
   private final class KeysIterator implements Iterator<Integer> {
-    private int index = 0;
-    private int bucketIndex = 0;
+    private int index;
+    private int bucketIndex;
     private int current;
     private boolean hasNext = true;
 
@@ -369,7 +386,9 @@ public final class IntHashMap<E> {
     }
 
     public Integer next() {
-      if (!hasNext) return null;
+      if (!hasNext) {
+        return null;
+      }
       // the next int
       int answer = current;
       findNext();
@@ -409,8 +428,8 @@ public final class IntHashMap<E> {
    * @author simon
    */
   private final class EntryIterator implements Iterator<Map.Entry<Integer, E>> {
-    private int index = 0;
-    private int bucketIndex = 0;
+    private int index;
+    private int bucketIndex;
     private int current;
     private E currentValue;
     private boolean hasNext = true;
@@ -424,7 +443,9 @@ public final class IntHashMap<E> {
     }
 
     public Map.Entry<Integer, E> next() {
-      if (!hasNext) return null;
+      if (!hasNext) {
+        return null;
+      }
       // the next int
       Map.Entry<Integer, E> answer =
           new Map.Entry<>() {

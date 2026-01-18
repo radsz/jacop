@@ -106,12 +106,17 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
       this.bHasChanged = false;
       this.cHasChanged = false;
 
-      if (cHasChanged) a.domain.inGLB(store.level, a, c.domain.glb());
+      if (cHasChanged) {
+        a.domain.inGLB(store.level, a, c.domain.glb());
+      }
 
-      if (bHasChanged || cHasChanged)
+      if (bHasChanged || cHasChanged) {
         a.domain.inLUB(store.level, a, b.domain.lub().union(c.domain.lub()));
+      }
 
-      if (cHasChanged) b.domain.inLUB(store.level, b, b.domain.lub().subtract(c.domain.glb()));
+      if (cHasChanged) {
+        b.domain.inLUB(store.level, b, b.domain.lub().subtract(c.domain.glb()));
+      }
 
       if (aHasChanged || bHasChanged) {
         c.domain.inGLB(store.level, c, a.domain.glb().subtract(b.domain.lub()));
@@ -135,7 +140,9 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
             int sizeOf2_7 =
                 a.domain.lub().intersect(b.domain.lub()).subtract(a.domain.glb()).getSize();
             int min = b.domain.card().max() - sizeOf8;
-            if (min > sizeOf2_7) min = sizeOf2_7;
+            if (min > sizeOf2_7) {
+              min = sizeOf2_7;
+            }
             int max = aMinCard - sizeOf4 - min;
             if (max > 0) {
               c.domain.inCardinality(store.level, c, sizeOf4 + max, Integer.MAX_VALUE);
@@ -160,13 +167,18 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
             }
           }
         }
-        if (minLeft < minRight) c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minLeft);
-        else c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minRight);
+        if (minLeft < minRight) {
+          c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minLeft);
+        } else {
+          c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minRight);
+        }
 
         int sizeOf_4_5 = a.domain.glb().subtract(b.domain.glb()).getSize();
         minLeft = b.domain.glb().getSize() + Math.max(0, sizeOf_4_5 - c.domain.card().max());
         minRight = a.domain.card().max() - c.domain.card().max();
-        if (minLeft < minRight) minLeft = minRight;
+        if (minLeft < minRight) {
+          minLeft = minRight;
+        }
 
         b.domain.inCardinality(
             store.level, c, b.domain.glb().getSize() + minLeft, Integer.MAX_VALUE);
@@ -174,8 +186,9 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
         int sizeOf1_4 = a.domain.lub().subtract(b.domain.lub()).getSize();
         int min = c.domain.card().min() - sizeOf1_4;
 
-        if (min > 0)
+        if (min > 0) {
           b.domain.inCardinality(store.level, b, Integer.MIN_VALUE, b.domain.lub().getSize() - min);
+        }
 
         min = c.domain.card().min() + b.domain.glb().intersect(a.domain.glb()).getSize();
         if (b.domain.lub().getSize() - a.domain.lub().getSize() < b.domain.card().min()) {
@@ -198,7 +211,7 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
 
   @Override
   public boolean satisfied() {
-    return (grounded() && a.domain.subtract(b.domain).eq(c.domain));
+    return grounded() && a.domain.subtract(b.domain).eq(c.domain);
   }
 
   @Override

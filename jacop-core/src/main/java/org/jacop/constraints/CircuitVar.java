@@ -47,7 +47,7 @@ class CircuitVar implements MutableVar {
 
   final Store store;
 
-  CircuitVarValue value = null;
+  CircuitVarValue value;
 
   CircuitVar(Store store) {
     CircuitVarValue val = new CircuitVarValue();
@@ -74,7 +74,9 @@ class CircuitVar implements MutableVar {
   }
 
   public void removeLevel(int removeLevel) {
-    if (value.stamp == removeLevel) value = value.nextCircuitVarValue;
+    if (value.stamp == removeLevel) {
+      value = value.nextCircuitVarValue;
+    }
   }
 
   public void setCurrent(MutableVarValue o) {
@@ -90,7 +92,7 @@ class CircuitVar implements MutableVar {
 
     StringBuilder result = new StringBuilder();
 
-    result.append("CircuitVar[").append((index + 1)).append("] = ");
+    result.append("CircuitVar[").append(index + 1).append("] = ");
 
     result.append(value);
 

@@ -75,6 +75,8 @@ public class MultiVarHandler implements VarHandler {
 
   public void processEvent(IntVar variable, MutableNetwork network) {
     assert (this.variable == variable);
-    for (VarHandler handler : handlers) handler.processEvent(variable, network);
+    for (VarHandler handler : handlers) {
+      handler.processEvent(variable, network);
+    }
   }
 }

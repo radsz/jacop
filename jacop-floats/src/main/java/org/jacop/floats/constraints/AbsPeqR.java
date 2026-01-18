@@ -80,7 +80,9 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override

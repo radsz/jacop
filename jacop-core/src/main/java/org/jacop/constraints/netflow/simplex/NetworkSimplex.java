@@ -76,7 +76,9 @@ public class NetworkSimplex {
     this.infeasibleNodes = new LinkedHashSet<>();
 
     // initialize index pointers
-    for (int i = 0; i < lower.length; i++) lower[i].index = lower[i].sister.index = i;
+    for (int i = 0; i < lower.length; i++) {
+      lower[i].index = lower[i].sister.index = i;
+    }
 
     // create initial spanning tree structure
     Node nextOnThread = root;
@@ -169,7 +171,9 @@ public class NetworkSimplex {
       }
 
       arc = node.adjacencyList[1];
-      if (arc != null && arc.index == DELETED_ARC) node.adjacencyList[1] = null;
+      if (arc != null && arc.index == DELETED_ARC) {
+        node.adjacencyList[1] = null;
+      }
 
       assert ((node.degree == 1
                   && ((node.adjacencyList[0] == null) ^ (node.adjacencyList[1] == null)))
@@ -274,13 +278,17 @@ public class NetworkSimplex {
         Arc arc = node.artificial;
         arc.sister.set(-LARGE_COST, delta);
         assert arc.index != DELETED_ARC;
-        if (arc.index != TREE_ARC) lower[arc.index] = arc.sister;
+        if (arc.index != TREE_ARC) {
+          lower[arc.index] = arc.sister;
+        }
       } else if (delta < 0) {
         // demand node
         Arc arc = node.artificial;
         arc.set(-LARGE_COST, -delta);
         assert arc.index != DELETED_ARC;
-        if (arc.index != TREE_ARC) lower[arc.index] = arc;
+        if (arc.index != TREE_ARC) {
+          lower[arc.index] = arc;
+        }
       } else {
         it.remove();
       }
@@ -348,11 +356,17 @@ public class NetworkSimplex {
     assert (pivots == -1 || failure || checkOptimality(this));
 
     if (DEBUG) {
-      if (pivots == -1) IO.println("Abort after " + maxPivots + " iterations");
-      else if (failure) IO.println("Failure after " + pivots + " iterations");
-      else IO.println(pivots + " iterations (" + numArcs + " arcs)");
+      if (pivots == -1) {
+        IO.println("Abort after " + maxPivots + " iterations");
+      } else if (failure) {
+        IO.println("Failure after " + pivots + " iterations");
+      } else {
+        IO.println(pivots + " iterations (" + numArcs + " arcs)");
+      }
     }
-    if (failure && pivots != -1) pivots = -2;
+    if (failure && pivots != -1) {
+      pivots = -2;
+    }
     return pivots;
   }
 
@@ -403,7 +417,9 @@ public class NetworkSimplex {
     assert (delta >= 0);
 
     blocking = null; // default value
-    if (delta == 0) return 0;
+    if (delta == 0) {
+      return 0;
+    }
 
     // entering arc (k,l)
     Node k = to;
@@ -427,8 +443,12 @@ public class NetworkSimplex {
     }
 
     // augment flow
-    for (Node j = k; j != apex; j = j.parent) j.toParent.addFlow(-delta);
-    for (Node i = l; i != apex; i = i.parent) i.toParent.addFlow(delta);
+    for (Node j = k; j != apex; j = j.parent) {
+      j.toParent.addFlow(-delta);
+    }
+    for (Node i = l; i != apex; i = i.parent) {
+      i.toParent.addFlow(delta);
+    }
 
     return delta;
   }
@@ -522,7 +542,9 @@ public class NetworkSimplex {
    */
   public void treeSwap(Node a, Node b, Node c) {
     // shortcut for multiple arcs (for performance, not correctness)
-    if (a == c) return;
+    if (a == c) {
+      return;
+    }
 
     Node i = b.predecessorOnThread();
     Node j = b.rightMostLeaf();
@@ -568,7 +590,9 @@ public class NetworkSimplex {
     while (balance > 0) {
       // stop when limit is reached
       if (pivots >= maxPivots) {
-        if (DEBUG) IO.println("Abort after " + pivots + " iterations");
+        if (DEBUG) {
+          IO.println("Abort after " + pivots + " iterations");
+        }
         return -1;
       }
 
@@ -582,7 +606,9 @@ public class NetworkSimplex {
       // Augment flow
       balance -= augmentFlow(source, sink, balance);
     }
-    if (DEBUG) IO.println(pivots + " iterations");
+    if (DEBUG) {
+      IO.println(pivots + " iterations");
+    }
     return pivots;
   }
 
@@ -673,16 +699,22 @@ public class NetworkSimplex {
 
     for (Node i = root; ; i = i.thread) {
       IO.println("\t" + i + "\t\t" + i.toParent);
-      if (i.thread == root) break;
+      if (i.thread == root) {
+        break;
+      }
     }
 
     IO.println("Flow");
     int cost = 0;
     for (Arc a : allArcs) {
-      if (!a.forward) a = a.sister;
+      if (!a.forward) {
+        a = a.sister;
+      }
 
       int flow = a.sister.capacity;
-      if (a.companion != null) flow += a.companion.flowOffset;
+      if (a.companion != null) {
+        flow += a.companion.flowOffset;
+      }
 
       if (flow > 0) {
         IO.println(flow + "\t" + a.toFlow());

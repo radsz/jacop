@@ -78,7 +78,7 @@ public class XmulCeqZ extends PrimitiveConstraint {
   @Override
   public void consistency(final Store store) {
 
-    if (c != 0)
+    if (c != 0) {
       do {
 
         // Bounds for Z
@@ -94,7 +94,9 @@ public class XmulCeqZ extends PrimitiveConstraint {
         x.domain.in(store.level, x, xBounds.min(), xBounds.max());
 
       } while (store.propagationHasOccurred);
-    else z.domain.inValue(store.level, z, 0);
+    } else {
+      z.domain.inValue(store.level, z, 0);
+    }
   }
 
   @Override
@@ -102,7 +104,9 @@ public class XmulCeqZ extends PrimitiveConstraint {
 
     if (c != 0) {
 
-      if (x.singleton()) z.domain.inComplement(store.level, z, x.value() * c);
+      if (x.singleton()) {
+        z.domain.inComplement(store.level, z, x.value() * c);
+      }
 
       if (z.singleton()) {
         Interval xBounds;
@@ -117,7 +121,9 @@ public class XmulCeqZ extends PrimitiveConstraint {
         x.domain.inComplement(store.level, x, xBounds.min());
       }
 
-    } else z.domain.inComplement(store.level, z, 0);
+    } else {
+      z.domain.inComplement(store.level, z, 0);
+    }
   }
 
   @Override

@@ -54,7 +54,7 @@ public class EinA extends PrimitiveConstraint {
   public final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict = false;
+  public boolean strict;
 
   /**
    * It constructs an eInA constraint to restrict the domain of the variable.
@@ -91,7 +91,9 @@ public class EinA extends PrimitiveConstraint {
 
     a.domain.inGLB(store.level, a, element);
 
-    if (strict) a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
+    if (strict) {
+      a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
+    }
   }
 
   @Override

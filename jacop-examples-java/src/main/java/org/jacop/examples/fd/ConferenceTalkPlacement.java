@@ -112,9 +112,13 @@ public class ConferenceTalkPlacement {
 
     Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
 
-    for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<>());
+    for (int i = 0; i < noOfTalks; i++) {
+      result.put(i, new HashMap<>());
+    }
 
-    for (int[] ints : costs) result.get(ints[0]).put(ints[1], ints[2]);
+    for (int[] ints : costs) {
+      result.get(ints[0]).put(ints[1], ints[2]);
+    }
 
     IO.println(result);
 
@@ -128,10 +132,15 @@ public class ConferenceTalkPlacement {
 
     Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
 
-    for (int i = 0; i < noOfTalks; i++) result.put(i, new HashMap<>());
+    for (int i = 0; i < noOfTalks; i++) {
+      result.put(i, new HashMap<>());
+    }
 
-    for (int i = 0; i < noOfTalks; i++)
-      for (int j = i + 1; j < noOfTalks; j++) result.get(i).put(j, seed.nextInt(maxSingleCost));
+    for (int i = 0; i < noOfTalks; i++) {
+      for (int j = i + 1; j < noOfTalks; j++) {
+        result.get(i).put(j, seed.nextInt(maxSingleCost));
+      }
+    }
 
     return result;
   }
@@ -141,7 +150,9 @@ public class ConferenceTalkPlacement {
       int noOfParallelTracks, int noOfTimeSlots, Map<Integer, Map<Integer, Integer>> costs) {
 
     List<Integer> costsList = new ArrayList<>();
-    for (Map<Integer, Integer> elH : costs.values()) costsList.addAll(elH.values());
+    for (Map<Integer, Integer> elH : costs.values()) {
+      costsList.addAll(elH.values());
+    }
 
     Integer[] sortedArray = costsList.toArray(new Integer[0]);
     Arrays.sort(sortedArray);
@@ -150,7 +161,9 @@ public class ConferenceTalkPlacement {
     int lowerBound = 0;
     for (int i = 0;
         i < noOfTimeSlots * (noOfTalksInOneTimeSlot * (noOfTalksInOneTimeSlot - 1) / 2);
-        i++) lowerBound += sortedArray[i];
+        i++) {
+      lowerBound += sortedArray[i];
+    }
 
     IO.println(lowerBound);
     return lowerBound;
@@ -169,25 +182,28 @@ public class ConferenceTalkPlacement {
 
     IntVar[] talkPlacement = new IntVar[noOfTalks];
 
-    for (int i = 0; i < noOfTalks; i++)
+    for (int i = 0; i < noOfTalks; i++) {
       talkPlacement[i] = new IntVar(store, "talk[" + i + "]-track", 0, noOfParallelTracks - 1);
+    }
 
     IntVar[] talkCounterInTrack = new IntVar[noOfParallelTracks];
-    for (int i = 0; i < noOfParallelTracks; i++)
+    for (int i = 0; i < noOfParallelTracks; i++) {
       talkCounterInTrack[i] =
           new IntVar(
               store,
               "noOfTalksIn-" + i + "-th-Track",
               noOfTalks / noOfParallelTracks - 1,
               noOfTimeSlots);
+    }
 
-    for (int i = 0; i < noOfParallelTracks; i++)
+    for (int i = 0; i < noOfParallelTracks; i++) {
       store.impose(new Count(talkPlacement, talkCounterInTrack[i], i));
+    }
 
     IntVar[] pairCosts = new IntVar[noOfTalks * (noOfTalks - 1) / 2];
 
     int pairNo = 0;
-    for (int i = 0; i < noOfTalks; i++)
+    for (int i = 0; i < noOfTalks; i++) {
       for (int j = i + 1; j < noOfTalks; j++) {
 
         pairCosts[pairNo] = new IntVar(store, "pair(" + i + ", " + j + ")Cost", 0, maxSingleCost);
@@ -207,10 +223,13 @@ public class ConferenceTalkPlacement {
           IntervalDomain costPairDomain = new IntervalDomain(0, 0);
           costPairDomain.unionAdapt(costMap.get(i).get(j));
           store.impose(new In(pairCosts[pairNo], costPairDomain));
-        } else store.impose(new XeqC(pairCosts[pairNo], 0));
+        } else {
+          store.impose(new XeqC(pairCosts[pairNo], 0));
+        }
 
         pairNo++;
       }
+    }
 
     cost = new IntVar(store, "cost", 0, IntDomain.MaxInt);
 
@@ -237,7 +256,9 @@ public class ConferenceTalkPlacement {
     PrintOutListener<IntVar> solutionListener = new PrintOutListener<>();
     search.setSolutionListener(solutionListener);
 
-    if (timeOutSeconds > 0) search.setTimeOut(timeOutSeconds);
+    if (timeOutSeconds > 0) {
+      search.setTimeOut(timeOutSeconds);
+    }
 
     // pivot variable is at index 0.
     SelectChoicePoint<IntVar> select =
@@ -249,8 +270,11 @@ public class ConferenceTalkPlacement {
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    if (result) IO.println("Variables : " + vars);
-    else IO.println("Failed to find any solution");
+    if (result) {
+      IO.println("Variables : " + vars);
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + T + " ms");
 
@@ -259,7 +283,9 @@ public class ConferenceTalkPlacement {
 
   public boolean search(int maxCostAllowed, int timeOutSeconds) {
 
-    if (maxCostAllowed != -1) store.impose(new XlteqC(cost, maxCostAllowed));
+    if (maxCostAllowed != -1) {
+      store.impose(new XlteqC(cost, maxCostAllowed));
+    }
 
     long T1, T2, T;
     T1 = System.currentTimeMillis();
@@ -271,15 +297,20 @@ public class ConferenceTalkPlacement {
         new SimpleMatrixSelect<>(
             varsMatrix, new MaxRegret<>(), new SmallestDomain<>(), new IndomainMin<>());
 
-    if (timeOutSeconds > 0) search.setTimeOut(timeOutSeconds);
+    if (timeOutSeconds > 0) {
+      search.setTimeOut(timeOutSeconds);
+    }
 
     boolean result = search.labeling(store, select);
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    if (result) IO.println("Variables : " + vars);
-    else IO.println("Failed to find any solution");
+    if (result) {
+      IO.println("Variables : " + vars);
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + T + " ms");
 

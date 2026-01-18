@@ -92,15 +92,17 @@ public class AeqB extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    if (a.singleton() && b.singleton() && a.dom().glb().eq(b.dom().glb()))
+    if (a.singleton() && b.singleton() && a.dom().glb().eq(b.dom().glb())) {
       throw Store.failException;
+    }
   }
 
   @Override
   public boolean notSatisfied() {
 
-    if (!a.domain.lub().contains(b.domain.glb()) || !b.domain.lub().contains(a.domain.glb()))
+    if (!a.domain.lub().contains(b.domain.glb()) || !b.domain.lub().contains(a.domain.glb())) {
       return true;
+    }
 
     return a.singleton() && b.singleton() && !a.domain.glb().eq(b.domain.glb());
   }

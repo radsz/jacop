@@ -154,8 +154,11 @@ public final class DebugModule
   }
 
   private void printLine(boolean start) {
-    if (start) core.logc(3, "/==================================");
-    else core.logc(3, "\\==================================");
+    if (start) {
+      core.logc(3, "/==================================");
+    } else {
+      core.logc(3, "\\==================================");
+    }
   }
 
   private void printBlank() {
@@ -166,7 +169,9 @@ public final class DebugModule
     StringBuilder sb = new StringBuilder(prefix).append("[ ");
     for (int var : clause.literals.keySet()) {
       int value = core.trail.values[var];
-      if (value >= 0) sb.append(' ');
+      if (value >= 0) {
+        sb.append(' ');
+      }
       sb.append(value);
       sb.append(' ');
     }

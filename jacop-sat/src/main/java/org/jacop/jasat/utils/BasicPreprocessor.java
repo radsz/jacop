@@ -91,12 +91,15 @@ public class BasicPreprocessor {
     // state of the clause
     int state = UNTOUCHED;
 
-    for (int i = 0; i < clause.numElem; ++i) {
+    for (int i = 0; i < clause.numElem; i++) {
       int literal = clause.array[i];
 
       // trivial clause
-      if (localClause.containsLiteral(literal)) state = SIMPLIFIED;
-      else if (localClause.addLiteral(literal)) return TRIVIAL;
+      if (localClause.containsLiteral(literal)) {
+        state = SIMPLIFIED;
+      } else if (localClause.addLiteral(literal)) {
+        return TRIVIAL;
+      }
     }
 
     // clause is not trivial

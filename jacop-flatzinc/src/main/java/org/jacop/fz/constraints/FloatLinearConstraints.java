@@ -122,32 +122,43 @@ class FloatLinearConstraints implements ParserTreeConstants {
       switch (operation) {
         case Support.eq:
           if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-            if (p3 != 0) support.pose(new PplusCeqR(p2[1], p3, p2[0]));
-            else support.pose(new PeqQ(p2[1], p2[0]));
+            if (p3 != 0) {
+              support.pose(new PplusCeqR(p2[1], p3, p2[0]));
+            } else {
+              support.pose(new PeqQ(p2[1], p2[0]));
+            }
           } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
             if (p3 != 0) {
               support.pose(new PplusCeqR(p2[0], p3, p2[1]));
-            } else support.pose(new PeqQ(p2[0], p2[1]));
+            } else {
+              support.pose(new PeqQ(p2[0], p2[1]));
+            }
           } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
             support.pose(new PplusQeqR(p2[0], p2[1], new FloatVar(store, p3, p3)));
-          } else support.pose(new LinearFloat(p2, p1, "==", p3));
+          } else {
+            support.pose(new LinearFloat(p2, p1, "==", p3));
+          }
           break;
         case Support.ne:
           support.pose(new LinearFloat(p2, p1, "!=", p3));
           break;
         case Support.lt:
-          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
             support.pose(new PltQ(p2[0], p2[1]));
-          else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+          } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
             support.pose(new PltQ(p2[1], p2[0]));
-          else support.pose(new LinearFloat(p2, p1, "<", p3));
+          } else {
+            support.pose(new LinearFloat(p2, p1, "<", p3));
+          }
           break;
         case Support.le:
-          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0)
+          if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
             support.pose(new PlteqQ(p2[0], p2[1]));
-          else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0)
+          } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
             support.pose(new PlteqQ(p2[1], p2[0]));
-          else support.pose(new LinearFloat(p2, p1, "<=", p3));
+          } else {
+            support.pose(new LinearFloat(p2, p1, "<=", p3));
+          }
           break;
         default:
           throw new IllegalArgumentException(

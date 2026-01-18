@@ -54,10 +54,14 @@ public class ReversibleSparseBitSet {
 
     int n = tuple.length;
     int lastWordSize = n % 64;
-    int numberBitSets = n / 64 + ((lastWordSize != 0) ? 1 : 0);
+    int numberBitSets = n / 64 + (lastWordSize != 0 ? 1 : 0);
 
     long[] bs = new long[numberBitSets];
-    for (int i = 0; i < n; i++) if (validTuple(x, tuple[i])) setBit(i, bs);
+    for (int i = 0; i < n; i++) {
+      if (validTuple(x, tuple[i])) {
+        setBit(i, bs);
+      }
+    }
 
     init(store, bs);
   }
@@ -70,7 +74,9 @@ public class ReversibleSparseBitSet {
     words = new TimeStamp<>(store, w);
 
     index = new int[n];
-    for (int i = 0; i < n; i++) index[i] = i;
+    for (int i = 0; i < n; i++) {
+      index[i] = i;
+    }
 
     mask = new long[n];
   }
@@ -80,7 +86,7 @@ public class ReversibleSparseBitSet {
     int l = n % 64;
     int m = n / 64;
 
-    a[m] |= (1L << l);
+    a[m] |= 1L << l;
 
     return a;
   }
@@ -90,7 +96,9 @@ public class ReversibleSparseBitSet {
     int n = t.length;
     int i = 0;
     while (i < n) {
-      if (!x[i].dom().contains(t[i])) return false;
+      if (!x[i].dom().contains(t[i])) {
+        return false;
+      }
       i++;
     }
     return true;
@@ -150,7 +158,9 @@ public class ReversibleSparseBitSet {
 
     if (update) {
       words.update(ws);
-      if (l < n) limit.update(l);
+      if (l < n) {
+        limit.update(l);
+      }
     }
   }
 
@@ -162,7 +172,9 @@ public class ReversibleSparseBitSet {
       long w = wrds[offset];
 
       w &= m[offset];
-      if (w != 0) return offset;
+      if (w != 0) {
+        return offset;
+      }
     }
     return -1;
   }
@@ -181,7 +193,9 @@ public class ReversibleSparseBitSet {
       int offset = index[i];
       s.append(offset).append(": ");
       s.append("0x%08X".formatted(wrds[offset]));
-      if (i < n - 1) s.append(", ");
+      if (i < n - 1) {
+        s.append(", ");
+      }
     }
 
     s.append("\nmask: ");

@@ -60,10 +60,16 @@ public final class IntMap<E> {
   public E get(int key) {
     MapNode n = map.getNode(key);
     boolean isPos = key >= 0;
-    if (n == null) return null;
-    if (isPos && n.posMember) return n.posValue;
-    else if (n.negMember) return n.negValue;
-    else return null;
+    if (n == null) {
+      return null;
+    }
+    if (isPos && n.posMember) {
+      return n.posValue;
+    } else if (n.negMember) {
+      return n.negValue;
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -79,10 +85,14 @@ public final class IntMap<E> {
     E answer = null;
 
     if (isPos) {
-      if (n.posMember) answer = n.posValue;
+      if (n.posMember) {
+        answer = n.posValue;
+      }
       n.posValue = value;
     } else {
-      if (n.negMember) answer = n.negValue;
+      if (n.negMember) {
+        answer = n.negValue;
+      }
       n.negValue = value;
     }
     return answer;

@@ -53,7 +53,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   /** It specifes variable z in constraint |x-y|=z. */
   public final IntVar z;
 
-  boolean firstConsistencyCheck = false;
+  boolean firstConsistencyCheck;
   int firstConsistencyLevel;
 
   /**
@@ -77,7 +77,9 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -103,21 +105,25 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
         IntervalDomain tempPlus4Z = new IntervalDomain(ySize);
 
-        for (int i = ySize - 1; i >= 0; i--)
-          if (xValue >= yDom.rightElement(i))
+        for (int i = ySize - 1; i >= 0; i--) {
+          if (xValue >= yDom.rightElement(i)) {
             tempPlus4Z.unionAdapt(
                 new Interval(xValue - yDom.rightElement(i), xValue - yDom.leftElement(i)));
-          else if (xValue >= yDom.leftElement(i))
+          } else if (xValue >= yDom.leftElement(i)) {
             tempPlus4Z.unionAdapt(new Interval(0, xValue - yDom.leftElement(i)));
+          }
+        }
 
         IntervalDomain tempMinus4Z = new IntervalDomain(ySize);
 
-        for (int i = 0; i < ySize; i++)
-          if (xValue <= yDom.leftElement(i))
+        for (int i = 0; i < ySize; i++) {
+          if (xValue <= yDom.leftElement(i)) {
             tempMinus4Z.unionAdapt(
                 new Interval(-xValue + yDom.leftElement(i), -xValue + yDom.rightElement(i)));
-          else if (xValue <= yDom.rightElement(i))
+          } else if (xValue <= yDom.rightElement(i)) {
             tempMinus4Z.unionAdapt(new Interval(0, -xValue + yDom.rightElement(i)));
+          }
+        }
 
         tempPlus4Z.addDom(tempMinus4Z);
         z.domain.in(store.level, z, tempPlus4Z);
@@ -133,8 +139,9 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
         IntervalDomain temp = new IntervalDomain(zSize);
 
-        for (int i = zSize - 1; i >= 0; i--)
+        for (int i = zSize - 1; i >= 0; i--) {
           temp.unionAdapt(new Interval(-zDom.rightElement(i), -zDom.leftElement(i)));
+        }
 
         temp.addDom(zDom);
 
@@ -154,19 +161,23 @@ public class Distance extends PrimitiveConstraint implements Stateful {
           IntervalDomain temp4PlusZ = new IntervalDomain(xSize);
           IntervalDomain temp4MinusZ = new IntervalDomain(xSize);
 
-          for (int i = 0; i < xSize; i++)
-            if (xDom.leftElement(i) - yValue >= 0)
+          for (int i = 0; i < xSize; i++) {
+            if (xDom.leftElement(i) - yValue >= 0) {
               temp4PlusZ.unionAdapt(
                   new Interval(xDom.leftElement(i) - yValue, xDom.rightElement(i) - yValue));
-            else if (xDom.rightElement(i) - yValue >= 0)
+            } else if (xDom.rightElement(i) - yValue >= 0) {
               temp4PlusZ.unionAdapt(0, xDom.rightElement(i) - yValue);
+            }
+          }
 
-          for (int i = xSize - 1; i >= 0; i--)
-            if (xDom.rightElement(i) - yValue <= 0)
+          for (int i = xSize - 1; i >= 0; i--) {
+            if (xDom.rightElement(i) - yValue <= 0) {
               temp4MinusZ.unionAdapt(
                   new Interval(-xDom.rightElement(i) + yValue, -xDom.leftElement(i) + yValue));
-            else if (xDom.leftElement(i) - yValue <= 0)
+            } else if (xDom.leftElement(i) - yValue <= 0) {
               temp4MinusZ.unionAdapt(0, -xDom.leftElement(i) + yValue);
+            }
+          }
 
           temp4PlusZ.addDom(temp4MinusZ);
           z.domain.in(store.level, z, temp4PlusZ);
@@ -183,8 +194,9 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
           IntervalDomain temp = new IntervalDomain(zSize);
 
-          for (int i = zSize - 1; i >= 0; i--)
+          for (int i = zSize - 1; i >= 0; i--) {
             temp.unionAdapt(new Interval(-zDom.rightElement(i), -zDom.leftElement(i)));
+          }
 
           temp.addDom(zDom);
 
@@ -287,10 +299,10 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   @Override
   public boolean satisfied() {
     IntDomain Xdom = x.dom(), Ydom = y.dom(), Zdom = z.dom();
-    return (Xdom.singleton()
+    return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()
-        && java.lang.Math.abs(Xdom.min() - Ydom.min()) == Zdom.min());
+        && java.lang.Math.abs(Xdom.min() - Ydom.min()) == Zdom.min();
   }
 
   @Override
@@ -308,10 +320,10 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   public boolean notSatisfied() {
 
     IntDomain Xdom = x.dom(), Ydom = y.dom(), Zdom = z.dom();
-    return (Xdom.singleton()
+    return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()
-        && !(java.lang.Math.abs(Xdom.min() - Ydom.min()) == Zdom.min()));
+        && !(java.lang.Math.abs(Xdom.min() - Ydom.min()) == Zdom.min());
   }
 
   @Override

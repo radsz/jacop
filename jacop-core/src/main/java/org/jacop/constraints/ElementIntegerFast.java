@@ -160,31 +160,36 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
         int minIndex = index.min();
         int maxIndex = index.max();
 
-        if (sort == ascending)
+        if (sort == ascending) {
           value.domain.in(
               store.level,
               value,
               list[minIndex - 1 - indexOffset],
               list[maxIndex - 1 - indexOffset]);
-        else
+        } else {
           value.domain.in(
               store.level,
               value,
               list[maxIndex - 1 - indexOffset],
               list[minIndex - 1 - indexOffset]);
+        }
 
         IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
         for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
           int position = e.nextElement() - 1 - indexOffset;
           int val = list[position];
 
-          if (disjoint(value, val))
-            if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-            else
+          if (disjoint(value, val)) {
+            if (indexDom.size == 0) {
+              indexDom.unionAdapt(position + 1 + indexOffset);
+            } else {
               // indexes are in ascending order and can be added at the end if the last element
               // plus 1 is not equal a new value. In such case the max must be changed.
               indexDom.addLastElement(position + 1 + indexOffset);
-          else if (val == list[maxIndex - 1 - indexOffset]) break;
+            }
+          } else if (val == list[maxIndex - 1 - indexOffset]) {
+            break;
+          }
         }
 
         index.domain.in(store.level, index, indexDom.complement());
@@ -202,24 +207,34 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
           int position = e.nextElement() - 1 - indexOffset;
           int val = list[position];
 
-          if (disjoint(value, val))
-            if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-            else
+          if (disjoint(value, val)) {
+            if (indexDom.size == 0) {
+              indexDom.unionAdapt(position + 1 + indexOffset);
+            } else {
               // indexes are in ascending order and can be added at the end if the last element
               // plus 1 is not equal a new value. In such case the max must be changed.
               indexDom.addLastElement(position + 1 + indexOffset);
-          else {
+            }
+          } else {
             min = Math.min(min, val);
             max = Math.max(max, val);
           }
 
-          if (val > previous) desc = false;
-          if (val < previous) asc = false;
+          if (val > previous) {
+            desc = false;
+          }
+          if (val < previous) {
+            asc = false;
+          }
 
           previous = val;
         }
-        if (desc) order.update(descending);
-        if (asc) order.update(ascending);
+        if (desc) {
+          order.update(descending);
+        }
+        if (asc) {
+          order.update(ascending);
+        }
 
         index.domain.in(store.level, index, indexDom.complement());
         value.domain.in(store.level, value, min, max);
@@ -238,13 +253,15 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
           int position = e.nextElement() - 1 - indexOffset;
           int val = list[position];
 
-          if (disjoint(value, val))
-            if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-            else
+          if (disjoint(value, val)) {
+            if (indexDom.size == 0) {
+              indexDom.unionAdapt(position + 1 + indexOffset);
+            } else {
               // indexes are in ascending order and can be added at the end if the last element
               // plus 1 is not equal a new value. In such case the max must be changed.
               indexDom.addLastElement(position + 1 + indexOffset);
-          else {
+            }
+          } else {
             min = Math.min(min, val);
             max = Math.max(max, val);
           }
@@ -263,13 +280,18 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   }
 
   private boolean disjoint(IntVar v1, int v2) {
-    if (v1.min() > v2 || v2 > v1.max()) return true;
-    else return !v1.domain.contains(v2);
+    if (v1.min() > v2 || v2 > v1.max()) {
+      return true;
+    } else {
+      return !v1.domain.contains(v2);
+    }
   }
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -279,7 +301,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
   @Override
   public boolean isStateful() {
-    return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
 
   @Override
@@ -302,7 +324,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
       ValueEnumeration e = index.domain.valueEnumeration();
       while (sat && e.hasMoreElements()) {
         int fdv = list[e.nextElement() - 1 - indexOffset];
-        sat = (fdv == v);
+        sat = fdv == v;
       }
     }
     return sat;
@@ -318,7 +340,9 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(" )");

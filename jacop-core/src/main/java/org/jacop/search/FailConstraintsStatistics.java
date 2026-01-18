@@ -69,11 +69,14 @@ public class FailConstraintsStatistics implements ConsistencyListener {
    */
   public boolean executeAfterConsistency(boolean consistent) {
 
-    if (consistent) return true;
-    else { // consistency failed
-      if (store.recentlyFailedConstraint != null)
+    if (consistent) {
+      return true;
+    } else { // consistency failed
+      if (store.recentlyFailedConstraint != null) {
         collectFailStatistics(store.recentlyFailedConstraint);
-      else otherFails++;
+      } else {
+        otherFails++;
+      }
       return false;
     }
   }
@@ -86,17 +89,23 @@ public class FailConstraintsStatistics implements ConsistencyListener {
 
     // ======== add fail constraints classes to list of fails
     String cName = currentConstraint.getClass().getSimpleName();
-    if (cName == "") cName = currentConstraint.getClass().getTypeName();
+    if (cName == "") {
+      cName = currentConstraint.getClass().getTypeName();
+    }
     Integer n = failConstraintsStatistics.get(cName);
     if (n != null) {
       failConstraintsStatistics.put(cName, ++n);
-    } else failConstraintsStatistics.put(cName, 1);
+    } else {
+      failConstraintsStatistics.put(cName, 1);
+    }
 
     // ======== add fail constraints id's to list of fails
     Integer k = failConstraintsIdStatistics.get(currentConstraint.id());
     if (k != null) {
       failConstraintsIdStatistics.put(currentConstraint.id(), ++k);
-    } else failConstraintsIdStatistics.put(currentConstraint.id(), 1);
+    } else {
+      failConstraintsIdStatistics.put(currentConstraint.id(), 1);
+    }
     // ========
   }
 
@@ -105,11 +114,13 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     StringBuilder c = new StringBuilder();
 
     c.append("*** Failed classes of constraints ***\n");
-    for (Entry<String, Integer> cls : sortByValues(failConstraintsStatistics))
+    for (Entry<String, Integer> cls : sortByValues(failConstraintsStatistics)) {
       c.append(cls.getKey()).append("\t").append(cls.getValue()).append("\n");
+    }
     c.append("*** Failed constraints ***\n");
-    for (Entry<String, Integer> constraint : sortByValues(failConstraintsIdStatistics))
+    for (Entry<String, Integer> constraint : sortByValues(failConstraintsIdStatistics)) {
       c.append(constraint.getKey()).append("\t").append(constraint.getValue()).append("\n");
+    }
     c.append("*** Fails not caused by constraints ").append(otherFails).append("\n");
 
     return c.toString();

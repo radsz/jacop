@@ -64,28 +64,39 @@ public class MagicSquares extends ExampleFD {
 
     MagicSquares example = new MagicSquares();
 
-    if (args.length != 0) example.number = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.number = Integer.parseInt(args[0]);
+    }
 
     example.model();
 
-    if (example.searchMiddle()) IO.println("Solution(s) found");
+    if (example.searchMiddle()) {
+      IO.println("Solution(s) found");
+    }
 
     MagicSquares exampleDual = new MagicSquares();
 
-    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      exampleDual.number = Integer.parseInt(args[0]);
+    }
 
     exampleDual.modelDual();
 
-    if (exampleDual.creditSearch(64, 5000, 10)) IO.println("Solution(s) found");
+    if (exampleDual.creditSearch(64, 5000, 10)) {
+      IO.println("Solution(s) found");
+    }
 
     MagicSquares exampleShave = new MagicSquares();
 
-    if (args.length != 0) exampleShave.number = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      exampleShave.number = Integer.parseInt(args[0]);
+    }
 
     exampleShave.model4Shaving();
 
-    if (exampleShave.shavingSearch(exampleShave.guidingShaving, true))
+    if (exampleShave.shavingSearch(exampleShave.guidingShaving, true)) {
       IO.println("Solution(s) found");
+    }
   }
 
   /**
@@ -97,19 +108,27 @@ public class MagicSquares extends ExampleFD {
 
     MagicSquares example = new MagicSquares();
 
-    if (args.length != 0) example.number = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.number = Integer.parseInt(args[0]);
+    }
 
     example.model();
 
-    if (example.searchMiddle()) IO.println("Solution(s) found");
+    if (example.searchMiddle()) {
+      IO.println("Solution(s) found");
+    }
 
     MagicSquares exampleDual = new MagicSquares();
 
-    if (args.length != 0) exampleDual.number = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      exampleDual.number = Integer.parseInt(args[0]);
+    }
 
     exampleDual.modelDual();
 
-    if (exampleDual.creditSearch(64, 5000, 10)) IO.println("Solution(s) found");
+    if (exampleDual.creditSearch(64, 5000, 10)) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -125,13 +144,17 @@ public class MagicSquares extends ExampleFD {
         new IntVar(
             store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
 
-    for (int i = 0; i < number; i++)
-      for (int j = 0; j < number; j++)
+    for (int i = 0; i < number; i++) {
+      for (int j = 0; j < number; j++) {
         squares[i * number + j] =
             new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
+      }
+    }
 
     vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
-    for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
+    for (int i = number; i > 0; i--) {
+      vars.add(squares[(i - 1) * number + (number - i)]);
+    }
     vars.addAll(Arrays.asList(squares));
 
     // Imposing inequalities constraints between squares
@@ -147,17 +170,23 @@ public class MagicSquares extends ExampleFD {
     IntVar[] column = new IntVar[number];
 
     for (int j = 0; j < number; j++) {
-      for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
+      for (int i = 0; i < number; i++) {
+        column[i] = squares[i * number + j];
+      }
       store.impose(new SumInt(column, "==", k));
     }
 
     IntVar[] diagonal = new IntVar[number];
 
-    for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
+    for (int i = 0; i < number; i++) {
+      diagonal[i] = squares[i * number + i];
+    }
 
     store.impose(new SumInt(diagonal, "==", k));
 
-    for (int i = number; i > 0; i--) diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    for (int i = number; i > 0; i--) {
+      diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    }
     store.impose(new SumInt(diagonal, "==", k));
 
     // symmetry breaking
@@ -181,13 +210,17 @@ public class MagicSquares extends ExampleFD {
         new IntVar(
             store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
 
-    for (int i = 0; i < number; i++)
-      for (int j = 0; j < number; j++)
+    for (int i = 0; i < number; i++) {
+      for (int j = 0; j < number; j++) {
         squares[i * number + j] =
             new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
+      }
+    }
 
     vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
-    for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
+    for (int i = number; i > 0; i--) {
+      vars.add(squares[(i - 1) * number + (number - i)]);
+    }
     vars.addAll(Arrays.asList(squares));
 
     // Imposing inequalities constraints between squares
@@ -205,7 +238,9 @@ public class MagicSquares extends ExampleFD {
     IntVar[] column = new IntVar[number];
 
     for (int j = 0; j < number; j++) {
-      for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
+      for (int i = 0; i < number; i++) {
+        column[i] = squares[i * number + j];
+      }
 
       Constraint cx = new SumInt(column, "==", k);
       store.impose(cx);
@@ -214,13 +249,17 @@ public class MagicSquares extends ExampleFD {
 
     IntVar[] diagonal = new IntVar[number];
 
-    for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
+    for (int i = 0; i < number; i++) {
+      diagonal[i] = squares[i * number + i];
+    }
 
     Constraint cx = new SumInt(diagonal, "==", k);
     store.impose(cx);
     guidingShaving.add(cx);
 
-    for (int i = number; i > 0; i--) diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    for (int i = number; i > 0; i--) {
+      diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    }
     store.impose(new SumInt(diagonal, "==", k));
 
     // symmetry breaking
@@ -245,13 +284,17 @@ public class MagicSquares extends ExampleFD {
         new IntVar(
             store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
 
-    for (int i = 0; i < number; i++)
-      for (int j = 0; j < number; j++)
+    for (int i = 0; i < number; i++) {
+      for (int j = 0; j < number; j++) {
         squares[i * number + j] =
             new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
+      }
+    }
 
     vars.addAll(Arrays.asList(squares).subList(0 + 0 * number + 0, number + 0 * number + 0));
-    for (int i = number; i > 0; i--) vars.add(squares[(i - 1) * number + (number - i)]);
+    for (int i = number; i > 0; i--) {
+      vars.add(squares[(i - 1) * number + (number - i)]);
+    }
     vars.addAll(Arrays.asList(squares));
 
     IntVar[] row = new IntVar[number];
@@ -264,17 +307,23 @@ public class MagicSquares extends ExampleFD {
     IntVar[] column = new IntVar[number];
 
     for (int j = 0; j < number; j++) {
-      for (int i = 0; i < number; i++) column[i] = squares[i * number + j];
+      for (int i = 0; i < number; i++) {
+        column[i] = squares[i * number + j];
+      }
       store.impose(new SumInt(column, "==", k));
     }
 
     IntVar[] diagonal = new IntVar[number];
 
-    for (int i = 0; i < number; i++) diagonal[i] = squares[(i) * number + i];
+    for (int i = 0; i < number; i++) {
+      diagonal[i] = squares[i * number + i];
+    }
 
     store.impose(new SumInt(diagonal, "==", k));
 
-    for (int i = number; i > 0; i--) diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    for (int i = number; i > 0; i--) {
+      diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
+    }
     store.impose(new SumInt(diagonal, "==", k));
 
     // // symmetry breaking

@@ -77,7 +77,9 @@ public class DomainStructure implements VarHandler {
 
   public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs, Behavior behavior) {
 
-    if (domains.length != arcs.length) throw new IllegalArgumentException("#domains != #arcs");
+    if (domains.length != arcs.length) {
+      throw new IllegalArgumentException("#domains != #arcs");
+    }
 
     this.variable = variable;
     this.arcs = arcs;
@@ -87,7 +89,9 @@ public class DomainStructure implements VarHandler {
     this.behavior = behavior;
 
     for (int id = 0; id < arcs.length; id++) {
-      if (!arcs[id].forward) throw new IllegalArgumentException("Not a forward arc");
+      if (!arcs[id].forward) {
+        throw new IllegalArgumentException("Not a forward arc");
+      }
 
       ArcCompanion companion = arcs[id].companion;
       if (companion == null) {
@@ -194,7 +198,9 @@ public class DomainStructure implements VarHandler {
   }
 
   private void swap(int i, int j) {
-    if (i == j) return;
+    if (i == j) {
+      return;
+    }
 
     IntDomain temp1 = domains[i];
     domains[i] = domains[j];
@@ -222,7 +228,7 @@ public class DomainStructure implements VarHandler {
   }
 
   public boolean isGrounded(int arcID) {
-    return (arcID >= notGrounded);
+    return arcID >= notGrounded;
   }
 
   public int getPruningEvent(Var var) {

@@ -153,7 +153,9 @@ public class CPvizNetworkFlow {
     if (Result) {
       IO.println("*** Yes");
       IO.println(cost);
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;

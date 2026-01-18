@@ -30,7 +30,9 @@
 
 package org.jacop.search;
 
+import java.util.Arrays;
 import org.jacop.constraints.*;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
@@ -90,23 +92,33 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
 
     T var = super.getChoiceVariable(index);
 
-    if (var == null) return null;
+    if (var == null) {
+      return null;
+    }
 
     int value = var.min();
-    if (var.domain.getSize() == 2 && var.dom().domainID() == org.jacop.core.IntDomain.BoundDomainID)
+    if (var.domain.getSize() == 2 && var.dom().domainID() == IntDomain.BoundDomainID) {
       value = var.min();
-    else value = super.getChoiceValue();
+    } else {
+      value = super.getChoiceValue();
+    }
 
-    if (leftFirst)
-      if (var.max() != value) return new XlteqC(var, value);
-      else return new XltC(var, value);
-    else if (var.max() != value) return new XgtC(var, value);
-    else return new XeqC(var, value);
+    if (leftFirst) {
+      if (var.max() != value) {
+        return new XlteqC(var, value);
+      } else {
+        return new XltC(var, value);
+      }
+    } else if (var.max() != value) {
+      return new XgtC(var, value);
+    } else {
+      return new XeqC(var, value);
+    }
   }
 
   public String toString() {
     return ""
-        + java.util.Arrays.asList((Var[]) searchVariables)
+        + Arrays.asList((Var[]) searchVariables)
         + ", SplitSelect("
         + variableOrdering
         + ", "

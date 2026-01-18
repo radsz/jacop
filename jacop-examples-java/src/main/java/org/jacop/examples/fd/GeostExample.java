@@ -189,7 +189,9 @@ public class GeostExample extends ExampleFD {
     if (result) {
       IO.println("*** Yes");
       IO.println(store);
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;

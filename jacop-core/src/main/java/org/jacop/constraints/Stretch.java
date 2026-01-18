@@ -80,15 +80,21 @@ public class Stretch extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 
   @Override
   public List<Constraint> decompose(Store store) {
 
-    if (constraints != null) return constraints;
+    if (constraints != null) {
+      return constraints;
+    }
 
     FSM fsm = new FSM();
 
@@ -110,16 +116,22 @@ public class Stretch extends DecomposedConstraint<Constraint> {
 
       oneStep[k] = current;
 
-      if (min[k] <= 1) fsm.finalStates.add(current);
+      if (min[k] <= 1) {
+        fsm.finalStates.add(current);
+      }
     }
 
-    for (int vk = 0; vk < this.values.length; vk++)
-      if (min[vk] <= 1)
-        for (int other = 0; other < this.values.length; other++)
-          if (other != vk)
+    for (int vk = 0; vk < this.values.length; vk++) {
+      if (min[vk] <= 1) {
+        for (int other = 0; other < this.values.length; other++) {
+          if (other != vk) {
             oneStep[vk].addTransition(
                 new FSMTransition(
                     new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
+          }
+        }
+      }
+    }
 
     FSMState prev = null;
 
@@ -137,11 +149,13 @@ public class Stretch extends DecomposedConstraint<Constraint> {
         if (step >= min[vk]) {
 
           fsm.finalStates.add(cur1);
-          for (int other = 0; other < this.values.length; other++)
-            if (other != vk)
+          for (int other = 0; other < this.values.length; other++) {
+            if (other != vk) {
               cur1.addTransition(
                   new FSMTransition(
                       new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
+            }
+          }
         }
 
         prev = cur1;

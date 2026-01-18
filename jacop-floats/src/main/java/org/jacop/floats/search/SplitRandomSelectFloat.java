@@ -82,7 +82,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     currentIndex = new TimeStamp<>(store, 0);
 
-    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   /**
@@ -106,7 +106,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     currentIndex = new TimeStamp<>(store, 0);
 
-    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   @Override
@@ -119,10 +119,15 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     T var = super.getChoiceVariable(index);
 
-    if (variableOrdering == null && roundRobin) var = roundRobinVarSelection(index);
-    else var = super.getChoiceVariable(index);
+    if (variableOrdering == null && roundRobin) {
+      var = roundRobinVarSelection(index);
+    } else {
+      var = super.getChoiceVariable(index);
+    }
 
-    if (var == null) return null;
+    if (var == null) {
+      return null;
+    }
 
     assert (index >= 0);
     // assert (index < searchVar.length);
@@ -134,11 +139,17 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     leftFirst = generator.nextBoolean();
 
-    if (leftFirst)
-      if (((FloatVar) var).max() > value) return new PlteqC((FloatVar) var, value);
-      else return new PltC((FloatVar) var, value);
-    else if (((FloatVar) var).max() > value) return new PgtC((FloatVar) var, value);
-    else return new PeqC((FloatVar) var, value);
+    if (leftFirst) {
+      if (((FloatVar) var).max() > value) {
+        return new PlteqC((FloatVar) var, value);
+      } else {
+        return new PltC((FloatVar) var, value);
+      }
+    } else if (((FloatVar) var).max() > value) {
+      return new PgtC((FloatVar) var, value);
+    } else {
+      return new PeqC((FloatVar) var, value);
+    }
   }
 
   T roundRobinVarSelection(int index) {

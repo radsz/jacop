@@ -38,7 +38,7 @@ package org.jacop.constraints;
  */
 class IntTask {
 
-  int start = 0, stop = 0;
+  int start, stop;
 
   IntTask() {}
 

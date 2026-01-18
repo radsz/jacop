@@ -65,10 +65,15 @@ class OperationConstraints implements ParserTreeConstants {
     } else if (v2.singleton() && v2.value() <= v1.min()) {
       int min = v2.value();
       v3.domain.inValue(store.level, v3, min);
-    } else if (v1.min() >= v2.max()) support.pose(new XeqY(v2, v3));
-    else if (v2.min() >= v1.max()) support.pose(new XeqY(v1, v3));
-    else if (v1 == v2) support.pose(new XeqY(v1, v3));
-    else support.pose(new MinSimple(v1, v2, v3));
+    } else if (v1.min() >= v2.max()) {
+      support.pose(new XeqY(v2, v3));
+    } else if (v2.min() >= v1.max()) {
+      support.pose(new XeqY(v1, v3));
+    } else if (v1 == v2) {
+      support.pose(new XeqY(v1, v3));
+    } else {
+      support.pose(new MinSimple(v1, v2, v3));
+    }
   }
 
   void gen_int_max(SimpleNode node) {
@@ -89,10 +94,15 @@ class OperationConstraints implements ParserTreeConstants {
     } else if (v2.singleton() && v2.value() >= v1.max()) {
       int max = v2.value();
       v3.domain.inValue(store.level, v3, max);
-    } else if (v1.min() >= v2.max()) support.pose(new XeqY(v1, v3));
-    else if (v2.min() >= v1.max()) support.pose(new XeqY(v2, v3));
-    else if (v1 == v2) support.pose(new XeqY(v1, v3));
-    else support.pose(new MaxSimple(v1, v2, v3));
+    } else if (v1.min() >= v2.max()) {
+      support.pose(new XeqY(v1, v3));
+    } else if (v2.min() >= v1.max()) {
+      support.pose(new XeqY(v2, v3));
+    } else if (v1 == v2) {
+      support.pose(new XeqY(v1, v3));
+    } else {
+      support.pose(new MaxSimple(v1, v2, v3));
+    }
   }
 
   void gen_int_mod(SimpleNode node) {
@@ -126,8 +136,11 @@ class OperationConstraints implements ParserTreeConstants {
     IntVar v1 = support.getVariable(p1);
     IntVar v2 = support.getVariable(p2);
 
-    if (support.boundsConsistency) support.pose(new AbsXeqY(v1, v2));
-    else support.pose(new AbsXeqY(v1, v2, true));
+    if (support.boundsConsistency) {
+      support.pose(new AbsXeqY(v1, v2));
+    } else {
+      support.pose(new AbsXeqY(v1, v2, true));
+    }
   }
 
   void gen_int_times(SimpleNode node) {
@@ -137,20 +150,25 @@ class OperationConstraints implements ParserTreeConstants {
 
     if (p1.getType() == 0) { // p1 int
       int c = support.getInt(p1);
-      if (c == 1) support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
-      else if (c == 0) {
+      if (c == 1) {
+        support.pose(new XeqY(support.getVariable(p2), support.getVariable(p3)));
+      } else if (c == 0) {
         IntVar v3 = support.getVariable(p3);
         v3.domain.inValue(store.level, v3, 0);
-      } else support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
+      } else {
+        support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
+      }
     } else if (p2.getType() == 0) { // p2 int
       int c = support.getInt(p2);
-      if (c == 1) support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
-      else if (c == 0) {
+      if (c == 1) {
+        support.pose(new XeqY(support.getVariable(p1), support.getVariable(p3)));
+      } else if (c == 0) {
         IntVar v3 = support.getVariable(p3);
         v3.domain.inValue(store.level, v3, 0);
-      } else
+      } else {
         support.pose(
             new XmulCeqZ(support.getVariable(p1), support.getInt(p2), support.getVariable(p3)));
+      }
     } else if (p3.getType() == 0) { // p3 int
       support.pose(
           new XmulYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
@@ -164,11 +182,16 @@ class OperationConstraints implements ParserTreeConstants {
           && v2.max() <= 1
           && v3.min() >= 0
           && v3.max() <= 1) {
-        if (v1.equals(v2)) support.pose(new XeqY(v1, v3));
-        else support.pose(new AndBoolSimple(v1, v2, v3));
-      } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0))
+        if (v1.equals(v2)) {
+          support.pose(new XeqY(v1, v3));
+        } else {
+          support.pose(new AndBoolSimple(v1, v2, v3));
+        }
+      } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0)) {
         v3.domain.inValue(store.level, v3, 0);
-      else support.pose(new XmulYeqZ(v1, v2, v3));
+      } else {
+        support.pose(new XmulYeqZ(v1, v2, v3));
+      }
     }
   }
 
@@ -186,9 +209,10 @@ class OperationConstraints implements ParserTreeConstants {
     } else if (p3.getType() == 0) { // p3 int
       support.pose(
           new XplusYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
-    } else
+    } else {
       support.pose(
           new XplusYeqZ(support.getVariable(p1), support.getVariable(p2), support.getVariable(p3)));
+    }
   }
 
   void gen_int2float(SimpleNode node) {

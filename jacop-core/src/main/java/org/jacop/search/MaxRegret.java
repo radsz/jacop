@@ -52,13 +52,20 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
     int rmin = rEnum.nextElement();
     int rminNext = 0;
-    if (rEnum.hasMoreElements()) rminNext = rEnum.nextElement();
-    else rminNext = IntDomain.MaxInt;
+    if (rEnum.hasMoreElements()) {
+      rminNext = rEnum.nextElement();
+    } else {
+      rminNext = IntDomain.MaxInt;
+    }
 
     int rdiff = rminNext - rmin;
 
-    if (ldiff > rdiff) return 1;
-    if (ldiff < rdiff) return -1;
+    if (ldiff > rdiff) {
+      return 1;
+    }
+    if (ldiff < rdiff) {
+      return -1;
+    }
     return 0;
   }
 
@@ -68,8 +75,11 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
     int lmin = lEnum.nextElement();
     int lminNext = 0;
-    if (lEnum.hasMoreElements()) lminNext = lEnum.nextElement();
-    else lminNext = IntDomain.MaxInt;
+    if (lEnum.hasMoreElements()) {
+      lminNext = lEnum.nextElement();
+    } else {
+      lminNext = IntDomain.MaxInt;
+    }
 
     int ldiff = lminNext - lmin;
 
@@ -77,8 +87,11 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
     int rmin = rEnum.nextElement();
     int rminNext = 0;
-    if (rEnum.hasMoreElements()) rminNext = rEnum.nextElement();
-    else rminNext = IntDomain.MaxInt;
+    if (rEnum.hasMoreElements()) {
+      rminNext = rEnum.nextElement();
+    } else {
+      rminNext = IntDomain.MaxInt;
+    }
 
     int rdiff = rminNext - rmin;
 
@@ -91,9 +104,12 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
 
     int omin = oEnum.nextElement();
     int ominNext = 0;
-    if (oEnum.hasMoreElements()) ominNext = oEnum.nextElement();
-    else ominNext = IntDomain.MaxInt;
+    if (oEnum.hasMoreElements()) {
+      ominNext = oEnum.nextElement();
+    } else {
+      ominNext = IntDomain.MaxInt;
+    }
 
-    return (ominNext - omin);
+    return ominNext - omin;
   }
 }

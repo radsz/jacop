@@ -62,7 +62,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
   int[] temporaryArray;
 
-  int removeCount = 0;
+  int removeCount;
   boolean addingToIntervals;
   final Boolean valueFalse = Boolean.FALSE;
   final Boolean valueTrue = Boolean.TRUE;
@@ -96,9 +96,13 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   @Override
   public void addChanged(int index) {
 
-    if (debug) IO.println(this + "Add item " + index + "max reached " + currentLevelMax);
+    if (debug) {
+      IO.println(this + "Add item " + index + "max reached " + currentLevelMax);
+    }
 
-    if (currentLevelMax) return;
+    if (currentLevelMax) {
+      return;
+    }
 
     if (trailContainsAllChanges) {
 
@@ -129,13 +133,19 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
         addChangedToInterval(index);
 
-        if (!isRecognizedAsChanged(index)) addChangedToInterval(index);
+        if (!isRecognizedAsChanged(index)) {
+          addChangedToInterval(index);
+        }
 
         assert (isRecognizedAsChanged(index));
         return;
       }
 
-      if (lastTrail != emptyLevel) for (int i : lastTrail) currentlyChanged.addMember(i);
+      if (lastTrail != emptyLevel) {
+        for (int i : lastTrail) {
+          currentlyChanged.addMember(i);
+        }
+      }
     }
 
     if (addingToIntervals) {
@@ -143,7 +153,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     } else {
       currentlyChanged.addMember(index);
 
-      if (currentlyChanged.members > intervalCutOffValue) currentLevelMax = true;
+      if (currentlyChanged.members > intervalCutOffValue) {
+        currentLevelMax = true;
+      }
     }
 
     assert (isRecognizedAsChanged(index));
@@ -152,18 +164,24 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   @Override
   public void setLevel(int level) {
 
-    if (currentLevel == level) return;
+    if (currentLevel == level) {
+      return;
+    }
 
     if (debug) {
 
       IO.println("Level being set" + level);
       IO.println("Last Level info " + levelInfo);
       IO.println("Intervals? " + intervalBasedTrail);
-      if (!trail.isEmpty()) IO.println("LastTrail " + trail.getLast());
+      if (!trail.isEmpty()) {
+        IO.println("LastTrail " + trail.getLast());
+      }
       IO.println(super.toString());
     }
 
-    if (debug) IO.println(">" + this + "Add level " + level);
+    if (debug) {
+      IO.println(">" + this + "Add level " + level);
+    }
 
     assert (level > currentLevel) : "It is possible only to add higher levels";
 
@@ -190,8 +208,11 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
           trail.add(computeIntervals());
         } else {
           intervalBasedTrail.add(valueFalse);
-          if (!currentlyChanged.isEmpty()) trail.add(fullLevel);
-          else trail.add(emptyLevel);
+          if (!currentlyChanged.isEmpty()) {
+            trail.add(fullLevel);
+          } else {
+            trail.add(emptyLevel);
+          }
         }
       }
 
@@ -203,7 +224,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     currentLevelMax = false;
     currentLevel = level;
 
-    if (debug) IO.println("<" + this + "Add level " + level + "\n");
+    if (debug) {
+      IO.println("<" + this + "Add level " + level + "\n");
+    }
   }
 
   private int[] computeIntervals() {
@@ -245,7 +268,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       System.arraycopy(temporaryArray, noOfIntervals, result, 0, result.length);
 
       return result;
-    } else return fullLevel;
+    } else {
+      return fullLevel;
+    }
   }
 
   /**
@@ -259,10 +284,13 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     removeCount++;
 
-    if (debug) IO.println("Remove level count " + removeCount);
+    if (debug) {
+      IO.println("Remove level count " + removeCount);
+    }
 
-    if (debug)
+    if (debug) {
       IO.println(">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
+    }
 
     if (currentLevel == removedLevel) {
 
@@ -282,29 +310,43 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
           while (true) {
 
             while (currentPositionInHoles < lastTrail.length
-                && lastTrail[currentPositionInHoles] == -1) currentPositionInHoles += 2;
+                && lastTrail[currentPositionInHoles] == -1) {
+              currentPositionInHoles += 2;
+            }
 
-            if (currentPositionInHoles == lastTrail.length) break;
+            if (currentPositionInHoles == lastTrail.length) {
+              break;
+            }
 
-            if (left < lastTrail[currentPositionInHoles])
-              for (int i = left; i < lastTrail[currentPositionInHoles]; i++)
+            if (left < lastTrail[currentPositionInHoles]) {
+              for (int i = left; i < lastTrail[currentPositionInHoles]; i++) {
                 objects[i].remove(removedLevel);
+              }
+            }
 
             left = lastTrail[currentPositionInHoles + 1] + 1;
 
             currentPositionInHoles += 2;
           }
 
-          for (int j = left; j < noOfObjects; j++) objects[j].remove(removedLevel);
+          for (int j = left; j < noOfObjects; j++) {
+            objects[j].remove(removedLevel);
+          }
 
         } // non-interval based representation.
         else {
 
-          if (lastTrail != emptyLevel && lastTrail != fullLevel)
-            for (int i : lastTrail) objects[i].remove(removedLevel);
+          if (lastTrail != emptyLevel && lastTrail != fullLevel) {
+            for (int i : lastTrail) {
+              objects[i].remove(removedLevel);
+            }
+          }
 
-          if (lastTrail == fullLevel)
-            for (int i = noOfObjects - 1; i >= 0; i--) objects[i].remove(removedLevel);
+          if (lastTrail == fullLevel) {
+            for (int i = noOfObjects - 1; i >= 0; i--) {
+              objects[i].remove(removedLevel);
+            }
+          }
         }
 
       } else {
@@ -317,29 +359,41 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
           while (true) {
 
             while (currentPositionInHoles < currentIntervals.length
-                && currentIntervals[currentPositionInHoles] == -1) currentPositionInHoles += 2;
+                && currentIntervals[currentPositionInHoles] == -1) {
+              currentPositionInHoles += 2;
+            }
 
-            if (currentPositionInHoles == currentIntervals.length) break;
+            if (currentPositionInHoles == currentIntervals.length) {
+              break;
+            }
 
-            if (left < currentIntervals[currentPositionInHoles])
-              for (int i = left; i < currentIntervals[currentPositionInHoles]; i++)
+            if (left < currentIntervals[currentPositionInHoles]) {
+              for (int i = left; i < currentIntervals[currentPositionInHoles]; i++) {
                 objects[i].remove(removedLevel);
+              }
+            }
 
             left = currentIntervals[currentPositionInHoles + 1] + 1;
 
             currentPositionInHoles += 2;
           }
 
-          for (int j = left; j < noOfObjects; j++) objects[j].remove(removedLevel);
+          for (int j = left; j < noOfObjects; j++) {
+            objects[j].remove(removedLevel);
+          }
 
         } else { // non adding to intervals.
 
           if (!currentLevelMax) {
-            if (!currentlyChanged.isEmpty())
-              for (int i = currentlyChanged.members; i >= 0; i--)
+            if (!currentlyChanged.isEmpty()) {
+              for (int i = currentlyChanged.members; i >= 0; i--) {
                 objects[currentlyChanged.dense[i]].remove(removedLevel);
+              }
+            }
           } else {
-            for (int i = noOfObjects - 1; i >= 0; i--) objects[i].remove(removedLevel);
+            for (int i = noOfObjects - 1; i >= 0; i--) {
+              objects[i].remove(removedLevel);
+            }
           }
         }
 
@@ -347,19 +401,25 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
         currentlyChanged.clear();
       }
 
-      if (!levelInfo.isEmpty()) currentLevel = levelInfo.getLast();
-      else currentLevel = 0;
+      if (!levelInfo.isEmpty()) {
+        currentLevel = levelInfo.getLast();
+      } else {
+        currentLevel = 0;
+      }
 
       currentLevelMax = false;
-      if (!trail.isEmpty())
+      if (!trail.isEmpty()) {
         if (trail.getLast() == fullLevel) {
           currentLevelMax = true;
         }
+      }
 
       addingToIntervals = false;
     }
 
-    if (debug) IO.println("<" + this + "Remove level " + removedLevel + "\n");
+    if (debug) {
+      IO.println("<" + this + "Remove level " + removedLevel + "\n");
+    }
 
     assert (removedLevel >= currentLevel)
         : "It is only possible to remove the most recent not removed level";
@@ -379,14 +439,16 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
    */
   public String checkRemoveInvariant(int removedLevel) {
 
-    for (int i = 0; i < this.noOfObjects; i++)
-      if (objects[i].level() >= removedLevel)
+    for (int i = 0; i < this.noOfObjects; i++) {
+      if (objects[i].level() >= removedLevel) {
         return "The object "
             + objects[i]
             + " has retained the old level "
             + removedLevel
             + " index "
             + objects[i].index();
+      }
+    }
 
     return null;
   }
@@ -400,9 +462,10 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     while (currentPosition < currentIntervals.length) {
 
       int left = currentIntervals[currentPosition];
-      if (left > index)
+      if (left > index) {
         // all the remaining holes are safe.
         return;
+      }
 
       int right = currentIntervals[currentPosition + 1];
 
@@ -452,7 +515,9 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   @Override
   public boolean isRecognizedAsChanged(int index) {
 
-    if (currentLevelMax) return true;
+    if (currentLevelMax) {
+      return true;
+    }
 
     if (trailContainsAllChanges) {
 
@@ -462,12 +527,14 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
         int[] trailLevel = trail.getLast();
 
         for (int i = 0; i < trailLevel.length; ) {
-          if (trailLevel[i] <= index && index <= trailLevel[i + 1])
+          if (trailLevel[i] <= index && index <= trailLevel[i + 1]) {
             // within a hole.
             return false;
-          if (trailLevel[i] > index)
+          }
+          if (trailLevel[i] > index) {
             // before a hole.
             return true;
+          }
           i += 2;
         }
         // it did not hit any hole.
@@ -477,7 +544,11 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       // number of changes was too small to use intervals, just a list is used.
       int[] trailLevel = trail.getLast();
 
-      for (int i : trailLevel) if (i == index) return true;
+      for (int i : trailLevel) {
+        if (i == index) {
+          return true;
+        }
+      }
 
       return false;
 
@@ -486,12 +557,14 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       if (addingToIntervals) {
 
         for (int i = 0; i < currentIntervals.length; ) {
-          if (currentIntervals[i] <= index && index <= currentIntervals[i + 1])
+          if (currentIntervals[i] <= index && index <= currentIntervals[i + 1]) {
             // within a hole.
             return false;
-          if (currentIntervals[i] > index)
+          }
+          if (currentIntervals[i] > index) {
             // before a hole.
             return true;
+          }
           i += 2;
         }
         // it did not hit any hole.

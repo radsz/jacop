@@ -147,13 +147,15 @@ public class CountVar extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.isIntersecting(value.domain))
+      if (v.domain.isIntersecting(value.domain)) {
         if (v.singleton() && value.singleton() && v.value() == value.value()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
@@ -176,7 +178,9 @@ public class CountVar extends PrimitiveConstraint {
     } else if (numberEq == counter.max()) {
       for (int i = start; i < list.length; i++) {
         IntVar v = list[i];
-        if (value.singleton()) v.domain.inComplement(store.level, v, value.value());
+        if (value.singleton()) {
+          v.domain.inComplement(store.level, v, value.value());
+        }
       }
       if (value.singleton()) {
         numberMayBe = 0;
@@ -201,13 +205,15 @@ public class CountVar extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.isIntersecting(value.domain))
+      if (v.domain.isIntersecting(value.domain)) {
         if (v.singleton() && value.singleton() && v.value() == value.value()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
@@ -218,7 +224,9 @@ public class CountVar extends PrimitiveConstraint {
       return;
     }
 
-    if (start == list.length) counter.domain.inComplement(store.level, counter, numberEq);
+    if (start == list.length) {
+      counter.domain.inComplement(store.level, counter, numberEq);
+    }
 
     equal.update(numberEq);
     position.update(start);
@@ -238,11 +246,15 @@ public class CountVar extends PrimitiveConstraint {
     int eq = 0;
     int notEq = 0;
 
-    for (IntVar v : list)
-      if (v.singleton() && value.singleton() && v.value() == value.value()) eq++;
-      else if (!v.domain.isIntersecting(value.domain)) notEq++;
+    for (IntVar v : list) {
+      if (v.singleton() && value.singleton() && v.value() == value.value()) {
+        eq++;
+      } else if (!v.domain.isIntersecting(value.domain)) {
+        notEq++;
+      }
+    }
 
-    return (eq + notEq == list.length && counter.singleton(eq));
+    return eq + notEq == list.length && counter.singleton(eq);
   }
 
   @Override
@@ -251,11 +263,15 @@ public class CountVar extends PrimitiveConstraint {
     int eq = 0;
     int notEq = 0;
 
-    for (IntVar v : list)
-      if (v.singleton() && value.singleton() && v.value() == value.value()) eq++;
-      else if (!v.domain.isIntersecting(value.domain)) notEq++;
+    for (IntVar v : list) {
+      if (v.singleton() && value.singleton() && v.value() == value.value()) {
+        eq++;
+      } else if (!v.domain.isIntersecting(value.domain)) {
+        notEq++;
+      }
+    }
 
-    return (eq + notEq == list.length && !counter.domain.contains(eq));
+    return eq + notEq == list.length && !counter.domain.contains(eq);
   }
 
   @Override
@@ -267,7 +283,9 @@ public class CountVar extends PrimitiveConstraint {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(counter).append(" )");

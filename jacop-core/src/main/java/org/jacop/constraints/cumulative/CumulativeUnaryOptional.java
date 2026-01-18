@@ -195,10 +195,14 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
       if (doEdgeFind && !store.propagationHasOccurred) {
 
         TaskView[] tn = filterZeroTasks(tvn);
-        if (tn == null) return;
+        if (tn == null) {
+          return;
+        }
         TaskView[] tr = filterZeroTasks(tvr);
 
-        if (!doProfile) overload(tn);
+        if (!doProfile) {
+          overload(tn);
+        }
         detectable(store, tn, tr);
         notFirstNotLast(store, tn, tr);
         edgeFind(store, tn, tr);
@@ -212,13 +216,16 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
     TaskView[] nonZeroTasks = new TaskView[ts.length];
     int k = 0;
 
-    for (int i = 0; i < ts.length; i++)
+    for (int i = 0; i < ts.length; i++) {
       if (ts[i].exists() && opt[i].min() != 0) {
         nonZeroTasks[k] = ts[i];
         ts[i].index = k++;
       }
+    }
 
-    if (k == 0) return null;
+    if (k == 0) {
+      return null;
+    }
     TaskView[] t = new TaskView[k];
     System.arraycopy(nonZeroTasks, 0, t, 0, k);
     return t;
@@ -230,7 +237,9 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : cumulativeUnaryOptional([ ");
-    for (int i = 0; i < taskNormal.length - 1; i++) result.append(taskNormal[i]).append(", ");
+    for (int i = 0; i < taskNormal.length - 1; i++) {
+      result.append(taskNormal[i]).append(", ");
+    }
 
     result.append(taskNormal[taskNormal.length - 1]);
 

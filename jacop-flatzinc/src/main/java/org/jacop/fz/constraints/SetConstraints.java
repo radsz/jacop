@@ -24,10 +24,7 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.constraints.Implies;
-import org.jacop.constraints.Not;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.Reified;
+import org.jacop.constraints.*;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -61,9 +58,13 @@ class SetConstraints implements ParserTreeConstants {
     if (v2.singleton()) {
       v1.domain.inCardinality(store.level, v1, v2.min(), v2.max());
 
-      if (support.options.debug()) IO.println("% Cardinality of set " + v1 + " = " + v2);
+      if (support.options.debug()) {
+        IO.println("% Cardinality of set " + v1 + " = " + v2);
+      }
 
-    } else support.pose(new CardAeqX(v1, v2));
+    } else {
+      support.pose(new CardAeqX(v1, v2));
+    }
   }
 
   void gen_set_diff(SimpleNode node) {
@@ -127,7 +128,7 @@ class SetConstraints implements ParserTreeConstants {
     if (v1Type.getId() == JJTSETLITERAL) {
       IntDomain d = support.getSetLiteral(node, 1);
       IntVar v1 = support.getVariable(p1);
-      c = new org.jacop.constraints.In(v1, d);
+      c = new In(v1, d);
     } else {
       SetVar v2 = support.getSetVariable(node, 1);
 
@@ -141,9 +142,13 @@ class SetConstraints implements ParserTreeConstants {
     }
 
     IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-    if (v3.singleton(1)) support.pose(c);
-    else if (v3.singleton(0)) support.pose(new Not(c));
-    else support.pose(new Reified(c, v3));
+    if (v3.singleton(1)) {
+      support.pose(c);
+    } else if (v3.singleton(0)) {
+      support.pose(new Not(c));
+    } else {
+      support.pose(new Reified(c, v3));
+    }
   }
 
   void gen_set_in_imp(SimpleNode node) {
@@ -154,7 +159,7 @@ class SetConstraints implements ParserTreeConstants {
     if (v1Type.getId() == JJTSETLITERAL) {
       IntDomain d = support.getSetLiteral(node, 1);
       IntVar v1 = support.getVariable(p1);
-      c = new org.jacop.constraints.In(v1, d);
+      c = new In(v1, d);
     } else {
       SetVar v2 = support.getSetVariable(node, 1);
 

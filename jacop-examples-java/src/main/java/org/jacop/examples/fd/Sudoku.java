@@ -59,7 +59,9 @@ public class Sudoku extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
 
     ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
@@ -75,7 +77,9 @@ public class Sudoku extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
 
     ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
 
@@ -83,7 +87,9 @@ public class Sudoku extends ExampleFD {
 
     example.modelBasic();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
 
     ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
@@ -115,37 +121,46 @@ public class Sudoku extends ExampleFD {
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
     // Creating variables.
-    for (int i = 0; i < noRows * noColumns; i++)
-      for (int j = 0; j < noRows * noColumns; j++)
+    for (int i = 0; i < noRows * noColumns; i++) {
+      for (int j = 0; j < noRows * noColumns; j++) {
         if (description[i][j] == 0) {
           elements[i][j] = new IntVar(store, "f" + i + j, 1, noRows * noColumns);
           vars.add(elements[i][j]);
-        } else
+        } else {
           elements[i][j] = new IntVar(store, "f" + i + j, description[i][j], description[i][j]);
+        }
+      }
+    }
 
     // Creating constraints for rows.
-    for (int i = 0; i < noRows * noColumns; i++) store.impose(new Alldistinct(elements[i]));
+    for (int i = 0; i < noRows * noColumns; i++) {
+      store.impose(new Alldistinct(elements[i]));
+    }
 
     // Creating constraints for columns.
     for (int j = 0; j < noRows * noColumns; j++) {
       IntVar[] column = new IntVar[noRows * noColumns];
-      for (int i = 0; i < noRows * noColumns; i++) column[i] = elements[i][j];
+      for (int i = 0; i < noRows * noColumns; i++) {
+        column[i] = elements[i][j];
+      }
 
       store.impose(new Alldistinct(column));
     }
 
     // Creating constraints for blocks.
-    for (int i = 0; i < noRows; i++)
+    for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
 
         List<IntVar> block = new ArrayList<>();
-        for (int k = 0; k < noColumns; k++)
+        for (int k = 0; k < noColumns; k++) {
           block.addAll(
               Arrays.asList(elements[i * noColumns + k])
                   .subList(0 + j * noRows + 0, noRows + j * noRows + 0));
+        }
 
         store.impose(new Alldistinct(block));
       }
+    }
   }
 
   /** It specifies the model using mostly primitive constraints. */
@@ -175,39 +190,52 @@ public class Sudoku extends ExampleFD {
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
     // Creating variables.
-    for (int i = 0; i < noRows * noColumns; i++)
-      for (int j = 0; j < noRows * noColumns; j++)
+    for (int i = 0; i < noRows * noColumns; i++) {
+      for (int j = 0; j < noRows * noColumns; j++) {
         if (description[i][j] == 0) {
           elements[i][j] = new IntVar(store, "f" + i + j, 1, noRows * noColumns);
           vars.add(elements[i][j]);
-        } else
+        } else {
           elements[i][j] = new IntVar(store, "f" + i + j, description[i][j], description[i][j]);
+        }
+      }
+    }
 
     // Creating constraints for rows.
-    for (int i = 0; i < noRows * noColumns; i++)
-      for (int k = 0; k < noRows * noColumns; k++)
-        for (int j = k + 1; j < noRows * noColumns; j++)
+    for (int i = 0; i < noRows * noColumns; i++) {
+      for (int k = 0; k < noRows * noColumns; k++) {
+        for (int j = k + 1; j < noRows * noColumns; j++) {
           store.impose(new XneqY(elements[i][k], elements[i][j]));
+        }
+      }
+    }
 
     // Creating constraints for columns.
-    for (int i = 0; i < noRows * noColumns; i++)
-      for (int k = 0; k < noRows * noColumns; k++)
-        for (int j = k + 1; j < noRows * noColumns; j++)
+    for (int i = 0; i < noRows * noColumns; i++) {
+      for (int k = 0; k < noRows * noColumns; k++) {
+        for (int j = k + 1; j < noRows * noColumns; j++) {
           store.impose(new XneqY(elements[k][i], elements[j][i]));
+        }
+      }
+    }
 
     // Creating constraints for blocks.
-    for (int i = 0; i < noRows; i++)
+    for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
 
         List<IntVar> block = new ArrayList<>();
-        for (int k = 0; k < noColumns; k++)
+        for (int k = 0; k < noColumns; k++) {
           block.addAll(
               Arrays.asList(elements[i * noColumns + k])
                   .subList(0 + j * noRows + 0, noRows + j * noRows + 0));
+        }
 
-        for (int k = 0; k < noColumns * noRows; k++)
-          for (int m = k + 1; m < noColumns * noRows; m++)
+        for (int k = 0; k < noColumns * noRows; k++) {
+          for (int m = k + 1; m < noColumns * noRows; m++) {
             store.impose(new XneqY(block.get(k), block.get(m)));
+          }
+        }
       }
+    }
   }
 }

@@ -254,7 +254,7 @@ public class SurvoPuzzle extends ExampleFD {
             // The row sums: index row.length
             List<Integer> this_row = new ArrayList<>();
             for (String s : row) {
-              if (s.equals("*")) {
+              if ("*".equals(s)) {
                 this_row.add(0);
               } else {
                 this_row.add(Integer.parseInt(s));

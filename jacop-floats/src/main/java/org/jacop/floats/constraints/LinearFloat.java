@@ -31,7 +31,9 @@
 package org.jacop.floats.constraints;
 
 import java.util.List;
+import java.util.Set;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.linear.Linear;
@@ -147,12 +149,14 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
     super.queueVariable(level, var);
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     // System.out.println ("FloatLinear of " + f + " on " + x);
 
     int fIndex = 0;
-    while (list[fIndex] != f) fIndex++;
+    while (list[fIndex] != f) {
+      fIndex++;
+    }
 
     if (fIndex == list.length) {
       throw new RuntimeException("Wrong variable in derivative of " + this);
@@ -176,7 +180,7 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
       }
     }
 
-    org.jacop.constraints.Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
+    Constraint c = new LinearFloat(store, df, ww, "==", 0.0);
     Derivative.poseDerivativeConstraint(c);
 
     // System.out.println ("Derivative of " + f + " over " + x + " is " + c);

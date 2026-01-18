@@ -61,11 +61,15 @@ public class LatinSquare extends ExampleFD {
 
     LatinSquare example = new LatinSquare();
 
-    if (args.length > 0) example.n = Integer.parseInt(args[0]);
+    if (args.length > 0) {
+      example.n = Integer.parseInt(args[0]);
+    }
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -79,18 +83,21 @@ public class LatinSquare extends ExampleFD {
     // Get problem size n from second program argument.
     IntVar[][] x = new IntVar[n][n];
 
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         x[i][j] = new IntVar(store, "x" + i + "_" + j, 1, n);
         vars.add(x[i][j]);
       }
+    }
 
     // Create variables and state constraints.
     for (int i = 0; i < n; i++) {
       store.impose(new Alldifferent(x[i]));
 
       IntVar[] y = new IntVar[n];
-      for (int j = 0; j < n; j++) y[j] = x[j][i];
+      for (int j = 0; j < n; j++) {
+        y[j] = x[j][i];
+      }
       store.impose(new Alldifferent(y));
     }
   }

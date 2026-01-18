@@ -44,7 +44,7 @@ import org.jacop.core.Var;
 public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
     implements ConsistencyListener, InitializeListener {
 
-  boolean solutionFound = false;
+  boolean solutionFound;
 
   ConsistencyListener[] childrenConsistencyListeners;
 
@@ -97,8 +97,11 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
    */
   public boolean executeAfterConsistency(boolean consistent) {
 
-    if (solutionFound) return false;
-    else return consistent;
+    if (solutionFound) {
+      return false;
+    } else {
+      return consistent;
+    }
   }
 
   public void setChildrenListeners(ConsistencyListener[] children) {

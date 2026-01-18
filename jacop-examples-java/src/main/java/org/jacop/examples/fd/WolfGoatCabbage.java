@@ -70,9 +70,11 @@ public class WolfGoatCabbage extends ExampleFD {
 
       example.model();
 
-      if (!example.searchMostConstrainedStatic())
+      if (!example.searchMostConstrainedStatic()) {
         IO.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
-      else result = true;
+      } else {
+        result = true;
+      }
 
       numberInnerMoves++;
     }
@@ -116,8 +118,11 @@ public class WolfGoatCabbage extends ExampleFD {
     for (int i = 0; i < numberInnerMoves + 1; i++) {
 
       IntVar[] temp = {wolf[i], wolf[i + 1], null};
-      if (i % 2 == 0) temp[2] = left;
-      else temp[2] = right;
+      if (i % 2 == 0) {
+        temp[2] = left;
+      } else {
+        temp[2] = right;
+      }
 
       store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
 

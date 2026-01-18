@@ -268,7 +268,9 @@ public class ValuePrecede extends Constraint
         if (x[i].singleton(s)) {
           break;
         }
-      } else return false;
+      } else {
+        return false;
+      }
     }
     for (; i < x.length; i++) {
       if (x[i].singleton(t)) {
@@ -297,7 +299,9 @@ public class ValuePrecede extends Constraint
     int lx = x.length;
     for (int i = 0; i < lx; i++) {
       resultString.append(x[i]);
-      if (i < lx - 1) resultString.append(", ");
+      if (i < lx - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append("])");
 

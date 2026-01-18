@@ -71,7 +71,7 @@ public class SumWeightDom extends Constraint
 
   Map<Var, Integer> positionMaping;
 
-  boolean backtrackHasOccured = false;
+  boolean backtrackHasOccured;
 
   /** The sum of grounded variables. */
   private TimeStamp<Integer> sumGrounded;
@@ -134,9 +134,10 @@ public class SumWeightDom extends Constraint
 
     checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
 
-    if (list.length != weights.length)
+    if (list.length != weights.length) {
       throw new IllegalArgumentException(
           "SumWeightDom constraint has list and weights of different lengths.");
+    }
 
     queueIndex = 4;
 
@@ -147,7 +148,9 @@ public class SumWeightDom extends Constraint
     Map<IntVar, Integer> parameters = Var.createEmptyPositioning();
 
     for (int i = 0; i < list.length; i++) {
-      if (weights[i] == 0) continue;
+      if (weights[i] == 0) {
+        continue;
+      }
       Integer coeff = parameters.getOrDefault(list[i], 0);
       parameters.put(list[i], coeff + weights[i]);
     }
@@ -219,7 +222,9 @@ public class SumWeightDom extends Constraint
         int valGround = sum - sumGrounded.value() + q.min() * weights[i];
         IntDomain vDom = new IntervalDomain(valGround, valGround);
 
-        for (int j = pointer; j < list.length; j++) vDom = subtractDom(vDom, lArray[j]);
+        for (int j = pointer; j < list.length; j++) {
+          vDom = subtractDom(vDom, lArray[j]);
+        }
 
         vDom = divDom(vDom, weights[i]);
         // if (!vDom.contains(q.value()))
@@ -237,8 +242,11 @@ public class SumWeightDom extends Constraint
 
         int sGround = sumGrounded.value();
         IntDomain vDom = new IntervalDomain(sum - sGround, sum - sGround);
-        for (int j = pointer1; j < list.length; j++)
-          if (j != i) vDom = subtractDom(vDom, lArray[j]);
+        for (int j = pointer1; j < list.length; j++) {
+          if (j != i) {
+            vDom = subtractDom(vDom, lArray[j]);
+          }
+        }
 
         vDom = divDom(vDom, weights[i]);
 
@@ -290,7 +298,9 @@ public class SumWeightDom extends Constraint
 
       int i = positionMaping.get(var);
 
-      if (i < pointer) return;
+      if (i < pointer) {
+        return;
+      }
 
       int value = ((IntVar) var).min();
 
@@ -352,13 +362,17 @@ public class SumWeightDom extends Constraint
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < weights.length; i++) {
       result.append(weights[i]);
-      if (i < weights.length - 1) result.append(", ");
+      if (i < weights.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(sum).append(" )");
@@ -370,9 +384,11 @@ public class SumWeightDom extends Constraint
     IntervalDomain temp;
     // System.out.println (d + " * " + c);
 
-    if (c == 1) return d;
-    else if (c == -1) temp = invertDom(d);
-    else {
+    if (c == 1) {
+      return d;
+    } else if (c == -1) {
+      temp = invertDom(d);
+    } else {
       temp = new IntervalDomain();
       temp.intervals = new Interval[d.getSize()];
       int n = 0;
@@ -380,9 +396,13 @@ public class SumWeightDom extends Constraint
         Interval i = e1.nextElement();
 
         if (c > 0) {
-          for (int k = i.min(); k <= i.max(); k++) temp.intervals[n++] = new Interval(k * c, k * c);
+          for (int k = i.min(); k <= i.max(); k++) {
+            temp.intervals[n++] = new Interval(k * c, k * c);
+          }
         } else { // c < 0
-          for (int k = i.max(); k >= i.min(); k--) temp.intervals[n++] = new Interval(k * c, k * c);
+          for (int k = i.max(); k >= i.min(); k--) {
+            temp.intervals[n++] = new Interval(k * c, k * c);
+          }
         }
       }
       temp.size = n;
@@ -415,9 +435,10 @@ public class SumWeightDom extends Constraint
 
       int k = 0;
       temp.intervals = new Interval[ranges.size()];
-      for (int i = ranges.size() - 1; i >= 0; i--)
+      for (int i = ranges.size() - 1; i >= 0; i--) {
         // temp.unionAdapt(ranges.get(i));
         temp.intervals[k++] = ranges.get(i);
+      }
       temp.size = k;
     }
     return temp;
@@ -428,9 +449,11 @@ public class SumWeightDom extends Constraint
     IntervalDomain temp;
     // System.out.println (d + " / " + c);
 
-    if (c == 1) return d;
-    else if (c == -1) temp = invertDom(d);
-    else {
+    if (c == 1) {
+      return d;
+    } else if (c == -1) {
+      temp = invertDom(d);
+    } else {
 
       temp = new IntervalDomain();
 
@@ -444,7 +467,9 @@ public class SumWeightDom extends Constraint
 
           int min = (int) Math.round(Math.ceil((float) iMin / c));
           int max = (int) Math.round(Math.floor((float) iMax / c));
-          if (min <= max) temp.unionAdapt(min, max);
+          if (min <= max) {
+            temp.unionAdapt(min, max);
+          }
         }
       } else { // c <= 0
 
@@ -458,9 +483,11 @@ public class SumWeightDom extends Constraint
 
             int min = (int) Math.round(Math.ceil((float) iMax / c));
             int max = (int) Math.round(Math.floor((float) iMin / c));
-            if (min <= max) temp.unionAdapt(min, max);
+            if (min <= max) {
+              temp.unionAdapt(min, max);
+            }
           }
-        } else
+        } else {
           for (IntervalEnumeration e1 = d.intervalEnumeration(); e1.hasMoreElements(); ) {
             Interval i = e1.nextElement();
             int iMin = i.min();
@@ -468,8 +495,11 @@ public class SumWeightDom extends Constraint
 
             int min = (int) Math.round(Math.ceil((float) iMax / c));
             int max = (int) Math.round(Math.floor((float) iMin / c));
-            if (min <= max) temp.unionAdapt(min, max);
+            if (min <= max) {
+              temp.unionAdapt(min, max);
+            }
           }
+        }
       }
     }
 
@@ -520,8 +550,9 @@ public class SumWeightDom extends Constraint
           int eMin = e.min();
           int eMax = e.max();
 
-          if (!(eMin > sumMax || eMax < sumMin))
+          if (!(eMin > sumMax || eMax < sumMin)) {
             ((IntervalDomain) temp).intervals[k++] = new Interval(d1Value - eMax, d1Value - eMin);
+          }
         }
         ((IntervalDomain) temp).size = k;
 
@@ -540,15 +571,17 @@ public class SumWeightDom extends Constraint
           int eMin = i2.min();
           int eMax = i2.max();
 
-          if (!(eMin > sumMax || eMax < sumMin))
+          if (!(eMin > sumMax || eMax < sumMin)) {
             ranges.add(new Interval(d1Value - i2.max(), d1Value - i2.min()));
+          }
         }
 
         int k = 0;
         ((IntervalDomain) temp).intervals = new Interval[ranges.size()];
-        for (int i = ranges.size() - 1; i >= 0; i--)
+        for (int i = ranges.size() - 1; i >= 0; i--) {
           // temp.unionAdapt(ranges.get(i));
           ((IntervalDomain) temp).intervals[k++] = ranges.get(i);
+        }
         ((IntervalDomain) temp).size = k;
       }
     } else // first domain not singleton
@@ -571,13 +604,23 @@ public class SumWeightDom extends Constraint
           int eMin = e.min();
           int eMax = e.max();
 
-          if (!(eMin > sumMax || eMax < sumMin))
-            if (temp.getSize() > 0 && temp.max() <= i1min - eMax)
-              temp.unionAdapt(new Interval(i1min - eMax, i1max - eMin));
-            else temp.unionAdapt(i1min - eMax, i1max - eMin); // need to check correctness of union
-          // and not only add intervals at the end
-          // as in above cases
-          // ranges.add(new Interval(i1min - eMax, i1max - eMin));
+          if (!(eMin > sumMax || eMax < sumMin)) {
+            if (temp.getSize() > 0 && temp.max() <= i1min - eMax) {
+              temp.unionAdapt(
+                  new Interval(i1min - eMax, i1max - eMin)); // need to check correctness of union
+              // and not only add intervals at the end
+              // as in above cases
+              // ranges.add(new Interval(i1min - eMax, i1max - eMin));
+            } else {
+              temp.unionAdapt(i1min - eMax, i1max - eMin); // need to check correctness of union
+              // and not only add intervals at the end
+              // as in above cases
+              // ranges.add(new Interval(i1min - eMax, i1max - eMin));
+            } // need to check correctness of union
+            // and not only add intervals at the end
+            // as in above cases
+            // ranges.add(new Interval(i1min - eMax, i1max - eMin));
+          }
         }
       }
 
@@ -610,16 +653,18 @@ public class SumWeightDom extends Constraint
           int eMin = i2.min();
           int eMax = i2.max();
 
-          if (!(eMin > sumMax || eMax < sumMin))
+          if (!(eMin > sumMax || eMax < sumMin)) {
             ranges.add(new Interval(i1min - eMax, i1max - eMin));
+          }
         }
       }
 
-      for (int i = ranges.size() - 1; i >= 0; i--)
+      for (int i = ranges.size() - 1; i >= 0; i--) {
         temp.unionAdapt(
             ranges.get(i).min(), ranges.get(i).max()); // need to check correctness of union
-      // and not only add intervals at the end
-      // as in above cases
+        // and not only add intervals at the end
+        // as in above cases
+      }
     }
 
     // System.out.println ("result- = " + temp);

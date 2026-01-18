@@ -58,7 +58,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
   /** It specifies variable sum to store the overall sum of the variables being summed up. */
   public final IntVar sum;
 
-  int guideValue = 0;
+  int guideValue;
 
   /** The sum of grounded variables. */
   private TimeStamp<Integer> sumGrounded;
@@ -140,27 +140,33 @@ public class Sum extends Constraint implements SatisfiedPresent {
       boolean needAdaptMin = false;
       boolean needAdaptMax = false;
 
-      if (sum.min() > lMin) needAdaptMin = true;
+      if (sum.min() > lMin) {
+        needAdaptMin = true;
+      }
 
-      if (sum.max() < lMax) needAdaptMax = true;
+      if (sum.max() < lMax) {
+        needAdaptMax = true;
+      }
 
       sum.domain.in(store.level, sum, long2int(lMin), long2int(lMax));
 
       store.propagationHasOccurred = false;
 
-      if (needAdaptMin && !needAdaptMax)
+      if (needAdaptMin && !needAdaptMax) {
         for (int i = pointer; i < list.length; i++) {
           IntVar v = list[i];
           v.domain.inMin(store.level, v, long2int(sum.min() - lMax + v.max()));
         }
+      }
 
-      if (!needAdaptMin && needAdaptMax)
+      if (!needAdaptMin && needAdaptMax) {
         for (int i = pointer; i < list.length; i++) {
           IntVar v = list[i];
           v.domain.inMax(store.level, v, long2int(sum.max() - lMin + v.min()));
         }
+      }
 
-      if (needAdaptMin && needAdaptMax)
+      if (needAdaptMin && needAdaptMax) {
         for (int i = pointer; i < list.length; i++) {
           IntVar v = list[i];
           v.domain.in(
@@ -169,6 +175,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
               long2int(sum.min() - lMax + v.max()),
               long2int(sum.max() - lMin + v.min()));
         }
+      }
 
     } while (store.propagationHasOccurred);
 
@@ -209,10 +216,14 @@ public class Sum extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     int sumAll = 0;
-    for (IntVar v : list) sumAll += v.min();
+    for (IntVar v : list) {
+      sumAll += v.min();
+    }
 
     return sumAll == sum.min();
   }
@@ -225,7 +236,9 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ").append(sum).append(" )");
 
@@ -236,8 +249,11 @@ public class Sum extends Constraint implements SatisfiedPresent {
   public Constraint getGuideConstraint() {
 
     IntVar proposedVariable = (IntVar) getGuideVariable();
-    if (proposedVariable != null) return new XeqC(proposedVariable, guideValue);
-    else return null;
+    if (proposedVariable != null) {
+      return new XeqC(proposedVariable, guideValue);
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -255,7 +271,9 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
       IntDomain listDom = v.dom();
 
-      if (v.singleton()) continue;
+      if (v.singleton()) {
+        continue;
+      }
 
       int currentRegret = listDom.nextValue(listDom.min()) - listDom.min();
 

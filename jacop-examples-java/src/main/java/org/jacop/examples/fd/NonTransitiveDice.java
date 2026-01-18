@@ -96,15 +96,22 @@ public class NonTransitiveDice extends ExampleFD {
     boolean firstSolutionFound = false;
 
     int noDices = 4;
-    if (args.length > 0) noDices = Integer.parseInt(args[0]);
+    if (args.length > 0) {
+      noDices = Integer.parseInt(args[0]);
+    }
 
     int noSides = 7;
-    if (args.length > 1) noSides = Integer.parseInt(args[1]);
+    if (args.length > 1) {
+      noSides = Integer.parseInt(args[1]);
+    }
 
     int currentBest;
 
-    if (noSides * noSides % 2 == 0) currentBest = noSides * noSides / 2 - 1;
-    else currentBest = noSides * noSides / 2;
+    if (noSides * noSides % 2 == 0) {
+      currentBest = noSides * noSides / 2 - 1;
+    } else {
+      currentBest = noSides * noSides / 2;
+    }
 
     while (true) {
 
@@ -125,7 +132,9 @@ public class NonTransitiveDice extends ExampleFD {
         //				sols++;
       }
 
-      if (!result && firstSolutionFound) break;
+      if (!result && firstSolutionFound) {
+        break;
+      }
     }
 
     firstSolutionFound = false;
@@ -160,7 +169,9 @@ public class NonTransitiveDice extends ExampleFD {
         //				sols++;
       }
 
-      if (!result && firstSolutionFound) break;
+      if (!result && firstSolutionFound) {
+        break;
+      }
     }
   }
 
@@ -185,30 +196,38 @@ public class NonTransitiveDice extends ExampleFD {
     }
 
     // Faces are lexigraphically ordered
-    for (int i = 0; i < noDices; i++)
-      for (int j = 0; j < noSides - 1; j++)
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides - 1; j++) {
         // Impose constraints that each consequtive face
         // is smaller than the previous one
         store.impose(new XltY(faces[i * noSides + j], faces[i * noSides + j + 1]));
+      }
+    }
 
     IntVar[][][] wins = new IntVar[noDices][noSides][noSides];
 
-    for (int i = 0; i < noDices; i++)
-      for (int j = 0; j < noSides; j++)
-        for (int m = 0; m < noSides; m++)
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        for (int m = 0; m < noSides; m++) {
           wins[i][j][m] =
               new BooleanVar(
                   store, "win_D" + (i + 1) + "->" + ((i + 2) % noDices) + "F" + j + m, 0, 1);
+        }
+      }
+    }
 
     // Winning constraints if Fj from ith dice is larger than Fm from
     // ith+1 dice than wins[i][j][m] is equal to 1.
-    for (int i = 0; i < noDices; i++)
-      for (int j = 0; j < noSides; j++)
-        for (int m = 0; m < noSides; m++)
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        for (int m = 0; m < noSides; m++) {
           store.impose(
               new Reified(
                   new XgtY(faces[noSides * i + j], faces[noSides * ((i + 1) % noDices) + m]),
                   wins[i][j][m]));
+        }
+      }
+    }
 
     // Special implied constraints (type 1)
     // do not decrease number of backtracks
@@ -226,13 +245,21 @@ public class NonTransitiveDice extends ExampleFD {
     // backtracks.
     // If the winning probability is given as parameter to the program
     // then use it.
-    for (int j = 0; j < noSides; j++)
-      for (int m = 0; m < noSides; m++)
+    for (int j = 0; j < noSides; j++) {
+      for (int m = 0; m < noSides; m++) {
         if (currentBest != noSides * noSides) {
-          if ((j + 1) * (noSides - m) > currentBest - 1)
-            for (int i = 0; i < noDices; i++) store.impose(new XeqC(wins[i][j][m], 1));
-        } else if ((j + 1) * (noSides - m) > ((noSides * noSides) / 2))
-          for (int i = 0; i < noDices; i++) store.impose(new XeqC(wins[i][j][m], 1));
+          if ((j + 1) * (noSides - m) > currentBest - 1) {
+            for (int i = 0; i < noDices; i++) {
+              store.impose(new XeqC(wins[i][j][m], 1));
+            }
+          }
+        } else if ((j + 1) * (noSides - m) > ((noSides * noSides) / 2)) {
+          for (int i = 0; i < noDices; i++) {
+            store.impose(new XeqC(wins[i][j][m], 1));
+          }
+        }
+      }
+    }
 
     IntVar[] winningSum = new IntVar[noDices];
     for (int i = 0; i < noDices; i++) {
@@ -244,8 +271,9 @@ public class NonTransitiveDice extends ExampleFD {
               noSides * noSides);
 
       IntVar[] matrix = new IntVar[noSides * noSides];
-      for (int j = 0; j < noSides; j++)
+      for (int j = 0; j < noSides; j++) {
         System.arraycopy(wins[i][j], 0, matrix, j * noSides + 0, noSides);
+      }
 
       store.impose(new SumInt(matrix, "==", winningSum[i]));
     }
@@ -304,12 +332,23 @@ public class NonTransitiveDice extends ExampleFD {
     vars = new ArrayList<>();
 
     for (int i = noSides / 2, j = noSides / 2 + 1; i >= 0 || j < noSides; i--, j++) {
-      for (int d = 0; d < noDices; d++) if (i >= 0) vars.add(faces[d * noSides + i]);
-      for (int d = 0; d < noDices; d++) if (j < noSides) vars.add(faces[d * noSides + j]);
+      for (int d = 0; d < noDices; d++) {
+        if (i >= 0) {
+          vars.add(faces[d * noSides + i]);
+        }
+      }
+      for (int d = 0; d < noDices; d++) {
+        if (j < noSides) {
+          vars.add(faces[d * noSides + j]);
+        }
+      }
     }
 
-    for (int i = 0; i < noDices; i++)
-      for (int j = 0; j < noSides; j++) vars.addAll(Arrays.asList(wins[i][j]).subList(0, noSides));
+    for (int i = 0; i < noDices; i++) {
+      for (int j = 0; j < noSides; j++) {
+        vars.addAll(Arrays.asList(wins[i][j]).subList(0, noSides));
+      }
+    }
   }
 
   /**

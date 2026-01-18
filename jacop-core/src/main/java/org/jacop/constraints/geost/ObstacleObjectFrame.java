@@ -55,7 +55,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
   static final boolean DISPLAY_FRAME = false;
 
-  static BoxDisplay display = null;
+  static BoxDisplay display;
 
   // TODO remove if not needed anymore, or better separate from other code by putting it inside
   // functions.
@@ -78,8 +78,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
    */
   public LinkedList<DBox> frame;
 
-  int timeSizeOrigin = 0;
-  int timeSizeMax = 0;
+  int timeSizeOrigin;
+  int timeSizeMax;
 
   /** It specifies the bounding box of the frame. */
   private DBox frameBoundingBox;
@@ -123,25 +123,34 @@ public class ObstacleObjectFrame extends InternalConstraint {
    */
   public String checkInvariants() {
 
-    if (obstacle == null) return "obstacle field is null";
+    if (obstacle == null) {
+      return "obstacle field is null";
+    }
 
-    if (frame == null) return "frame is null";
+    if (frame == null) {
+      return "frame is null";
+    }
 
-    if (extendedHoles == null) return "frame is null";
+    if (extendedHoles == null) {
+      return "frame is null";
+    }
 
     // make sure the selected dimensions are sorted and have correct values
     int previous = 0;
     for (int i = 0; i < selectedDimensions.length; i++) {
 
-      if (i != 0)
-        if (selectedDimensions[i] <= previous)
+      if (i != 0) {
+        if (selectedDimensions[i] <= previous) {
           return "selected dimensions "
               + Arrays.toString(selectedDimensions)
               + " are not sorted or not unique";
+        }
+      }
 
       previous = selectedDimensions[i];
-      if (!(selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension))
+      if (!(selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension)) {
         return "incorrect dimension: " + selectedDimensions[i];
+      }
     }
 
     return null;
@@ -152,7 +161,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
     if (frame != null) {
 
-      for (DBox b : frame) DBox.dispatchBox(b);
+      for (DBox b : frame) {
+        DBox.dispatchBox(b);
+      }
       frame.clear();
 
     } else {
@@ -180,8 +191,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
      * covered by some hole
      */
     if (DISPLAY_FRAME) {
-      if (display == null) display = new BoxDisplay(5, obstacle.toString());
-      else {
+      if (display == null) {
+        display = new BoxDisplay(5, obstacle.toString());
+      } else {
         display.eraseAll();
         display.setTitle(obstacle.toString());
         display.drawGrid(Color.lightGray);
@@ -207,7 +219,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
       Shape shape = geost.getShape(sid);
       // if we don't know that there are holes yet, check
-      if (!holesExist && !shape.holes().isEmpty()) holesExist = true;
+      if (!holesExist && !shape.holes().isEmpty()) {
+        holesExist = true;
+      }
 
       DBox shapeBoundingBox = shape.boundingBox();
       if (firstIter) {
@@ -215,8 +229,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
         firstIter = false;
       } else {
         DBox inter = boundingBox.intersectWith(shapeBoundingBox);
-        if (inter != null) inter.copyInto(boundingBox);
-        else {
+        if (inter != null) {
+          inter.copyInto(boundingBox);
+        } else {
           // there is no box common to all bounding boxes, the frame is empty
           clearFrame();
           // release unused boxes
@@ -369,11 +384,15 @@ public class ObstacleObjectFrame extends InternalConstraint {
     }
 
     // update frame bounding box
-    if (!frame.isEmpty()) DBox.boundingBox(frame).copyInto(frameBoundingBox);
+    if (!frame.isEmpty()) {
+      DBox.boundingBox(frame).copyInto(frameBoundingBox);
+    }
 
     // update the frame area
     frameArea = 0;
-    for (DBox frameComponent : frame) frameArea += frameComponent.area();
+    for (DBox frameComponent : frame) {
+      frameArea += frameComponent.area();
+    }
 
     if (!frame.isEmpty()) {
       frameArea++; // just to make sure that area made of thin parts are not discarded
@@ -434,8 +453,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
       return outPoint;
     }
 
-    if (frame.isEmpty()) return null;
-    else {
+    if (frame.isEmpty()) {
+      return null;
+    } else {
       // look for the upper or lower bound of the frame
 
       switch (minlex) {
@@ -473,28 +493,35 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
         } else { // cover the whole space
 
-          if (minlex == Geost.SweepDirection.PRUNEMAX) outPoint[i] = Integer.MAX_VALUE;
-          else outPoint[i] = Integer.MIN_VALUE;
+          if (minlex == Geost.SweepDirection.PRUNEMAX) {
+            outPoint[i] = Integer.MAX_VALUE;
+          } else {
+            outPoint[i] = Integer.MIN_VALUE;
+          }
         }
       }
 
       if (useTime) {
         int up = obstacle.end.max();
         int low = obstacle.start.min();
-        if (up - low < 0) outPoint[obstacle.dimension] = 0;
-        else {
+        if (up - low < 0) {
+          outPoint[obstacle.dimension] = 0;
+        } else {
 
-          if (minlex == Geost.SweepDirection.PRUNEMAX && up == low)
+          if (minlex == Geost.SweepDirection.PRUNEMAX && up == low) {
             // same case as above, we need to include the constraint in the series
             up = low + 1;
+          }
 
           outPoint[obstacle.dimension] = minlex == Geost.SweepDirection.PRUNEMIN ? low : up;
         }
       } else {
 
-        if (minlex == Geost.SweepDirection.PRUNEMAX)
+        if (minlex == Geost.SweepDirection.PRUNEMAX) {
           outPoint[obstacle.dimension] = Integer.MAX_VALUE;
-        else outPoint[obstacle.dimension] = Integer.MIN_VALUE;
+        } else {
+          outPoint[obstacle.dimension] = Integer.MIN_VALUE;
+        }
       }
 
       return outPoint;
@@ -555,7 +582,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
         timeSizeMax = obstacle.end.min() + o.duration.min();
       }
 
-      if (timeSizeMax - timeSizeOrigin <= 0) return false;
+      if (timeSizeMax - timeSizeOrigin <= 0) {
+        return false;
+      }
 
       // check if point is between bounds, if not return null
       // point cannot be contained in outbox, no need to continue
@@ -578,12 +607,18 @@ public class ObstacleObjectFrame extends InternalConstraint {
       int[] c) {
 
     // an object can overlap with itself
-    if (o == obstacle) return null;
+    if (o == obstacle) {
+      return null;
+    }
 
     // if the frame is empty, then any point is feasible
-    if (frame.isEmpty()) return null;
+    if (frame.isEmpty()) {
+      return null;
+    }
 
-    if (!timeOnlyCheck(min, order, o, currentShape, c)) return null;
+    if (!timeOnlyCheck(min, order, o, currentShape, c)) {
+      return null;
+    }
 
     // intermediate check: use bounding boxes to skip test quickly
     DBox otherBB = geost.getShape(currentShape).boundingBox;
@@ -608,7 +643,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
         outDimLength = IntDomain.MaxInt - IntDomain.MinInt;
       }
 
-      if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) return null;
+      if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) {
+        return null;
+      }
     }
 
     /*
@@ -625,7 +662,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     outOrigin[obstacle.dimension] = timeSizeOrigin;
     outLength[obstacle.dimension] = timeSizeMax - timeSizeOrigin;
 
-    for (DBox constrainedPiece : geost.getShape(currentShape).boxes)
+    for (DBox constrainedPiece : geost.getShape(currentShape).boxes) {
       for (DBox framePiece : frame) {
         selectedDimIndex = 0;
         for (int i = 0; i < obstacle.dimension; i++) {
@@ -651,8 +688,11 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
         assert (outBox.checkInvariants() == null) : outBox.checkInvariants();
 
-        if (outBox.containsPoint(c)) return outBox;
+        if (outBox.containsPoint(c)) {
+          return outBox;
+        }
       }
+    }
 
     return null;
   }

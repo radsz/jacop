@@ -131,16 +131,20 @@ public class XplusCeqZ extends PrimitiveConstraint {
 
       store.propagationHasOccurred = false;
 
-      if (x.singleton()) z.domain.inComplement(store.level, z, x.min() + c);
+      if (x.singleton()) {
+        z.domain.inComplement(store.level, z, x.min() + c);
+      }
 
-      if (z.singleton()) x.domain.inComplement(store.level, x, z.min() - c);
+      if (z.singleton()) {
+        x.domain.inComplement(store.level, x, z.min() - c);
+      }
 
     } while (store.propagationHasOccurred);
   }
 
   @Override
   public boolean notSatisfied() {
-    return (x.max() + c < z.min() || x.min() + c > z.max());
+    return x.max() + c < z.min() || x.min() + c > z.max();
   }
 
   @Override

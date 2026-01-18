@@ -75,8 +75,9 @@ public class Fz2jacop {
     Options opt = new Options(args);
 
     // if (opt.getVerbose())
-    if (opt.debug())
+    if (opt.debug()) {
       IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
+    }
 
     // Thread tread = java.lang.Thread.currentThread();
     // java.lang.management.ThreadMXBean b =
@@ -87,7 +88,9 @@ public class Fz2jacop {
     parser.setOptions(opt);
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
-    if (opt.getStatistics()) Runtime.getRuntime().addShutdownHook(t);
+    if (opt.getStatistics()) {
+      Runtime.getRuntime().addShutdownHook(t);
+    }
 
     try {
 
@@ -112,14 +115,20 @@ public class Fz2jacop {
       }
     } catch (ArithmeticException e) {
       System.err.println("%% Evaluation of model resulted in an overflow.");
-      if (e.getStackTrace().length > 0) IO.println("%%\t" + e);
+      if (e.getStackTrace().length > 0) {
+        IO.println("%%\t" + e);
+      }
     } catch (IllegalArgumentException e) {
-      if (e.getStackTrace().length > 0) IO.println("%%\t" + e);
+      if (e.getStackTrace().length > 0) {
+        IO.println("%%\t" + e);
+      }
     } catch (ParseException | TokenMgrError e) {
       IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
       IO.println("%% JaCoP internal error. Array out of bound exception " + e);
-      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.getStackTrace()[0]);
+      if (e.getStackTrace().length > 0) {
+        IO.println("%%\t" + e.getStackTrace()[0]);
+      }
     } catch (OutOfMemoryError _) {
       IO.println("%% Out of memory error; consider option -Xmx... for JVM");
     } catch (StackOverflowError _) {
@@ -147,10 +156,15 @@ public class Fz2jacop {
                   - TimeUnit.MINUTES.toMillis(min)
                   - TimeUnit.SECONDS.toMillis(sec));
       System.out.printf("%n%%%%%%mzn-stat: time=%.3f ", (double) execTime / 1000.0);
-      if (hr == 0)
-        if (min == 0) IO.println(); // String.format("(%d.%03d)", sec, ms));
-        else IO.println("(%d:%02d.%03d)".formatted(min, sec, ms));
-      else IO.println("(%d:%02d:%02d.%03d)".formatted(hr, min, sec, ms));
+      if (hr == 0) {
+        if (min == 0) {
+          IO.println(); // String.format("(%d.%03d)", sec, ms));
+        } else {
+          IO.println("(%d:%02d.%03d)".formatted(min, sec, ms));
+        }
+      } else {
+        IO.println("(%d:%02d:%02d.%03d)".formatted(hr, min, sec, ms));
+      }
     }
   }
 }

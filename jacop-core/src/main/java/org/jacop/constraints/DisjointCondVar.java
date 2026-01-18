@@ -48,7 +48,7 @@ class DisjointCondVar implements MutableVar {
 
   final Store store;
 
-  DisjointCondVarValue value = null;
+  DisjointCondVarValue value;
 
   DisjointCondVar(Store S) {
     DisjointCondVarValue val = new DisjointCondVarValue();

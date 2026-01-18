@@ -113,8 +113,11 @@ public class TimeStamp<T> implements Stateful {
    * @return the previous value according to the stamp.
    */
   public final T previousValue() {
-    if (pointer4Last > 0) return values[pointer4Last - 1];
-    else return null;
+    if (pointer4Last > 0) {
+      return values[pointer4Last - 1];
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -167,13 +170,16 @@ public class TimeStamp<T> implements Stateful {
         : "Error - Timestamp" + this + "has greater level than store " + "- missing remove";
 
     if (stamps[pointer4Last] == store.level) {
-      if (debug)
+      if (debug) {
         IO.print(
             "1. Level: " + store.level + ", In " + this + ",  New value " + val + "replaces old");
+      }
 
       values[pointer4Last] = val;
     } else if (stamps[pointer4Last] < store.level) {
-      if (debug) IO.print("2. Level: " + store.level + ", IN " + this + ",  New value" + val);
+      if (debug) {
+        IO.print("2. Level: " + store.level + ", IN " + this + ",  New value" + val);
+      }
 
       addLast(val, store.level);
     }

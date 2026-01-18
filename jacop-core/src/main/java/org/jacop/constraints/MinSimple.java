@@ -84,13 +84,17 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
     x1.domain.inMin(store.level, x1, minMin);
     x2.domain.inMin(store.level, x2, minMin);
 
-    int minValue = (x1.min() > x2.min()) ? x2.min() : x1.min();
-    int maxValue = (x1.max() > x2.max()) ? x2.max() : x1.max();
+    int minValue = x1.min() > x2.min() ? x2.min() : x1.min();
+    int maxValue = x1.max() > x2.max() ? x2.max() : x1.max();
 
     min.domain.in(store.level, min, minValue, maxValue);
 
-    if (x1.min() > min.max()) x2.domain.in(store.level, x2, min.dom());
-    if (x2.min() > min.max()) x1.domain.in(store.level, x1, min.dom());
+    if (x1.min() > min.max()) {
+      x2.domain.in(store.level, x2, min.dom());
+    }
+    if (x2.min() > min.max()) {
+      x1.domain.in(store.level, x1, min.dom());
+    }
   }
 
   @Override

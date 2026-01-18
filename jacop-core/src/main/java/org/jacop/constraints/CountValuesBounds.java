@@ -165,7 +165,9 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
     int restMayBe;
 
     restEq = rest.value();
-    for (int i = 0; i < values.length; i++) numberEq[i] = equal[i].value();
+    for (int i = 0; i < values.length; i++) {
+      numberEq[i] = equal[i].value();
+    }
 
     do {
 
@@ -180,7 +182,7 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
         int mayBe = 0;
 
         for (int j = 0; j < values.length; j++) {
-          if (v.domain.contains(values[j]))
+          if (v.domain.contains(values[j])) {
             if (v.singleton()) {
               numberEq[j]++;
               swap(start, i);
@@ -188,12 +190,14 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
             } else {
               numberMayBe[j]++;
             }
-          else { // does not have the values in its domain
+          } else { // does not have the values in its domain
             noValuesInDomain++;
           }
         }
 
-        if (!v.domain.subtract(valuesDomain).isEmpty()) restMayBe++;
+        if (!v.domain.subtract(valuesDomain).isEmpty()) {
+          restMayBe++;
+        }
 
         if (noValuesInDomain == values.length) {
           swap(start, i);
@@ -204,8 +208,9 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
       counterRest.in(restEq, restEq + restMayBe);
 
-      for (int i = 0; i < values.length; i++)
+      for (int i = 0; i < values.length; i++) {
         counter[i].in(numberEq[i], numberEq[i] + numberMayBe[i]);
+      }
 
       int min = 0;
       int max = 0;
@@ -223,7 +228,9 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
           for (int j = start; j < n; j++) {
             IntVar v = list[j];
-            if (v.domain.contains(values[i])) v.domain.inValue(store.level, v, values[i]);
+            if (v.domain.contains(values[i])) {
+              v.domain.inValue(store.level, v, values[i]);
+            }
           }
         } else if (numberEq[i] == counter[i].max()) {
 
@@ -275,9 +282,13 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
       int cc = 0;
       for (int j = 0; j < n; j++) {
-        if (list[j].singleton(v)) cc++;
+        if (list[j].singleton(v)) {
+          cc++;
+        }
       }
-      if (cc < counter[i].lb || cc > counter[i].ub) return false;
+      if (cc < counter[i].lb || cc > counter[i].ub) {
+        return false;
+      }
     }
 
     return true;
@@ -288,13 +299,13 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
     StringBuilder result = new StringBuilder(id());
 
-    result.append(" : CountValuesBounds(").append(java.util.Arrays.asList(list)).append(", ");
+    result.append(" : CountValuesBounds(").append(Arrays.asList(list)).append(", ");
     result
-        .append(java.util.Arrays.toString(lb))
+        .append(Arrays.toString(lb))
         .append(", ")
-        .append(java.util.Arrays.toString(ub))
+        .append(Arrays.toString(ub))
         .append(", ")
-        .append(java.util.Arrays.toString(values));
+        .append(Arrays.toString(values));
 
     return result.toString();
   }
@@ -317,11 +328,17 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
       if (min > ub || max < lb) {
         throw Store.failException;
       } else {
-        if (min > lb) this.min = min;
-        else this.min = lb;
+        if (min > lb) {
+          this.min = min;
+        } else {
+          this.min = lb;
+        }
 
-        if (max < ub) this.max = max;
-        else this.max = ub;
+        if (max < ub) {
+          this.max = max;
+        } else {
+          this.max = ub;
+        }
       }
     }
 

@@ -64,9 +64,10 @@ public class PneqC extends PrimitiveConstraint {
   public PneqC(FloatVar p, double c) {
 
     checkInputForNullness(new String[] {"p"}, new Object[][] {{p}});
-    if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt))
+    if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt)) {
       throw new IllegalArgumentException(
           "PneqC constraint has constant c " + c + " in the not allowed range.");
+    }
 
     numberId = idNumber.incrementAndGet();
     this.p = p;

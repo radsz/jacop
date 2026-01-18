@@ -97,7 +97,9 @@ public abstract class ExampleFD {
 
     boolean result = search.labeling(store, select);
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -131,7 +133,9 @@ public abstract class ExampleFD {
 
     boolean result = search.labeling(store, select, cost);
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -186,8 +190,11 @@ public abstract class ExampleFD {
 
     boolean result = false;
 
-    if (optimal) search.labeling(store, select, cost);
-    else search.labeling(store, select);
+    if (optimal) {
+      search.labeling(store, select, cost);
+    } else {
+      search.labeling(store, select);
+    }
 
     IO.println();
     IO.print(search.getNodes() + "\t");
@@ -196,7 +203,9 @@ public abstract class ExampleFD {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -235,7 +244,9 @@ public abstract class ExampleFD {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     T2 = System.currentTimeMillis();
 
@@ -267,7 +278,9 @@ public abstract class ExampleFD {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (!result) IO.println("**** No Solution ****");
+    if (!result) {
+      IO.println("**** No Solution ****");
+    }
 
     return result;
   }
@@ -300,7 +313,9 @@ public abstract class ExampleFD {
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       //	search.printAllSolutions();
-    } else IO.println("Failed to find any solution");
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
@@ -343,7 +358,9 @@ public abstract class ExampleFD {
     shaving.setStore(store);
     shaving.quickShave = true;
 
-    for (Constraint c : guidingShaving) shaving.addShavingConstraint(c);
+    for (Constraint c : guidingShaving) {
+      shaving.addShavingConstraint(c);
+    }
 
     long begin = System.currentTimeMillis();
 
@@ -364,7 +381,9 @@ public abstract class ExampleFD {
       IO.println("Number of milliseconds " + (end - begin));
       IO.println("Ratio " + (shaving.successes * 100 / (shaving.successes + shaving.failures)));
 
-      if (result) store.print();
+      if (result) {
+        store.print();
+      }
     }
 
     return result;
@@ -425,8 +444,11 @@ public abstract class ExampleFD {
     IO.print(wrongDecisions + "\t");
     IO.print(backtracks + "\t");
 
-    if (result) IO.println(1);
-    else IO.println(0);
+    if (result) {
+      IO.println(1);
+    } else {
+      IO.println(0);
+    }
 
     return result;
   }
@@ -449,8 +471,11 @@ public abstract class ExampleFD {
 
     search = new DepthFirstSearch<>();
 
-    if (search.getConsistencyListener() == null) search.setConsistencyListener(credit);
-    else search.getConsistencyListener().setChildrenListeners(credit);
+    if (search.getConsistencyListener() == null) {
+      search.setConsistencyListener(credit);
+    } else {
+      search.getConsistencyListener().setChildrenListeners(credit);
+    }
 
     search.setExitChildListener(credit);
     search.setTimeOutListener(credit);
@@ -465,8 +490,11 @@ public abstract class ExampleFD {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) IO.println(1);
-    else IO.println(0);
+    if (result) {
+      IO.println(1);
+    } else {
+      IO.println(0);
+    }
 
     return result;
   }
@@ -512,8 +540,11 @@ public abstract class ExampleFD {
 
     LDS<IntVar> lds = new LDS<>(noDiscrepancy);
 
-    if (search.getExitChildListener() == null) search.setExitChildListener(lds);
-    else search.getExitChildListener().setChildrenListeners(lds);
+    if (search.getExitChildListener() == null) {
+      search.setExitChildListener(lds);
+    } else {
+      search.getExitChildListener().setChildrenListeners(lds);
+    }
 
     // Execution time measurement
     long begin = System.currentTimeMillis();
@@ -549,8 +580,11 @@ public abstract class ExampleFD {
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    if (result) IO.println("Variables : " + vars);
-    else IO.println("Failed to find any solution");
+    if (result) {
+      IO.println("Variables : " + vars);
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + T + " ms");
 
@@ -628,8 +662,11 @@ public abstract class ExampleFD {
 
     long end = System.currentTimeMillis();
 
-    if (solution) store.print();
-    else IO.println("Failed to find any solution");
+    if (solution) {
+      store.print();
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("Number of milliseconds " + (end - begin));
 
@@ -664,9 +701,13 @@ public abstract class ExampleFD {
 
     result = labelMaster.labeling(store, selectMaster);
 
-    if (result) IO.println("Solution found");
+    if (result) {
+      IO.println("Solution found");
+    }
 
-    if (result) store.print();
+    if (result) {
+      store.print();
+    }
 
     long T2 = System.currentTimeMillis();
 

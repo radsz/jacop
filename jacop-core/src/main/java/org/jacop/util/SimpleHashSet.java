@@ -59,13 +59,13 @@ public class SimpleHashSet<E> {
   final float loadFactor;
 
   /** It points to the first Entry to be removed. */
-  transient Entry<E> firstEntry = null;
+  transient Entry<E> firstEntry;
 
   /** The initial capacity for the hash set. */
   int initialCapacity;
 
   /** It points to the last Entry being add. */
-  transient Entry<E> lastEntry = null;
+  transient Entry<E> lastEntry;
 
   /** The number of elements contained in this set. */
   transient int size;
@@ -108,15 +108,21 @@ public class SimpleHashSet<E> {
    *     nonpositive.
    */
   public SimpleHashSet(int initialCapacity, float loadFactor) {
-    if (initialCapacity < 0)
+    if (initialCapacity < 0) {
       throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
-    if (initialCapacity > MAXIMUM_CAPACITY) initialCapacity = MAXIMUM_CAPACITY;
-    if (loadFactor <= 0 || Float.isNaN(loadFactor))
+    }
+    if (initialCapacity > MAXIMUM_CAPACITY) {
+      initialCapacity = MAXIMUM_CAPACITY;
+    }
+    if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
       throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
+    }
 
     // Find a power of 2 >= initialCapacity
     int capacity = 1;
-    while (capacity < initialCapacity) capacity <<= 1;
+    while (capacity < initialCapacity) {
+      capacity <<= 1;
+    }
 
     this.loadFactor = loadFactor;
     this.threshold = (int) (capacity * loadFactor);
@@ -140,9 +146,9 @@ public class SimpleHashSet<E> {
     int h = x.hashCode();
 
     h += ~(h << 9);
-    h ^= (h >>> 14);
-    h += (h << 4);
-    h ^= (h >>> 10);
+    h ^= h >>> 14;
+    h += h << 4;
+    h ^= h >>> 10;
     return h;
   }
 
@@ -169,7 +175,9 @@ public class SimpleHashSet<E> {
 
       if (result) {
         // checks threshold and increases size
-        if (size++ >= threshold) resize(2 * table.length);
+        if (size++ >= threshold) {
+          resize(2 * table.length);
+        }
       }
       return result;
     } else {
@@ -184,7 +192,9 @@ public class SimpleHashSet<E> {
       }
 
       // checks threshold and increases size
-      if (size++ >= threshold) resize(2 * table.length);
+      if (size++ >= threshold) {
+        resize(2 * table.length);
+      }
     }
 
     return true;
@@ -243,8 +253,11 @@ public class SimpleHashSet<E> {
     int hash = hash(element);
     int i = indexFor(hash, table.length);
     Entry<E> e = table[i];
-    if (e != null) return e.contains(element);
-    else return false;
+    if (e != null) {
+      return e.contains(element);
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -265,7 +278,9 @@ public class SimpleHashSet<E> {
   @SuppressWarnings("unchecked")
   public E removeFirst() {
 
-    if (size == 0) return null;
+    if (size == 0) {
+      return null;
+    }
 
     Entry<E> removed = firstEntry;
 
@@ -276,8 +291,11 @@ public class SimpleHashSet<E> {
     int hash = hash(removed.element);
     int i = indexFor(hash, table.length);
 
-    if (removed.next == null) table[i] = null;
-    else table[i] = removed.next;
+    if (removed.next == null) {
+      table[i] = null;
+    } else {
+      table[i] = removed.next;
+    }
 
     return removed.element;
   }
@@ -332,13 +350,17 @@ public class SimpleHashSet<E> {
 
       Entry<E> e = entry;
 
-      if (!empty && e != null) s.append(",");
+      if (!empty && e != null) {
+        s.append(",");
+      }
 
       while (e != null) {
         empty = false;
         s.append(e.element);
         e = e.next;
-        if (e != null) s.append(",");
+        if (e != null) {
+          s.append(",");
+        }
       }
     }
 
@@ -387,9 +409,12 @@ public class SimpleHashSet<E> {
 
     @SuppressWarnings("unchecked")
     public boolean add(E addedElement) {
-      if (element == addedElement) return false;
-      if (next != null) return next.add(addedElement);
-      else {
+      if (element == addedElement) {
+        return false;
+      }
+      if (next != null) {
+        return next.add(addedElement);
+      } else {
         next = new Entry(addedElement);
         lastEntry.chain = next;
         lastEntry = next;
@@ -399,9 +424,12 @@ public class SimpleHashSet<E> {
 
     @SuppressWarnings("unchecked")
     public boolean contains(E checkedElement) {
-      if (element == checkedElement) return true;
-      if (next != null) return next.contains(checkedElement);
-      else {
+      if (element == checkedElement) {
+        return true;
+      }
+      if (next != null) {
+        return next.contains(checkedElement);
+      } else {
         return false;
       }
     }

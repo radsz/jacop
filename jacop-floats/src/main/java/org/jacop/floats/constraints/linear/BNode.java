@@ -66,10 +66,12 @@ public class BNode extends BinaryNode {
     double node_min = min();
     double node_max = max();
 
-    if (min > node_min)
+    if (min > node_min) {
       if (max < node_max) {
 
-        if (min > max) throw Store.failException;
+        if (min > max) {
+          throw Store.failException;
+        }
 
         updateBounds(min, max, lb, ub);
 
@@ -77,15 +79,19 @@ public class BNode extends BinaryNode {
 
       } else {
 
-        if (min > node_max) throw Store.failException;
+        if (min > node_max) {
+          throw Store.failException;
+        }
 
         updateBounds(min, node_max, lb, ub);
 
         parent.propagate();
       }
-    else if (max < node_max) {
+    } else if (max < node_max) {
 
-      if (node_min > max) throw Store.failException;
+      if (node_min > max) {
+        throw Store.failException;
+      }
 
       updateBounds(node_min, max, lb, ub);
 
@@ -111,10 +117,12 @@ public class BNode extends BinaryNode {
     double lb = d.min();
     double ub = d.max();
 
-    if (min > node_min)
+    if (min > node_min) {
       if (max < node_max) {
 
-        if (min > max) throw Store.failException;
+        if (min > max) {
+          throw Store.failException;
+        }
 
         updateBounds(min, max, lb, ub);
 
@@ -124,7 +132,9 @@ public class BNode extends BinaryNode {
 
       } else {
 
-        if (min > node_max) throw Store.failException;
+        if (min > node_max) {
+          throw Store.failException;
+        }
 
         updateBounds(min, node_max, lb, ub);
 
@@ -132,9 +142,11 @@ public class BNode extends BinaryNode {
 
         parent.propagateAndPrune();
       }
-    else if (max < node_max) {
+    } else if (max < node_max) {
 
-      if (node_min > max) throw Store.failException;
+      if (node_min > max) {
+        throw Store.failException;
+      }
 
       updateBounds(node_min, max, lb, ub);
 
@@ -167,8 +179,12 @@ public class BNode extends BinaryNode {
 
     right_changed = pruneNode(min, max, right, left);
 
-    if (left_changed) left.prune();
-    if (right_changed) right.prune();
+    if (left_changed) {
+      left.prune();
+    }
+    if (right_changed) {
+      right.prune();
+    }
   }
 
   boolean pruneNode(double min, double max, BinaryNode node, BinaryNode sibling) {
@@ -186,25 +202,31 @@ public class BNode extends BinaryNode {
     double lb = node.lb();
     double ub = node.ub();
 
-    if (new_node_min > node_min)
+    if (new_node_min > node_min) {
       if (new_node_max < node_max) {
 
-        if (new_node_min > new_node_max) throw Store.failException;
+        if (new_node_min > new_node_max) {
+          throw Store.failException;
+        }
 
         node.updateBounds(new_node_min, new_node_max, lb, ub);
 
         return true;
       } else {
 
-        if (new_node_min > node_max) throw Store.failException;
+        if (new_node_min > node_max) {
+          throw Store.failException;
+        }
 
         node.updateBounds(new_node_min, node_max, lb, ub);
 
         return true;
       }
-    else if (new_node_max < node_max) {
+    } else if (new_node_max < node_max) {
 
-      if (node_min > new_node_max) throw Store.failException;
+      if (node_min > new_node_max) {
+        throw Store.failException;
+      }
 
       node.updateBounds(node_min, new_node_max, lb, ub);
 

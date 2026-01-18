@@ -63,10 +63,10 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
   private int[] clauses = new int[INITIAL_SIZE];
 
   // current max index
-  private int currentIndex = 0;
+  private int currentIndex;
 
   // number of removed clauses
-  private int numRemoved = 0;
+  private int numRemoved;
 
   /**
    * TODO: Radek,
@@ -92,15 +92,18 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
     // propagate the literal if it is not yet set
     int literal = clause[0];
-    int var = (literal < 0) ? -literal : literal;
+    int var = literal < 0 ? -literal : literal;
     int value = trail.values[var];
-    if (value == 0) core.triggerPropagateEvent(literal, newId);
-    else if (value == -literal) {
+    if (value == 0) {
+      core.triggerPropagateEvent(literal, newId);
+    } else if (value == -literal) {
       MapClause conflictClause = core.explanationClause;
       conflictClause.clear();
       conflictClause.addLiteral(literal);
       core.triggerConflictEvent(conflictClause);
-    } else assert value == literal;
+    } else {
+      assert value == literal;
+    }
 
     return newId;
   }
@@ -140,14 +143,19 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
   @Override
   public int rateThisClause(int[] clause) {
-    if (clause.length == 1) return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
-    else return CLAUSE_RATE_UNSUPPORTED;
+    if (clause.length == 1) {
+      return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
+    } else {
+      return CLAUSE_RATE_UNSUPPORTED;
+    }
   }
 
   @Override
   public String toString(String prefix) {
     StringBuilder sb = new StringBuilder().append("unary clause database\n");
-    for (int i = 0; i < currentIndex; ++i) sb.append("[").append(clauses[i]).append("]\n");
+    for (int i = 0; i < currentIndex; i++) {
+      sb.append("[").append(clauses[i]).append("]\n");
+    }
     return sb.toString();
   }
 

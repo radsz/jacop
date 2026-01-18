@@ -79,7 +79,7 @@ public class FlatzincSGMPCS {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    if (fl.getSearch().type() == null || (!fl.getSearch().type().equals("int_search"))) {
+    if (fl.getSearch().type() == null || (!"int_search".equals(fl.getSearch().type()))) {
       throw new RuntimeException(
           "The problem is not of type int_search and cannot be handled by this method");
     }
@@ -90,8 +90,9 @@ public class FlatzincSGMPCS {
     }
 
     int timeOut = fl.getOptions().getTimeOut();
-    if (timeOut == 0) timeOut = 900; // default time-out 900s=15min
-
+    if (timeOut == 0) {
+      timeOut = 900; // default time-out 900s=15min
+    }
     IntVar[] vars = (IntVar[]) fl.getSearch().vars();
     IntVar cost = (IntVar) fl.getCost();
 
@@ -113,7 +114,9 @@ public class FlatzincSGMPCS {
         for (int j : sol) {
           IO.print(j + " ");
         }
-      } else IO.println("\n%%% No solution found with this method");
+      } else {
+        IO.println("\n%%% No solution found with this method");
+      }
     }
 
     T2 = System.currentTimeMillis();

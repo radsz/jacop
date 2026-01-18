@@ -115,9 +115,9 @@ public class Min extends Constraint implements SatisfiedPresent {
 
         vDom = var.dom();
         double VdomMin = vDom.min(), VdomMax = vDom.max();
-        minValue = (minValue < VdomMin) ? minValue : VdomMin;
+        minValue = minValue < VdomMin ? minValue : VdomMin;
 
-        maxValue = (maxValue < VdomMax) ? maxValue : VdomMax;
+        maxValue = maxValue < VdomMax ? maxValue : VdomMax;
       }
 
       min.domain.in(store.level, min, minValue, maxValue);
@@ -126,13 +126,17 @@ public class Min extends Constraint implements SatisfiedPresent {
       for (int i = 0; i < list.length; i++) {
         var = list[i];
 
-        if (maxValue < var.min()) n++;
-        else pos = i;
+        if (maxValue < var.min()) {
+          n++;
+        } else {
+          pos = i;
+        }
       }
       if (n
           == list.length
-              - 1) // one variable on the list is minimal; its is max < min of all other variables
-      list[pos].domain.in(store.level, list[pos], min.dom());
+              - 1) { // one variable on the list is minimal; its is max < min of all other variables
+        list[pos].domain.in(store.level, list[pos], min.dom());
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -145,15 +149,21 @@ public class Min extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    if (!min.singleton()) return false;
+    if (!min.singleton()) {
+      return false;
+    }
 
     double minValue = min.max();
     int i = 0;
     boolean eq = false;
 
     while (i < list.length) {
-      if (list[i].min() < minValue) return false;
-      if (!eq && (list[i].singleton() && list[i].value() == minValue)) eq = true;
+      if (list[i].min() < minValue) {
+        return false;
+      }
+      if (!eq && (list[i].singleton() && list[i].value() == minValue)) {
+        eq = true;
+      }
       i++;
     }
 
@@ -167,7 +177,9 @@ public class Min extends Constraint implements SatisfiedPresent {
     result.append(" : min( [ ");
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(this.min);

@@ -55,7 +55,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
   final IntVar[] y;
   final IntVar[] lx;
   final IntVar[] ly;
-  protected List<Constraint> constraints = null;
+  protected List<Constraint> constraints;
   protected final List<Var> auxVar = new ArrayList<>();
 
   /**
@@ -179,15 +179,19 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 
   public List<Constraint> decompose(Store store) {
     constraints = new ArrayList<>();
 
-    constraints.add(new org.jacop.constraints.diffn.Nooverlap(x, y, lx, ly));
+    constraints.add(new Nooverlap(x, y, lx, ly));
 
     // add cumulative in x direction
     IntVar[] ey = new IntVar[y.length];
@@ -258,7 +262,9 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
       result.append(lx[i]);
       result.append(ly[i]);
       result.append("]");
-      if (i < x.length - 1) result.append(", ");
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
     }
     return result.append(")").toString();
   }

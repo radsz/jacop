@@ -102,8 +102,9 @@ public class NoGood extends Constraint {
     checkInputForNullness("listOfVars", listOfVars);
     checkInputForNullness("listOfValues", listOfValues);
 
-    if (listOfVars.length != listOfValues.length)
+    if (listOfVars.length != listOfValues.length) {
       throw new IllegalArgumentException("Length of listOfVars is different from listOfValues");
+    }
 
     this.queueIndex = 0;
     this.numberId = idNumber.incrementAndGet();
@@ -116,32 +117,40 @@ public class NoGood extends Constraint {
   @Override
   public void consistency(Store store) {
 
-    if (debug) IO.println("Start " + this);
+    if (debug) {
+      IO.println("Start " + this);
+    }
 
     if (firstWatch == secondWatch) {
       // Special case, when NoGood was one variable no-good
       // or there was no two not singleton variables to be
       // watched.
 
-      if (debug) IO.println("Special cases of noGood constraints have occured");
+      if (debug) {
+        IO.println("Special cases of noGood constraints have occured");
+      }
 
       if (listOfVars.length == 1) {
 
         // store.in(firstWatch, Domain.domain.complement(firstValue));
       } else {
         // check if it still active no-good
-        for (int i = 0; i < listOfVars.length; i++)
-          if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) return;
+        for (int i = 0; i < listOfVars.length; i++) {
+          if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) {
+            return;
+          }
+        }
 
         // if variable is not singleton (even if it was at imposition
         // time)
         // sanity check, just in case, but if this code is executed than
         // mostly improper use of no-goods has been performed.
-        for (IntVar listOfVar : listOfVars)
+        for (IntVar listOfVar : listOfVars) {
           if (listOfVar.getSize() != 1 && listOfVar != firstWatch) {
             throw new RuntimeException(
                 "The NoGood learnt for one model is used in different model (model created across many store levels)");
           }
+        }
 
         // store.in(firstWatch, Domain.domain.complement(firstValue));
       }
@@ -150,20 +159,28 @@ public class NoGood extends Constraint {
     }
 
     // no good satisfied
-    if (firstWatch.getSize() == 1 && firstWatch.value() != firstValue) return;
+    if (firstWatch.getSize() == 1 && firstWatch.value() != firstValue) {
+      return;
+    }
 
     // no good satisfied
-    if (secondWatch.getSize() == 1 && secondWatch.value() != secondValue) return;
+    if (secondWatch.getSize() == 1 && secondWatch.value() != secondValue) {
+      return;
+    }
 
-    if (firstWatch.getSize() == 1 || secondWatch.getSize() == 1)
-      for (int i = 0; i < listOfVars.length; i++)
-        if (listOfVars[i].singleton() && !listOfVars[i].singleton(listOfValues[i])) return;
+    if (firstWatch.getSize() == 1 || secondWatch.getSize() == 1) {
+      for (int i = 0; i < listOfVars.length; i++) {
+        if (listOfVars[i].singleton() && !listOfVars[i].singleton(listOfValues[i])) {
+          return;
+        }
+      }
+    }
 
     if (firstWatch.getSize() == 1) {
 
       boolean found = false;
       // new watched variable needs to be found
-      for (int i = 0; i < listOfVars.length; i++)
+      for (int i = 0; i < listOfVars.length; i++) {
         if (listOfVars[i] != secondWatch && listOfVars[i].getSize() != 1) {
 
           store.deregisterWatchedLiteralConstraint(firstWatch, this);
@@ -175,6 +192,7 @@ public class NoGood extends Constraint {
 
           found = true;
         }
+      }
 
       if (!found) {
         // no new watch found, can propagate.
@@ -182,7 +200,9 @@ public class NoGood extends Constraint {
         secondWatch.dom().inComplement(store.level, secondWatch, secondValue);
 
         // store.in(secondWatch, Domain.domain.complement(secondValue));
-        if (debug) IO.println(secondWatch);
+        if (debug) {
+          IO.println(secondWatch);
+        }
 
         return;
       }
@@ -193,7 +213,7 @@ public class NoGood extends Constraint {
 
       boolean found = false;
 
-      for (int i = 0; i < listOfVars.length; i++)
+      for (int i = 0; i < listOfVars.length; i++) {
         if (listOfVars[i] != firstWatch && listOfVars[i].getSize() != 1) {
 
           store.deregisterWatchedLiteralConstraint(secondWatch, this);
@@ -205,6 +225,7 @@ public class NoGood extends Constraint {
 
           found = true;
         }
+      }
 
       if (!found) {
         // no new watch found, can propagate.
@@ -212,11 +233,15 @@ public class NoGood extends Constraint {
         firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
 
         // store.in(firstWatch, Domain.domain.complement(firstValue));
-        if (debug) IO.println(firstWatch);
+        if (debug) {
+          IO.println(firstWatch);
+        }
       }
     }
 
-    if (debug) IO.println("End" + this);
+    if (debug) {
+      IO.println("End" + this);
+    }
   }
 
   @Override
@@ -229,7 +254,9 @@ public class NoGood extends Constraint {
   @Override
   public void impose(Store store) {
 
-    if (store.watchedConstraints == null) store.watchedConstraints = Var.createEmptyPositioning();
+    if (store.watchedConstraints == null) {
+      store.watchedConstraints = Var.createEmptyPositioning();
+    }
 
     if (listOfVars.length == 1) {
 
@@ -266,8 +293,11 @@ public class NoGood extends Constraint {
         secondValue = firstValue;
 
         // No good is already satisfied and it is ignored.
-        for (IntVar _ : listOfVars)
-          if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) return;
+        for (IntVar _ : listOfVars) {
+          if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) {
+            return;
+          }
+        }
 
         // All values match, so no good is at the moment equivalent to
         // one-variable no-good.
@@ -307,15 +337,21 @@ public class NoGood extends Constraint {
     result.append(" : noGood([");
 
     for (int i = 0; i < listOfVars.length; i++) {
-      if (listOfVars[i] == firstWatch || listOfVars[i] == secondWatch) result.append("@");
+      if (listOfVars[i] == firstWatch || listOfVars[i] == secondWatch) {
+        result.append("@");
+      }
       result.append(listOfVars[i]);
-      if (i < listOfVars.length - 1) result.append(", ");
+      if (i < listOfVars.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < listOfValues.length; i++) {
       result.append(listOfValues[i]);
-      if (i < listOfValues.length - 1) result.append(", ");
+      if (i < listOfValues.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("] )");
     return result.toString();

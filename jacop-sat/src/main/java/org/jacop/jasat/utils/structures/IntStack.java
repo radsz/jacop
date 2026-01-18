@@ -45,7 +45,7 @@ public final class IntStack {
   public int[] array = new int[40];
 
   // pointer to the first free slot
-  public int currentIndex = 0;
+  public int currentIndex;
 
   // pool of int[]
   public final MemoryPool pool;
@@ -79,7 +79,9 @@ public final class IntStack {
    */
   public void push(int n) {
 
-    if (currentIndex >= array.length) ensureCapacity(currentIndex);
+    if (currentIndex >= array.length) {
+      ensureCapacity(currentIndex);
+    }
 
     array[currentIndex++] = n;
   }
@@ -118,7 +120,9 @@ public final class IntStack {
    * @param n the number of elements
    */
   private void ensureCapacity(int n) {
-    if (n < array.length) return;
+    if (n < array.length) {
+      return;
+    }
 
     int[] newArray = pool.getNew(2 * n);
     System.arraycopy(array, 0, newArray, 0, currentIndex);
@@ -130,7 +134,9 @@ public final class IntStack {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("IntStack [");
-    for (int i = 0; i < currentIndex; ++i) sb.append(array[i]).append(' ');
+    for (int i = 0; i < currentIndex; i++) {
+      sb.append(array[i]).append(' ');
+    }
     return sb.append(']').toString();
   }
 }

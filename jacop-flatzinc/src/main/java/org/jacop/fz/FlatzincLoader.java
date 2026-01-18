@@ -64,8 +64,9 @@ public class FlatzincLoader {
 
   public void load() {
 
-    if (opt.getVerbose())
+    if (opt.getVerbose()) {
       IO.println("%% Flatzinc2JaCoP: compiling and executing " + opt.getFileName());
+    }
 
     parser = new Parser(opt.getFile());
     parser.setOptions(opt);
@@ -82,7 +83,9 @@ public class FlatzincLoader {
       IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
       IO.println("%% JaCoP internal error. Array out of bound exception " + e);
-      if (e.getStackTrace().length > 0) IO.println("%%\t" + e.getStackTrace()[0]);
+      if (e.getStackTrace().length > 0) {
+        IO.println("%%\t" + e.getStackTrace()[0]);
+      }
     } catch (OutOfMemoryError _) {
       IO.println("%% Out of memory error; consider option -Xmx... for JVM");
     } catch (StackOverflowError _) {

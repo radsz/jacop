@@ -56,20 +56,20 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   public Rectangle[] rectangles;
 
   protected final Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
-      (dim ->
+      dim ->
           (IntRectangle o1, IntRectangle o2) -> {
             int v1 = o1.origin[dim];
             int v2 = o2.origin[dim];
             return v1 - v2;
-          });
-  Store currentStore = null;
-  int stamp = 0;
+          };
+  Store currentStore;
+  int stamp;
   Set<IntVar> variableQueue = new HashSet<>();
 
   /** It specifies if the constraint should compute and use the profile. */
   boolean doProfile = true;
 
-  private int minPosition = 0;
+  private int minPosition;
   // use to collect information on possible length of rectangles for pruning
   private List<Integer> durMax;
 
@@ -317,7 +317,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           if (start < stop) {
             Use.add(start, stop - start);
             j++;
-          } else use = false;
+          } else {
+            use = false;
+          }
 
           // min length == 0
           minLength0 = minLength0 || (sLengthMin[m] <= 0);
@@ -340,9 +342,15 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             checkArea = true;
             totalNumberOfRectangles++;
             for (int i = 0; i < dim; i++) {
-              if (sOriginMin[i] < startMin[i]) startMin[i] = sOriginMin[i];
-              if (sOriginMax[i] > stopMax[i]) stopMax[i] = sOriginMax[i];
-              if (minLength[i] > sLengthMin[i]) minLength[i] = sLengthMin[i];
+              if (sOriginMin[i] < startMin[i]) {
+                startMin[i] = sOriginMin[i];
+              }
+              if (sOriginMax[i] > stopMax[i]) {
+                stopMax[i] = sOriginMax[i];
+              }
+              if (minLength[i] > sLengthMin[i]) {
+                minLength[i] = sLengthMin[i];
+              }
 
               sArea *= sLengthMin[i];
             }
@@ -354,27 +362,40 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             if (sOriginMin[i] <= r_min[i]) {
               if (sOriginMax[i] <= r_max[i]) {
                 int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
-                sLengthMin[i] = (distance1 > 0) ? distance1 : 0;
+                sLengthMin[i] = distance1 > 0 ? distance1 : 0;
               } else {
                 // sOriginMax[i] > r_max[i])
                 int rmax = r.origin[i].max() + r.length[i].min();
 
                 int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
                 int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
-                if (distance1 > rmax - r_min[i]) distance1 = rmax - r_min[i];
-                if (distance2 > rmax - r_min[i]) distance2 = rmax - r_min[i];
-                if (distance1 < distance2) sLengthMin[i] = (distance1 > 0) ? distance1 : 0;
-                else if (distance2 > 0) {
-                  if (distance2 < sLengthMin[i]) sLengthMin[i] = distance2;
-                } else sLengthMin[i] = 0;
+                if (distance1 > rmax - r_min[i]) {
+                  distance1 = rmax - r_min[i];
+                }
+                if (distance2 > rmax - r_min[i]) {
+                  distance2 = rmax - r_min[i];
+                }
+                if (distance1 < distance2) {
+                  sLengthMin[i] = distance1 > 0 ? distance1 : 0;
+                } else if (distance2 > 0) {
+                  if (distance2 < sLengthMin[i]) {
+                    sLengthMin[i] = distance2;
+                  }
+                } else {
+                  sLengthMin[i] = 0;
+                }
               }
             } else // sOriginMin[i] > r_min[i]
             if (sOriginMax[i] > r_max[i]) {
               int distance2 =
                   sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
               if (distance2 > 0) {
-                if (distance2 < sLengthMin[i]) sLengthMin[i] = distance2;
-              } else sLengthMin[i] = 0;
+                if (distance2 < sLengthMin[i]) {
+                  sLengthMin[i] = distance2;
+                }
+              } else {
+                sLengthMin[i] = 0;
+              }
             }
 
             partialCommonArea = partialCommonArea * sLengthMin[i];
@@ -382,8 +403,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           // end for
           commonArea += partialCommonArea;
         }
-        if (commonArea + r.minArea() > (r_max[0] - r_min[0]) * (r_max[1] - r_min[1]))
+        if (commonArea + r.minArea() > (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
           throw Store.failException;
+        }
       }
     }
 
@@ -398,21 +420,31 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         int rOriginIMin = rOriginIdom.min(),
             rOriginIMax = rOriginIdom.max(),
             rLengthIMin = rLengthIdom.min();
-        if (rOriginIMin < startMin[i]) startMin[i] = rOriginIMin;
-        if (rOriginIMax + rLengthIMin > stopMax[i]) stopMax[i] = rOriginIMax + rLengthIMin;
+        if (rOriginIMin < startMin[i]) {
+          startMin[i] = rOriginIMin;
+        }
+        if (rOriginIMax + rLengthIMin > stopMax[i]) {
+          stopMax[i] = rOriginIMax + rLengthIMin;
+        }
       }
       boolean checkRectNumber = true;
       for (int i = 0; i < startMin.length; i++) {
-        availArea *= (stopMax[i] - startMin[i]);
-        if (minLength[i] != 0) rectNumber *= ((stopMax[i] - startMin[i]) / minLength[i]);
-        else checkRectNumber = false;
+        availArea *= stopMax[i] - startMin[i];
+        if (minLength[i] != 0) {
+          rectNumber *= (stopMax[i] - startMin[i]) / minLength[i];
+        } else {
+          checkRectNumber = false;
+        }
       }
 
-      if (availArea < area) throw Store.failException;
-      else
+      if (availArea < area) {
+        throw Store.failException;
+      } else
       // check whether there is enough room for
       // all minimal rectangles
-      if (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1)) throw Store.failException;
+      if (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1)) {
+        throw Store.failException;
+      }
     }
 
     return contains;
@@ -438,7 +470,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       // System.out.println("New start = " + start + ".." + (int)(start +
       // minPosition));
       return new Pair(start, start + minPosition);
-    } else return new Pair(-1, -1);
+    } else {
+      return new Pair(-1, -1);
+    }
   }
 
   private void narrowIth(
@@ -449,7 +483,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MaxInt);
 
-    if (!ProfileCandidates.isEmpty() && doProfile) profileNarrowing(i, r, ProfileCandidates);
+    if (!ProfileCandidates.isEmpty() && doProfile) {
+      profileNarrowing(i, r, ProfileCandidates);
+    }
 
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MaxInt);
@@ -465,20 +501,25 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       Collections.addAll(starts, UsedRectArray);
 
       int sizeOfstartsOfR =
-          (r.origin[0].domain.noIntervals() > r.origin[1].domain.noIntervals())
+          r.origin[0].domain.noIntervals() > r.origin[1].domain.noIntervals()
               ? r.origin[0].domain.noIntervals()
               : r.origin[1].domain.noIntervals();
 
       IntRectangle[] startsOfR = new IntRectangle[sizeOfstartsOfR];
 
-      for (int k = 0; k < sizeOfstartsOfR; k++) startsOfR[k] = new IntRectangle(r.dim);
+      for (int k = 0; k < sizeOfstartsOfR; k++) {
+        startsOfR[k] = new IntRectangle(r.dim);
+      }
 
       for (int k = 0; k < r.dim; k++) {
         IntDomain rOrigin = r.origin[k].dom();
         int rOriginSize = rOrigin.noIntervals();
         for (int n = 0; n < sizeOfstartsOfR; n++) {
-          if (n < rOriginSize) startsOfR[n].add(rOrigin.leftElement(n), 0);
-          else startsOfR[n].add(rOrigin.min(), 0);
+          if (n < rOriginSize) {
+            startsOfR[n].add(rOrigin.leftElement(n), 0);
+          } else {
+            startsOfR[n].add(rOrigin.min(), 0);
+          }
         }
       }
       Collections.addAll(starts, startsOfR);
@@ -519,12 +560,15 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                   new IntervalDomain(IntDomain.MinInt, exclude.Min - r.length[i].min());
               Update.unionAdapt(exclude.Max, IntDomain.MaxInt);
 
-              if (traceNarr)
+              if (traceNarr) {
                 IO.print("7. Obligatory rectangles Narrow " + r.origin[i] + " in " + Update);
+              }
 
               r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
-              if (traceNarr) IO.println(" -->" + r.origin[i]);
+              if (traceNarr) {
+                IO.println(" -->" + r.origin[i]);
+              }
 
               computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.Min, exclude.Max);
 
@@ -536,12 +580,20 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
       // Update rectangles length in direction i
       // sort rectangles on increasing origin i
-      if (trace) IO.println("10. length = " + durMax);
+      if (trace) {
+        IO.println("10. length = " + durMax);
+      }
 
       int lengthLimit = 0;
-      for (int l : durMax) if (lengthLimit < l) lengthLimit = l;
+      for (int l : durMax) {
+        if (lengthLimit < l) {
+          lengthLimit = l;
+        }
+      }
 
-      if (traceNarr) IO.println("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
+      if (traceNarr) {
+        IO.println("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
+      }
 
       r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
     }
@@ -559,13 +611,17 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         break;
       }
     }
-    if (dMax < durMax.getLast()) durMax.set(durMax.size() - 1, dMax);
+    if (dMax < durMax.getLast()) {
+      durMax.set(durMax.size() - 1, dMax);
+    }
 
     if (start.dom().contains(excludeMax)) {
       durMax.add(IntDomain.MaxInt);
     }
 
-    if (trace) IO.println("+++ " + durMax);
+    if (trace) {
+      IO.println("+++ " + durMax);
+    }
   }
 
   void narrowRectangle(
@@ -598,8 +654,12 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
 
         int originStamp = rOrigin.stamp, lengthStamp = rLength.stamp;
-        if (maxLevel < originStamp) maxLevel = originStamp;
-        if (maxLevel < lengthStamp) maxLevel = lengthStamp;
+        if (maxLevel < originStamp) {
+          maxLevel = originStamp;
+        }
+        if (maxLevel < lengthStamp) {
+          maxLevel = lengthStamp;
+        }
       }
 
       if ( // !minLengthEq0 && // Check for rectangle r which has
@@ -617,7 +677,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         needToNarrow = needToNarrow || ntN;
 
         // Checking r against all s with minUse in the domain of r
-        if (needToNarrow) narrowRectangle(r, UsedRect, ProfileCandidates);
+        if (needToNarrow) {
+          narrowRectangle(r, UsedRect, ProfileCandidates);
+        }
       }
     }
   }
@@ -652,7 +714,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           int hinderValue = hinder.origin[i] + hinder.length[i] - barierPosition;
           if (hinderValue > 0) {
             barrier.addToProfile(hinderJ, hinderJ + hinder.length[j], hinderValue);
-            if (minimalAfter > hinderValue) minimalAfter = hinderValue;
+            if (minimalAfter > hinderValue) {
+              minimalAfter = hinderValue;
+            }
           }
         }
         // System.out.println("Barrier : " + barrier);
@@ -662,29 +726,37 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           ProfileItem p = barrier.get(k);
           int hinderStart = p.min;
           int hinderStop = p.max;
-          if (hinderStart - currentJposition >= durJ) excludedState = false;
+          if (hinderStart - currentJposition >= durJ) {
+            excludedState = false;
+          }
           currentJposition = hinderStop;
           k++;
           // System.out.println("Hinder = " + hinderStart + ".." +
           // hinderStop);
           // System.out.println("*** Excluded = " + excludedState);
         }
-        if (excludedState && maxJ - currentJposition >= durJ) excludedState = false;
+        if (excludedState && maxJ - currentJposition >= durJ) {
+          excludedState = false;
+        }
 
         if (excludedState) {
           ProfileItem first = barrier.getFirst();
           ProfileItem last = barrier.getLast();
-          if (minJ < first.min) // exist free space before first
+          if (minJ < first.min) { // exist free space before first
             // obstacle
             barrier.addToProfile(minJ, first.min, minimalAfter);
-          if (maxJ > last.max) // exist free space after last
+          }
+          if (maxJ > last.max) { // exist free space after last
             // obstacle
             barrier.addToProfile(last.max, maxJ, minimalAfter);
+          }
           List<Interval> toAdd = new ArrayList<>();
           for (int m = 0; m < barrier.size() - 1; m++) {
             ProfileItem p = barrier.get(m);
             ProfileItem pNext = barrier.get(m + 1);
-            if (p.max != pNext.min) toAdd.add(new Interval(p.max, pNext.min));
+            if (p.max != pNext.min) {
+              toAdd.add(new Interval(p.max, pNext.min));
+            }
           }
           // for (ProfileItem p : barrier) System.out.print(p + " ");
           for (Interval v : toAdd) {
@@ -701,7 +773,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                 minSizeAfterBarier = minimalAfter;
                 break;
               }
-              if (p.value > minimalAfter) minSizeAfterBarier = p.value;
+              if (p.value > minimalAfter) {
+                minSizeAfterBarier = p.value;
+              }
             }
           }
           minPosition = minSizeAfterBarier;
@@ -733,8 +807,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int dur = Duration.min();
     int iMax = i_max + dur;
     for (ProfileItem p : Profile) {
-      if (trace)
+      if (trace) {
         IO.println("Comparing " + "[" + iMin + ", " + i_max + "]" + " with profile item " + p);
+      }
 
       if (intervalOverlap(iMin, iMax, p.min, p.max)) {
         if (limit - p.value < Resources.min()) {
@@ -747,18 +822,28 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
             Update.unionAdapt(p.max, IntDomain.MaxInt);
 
-            if (traceNarr) IO.print("6. Profile Narrowed " + Start + " \\ " + Update);
+            if (traceNarr) {
+              IO.print("6. Profile Narrowed " + Start + " \\ " + Update);
+            }
 
             Start.domain.in(store.level, Start, Update);
 
-            if (traceNarr) IO.println(" => " + Start);
+            if (traceNarr) {
+              IO.println(" => " + Start);
+            }
 
             computeNewMaxDuration(Start, dur, p.min, p.max);
 
             int lengthLimit = 0;
-            for (int l : durMax) if (lengthLimit < l) lengthLimit = l;
+            for (int l : durMax) {
+              if (lengthLimit < l) {
+                lengthLimit = l;
+              }
+            }
 
-            if (traceNarr) IO.println("6b. Length " + Duration + " <-- 0.." + lengthLimit);
+            if (traceNarr) {
+              IO.println("6b. Length " + Duration + " <-- 0.." + lengthLimit);
+            }
 
             Duration.domain.in(currentStore.level, Duration, 0, lengthLimit);
           }
@@ -770,11 +855,15 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             if (updateMax < Resources.max()) {
               IntervalDomain Update = new IntervalDomain(0, updateMax);
 
-              if (traceNarr) IO.println("8. Profile Narrowed " + Resources + " in " + Update);
+              if (traceNarr) {
+                IO.println("8. Profile Narrowed " + Resources + " in " + Update);
+              }
 
               Resources.domain.in(store.level, Resources, Update);
 
-              if (traceNarr) IO.println(" => " + Resources);
+              if (traceNarr) {
+                IO.println(" => " + Resources);
+              }
             }
           }
         }
@@ -790,7 +879,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     IntDomain rOriginJdom = r.origin[j].dom();
     int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
-    if (trace) IO.println("Start time = " + s + ", resource use = " + resUse);
+    if (trace) {
+      IO.println("Start time = " + s + ", resource use = " + resUse);
+    }
 
     IntDomain sDom = s.dom();
 
@@ -827,8 +918,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   @Override
   public void queueVariable(int level, Var V) {
-    if (level == stamp) variableQueue.add((IntVar) V);
-    else {
+    if (level == stamp) {
+      variableQueue.add((IntVar) V);
+    } else {
       variableQueue.clear();
       stamp = level;
       variableQueue.add((IntVar) V);
@@ -864,7 +956,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int i = 0;
     for (Rectangle R : rectangles) {
       result.append(R);
-      if (i < rectangles.length - 1) result.append(", ");
+      if (i < rectangles.length - 1) {
+        result.append(", ");
+      }
       i++;
     }
     return result.append(")").toString();

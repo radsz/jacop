@@ -61,7 +61,9 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 
       int dMin = domain.min(), dMax = domain.max();
 
-      if (domain.singleton()) return dMin;
+      if (domain.singleton()) {
+        return dMin;
+      }
 
       // right shift operator is a division by 2, more efficient
       int middle = dMin + ((dMax - dMin) >> 1);
@@ -71,29 +73,36 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
         int iBefore = 0;
         int iAfter = domain.size - 1;
 
-        for (; iBefore < domain.size && domain.intervals[iBefore].max() < middle; iBefore++)
-          ;
+        for (; iBefore < domain.size && domain.intervals[iBefore].max() < middle; iBefore++) {}
 
-        for (; iAfter >= 0 && domain.intervals[iAfter].min() > middle; iAfter--)
-          ;
+        for (; iAfter >= 0 && domain.intervals[iAfter].min() > middle; iAfter--) {}
 
-        if (iBefore > iAfter)
-          if (middle - domain.intervals[iAfter].max() > domain.intervals[iBefore].min() - middle)
+        if (iBefore > iAfter) {
+          if (middle - domain.intervals[iAfter].max() > domain.intervals[iBefore].min() - middle) {
             return domain.intervals[iBefore].min();
-          else return domain.intervals[iAfter].max();
+          } else {
+            return domain.intervals[iAfter].max();
+          }
+        }
 
-        if (middle - domain.intervals[iBefore].max() > domain.intervals[iAfter].min() - middle)
+        if (middle - domain.intervals[iBefore].max() > domain.intervals[iAfter].min() - middle) {
           return domain.intervals[iAfter].min();
-        else return domain.intervals[iBefore].max();
+        } else {
+          return domain.intervals[iBefore].max();
+        }
 
-      } else return middle;
+      } else {
+        return middle;
+      }
 
     } else {
 
       IntDomain dom = var.dom();
       int dMin = dom.min(), dMax = dom.max();
 
-      if (dom.singleton()) return dMin;
+      if (dom.singleton()) {
+        return dMin;
+      }
 
       // right shift operator is a division by 2, more efficient
       int middle = dMin + ((dMax - dMin) >> 1);
@@ -103,22 +112,27 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
         int iBefore = 0;
         int iAfter = dom.noIntervals() - 1;
 
-        for (; iBefore < dom.noIntervals() && dom.getInterval(iBefore).max() < middle; iBefore++)
-          ;
+        for (; iBefore < dom.noIntervals() && dom.getInterval(iBefore).max() < middle; iBefore++) {}
 
-        for (; iAfter >= 0 && dom.getInterval(iAfter).min() > middle; iAfter--)
-          ;
+        for (; iAfter >= 0 && dom.getInterval(iAfter).min() > middle; iAfter--) {}
 
-        if (iBefore > iAfter)
-          if (middle - dom.getInterval(iAfter).max() > dom.getInterval(iBefore).min() - middle)
+        if (iBefore > iAfter) {
+          if (middle - dom.getInterval(iAfter).max() > dom.getInterval(iBefore).min() - middle) {
             return dom.getInterval(iBefore).min();
-          else return dom.getInterval(iAfter).max();
+          } else {
+            return dom.getInterval(iAfter).max();
+          }
+        }
 
-        if (middle - dom.getInterval(iBefore).max() > dom.getInterval(iAfter).min() - middle)
+        if (middle - dom.getInterval(iBefore).max() > dom.getInterval(iAfter).min() - middle) {
           return dom.getInterval(iAfter).min();
-        else return dom.getInterval(iBefore).max();
+        } else {
+          return dom.getInterval(iBefore).max();
+        }
 
-      } else return middle;
+      } else {
+        return middle;
+      }
     }
   }
 }

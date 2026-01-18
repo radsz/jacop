@@ -59,7 +59,7 @@ public class QCP extends ExampleFD {
   public final List<Constraint> shavingConstraints = new ArrayList<>();
 
   /** It contains the order of the QCP being solved. */
-  public int n = 0;
+  public int n;
 
   /**
    * It executes the program which solves the QCP in multiple different ways.
@@ -70,27 +70,39 @@ public class QCP extends ExampleFD {
 
     QCP example = new QCP();
 
-    if (args.length > 0) example.filename = args[0];
+    if (args.length > 0) {
+      example.filename = args[0];
+    }
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) IO.print(" Solution(s) found ");
+    if (example.searchSmallestDomain(false)) {
+      IO.print(" Solution(s) found ");
+    }
 
     example = new QCP();
 
-    if (args.length > 0) example.filename = args[0];
+    if (args.length > 0) {
+      example.filename = args[0];
+    }
 
     example.model();
 
-    if (example.searchWithRestarts()) IO.print(" Solution(s) found ");
+    if (example.searchWithRestarts()) {
+      IO.print(" Solution(s) found ");
+    }
 
     example = new QCP();
 
-    if (args.length > 0) example.filename = args[0];
+    if (args.length > 0) {
+      example.filename = args[0];
+    }
 
     example.model();
 
-    if (example.searchWithShaving()) IO.print(" Solution(s) found ");
+    if (example.searchWithShaving()) {
+      IO.print(" Solution(s) found ");
+    }
 
     /*
     // TODO, Why it is no longer efficient? It takes too long now.
@@ -107,12 +119,16 @@ public class QCP extends ExampleFD {
 
     example = new QCP();
 
-    if (args.length > 0) example.filename = args[0];
+    if (args.length > 0) {
+      example.filename = args[0];
+    }
 
     example.model();
     example.store.variableWeightManagement = true;
 
-    if (example.searchWeightedDegree()) IO.print(" Solution(s) found ");
+    if (example.searchWeightedDegree()) {
+      IO.print(" Solution(s) found ");
+    }
   }
 
   /**
@@ -124,12 +140,16 @@ public class QCP extends ExampleFD {
 
     QCP example = new QCP();
 
-    if (args.length > 0) example.filename = args[0];
+    if (args.length > 0) {
+      example.filename = args[0];
+    }
 
     IO.println("Solving QCP with restart search.");
     example.model();
 
-    if (example.searchWithRestarts()) IO.print(" Solution(s) found ");
+    if (example.searchWithRestarts()) {
+      IO.print(" Solution(s) found ");
+    }
   }
 
   @Override
@@ -171,13 +191,14 @@ public class QCP extends ExampleFD {
       String[] result = pat.split(lines[i]);
 
       int current = 0;
-      for (String s : result)
+      for (String s : result) {
         try {
           int currentNo = Integer.parseInt(s);
           numbers[i - 1][current++] = currentNo;
         } catch (Exception _) {
 
         }
+      }
     }
 
     store = new Store();
@@ -188,14 +209,17 @@ public class QCP extends ExampleFD {
     // Get problem size n from second program argument.
     IntVar[][] x = new IntVar[n][n];
 
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         if (numbers[i][j] == -1) {
           x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, n - 1);
           vars.add(x[i][j]);
-        } else x[i][j] = new IntVar(store, "x" + i + "_" + j, numbers[i][j], numbers[i][j]);
+        } else {
+          x[i][j] = new IntVar(store, "x" + i + "_" + j, numbers[i][j], numbers[i][j]);
+        }
         vars.add(x[i][j]);
       }
+    }
 
     // Create variables and state constraints.
     for (int i = 0; i < n; i++) {
@@ -205,7 +229,9 @@ public class QCP extends ExampleFD {
       shavingConstraints.add(cx);
 
       IntVar[] y = new IntVar[n];
-      for (int j = 0; j < n; j++) y[j] = x[j][i];
+      for (int j = 0; j < n; j++) {
+        y[j] = x[j][i];
+      }
 
       Constraint cy = new Alldistinct(y);
       store.impose(cy);
@@ -224,7 +250,9 @@ public class QCP extends ExampleFD {
     shaving.setStore(store);
     shaving.quickShave = true;
 
-    for (Constraint c : shavingConstraints) shaving.addShavingConstraint(c);
+    for (Constraint c : shavingConstraints) {
+      shaving.addShavingConstraint(c);
+    }
 
     long begin = System.currentTimeMillis();
 
@@ -262,10 +290,13 @@ public class QCP extends ExampleFD {
 
     store.consistency();
 
-    for (int i = 7; i < 16; i++)
-      for (int j = 14; j < 22; j++)
-        if (!vars.get(i * n + j).singleton())
+    for (int i = 7; i < 16; i++) {
+      for (int j = 14; j < 22; j++) {
+        if (!vars.get(i * n + j).singleton()) {
           transform.variablesTransformationScope.add(vars.get(i * n + j));
+        }
+      }
+    }
 
     IO.println(transform.variablesTransformationScope);
 

@@ -42,7 +42,9 @@ record BinItem(IntVar bin, int weight) {
 
   BinItem {
 
-    if (bin == null) throw new IllegalArgumentException("Bin variable is null");
+    if (bin == null) {
+      throw new IllegalArgumentException("Bin variable is null");
+    }
   }
 
   public String toString() {

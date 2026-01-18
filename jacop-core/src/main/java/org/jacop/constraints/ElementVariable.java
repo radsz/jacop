@@ -72,7 +72,7 @@ public class ElementVariable extends Constraint
 
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
-  boolean indexHasChanged = false;
+  boolean indexHasChanged;
 
   final IntDomain indexRange;
 
@@ -147,7 +147,9 @@ public class ElementVariable extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
     indexHasChanged = false;
     valueHasChanged = false;
     variableQueue.clear();
@@ -188,8 +190,12 @@ public class ElementVariable extends Constraint
         for (int i = list.length - 1; i >= 0; i--) {
           if (!temp.isEmpty()) {
             supports[i] = temp.intersect(list[i].domain);
-            if (!supports[i].isEmpty()) temp = temp.subtract(supports[i]);
-          } else supports[i] = new IntervalDomain();
+            if (!supports[i].isEmpty()) {
+              temp = temp.subtract(supports[i]);
+            }
+          } else {
+            supports[i] = new IntervalDomain();
+          }
         }
       }
 
@@ -200,8 +206,8 @@ public class ElementVariable extends Constraint
         // valDomain.addDom(list[position].domain);
         int min = list[position].domain.min();
         int max = list[position].domain.max();
-        valMin = (valMin > min) ? min : valMin;
-        valMax = (valMax < max) ? max : valMax;
+        valMin = valMin > min ? min : valMin;
+        valMax = valMax < max ? max : valMax;
       }
       value.domain.in(store.level, value, valMin, valMax);
       // value.domain.in(store.level, value, valDomain);
@@ -234,11 +240,15 @@ public class ElementVariable extends Constraint
             if (nextValueDomain.contains(value.domain)) {
               propagation = false;
               break;
-            } else checkTrigger = nextValueDomain.getSize();
+            } else {
+              checkTrigger = nextValueDomain.getSize();
+            }
           }
         }
 
-        if (propagation) value.domain.in(store.level, value, nextValueDomain);
+        if (propagation) {
+          value.domain.in(store.level, value, nextValueDomain);
+        }
       }
 
       if (!variableQueue.isEmpty()) {
@@ -262,12 +272,16 @@ public class ElementVariable extends Constraint
                 int endingPosition = generator.nextInt(list.length - 1);
                 int nextSupportPosition = -1;
                 for (int i = endingPosition + 1; ; ) {
-                  if (i == list.length) i = 0;
+                  if (i == list.length) {
+                    i = 0;
+                  }
                   if (list[i].domain.contains(lostSupport)) {
                     nextSupportPosition = i;
                     break;
                   }
-                  if (i == endingPosition) break;
+                  if (i == endingPosition) {
+                    break;
+                  }
                   i++;
                 }
                 if (nextSupportPosition != -1) {
@@ -287,9 +301,11 @@ public class ElementVariable extends Constraint
             list[position].removeConstraint(this);
 
             List<Integer> array = duplicates.get(changedVar);
-            if (array != null)
-              for (int additionalPosition : array)
+            if (array != null) {
+              for (int additionalPosition : array) {
                 index.domain.inComplement(store.level, index, additionalPosition + 1 + indexOffset);
+              }
+            }
           }
         }
       }
@@ -322,8 +338,9 @@ public class ElementVariable extends Constraint
       Integer oldInteger = mapping.put(list[i], i);
       if (oldInteger != null) {
         List<Integer> array = duplicates.get(list[i]);
-        if (array != null) array.add(i);
-        else {
+        if (array != null) {
+          array.add(i);
+        } else {
           array = new ArrayList<>();
           array.add(i);
           duplicates.put(list[i], array);
@@ -372,7 +389,9 @@ public class ElementVariable extends Constraint
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(" )");

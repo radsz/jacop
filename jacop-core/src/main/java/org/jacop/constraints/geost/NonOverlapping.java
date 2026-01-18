@@ -95,11 +95,12 @@ public class NonOverlapping implements ExternalConstraint {
 
     boolean changed = false;
 
-    for (GeostObject oc : objects)
+    for (GeostObject oc : objects) {
       if (oc != o) {
         changed = true;
         accumulator.add(oc);
       }
+    }
 
     return changed;
   }
@@ -110,7 +111,9 @@ public class NonOverlapping implements ExternalConstraint {
 
       // find largest object ID
       int largestID = 0;
-      for (GeostObject o : objects) largestID = Math.max(largestID, o.no);
+      for (GeostObject o : objects) {
+        largestID = Math.max(largestID, o.no);
+      }
 
       objectConstraintMap = new ObstacleObjectFrame[largestID + 1];
       Arrays.fill(objectConstraintMap, null);
@@ -121,9 +124,11 @@ public class NonOverlapping implements ExternalConstraint {
 
         ObstacleObjectFrame c;
 
-        if (geost.alwaysUseFrames || !o.shapeID.singleton())
+        if (geost.alwaysUseFrames || !o.shapeID.singleton()) {
           c = new ObstacleObjectFrame(geost, o, selectedDimensions);
-        else c = new ObstacleObject(geost, o, selectedDimensions);
+        } else {
+          c = new ObstacleObject(geost, o, selectedDimensions);
+        }
 
         objectConstraintMap[o.no] = c;
         constraints.add(c);
@@ -138,8 +143,9 @@ public class NonOverlapping implements ExternalConstraint {
     /*
      * This is where we update the object's constraint
      */
-    if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null)
+    if (o.no < objectConstraintMap.length && objectConstraintMap[o.no] != null) {
       objectConstraintMap[o.no].updateFrame();
+    }
   }
 
   public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
@@ -153,7 +159,9 @@ public class NonOverlapping implements ExternalConstraint {
       // only once
       for (int i = objectConstraintMap.length - 1; i >= 0; i--) {
         ObstacleObjectFrame c = objectConstraintMap[i];
-        if (c != null) relatedConstraints.add(c);
+        if (c != null) {
+          relatedConstraints.add(c);
+        }
       }
     }
 
@@ -165,13 +173,15 @@ public class NonOverlapping implements ExternalConstraint {
     final boolean inefficient = true;
 
     // TODO, do we keep inefficient version? If so, attribute constraints is no longer needed.
-    if (inefficient) return getObjectConstraints(o).contains(ic);
-    else {
+    if (inefficient) {
+      return getObjectConstraints(o).contains(ic);
+    } else {
 
       // TODO, Potentially a bug after introducing inheritance between ObstacleObject and
       // ObstacleObjectFrame.
-      if (ic.getClass() != ObstacleObjectFrame.class) return false;
-      else {
+      if (ic.getClass() != ObstacleObjectFrame.class) {
+        return false;
+      } else {
         InternalConstraint oc = objectConstraintMap[o.no];
         return oc != null && ic != oc && constraints.contains(ic);
       }

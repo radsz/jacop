@@ -73,9 +73,10 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
     this.b = b;
     n = b.length;
     for (int i = 0; i < n; i++) {
-      if (b[i].min() < 0 || b[i].max() > 1)
+      if (b[i].min() < 0 || b[i].max() > 1) {
         throw new RuntimeException(
             "Error; prameters in array of ChannelBoolSet must be in interval 0..1");
+      }
     }
     this.s = s;
     this.offset = offset;
@@ -106,8 +107,12 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
     IntDomain ub = new IntervalDomain(5);
     IntDomain lb = new IntervalDomain(5);
     for (int i = 0; i < n; i++) {
-      if (b[i].max() != 0) ub.unionAdapt(i + offset);
-      if (b[i].singleton(1)) lb.unionAdapt(i + offset);
+      if (b[i].max() != 0) {
+        ub.unionAdapt(i + offset);
+      }
+      if (b[i].singleton(1)) {
+        lb.unionAdapt(i + offset);
+      }
     }
     s.domain.inLUB(store.level, s, ub);
     s.domain.inGLB(store.level, s, lb);
@@ -122,7 +127,9 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
 
   @Override
   public boolean satisfied() {
-    if (!allGround()) return false;
+    if (!allGround()) {
+      return false;
+    }
 
     for (int i = 0; i < n; i++) {
       if (b[i].singleton(0) && s.dom().glb().contains(i + offset)) {
@@ -138,7 +145,9 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
 
   boolean allGround() {
     for (int i = 0; i < n; i++) {
-      if (!b[i].singleton()) return false;
+      if (!b[i].singleton()) {
+        return false;
+      }
     }
     return s.singleton();
   }
@@ -149,11 +158,16 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var instanceof IntVar) return IntDomain.ANY;
-    else return SetDomain.ANY;
+    if (var instanceof IntVar) {
+      return IntDomain.ANY;
+    } else {
+      return SetDomain.ANY;
+    }
   }
 
   @Override

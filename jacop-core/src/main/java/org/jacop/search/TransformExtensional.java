@@ -100,20 +100,24 @@ public class TransformExtensional implements InitializeListener {
 
         Set<Constraint> constraintsInQuestion = new HashSet<>();
 
-        for (int i = 0; i < toEvaluate.length; i++)
+        for (int i = 0; i < toEvaluate.length; i++) {
           constraintsInQuestion.addAll(Arrays.asList(varConstraints[i]).subList(0, toEvaluate[i]));
+        }
 
         for (Constraint checkConstraint : constraintsInQuestion) {
 
           boolean toBeRemoved = true;
 
-          for (Var m : checkConstraint.arguments())
+          for (Var m : checkConstraint.arguments()) {
             if (!variablesTransformationScope.contains(m)) {
               toBeRemoved = false;
               break;
             }
+          }
 
-          if (toBeRemoved) checkConstraint.removeConstraint();
+          if (toBeRemoved) {
+            checkConstraint.removeConstraint();
+          }
         }
       }
 
@@ -123,8 +127,9 @@ public class TransformExtensional implements InitializeListener {
       for (int i = 1; i <= solutions.length; i++) {
         Domain[] currentSolution = search.getSolution(i);
         solutions[i - 1] = new int[currentSolution.length];
-        for (int j = 0; j < currentSolution.length; j++)
+        for (int j = 0; j < currentSolution.length; j++) {
           solutions[i - 1][j] = ((IntDomain) currentSolution[j]).min();
+        }
       }
 
       IntVar[] vars = search.getSolutionListener().getVariables();
@@ -133,7 +138,9 @@ public class TransformExtensional implements InitializeListener {
           new ExtensionalSupportVA(vars, solutions);
       store.impose(transformationIntoExtensionalConstraint);
 
-      if (debug) IO.println(transformationIntoExtensionalConstraint);
+      if (debug) {
+        IO.println(transformationIntoExtensionalConstraint);
+      }
     }
   }
 

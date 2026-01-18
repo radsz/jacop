@@ -39,9 +39,9 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
   /** It stores the value of the mutable domain. */
   public Domain domain;
 
-  MutableDomainValue previousMutableDomainVariableValue = null;
+  MutableDomainValue previousMutableDomainVariableValue;
 
-  int stamp = 0;
+  int stamp;
 
   MutableDomainValue() {}
 

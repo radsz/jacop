@@ -66,13 +66,13 @@ public class Config extends Properties {
   public final int trail_size = 100;
 
   /** controls default solver verbosity */
-  public int verbosity = 0;
+  public int verbosity;
 
   /** the default timeout, in seconds, for searches. */
-  public long timeout = 0;
+  public long timeout;
 
   /** switch for debug mode */
-  public boolean debug = false;
+  public boolean debug;
 
   /** random seed, to be changed if we want to redo the same run */
   public long seed = System.currentTimeMillis();

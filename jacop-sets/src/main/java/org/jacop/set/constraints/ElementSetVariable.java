@@ -138,7 +138,7 @@ public class ElementSetVariable extends Constraint implements Stateful {
 
   @Override
   public boolean isStateful() {
-    return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
 
   /**
@@ -190,10 +190,13 @@ public class ElementSetVariable extends Constraint implements Stateful {
       int position = e.nextElement() - 1 - indexOffset;
 
       if (!list[position].domain.glb().subtract(value.domain.lub()).isEmpty()
-          || !value.domain.glb().subtract(list[position].domain.lub()).isEmpty())
-        if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-        else indexDom.addLastElement(position + 1 + indexOffset);
-      else {
+          || !value.domain.glb().subtract(list[position].domain.lub()).isEmpty()) {
+        if (indexDom.size == 0) {
+          indexDom.unionAdapt(position + 1 + indexOffset);
+        } else {
+          indexDom.addLastElement(position + 1 + indexOffset);
+        }
+      } else {
         glb = glb.intersect(list[position].domain.glb());
         lub.unionAdapt(list[position].domain.lub());
       }
@@ -223,7 +226,9 @@ public class ElementSetVariable extends Constraint implements Stateful {
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -236,7 +241,9 @@ public class ElementSetVariable extends Constraint implements Stateful {
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(", ").append(indexOffset).append(" )");

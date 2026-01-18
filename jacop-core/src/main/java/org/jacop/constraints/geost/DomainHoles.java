@@ -95,8 +95,9 @@ public class DomainHoles extends InternalConstraint {
 
         holeCount++;
 
-        if (holeCount > 1) break; // stop here if we have already seen a hole
-
+        if (holeCount > 1) {
+          break; // stop here if we have already seen a hole
+        }
         holeDimension = i;
 
         // implies that there is at least one hole in the domain
@@ -133,10 +134,11 @@ public class DomainHoles extends InternalConstraint {
           break;
       }
 
-      if (holeCount == 1)
+      if (holeCount == 1) {
         // same thing as before, except that in the dimension with the hole, the extremum is the
         // hole extremum
         outPoint[holeDimension] = holeBound;
+      }
     }
 
     return outPoint;
@@ -155,7 +157,11 @@ public class DomainHoles extends InternalConstraint {
 
     IntVar[] vars = object.coords;
 
-    for (IntVar v : vars) if (v.domain.noIntervals() > 1) return true;
+    for (IntVar v : vars) {
+      if (v.domain.noIntervals() > 1) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -179,8 +185,9 @@ public class DomainHoles extends InternalConstraint {
       int currentShape,
       int[] c) {
 
-    if (o != object) return null; // only need to work if this is the same object
-
+    if (o != object) {
+      return null; // only need to work if this is the same object
+    }
     DBox forbiddenRegion = DBox.getAllocatedInstance(o.dimension + 1);
 
     int[] forbiddenOrigin = forbiddenRegion.origin;
@@ -202,13 +209,17 @@ public class DomainHoles extends InternalConstraint {
 
       } else {
         IntDomain dom = o.coords[d].domain;
-        if (dom.noIntervals() == 1) continue; // there are no domain holes in this dimension
+        if (dom.noIntervals() == 1) {
+          continue; // there are no domain holes in this dimension
+        }
         if (!dom.contains(c[d])) {
 
           assert dom.nextValue(c[d]) != c[d] && dom.previousValue(c[d]) != c[d]
               : "current point not located in a domain hole";
 
-          if (debug) IO.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
+          if (debug) {
+            IO.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
+          }
 
           /*
            * we found a hole, the infeasible slice is the whole domain, except in the

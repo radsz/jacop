@@ -78,9 +78,13 @@ public class PneqQ extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    if (q.singleton()) p.domain.inComplement(store.level, p, q.value());
+    if (q.singleton()) {
+      p.domain.inComplement(store.level, p, q.value());
+    }
 
-    if (p.singleton()) q.domain.inComplement(store.level, q, p.value());
+    if (p.singleton()) {
+      q.domain.inComplement(store.level, q, p.value());
+    }
   }
 
   @Override

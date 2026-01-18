@@ -60,10 +60,10 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
   private final int[] curLit = new int[3];
 
   // current clause index
-  private int currentIndex = 0;
+  private int currentIndex;
 
   // number of removed clauses
-  private int numRemoved = 0;
+  private int numRemoved;
 
   public int addClause(int[] clause, boolean isModel) {
 
@@ -97,7 +97,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
   }
 
   public void assertLiteral(int literal) {
-    int var = (literal > 0) ? literal : -literal; // Math.abs(literal);
+    int var = literal > 0 ? literal : -literal; // Math.abs(literal);
 
     if (watchLists.length <= var || watchLists[var] == null) {
       return;
@@ -105,7 +105,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
 
     // notify all clauses
     int[] clauses = watchLists[var];
-    for (int i = 1; i < clauses[0]; ++i) {
+    for (int i = 1; i < clauses[0]; i++) {
       int clauseIndex = clauses[i];
 
       // notify this clause
@@ -144,7 +144,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
 
     int offset = clauseIndex * 3;
 
-    for (int i = offset; i <= offset + 2; ++i) {
+    for (int i = offset; i <= offset + 2; i++) {
       int literal = clauses[i];
       // try to remove -literal. If it fails, add literal
       // if (! clause.removeLiteral(-literal))
@@ -180,7 +180,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
     int numUnknown = 0; // number of literals not set
 
     // store current values and literals
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; i++) {
       int literal = clauses[offset + i];
       int var = Math.abs(literal);
       curLit[i] = literal;
@@ -212,7 +212,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
       return ClauseState.UNSATISFIABLE_CLAUSE;
     }
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; i++) {
       if (curValues[i] == 0) {
         core.triggerPropagateEvent(curLit[i], clauseId);
         return ClauseState.SATISFIED_CLAUSE;

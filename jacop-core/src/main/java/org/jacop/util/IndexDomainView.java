@@ -122,15 +122,22 @@ public class IndexDomainView {
           int value = enumer.nextElement();
           while (indexToValue[index] < value) {
             index++;
-            if (index == indexToValue.length) return;
+            if (index == indexToValue.length) {
+              return;
+            }
           }
 
-          if (indexToValue[index] == value) forRemoval[index] = true;
+          if (indexToValue[index] == value) {
+            forRemoval[index] = true;
+          }
         }
       } else {
         Arrays.fill(forRemoval, true);
-        for (int i = 0; i < indexToValue.length; i++)
-          if (!var.domain.contains(indexToValue[i])) forRemoval[i] = false;
+        for (int i = 0; i < indexToValue.length; i++) {
+          if (!var.domain.contains(indexToValue[i])) {
+            forRemoval[i] = false;
+          }
+        }
       }
     } else {
 
@@ -147,8 +154,11 @@ public class IndexDomainView {
   public void removeUnSupportedValues(Store store) {
 
     if (viewOfSparseDomain) {
-      for (int i = 0; i < indexToValue.length; i++)
-        if (forRemoval[i]) var.domain.inComplement(store.level, var, indexToValue[i]);
+      for (int i = 0; i < indexToValue.length; i++) {
+        if (forRemoval[i]) {
+          var.domain.inComplement(store.level, var, indexToValue[i]);
+        }
+      }
     }
   }
 
@@ -194,7 +204,11 @@ public class IndexDomainView {
 
     if (viewOfSparseDomain) {
 
-      for (boolean b : forRemoval) if (b) return false;
+      for (boolean b : forRemoval) {
+        if (b) {
+          return false;
+        }
+      }
       return true;
     } else {
 
@@ -224,13 +238,17 @@ public class IndexDomainView {
 
     if (debugAll) {
       IO.println("Looking for " + value);
-      for (int v : indexToValue) IO.print("val " + v);
+      for (int v : indexToValue) {
+        IO.print("val " + v);
+      }
       IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) {
+        IO.println("left " + left + " right " + right + " position " + position);
+      }
 
       if (indexToValue[position] > value) {
         right = position;
@@ -241,9 +259,13 @@ public class IndexDomainView {
       position = (left + right) >> 1;
     }
 
-    if (indexToValue[left] == value) return left;
+    if (indexToValue[left] == value) {
+      return left;
+    }
 
-    if (indexToValue[right] == value) return right;
+    if (indexToValue[right] == value) {
+      return right;
+    }
 
     return -1;
   }

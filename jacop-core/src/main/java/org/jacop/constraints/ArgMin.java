@@ -134,7 +134,9 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         }
       }
 
-      if (lb == ub) minIndex.domain.inMax(store.level, minIndex, pos + 1 + indexOffset);
+      if (lb == ub) {
+        minIndex.domain.inMax(store.level, minIndex, pos + 1 + indexOffset);
+      }
 
       // find min/max values for index
       IntervalDomain idxDomain = new IntervalDomain();
@@ -142,12 +144,18 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         int cp = i + 1 + indexOffset;
 
         if (list[i].min() <= ub) {
-          if (idxDomain.getSize() == 0) idxDomain.unionAdapt(cp, cp);
-          else idxDomain.addLastElement(cp);
+          if (idxDomain.getSize() == 0) {
+            idxDomain.unionAdapt(cp, cp);
+          } else {
+            idxDomain.addLastElement(cp);
+          }
         }
       }
-      if (idxDomain.isEmpty()) throw Store.failException;
-      else minIndex.domain.in(store.level, minIndex, idxDomain);
+      if (idxDomain.isEmpty()) {
+        throw Store.failException;
+      } else {
+        minIndex.domain.in(store.level, minIndex, idxDomain);
+      }
 
       // find min value for variables indexed by index variable
       lb = IntDomain.MaxInt;
@@ -161,8 +169,9 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
           pos = i;
         }
       }
-      if (list[pos].singleton())
+      if (list[pos].singleton()) {
         minIndex.domain.in(store.level, minIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+      }
 
       if (minIndex.singleton()) {
 
@@ -189,8 +198,11 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         for (int i = 0; i < list.length; i++) {
           int cp = i + 1 + indexOffset;
 
-          if (cp < im) list[i].domain.inMin(store.level, list[i], lb + 1);
-          else if (cp > im) list[i].domain.inMin(store.level, list[i], lb);
+          if (cp < im) {
+            list[i].domain.inMin(store.level, list[i], lb + 1);
+          } else if (cp > im) {
+            list[i].domain.inMin(store.level, list[i], lb);
+          }
         }
       }
     } while (store.propagationHasOccurred);
@@ -210,11 +222,14 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == minIndex) return IntDomain.ANY;
-    else {
+    if (var == minIndex) {
+      return IntDomain.ANY;
+    } else {
       return IntDomain.BOUND;
     }
   }
@@ -224,12 +239,16 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
 
     boolean sat = minIndex.singleton();
 
-    if (!sat) return false;
+    if (!sat) {
+      return false;
+    }
 
     int MIN = list[minIndex.value() - 1 - indexOffset].value();
     int i = 0, eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() >= MIN) eq++;
+      if (list[i].singleton() && list[i].value() >= MIN) {
+        eq++;
+      }
       sat = list[i].min() >= MIN;
       i++;
     }
@@ -245,7 +264,9 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     result.append(" : ArgMin(  [ ");
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(this.minIndex);

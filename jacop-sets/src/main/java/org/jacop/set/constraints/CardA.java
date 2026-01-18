@@ -111,7 +111,9 @@ public class CardA extends Constraint implements SatisfiedPresent {
     int min = Math.max(aDom.glb().getSize(), cardinality.min());
     int max = Math.min(aDom.lub().getSize(), cardinality.max());
 
-    if (min > max) throw Store.failException;
+    if (min > max) {
+      throw Store.failException;
+    }
 
     a.domain.inCardinality(store.level, a, min, max);
   }

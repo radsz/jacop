@@ -99,11 +99,15 @@ public final class SatChangesListener
   }
 
   public void onPropagate(int literal, int clauseId) {
-    if (wrapper.isVarLiteral(literal)) onAssertion(literal);
+    if (wrapper.isVarLiteral(literal)) {
+      onAssertion(literal);
+    }
   }
 
   public void onAssertion(int literal, int level) {
-    if (wrapper.isVarLiteral(literal)) onAssertion(literal);
+    if (wrapper.isVarLiteral(literal)) {
+      onAssertion(literal);
+    }
   }
 
   /** clear on backjump */
@@ -159,27 +163,35 @@ public final class SatChangesListener
           lowerBounds[cpVarIndex] = cpValue;
         } else {
           // 'x!=v', remember that this value is excluded
-          if (excludedValues[cpVarIndex] == null) excludedValues[cpVarIndex] = new HashSet<>();
+          if (excludedValues[cpVarIndex] == null) {
+            excludedValues[cpVarIndex] = new HashSet<>();
+          }
           excludedValues[cpVarIndex].add(cpValue);
         }
       } else {
         // check impacts on ranges
         if (isTrue) {
           // 'x<=v' proposition
-          if (upperBounds[cpVarIndex] == null) upperBounds[cpVarIndex] = cpValue;
-          else {
+          if (upperBounds[cpVarIndex] == null) {
+            upperBounds[cpVarIndex] = cpValue;
+          } else {
             int curBound = upperBounds[cpVarIndex];
-            if (cpValue < curBound) upperBounds[cpVarIndex] = cpValue;
+            if (cpValue < curBound) {
+              upperBounds[cpVarIndex] = cpValue;
+            }
           }
 
         } else {
           // 'not x<=v', so 'x>v' proposition
 
           cpValue++; // work on '>=' predicate, not '>'
-          if (lowerBounds[cpVarIndex] == null) lowerBounds[cpVarIndex] = cpValue;
-          else {
+          if (lowerBounds[cpVarIndex] == null) {
+            lowerBounds[cpVarIndex] = cpValue;
+          } else {
             int curBound = lowerBounds[cpVarIndex];
-            if (cpValue > curBound) lowerBounds[cpVarIndex] = cpValue;
+            if (cpValue > curBound) {
+              lowerBounds[cpVarIndex] = cpValue;
+            }
           }
         }
       }
@@ -193,7 +205,9 @@ public final class SatChangesListener
    */
   public void updateCpVariables(int storeLevel) {
 
-    if (intVarsToUpdate.isEmpty() && booleanVarsToUpdate.isEmpty()) return;
+    if (intVarsToUpdate.isEmpty() && booleanVarsToUpdate.isEmpty()) {
+      return;
+    }
 
     assert wrapper.log(this, "update CP variables " + intVarsToUpdate + booleanVarsToUpdate);
 
@@ -217,14 +231,22 @@ public final class SatChangesListener
       if (lower != null && upper != null) {
         variable.domain.in(storeLevel, variable, lower, upper);
       } else {
-        if (lower != null) variable.domain.inMin(storeLevel, variable, lower);
-        if (upper != null) variable.domain.inMax(storeLevel, variable, upper);
+        if (lower != null) {
+          variable.domain.inMin(storeLevel, variable, lower);
+        }
+        if (upper != null) {
+          variable.domain.inMax(storeLevel, variable, upper);
+        }
       }
 
       // exclude some values from the domain
       Set<Integer> excluded = excludedValues[variable.index];
-      if (excluded == null) continue;
-      for (int value : excluded) variable.domain.inComplement(storeLevel, variable, value);
+      if (excluded == null) {
+        continue;
+      }
+      for (int value : excluded) {
+        variable.domain.inComplement(storeLevel, variable, value);
+      }
     }
 
     // then, boolean variables
@@ -237,9 +259,13 @@ public final class SatChangesListener
       assert !(isZeroValue * isOneValue > 0); // not both true or false
       assert !(isOneValue == 0 && isZeroValue == 0); // at least one set
 
-      if (isOneValue > 0 || isZeroValue < 0) variable.domain.in(storeLevel, variable, 1, 1);
-      else if (isZeroValue > 0 || isOneValue < 0) variable.domain.in(storeLevel, variable, 0, 0);
-      else throw new AssertionError("no changes for boolean var " + variable + "?");
+      if (isOneValue > 0 || isZeroValue < 0) {
+        variable.domain.in(storeLevel, variable, 1, 1);
+      } else if (isZeroValue > 0 || isOneValue < 0) {
+        variable.domain.in(storeLevel, variable, 0, 0);
+      } else {
+        throw new AssertionError("no changes for boolean var " + variable + "?");
+      }
     }
 
     assert wrapper.log(this, "updated CP variables " + intVarsToUpdate + booleanVarsToUpdate);

@@ -53,13 +53,13 @@ public class BoxDisplay extends JFrame {
   public int pixelsPerUnit = 5;
 
   /** It defines the shift in x dimension for drawing. */
-  public int xCellsShift = 0;
+  public int xCellsShift;
 
   /** It defines the shift in x dimension for drawing. */
-  public int yCellsShift = 0;
+  public int yCellsShift;
 
-  private Image bufferImage = null;
-  private Image displayImgae = null; // page flipping
+  private Image bufferImage;
+  private Image displayImgae; // page flipping
 
   /**
    * It constructs a display to visualize Geost objects/constraint.
@@ -226,14 +226,14 @@ public class BoxDisplay extends JFrame {
         g.fillRect(
             10 + (xCellsShift + b.origin[0]) * pixelsPerUnit,
             height - (yCellsShift + b.origin[1] + b.length[1]) * pixelsPerUnit,
-            (b.length[0] > 0) ? b.length[0] * pixelsPerUnit - 1 : 1,
-            (b.length[1] > 0) ? b.length[1] * pixelsPerUnit - 1 : 1);
+            b.length[0] > 0 ? b.length[0] * pixelsPerUnit - 1 : 1,
+            b.length[1] > 0 ? b.length[1] * pixelsPerUnit - 1 : 1);
       } else {
         g.drawRect(
             10 + (xCellsShift + b.origin[0]) * pixelsPerUnit,
             height - (yCellsShift + b.origin[1] + b.length[1]) * pixelsPerUnit,
-            (b.length[0] > 0) ? b.length[0] * pixelsPerUnit - 1 : 1,
-            (b.length[1] > 0) ? b.length[1] * pixelsPerUnit - 1 : 1);
+            b.length[0] > 0 ? b.length[0] * pixelsPerUnit - 1 : 1,
+            b.length[1] > 0 ? b.length[1] * pixelsPerUnit - 1 : 1);
       }
 
       repaint();

@@ -104,10 +104,14 @@ public class RegularExpressionParser {
           } // if
           Expression c2 = parse(false);
           if (c.getType() == RegularExpressionParser.Sum
-              && c2.getType() == RegularExpressionParser.Sum) ((Sum) c).addSum((Sum) c2);
+              && c2.getType() == RegularExpressionParser.Sum) {
+            ((Sum) c).addSum((Sum) c2);
+          }
 
           if (c.getType() == RegularExpressionParser.Sum
-              && c2.getType() != RegularExpressionParser.Sum) ((Sum) c).addExp(c2);
+              && c2.getType() != RegularExpressionParser.Sum) {
+            ((Sum) c).addExp(c2);
+          }
 
           if (c.getType() != RegularExpressionParser.Sum
               && c2.getType() == RegularExpressionParser.Sum) {
@@ -116,7 +120,9 @@ public class RegularExpressionParser {
           }
 
           if (c.getType() != RegularExpressionParser.Sum
-              && c2.getType() != RegularExpressionParser.Sum) c = new Sum(c, c2);
+              && c2.getType() != RegularExpressionParser.Sum) {
+            c = new Sum(c, c2);
+          }
 
           break;
 
@@ -135,7 +141,9 @@ public class RegularExpressionParser {
             c = new Concatination(c, c3);
           }
 
-          if (token != LexicalAnalyzer.EOF) contin = true;
+          if (token != LexicalAnalyzer.EOF) {
+            contin = true;
+          }
           break;
 
         case LexicalAnalyzer.LEFT_PAREN:
@@ -143,13 +151,17 @@ public class RegularExpressionParser {
           c = parse(false);
           expect(LexicalAnalyzer.RIGHT_PAREN);
           lexer.nextToken();
-          if (token != LexicalAnalyzer.EOF) contin = true;
+          if (token != LexicalAnalyzer.EOF) {
+            contin = true;
+          }
           break;
 
         case LexicalAnalyzer.STAR:
           c = new Star(c);
           lexer.nextToken();
-          if (token != LexicalAnalyzer.EOF) contin = true;
+          if (token != LexicalAnalyzer.EOF) {
+            contin = true;
+          }
           break;
 
         case LexicalAnalyzer.WORD:
@@ -168,10 +180,14 @@ public class RegularExpressionParser {
           break;
       }
 
-      if (parseOneNext == true && !(token == LexicalAnalyzer.STAR)) contin = false;
+      if (parseOneNext == true && !(token == LexicalAnalyzer.STAR)) {
+        contin = false;
+      }
     }
 
-    if (Regular.debugAll) IO.println("Succesful parsing of " + c);
+    if (Regular.debugAll) {
+      IO.println("Succesful parsing of " + c);
+    }
 
     return c;
   }
@@ -316,7 +332,9 @@ public class RegularExpressionParser {
 
       StringBuilder result = new StringBuilder("(");
 
-      for (Expression e : this.disj) result.append(e.toString()).append("+");
+      for (Expression e : this.disj) {
+        result.append(e.toString()).append("+");
+      }
       result.deleteCharAt(result.length() - 1);
       result.append(")");
 
@@ -331,17 +349,26 @@ public class RegularExpressionParser {
     @Override
     public boolean isSimple() {
 
-      for (Expression e : this.disj) if (!e.isSimple()) return false;
+      for (Expression e : this.disj) {
+        if (!e.isSimple()) {
+          return false;
+        }
+      }
       return true;
     }
 
     public void addExp(Expression e) {
-      if (e.isSimple()) this.disj.addFirst(e);
-      else this.disj.add(e);
+      if (e.isSimple()) {
+        this.disj.addFirst(e);
+      } else {
+        this.disj.add(e);
+      }
     }
 
     public void addSum(Sum s) {
-      for (Expression e : s.disj) addExp(e);
+      for (Expression e : s.disj) {
+        addExp(e);
+      }
     }
 
     @Override
@@ -356,7 +383,9 @@ public class RegularExpressionParser {
         if (first) {
           tmp = e.parseToFSM();
           first = false;
-          if (e.getType() != RegularExpressionParser.Literal) isSimple = false;
+          if (e.getType() != RegularExpressionParser.Literal) {
+            isSimple = false;
+          }
         } else if (e.getType() == RegularExpressionParser.Literal && isSimple) {
 
           IntDomain dom = tmp.initState.transitions.iterator().next().domain;

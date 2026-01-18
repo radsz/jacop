@@ -105,7 +105,9 @@ public class LengauerTarjan {
     dfs_n = 0;
     dfs(r);
 
-    if (dfs_n != n) return false;
+    if (dfs_n != n) {
+      return false;
+    }
 
     for (int i = n - 1; i > 0; i--) {
 
@@ -115,7 +117,9 @@ public class LengauerTarjan {
       BitSet pw = pred[w];
       for (int v = pw.nextSetBit(0); v >= 0; v = pw.nextSetBit(v + 1)) {
         int u = eval(v);
-        if (semi[u] < semi[w]) semi[w] = semi[u];
+        if (semi[u] < semi[w]) {
+          semi[w] = semi[u];
+        }
       }
       bucket[vertex[semi[w]]].set(w);
 
@@ -125,16 +129,20 @@ public class LengauerTarjan {
       BitSet bs = bucket[parent[w]];
       for (int v = bs.nextSetBit(0); v >= 0; v = bs.nextSetBit(v + 1)) {
         int u = eval(v);
-        dom[v] = (semi[u] < semi[v]) ? u : parent[w];
+        dom[v] = semi[u] < semi[v] ? u : parent[w];
       }
     }
     // step_4:
     for (int i = 1; i < n; i++) {
       int w = vertex[i];
-      if (dom[w] != vertex[semi[w]]) dom[w] = dom[dom[w]];
+      if (dom[w] != vertex[semi[w]]) {
+        dom[w] = dom[dom[w]];
+      }
 
       // add arc to domination tree
-      if (dom[w] != w) domTreeSucc[dom[w]].set(w);
+      if (dom[w] != w) {
+        domTreeSucc[dom[w]].set(w);
+      }
     }
 
     dom[r] = r;
@@ -166,14 +174,17 @@ public class LengauerTarjan {
   void compress(int v) {
     if (ancestor[ancestor[v]] != NIL) {
       compress(ancestor[v]);
-      if (semi[label[ancestor[v]]] < semi[label[v]]) label[v] = label[ancestor[v]];
+      if (semi[label[ancestor[v]]] < semi[label[v]]) {
+        label[v] = label[ancestor[v]];
+      }
       ancestor[v] = ancestor[ancestor[v]];
     }
   }
 
   private int eval(int v) {
-    if (ancestor[v] == NIL) return v;
-    else {
+    if (ancestor[v] == NIL) {
+      return v;
+    } else {
       compress(v);
       return label[v];
     }
@@ -203,7 +214,9 @@ public class LengauerTarjan {
     dcV.set(v);
 
     BitSet next = domTreeSucc[v];
-    for (int i = next.nextSetBit(0); i >= 0; i = next.nextSetBit(i + 1)) transitiveClosure(i, dcV);
+    for (int i = next.nextSetBit(0); i >= 0; i = next.nextSetBit(i + 1)) {
+      transitiveClosure(i, dcV);
+    }
   }
 
   public void generate(String filename) {

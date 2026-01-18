@@ -123,15 +123,21 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private int stampValue;
   private final Comparator<XDomain> compareLowerBound =
       (o1, o2) -> {
-        if (o1.min() < o2.min()) return -1;
-        else if (o1.min() > o2.min()) return 1;
+        if (o1.min() < o2.min()) {
+          return -1;
+        } else if (o1.min() > o2.min()) {
+          return 1;
+        }
         return 0;
       };
 
   private final Comparator<XDomain> sortPriorityMinOrder =
       (o1, o2) -> {
-        if (o1.max() < o2.max()) return -1;
-        else if (o1.max() > o2.max()) return 1;
+        if (o1.max() < o2.max()) {
+          return -1;
+        } else if (o1.max() > o2.max()) {
+          return 1;
+        }
 
         return 0;
       };
@@ -213,10 +219,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // here I will put normalization
     IntervalDomain d = new IntervalDomain();
 
-    for (IntVar aX : x) d = (IntervalDomain) d.union(aX.domain);
+    for (IntVar aX : x) {
+      d = (IntervalDomain) d.union(aX.domain);
+    }
 
     // I check the consistency of the x and y variable
-    if (d.getSize() != counters.length && (d.max() - d.min() + 1) != counters.length)
+    if (d.getSize() != counters.length && (d.max() - d.min() + 1) != counters.length) {
       // if there are more y variable than x variable there is a mistake of conseption
       // as the rest of y variables are 0 in any case. The problem is to know which y variable
       // should not be here. With normalization we assume that it is the last ones in the
@@ -224,25 +232,34 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // user determine what is correct.
       throw new IllegalArgumentException(
           "GCC failure : join domain of x variables doesn't cover all count variables");
+    }
 
     // no changes required
-    if (d.getSize() == counters.length) return counters;
+    if (d.getSize() == counters.length) {
+      return counters;
+    }
 
     // zero counters encountered.
     result = new IntVar[d.getSize()];
     zeroCounters = new HashSet<>();
 
     int i = 0;
-    for (int k = d.min(); k <= d.max(); k++)
-      if (d.contains(k)) result[i++] = counters[k - d.min()];
-      else zeroCounters.add(counters[k - d.min()]);
+    for (int k = d.min(); k <= d.max(); k++) {
+      if (d.contains(k)) {
+        result[i++] = counters[k - d.min()];
+      } else {
+        zeroCounters.add(counters[k - d.min()]);
+      }
+    }
 
     return result;
   }
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -258,9 +275,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // after the stamp value
     if (firstConsistencyCheck) {
 
-      if (zeroCounters != null)
-        for (IntVar zeroCounter : zeroCounters)
+      if (zeroCounters != null) {
+        for (IntVar zeroCounter : zeroCounters) {
           zeroCounter.domain.inValue(store.level, zeroCounter, 0);
+        }
+      }
 
       int k = 0;
 
@@ -302,7 +321,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         if (var.singleton() && xNodesHash.containsKey(var)) {
           // if
           if (xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
-            if (debug) IO.println(" in xVariableToChange: " + var);
+            if (debug) {
+              IO.println(" in xVariableToChange: " + var);
+            }
             if (stamp.value() > 0) {
               stamp.update(stamp.value() - 1);
               putToTheEnd(x, xNodesHash.get(var));
@@ -315,7 +336,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       if (debug) {
         IO.println("XNodes");
-        for (int i = 0; i < xSize; i++) IO.println(x[i]);
+        for (int i = 0; i < xSize; i++) {
+          IO.println(x[i]);
+        }
         IO.println("stamp before " + stamp.value());
       }
 
@@ -332,19 +355,27 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
             findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
 
         xDomain[i].twin = x[i];
-        if (debug) IO.println(xDomain[i]);
+        if (debug) {
+          IO.println(xDomain[i]);
+        }
       }
-      if (debug) IO.println("YDomain");
+      if (debug) {
+        IO.println("YDomain");
+      }
 
       // put all yNodes in yDomain
       for (int i = 0; i < ySize; i++) {
         yDomain[0][i] = counters[i].min();
         yDomain[1][i] = counters[i].max();
 
-        if (debug) IO.println(yDomain[i]);
+        if (debug) {
+          IO.println(yDomain[i]);
+        }
       }
 
-      if (debug) IO.println("take out singleton xNodes");
+      if (debug) {
+        IO.println("take out singleton xNodes");
+      }
 
       // check all xNodes and if singleton change the yDomain value
       // to count down the xNode already link to this yNode
@@ -356,14 +387,18 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
             yDomain[0][value]--;
           }
           yDomain[1][value]--;
-          if (yDomain[1][value] < 0) throw Store.failException;
+          if (yDomain[1][value] < 0) {
+            throw Store.failException;
+          }
         }
       }
 
       if (debug) {
         IO.println("pass in consistency");
         IO.println("YDomain");
-        for (int i = 0; i < ySize; i++) IO.println(yDomain[i]);
+        for (int i = 0; i < ySize; i++) {
+          IO.println(yDomain[i]);
+        }
       }
 
       sortXByDomainMin();
@@ -383,9 +418,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         int cutMin = xDomain[j].min();
         int cutMax = xDomain[j].max();
 
-        if (debug) IO.println("cutmax " + cutMax);
+        if (debug) {
+          IO.println("cutmax " + cutMax);
+        }
 
-        while (compOfY[match3[j]] != compOfY[cutMin]) cutMin++;
+        while (compOfY[match3[j]] != compOfY[cutMin]) {
+          cutMin++;
+        }
 
         while (compOfY[match3[j]] != compOfY[cutMax]) {
           cutMax--;
@@ -393,7 +432,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         int id = xNodesHash.get(xDomain[j].twin);
 
-        if (debug)
+        if (debug) {
           IO.println(
               "do pruning ["
                   + x[id].min()
@@ -404,6 +443,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
                   + ","
                   + cutMax
                   + "]");
+        }
 
         xDomain[j].setDomain(cutMin, cutMax);
         IntVar v = x[id];
@@ -419,7 +459,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           int value = findPosition(x[i].value(), domainHash);
           yDomain[1][value]--;
           if (yDomain[1][value] < 0) {
-            if (debug) IO.println("failure in putting back yNodes domain");
+            if (debug) {
+              IO.println("failure in putting back yNodes domain");
+            }
             throw Store.failException;
           }
         }
@@ -436,10 +478,17 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    */
   private boolean checkXorder() {
 
-    for (int i = this.stamp.value() - 1; i >= 0; i--) if (this.x[i].singleton()) return false;
+    for (int i = this.stamp.value() - 1; i >= 0; i--) {
+      if (this.x[i].singleton()) {
+        return false;
+      }
+    }
 
-    for (int i = this.stamp.value(); i < this.x.length; i++)
-      if (!this.x[i].singleton()) return false;
+    for (int i = this.stamp.value(); i < this.x.length; i++) {
+      if (!this.x[i].singleton()) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -464,10 +513,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // here I will put normalization
     IntervalDomain d = new IntervalDomain();
 
-    for (int i = 0; i < xSize; i++) d = (IntervalDomain) d.union(x[i].domain);
+    for (int i = 0; i < xSize; i++) {
+      d = (IntervalDomain) d.union(x[i].domain);
+    }
 
     // I check the consistency of the x and y variable
-    if (d.getSize() != ySize)
+    if (d.getSize() != ySize) {
       // if there are more y variable than x variable there is a mistake of conseption
       // as the rest of y variables are 0 in any case. The problem is to know which y variable
       // should not be here. With normalization we assume that it is the last ones in the
@@ -475,6 +526,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // user determine what is correct.
       throw new IllegalArgumentException(
           "GCC failure : join domain of x variables doesn't cover all count variables");
+    }
 
     domainHash = new int[d.getSize()];
     IntervalDomainValueEnumeration venum = new IntervalDomainValueEnumeration(d);
@@ -486,10 +538,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     } while (venum.hasMoreElements());
 
-    for (i = 0; i < xSize; i++)
+    for (i = 0; i < xSize; i++) {
       this.xDomain[i] =
           new XDomain(
               x[i], findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
+    }
 
     for (i = 0; i < ySize; i++) {
       this.yDomain[0][i] = counters[i].min();
@@ -500,7 +553,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (debug) IO.println("in queue variable " + var + " level " + level);
+    if (debug) {
+      IO.println("in queue variable " + var + " level " + level);
+    }
 
     // Fix suggested by Radek: the queueVariable function should store the variables that are
     // changing in a HashSet
@@ -510,20 +565,25 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     int[] count = new int[domainHash.length];
 
     for (IntVar xVar : x) {
       int xValue = xVar.value();
       int position = 0;
-      for (; position < count.length && domainHash[position] != xValue; position++)
-        ;
+      for (; position < count.length && domainHash[position] != xValue; position++) {}
       assert (position < count.length);
       count[position]++;
     }
 
-    for (int i = 0; i < counters.length; i++) if (counters[i].value() != count[i]) return false;
+    for (int i = 0; i < counters.length; i++) {
+      if (counters[i].value() != count[i]) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -534,10 +594,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     StringBuilder toString = new StringBuilder(id());
 
     toString.append(" : GCC ([");
-    for (int i = 0; i < xSize - 1; i++) toString.append(x[i].toString()).append(", ");
+    for (int i = 0; i < xSize - 1; i++) {
+      toString.append(x[i].toString()).append(", ");
+    }
     toString.append(x[xSize - 1].toString());
     toString.append("], [");
-    for (int j = 0; j < ySize - 1; j++) toString.append(counters[j].toString()).append(", ");
+    for (int j = 0; j < ySize - 1; j++) {
+      toString.append(counters[j].toString()).append(", ");
+    }
     toString.append(counters[ySize - 1].toString()).append("])");
 
     return toString.toString();
@@ -553,8 +617,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     if (debug) {
       IO.println("XDomain");
-      for (int i = 0; i < stampValue; i++)
+      for (int i = 0; i < stampValue; i++) {
         IO.println(i + " [" + xDomain[i].min() + "-" + xDomain[i].max() + "]");
+      }
     }
     // first pass
     firstPass();
@@ -585,8 +650,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private boolean checkSecondPass() {
 
-    for (int j = 1; j < stampValue; j++)
+    for (int j = 1; j < stampValue; j++) {
       assert (match2[match2XOrder[j]] >= match2[match2XOrder[j - 1]]);
+    }
 
     return true;
   }
@@ -633,7 +699,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         match1XOrderIndex++;
 
         if (xDomain[top].max() < i) {
-          if (debug) IO.println("failure first pass");
+          if (debug) {
+            IO.println("failure first pass");
+          }
 
           throw Store.failException;
           // it was checked that the min == i so max cannot be under min. Well, yes there are cases
@@ -648,7 +716,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // otherwise the element in the queue can be used by the next yNode.
     if (!pFirst.isEmpty()) {
 
-      if (debug) IO.println("failure the queue is not empty");
+      if (debug) {
+        IO.println("failure the queue is not empty");
+      }
 
       throw Store.failException;
     }
@@ -656,12 +726,16 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     if (debug) {
 
       IO.print("match1Xorder : ");
-      for (int aMatch1XOrder : match1XOrder) IO.print(aMatch1XOrder + " ");
+      for (int aMatch1XOrder : match1XOrder) {
+        IO.print(aMatch1XOrder + " ");
+      }
 
       IO.println("");
       IO.print("match1 : ");
 
-      for (int aMatch1 : match1) IO.print(aMatch1 + " ");
+      for (int aMatch1 : match1) {
+        IO.print(aMatch1 + " ");
+      }
 
       IO.println("");
     }
@@ -690,7 +764,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       for (int l = 0; l < minY; l++) {
         if (pSecond.isEmpty()) {
           // failure need to be expressed
-          if (debug) IO.println("failure second pass");
+          if (debug) {
+            IO.println("failure second pass");
+          }
 
           throw Store.failException;
         }
@@ -718,12 +794,16 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       IO.print("match2Xorder : ");
 
-      for (int aMatch2XOrder : match2XOrder) IO.print(aMatch2XOrder + " ");
+      for (int aMatch2XOrder : match2XOrder) {
+        IO.print(aMatch2XOrder + " ");
+      }
 
       IO.println("");
 
       IO.print("match2 : ");
-      for (int aMatch2 : match2) IO.print(aMatch2 + " ");
+      for (int aMatch2 : match2) {
+        IO.print(aMatch2 + " ");
+      }
 
       IO.println("");
     }
@@ -738,7 +818,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     System.arraycopy(match2, 0, match3, 0, stampValue);
 
     for (int i = ySize - 1; i >= 0; i--) {
-      while ((xIndex >= 0) && (match2[match2XOrder[xIndex]] > i)) xIndex--;
+      while ((xIndex >= 0) && (match2[match2XOrder[xIndex]] > i)) {
+        xIndex--;
+      }
 
       e = nbOfMatchPerY[i] - yDomain[1][i]; // excess of y mates
       while (e > 0) {
@@ -747,8 +829,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         while (xIndex >= 0) {
           x = match2XOrder[xIndex];
-          if (match1[x] == i) xIndex--;
-          else break;
+          if (match1[x] == i) {
+            xIndex--;
+          } else {
+            break;
+          }
         }
 
         assert (match1[x] < i);
@@ -763,7 +848,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
     if (debug) {
       IO.print("match3 : ");
-      for (int aMatch3 : match3) IO.print(aMatch3 + " ");
+      for (int aMatch3 : match3) {
+        IO.print(aMatch3 + " ");
+      }
       IO.println("");
     }
   }
@@ -780,7 +867,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int[] yReachesLeft = new int[ySize];
     int[] yReachesRight = new int[ySize];
 
-    for (int i = 0; i < ySize; i++) compOfY[i] = i;
+    for (int i = 0; i < ySize; i++) {
+      compOfY[i] = i;
+    }
 
     sccNb = SCCsWithoutS(compReachesLeft, compReachesRight, yReachesLeft, yReachesRight);
     // now compReaches(Left, Right) and compOfY contain the left and right most y per comp and to
@@ -788,15 +877,21 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     if (debug) {
       IO.println("sccNb : " + sccNb);
       IO.println("compReachesLeft ");
-      for (int aCompReachesLeft : compReachesLeft) IO.print(aCompReachesLeft + " ");
+      for (int aCompReachesLeft : compReachesLeft) {
+        IO.print(aCompReachesLeft + " ");
+      }
 
       IO.println("");
       IO.println("compReachesRight ");
-      for (int aCompReachesRight : compReachesRight) IO.print(aCompReachesRight + " ");
+      for (int aCompReachesRight : compReachesRight) {
+        IO.print(aCompReachesRight + " ");
+      }
 
       IO.println("");
       IO.println("compOfY ");
-      for (int aCompOfY : compOfY) IO.print(aCompOfY + " ");
+      for (int aCompOfY : compOfY) {
+        IO.print(aCompOfY + " ");
+      }
 
       IO.println("");
     }
@@ -817,11 +912,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       // if there are stictly more match to y than the minimum required
       // an edge exist from s to y
-      if (yDomain[0][i] < nbOfMatchPerY[i]) reachedFromS[comp] = true;
+      if (yDomain[0][i] < nbOfMatchPerY[i]) {
+        reachedFromS[comp] = true;
+      }
 
       // if there are strictly less match to y than the maximum possible
       // an edge exist from y to s
-      if (yDomain[1][i] > nbOfMatchPerY[i]) reachesS[comp] = true;
+      if (yDomain[1][i] > nbOfMatchPerY[i]) {
+        reachesS[comp] = true;
+      }
     }
 
     maxYReachedFromS = -1;
@@ -835,17 +934,25 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       // if the max y that can be reached is greater than the current y,
       // that the comp it belongs to can be reached from s.
-      if (maxYReachedFromS >= i) reachedFromS[C] = true;
+      if (maxYReachedFromS >= i) {
+        reachedFromS[C] = true;
+      }
 
       // if it's reached we can extand the max y reached to the compReachesRight of the component
-      if (reachedFromS[C]) maxYReachedFromS = Math.max(maxYReachedFromS, compReachesRight[C]);
+      if (reachedFromS[C]) {
+        maxYReachedFromS = Math.max(maxYReachedFromS, compReachesRight[C]);
+      }
 
       // same in the other way : if the ReachesLeft of the comp is under the max y that
       // reaches S this comp reaches S
-      if (compReachesLeft[C] <= maxYReachesS) reachesS[C] = true;
+      if (compReachesLeft[C] <= maxYReachesS) {
+        reachesS[C] = true;
+      }
 
       // if it's reachesS we can extand the max Y that reaches it to the current y.
-      if (reachesS[C]) maxYReachesS = Math.max(maxYReachesS, i);
+      if (reachesS[C]) {
+        maxYReachesS = Math.max(maxYReachesS, i);
+      }
     }
 
     // same as before but for minimum
@@ -857,24 +964,37 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       C = compOfY[i];
       assert (C >= 0);
       assert (C <= sccNb);
-      if (minYReachedFromS <= i) reachedFromS[C] = true;
+      if (minYReachedFromS <= i) {
+        reachedFromS[C] = true;
+      }
 
-      if (reachedFromS[C]) minYReachedFromS = Math.min(minYReachedFromS, compReachesLeft[C]);
+      if (reachedFromS[C]) {
+        minYReachedFromS = Math.min(minYReachedFromS, compReachesLeft[C]);
+      }
 
-      if (compReachesRight[C] >= minYReachesS) reachesS[C] = true;
+      if (compReachesRight[C] >= minYReachesS) {
+        reachesS[C] = true;
+      }
 
-      if (reachesS[C]) minYReachesS = Math.min(minYReachesS, i);
+      if (reachesS[C]) {
+        minYReachesS = Math.min(minYReachesS, i);
+      }
     }
 
     // merge all comp that are strongly connected through s and
     // give this new comp a new number
 
-    for (int i = 0; i < ySize; i++)
-      if (reachesS[compOfY[i]] && reachedFromS[compOfY[i]]) compOfY[i] = sccNb;
+    for (int i = 0; i < ySize; i++) {
+      if (reachesS[compOfY[i]] && reachedFromS[compOfY[i]]) {
+        compOfY[i] = sccNb;
+      }
+    }
 
     if (debug) {
       IO.println("compOfY after S ");
-      for (int aCompOfY : compOfY) IO.print(aCompOfY + " ");
+      for (int aCompOfY : compOfY) {
+        IO.print(aCompOfY + " ");
+      }
 
       IO.println("");
     }
@@ -911,7 +1031,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // this first part treat the case we have a new component.
       // (c1.max < C.root)
 
-      while ((!S2.isEmpty()) && ((S2.peek().maxX < C.root))) {
+      while ((!S2.isEmpty()) && (S2.peek().maxX < C.root)) {
         compReachesLeft[sccNb] = ySize;
         compReachesRight[sccNb] = -1;
 
@@ -991,11 +1111,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
     if (debug) {
       IO.println("yReachesLeft ");
-      for (i = 0; i < yReachesLeft.length; i++) IO.print(yReachesLeft[i] + " ");
+      for (i = 0; i < yReachesLeft.length; i++) {
+        IO.print(yReachesLeft[i] + " ");
+      }
 
       IO.println("");
       IO.println("yReachesRight ");
-      for (i = 0; i < yReachesRight.length; i++) IO.print(yReachesRight[i] + " ");
+      for (i = 0; i < yReachesRight.length; i++) {
+        IO.print(yReachesRight[i] + " ");
+      }
 
       IO.println("");
     }
@@ -1030,17 +1154,21 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     if (debug) {
       IO.println("max_u ");
-      for (int aMax_u : max_u) IO.print(aMax_u + " ");
+      for (int aMax_u : max_u) {
+        IO.print(aMax_u + " ");
+      }
 
       IO.println("");
       IO.println("min_l ");
-      for (int aMin_l : min_l) IO.print(aMin_l + " ");
+      for (int aMin_l : min_l) {
+        IO.print(aMin_l + " ");
+      }
 
       IO.println("");
     }
     // do the pruning of the domain
     for (int i = 0; i < ySize; i++) {
-      if (debug)
+      if (debug) {
         IO.println(
             "do pruning ["
                 + counters[i].min()
@@ -1051,6 +1179,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
                 + ","
                 + max_u[i]
                 + "]");
+      }
 
       if (yDomain[1][i] != max_u[i] || yDomain[0][i] != min_l[i]) {
         yDomain[0][i] = min_l[i];
@@ -1058,7 +1187,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
     // add the rest of nodes not treated in this pass that was already singleton
-    if (debug) IO.println("increase yDomain with xNodes singleton");
+    if (debug) {
+      IO.println("increase yDomain with xNodes singleton");
+    }
 
     for (int i = 0; i < xSize; i++) {
       if (x[i].singleton()) {
@@ -1069,10 +1200,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
 
-    if (debug) IO.println("set yNodes");
+    if (debug) {
+      IO.println("set yNodes");
+    }
 
-    for (int i = 0; i < ySize; i++)
+    for (int i = 0; i < ySize; i++) {
       counters[i].domain.in(store.level, counters[i], yDomain[0][i], yDomain[1][i]);
+    }
   }
 
   private void upperCount(int[] max_u) {
@@ -1086,7 +1220,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         if (match2[x] == i) {
           pCount.add(match1[x]);
           xIndex--;
-        } else break;
+        } else {
+          break;
+        }
       }
       max_u[i] = Math.min(yDomain[1][i], pCount.size());
       for (int l = 0; l < yDomain[0][i]; l++) {
@@ -1112,7 +1248,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         if (match2[x] == i) {
           pCount.add(match1[x]);
           xIndex--;
-        } else break;
+        } else {
+          break;
+        }
       }
 
       for (int l = 0; l < yDomain[0][i]; l++) {
@@ -1151,13 +1289,17 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     if (debug) {
       IO.println("Looking for " + value);
-      for (int v : values) IO.print("val " + v);
+      for (int v : values) {
+        IO.print("val " + v);
+      }
       IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debug) IO.println("left " + left + " right " + right + " position " + position);
+      if (debug) {
+        IO.println("left " + left + " right " + right + " position " + position);
+      }
 
       if (values[position] > value) {
         right = position;
@@ -1168,9 +1310,13 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       position = (left + right) >> 1;
     }
 
-    if (values[left] == value) return left;
+    if (values[left] == value) {
+      return left;
+    }
 
-    if (values[right] == value) return right;
+    if (values[right] == value) {
+      return right;
+    }
 
     return -1;
   }

@@ -41,7 +41,7 @@ import org.jacop.search.ConsistencyListener;
  */
 public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
 
-  int numberFails = 0;
+  int numberFails;
 
   int failLimit;
 
@@ -55,9 +55,12 @@ public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
    */
   public boolean executeAfterConsistency(boolean consistent) {
 
-    if (numberFails >= failLimit) return false;
-    else {
-      if (!consistent) numberFails++;
+    if (numberFails >= failLimit) {
+      return false;
+    } else {
+      if (!consistent) {
+        numberFails++;
+      }
 
       return consistent;
     }

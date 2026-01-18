@@ -110,8 +110,11 @@ public class SumBool extends PrimitiveConstraint {
     x = filterAndOverflow(list); // Arrays.copyOf(list, list.length);
     this.l = x.length;
 
-    if (l <= 2) queueIndex = 0;
-    else queueIndex = 1;
+    if (l <= 2) {
+      queueIndex = 0;
+    } else {
+      queueIndex = 1;
+    }
 
     setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
   }
@@ -177,66 +180,108 @@ public class SumBool extends PrimitiveConstraint {
 
         if (sum.singleton() && min != max) {
           int sumValue = sum.value();
-          if (sumValue == min)
-            for (int i = 0; i < l; i++)
-              if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 0);
+          if (sumValue == min) {
+            for (int i = 0; i < l; i++) {
+              if (!x[i].singleton()) {
+                x[i].domain.inValue(store.level, x[i], 0);
+              }
+            }
+          }
 
-          if (sumValue == max)
-            for (int i = 0; i < l; i++)
-              if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 1);
+          if (sumValue == max) {
+            for (int i = 0; i < l; i++) {
+              if (!x[i].singleton()) {
+                x[i].domain.inValue(store.level, x[i], 1);
+              }
+            }
+          }
         }
         break;
       case le:
         sum.domain.inMin(store.level, sum, min);
 
-        if (!reified) if (max <= sum.min()) removeConstraint();
+        if (!reified) {
+          if (max <= sum.min()) {
+            removeConstraint();
+          }
+        }
 
         if (sum.singleton(min) && min != max) {
 
-          for (int i = 0; i < l; i++)
-            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 0);
+          for (int i = 0; i < l; i++) {
+            if (!x[i].singleton()) {
+              x[i].domain.inValue(store.level, x[i], 0);
+            }
+          }
         }
         break;
       case lt:
         sum.domain.inMin(store.level, sum, min + 1);
 
-        if (!reified) if (max < sum.min()) removeConstraint();
+        if (!reified) {
+          if (max < sum.min()) {
+            removeConstraint();
+          }
+        }
 
         if (sum.singleton(min + 1) && min != max) {
 
-          for (int i = 0; i < l; i++)
-            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 0);
+          for (int i = 0; i < l; i++) {
+            if (!x[i].singleton()) {
+              x[i].domain.inValue(store.level, x[i], 0);
+            }
+          }
         }
         break;
       case ne:
-        if (min == max) sum.domain.inComplement(store.level, sum, min);
+        if (min == max) {
+          sum.domain.inComplement(store.level, sum, min);
+        }
 
         int sumMin = sum.min() - max;
         int sumMax = sum.max() - min;
-        if (sumMax - sumMin == 1)
-          for (int i = 0; i < l; i++)
-            if (!x[i].singleton()) x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
+        if (sumMax - sumMin == 1) {
+          for (int i = 0; i < l; i++) {
+            if (!x[i].singleton()) {
+              x[i].domain.inComplement(store.level, x[i], sumMin + x[i].max());
+            }
+          }
+        }
         break;
       case gt:
         sum.domain.inMax(store.level, sum, max - 1);
 
-        if (!reified) if (min > sum.max()) removeConstraint();
+        if (!reified) {
+          if (min > sum.max()) {
+            removeConstraint();
+          }
+        }
 
         if (sum.singleton(max - 1) && min != max) {
 
-          for (int i = 0; i < l; i++)
-            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 1);
+          for (int i = 0; i < l; i++) {
+            if (!x[i].singleton()) {
+              x[i].domain.inValue(store.level, x[i], 1);
+            }
+          }
         }
         break;
       case ge:
         sum.domain.inMax(store.level, sum, max);
 
-        if (!reified) if (min >= sum.max()) removeConstraint();
+        if (!reified) {
+          if (min >= sum.max()) {
+            removeConstraint();
+          }
+        }
 
         if (sum.singleton(max) && min != max) {
 
-          for (int i = 0; i < l; i++)
-            if (!x[i].singleton()) x[i].domain.inValue(store.level, x[i], 1);
+          for (int i = 0; i < l; i++) {
+            if (!x[i].singleton()) {
+              x[i].domain.inValue(store.level, x[i], 1);
+            }
+          }
         }
         break;
 
@@ -268,7 +313,9 @@ public class SumBool extends PrimitiveConstraint {
   @Override
   public void impose(Store store) {
 
-    if (x == null) return;
+    if (x == null) {
+      return;
+    }
 
     reified = false;
 
@@ -371,7 +418,9 @@ public class SumBool extends PrimitiveConstraint {
       sMin = Math.addExact(sMin, n1);
       sMax = Math.addExact(sMax, n2);
 
-      if (intVar.max() != 0) ls.add(intVar);
+      if (intVar.max() != 0) {
+        ls.add(intVar);
+      }
     }
 
     return ls.toArray(new IntVar[0]);
@@ -385,7 +434,9 @@ public class SumBool extends PrimitiveConstraint {
 
     for (int i = 0; i < l; i++) {
       result.append(x[i]);
-      if (i < l - 1) result.append(", ");
+      if (i < l - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ");
 

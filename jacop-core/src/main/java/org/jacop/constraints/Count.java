@@ -140,13 +140,15 @@ public class Count extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.contains(value))
+      if (v.domain.contains(value)) {
         if (v.singleton()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
@@ -192,13 +194,15 @@ public class Count extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.contains(value))
+      if (v.domain.contains(value)) {
         if (v.singleton()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
@@ -209,7 +213,9 @@ public class Count extends PrimitiveConstraint {
       return;
     }
 
-    if (start == list.length) counter.domain.inComplement(store.level, counter, numberEq);
+    if (start == list.length) {
+      counter.domain.inComplement(store.level, counter, numberEq);
+    }
 
     equal.update(numberEq);
     position.update(start);
@@ -229,11 +235,15 @@ public class Count extends PrimitiveConstraint {
     int eq = 0;
     int notEq = 0;
 
-    for (IntVar v : list)
-      if (v.singleton(value)) eq++;
-      else if (!v.domain.contains(value)) notEq++;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        eq++;
+      } else if (!v.domain.contains(value)) {
+        notEq++;
+      }
+    }
 
-    return (eq + notEq == list.length && counter.singleton(eq));
+    return eq + notEq == list.length && counter.singleton(eq);
   }
 
   @Override
@@ -242,11 +252,15 @@ public class Count extends PrimitiveConstraint {
     int eq = 0;
     int notEq = 0;
 
-    for (IntVar v : list)
-      if (v.singleton(value)) eq++;
-      else if (!v.domain.contains(value)) notEq++;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        eq++;
+      } else if (!v.domain.contains(value)) {
+        notEq++;
+      }
+    }
 
-    return (eq + notEq == list.length && !counter.domain.contains(eq));
+    return eq + notEq == list.length && !counter.domain.contains(eq);
   }
 
   @Override
@@ -258,7 +272,9 @@ public class Count extends PrimitiveConstraint {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(counter).append(" )");

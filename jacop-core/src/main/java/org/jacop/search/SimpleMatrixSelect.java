@@ -74,10 +74,10 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
   /** It stores variables which need to be labelled. */
   public final List<List<T>> searchVariables = new ArrayList<>();
 
-  ComparatorVariable<T> mainComparator = null;
-  ComparatorVariable<T> tieBreakingComparator = null;
-  int primaryIndex = 0;
-  int secondaryIndex = 0;
+  ComparatorVariable<T> mainComparator;
+  ComparatorVariable<T> tieBreakingComparator;
+  int primaryIndex;
+  int secondaryIndex;
   Indomain<T> valueOrdering;
 
   /**
@@ -156,7 +156,9 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
       for (T t : var) {
         current.add(t);
-        if (!position.containsKey(t)) position.put(t, no++);
+        if (!position.containsKey(t)) {
+          position.put(t, no++);
+        }
       }
 
       searchVariables.add(current);
@@ -185,12 +187,13 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
         List<T> row = searchVariables.get(firstVariable);
 
-        for (int i = 0; i < row.size(); i++)
+        for (int i = 0; i < row.size(); i++) {
           if (!row.get(i).singleton()) {
             primaryIndex = firstVariable;
             secondaryIndex = i;
             return row.get(i);
           }
+        }
 
         firstVariable++;
       }
@@ -209,8 +212,11 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
         boolean allGrounded = true;
 
-        for (int i = row.size() - 1; i >= 0 && allGrounded; i--)
-          if (!row.get(i).singleton()) allGrounded = false;
+        for (int i = row.size() - 1; i >= 0 && allGrounded; i--) {
+          if (!row.get(i).singleton()) {
+            allGrounded = false;
+          }
+        }
 
         if (allGrounded) {
 
@@ -252,14 +258,19 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
         boolean allGrounded = true;
 
-        for (int i = row.size() - 1; i >= 0 && allGrounded; i--)
-          if (!row.get(i).singleton()) allGrounded = false;
+        for (int i = row.size() - 1; i >= 0 && allGrounded; i--) {
+          if (!row.get(i).singleton()) {
+            allGrounded = false;
+          }
+        }
 
         if (allGrounded) {
           // switch rows.
           searchVariables.set(currentPosition, searchVariables.get(firstVariable));
           searchVariables.set(firstVariable, row);
-          if (optimalPosition == firstVariable) optimalPosition = currentPosition;
+          if (optimalPosition == firstVariable) {
+            optimalPosition = currentPosition;
+          }
           firstVariable++;
           // work with next row, that one was composed of singletons only.
           continue;
@@ -275,15 +286,16 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
         optimalMetric = mainComparator.metric(v);
       } else {
 
-        if (comparison == 0)
+        if (comparison == 0) {
           if (tieBreakingComparator != null) {
 
             int comp =
                 tieBreakingComparator.compare(
                     searchVariables.get(optimalPosition).get(pivotPosition), v);
 
-            if (comp < 0) optimalPosition = currentPosition;
-            else if (comp == 0 && inputOrderTieBreaking) {
+            if (comp < 0) {
+              optimalPosition = currentPosition;
+            } else if (comp == 0 && inputOrderTieBreaking) {
               // Employs input order tie breaking
 
               int position1 = position.get(searchVariables.get(optimalPosition).get(pivotPosition));
@@ -312,6 +324,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
               }
             }
           }
+        }
       }
     }
 
@@ -325,11 +338,12 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     primaryIndex = optimalPosition;
     List<T> row = searchVariables.get(primaryIndex);
-    for (int i = 0; i < row.size(); i++)
+    for (int i = 0; i < row.size(); i++) {
       if (!row.get(i).singleton()) {
         secondaryIndex = i;
         break;
       }
+    }
 
     return searchVariables.get(primaryIndex).get(secondaryIndex);
   }

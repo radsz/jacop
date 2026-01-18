@@ -54,7 +54,9 @@ class ReificationConstraints extends ChannelMap {
       IntVar var = e.getKey();
       Map<Integer, IntVar> vb = e.getValue();
 
-      if (vb.size() > minSize) support.pose(new ChannelReif(var, vb));
+      if (vb.size() > minSize) {
+        support.pose(new ChannelReif(var, vb));
+      }
     }
   }
 }

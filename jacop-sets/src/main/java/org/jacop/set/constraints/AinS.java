@@ -94,8 +94,9 @@ public class AinS extends PrimitiveConstraint {
 
     a.domain.inLUB(store.level, a, set);
 
-    if (strict && set.getSize() - 1 == a.domain.glb().getSize())
+    if (strict && set.getSize() - 1 == a.domain.glb().getSize()) {
       a.domain.inLUBComplement(store.level, a, set.subtract(a.domain.glb()).value());
+    }
   }
 
   @Override
@@ -134,19 +135,27 @@ public class AinS extends PrimitiveConstraint {
 
     // TODO, test it properly.
 
-    if (a.domain.lub().getSize() > set.getSize() + 1) return;
+    if (a.domain.lub().getSize() > set.getSize() + 1) {
+      return;
+    }
 
-    if (!set.contains(a.domain.glb())) return;
+    if (!set.contains(a.domain.glb())) {
+      return;
+    }
 
     IntDomain result = a.domain.lub().subtract(set);
 
-    if (result.isEmpty())
+    if (result.isEmpty()) {
       if (strict) {
-        if (a.domain.lub().getSize() < set.getSize()) throw Store.failException;
-        else {
+        if (a.domain.lub().getSize() < set.getSize()) {
+          throw Store.failException;
+        } else {
           a.domain.inGLB(store.level, a, a.domain.lub());
         }
-      } else throw Store.failException;
+      } else {
+        throw Store.failException;
+      }
+    }
 
     if (!strict && result.getSize() == 1) {
       // to remain inconsistency the last value which can make this constraint

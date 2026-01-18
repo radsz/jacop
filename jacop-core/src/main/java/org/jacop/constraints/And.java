@@ -108,7 +108,9 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
       // Variable propagation can be set to true again if queueVariable function is being called.
       propagation = false;
 
-      for (Constraint cc : listOfC) cc.consistency(store);
+      for (Constraint cc : listOfC) {
+        cc.consistency(store);
+      }
 
     } while (propagation);
   }
@@ -141,8 +143,11 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
         numberCertainNotSat++;
         removeConstraint();
       } else {
-        if (listOfC[i].satisfied()) numberCertainSat++;
-        else j = i;
+        if (listOfC[i].satisfied()) {
+          numberCertainSat++;
+        } else {
+          j = i;
+        }
       }
       i++;
     }
@@ -150,7 +155,9 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
     if (numberCertainNotSat == 0) {
       if (numberCertainSat == listOfC.length - 1) {
         listOfC[j].notConsistency(store);
-      } else if (numberCertainSat == listOfC.length) throw Store.failException;
+      } else if (numberCertainSat == listOfC.length) {
+        throw Store.failException;
+      }
     }
   }
 
@@ -176,7 +183,11 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public boolean satisfied() {
 
-    for (PrimitiveConstraint c : listOfC) if (!c.satisfied()) return false;
+    for (PrimitiveConstraint c : listOfC) {
+      if (!c.satisfied()) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -190,7 +201,9 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
 
     for (int i = 0; i < listOfC.length; i++) {
       result.append(listOfC[i]);
-      if (i != listOfC.length - 1) result.append(", ");
+      if (i != listOfC.length - 1) {
+        result.append(", ");
+      }
     }
     result.append(")");
     return result.toString();

@@ -108,13 +108,19 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
         removeConstraint();
         return;
       } else {
-        if (listOfC[i].notSatisfied()) numberNotSat++;
-        else j = i;
+        if (listOfC[i].notSatisfied()) {
+          numberNotSat++;
+        } else {
+          j = i;
+        }
       }
     }
 
-    if (numberNotSat == n - 1) listOfC[j].consistency(store);
-    else if (numberNotSat == n) throw Store.failException;
+    if (numberNotSat == n - 1) {
+      listOfC[j].consistency(store);
+    } else if (numberNotSat == n) {
+      throw Store.failException;
+    }
   }
 
   @Override
@@ -147,8 +153,9 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
     do {
 
       propagation = false;
-      for (PrimitiveConstraint primitiveConstraint : listOfC)
+      for (PrimitiveConstraint primitiveConstraint : listOfC) {
         primitiveConstraint.notConsistency(store);
+      }
 
     } while (propagation);
   }
@@ -184,8 +191,11 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
     result.append(" : Or( ");
     for (int i = 0; i < listOfC.length; i++) {
       result.append(listOfC[i]);
-      if (i == listOfC.length - 1) result.append("),");
-      else result.append(", ");
+      if (i == listOfC.length - 1) {
+        result.append("),");
+      } else {
+        result.append(", ");
+      }
     }
     return result.toString();
   }

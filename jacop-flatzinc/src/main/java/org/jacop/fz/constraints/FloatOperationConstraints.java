@@ -105,7 +105,7 @@ class FloatOperationConstraints implements ParserTreeConstants {
 
     FloatVar tmp = new FloatVar(store, -1e150, 1e150);
     support.pose(new LnPeqR(support.getFloatVariable(p1), tmp));
-    support.pose(new PdivCeqR(tmp, java.lang.Math.log(10), support.getFloatVariable(p2)));
+    support.pose(new PdivCeqR(tmp, Math.log(10), support.getFloatVariable(p2)));
   }
 
   void gen_float_log2(SimpleNode node) {
@@ -114,7 +114,7 @@ class FloatOperationConstraints implements ParserTreeConstants {
 
     FloatVar tmp = new FloatVar(store, -1e150, 1e150);
     support.pose(new LnPeqR(support.getFloatVariable(p1), tmp));
-    support.pose(new PdivCeqR(tmp, java.lang.Math.log(2), support.getFloatVariable(p2)));
+    support.pose(new PdivCeqR(tmp, Math.log(2), support.getFloatVariable(p2)));
   }
 
   void gen_float_sqrt(SimpleNode node) {
@@ -153,7 +153,7 @@ class FloatOperationConstraints implements ParserTreeConstants {
     FloatVar v2 = support.getFloatVariable(p2);
     FloatVar v3 = support.getFloatVariable(p3);
 
-    support.pose(new org.jacop.floats.constraints.Max(new FloatVar[] {v1, v2}, v3));
+    support.pose(new Max(new FloatVar[] {v1, v2}, v3));
   }
 
   void gen_float_min(SimpleNode node) {
@@ -165,7 +165,7 @@ class FloatOperationConstraints implements ParserTreeConstants {
     FloatVar v2 = support.getFloatVariable(p2);
     FloatVar v3 = support.getFloatVariable(p3);
 
-    support.pose(new org.jacop.floats.constraints.Min(new FloatVar[] {v1, v2}, v3));
+    support.pose(new Min(new FloatVar[] {v1, v2}, v3));
   }
 
   void gen_float_plus(SimpleNode node) {
@@ -181,12 +181,13 @@ class FloatOperationConstraints implements ParserTreeConstants {
       support.pose(
           new PplusCeqR(
               support.getFloatVariable(p1), support.getFloat(p2), support.getFloatVariable(p3)));
-    } else
+    } else {
       support.pose(
           new PplusQeqR(
               support.getFloatVariable(p1),
               support.getFloatVariable(p2),
               support.getFloatVariable(p3)));
+    }
   }
 
   void gen_float_times(SimpleNode node) {
@@ -202,12 +203,13 @@ class FloatOperationConstraints implements ParserTreeConstants {
       support.pose(
           new PmulCeqR(
               support.getFloatVariable(p1), support.getFloat(p2), support.getFloatVariable(p3)));
-    } else
+    } else {
       support.pose(
           new PmulQeqR(
               support.getFloatVariable(p1),
               support.getFloatVariable(p2),
               support.getFloatVariable(p3)));
+    }
   }
 
   void gen_float_pow(SimpleNode node) {
@@ -219,7 +221,7 @@ class FloatOperationConstraints implements ParserTreeConstants {
     FloatVar v2 = support.getFloatVariable(p2);
     FloatVar v3 = support.getFloatVariable(p3);
 
-    if (v1.min() < 0)
+    if (v1.min() < 0) {
       if (v2.min() == v2.max() && Math.ceil(v2.max()) == v2.max()) {
         // case for integer exponent
 
@@ -234,23 +236,26 @@ class FloatOperationConstraints implements ParserTreeConstants {
         support.pose(new PmulQeqR(tmp1, v2, tmp2));
         support.pose(new ExpPeqR(tmp2, tmp3));
 
-        if (exponent % 2 == 0)
+        if (exponent % 2 == 0) {
           // even
           support.pose(new PeqQ(tmp3, v3));
-        else
+        } else {
           // odd
           support.pose(
               new IfThenElse(
                   new PltC(v1, 0),
                   new PplusQeqR(tmp3, v3, new FloatVar(store, 0, 0)),
                   new PeqQ(tmp3, v3)));
+        }
 
         return;
-      } else
+      } else {
         System.err.println(
             "%% WARNING: constraint float_pow is not defined for negative numbers as first argument (decomposition x^y = exp(y*ln(x))); "
                 + v1
                 + " has minimal value negative (will be pruned).");
+      }
+    }
 
     FloatVar tmp1 = new FloatVar(store, -1e150, 1e150);
     FloatVar tmp2 = new FloatVar(store, -1e150, 1e150);

@@ -284,9 +284,9 @@ public abstract class Domain {
    * @return the number of constraint attached to this domain.
    */
   public int sizeConstraints() {
-    return (modelConstraintsToEvaluate[0]
+    return modelConstraintsToEvaluate[0]
         + modelConstraintsToEvaluate[1]
-        + modelConstraintsToEvaluate[2]);
+        + modelConstraintsToEvaluate[2];
   }
 
   /**
@@ -308,12 +308,17 @@ public abstract class Domain {
 
     List<Constraint> result = new ArrayList<>(searchConstraints);
 
-    if (modelConstraints != null)
+    if (modelConstraints != null) {
       for (int i = 0; i < modelConstraints.length; i++) {
-        for (int j = modelConstraintsToEvaluate[i]; j >= 0; j--)
-          if (modelConstraints[i] != null)
-            if (j < modelConstraints[i].length) result.add(modelConstraints[i][j]);
+        for (int j = modelConstraintsToEvaluate[i]; j >= 0; j--) {
+          if (modelConstraints[i] != null) {
+            if (j < modelConstraints[i].length) {
+              result.add(modelConstraints[i][j]);
+            }
+          }
+        }
       }
+    }
 
     return result;
   }

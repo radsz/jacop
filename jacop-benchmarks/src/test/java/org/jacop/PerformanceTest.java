@@ -97,7 +97,9 @@ public class PerformanceTest extends TestHelper {
     IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
     IntVar n = new IntVar(store, "sum", 237, 240);
     int[] weights = new int[xLength];
-    for (int i = 0; i < weights.length; i++) weights[i] = i % 6;
+    for (int i = 0; i < weights.length; i++) {
+      weights[i] = i % 6;
+    }
 
     SumWeight sum = new SumWeight(x, weights, n);
 
@@ -119,7 +121,9 @@ public class PerformanceTest extends TestHelper {
     IntVar[] x = getIntVars(store, "x", xLength, xSize + 1);
     IntVar n = new IntVar(store, "sum", 237, 240);
     int[] weights = new int[xLength];
-    for (int i = 0; i < weights.length; i++) weights[i] = i % 6;
+    for (int i = 0; i < weights.length; i++) {
+      weights[i] = i % 6;
+    }
 
     LinearInt sum = new LinearInt(x, weights, "==", n);
 

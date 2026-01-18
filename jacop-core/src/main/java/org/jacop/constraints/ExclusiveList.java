@@ -54,8 +54,9 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
     int i = 0;
     while (c == null && i < size()) {
       ExclusiveItem v = get(i);
-      if (((n + 1) == v.i1() && (m + 1) == v.i2()) || ((m + 1) == v.i1() && (n + 1) == v.i2()))
+      if (((n + 1) == v.i1() && (m + 1) == v.i2()) || ((m + 1) == v.i1() && (n + 1) == v.i2())) {
         c = v.cond();
+      }
       i++;
     }
     return c;
@@ -65,8 +66,11 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
     List<IntVar> list = new ArrayList<>();
     for (int i = 0; i < size(); i++) {
       ExclusiveItem v = get(i);
-      if (index == v.i1() && !v.cond().singleton()) list.add(v.cond());
-      else if (index == v.i2() && !v.cond().singleton()) list.add(v.cond());
+      if (index == v.i1() && !v.cond().singleton()) {
+        list.add(v.cond());
+      } else if (index == v.i2() && !v.cond().singleton()) {
+        list.add(v.cond());
+      }
     }
     return list;
   }
@@ -75,8 +79,11 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
     ExclusiveList list = new ExclusiveList();
     for (int i = 0; i < size(); i++) {
       ExclusiveItem v = get(i);
-      if (index == v.i1()) list.add(v);
-      else if (index == v.i2()) list.add(new ExclusiveItem(v.i2(), v.i1(), v.cond()));
+      if (index == v.i1()) {
+        list.add(v);
+      } else if (index == v.i2()) {
+        list.add(new ExclusiveItem(v.i2(), v.i1(), v.cond()));
+      }
     }
     return list;
   }
@@ -101,7 +108,9 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
 
       result.append(this.get(i).toString());
 
-      if (i + 1 < this.size()) result.append(", ");
+      if (i + 1 < this.size()) {
+        result.append(", ");
+      }
     }
 
     result.append("]");

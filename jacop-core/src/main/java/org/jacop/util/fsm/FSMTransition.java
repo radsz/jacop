@@ -75,9 +75,13 @@ public class FSMTransition {
   @Override
   public boolean equals(Object o) {
 
-    if (o == null) return false;
+    if (o == null) {
+      return false;
+    }
 
-    if (o == this) return true;
+    if (o == this) {
+      return true;
+    }
 
     FSMTransition compareTo = (FSMTransition) o;
 

@@ -80,9 +80,9 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
   final ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
-  int numberBoolVariables = 0;
-  int numberFloatVariables = 0;
-  int numberSetVariables = 0;
+  int numberBoolVariables;
+  int numberFloatVariables;
+  int numberSetVariables;
 
   /**
    * It constructs the storage object to store different objects, like int, array of ints, sets, ...
@@ -129,16 +129,22 @@ public class Tables {
 
   public void addAlias(IntVar b, IntVar v) {
     IntVar x = aliasTable.get(v);
-    if (x == null) aliasTable.put(v, b);
-    else System.err.println("%% Double int var alias for bool var");
+    if (x == null) {
+      aliasTable.put(v, b);
+    } else {
+      System.err.println("%% Double int var alias for bool var");
+    }
 
     // System.out.println(v + " is alias of " + b);
   }
 
   IntVar getAlias(IntVar b) {
     IntVar v = aliasTable.get(b);
-    if (v == null) return b;
-    else return v;
+    if (v == null) {
+      return b;
+    } else {
+      return v;
+    }
   }
 
   void removeAliasFromSearch() {
@@ -169,8 +175,9 @@ public class Tables {
    */
   public int getInt(String ident) {
     Integer iVal = intTable.get(ident);
-    if (iVal != null) return iVal;
-    else {
+    if (iVal != null) {
+      return iVal;
+    } else {
       throw new RuntimeException(
           "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
     }
@@ -204,8 +211,9 @@ public class Tables {
    */
   public double getFloat(String ident) {
     Double dVal = floatTable.get(ident);
-    if (dVal != null) return dVal;
-    else {
+    if (dVal != null) {
+      return dVal;
+    } else {
       throw new RuntimeException(
           "Symbol \"" + ident + "\" does not have assigned value when refered; execution aborted");
     }
@@ -366,8 +374,14 @@ public class Tables {
         for (int i = 0; i < intA.length; i++) {
           a[i] = getConstant(intA[i]);
         }
-      } else return null;
-    } else for (int i = 0; i < a.length; i++) a[i] = getAlias(a[i]);
+      } else {
+        return null;
+      }
+    } else {
+      for (int i = 0; i < a.length; i++) {
+        a[i] = getAlias(a[i]);
+      }
+    }
     return a;
   }
 
@@ -396,7 +410,9 @@ public class Tables {
         for (int i = 0; i < floatA.length; i++) {
           a[i] = getFloatConstant(floatA[i]); // new FloatVar(store, floatA[i], floatA[i]);
         }
-      } else throw new IllegalArgumentException("Array identifier does not exist: " + ident);
+      } else {
+        throw new IllegalArgumentException("Array identifier does not exist: " + ident);
+      }
     }
     return a;
   }
@@ -465,8 +481,15 @@ public class Tables {
    * @return true if variable is output, false otherwise
    */
   public boolean isOutput(Var v) {
-    if (outputVariables.contains(v)) return true;
-    else for (OutputArrayAnnotation oa : outputArray) if (oa.contains(v)) return true;
+    if (outputVariables.contains(v)) {
+      return true;
+    } else {
+      for (OutputArrayAnnotation oa : outputArray) {
+        if (oa.contains(v)) {
+          return true;
+        }
+      }
+    }
 
     return false;
   }
@@ -620,13 +643,15 @@ public class Tables {
       if (i == indexIntArray) {
         s.append(tableNames[i]).append("\n");
         s.append("{");
-        java.util.Set<String> keys = dictionary[i].keySet();
+        Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           int[] a = (int[]) dictionary[i].get(k);
           s.append(k).append("=[");
           for (int j = 0; j < a.length; j++) {
             s.append(a[j]);
-            if (j < a.length - 1) s.append(", ");
+            if (j < a.length - 1) {
+              s.append(", ");
+            }
           }
           s.append("], ");
         }
@@ -636,13 +661,15 @@ public class Tables {
       else if (i == indexFloatArray) {
         s.append(tableNames[i]).append("\n");
         s.append("{");
-        java.util.Set<String> keys = dictionary[i].keySet();
+        Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           double[] a = (double[]) dictionary[i].get(k);
           s.append(k).append("=[");
           for (int j = 0; j < a.length; j++) {
             s.append(a[j]);
-            if (j < a.length - 1) s.append(", ");
+            if (j < a.length - 1) {
+              s.append(", ");
+            }
           }
           s.append("], ");
         }
@@ -652,7 +679,7 @@ public class Tables {
       else if (i == indexSetArray) {
         s.append(tableNames[i]).append("\n");
         s.append("{");
-        java.util.Set<String> keys = dictionary[i].keySet();
+        Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           s.append(k).append("=");
           IntDomain[] a = (IntDomain[]) dictionary[i].get(k);
@@ -667,7 +694,7 @@ public class Tables {
           || i == indexSetVariableArray) {
         s.append(tableNames[i]).append("\n");
         s.append("{");
-        java.util.Set<String> keys = dictionary[i].keySet();
+        Set<String> keys = dictionary[i].keySet();
         for (String k : keys) {
           Var[] a = (Var[]) dictionary[i].get(k);
           s.append(k).append("=");
@@ -678,7 +705,7 @@ public class Tables {
       } else if (i == indexConstantTable) {
         s.append(tableNames[i]).append("\n");
         s.append("{");
-        java.util.Set<Integer> keys = dictionary[i].keySet();
+        Set<Integer> keys = dictionary[i].keySet();
         for (Integer k : keys) {
           Var a = (Var) dictionary[i].get(k);
           s.append(a);

@@ -91,8 +91,9 @@ public final class Arc {
    */
   public Arc(Node tail, Node head, int cost, int lowerCapacity, int upperCapacity) {
 
-    if (lowerCapacity > upperCapacity)
+    if (lowerCapacity > upperCapacity) {
       throw new IllegalArgumentException("lower capacity > upper capacity");
+    }
 
     this.head = head;
     this.cost = cost;
@@ -185,12 +186,18 @@ public final class Arc {
    */
   public long longCost() {
 
-    if (cost == 0) return 0L;
+    if (cost == 0) {
+      return 0L;
+    }
 
-    if (!forward) return sister.longCost();
+    if (!forward) {
+      return sister.longCost();
+    }
 
     int flow = sister.capacity;
-    if (companion != null) flow += companion.flowOffset;
+    if (companion != null) {
+      flow += companion.flowOffset;
+    }
 
     return (long) flow * (long) cost;
   }
@@ -205,7 +212,7 @@ public final class Arc {
 
     ArcCompanion comp = forward ? companion : sister.companion;
     //		String x = (companion == null) ? "" : ", offset=" + companion.flowOffset;
-    String compstr = (comp == null) ? "" : ", forward = " + forward + ", companion = " + comp;
+    String compstr = comp == null ? "" : ", forward = " + forward + ", companion = " + comp;
 
     return "["
         + tail.name
@@ -228,7 +235,7 @@ public final class Arc {
     Node tail = tail();
     int flow = sister.capacity;
     int total = capacity + flow;
-    String coststr = (cost > 0) ? "+" + cost : "" + cost;
+    String coststr = cost > 0 ? "+" + cost : "" + cost;
     return tail.name
         + "->"
         + head.name
@@ -249,7 +256,7 @@ public final class Arc {
   }
 
   public ArcCompanion getCompanion() {
-    return (companion != null) ? companion : sister.companion;
+    return companion != null ? companion : sister.companion;
   }
 
   public String name() {

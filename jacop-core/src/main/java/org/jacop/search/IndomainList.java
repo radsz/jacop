@@ -71,9 +71,15 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
   public int indomain(T var) throws RuntimeException {
 
     // FIXME, there is no better way than just creating a BoundDomain object?
-    for (int next : order) if (var.dom().contains(next)) return next;
+    for (int next : order) {
+      if (var.dom().contains(next)) {
+        return next;
+      }
+    }
 
-    if (defIndomain == null) throw new RuntimeException();
+    if (defIndomain == null) {
+      throw new RuntimeException();
+    }
 
     return defIndomain.indomain(var);
   }

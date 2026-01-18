@@ -122,7 +122,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (v3.min() == 1) {
               v1.domain.in(store.level, v1, i2, i2);
               return;
-            } else c = new PeqC(v1, i2);
+            } else {
+              c = new PeqC(v1, i2);
+            }
             break;
 
           case Support.ne:
@@ -138,7 +140,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (v3.min() == 1) {
               v1.domain.inComplement(store.level, v1, i2);
               return;
-            } else c = new PneqC(v1, i2);
+            } else {
+              c = new PneqC(v1, i2);
+            }
             break;
           case Support.lt:
             if (v1.max() < i2) {
@@ -147,7 +151,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (v1.min() >= i2) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
-            } else c = new PltC(v1, i2);
+            } else {
+              c = new PltC(v1, i2);
+            }
             break;
           case Support.le:
             if (v1.max() <= i2) {
@@ -156,7 +162,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (v1.min() > i2) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
-            } else c = new PlteqC(v1, i2);
+            } else {
+              c = new PlteqC(v1, i2);
+            }
             break;
           default:
             throw new RuntimeException("Internal error in " + getClass().getName());
@@ -179,7 +187,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (v3.min() == 1) {
               v2.domain.in(store.level, v2, i1, i1);
               return;
-            } else c = new PeqC(v2, i1);
+            } else {
+              c = new PeqC(v2, i1);
+            }
             break;
 
           case Support.ne:
@@ -189,7 +199,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (v2.min() == i1 && v2.singleton()) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
-            } else c = new PneqC(v2, i1);
+            } else {
+              c = new PneqC(v2, i1);
+            }
             break;
           case Support.lt:
             if (i1 < v2.min()) {
@@ -198,7 +210,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (i1 >= v2.max()) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
-            } else c = new PgtC(v2, i1);
+            } else {
+              c = new PgtC(v2, i1);
+            }
             break;
           case Support.le:
             if (i1 <= v2.min()) {
@@ -207,7 +221,9 @@ class FloatComparisonConstraints implements ParserTreeConstants {
             } else if (i1 > v2.max()) {
               v3.domain.in(store.level, v3, 0, 0);
               return;
-            } else c = new PgteqC(v2, i1);
+            } else {
+              c = new PgteqC(v2, i1);
+            }
             break;
           default:
             throw new RuntimeException("Internal error in " + getClass().getName());
@@ -237,16 +253,24 @@ class FloatComparisonConstraints implements ParserTreeConstants {
           double i2 = support.getFloat(p2);
           switch (operation) {
             case Support.eq:
-              if (i1 != i2) throw Store.failException;
+              if (i1 != i2) {
+                throw Store.failException;
+              }
               break;
             case Support.ne:
-              if (i1 == i2) throw Store.failException;
+              if (i1 == i2) {
+                throw Store.failException;
+              }
               break;
             case Support.lt:
-              if (i1 >= i2) throw Store.failException;
+              if (i1 >= i2) {
+                throw Store.failException;
+              }
               break;
             case Support.le:
-              if (i1 > i2) throw Store.failException;
+              if (i1 > i2) {
+                throw Store.failException;
+              }
               break;
             default:
               throw new RuntimeException("Internal error in " + getClass().getName());

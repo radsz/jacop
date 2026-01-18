@@ -57,7 +57,7 @@ public class XinA extends PrimitiveConstraint {
   public final SetVar a;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict = false;
+  public boolean strict;
 
   /**
    * It constructs an XinY constraint to restrict the domain of the variables X and Y.
@@ -95,12 +95,19 @@ public class XinA extends PrimitiveConstraint {
 
     x.domain.in(store.level, x, a.domain.lub());
 
-    if (strict) a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
-    else a.domain.inCardinality(store.level, a, 1, Integer.MAX_VALUE);
+    if (strict) {
+      a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
+    } else {
+      a.domain.inCardinality(store.level, a, 1, Integer.MAX_VALUE);
+    }
 
-    if (x.singleton()) a.domain.inGLB(store.level, a, x.value());
+    if (x.singleton()) {
+      a.domain.inGLB(store.level, a, x.value());
+    }
 
-    if (!x.domain.isIntersecting(a.domain.lub())) throw Store.failException;
+    if (!x.domain.isIntersecting(a.domain.lub())) {
+      throw Store.failException;
+    }
   }
 
   @Override
@@ -109,11 +116,16 @@ public class XinA extends PrimitiveConstraint {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == x) return IntDomain.ANY;
-    else return SetDomain.ANY;
+    if (var == x) {
+      return IntDomain.ANY;
+    } else {
+      return SetDomain.ANY;
+    }
   }
 
   @Override
@@ -127,21 +139,30 @@ public class XinA extends PrimitiveConstraint {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == x) return IntDomain.ANY;
-    else return SetDomain.GLB;
+    if (var == x) {
+      return IntDomain.ANY;
+    } else {
+      return SetDomain.GLB;
+    }
   }
 
   @Override
   public void notConsistency(Store store) {
 
-    if (x.singleton()) a.domain.inLUBComplement(store.level, a, x.value());
+    if (x.singleton()) {
+      a.domain.inLUBComplement(store.level, a, x.value());
+    }
 
     IntDomain xDom = x.domain.subtract(a.domain.glb());
 
-    if (xDom.getSize() == 0) throw Store.failException;
+    if (xDom.getSize() == 0) {
+      throw Store.failException;
+    }
 
     x.domain.in(store.level, x, xDom);
   }
@@ -164,7 +185,9 @@ public class XinA extends PrimitiveConstraint {
     if (mode) {
       if (consistencyPruningEvents != null) {
         Integer possibleEvent = consistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
 
     }
@@ -172,11 +195,16 @@ public class XinA extends PrimitiveConstraint {
     else {
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
     }
-    if (var == x) return IntDomain.ANY;
-    else return SetDomain.GLB;
+    if (var == x) {
+      return IntDomain.ANY;
+    } else {
+      return SetDomain.GLB;
+    }
   }
 
   @Override

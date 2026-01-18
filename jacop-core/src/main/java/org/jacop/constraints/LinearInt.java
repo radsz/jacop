@@ -224,9 +224,10 @@ public class LinearInt extends PrimitiveConstraint {
 
     this.relationType = relation(rel);
 
-    if (list.length != weights.length)
+    if (list.length != weights.length) {
       throw new IllegalArgumentException(
           "LinearInt has list and weights arguments of different length.");
+    }
 
     this.store = store;
     this.b = sum;
@@ -235,17 +236,24 @@ public class LinearInt extends PrimitiveConstraint {
 
     for (int i = 0; i < list.length; i++) {
       if (weights[i] != 0) {
-        if (list[i].singleton()) this.b -= (long) list[i].value() * weights[i];
-        else if (parameters.get(list[i]) != null) {
+        if (list[i].singleton()) {
+          this.b -= (long) list[i].value() * weights[i];
+        } else if (parameters.get(list[i]) != null) {
           // variable ordered in the scope of the Propagations constraint.
           Long coeff = parameters.get(list[i]);
           Long sumOfCoeff = coeff + weights[i];
           parameters.put(list[i], sumOfCoeff);
-        } else parameters.put(list[i], (long) weights[i]);
+        } else {
+          parameters.put(list[i], (long) weights[i]);
+        }
       }
     }
     int size = 0;
-    for (Long e : parameters.values()) if (e != 0) size++;
+    for (Long e : parameters.values()) {
+      if (e != 0) {
+        size++;
+      }
+    }
 
     this.x = new IntVar[size];
     this.a = new long[size];
@@ -278,8 +286,11 @@ public class LinearInt extends PrimitiveConstraint {
 
     checkForOverflow();
 
-    if (l <= 3) queueIndex = 0;
-    else queueIndex = 1;
+    if (l <= 3) {
+      queueIndex = 0;
+    } else {
+      queueIndex = 1;
+    }
 
     setScope(list);
   }
@@ -317,30 +328,49 @@ public class LinearInt extends PrimitiveConstraint {
         case le:
           pruneLtEq(b);
 
-          if (!reified) if (sumMax <= b) removeConstraint();
+          if (!reified) {
+            if (sumMax <= b) {
+              removeConstraint();
+            }
+          }
           break;
 
         case lt:
           pruneLtEq(b - 1L);
 
-          if (!reified) if (sumMax < b) removeConstraint();
+          if (!reified) {
+            if (sumMax < b) {
+              removeConstraint();
+            }
+          }
           break;
         case ne:
           pruneNeq();
 
-          if (!reified)
+          if (!reified) {
             // if (sumMin == sumMax && (sumMin > b || sumMax < b))
-            if (sumMin > b || sumMax < b) removeConstraint();
+            if (sumMin > b || sumMax < b) {
+              removeConstraint();
+            }
+          }
           break;
         case gt:
           pruneGtEq(b + 1L);
 
-          if (!reified) if (sumMin > b) removeConstraint();
+          if (!reified) {
+            if (sumMin > b) {
+              removeConstraint();
+            }
+          }
           break;
         case ge:
           pruneGtEq(b);
 
-          if (!reified) if (sumMin >= b) removeConstraint();
+          if (!reified) {
+            if (sumMin >= b) {
+              removeConstraint();
+            }
+          }
 
           break;
         default:
@@ -391,7 +421,7 @@ public class LinearInt extends PrimitiveConstraint {
       max = (long) xd.max() * a[i];
       f += min;
       e += max;
-      I[i] = (max - min);
+      I[i] = max - min;
     }
     // negative weights
     for (; i < l; i++) {
@@ -400,7 +430,7 @@ public class LinearInt extends PrimitiveConstraint {
       max = (long) xd.min() * a[i];
       f += min;
       e += max;
-      I[i] = (max - min);
+      I[i] = max - min;
     }
     sumMin = f;
     sumMax = e;
@@ -408,7 +438,9 @@ public class LinearInt extends PrimitiveConstraint {
 
   void pruneLtEq(long b) {
 
-    if (sumMin > b) throw Store.failException;
+    if (sumMin > b) {
+      throw Store.failException;
+    }
 
     long min;
     long max;
@@ -441,7 +473,9 @@ public class LinearInt extends PrimitiveConstraint {
 
   void pruneGtEq(long b) {
 
-    if (sumMax < b) throw Store.failException;
+    if (sumMax < b) {
+      throw Store.failException;
+    }
 
     long min;
     long max;
@@ -474,7 +508,9 @@ public class LinearInt extends PrimitiveConstraint {
 
   void pruneNeq() {
 
-    if (sumMin == sumMax && b == sumMin) throw Store.failException;
+    if (sumMin == sumMax && b == sumMin) {
+      throw Store.failException;
+    }
 
     long min;
     long max;
@@ -511,14 +547,18 @@ public class LinearInt extends PrimitiveConstraint {
     if (min > (long) x.min()) {
       x.domain.inMin(store.level, x, long2int(min));
       return true;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   private boolean pruneMax(IntVar x, long max) {
     if (max < (long) x.max()) {
       x.domain.inMax(store.level, x, long2int(max));
       return true;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   private boolean pruneNe(IntVar x, long min, long max, long a) {
@@ -699,13 +739,17 @@ public class LinearInt extends PrimitiveConstraint {
 
     for (int i = 0; i < x.length; i++) {
       result.append(x[i]);
-      if (i < x.length - 1) result.append(", ");
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < a.length; i++) {
       result.append(a[i]);
-      if (i < a.length - 1) result.append(", ");
+      if (i < a.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(rel2String()).append(", ").append(b).append(" )");

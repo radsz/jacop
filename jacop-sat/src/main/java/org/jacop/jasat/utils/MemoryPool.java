@@ -93,12 +93,14 @@ public final class MemoryPool implements SolverComponent {
 
     int size = array.length;
 
-    if (size >= pool.length) return; // ignore this array, it is too long
-
+    if (size >= pool.length) {
+      return; // ignore this array, it is too long
+    }
     assert indexes[array.length] <= stockSize;
 
-    if (indexes[size] == stockSize) return; // there are already enough arrays of this size
-
+    if (indexes[size] == stockSize) {
+      return; // there are already enough arrays of this size
+    }
     int newIndex = indexes[size];
     indexes[size]++; // the free place is next now
     pool[size][newIndex] = array;
@@ -112,7 +114,9 @@ public final class MemoryPool implements SolverComponent {
 
     indexes = new int[maxSize];
 
-    for (int i = 0; i < maxSize; ++i) indexes[i] = 0;
+    for (int i = 0; i < maxSize; i++) {
+      indexes[i] = 0;
+    }
   }
 
   @Override

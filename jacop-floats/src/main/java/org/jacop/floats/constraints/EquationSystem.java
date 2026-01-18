@@ -83,14 +83,19 @@ public class EquationSystem extends Constraint {
 
     FloatInterval[] xs = newton.solve();
 
-    if (xs != null)
+    if (xs != null) {
       for (int i = 0; i < xs.length; i++) {
-        if (debug)
-          if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max())
+        if (debug) {
+          if (x[i].min() < xs[i].min() || x[i].max() > xs[i].max()) {
             IO.println("*** " + x[i] + " in " + xs[i]);
+          }
+        }
 
-        if (!xs[i].singleton()) x[i].domain.in(store.level, x[i], xs[i].min(), xs[i].max());
+        if (!xs[i].singleton()) {
+          x[i].domain.in(store.level, x[i], xs[i].min(), xs[i].max());
+        }
       }
+    }
   }
 
   @Override
@@ -101,13 +106,17 @@ public class EquationSystem extends Constraint {
   @Override
   public void impose(Store store) {
 
-    if (f == null) return;
+    if (f == null) {
+      return;
+    }
 
     super.impose(store);
 
     // TODO, why do we call consistency of the whole store inside impose function of the
     // constraint???
-    if (!store.consistency()) throw Store.failException;
+    if (!store.consistency()) {
+      throw Store.failException;
+    }
 
     store.addChanged(this);
     store.countConstraint();
@@ -121,13 +130,17 @@ public class EquationSystem extends Constraint {
 
     for (int i = 0; i < f.length; i++) {
       result.append(f[i]);
-      if (i < f.length - 1) result.append(", ");
+      if (i < f.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < x.length; i++) {
       result.append(x[i]);
-      if (i < x.length - 1) result.append(", ");
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(" )");

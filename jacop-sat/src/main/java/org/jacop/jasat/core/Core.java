@@ -62,9 +62,9 @@ public final class Core implements SolverComponent {
   public MapClause explanationClause = new MapClause();
 
   // used to compute throughput of the solver
-  public long assignmentNum = 0;
+  public long assignmentNum;
   // is the solver stopped ?
-  public boolean isStopped = false;
+  public boolean isStopped;
   // timer for scheduled events (daemon thread)
   public final Timer timer = new Timer(true);
   // pool of int[] to avoir allocating too much
@@ -84,7 +84,7 @@ public final class Core implements SolverComponent {
   // stream to log messages to
   public final PrintStream logStream = System.out;
   // the current level of research
-  public int currentLevel = 0;
+  public int currentLevel;
   // current state of the solver (indicates what to do next)
   public int currentState = SolverState.UNKNOWN;
   // the conflict learning module
@@ -100,20 +100,20 @@ public final class Core implements SolverComponent {
   public final ExplanationListener[] explanationModules = new ExplanationListener[5];
   public final StartStopListener[] startStopModules = new StartStopListener[5];
   public final BackjumpListener[] restartModules = new BackjumpListener[5];
-  public int numAssertionModules = 0;
-  public int numBackjumpModules = 0;
-  public int numConflictModules = 0;
-  public int numPropagateModules = 0;
-  public int numSolutionModules = 0;
-  public int numForgetModules = 0;
-  public int numClauseModules = 0;
-  public int numExplanationModules = 0;
-  public int numStartStopModules = 0;
-  public int numRestartModules = 0;
+  public int numAssertionModules;
+  public int numBackjumpModules;
+  public int numConflictModules;
+  public int numPropagateModules;
+  public int numSolutionModules;
+  public int numForgetModules;
+  public int numClauseModules;
+  public int numExplanationModules;
+  public int numStartStopModules;
+  public int numRestartModules;
   // do we have to forget ?
-  private boolean mustForget = false;
+  private boolean mustForget;
   // the maximum variable allowed
-  private int maxVariable = 0;
+  private int maxVariable;
   // a time counter
   private final Map<String, Long> timeMap = new HashMap<>();
 
@@ -138,9 +138,13 @@ public final class Core implements SolverComponent {
     toPropagate = new IntQueue(pool);
 
     // add instantiated components from configuration object
-    for (SolverComponent component : config.mainComponents) addComponent(component);
+    for (SolverComponent component : config.mainComponents) {
+      addComponent(component);
+    }
     // and require the class of the other required components
-    for (AbstractClausesDatabase database : config.clausesDatabases) addComponent(database);
+    for (AbstractClausesDatabase database : config.clausesDatabases) {
+      addComponent(database);
+    }
   }
 
   /** initializes the solver with a default configuration. */
@@ -175,8 +179,9 @@ public final class Core implements SolverComponent {
     int clauseId = dbStore.addClause(clause, isModelClause);
 
     // notify modules
-    for (int i = 0; i < numClauseModules; ++i)
+    for (int i = 0; i < numClauseModules; i++) {
       clauseModules[i].onClauseAdd(clause, clauseId, isModelClause);
+    }
 
     return clauseId;
   }
@@ -204,7 +209,9 @@ public final class Core implements SolverComponent {
       dbStore.removeClause(clauseId);
 
       // notify modules
-      for (ClauseListener module : clauseModules) module.onClauseRemoval(clauseId);
+      for (ClauseListener module : clauseModules) {
+        module.onClauseRemoval(clauseId);
+      }
 
       return true;
     } else {
@@ -244,7 +251,9 @@ public final class Core implements SolverComponent {
 
   /** notify all modules that we start */
   public void start() {
-    if (isStopped) throw new AssertionError("should not start when already stopped");
+    if (isStopped) {
+      throw new AssertionError("should not start when already stopped");
+    }
 
     markTime("start");
     logc("solver starts");
@@ -253,7 +262,9 @@ public final class Core implements SolverComponent {
     unitPropagate();
 
     // notify modules
-    for (int i = 0; i < numStartStopModules; ++i) startStopModules[i].onStart();
+    for (int i = 0; i < numStartStopModules; i++) {
+      startStopModules[i].onStart();
+    }
   }
 
   /** notify all modules that we stop */
@@ -264,7 +275,9 @@ public final class Core implements SolverComponent {
       markTime("stop");
 
       // notify modules
-      for (int i = 0; i < numStartStopModules; ++i) startStopModules[i].onStop();
+      for (int i = 0; i < numStartStopModules; i++) {
+        startStopModules[i].onStop();
+      }
 
       // stop events
       timer.cancel();
@@ -379,7 +392,9 @@ public final class Core implements SolverComponent {
   private void triggerForgetEvent() {
     assert currentState == SolverState.UNKNOWN;
 
-    for (int i = 0; i < numForgetModules; ++i) forgetModules[i].onForget();
+    for (int i = 0; i < numForgetModules; i++) {
+      forgetModules[i].onForget();
+    }
   }
 
   /**
@@ -399,8 +414,9 @@ public final class Core implements SolverComponent {
     trail.assertLiteral(literal, currentLevel);
 
     // call modules
-    for (int i = 0; i < numAssertionModules; ++i)
+    for (int i = 0; i < numAssertionModules; i++) {
       assertionModules[i].onAssertion(literal, currentLevel);
+    }
 
     // watch for unit clauses
     dbStore.assertLiteral(literal);
@@ -460,8 +476,9 @@ public final class Core implements SolverComponent {
     currentState = SolverState.CONFLICT;
 
     // inform modules
-    for (int i = 0; i < numConflictModules; ++i)
+    for (int i = 0; i < numConflictModules; i++) {
       conflictModules[i].onConflict(clause, currentLevel);
+    }
 
     // remember explanation
     explanationClause = clause;
@@ -472,8 +489,9 @@ public final class Core implements SolverComponent {
       conflictLearning.applyExplainUIP(explanationClause);
 
       // notify modules
-      for (int i = 0; i < numExplanationModules; ++i)
+      for (int i = 0; i < numExplanationModules; i++) {
         explanationModules[i].onExplain(explanationClause);
+      }
 
     } else {
       assert currentLevel == 0;
@@ -498,8 +516,9 @@ public final class Core implements SolverComponent {
     trail.assertLiteral(literal, currentLevel, unitClauseId);
 
     // modules
-    for (int i = 0; i < numPropagateModules; ++i)
+    for (int i = 0; i < numPropagateModules; i++) {
       propagateModules[i].onPropagate(literal, unitClauseId);
+    }
 
     // schedule literal to be propagated
     toPropagate.add(literal);
@@ -513,7 +532,9 @@ public final class Core implements SolverComponent {
   public void triggerBackjumpEvent(int level) {
     assert level < currentLevel;
 
-    for (int i = 0; i < numBackjumpModules; ++i) backjumpModules[i].onBackjump(currentLevel, level);
+    for (int i = 0; i < numBackjumpModules; i++) {
+      backjumpModules[i].onBackjump(currentLevel, level);
+    }
 
     // unset everything above level
     trail.backjump(level);
@@ -529,13 +550,17 @@ public final class Core implements SolverComponent {
     assert currentLevel > 0;
     int level = currentLevel;
 
-    for (int i = 0; i < numRestartModules; ++i) restartModules[i].onRestart(level);
+    for (int i = 0; i < numRestartModules; i++) {
+      restartModules[i].onRestart(level);
+    }
 
     // a restart *is* a backjump to level 0
     triggerBackjumpEvent(0);
 
     // good time to forget clauses
-    if (mustForget) triggerForgetEvent();
+    if (mustForget) {
+      triggerForgetEvent();
+    }
 
     // FIXME: is this correct? I guess so, but...
     triggerIdleEvent();
@@ -547,7 +572,9 @@ public final class Core implements SolverComponent {
 
     toPropagate.clear();
 
-    for (int i = 0; i < numSolutionModules; ++i) solutionModules[i].onSolution(true);
+    for (int i = 0; i < numSolutionModules; i++) {
+      solutionModules[i].onSolution(true);
+    }
 
     stop();
   }
@@ -558,7 +585,9 @@ public final class Core implements SolverComponent {
 
     toPropagate.clear();
 
-    for (int i = 0; i < numSolutionModules; ++i) solutionModules[i].onSolution(false);
+    for (int i = 0; i < numSolutionModules; i++) {
+      solutionModules[i].onSolution(false);
+    }
 
     stop();
   }
@@ -579,7 +608,9 @@ public final class Core implements SolverComponent {
    * @return the time associated with given mark, or 0 if none
    */
   public long getTime(String s) {
-    if (timeMap.containsKey(s)) return timeMap.get(s);
+    if (timeMap.containsKey(s)) {
+      return timeMap.get(s);
+    }
     return 0;
   }
 
@@ -590,8 +621,11 @@ public final class Core implements SolverComponent {
    * @return the time elapsed since mark, in ms
    */
   public long getTimeDiff(String s) {
-    if (!timeMap.containsKey(s)) return 0;
-    else return System.currentTimeMillis() - timeMap.get(s);
+    if (!timeMap.containsKey(s)) {
+      return 0;
+    } else {
+      return System.currentTimeMillis() - timeMap.get(s);
+    }
   }
 
   /*
@@ -646,7 +680,7 @@ public final class Core implements SolverComponent {
       int count = 0;
       StringBuilder sb = new StringBuilder();
       sb.append("v ");
-      for (int i = 0; i < trail.size(); ++i) {
+      for (int i = 0; i < trail.size(); i++) {
         int var = trail.assertionStack.array[i];
         sb.append(trail.values[var]);
         sb.append(' ');

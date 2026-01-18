@@ -55,17 +55,17 @@ public final class StatModule
   // indicates whether a thread should be run to print stats regularly
   private final boolean threaded;
   private Core core;
-  private long numRestarts = 0;
-  private long numConflicts = 0;
-  private long numBackjumps = 0;
-  private long numAssertions = 0;
-  private long numForget = 0;
-  private long numClauseAdd = 0;
-  private long numLearntClauses = 0;
-  private long numClauseRemoved = 0;
-  private long numPropagate = 0;
+  private long numRestarts;
+  private long numConflicts;
+  private long numBackjumps;
+  private long numAssertions;
+  private long numForget;
+  private long numClauseAdd;
+  private long numLearntClauses;
+  private long numClauseRemoved;
+  private long numPropagate;
   // task to print regularly stats
-  private TimerTask task = null;
+  private TimerTask task;
 
   /**
    * Create a StatModule. It can schedule
@@ -103,7 +103,9 @@ public final class StatModule
   public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
     numClauseAdd++;
 
-    if (!isModelClause) numLearntClauses++;
+    if (!isModelClause) {
+      numLearntClauses++;
+    }
   }
 
   public void onClauseRemoval(int clauseId) {
@@ -112,7 +114,9 @@ public final class StatModule
 
   public void onStop() {
     // kill the thread
-    if (task != null) task.cancel();
+    if (task != null) {
+      task.cancel();
+    }
 
     // print stats
     logStats();
@@ -155,7 +159,7 @@ public final class StatModule
     // summary
     core.logc(2, "trail state: %d/%d", core.trail.size(), core.getMaxVariable());
     core.logc(2, "database store state: %d", core.dbStore.size());
-    for (int i = 0; i < core.dbStore.currentIndex; ++i) {
+    for (int i = 0; i < core.dbStore.currentIndex; i++) {
       AbstractClausesDatabase db = core.dbStore.databases[i];
       core.logc(2, "%s in state %d", db.getClass().getName(), db.size());
     }
@@ -171,8 +175,11 @@ public final class StatModule
 
   /** prints a line, starting a block if @param start is true, ending the block otherwise */
   private void printLine(boolean start) {
-    if (start) core.logc(2, "/==================================");
-    else core.logc(2, "\\==================================");
+    if (start) {
+      core.logc(2, "/==================================");
+    } else {
+      core.logc(2, "\\==================================");
+    }
   }
 
   private void printBlank() {

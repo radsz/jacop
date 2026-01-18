@@ -75,7 +75,9 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
 
     StringBuilder result = new StringBuilder("Decomposition of CosPeqR(" + p + ", " + q + "): { ");
 
-    for (Constraint c : constraints) result.append(c).append(System.lineSeparator());
+    for (Constraint c : constraints) {
+      result.append(c).append(System.lineSeparator());
+    }
     result.append("}");
 
     return result.toString();
@@ -84,9 +86,13 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null || constraints.isEmpty()) constraints = decompose(store);
+    if (constraints == null || constraints.isEmpty()) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c);
+    for (Constraint c : constraints) {
+      store.impose(c);
+    }
   }
 
   @Override

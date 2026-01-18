@@ -88,8 +88,11 @@ public class BoolClause extends PrimitiveConstraint {
 
     assert (checkInvariants() == null) : checkInvariants();
 
-    if (lx + ly > 4) queueIndex = 1;
-    else queueIndex = 0;
+    if (lx + ly > 4) {
+      queueIndex = 1;
+    } else {
+      queueIndex = 0;
+    }
 
     setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
   }
@@ -112,13 +115,17 @@ public class BoolClause extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    for (IntVar var : x)
-      if (var.min() < 0 || var.max() > 1)
+    for (IntVar var : x) {
+      if (var.min() < 0 || var.max() > 1) {
         return "Variable " + var + " does not have boolean domain";
+      }
+    }
 
-    for (IntVar var : y)
-      if (var.min() < 0 || var.max() > 1)
+    for (IntVar var : y) {
+      if (var.min() < 0 || var.max() > 1) {
         return "Variable " + var + " does not have boolean domain";
+      }
+    }
 
     return null;
   }
@@ -179,13 +186,19 @@ public class BoolClause extends PrimitiveConstraint {
     positionY.update(startY);
 
     // all x = 0 and all y = 1 => FAIL
-    if (startX == lx && startY == ly) throw Store.failException;
-    // last x must be 1
-    else if (startX == lx - 1 && startY == ly) x[lx - 1].domain.inValue(store.level, x[lx - 1], 1);
-    // last y must be 0
-    else if (startX == lx && startY == ly - 1) y[ly - 1].domain.inValue(store.level, y[ly - 1], 0);
+    if (startX == lx && startY == ly) {
+      throw Store.failException;
+      // last x must be 1
+    } else if (startX == lx - 1 && startY == ly) {
+      x[lx - 1].domain.inValue(store.level, x[lx - 1], 1);
+      // last y must be 0
+    } else if (startX == lx && startY == ly - 1) {
+      y[ly - 1].domain.inValue(store.level, y[ly - 1], 0);
+    }
 
-    if (lx - startX + ly + startY < 5) queueIndex = 0;
+    if (lx - startX + ly + startY < 5) {
+      queueIndex = 0;
+    }
   }
 
   private void swap(IntVar[] p, int i, int j) {
@@ -203,8 +216,12 @@ public class BoolClause extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    for (int i = 0; i < lx; i++) x[i].domain.inValue(store.level, x[i], 0);
-    for (int i = 0; i < ly; i++) y[i].domain.inValue(store.level, y[i], 1);
+    for (int i = 0; i < lx; i++) {
+      x[i].domain.inValue(store.level, x[i], 0);
+    }
+    for (int i = 0; i < ly; i++) {
+      y[i].domain.inValue(store.level, y[i], 1);
+    }
 
     removeConstraint();
   }
@@ -215,20 +232,24 @@ public class BoolClause extends PrimitiveConstraint {
     int startX = positionX.value();
     int startY = positionY.value();
 
-    for (int i = startX; i < lx; i++)
-      if (x[i].min() == 1) return true;
-      else if (x[i].max() == 0) {
+    for (int i = startX; i < lx; i++) {
+      if (x[i].min() == 1) {
+        return true;
+      } else if (x[i].max() == 0) {
         swap(x, startX, i);
         startX++;
       }
+    }
     positionX.update(startX);
 
-    for (int i = startY; i < ly; i++)
-      if (y[i].max() == 0) return true;
-      else if (y[i].min() == 1) {
+    for (int i = startY; i < ly; i++) {
+      if (y[i].max() == 0) {
+        return true;
+      } else if (y[i].min() == 1) {
         swap(y, startY, i);
         startY++;
       }
+    }
     positionY.update(startY);
 
     return false;
@@ -240,18 +261,24 @@ public class BoolClause extends PrimitiveConstraint {
     int startX = positionX.value();
     int startY = positionY.value();
 
-    for (int i = startX; i < lx; i++)
+    for (int i = startX; i < lx; i++) {
       if (x[i].max() == 0) {
         swap(x, startX, i);
         startX++;
-      } else return false;
+      } else {
+        return false;
+      }
+    }
     positionX.update(startX);
 
-    for (int i = startY; i < ly; i++)
+    for (int i = startY; i < ly; i++) {
       if (y[i].min() == 1) {
         swap(y, startY, i);
         startY++;
-      } else return false;
+      } else {
+        return false;
+      }
+    }
     positionY.update(startY);
 
     return startX == lx && startY == ly;
@@ -265,13 +292,17 @@ public class BoolClause extends PrimitiveConstraint {
     resultString.append(" : BoolClause([ ");
     for (int i = 0; i < lx; i++) {
       resultString.append(x[i]);
-      if (i < lx - 1) resultString.append(", ");
+      if (i < lx - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append("], [");
 
     for (int i = 0; i < ly; i++) {
       resultString.append(y[i]);
-      if (i < ly - 1) resultString.append(", ");
+      if (i < ly - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append("])");
     return resultString.toString();

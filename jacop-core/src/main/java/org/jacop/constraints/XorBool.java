@@ -86,8 +86,11 @@ public class XorBool extends PrimitiveConstraint {
 
     assert (checkInvariants() == null) : checkInvariants();
 
-    if (x.length > 2) queueIndex = 1;
-    else queueIndex = 0;
+    if (x.length > 2) {
+      queueIndex = 1;
+    } else {
+      queueIndex = 0;
+    }
 
     setScope(Stream.concat(Arrays.stream(x), Stream.of(y)));
   }
@@ -100,10 +103,15 @@ public class XorBool extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    for (IntVar e : x)
-      if (e.min() < 0 || e.max() > 1) return "Variable " + e + " does not have boolean domain";
+    for (IntVar e : x) {
+      if (e.min() < 0 || e.max() > 1) {
+        return "Variable " + e + " does not have boolean domain";
+      }
+    }
 
-    if (y.min() < 0 || y.max() > 1) return "Variable " + y + " does not have boolean domain";
+    if (y.min() < 0 || y.max() > 1) {
+      return "Variable " + y + " does not have boolean domain";
+    }
 
     return null;
   }
@@ -117,21 +125,36 @@ public class XorBool extends PrimitiveConstraint {
     int numberZeros = 0;
 
     for (IntVar e : x) {
-      if (e.min() == 1) numberOnes++;
-      else if (e.max() == 0) numberZeros++;
-      else nonGround = e;
+      if (e.min() == 1) {
+        numberOnes++;
+      } else if (e.max() == 0) {
+        numberZeros++;
+      } else {
+        nonGround = e;
+      }
     }
 
-    if (numberOnes + numberZeros == x.length)
-      if ((numberOnes & 1) == 1) y.domain.inValue(store.level, y, 1);
-      else y.domain.inValue(store.level, y, 0);
-    else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
-      if (y.min() == 1)
-        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 0);
-        else nonGround.domain.inValue(store.level, nonGround, 1);
-      else if (y.max() == 0)
-        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 1);
-        else nonGround.domain.inValue(store.level, nonGround, 0);
+    if (numberOnes + numberZeros == x.length) {
+      if ((numberOnes & 1) == 1) {
+        y.domain.inValue(store.level, y, 1);
+      } else {
+        y.domain.inValue(store.level, y, 0);
+      }
+    } else if (nonGround != null && numberOnes + numberZeros == x.length - 1) {
+      if (y.min() == 1) {
+        if ((numberOnes & 1) == 1) {
+          nonGround.domain.inValue(store.level, nonGround, 0);
+        } else {
+          nonGround.domain.inValue(store.level, nonGround, 1);
+        }
+      } else if (y.max() == 0) {
+        if ((numberOnes & 1) == 1) {
+          nonGround.domain.inValue(store.level, nonGround, 1);
+        } else {
+          nonGround.domain.inValue(store.level, nonGround, 0);
+        }
+      }
+    }
   }
 
   @Override
@@ -143,21 +166,36 @@ public class XorBool extends PrimitiveConstraint {
     int numberZeros = 0;
 
     for (IntVar e : x) {
-      if (e.min() == 1) numberOnes++;
-      else if (e.max() == 0) numberZeros++;
-      else nonGround = e;
+      if (e.min() == 1) {
+        numberOnes++;
+      } else if (e.max() == 0) {
+        numberZeros++;
+      } else {
+        nonGround = e;
+      }
     }
 
-    if (numberOnes + numberZeros == x.length)
-      if ((numberOnes & 1) == 1) y.domain.inValue(store.level, y, 0);
-      else y.domain.inValue(store.level, y, 1);
-    else if (nonGround != null && numberOnes + numberZeros == x.length - 1)
-      if (y.min() == 1)
-        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 1);
-        else nonGround.domain.inValue(store.level, nonGround, 0);
-      else if (y.max() == 0)
-        if ((numberOnes & 1) == 1) nonGround.domain.inValue(store.level, nonGround, 0);
-        else nonGround.domain.inValue(store.level, nonGround, 1);
+    if (numberOnes + numberZeros == x.length) {
+      if ((numberOnes & 1) == 1) {
+        y.domain.inValue(store.level, y, 0);
+      } else {
+        y.domain.inValue(store.level, y, 1);
+      }
+    } else if (nonGround != null && numberOnes + numberZeros == x.length - 1) {
+      if (y.min() == 1) {
+        if ((numberOnes & 1) == 1) {
+          nonGround.domain.inValue(store.level, nonGround, 1);
+        } else {
+          nonGround.domain.inValue(store.level, nonGround, 0);
+        }
+      } else if (y.max() == 0) {
+        if ((numberOnes & 1) == 1) {
+          nonGround.domain.inValue(store.level, nonGround, 0);
+        } else {
+          nonGround.domain.inValue(store.level, nonGround, 1);
+        }
+      }
+    }
   }
 
   @Override
@@ -167,13 +205,17 @@ public class XorBool extends PrimitiveConstraint {
     if (mode) {
       if (consistencyPruningEvents != null) {
         Integer possibleEvent = consistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
       return IntDomain.GROUND;
     } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
       return IntDomain.BOUND;
     }
@@ -192,26 +234,45 @@ public class XorBool extends PrimitiveConstraint {
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     int sum = 0;
-    for (IntVar e : x) sum += e.value();
+    for (IntVar e : x) {
+      sum += e.value();
+    }
 
-    if ((sum & 1) == 1 && y.min() == 1) return true;
-    else return (sum & 1) == 0 && y.max() == 0;
+    if ((sum & 1) == 1 && y.min() == 1) {
+      return true;
+    } else {
+      return (sum & 1) == 0 && y.max() == 0;
+    }
   }
 
   @Override
   public boolean notSatisfied() {
 
-    if (!y.singleton()) return false;
-    else for (IntVar e : x) if (!e.singleton()) return false;
+    if (!y.singleton()) {
+      return false;
+    } else {
+      for (IntVar e : x) {
+        if (!e.singleton()) {
+          return false;
+        }
+      }
+    }
 
     int sum = 0;
-    for (IntVar e : x) sum += e.value();
+    for (IntVar e : x) {
+      sum += e.value();
+    }
 
-    if ((sum & 1) == 1 && y.min() == 0) return true;
-    else return (sum & 1) == 0 && y.min() == 1;
+    if ((sum & 1) == 1 && y.min() == 0) {
+      return true;
+    } else {
+      return (sum & 1) == 0 && y.min() == 1;
+    }
   }
 
   @Override

@@ -61,7 +61,9 @@ public class ExampleBasedTest {
 
     String[] description = CarSequencing.toStringArray(example);
 
-    for (String line : description) IO.println(line);
+    for (String line : description) {
+      IO.println(line);
+    }
 
     assertEquals(true, example.searchAllAtOnce());
     assertEquals(6, example.search.getSolutionListener().solutionsNo());
@@ -135,13 +137,17 @@ public class ExampleBasedTest {
     for (int i = 0; i <= 150; i = i + 10) {
 
       StringBuilder no = new StringBuilder(String.valueOf(i));
-      while (no.length() < 3) no.insert(0, "0");
+      while (no.length() < 3) {
+        no.insert(0, "0");
+      }
 
       IO.println("Problem file data" + no + ".nin");
       example.readFromFile("src/test/resources/nonogramRepository/data" + no + ".nin");
       example.model();
 
-      if (example.searchAll()) IO.println("Solution(s) found");
+      if (example.searchAll()) {
+        IO.println("Solution(s) found");
+      }
 
       assertEquals(1, example.search.getSolutionListener().solutionsNo());
       assertEquals(solutions[i / 10], example.store.toStringOrderedVars());
@@ -156,7 +162,9 @@ public class ExampleBasedTest {
     example.filename = "src/test/resources/psqwh-25-235-0081.pls";
     example.model();
 
-    if (example.searchWithRestarts()) IO.print(" Solution(s) found ");
+    if (example.searchWithRestarts()) {
+      IO.print(" Solution(s) found ");
+    }
 
     Set<String> solutions = new HashSet<>();
     solutions.add(
@@ -658,8 +666,11 @@ public class ExampleBasedTest {
     int noSides = 7;
     int currentBest;
 
-    if (noSides * noSides % 2 == 0) currentBest = noSides * noSides / 2 - 1;
-    else currentBest = noSides * noSides / 2;
+    if (noSides * noSides % 2 == 0) {
+      currentBest = noSides * noSides / 2 - 1;
+    } else {
+      currentBest = noSides * noSides / 2;
+    }
 
     String solution = "";
 
@@ -691,7 +702,9 @@ public class ExampleBasedTest {
         firstSolutionFound = true;
       }
 
-      if (!result && firstSolutionFound) break;
+      if (!result && firstSolutionFound) {
+        break;
+      }
 
       // Store previous solution and not a proof of optimality ( no solution ).
       example.getSearch().assignSolution();
@@ -710,7 +723,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.searchMaxRegretOptimal()) IO.println("Solution(s) found");
+    if (example.searchMaxRegretOptimal()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -775,7 +790,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -811,7 +828,9 @@ public class ExampleBasedTest {
 
     exampleBasic.modelBasic();
 
-    if (exampleBasic.search()) IO.println("Solution found.");
+    if (exampleBasic.search()) {
+      IO.println("Solution found.");
+    }
 
     exampleBasic.getSearch().assignSolution();
 
@@ -823,7 +842,9 @@ public class ExampleBasedTest {
 
     exampleGlobal.model();
 
-    if (exampleGlobal.search()) IO.println("Solution found.");
+    if (exampleGlobal.search()) {
+      IO.println("Solution found.");
+    }
 
     exampleGlobal.getSearch().assignSolution();
 
@@ -839,7 +860,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -855,7 +878,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -871,7 +896,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -887,7 +914,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -899,7 +928,9 @@ public class ExampleBasedTest {
 
     example.modelBasic();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -935,7 +966,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.searchMaxRegretForMatrixOptimal()) IO.println("Solution(s) found");
+    if (example.searchMaxRegretForMatrixOptimal()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -951,7 +984,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.searchMostConstrainedStatic()) IO.println("Solution(s) found");
+    if (example.searchMostConstrainedStatic()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 
@@ -966,7 +1001,9 @@ public class ExampleBasedTest {
     WhoKilledAgatha example = new WhoKilledAgatha();
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
 
     assertEquals(8, example.search.getSolutionListener().solutionsNo());
   }
@@ -985,9 +1022,11 @@ public class ExampleBasedTest {
 
       example.model();
 
-      if (!example.searchMostConstrainedStatic())
+      if (!example.searchMostConstrainedStatic()) {
         IO.println("No Solution(s) found for " + example.numberInnerMoves + " innermoves");
-      else result = true;
+      } else {
+        result = true;
+      }
 
       numberInnerMoves++;
     }
@@ -1008,7 +1047,9 @@ public class ExampleBasedTest {
 
     example.model();
 
-    if (example.searchMostConstrainedStatic()) IO.println("Solution(s) found");
+    if (example.searchMostConstrainedStatic()) {
+      IO.println("Solution(s) found");
+    }
 
     example.getSearch().assignSolution();
 

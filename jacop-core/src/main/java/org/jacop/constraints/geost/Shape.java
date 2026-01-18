@@ -52,7 +52,7 @@ public class Shape {
   /** It defines the area (2D) or volume (3D) of the shape. */
   private int area;
 
-  private SimpleArrayList<DBox> holes = null;
+  private SimpleArrayList<DBox> holes;
 
   /**
    * It constructs a shape with a given id based on a specified collection of Dboxes.
@@ -117,9 +117,15 @@ public class Shape {
    */
   public String checkInvariants() {
 
-    if (boxes == null) return "uninitialized shifted box set";
+    if (boxes == null) {
+      return "uninitialized shifted box set";
+    }
 
-    for (DBox b : boxes) if (b == null) return "shape contains a null box";
+    for (DBox b : boxes) {
+      if (b == null) {
+        return "shape contains a null box";
+      }
+    }
 
     return null;
   }
@@ -189,7 +195,9 @@ public class Shape {
 
     boolean inside = false;
 
-    while (!inside && i.hasNext()) inside = i.next().containsPoint(point);
+    while (!inside && i.hasNext()) {
+      inside = i.next().containsPoint(point);
+    }
 
     return inside;
   }
@@ -263,7 +271,9 @@ public class Shape {
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("Shape(").append(no).append(",");
-    for (DBox b : boxes) builder.append(b).append(", ");
+    for (DBox b : boxes) {
+      builder.append(b).append(", ");
+    }
     builder.deleteCharAt(builder.length() - 1);
     builder.deleteCharAt(builder.length() - 1);
 
@@ -283,7 +293,7 @@ public class Shape {
       Collection<DBox> actualHoles = new LinkedList<>();
       actualHoles = boundingBox.subtractAll(boxes, actualHoles);
       for (DBox hole : actualHoles) {
-        holeArea += (hole.area());
+        holeArea += hole.area();
         DBox.dispatchBox(hole);
       }
 

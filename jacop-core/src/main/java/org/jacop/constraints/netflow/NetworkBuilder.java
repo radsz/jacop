@@ -106,7 +106,9 @@ public class NetworkBuilder {
 
     Arc arc = addArc(from, to, weight, xVar.min(), xVar.max());
 
-    if (arc.companion == null) arc.companion = new ArcCompanion(arc, 0);
+    if (arc.companion == null) {
+      arc.companion = new ArcCompanion(arc, 0);
+    }
 
     arc.companion.xVar = xVar;
     handlerList.add(arc.companion);
@@ -119,7 +121,9 @@ public class NetworkBuilder {
     int weight = wVar.min();
     Arc arc = addArc(from, to, weight, lowerCapacity, upperCapacity);
 
-    if (arc.companion == null) arc.companion = new ArcCompanion(arc, 0);
+    if (arc.companion == null) {
+      arc.companion = new ArcCompanion(arc, 0);
+    }
 
     arc.companion.wVar = wVar;
     handlerList.add(arc.companion);
@@ -162,9 +166,13 @@ public class NetworkBuilder {
 
     Node[] v = new Node[n], d = new Node[m];
 
-    for (int i = 0; i < n; i++) v[i] = addNode(vars[i].id, 1);
+    for (int i = 0; i < n; i++) {
+      v[i] = addNode(vars[i].id, 1);
+    }
 
-    for (int i = 0; i < m; i++) d[i] = addNode(domains[i].toString(), 0);
+    for (int i = 0; i < m; i++) {
+      d[i] = addNode(domains[i].toString(), 0);
+    }
 
     for (int i = 0; i < n; i++) {
 
@@ -192,7 +200,9 @@ public class NetworkBuilder {
 
     ArrayList<IntVar> list = new ArrayList<>();
 
-    for (VarHandler handler : handlerList) list.addAll(handler.listVariables());
+    for (VarHandler handler : handlerList) {
+      list.addAll(handler.listVariables());
+    }
 
     return list;
   }
@@ -227,19 +237,25 @@ public class NetworkBuilder {
         // This code replaces, the one below to handle
         if (arc.head == node || arc.tail() == node) {
 
-          if (arc.getCompanion() == null)
+          if (arc.getCompanion() == null) {
             // the above condition is satisfied sometimes.
             arc.companion = new ArcCompanion(arc, 0);
+          }
 
           IntVar var = arc.getCompanion().xVar;
-          if (var == null)
+          if (var == null) {
             var =
                 new IntVar(
                     store,
                     arc.getCompanion().flowOffset,
                     arc.getCompanion().flowOffset + arc.capacity + arc.sister.capacity);
-          if (arc.head == node) in.add(var);
-          if (arc.tail() == node) out.add(var);
+          }
+          if (arc.head == node) {
+            in.add(var);
+          }
+          if (arc.tail() == node) {
+            out.add(var);
+          }
           arc.getCompanion().xVar = var;
         }
         //	if (arc.head == node) in.add(arc.getCompanion().xVar);
@@ -252,7 +268,9 @@ public class NetworkBuilder {
       }
 
       // added.
-      if (in.isEmpty() || out.isEmpty()) continue;
+      if (in.isEmpty() || out.isEmpty()) {
+        continue;
+      }
 
       if (in.size() == 1) {
         sumC(result, store, out, in.getFirst());
@@ -313,8 +331,9 @@ public class NetworkBuilder {
     }
 
     // @TODO, SumWeight could be used instead of Sum and auxiliary variables weight above.
-    if (simpleSum) sumC(result, store, vars, costVariable);
-    else {
+    if (simpleSum) {
+      sumC(result, store, vars, costVariable);
+    } else {
       int n = vars.size();
       IntVar[] vs = new IntVar[n + 1];
       int[] ws = new int[n + 1];
@@ -332,7 +351,9 @@ public class NetworkBuilder {
 
   private void sumC(List<Constraint> list, Store store, List<IntVar> vars, IntVar result) {
 
-    if (result == null) throw new AssertionError();
+    if (result == null) {
+      throw new AssertionError();
+    }
 
     if (vars.isEmpty()) {
       list.add(new XeqY(result, new IntVar(store, 0, 0)));

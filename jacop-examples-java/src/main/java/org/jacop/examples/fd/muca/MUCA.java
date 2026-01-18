@@ -879,7 +879,9 @@ public class MUCA extends ExampleFD {
 
       for (List<Transformation> bid_xor : bid) {
         noAvailableTransformations += bid_xor.size();
-        if (bid_xor.size() > max) max = bid_xor.size();
+        if (bid_xor.size() > max) {
+          max = bid_xor.size();
+        }
       }
 
       maxNoTransformations += max;
@@ -889,10 +891,12 @@ public class MUCA extends ExampleFD {
 
     transitions = new IntVar[maxNoTransformations];
 
-    for (int i = 0; i < maxNoTransformations; i++)
+    for (int i = 0; i < maxNoTransformations; i++) {
       transitions[i] = new IntVar(store, "t" + (i + 1), 0, noAvailableTransformations);
-    for (int i = 0; i < maxNoTransformations - 1; i++)
+    }
+    for (int i = 0; i < maxNoTransformations - 1; i++) {
       store.impose(new IfThen(new XeqC(transitions[i], 0), new XeqC(transitions[i + 1], 0)));
+    }
     // for each set of transformations create an among
 
     IntVar[] usedTransformation = new IntVar[noAvailableTransformations];
@@ -1030,9 +1034,11 @@ public class MUCA extends ExampleFD {
 
             int[][] tuples = new int[2][2];
 
-            if (t.getDelta(g) >= 0)
+            if (t.getDelta(g) >= 0) {
               weights[t.id] = new IntVar(store, "delta_tid_" + t.id + "_g" + g, 0, t.getDelta(g));
-            else weights[t.id] = new IntVar(store, "delta_t" + t.id + "_g" + g, t.getDelta(g), 0);
+            } else {
+              weights[t.id] = new IntVar(store, "delta_t" + t.id + "_g" + g, t.getDelta(g), 0);
+            }
 
             tuples[0][0] = 0;
             tuples[0][1] = 0;
@@ -1077,15 +1083,17 @@ public class MUCA extends ExampleFD {
 
     IO.print("\t");
 
-    for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++)
+    for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++) {
       IO.print(transitions[i] + "\t");
+    }
     IO.println();
 
     for (int g = 0; g < noGoods; g++) {
 
       IO.print(initialQuantity.get(g) + "\t");
-      for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++)
+      for (int i = 0; i < maxNoTransformations && transitions[i].value() != 0; i++) {
         IO.print(deltasI[i][g].value() + "," + deltasO[i][g].value() + "\t");
+      }
 
       IO.println(sum[g].value() + ">=" + finalQuantity.get(g));
     }
@@ -1150,9 +1158,9 @@ public class MUCA extends ExampleFD {
 
       bids.add(new ArrayList<List<Transformation>>());
 
-      (bids.getFirst()).add(new ArrayList<Transformation>());
+      bids.getFirst().add(new ArrayList<Transformation>());
 
-      while (!line.equals("price")) {
+      while (!"price".equals(line)) {
         tk = new StringTokenizer(line, "():, ");
         transformationCounter++;
 
@@ -1263,12 +1271,13 @@ public class MUCA extends ExampleFD {
     } catch (IOException ex) {
       System.err.println(ex);
     } finally {
-      if (br != null)
+      if (br != null) {
         try {
           br.close();
         } catch (IOException e) {
           e.printStackTrace();
         }
+      }
     }
 
     IO.println(this.maxCost);
@@ -1311,24 +1320,33 @@ public class MUCA extends ExampleFD {
 
     public int getDelta(int goodId) {
 
-      for (int i = 0; i < goodsIds.size(); i++)
-        if (goodsIds.get(i) == goodId) return delta.get(i).output - delta.get(i).input;
+      for (int i = 0; i < goodsIds.size(); i++) {
+        if (goodsIds.get(i) == goodId) {
+          return delta.get(i).output - delta.get(i).input;
+        }
+      }
 
       return 0;
     }
 
     public int getDeltaInput(int goodId) {
 
-      for (int i = 0; i < goodsIds.size(); i++)
-        if (goodsIds.get(i) == goodId) return delta.get(i).input;
+      for (int i = 0; i < goodsIds.size(); i++) {
+        if (goodsIds.get(i) == goodId) {
+          return delta.get(i).input;
+        }
+      }
 
       return 0;
     }
 
     public int getDeltaOutput(int goodId) {
 
-      for (int i = 0; i < goodsIds.size(); i++)
-        if (goodsIds.get(i) == goodId) return delta.get(i).output;
+      for (int i = 0; i < goodsIds.size(); i++) {
+        if (goodsIds.get(i) == goodId) {
+          return delta.get(i).output;
+        }
+      }
 
       return 0;
     }

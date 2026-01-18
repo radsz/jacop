@@ -82,8 +82,9 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     shapeId = obstacle.shapeID.value();
 
-    for (DBox elem : geost.getShape(shapeId).boxes)
+    for (DBox elem : geost.getShape(shapeId).boxes) {
       preshiftedElems.add(elem.copyInto(DBox.newBox(obstacle.dimension)));
+    }
 
     upperAbsInsfeasible = new int[obstacle.dimension + 1];
     lowerAbsInsfeasible = new int[obstacle.dimension + 1];
@@ -92,23 +93,30 @@ public class ObstacleObject extends ObstacleObjectFrame {
   @Override
   public String checkInvariants() {
 
-    if (super.checkInvariants() != null) return super.checkInvariants();
+    if (super.checkInvariants() != null) {
+      return super.checkInvariants();
+    }
 
-    if (obstacle == null) return "obstacle field is null";
+    if (obstacle == null) {
+      return "obstacle field is null";
+    }
 
     // make sure the selected dimensions are sorted and have correct values
     int previous = 0;
     for (int i = 0; i < selectedDimensions.length; i++) {
-      if (i != 0)
-        if (selectedDimensions[i] <= previous)
+      if (i != 0) {
+        if (selectedDimensions[i] <= previous) {
           return "selected dimensions "
               + Arrays.toString(selectedDimensions)
               + " are not sorted or not unique";
+        }
+      }
 
       previous = selectedDimensions[i];
 
-      if (!(selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension))
+      if (!(selectedDimensions[i] >= 0 && selectedDimensions[i] <= obstacle.dimension)) {
         return "incorrect dimension: " + selectedDimensions[i];
+      }
     }
 
     return null;
@@ -119,11 +127,15 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     // TODO implement,
 
-    if (frameExists) return super.absInfeasible(minlex);
-    else {
+    if (frameExists) {
+      return super.absInfeasible(minlex);
+    } else {
 
-      if (minlex == Geost.SweepDirection.PRUNEMAX) return upperAbsInsfeasible;
-      else return lowerAbsInsfeasible;
+      if (minlex == Geost.SweepDirection.PRUNEMAX) {
+        return upperAbsInsfeasible;
+      } else {
+        return lowerAbsInsfeasible;
+      }
     }
   }
 
@@ -150,12 +162,18 @@ public class ObstacleObject extends ObstacleObjectFrame {
     assert obstacle.shapeID.singleton()
         : "no support for polymorphism. Use ObstacleObjectFrame instead.";
 
-    if (frameExists) return super.isFeasible(min, order, o, currentShape, c);
+    if (frameExists) {
+      return super.isFeasible(min, order, o, currentShape, c);
+    }
 
     // an object can overlap with itself
-    if (o == obstacle) return null;
+    if (o == obstacle) {
+      return null;
+    }
 
-    if (!timeOnlyCheck(min, order, o, currentShape, c)) return null;
+    if (!timeOnlyCheck(min, order, o, currentShape, c)) {
+      return null;
+    }
 
     // intermediate check: use bounding boxes to skip test quickly
     DBox obstacleBB = geost.getShape(shapeId).boundingBox;
@@ -186,7 +204,9 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
         outDimLength = max - outDimOrigin;
 
-        if (outDimLength <= 0) return null;
+        if (outDimLength <= 0) {
+          return null;
+        }
 
       } else {
         // the dimension is not relevant, outbox covers the whole space
@@ -194,7 +214,9 @@ public class ObstacleObject extends ObstacleObjectFrame {
         outDimLength = IntDomain.MaxInt - IntDomain.MinInt;
       }
 
-      if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) return null;
+      if (c[i] < outDimOrigin || c[i] >= outDimOrigin + outDimLength) {
+        return null;
+      }
     }
 
     /*
@@ -211,7 +233,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
     outOrigin[obstacle.dimension] = timeSizeOrigin;
     outLength[obstacle.dimension] = timeSizeMax - timeSizeOrigin;
 
-    for (DBox constrainedPiece : geost.getShape(currentShape).boxes)
+    for (DBox constrainedPiece : geost.getShape(currentShape).boxes) {
       for (DBox preshift : preshiftedElems) {
 
         boolean useless = false;
@@ -222,7 +244,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
         // elem.length[i] + obstacle.coords[i].min()
         // and update whenever the object gets updated
 
-        for (int i = 0; i < obstacle.dimension; i++)
+        for (int i = 0; i < obstacle.dimension; i++) {
           if (selectedDimIndex < selectedDimensions.length
               && selectedDimensions[selectedDimIndex] == i) {
 
@@ -234,18 +256,24 @@ public class ObstacleObject extends ObstacleObjectFrame {
             final int max = preshift.length[i] - constrainedPiece.origin[i];
             outLength[i] = max - outOrigin[i];
 
-            if (outLength[i] <= 0) useless = true;
+            if (outLength[i] <= 0) {
+              useless = true;
+            }
 
           } else {
             // the dimension is not relevant, outbox covers the whole space
             outOrigin[i] = IntDomain.MinInt;
             outLength[i] = IntDomain.MaxInt - IntDomain.MinInt;
           }
+        }
 
         assert (useless || outBox.checkInvariants() == null) : outBox.checkInvariants();
 
-        if (!useless && outBox.containsPoint(c)) return outBox;
+        if (!useless && outBox.containsPoint(c)) {
+          return outBox;
+        }
       }
+    }
 
     return null;
   }
@@ -308,7 +336,9 @@ public class ObstacleObject extends ObstacleObjectFrame {
       upperAbsInsfeasible[obstacle.dimension] = IntDomain.MaxInt;
       lowerAbsInsfeasible[obstacle.dimension] = IntDomain.MinInt;
 
-    } else frameExists = true;
+    } else {
+      frameExists = true;
+    }
 
     assert checkInvariants() == null : checkInvariants();
   }

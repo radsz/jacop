@@ -3,8 +3,8 @@
 package org.jacop.fz;
 
 public class ASTVariableExpr extends SimpleNode {
-  String ident = null;
-  ArrayAccess arrAccess = null;
+  String ident;
+  ArrayAccess arrAccess;
 
   public ASTVariableExpr(int id) {
     super(id);
@@ -32,8 +32,12 @@ public class ASTVariableExpr extends SimpleNode {
 
   public String toString() {
     String s = null;
-    if (ident != null) s = ident;
-    if (arrAccess != null) s = arrAccess.toString();
+    if (ident != null) {
+      s = ident;
+    }
+    if (arrAccess != null) {
+      s = arrAccess.toString();
+    }
     return super.toString() + ": " + s;
   }
 }

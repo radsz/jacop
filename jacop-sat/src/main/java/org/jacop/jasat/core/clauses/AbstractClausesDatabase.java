@@ -32,6 +32,7 @@
 package org.jacop.jasat.core.clauses;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
@@ -143,11 +144,15 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     int var = Math.abs(literal);
 
-    if (watchLists.length <= var || watchLists[var] == null) return false;
+    if (watchLists.length <= var || watchLists[var] == null) {
+      return false;
+    }
 
     int[] watchList = watchLists[var];
-    for (int i = 1; i < watchList[0]; ++i) {
-      if (watchList[i] == clauseIndex) return true;
+    for (int i = 1; i < watchList[0]; i++) {
+      if (watchList[i] == clauseIndex) {
+        return true;
+      }
     }
 
     return false;
@@ -163,7 +168,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     assert var > 0;
 
     // already has a watch-list
-    if (watchLists.length > var && watchLists[var] != null) return;
+    if (watchLists.length > var && watchLists[var] != null) {
+      return;
+    }
 
     // create new int[]
     int[] watchList = pool.getNew(MINIMUM_VAR_WATCH_SIZE);
@@ -226,7 +233,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
 
     // find the index of the clause in the int[]. Start from the
     // right so that recently added clauses are found faster.
-    for (int i = watchList[0] - 1; i > 0; --i) {
+    for (int i = watchList[0] - 1; i > 0; i--) {
       if (watchList[i] == clauseIndex) {
         // this is the clause, remove it by putting the last
         // clause index here
@@ -287,7 +294,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    *
    * @param output it specifies the target to which the description will be written.
    */
-  public abstract void toCNF(BufferedWriter output) throws java.io.IOException;
+  public abstract void toCNF(BufferedWriter output) throws IOException;
 
   /**
    * swaps the two literals at position i and j in the clause
@@ -298,7 +305,9 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    */
   protected final void swap(int[] clause, int i, int j) {
     // assert i >= 0 && j >= 0;
-    if (i == j) return;
+    if (i == j) {
+      return;
+    }
 
     int temp = clause[i];
     clause[i] = clause[j];

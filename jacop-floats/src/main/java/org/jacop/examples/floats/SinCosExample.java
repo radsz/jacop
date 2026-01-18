@@ -89,8 +89,11 @@ public class SinCosExample {
 
     boolean result = label.labeling(store, s);
 
-    if (result) label.printAllSolutions();
-    else IO.println("NO SOLUTION");
+    if (result) {
+      label.printAllSolutions();
+    } else {
+      IO.println("NO SOLUTION");
+    }
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 

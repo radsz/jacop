@@ -106,7 +106,9 @@ public class CountValues extends Constraint implements SatisfiedPresent {
     this.counterRest = new IntVar(counter[0].getStore(), 0, n);
 
     this.valuesDomain = new IntervalDomain();
-    for (int v : values) valuesDomain.unionAdapt(v);
+    for (int v : values) {
+      valuesDomain.unionAdapt(v);
+    }
     this.valuesDomainComplement = valuesDomain.complement();
 
     extendedCounter = new IntVar[counter.length + 1];
@@ -158,19 +160,23 @@ public class CountValues extends Constraint implements SatisfiedPresent {
     int restMayBe;
 
     restEq = rest.value();
-    for (int i = 0; i < values.length; i++) numberEq[i] = equal[i].value();
+    for (int i = 0; i < values.length; i++) {
+      numberEq[i] = equal[i].value();
+    }
 
     do {
 
       restMayBe = 0;
-      for (int i = 0; i < values.length; i++) numberMayBe[i] = 0;
+      for (int i = 0; i < values.length; i++) {
+        numberMayBe[i] = 0;
+      }
 
       for (int i = start; i < n; i++) {
         IntVar v = list[i];
         int noValuesInDomain = 0;
 
         for (int j = 0; j < values.length; j++) {
-          if (v.domain.contains(values[j]))
+          if (v.domain.contains(values[j])) {
             if (v.singleton()) {
               numberEq[j]++;
               swap(start, i);
@@ -178,12 +184,14 @@ public class CountValues extends Constraint implements SatisfiedPresent {
             } else {
               numberMayBe[j]++;
             }
-          else { // does not have the values in its domain
+          } else { // does not have the values in its domain
             noValuesInDomain++;
           }
         }
 
-        if (!v.domain.subtract(valuesDomain).isEmpty()) restMayBe++;
+        if (!v.domain.subtract(valuesDomain).isEmpty()) {
+          restMayBe++;
+        }
 
         if (noValuesInDomain == values.length) {
           swap(start, i);
@@ -196,8 +204,9 @@ public class CountValues extends Constraint implements SatisfiedPresent {
 
       counterRest.domain.in(store.level, counterRest, restEq, restEq + restMayBe);
 
-      for (int i = 0; i < values.length; i++)
+      for (int i = 0; i < values.length; i++) {
         counter[i].domain.in(store.level, counter[i], numberEq[i], numberEq[i] + numberMayBe[i]);
+      }
 
       int min = 0;
       int max = 0;
@@ -215,7 +224,9 @@ public class CountValues extends Constraint implements SatisfiedPresent {
 
           for (int j = start; j < n; j++) {
             IntVar v = list[j];
-            if (v.domain.contains(values[i])) v.domain.in(store.level, v, values[i], values[i]);
+            if (v.domain.contains(values[i])) {
+              v.domain.in(store.level, v, values[i], values[i]);
+            }
           }
         } else if (numberEq[i] == counter[i].max()) {
 
@@ -265,14 +276,21 @@ public class CountValues extends Constraint implements SatisfiedPresent {
     for (int i = 0; i < counter.length; i++) {
       int v = values[i];
       int c;
-      if (counter[i].singleton()) c = counter[i].value();
-      else return false;
+      if (counter[i].singleton()) {
+        c = counter[i].value();
+      } else {
+        return false;
+      }
 
       int cc = 0;
       for (int j = 0; j < n; j++) {
-        if (list[j].singleton(v)) cc++;
+        if (list[j].singleton(v)) {
+          cc++;
+        }
       }
-      if (cc != counter[i].value()) return false;
+      if (cc != counter[i].value()) {
+        return false;
+      }
     }
 
     return true;
@@ -285,11 +303,11 @@ public class CountValues extends Constraint implements SatisfiedPresent {
 
     result
         .append(" : CountValues(")
-        .append(java.util.Arrays.asList(list))
+        .append(Arrays.asList(list))
         .append(", ")
-        .append(java.util.Arrays.asList(counter))
+        .append(Arrays.asList(counter))
         .append(", ")
-        .append(java.util.Arrays.toString(values));
+        .append(Arrays.toString(values));
 
     return result.toString();
   }

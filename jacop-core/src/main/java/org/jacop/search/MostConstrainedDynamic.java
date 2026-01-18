@@ -49,8 +49,12 @@ public class MostConstrainedDynamic<T extends Var> implements ComparatorVariable
 
   public int compare(double left, T var) {
     int right = var.sizeConstraints();
-    if (left > right) return 1;
-    if (left < right) return -1;
+    if (left > right) {
+      return 1;
+    }
+    if (left < right) {
+      return -1;
+    }
     return 0;
   }
 

@@ -108,25 +108,35 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
       this.bHasChanged = false;
       this.cHasChanged = false;
 
-      if (cHasChanged) a.domain.inGLB(store.level, a, c.domain.glb());
+      if (cHasChanged) {
+        a.domain.inGLB(store.level, a, c.domain.glb());
+      }
 
       if (bHasChanged || cHasChanged) {
         IntDomain temp = b.domain.glb().subtract(c.domain.lub());
-        if (!temp.isEmpty()) a.domain.inLUB(store.level, a, a.domain.lub().subtract(temp));
+        if (!temp.isEmpty()) {
+          a.domain.inLUB(store.level, a, a.domain.lub().subtract(temp));
+        }
       }
 
-      if (cHasChanged) b.domain.inGLB(store.level, b, c.domain.glb());
+      if (cHasChanged) {
+        b.domain.inGLB(store.level, b, c.domain.glb());
+      }
 
       if (cHasChanged || aHasChanged) {
         IntDomain temp = a.domain.glb().subtract(c.domain.lub());
-        if (!temp.isEmpty()) b.domain.inLUB(store.level, b, b.domain.lub().subtract(temp));
+        if (!temp.isEmpty()) {
+          b.domain.inLUB(store.level, b, b.domain.lub().subtract(temp));
+        }
       }
 
-      if (bHasChanged || aHasChanged)
+      if (bHasChanged || aHasChanged) {
         c.domain.inGLB(store.level, c, a.domain.glb().intersect(b.domain.glb()));
+      }
 
-      if (bHasChanged || aHasChanged)
+      if (bHasChanged || aHasChanged) {
         c.domain.inLUB(store.level, c, a.domain.lub().intersect(b.domain.lub()));
+      }
 
       if (performCardinalityReasoning) {
 
@@ -160,7 +170,9 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
                 + Math.max(b.domain.card().min() - sizeOf3_8, 0);
 
         max -= sizeOf6 + sizeOf2_5_6_7;
-        if (max > 0) c.domain.inCardinality(store.level, c, sizeOf6 + max, Integer.MAX_VALUE);
+        if (max > 0) {
+          c.domain.inCardinality(store.level, c, sizeOf6 + max, Integer.MAX_VALUE);
+        }
 
         c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, a.domain.card().max() - sizeOf4);
         c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, b.domain.card().max() - sizeOf8);

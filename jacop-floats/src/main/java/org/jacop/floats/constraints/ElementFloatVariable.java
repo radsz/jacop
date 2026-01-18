@@ -140,7 +140,7 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
 
   @Override
   public boolean isStateful() {
-    return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
 
   /**
@@ -187,10 +187,13 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
 
-      if (disjoint(value, list[position]))
-        if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-        else indexDom.addLastElement(position + 1 + indexOffset);
-      else {
+      if (disjoint(value, list[position])) {
+        if (indexDom.size == 0) {
+          indexDom.unionAdapt(position + 1 + indexOffset);
+        } else {
+          indexDom.addLastElement(position + 1 + indexOffset);
+        }
+      } else {
         min = Math.min(min, list[position].min());
         max = Math.max(max, list[position].max());
       }
@@ -221,7 +224,9 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -248,7 +253,9 @@ public class ElementFloatVariable extends Constraint implements Stateful, Satisf
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(", ").append(indexOffset).append(" )");

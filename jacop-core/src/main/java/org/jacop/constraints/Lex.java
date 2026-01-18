@@ -95,29 +95,45 @@ public class Lex extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 
   @Override
   public List<Constraint> decompose(Store store) {
 
-    if (constraints != null) return constraints;
+    if (constraints != null) {
+      return constraints;
+    }
 
-    if (x.length == 2) // && x[0].length > 100)
-    if (lexLT) return decomposeLT(store);
-      else return decomposeLE(store);
+    if (x.length == 2) { // && x[0].length > 100)
+      if (lexLT) {
+        return decomposeLT(store);
+      } else {
+        return decomposeLE(store);
+      }
+    }
 
     // smaller Lex with several lists can be decompose with Regular
-    if (lexLT) return decomposeLTRegular(store);
-    else return decomposeLERegular(store);
+    if (lexLT) {
+      return decomposeLTRegular(store);
+    } else {
+      return decomposeLERegular(store);
+    }
   }
 
   public List<Constraint> decomposeLERegular(Store store) {
 
-    if (constraints == null) constraints = new ArrayList<>();
-    else return constraints;
+    if (constraints == null) {
+      constraints = new ArrayList<>();
+    } else {
+      return constraints;
+    }
 
     // first index represents compared vectors and the second variables within vectors
     //		int numberStates = 0;
@@ -128,9 +144,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
     FSMState[][][] state = new FSMState[x.length - 1][][];
     FSMState[][] addState = new FSMState[x.length - 2][];
 
-    for (int i = 0; i < x.length - 1; ++i) {
+    for (int i = 0; i < x.length - 1; i++) {
 
-      int sizeToCompare = (x[i].length < x[i + 1].length) ? x[i].length : x[i + 1].length;
+      int sizeToCompare = x[i].length < x[i + 1].length ? x[i].length : x[i + 1].length;
 
       lt[i] = new BooleanVar[sizeToCompare];
       eq[i] = new BooleanVar[sizeToCompare];
@@ -143,8 +159,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
         constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
         constraints.add(new Reified(new XeqY(x[i][j], x[i + 1][j]), eq[i][j]));
 
-        if (x[i].length > x[i + 1].length && j == sizeToCompare - 1)
+        if (x[i].length > x[i + 1].length && j == sizeToCompare - 1) {
           constraints.add(new XeqC(eq[i][j], 0));
+        }
 
         state[i][j] = new FSMState[2];
         state[i][j][0] = new FSMState();
@@ -157,7 +174,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
           if (j == 0) {
             addState[i] = new FSMState[2 * (sizeToCompare - j) - 1];
 
-            for (int k = 0; k < addState[i].length; k++) addState[i][k] = new FSMState();
+            for (int k = 0; k < addState[i].length; k++) {
+              addState[i][k] = new FSMState();
+            }
           }
         }
       }
@@ -176,7 +195,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
         g.allStates.add(state[i][j][1]);
       }
     }
-    for (FSMState[] fsmStates : addState) g.allStates.addAll(Arrays.asList(fsmStates));
+    for (FSMState[] fsmStates : addState) {
+      g.allStates.addAll(Arrays.asList(fsmStates));
+    }
 
     g.initState = state[0][0][0];
     FSMState terminate = new FSMState();
@@ -193,14 +214,16 @@ public class Lex extends DecomposedConstraint<Constraint> {
               state[i][j][0].transitions.add(
                   new FSMTransition(new IntervalDomain(1, 1), addState[i][0]));
 
-              for (int s = 1; s < addState[i].length; s++)
+              for (int s = 1; s < addState[i].length; s++) {
                 addState[i][s - 1].transitions.add(
                     new FSMTransition(new IntervalDomain(0, 1), addState[i][s]));
+              }
               addState[i][addState[i].length - 1].transitions.add(
                   new FSMTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
-            } else
+            } else {
               state[i][j][0].transitions.add(
                   new FSMTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
+            }
 
             state[i][j][0].transitions.add(
                 new FSMTransition(new IntervalDomain(0, 0), state[i][j][1]));
@@ -212,17 +235,18 @@ public class Lex extends DecomposedConstraint<Constraint> {
         }
 
         if (i != state.length - 1) {
-          if (j != state[i].length - 1)
+          if (j != state[i].length - 1) {
             state[i][j][1].transitions.add(
                 new FSMTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
-          else
+          } else {
             state[i][j][1].transitions.add(
                 new FSMTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+          }
         } else { // i == state.length
-          if (j != state[i].length - 1)
+          if (j != state[i].length - 1) {
             state[i][j][1].transitions.add(
                 new FSMTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
-          else {
+          } else {
             state[i][j][1].transitions.add(new FSMTransition(new IntervalDomain(1, 1), terminate));
           }
         }
@@ -238,8 +262,11 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
   public List<Constraint> decomposeLTRegular(Store store) {
 
-    if (constraints == null) constraints = new ArrayList<>();
-    else return constraints;
+    if (constraints == null) {
+      constraints = new ArrayList<>();
+    } else {
+      return constraints;
+    }
 
     // first index represents compared vectors and the second varinbales within vectors
     //		int numberStates = 0;
@@ -249,9 +276,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
     FSMState[][][] state = new FSMState[x.length - 1][][];
     FSMState[][] addState = new FSMState[x.length - 2][];
 
-    for (int i = 0; i < x.length - 1; ++i) {
+    for (int i = 0; i < x.length - 1; i++) {
 
-      int sizeToCompare = (x[i].length < x[i + 1].length) ? x[i].length : x[i + 1].length;
+      int sizeToCompare = x[i].length < x[i + 1].length ? x[i].length : x[i + 1].length;
 
       lt[i] = new BooleanVar[sizeToCompare];
       eq[i] = new BooleanVar[sizeToCompare - 1];
@@ -259,7 +286,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
       for (int j = 0; j < sizeToCompare; j++) {
 
-        if (x[i].length < x[i + 1].length)
+        if (x[i].length < x[i + 1].length) {
           if (j < sizeToCompare - 1) {
             lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
             numberVar++;
@@ -269,7 +296,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
             numberVar++;
             constraints.add(new Reified(new XlteqY(x[i][j], x[i + 1][j]), lt[i][j]));
           }
-        else {
+        } else {
           lt[i][j] = new BooleanVar(store, "lt_" + i + "_" + j);
           numberVar++;
           constraints.add(new Reified(new XltY(x[i][j], x[i + 1][j]), lt[i][j]));
@@ -295,7 +322,9 @@ public class Lex extends DecomposedConstraint<Constraint> {
           if (j == 0) {
             addState[i] = new FSMState[2 * (sizeToCompare - j) - 2];
 
-            for (int k = 0; k < addState[i].length; k++) addState[i][k] = new FSMState();
+            for (int k = 0; k < addState[i].length; k++) {
+              addState[i][k] = new FSMState();
+            }
           }
         }
       }
@@ -308,13 +337,19 @@ public class Lex extends DecomposedConstraint<Constraint> {
     for (int i = 0; i < lt.length; i++) {
       for (int j = 0; j < lt[i].length; j++) {
         var[k++] = lt[i][j];
-        if (j < eq[i].length) var[k++] = eq[i][j];
+        if (j < eq[i].length) {
+          var[k++] = eq[i][j];
+        }
 
         g.allStates.add(state[i][j][0]);
-        if (j < eq[i].length) g.allStates.add(state[i][j][1]);
+        if (j < eq[i].length) {
+          g.allStates.add(state[i][j][1]);
+        }
       }
     }
-    for (FSMState[] fsmStates : addState) g.allStates.addAll(Arrays.asList(fsmStates));
+    for (FSMState[] fsmStates : addState) {
+      g.allStates.addAll(Arrays.asList(fsmStates));
+    }
 
     g.initState = state[0][0][0];
     FSMState terminate = new FSMState();
@@ -326,35 +361,40 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
         if (i != state.length - 1) {
           // cannot go directly - must go through other states :(
-          if (addState[i].length != 0)
+          if (addState[i].length != 0) {
             if (j == 0) {
               state[i][j][0].transitions.add(
                   new FSMTransition(new IntervalDomain(1, 1), addState[i][0]));
 
-              for (int s = 1; s < addState[i].length; s++)
+              for (int s = 1; s < addState[i].length; s++) {
                 addState[i][s - 1].transitions.add(
                     new FSMTransition(new IntervalDomain(0, 1), addState[i][s]));
+              }
               addState[i][addState[i].length - 1].transitions.add(
                   new FSMTransition(new IntervalDomain(0, 1), state[i + 1][0][0]));
             } else if (j != state[i].length - 1) {
               state[i][j][0].transitions.add(
                   new FSMTransition(new IntervalDomain(1, 1), addState[i][2 * j]));
-            } else
+            } else {
               state[i][j][0].transitions.add(
                   new FSMTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
-          else
+            }
+          } else {
             state[i][j][0].transitions.add(
                 new FSMTransition(new IntervalDomain(1, 1), state[i + 1][0][0]));
+          }
         } else {
           state[i][j][0].transitions.add(new FSMTransition(new IntervalDomain(1, 1), terminate));
         }
-        if (j != state[i].length - 1)
+        if (j != state[i].length - 1) {
           state[i][j][0].transitions.add(
               new FSMTransition(new IntervalDomain(0, 0), state[i][j][1]));
+        }
 
-        if (j != state[i].length - 1)
+        if (j != state[i].length - 1) {
           state[i][j][1].transitions.add(
               new FSMTransition(new IntervalDomain(1, 1), state[i][j + 1][0]));
+        }
       }
     }
 
@@ -367,13 +407,18 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
   public List<Constraint> decomposeLT(Store store) {
 
-    if (constraints == null) constraints = new ArrayList<>();
-    else return constraints;
+    if (constraints == null) {
+      constraints = new ArrayList<>();
+    } else {
+      return constraints;
+    }
 
-    int sizeToCompare = (x[0].length < x[1].length) ? x[0].length : x[1].length;
+    int sizeToCompare = x[0].length < x[1].length ? x[0].length : x[1].length;
 
     BooleanVar[] b = new BooleanVar[sizeToCompare + 1];
-    for (int i = 0; i < b.length; i++) b[i] = new BooleanVar(store);
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new BooleanVar(store);
+    }
 
     constraints.add(new XeqC(b[0], 1));
 
@@ -387,33 +432,43 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
       constraints.add(c);
     }
-    if (x[0].length < x[1].length) constraints.add(new XeqC(b[sizeToCompare], 1));
-    else constraints.add(new XeqC(b[sizeToCompare], 0));
+    if (x[0].length < x[1].length) {
+      constraints.add(new XeqC(b[sizeToCompare], 1));
+    } else {
+      constraints.add(new XeqC(b[sizeToCompare], 0));
+    }
 
     return constraints;
   }
 
   public List<Constraint> decomposeLE(Store store) {
 
-    if (constraints == null) constraints = new ArrayList<>();
-    else return constraints;
+    if (constraints == null) {
+      constraints = new ArrayList<>();
+    } else {
+      return constraints;
+    }
 
-    int sizeToCompare = (x[0].length < x[1].length) ? x[0].length : x[1].length;
+    int sizeToCompare = x[0].length < x[1].length ? x[0].length : x[1].length;
 
     BooleanVar[] b = new BooleanVar[sizeToCompare];
-    for (int i = 0; i < b.length; i++) b[i] = new BooleanVar(store);
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new BooleanVar(store);
+    }
 
     constraints.add(new XeqC(b[0], 1));
 
     for (int i = 0; i < sizeToCompare; i++) {
-      if (i == sizeToCompare - 1) constraints.add(new Reified(new XlteqY(x[0][i], x[1][i]), b[i]));
-      else
+      if (i == sizeToCompare - 1) {
+        constraints.add(new Reified(new XlteqY(x[0][i], x[1][i]), b[i]));
+      } else {
         constraints.add(
             new Reified(
                 new And(
                     new XlteqY(x[0][i], x[1][i]),
                     new Or(new XltY(x[0][i], x[1][i]), new XeqC(b[i + 1], 1))),
                 b[i]));
+      }
     }
 
     return constraints;

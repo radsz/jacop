@@ -68,9 +68,10 @@ public class Xor extends PrimitiveConstraint {
 
     checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
 
-    if (!(b.min() >= 0 && b.max() <= 1))
+    if (!(b.min() >= 0 && b.max() <= 1)) {
       throw new IllegalArgumentException(
           "Constraint Xor has a variable b = " + b + " that has a domain outside of 0..1.");
+    }
 
     numberId = idNumber.incrementAndGet();
 
@@ -89,12 +90,15 @@ public class Xor extends PrimitiveConstraint {
 
     // Does not need to loop on newPropagation since
     // the constraint C loops itself
-    if (b.max() == 0) // C must be true
-    c.consistency(store);
-    else if (b.min() == 1) // C must be false
-    c.notConsistency(store);
-    else if (c.satisfied()) b.domain.inValue(store.level, b, 0);
-    else if (c.notSatisfied()) b.domain.inValue(store.level, b, 1);
+    if (b.max() == 0) { // C must be true
+      c.consistency(store);
+    } else if (b.min() == 1) { // C must be false
+      c.notConsistency(store);
+    } else if (c.satisfied()) {
+      b.domain.inValue(store.level, b, 0);
+    } else if (c.notSatisfied()) {
+      b.domain.inValue(store.level, b, 1);
+    }
   }
 
   @Override
@@ -114,26 +118,36 @@ public class Xor extends PrimitiveConstraint {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == b) return IntDomain.GROUND;
-    else {
+    if (var == b) {
+      return IntDomain.GROUND;
+    } else {
 
       int eventAcross = -1;
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, true);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, false);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
-      if (eventAcross == -1) return Domain.NONE;
-      else return eventAcross;
+      if (eventAcross == -1) {
+        return Domain.NONE;
+      } else {
+        return eventAcross;
+      }
     }
   }
 
@@ -148,25 +162,35 @@ public class Xor extends PrimitiveConstraint {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == b) return IntDomain.GROUND;
-    else {
+    if (var == b) {
+      return IntDomain.GROUND;
+    } else {
 
       int eventAcross = -1;
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, true);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, false);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
-      if (eventAcross == -1) return Domain.NONE;
-      else return eventAcross;
+      if (eventAcross == -1) {
+        return Domain.NONE;
+      } else {
+        return eventAcross;
+      }
     }
   }
 
@@ -192,12 +216,15 @@ public class Xor extends PrimitiveConstraint {
 
     // Does not need to loop on newPropagation since
     // the constraint C loops itself
-    if (b.max() == 0) // C must be false
-    c.notConsistency(store);
-    else if (b.min() == 1) // C must be true
-    c.consistency(store);
-    else if (c.satisfied()) b.domain.inValue(store.level, b, 1);
-    else if (c.notSatisfied()) b.domain.inValue(store.level, b, 0);
+    if (b.max() == 0) { // C must be false
+      c.notConsistency(store);
+    } else if (b.min() == 1) { // C must be true
+      c.consistency(store);
+    } else if (c.satisfied()) {
+      b.domain.inValue(store.level, b, 1);
+    } else if (c.notSatisfied()) {
+      b.domain.inValue(store.level, b, 0);
+    }
   }
 
   @Override

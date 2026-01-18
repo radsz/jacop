@@ -43,15 +43,15 @@ import org.jacop.core.Var;
  */
 public class LDS<T extends Var> implements ExitChildListener<T> {
 
-  boolean timeOut = false;
+  boolean timeOut;
 
   int noDiscrepancies;
 
   int maxNoDiscrepancies;
 
-  boolean recentExitingLeftChildGoingForDiscrepancy = false;
+  boolean recentExitingLeftChildGoingForDiscrepancy;
 
-  boolean recentExitingRightChild = false;
+  boolean recentExitingRightChild;
 
   ExitChildListener<T>[] exitChildListeners;
 
@@ -86,8 +86,9 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         // maximum number of discrepancies reached, returning false
         // since we do not want to
         if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
             exitChildListener.leftChild(var, value, status);
+          }
         }
 
         noDiscrepancies--;
@@ -97,12 +98,15 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 
         if (exitChildListeners != null) {
           boolean code = false;
-          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
             code |= exitChildListener.leftChild(var, value, status);
+          }
 
           // the children listeners disallow entering the right child
           // so there will be no disrepancy as counted.
-          if (!code) noDiscrepancies--;
+          if (!code) {
+            noDiscrepancies--;
+          }
           return code;
         }
 
@@ -133,8 +137,9 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         // maximum number of discrepancies reached, returning false
         // since we do not want to
         if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
             exitChildListener.leftChild(choice, status);
+          }
         }
 
         noDiscrepancies--;
@@ -144,12 +149,15 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
 
         if (exitChildListeners != null) {
           boolean code = false;
-          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
             code |= exitChildListener.leftChild(choice, status);
+          }
 
           // the children listeners disallow entering the right child
           // so there will be no disrepancy as counted.
-          if (!code) noDiscrepancies--;
+          if (!code) {
+            noDiscrepancies--;
+          }
           return code;
         }
 

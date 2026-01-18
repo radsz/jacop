@@ -203,18 +203,26 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
    */
   public void remove(int previous, int current) {
 
-    if (previous == -1) first = nexts[current];
-    else nexts[previous] = nexts[current];
-    if (nexts[current] == -1) last = previous;
+    if (previous == -1) {
+      first = nexts[current];
+    } else {
+      nexts[previous] = nexts[current];
+    }
+    if (nexts[current] == -1) {
+      last = previous;
+    }
 
     if (store.level == headsOfEliminatedTuples.stamp()) {
       nexts[current] = headsOfEliminatedTuples.value();
-    } else nexts[current] = -1;
+    } else {
+      nexts[current] = -1;
+    }
 
     headsOfEliminatedTuples.update(current);
 
-    if (tailsOfEliminatedTuples.stamp() < store.level || tailsOfEliminatedTuples.value() == -1)
+    if (tailsOfEliminatedTuples.stamp() < store.level || tailsOfEliminatedTuples.value() == -1) {
       tailsOfEliminatedTuples.update(current);
+    }
   }
 
   /**
@@ -224,11 +232,18 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
    * @param current the residue tuple.
    */
   public void storeResidue(int previous, int current) {
-    if (previous == -1) first = nexts[current];
-    else nexts[previous] = nexts[current];
-    if (nexts[current] == -1) last = previous;
+    if (previous == -1) {
+      first = nexts[current];
+    } else {
+      nexts[previous] = nexts[current];
+    }
+    if (nexts[current] == -1) {
+      last = previous;
+    }
     nexts[current] = firstResidue;
-    if (firstResidue == -1) lastResidue = current;
+    if (firstResidue == -1) {
+      lastResidue = current;
+    }
     firstResidue = current;
   }
 
@@ -245,19 +260,28 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     // adds tuples which were removed at current level, which is being removed.
 
-    if (headsOfEliminatedTuples.stamp() < store.level) return;
+    if (headsOfEliminatedTuples.stamp() < store.level) {
+      return;
+    }
 
     if (reinsertBefore) {
 
-      if (tailsOfEliminatedTuples.value() == -1) IO.print("Error");
+      if (tailsOfEliminatedTuples.value() == -1) {
+        IO.print("Error");
+      }
 
       nexts[tailsOfEliminatedTuples.value()] = first;
-      if (first == -1) last = tailsOfEliminatedTuples.value();
+      if (first == -1) {
+        last = tailsOfEliminatedTuples.value();
+      }
       first = headsOfEliminatedTuples.value();
 
     } else {
-      if (first != -1) nexts[last] = headsOfEliminatedTuples.value();
-      else first = headsOfEliminatedTuples.value();
+      if (first != -1) {
+        nexts[last] = headsOfEliminatedTuples.value();
+      } else {
+        first = headsOfEliminatedTuples.value();
+      }
       last = tailsOfEliminatedTuples.value();
     }
   }
@@ -279,7 +303,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
       valuesInFocus = new IntervalDomain[list.length];
 
-      for (int j = 0; j < list.length; j++) valuesInFocus[j] = new IntervalDomain();
+      for (int j = 0; j < list.length; j++) {
+        valuesInFocus[j] = new IntervalDomain();
+      }
 
       for (int[] t : tuples) {
 
@@ -289,7 +315,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         if (debugAll) {
           IO.print("support for analysis[");
-          for (int val : t) IO.print(val + " ");
+          for (int val : t) {
+            IO.print(val + " ");
+          }
           IO.println("]");
         }
 
@@ -317,7 +345,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         if (debugAll) {
           if (!stillSupport[i]) {
             IO.print("Not support [");
-            for (int val : t) IO.print(val + " ");
+            for (int val : t) {
+              IO.print(val + " ");
+            }
             IO.println("]");
           }
         }
@@ -342,7 +372,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
           if (debugAll) {
             IO.print("Still support [");
-            for (int val : t) IO.print(val + " ");
+            for (int val : t) {
+              IO.print(val + " ");
+            }
             IO.println("]");
           }
         }
@@ -354,11 +386,15 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
       tuples = temp4Shrinking;
 
-      if (tuples.length == 0) throw Store.failException;
+      if (tuples.length == 0) {
+        throw Store.failException;
+      }
 
       first = 0;
       nexts = new int[tuples.length];
-      for (int j = 0; j < nexts.length; j++) nexts[j] = j + 1;
+      for (int j = 0; j < nexts.length; j++) {
+        nexts[j] = j + 1;
+      }
       nexts[nexts.length - 1] = -1;
       last = nexts.length - 1;
 
@@ -382,8 +418,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         int[] originalTuple = tuples[l];
         int[] transformedTuple = new int[originalTuple.length];
 
-        for (int m = 0; m < transformedTuple.length; m++)
+        for (int m = 0; m < transformedTuple.length; m++) {
           transformedTuple[m] = views[m].indexOfValue(originalTuple[m]);
+        }
 
         tuples[l] = transformedTuple;
       }
@@ -394,13 +431,16 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     if (backtrackOccured) {
 
-      for (int i = 0; i < list.length; i++)
+      for (int i = 0; i < list.length; i++) {
         // If it zero it means that it has changed after backtracking so we
         // need to check this variable. All other variables (not equal to zero)
         // we do not need to check for validity just because of the backtracking.
         // QueueVariable performed after backtracking and before consistency call
         // registers all variables by setting their size to zero.
-        if (domainSizeAfterConsistency[i] != 0) domainSizeAfterConsistency[i] = list[i].getSize();
+        if (domainSizeAfterConsistency[i] != 0) {
+          domainSizeAfterConsistency[i] = list[i].getSize();
+        }
+      }
     }
 
     // This part decides for which variables we need to check to guarantee tuples validity.
@@ -429,10 +469,11 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     }
 
     int lastAssignedIndex = 0;
-    if (lastAssignedVariablePosition != -1)
+    if (lastAssignedVariablePosition != -1) {
       lastAssignedIndex =
           views[lastAssignedVariablePosition].indexOfValue(
               list[lastAssignedVariablePosition].value());
+    }
 
     // int cnt=0;
     firstResidue = -1;
@@ -448,11 +489,14 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
               || checkedTuple[lastAssignedVariablePosition] == lastAssignedIndex;
       for (int i = 0; valid && i < nbValidityVariables; i++) {
         int position = validityVariablePositions[i];
-        if (!views[position].contains(checkedTuple[position])) valid = false;
+        if (!views[position].contains(checkedTuple[position])) {
+          valid = false;
+        }
       }
 
-      if (!valid) remove(previous, current);
-      else {
+      if (!valid) {
+        remove(previous, current);
+      } else {
         int nbbefore = nbGlobalValuesToBeSupported;
         for (int i = nbSupportsVariables - 1; i >= 0; i--) {
           int position = supportsVariablePositions[i];
@@ -460,32 +504,42 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
           if (!views[position].setSupport(checkedTuple[position])) {
             nbGlobalValuesToBeSupported--;
             nbValuesToBeSupported[position]--;
-            if (nbValuesToBeSupported[position] == 0)
+            if (nbValuesToBeSupported[position] == 0) {
               supportsVariablePositions[i] = supportsVariablePositions[--nbSupportsVariables];
+            }
           }
         }
-        if (residuesBefore && nbbefore > nbGlobalValuesToBeSupported)
+        if (residuesBefore && nbbefore > nbGlobalValuesToBeSupported) {
           storeResidue(previous, current);
-        else previous = current;
+        } else {
+          previous = current;
+        }
       }
       current = next;
     }
 
     if (residuesBefore && firstResidue != -1) {
       nexts[lastResidue] = first;
-      if (first == -1) last = lastResidue;
+      if (first == -1) {
+        last = lastResidue;
+      }
       first = firstResidue;
     }
 
     for (int i = 0; i < nbSupportsVariables; i++) {
       int position = supportsVariablePositions[i];
-      if (nbValuesToBeSupported[position] == list[position].getSize()) throw Store.failException;
+      if (nbValuesToBeSupported[position] == list[position].getSize()) {
+        throw Store.failException;
+      }
     }
 
-    for (int i = 0; i < nbSupportsVariables; i++)
+    for (int i = 0; i < nbSupportsVariables; i++) {
       views[supportsVariablePositions[i]].removeUnSupportedValues(store);
+    }
 
-    for (int i = 0; i < list.length; i++) domainSizeAfterConsistency[i] = list[i].getSize();
+    for (int i = 0; i < list.length; i++) {
+      domainSizeAfterConsistency[i] = list[i].getSize();
+    }
 
     backtrackOccured = false;
   }
@@ -503,7 +557,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     varToIndex = Var.positionMapping(list, false, this.getClass());
 
     if (debugAll) {
-      for (Var var : list) IO.println("Variable " + var);
+      for (Var var : list) {
+        IO.println("Variable " + var);
+      }
     }
 
     headsOfEliminatedTuples = new TimeStamp<>(store, -1);
@@ -526,14 +582,19 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
       domainSizeAfterConsistency[varToIndex.get(V)] = 0;
     }
 
-    if (V.singleton()) lastAssignedVariablePosition = varToIndex.get(V);
+    if (V.singleton()) {
+      lastAssignedVariablePosition = varToIndex.get(V);
+    }
   }
 
   boolean smaller(int[] tuple1, int[] tuple2) {
 
     int arity = tuple1.length;
-    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++)
-      if (tuple1[i] < tuple2[i]) return true;
+    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
+      if (tuple1[i] < tuple2[i]) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -548,7 +609,9 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     for (int i = 0; i < list.length; i++) {
       tupleString.append(list[i].toString());
-      if (i + 1 < list.length) tupleString.append(" ");
+      if (i + 1 < list.length) {
+        tupleString.append(" ");
+      }
     }
 
     tupleString.append(", ");
@@ -557,21 +620,27 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
       int[][] subset = tuples;
 
-      for (int p1 = 0; p1 < subset.length; p1++)
-        for (int p2 = subset.length - 1; p2 > p1; p2--)
+      for (int p1 = 0; p1 < subset.length; p1++) {
+        for (int p2 = subset.length - 1; p2 > p1; p2--) {
           if (smaller(subset[p2], subset[p2 - 1])) {
             int[] temp = subset[p2];
             subset[p2] = subset[p2 - 1];
             subset[p2 - 1] = temp;
           }
+        }
+      }
 
       for (int p1 = 0; p1 < subset.length; p1++) {
         for (int p2 = 0; p2 < subset[p1].length; p2++) {
           tupleString.append(subset[p1][p2]);
-          if (p2 != subset[p1].length - 1) tupleString.append(" ");
+          if (p2 != subset[p1].length - 1) {
+            tupleString.append(" ");
+          }
         }
 
-        if (p1 != subset.length - 1) tupleString.append("|");
+        if (p1 != subset.length - 1) {
+          tupleString.append("|");
+        }
       }
 
       tupleString.append(")");

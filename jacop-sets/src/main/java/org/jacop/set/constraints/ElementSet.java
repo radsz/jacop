@@ -70,7 +70,7 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
    * It allows to offset the indexing. By default the indexing starts from 1, if index variable
    * starts from 0, and 0 denotes the first element then indexOffset should be set to -1.
    */
-  public int indexOffset = 0;
+  public int indexOffset;
 
   /**
    * It constructs a constraint to restrict the domains of the variables index and value.
@@ -125,7 +125,9 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     while (enumer.hasMoreElements()) {
       el = enumer.nextElement() - 1 - indexOffset;
       if (el >= 0) {
-        if (el >= list.length) break;
+        if (el >= list.length) {
+          break;
+        }
         // TODO, implement some support functionality
         // e.g. values in valueLUB can be supported by element from the list
         // if index has some value being removed from it then new supports
@@ -136,8 +138,9 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
         // in the list supports removing it from glb then we put it in glb.
         newValueGLB = newValueGLB.intersect(list[el]);
         newValueLUB.addDom(list[el]);
-        if (valueDom.lub().contains(list[el]) && list[el].contains(valueDom.glb()))
+        if (valueDom.lub().contains(list[el]) && list[el].contains(valueDom.glb())) {
           newIndex.unionAdapt(el + 1 + indexOffset, el + 1 + indexOffset);
+        }
       }
     }
 
@@ -151,10 +154,15 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == value) return SetDomain.ANY;
-    else return IntDomain.ANY;
+    if (var == value) {
+      return SetDomain.ANY;
+    } else {
+      return IntDomain.ANY;
+    }
   }
 
   @Override
@@ -174,7 +182,9 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
 
     result.append(id()).append(" : ElementSet( ").append(index).append(", [ ");
 
-    for (IntDomain s : list) result.append(s).append(" ");
+    for (IntDomain s : list) {
+      result.append(s).append(" ");
+    }
 
     result.append(" ], ").append(value).append(" )");
 

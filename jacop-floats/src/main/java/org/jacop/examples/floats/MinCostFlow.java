@@ -82,26 +82,29 @@ public class MinCostFlow {
 
     FloatVar[] X = new FloatVar[m];
 
-    for (int i = 0; i < m; i++)
+    for (int i = 0; i < m; i++) {
       X[i] = new FloatVar(store, "X[" + i + "]", capacity_lb[i], capacity[i]);
+    }
 
     for (int i = 0; i < n; i++) {
 
       List<FloatVar> outFlow = new ArrayList<>();
       List<Double> outFlowWeights = new ArrayList<>();
-      for (int j = 0; j < m; j++)
+      for (int j = 0; j < m; j++) {
         if (arcs[j][1] == i + 1) {
           outFlow.add(X[j]);
           outFlowWeights.add(1.0);
         }
+      }
 
       List<FloatVar> inFlow = new ArrayList<>();
       List<Double> inFlowWeights = new ArrayList<>();
-      for (int j = 0; j < m; j++)
+      for (int j = 0; j < m; j++) {
         if (arcs[j][0] == i + 1) {
           inFlow.add(X[j]);
           inFlowWeights.add(1.0);
         }
+      }
 
       FloatVar outResult = new FloatVar(store, "outResult_" + i, MIN_FLOAT, MAX_FLOAT);
       outFlow.add(outResult);
@@ -150,7 +153,9 @@ public class MinCostFlow {
     IO.println(cost);
     // System.out.printf ("cost = %.2f\n", cost.value());
 
-    for (FloatVar x : X) System.out.printf("%.2f, ", x.value());
+    for (FloatVar x : X) {
+      System.out.printf("%.2f, ", x.value());
+    }
     IO.println();
     // for (int i = 0; i < X.length; i++) {
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));

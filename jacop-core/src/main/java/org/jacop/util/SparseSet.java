@@ -94,7 +94,9 @@ public class SparseSet {
       dense[members] = value;
       members++;
       return true;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -124,7 +126,9 @@ public class SparseSet {
   public String toString() {
 
     StringBuilder result = new StringBuilder();
-    for (int i = 0; i < members; i++) result.append(dense[i]).append(" ");
+    for (int i = 0; i < members; i++) {
+      result.append(dense[i]).append(" ");
+    }
 
     return result.toString();
   }

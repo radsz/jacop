@@ -115,12 +115,16 @@ public class CurveFitting {
     div[n] = b1;
 
     double[] ones1 = new double[n + 1];
-    for (int i = 0; i < n; i++) ones1[i] = 1.0;
+    for (int i = 0; i < n; i++) {
+      ones1[i] = 1.0;
+    }
     ones1[n] = -1.0;
     store.impose(new LinearFloat(div, ones1, "==", 0.0));
 
     double[] ones = new double[n];
-    for (int i = 0; i < n; i++) ones[i] = 1.0;
+    for (int i = 0; i < n; i++) {
+      ones[i] = 1.0;
+    }
     store.impose(new LinearFloat(Ex, ones, "==", 0.0));
     store.impose(new LinearFloat(Ey, ones, "==", 0.0));
 

@@ -172,8 +172,9 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       // ignore this literal, now
 
       // remember which asserted literal is cause for this propagation
-      if (propagationCauses.length <= var)
+      if (propagationCauses.length <= var) {
         propagationCauses = Utils.resize(propagationCauses, 2 * var, pool);
+      }
       propagationCauses[var] = assertedLiteral;
 
       // invariant : the explanation is equal to the depth in trail stack
@@ -206,7 +207,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     assert wrapper.log(
         this,
         "resolution with "
-            + (propagatedLiteral)
+            + propagatedLiteral
             + " and "
             + (-assertedLiteral)
             + " meaning "
@@ -275,8 +276,9 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   @Override
   public void toCNF(BufferedWriter output) {
 
-    if (!wrapper.registeredVars.equals(wrapper.domainTranslator.translatedVars))
+    if (!wrapper.registeredVars.equals(wrapper.domainTranslator.translatedVars)) {
       throw new UnsupportedOperationException("Not supported yet.");
+    }
 
     // TODO, perform translation for toCNF operation only.
   }

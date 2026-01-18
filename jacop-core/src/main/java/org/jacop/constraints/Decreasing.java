@@ -58,7 +58,9 @@ public class Decreasing extends Increasing {
   public Decreasing(IntVar[] x, boolean strict) {
     this(x);
 
-    if (strict) this.strict = 1;
+    if (strict) {
+      this.strict = 1;
+    }
   }
 
   /**
@@ -82,7 +84,9 @@ public class Decreasing extends Increasing {
 
     for (int i = n - 1; i >= 0; i--) {
       result.append(x[i]);
-      if (i > 0) result.append(", ");
+      if (i > 0) {
+        result.append(", ");
+      }
     }
     result.append("], ").append(strict == 1 ? "strict" : "non-strict").append(")");
 

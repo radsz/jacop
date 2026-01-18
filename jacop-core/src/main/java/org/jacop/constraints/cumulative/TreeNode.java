@@ -38,7 +38,7 @@ package org.jacop.constraints.cumulative;
  */
 class TreeNode {
 
-  TaskView task = null;
+  TaskView task;
   // index in the tree
   int index;
 

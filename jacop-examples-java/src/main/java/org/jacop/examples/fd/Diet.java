@@ -193,8 +193,9 @@ public class Diet extends ExampleFD {
 
     for (int i = 0; i < n; i++) {
       IntVar minReq = new IntVar(store, "limit" + i, limits[i], IntDomain.MaxInt);
-      if (i != 1) store.impose(new Knapsack(matrix[i], price, x, cost, minReq));
-      else {
+      if (i != 1) {
+        store.impose(new Knapsack(matrix[i], price, x, cost, minReq));
+      } else {
         // this category has some items with zero profit, violates knapsack conditions so it is not
         // used.
         store.impose(new LinearInt(x, matrix[i], "==", minReq));

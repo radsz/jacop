@@ -32,6 +32,7 @@
 package org.jacop.jasat.core.clauses;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.SolverState;
@@ -49,7 +50,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   // the databases
   public AbstractClausesDatabase[] databases;
   // the index of the first databases[] empty slot
-  public int currentIndex = 0;
+  public int currentIndex;
   // solver instance
   public Core core;
   // how many clausesDatabases can we have ? must be a power of 2
@@ -61,7 +62,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   // the number of bits to shift right a DATABASE_MASK to get a normal int
   private int INDEX_MASK_NUM_BITS;
   // log_2 of the number of databases
-  private int LOG_OF_NUM_DATABASES = 0;
+  private int LOG_OF_NUM_DATABASES;
 
   // compute values and check things
   private void initializeMasks() {
@@ -71,7 +72,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
       i = i >>> 1; // divide by 2
     }
     // check  2^{LOG_OF_NUM_DATABASES} == MAX_NUMBER_OF_DATABASES
-    assert 1 << (LOG_OF_NUM_DATABASES) == MAX_NUMBER_OF_DATABASES
+    assert 1 << LOG_OF_NUM_DATABASES == MAX_NUMBER_OF_DATABASES
         : "number" + " of databases must be a power of 2";
 
     INDEX_MASK = Integer.MAX_VALUE >>> LOG_OF_NUM_DATABASES;
@@ -92,7 +93,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     // find which database gives the highest rate for this clause
     int winnerDatabaseIndex = 0;
     int maxRate = databases[0].rateThisClause(clause);
-    for (int i = 1; i < currentIndex; ++i) {
+    for (int i = 1; i < currentIndex; i++) {
       int currentRate = databases[i].rateThisClause(clause);
       if (currentRate > maxRate) {
         winnerDatabaseIndex = i;
@@ -155,7 +156,9 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   /** the number of clauses in all databases */
   public int size() {
     int sum = 0;
-    for (int i = 0; i < currentIndex; ++i) sum += databases[i].size();
+    for (int i = 0; i < currentIndex; i++) {
+      sum += databases[i].size();
+    }
 
     return sum;
   }
@@ -166,7 +169,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param level the level to backjump to
    */
   public void backjump(int level) {
-    for (int i = 0; i < currentIndex; ++i) {
+    for (int i = 0; i < currentIndex; i++) {
       AbstractClausesDatabase db = databases[i];
       db.backjump(level);
     }
@@ -180,10 +183,12 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    */
   public void assertLiteral(int literal) {
     // assert in all databases
-    for (int i = 0; i < currentIndex; ++i) {
+    for (int i = 0; i < currentIndex; i++) {
       databases[i].assertLiteral(literal);
 
-      if (core.currentState != SolverState.UNKNOWN) return;
+      if (core.currentState != SolverState.UNKNOWN) {
+        return;
+      }
     }
   }
 
@@ -257,13 +262,15 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     initializeMasks();
   }
 
-  public void toCNF(BufferedWriter output) throws java.io.IOException {
+  public void toCNF(BufferedWriter output) throws IOException {
 
     int noOfVariables = core.getMaxVariable();
     int noOfClauses = 0;
 
     for (AbstractClausesDatabase abstractClausesDatabase : databases) {
-      if (abstractClausesDatabase != null) noOfClauses += abstractClausesDatabase.size();
+      if (abstractClausesDatabase != null) {
+        noOfClauses += abstractClausesDatabase.size();
+      }
     }
 
     output.write("p cnf ");
@@ -273,7 +280,9 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     output.write("\n");
 
     for (AbstractClausesDatabase database : databases) {
-      if (database != null) database.toCNF(output);
+      if (database != null) {
+        database.toCNF(output);
+      }
     }
   }
 }

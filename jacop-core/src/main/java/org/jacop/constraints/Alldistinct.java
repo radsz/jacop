@@ -67,13 +67,13 @@ public class Alldistinct extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It counts the number of executions of the consistency function. */
-  public int consistencyChecks = 0;
+  public int consistencyChecks;
 
   /**
    * It computes how many times did consistency execution has been re-executed due to narrowing
    * event at the end of the consistency function.
    */
-  public int fullConsistencyPassesWithNarrowingEvent = 0;
+  public int fullConsistencyPassesWithNarrowingEvent;
 
   /** It specifies all variables which have to have different values. */
   public final IntVar[] list;
@@ -83,7 +83,7 @@ public class Alldistinct extends Constraint
   // structure to obtain a new matched edge
   final LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<>();
   // failure (inconsistency) discovered during imposition
-  boolean impositionFailure = false;
+  boolean impositionFailure;
   // each fdv has a matched value in maximal matching
   // this can change from consistency execution to consistency execution
   // any maximum matching is good for analysis.
@@ -144,7 +144,7 @@ public class Alldistinct extends Constraint
   final Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   int vn;
-  IntVar guideVariable = null;
+  IntVar guideVariable;
   int guideValue;
   final boolean greedy = true;
 
@@ -173,7 +173,9 @@ public class Alldistinct extends Constraint
 
     IntDomain sum = new IntervalDomain(5);
 
-    for (IntVar var : this.list) sum.addDom(var.dom());
+    for (IntVar var : this.list) {
+      sum.addDom(var.dom());
+    }
 
     // Each value in any variable domain will appear in a value graph
     // Therefore it is enough that one variable has a domain 0..1000000 to
@@ -196,8 +198,11 @@ public class Alldistinct extends Constraint
       m++;
 
       currentSimpleArrayList = new SimpleArrayList<>();
-      for (IntVar intVar : this.list)
-        if (intVar.domain.contains(value)) currentSimpleArrayList.add(intVar);
+      for (IntVar intVar : this.list) {
+        if (intVar.domain.contains(value)) {
+          currentSimpleArrayList.add(intVar);
+        }
+      }
       valueMapVariable.put(valueInteger, currentSimpleArrayList);
     }
 
@@ -231,7 +236,9 @@ public class Alldistinct extends Constraint
   @Override
   public void consistency(Store store) {
 
-    if (impositionFailure) throw Store.failException;
+    if (impositionFailure) {
+      throw Store.failException;
+    }
 
     if (store.currentQueue == queueIndex) {
 
@@ -241,8 +248,11 @@ public class Alldistinct extends Constraint
         if (Q.singleton()) {
           int qValue = Q.min();
           int lastNotGround = stampNotGroundedVariables.value();
-          for (int i = 0; i <= lastNotGround; i++)
-            if (list[i] != Q) list[i].domain.inComplement(store.level, list[i], qValue);
+          for (int i = 0; i <= lastNotGround; i++) {
+            if (list[i] != Q) {
+              list[i].domain.inComplement(store.level, list[i], qValue);
+            }
+          }
         }
       }
 
@@ -285,13 +295,14 @@ public class Alldistinct extends Constraint
           singletons.add(Q);
 
           int lastNotGroundedVariable = stampNotGroundedVariables.value();
-          for (int i = 0; i <= lastNotGroundedVariable; i++)
+          for (int i = 0; i <= lastNotGroundedVariable; i++) {
             if (list[i] == Q) {
               list[i] = list[lastNotGroundedVariable];
               list[lastNotGroundedVariable] = Q;
               stampNotGroundedVariables.update(lastNotGroundedVariable - 1);
               break;
             }
+          }
 
           currentSimpleArrayList = valueMapVariable.get(qValue);
 
@@ -319,15 +330,18 @@ public class Alldistinct extends Constraint
           // All Variable which still had qValue in its domain
           // have this value removed
           // Domain complement = Domain.domain.complement(qValue);
-          for (int c = 1; c <= lastPosition; c++)
+          for (int c = 1; c <= lastPosition; c++) {
             currentSimpleArrayList
                 .get(c)
                 .domain
                 .inComplement(store.level, currentSimpleArrayList.get(c), qValue);
+          }
 
           // Should be seperate from above loop since failure
           // in indexicals (in) will not clear variableQueue
-          for (int c = 1; c <= lastPosition; c++) variableQueue.add(currentSimpleArrayList.get(c));
+          for (int c = 1; c <= lastPosition; c++) {
+            variableQueue.add(currentSimpleArrayList.get(c));
+          }
         }
       }
       fdvs.addAll(variableQueue);
@@ -365,7 +379,9 @@ public class Alldistinct extends Constraint
 
         // vPrunedDomain contains edge in maximum matching
         // this variable needs recomputation
-        if (vPrunedDomain.contains(matchedValue)) freeVariables.add(V);
+        if (vPrunedDomain.contains(matchedValue)) {
+          freeVariables.add(V);
+        }
 
         if (debugAll) {
           IO.println(
@@ -393,7 +409,9 @@ public class Alldistinct extends Constraint
 
           int positionV = currentSimpleArrayList.indexOf(V, lastPosition);
 
-          if (positionV == -1) continue;
+          if (positionV == -1) {
+            continue;
+          }
 
           if (lastPosition > positionV) {
 
@@ -595,7 +613,9 @@ public class Alldistinct extends Constraint
           IO.println("Tarjan start, value mapping " + valueMapVariable);
         }
 
-        if (scc.get(list[i]) == null) visitTarjan(list[i], l, dfsnum, low);
+        if (scc.get(list[i]) == null) {
+          visitTarjan(list[i], l, dfsnum, low);
+        }
 
         if (debugAll) {
           IO.println("Tarjan end");
@@ -643,16 +663,19 @@ public class Alldistinct extends Constraint
 
       int noOfReachedVariablesLastTime = stampReachability.value();
 
-      for (int i = 0; i <= lastNotGroundedVariable; i++)
+      for (int i = 0; i <= lastNotGroundedVariable; i++) {
         matchedValues.add(matching.get(list[i]).value());
+      }
 
       for (int i = 0;
           i < stampValue
               && variablesReachableFromFreeValues.size() < noOfReachedVariablesLastTime
               && variablesReachableFromFreeValues.size() != lastNotGroundedVariablePlusOne;
-          i++)
-        if (!matchedValues.contains(potentialFreeValues[i]))
+          i++) {
+        if (!matchedValues.contains(potentialFreeValues[i])) {
           markReachableVariables(variablesReachableFromFreeValues, potentialFreeValues[i]);
+        }
+      }
 
       stampReachability.update(variablesReachableFromFreeValues.size());
     }
@@ -695,8 +718,9 @@ public class Alldistinct extends Constraint
 
         lastPosition = stamp.value();
 
-        if (debugAll)
+        if (debugAll) {
           IO.println("currentSimpleArrayList " + currentSimpleArrayList + " stamp " + lastPosition);
+        }
 
         // If permutation constraint
         // then above if is always true then this check can
@@ -705,8 +729,9 @@ public class Alldistinct extends Constraint
         // loop invariant is that variable is not singleton
         if (lastPosition == 0 && permutationConsistency) {
 
-          if (debugPruning)
+          if (debugPruning) {
             IO.println("Value " + matched + " has only this variable possible " + variable);
+          }
 
           // store.in(variable, matched, matched);
           variable.domain.inValue(store.level, variable, matched); // , matched);
@@ -907,17 +932,21 @@ public class Alldistinct extends Constraint
           }
         }
 
-        if (debugAll) IO.println("First element of the path " + path);
+        if (debugAll) {
+          IO.println("First element of the path " + path);
+        }
 
-        if (path.isEmpty())
+        if (path.isEmpty()) {
           // no possibility to start new path
-          if (allpaths.isEmpty())
+          if (allpaths.isEmpty()) {
             // no path was found last execution
             // failed to find maximum matching
             return false;
-          else
+          } else {
             // some paths were found re run algorithm
             break;
+          }
+        }
 
         // Get last element from path
         Integer top = (Integer) path.getLast();
@@ -934,11 +963,17 @@ public class Alldistinct extends Constraint
           // not yet used variable is larger than last possible
           // variable to be used.
 
-          if (debugAll) IO.println("Visited variables " + visitedVariables);
+          if (debugAll) {
+            IO.println("Visited variables " + visitedVariables);
+          }
 
-          if (debugAll) IO.println("Free variables " + freeVariables);
+          if (debugAll) {
+            IO.println("Free variables " + freeVariables);
+          }
 
-          if (debugAll) IO.println("Values for last path element " + valueMapVariable.get(top));
+          if (debugAll) {
+            IO.println("Values for last path element " + valueMapVariable.get(top));
+          }
 
           // MAKE SURE you have increase level before worrying about
           // Null Pointer exception
@@ -946,18 +981,26 @@ public class Alldistinct extends Constraint
 
           int notYetUsedVariable = notYetUsedVariablePointer.get(top);
 
-          if (debugAll) IO.println("notYetUsedVariable " + notYetUsedVariable);
+          if (debugAll) {
+            IO.println("notYetUsedVariable " + notYetUsedVariable);
+          }
 
-          if (notYetUsedVariable == -1)
-            if (path.size() == 1) break;
-            else {
-              if (debugAll) IO.println("Path to shorten " + path);
+          if (notYetUsedVariable == -1) {
+            if (path.size() == 1) {
+              break;
+            } else {
+              if (debugAll) {
+                IO.println("Path to shorten " + path);
+              }
               path.removeLast();
               path.removeLast();
-              if (debugAll) IO.println("Shorten path" + path);
+              if (debugAll) {
+                IO.println("Shorten path" + path);
+              }
               top = (Integer) path.getLast();
               continue;
             }
+          }
 
           // Value has still some edges pointing at variables
           first = valueMapVariable.get(top).get(notYetUsedVariable);
@@ -970,11 +1013,15 @@ public class Alldistinct extends Constraint
             path.addLast(first);
             visitedVariables.add(first);
 
-            if (debugAll) IO.println("Current path " + path);
+            if (debugAll) {
+              IO.println("Current path " + path);
+            }
 
             // if first is free variable then path
             // freevalue-...-freevariable found
-            if (freeVariables.contains(first)) break;
+            if (freeVariables.contains(first)) {
+              break;
+            }
 
             // variable is not free then matched value is pointed by
             // matching
@@ -982,7 +1029,9 @@ public class Alldistinct extends Constraint
             path.addLast(top);
           }
 
-          if (debugAll) IO.println("Current path " + path);
+          if (debugAll) {
+            IO.println("Current path " + path);
+          }
         }
 
         // If path has even elements then it means that
@@ -1007,9 +1056,13 @@ public class Alldistinct extends Constraint
         // this means that every free variables is visited and has its
         // path
 
-        if (debugAll) IO.println("Free variables " + freeVariables);
+        if (debugAll) {
+          IO.println("Free variables " + freeVariables);
+        }
 
-        if (debugAll) IO.println("Allpaths " + allpaths);
+        if (debugAll) {
+          IO.println("Allpaths " + allpaths);
+        }
 
         if (freeVariables.size() == allpaths.size()) {
           maximumMatchingFound = true;
@@ -1017,9 +1070,13 @@ public class Alldistinct extends Constraint
         }
       }
 
-      if (debugAll) IO.println("Allpaths " + allpaths);
+      if (debugAll) {
+        IO.println("Allpaths " + allpaths);
+      }
 
-      if (allpaths.isEmpty()) return false;
+      if (allpaths.isEmpty()) {
+        return false;
+      }
 
       // Use all paths to create better matching
 
@@ -1032,8 +1089,9 @@ public class Alldistinct extends Constraint
           Integer matchedValue = (Integer) freepath.get(pos);
           IntVar matchedVariable = (IntVar) freepath.get(pos + 1);
 
-          if (!freeVariables.remove(matchedVariable))
+          if (!freeVariables.remove(matchedVariable)) {
             nonFreeValues.remove(matching.get(matchedVariable).value());
+          }
 
           matching.get(matchedVariable).update(matchedValue);
 
@@ -1094,7 +1152,7 @@ public class Alldistinct extends Constraint
 
     Integer zero = 0;
 
-    Function<IntVar, TimeStamp<Integer>> f = (_) -> new TimeStamp<>(store, zero);
+    Function<IntVar, TimeStamp<Integer>> f = _ -> new TimeStamp<>(store, zero);
     Var.addPositionMapping(matching, list, f, false, this.getClass());
     Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
 
@@ -1164,7 +1222,9 @@ public class Alldistinct extends Constraint
 
       IntVar reachableVariable = currentSimpleArrayList.get(i);
 
-      if (variablesReachableFromFreeValues.contains(reachableVariable)) continue;
+      if (variablesReachableFromFreeValues.contains(reachableVariable)) {
+        continue;
+      }
 
       if (debugAll) {
         IO.println("Variable " + reachableVariable + " has been reached from value " + value);
@@ -1181,7 +1241,9 @@ public class Alldistinct extends Constraint
   @Override
   public void queueVariable(int level, Var var) {
 
-    if (debugAll) IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    if (debugAll) {
+      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    }
 
     variableQueue.add((IntVar) var);
   }
@@ -1199,7 +1261,7 @@ public class Alldistinct extends Constraint
     low.put(x, nInteger);
     n++;
 
-    if (debugAll)
+    if (debugAll) {
       IO.println(
           "Tarjan invocation : \nx "
               + x
@@ -1212,22 +1274,29 @@ public class Alldistinct extends Constraint
               + "\nlow "
               + low
               + "\n");
+    }
 
     l.add(x);
 
     Integer matchedValue = matching.get(x).value();
 
-    if (debugAll) IO.println("Matched value " + matchedValue + " for " + x);
+    if (debugAll) {
+      IO.println("Matched value " + matchedValue + " for " + x);
+    }
 
     SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
-    if (debugAll) IO.println("Mapped variables to Matched value " + currentSimpleArrayList);
+    if (debugAll) {
+      IO.println("Mapped variables to Matched value " + currentSimpleArrayList);
+    }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
 
     int lastPosition = stamp.value();
 
-    if (debugAll) IO.println("Last valid position for variables " + lastPosition);
+    if (debugAll) {
+      IO.println("Last valid position for variables " + lastPosition);
+    }
 
     int sccStampX = sccStamp.get(x).value();
     // first variable is matched value
@@ -1235,27 +1304,36 @@ public class Alldistinct extends Constraint
 
       IntVar v = currentSimpleArrayList.get(i);
 
-      if (sccStampX == sccStamp.get(v).value())
+      if (sccStampX == sccStamp.get(v).value()) {
         if (dfsnum.get(v) == null) {
 
           revisitTarjan(v, l, dfsnum, low, fdvs);
 
           int lowv = low.get(v);
 
-          if (low.get(x) > lowv) low.put(x, lowv);
+          if (low.get(x) > lowv) {
+            low.put(x, lowv);
+          }
         } else {
 
-          if (debugAll)
+          if (debugAll) {
             IO.println(
                 "Part 2 : low " + x + "=" + low.get(x) + " dfsnum " + v + "=" + dfsnum.get(v));
+          }
 
           int dfsnumv = dfsnum.get(v);
 
           // If v was earlier visited and v belongs to stack then
           // update low number of x.
-          if (dfsnumv < dfsnum.get(x))
-            if (l.contains(v)) if (low.get(x) > dfsnumv) low.put(x, dfsnumv);
+          if (dfsnumv < dfsnum.get(x)) {
+            if (l.contains(v)) {
+              if (low.get(x) > dfsnumv) {
+                low.put(x, dfsnumv);
+              }
+            }
+          }
         }
+      }
     }
 
     if (debugAll) {
@@ -1267,14 +1345,18 @@ public class Alldistinct extends Constraint
 
     if (lowx == dfsnum.get(x)) {
 
-      if (debugAll) IO.println("Component found  ");
+      if (debugAll) {
+        IO.println("Component found  ");
+      }
 
       Var component;
 
       do {
         component = l.removeLast();
 
-        if (debugAll) IO.println("Component part  " + component + "id " + lowx);
+        if (debugAll) {
+          IO.println("Component part  " + component + "id " + lowx);
+        }
 
         sccStamp.get(component).update(lowx);
         fdvs.remove(component);
@@ -1300,7 +1382,7 @@ public class Alldistinct extends Constraint
       while (sat && j < list.length) {
         if (i != j) {
           IntDomain ljDom = list[j].dom();
-          sat = (vMin > ljDom.max() || vMax < ljDom.min());
+          sat = vMin > ljDom.max() || vMax < ljDom.min();
         }
         j++;
       }
@@ -1318,7 +1400,9 @@ public class Alldistinct extends Constraint
 
     for (int i = 0; i < list.length; i++) {
       buf.append(list[i]);
-      if (i < list.length - 1) buf.append(", ");
+      if (i < list.length - 1) {
+        buf.append(", ");
+      }
     }
 
     buf.append("]");
@@ -1333,7 +1417,7 @@ public class Alldistinct extends Constraint
     low.put(x, vnInteger);
     vn++;
 
-    if (debugAll)
+    if (debugAll) {
       IO.println(
           "Tarjan invocation : \nx "
               + x
@@ -1346,22 +1430,29 @@ public class Alldistinct extends Constraint
               + "\nlow "
               + low
               + "\n");
+    }
 
     l.add(x);
 
     Integer matchedValue = matching.get(x).value();
 
-    if (debugAll) IO.println("Matched value " + matchedValue + " for " + x);
+    if (debugAll) {
+      IO.println("Matched value " + matchedValue + " for " + x);
+    }
 
     SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
-    if (debugAll) IO.println("Mapped variables to Matched value " + currentSimpleArrayList);
+    if (debugAll) {
+      IO.println("Mapped variables to Matched value " + currentSimpleArrayList);
+    }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
 
     int lastPosition = stamp.value();
 
-    if (debugAll) IO.println("Last valid position for variables " + lastPosition);
+    if (debugAll) {
+      IO.println("Last valid position for variables " + lastPosition);
+    }
 
     IntVar v;
 
@@ -1382,18 +1473,21 @@ public class Alldistinct extends Constraint
 
       } else {
 
-        if (debugAll)
+        if (debugAll) {
           IO.println("Part 2 : low " + x + "=" + low.get(x) + " dfsnum " + v + "=" + dfsnum.get(v));
+        }
 
         int dfsnumv = dfsnum.get(v);
 
         // If v was earlier visited and v belongs to stack then
         // update low number of x.
-        if (dfsnumv < dfsnum.get(x))
-          if (l.contains(v))
+        if (dfsnumv < dfsnum.get(x)) {
+          if (l.contains(v)) {
             if (low.get(x) > dfsnumv) {
               low.put(x, dfsnumv);
             }
+          }
+        }
       }
     }
 
@@ -1406,12 +1500,16 @@ public class Alldistinct extends Constraint
 
     if (lowx == dfsnum.get(x)) {
 
-      if (debugAll) IO.println("Component found  ");
+      if (debugAll) {
+        IO.println("Component found  ");
+      }
 
       while (true) {
         IntVar component = l.removeLast();
 
-        if (debugAll) IO.println("Component part  " + component);
+        if (debugAll) {
+          IO.println("Component part  " + component);
+        }
 
         scc.put(component, lowx);
 
@@ -1578,11 +1676,15 @@ public class Alldistinct extends Constraint
 
           int pruningFirstVariable = estimatePruning(currentSimpleArrayList.getFirst(), value);
 
-          if (pruningFirstVariable < minCurrentPruning) continue;
+          if (pruningFirstVariable < minCurrentPruning) {
+            continue;
+          }
 
           int pruningSecondVariable = estimatePruning(currentSimpleArrayList.get(1), value);
 
-          if (pruningSecondVariable < minCurrentPruning) continue;
+          if (pruningSecondVariable < minCurrentPruning) {
+            continue;
+          }
 
           if (pruningFirstVariable < pruningSecondVariable) {
 
@@ -1705,9 +1807,12 @@ public class Alldistinct extends Constraint
 
       int lastPosition = stamp.value();
 
-      for (int j = 0; j <= lastPosition; j++)
+      for (int j = 0; j <= lastPosition; j++) {
         // Edge between j and value was not counted yet
-        if (!exploredX.contains(currentSimpleArrayList.get(j))) pruning++;
+        if (!exploredX.contains(currentSimpleArrayList.get(j))) {
+          pruning++;
+        }
+      }
 
       stamp = null;
     }
@@ -1723,7 +1828,9 @@ public class Alldistinct extends Constraint
   int estimatePruningRecursive(
       IntVar xVar, Integer v, List<IntVar> exploredX, List<Integer> exploredV) {
 
-    if (exploredX.contains(xVar)) return 0;
+    if (exploredX.contains(xVar)) {
+      return 0;
+    }
 
     exploredX.add(xVar);
     exploredV.add(v);
@@ -1738,7 +1845,7 @@ public class Alldistinct extends Constraint
     ValueEnumeration enumer = xDom.valueEnumeration();
 
     // Permutation only
-    if (stampValues.value() - stampNotGroundedVariables.value() == 1)
+    if (stampValues.value() - stampNotGroundedVariables.value() == 1) {
       for (int i = enumer.nextElement(); enumer.hasMoreElements(); i = enumer.nextElement()) {
         if (!exploredV.contains(i)) {
           Integer iInteger = i;
@@ -1756,10 +1863,15 @@ public class Alldistinct extends Constraint
             IntVar singleVar = null;
             boolean single = true;
 
-            for (int m = 0; m <= lastPosition; m++)
-              if (!exploredX.contains(currentSimpleArrayList.get(m)))
-                if (singleVar == null) singleVar = currentSimpleArrayList.get(m);
-                else single = false;
+            for (int m = 0; m <= lastPosition; m++) {
+              if (!exploredX.contains(currentSimpleArrayList.get(m))) {
+                if (singleVar == null) {
+                  singleVar = currentSimpleArrayList.get(m);
+                } else {
+                  single = false;
+                }
+              }
+            }
 
             if (single && singleVar == null) {
               IO.println(this);
@@ -1776,14 +1888,16 @@ public class Alldistinct extends Constraint
               }
             }
 
-            if (single && singleVar != null)
+            if (single && singleVar != null) {
               pruning += estimatePruningRecursive(singleVar, iInteger, exploredX, exploredV);
+            }
 
             singleVar = null;
           }
           iInteger = null;
         }
       }
+    }
 
     enumer = null;
     stamp = stamps.get(v);
@@ -1804,12 +1918,18 @@ public class Alldistinct extends Constraint
             enumerX.hasMoreElements(); ) {
           Integer next = enumerX.nextElement();
 
-          if (!exploredV.contains(next))
-            if (singleVal == null) singleVal = next;
-            else single = false;
+          if (!exploredV.contains(next)) {
+            if (singleVal == null) {
+              singleVal = next;
+            } else {
+              single = false;
+            }
+          }
         }
 
-        if (single) pruning += estimatePruningRecursive(variable, singleVal, exploredX, exploredV);
+        if (single) {
+          pruning += estimatePruningRecursive(variable, singleVal, exploredX, exploredV);
+        }
       }
     }
 

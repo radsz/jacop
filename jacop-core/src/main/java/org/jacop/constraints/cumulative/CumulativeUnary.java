@@ -55,16 +55,16 @@ public class CumulativeUnary extends Cumulative {
    */
   final TaskView[] tvn;
   final TaskView[] tvr;
-  boolean doProfile = false;
+  boolean doProfile;
   boolean doEdgeFind = true;
   private final Comparator<TaskView> taskIncLctComparator =
-      (o1, o2) -> (o1.lct() == o2.lct()) ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
+      (o1, o2) -> o1.lct() == o2.lct() ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
 
   private final Comparator<TaskView> taskIncLstComparator =
-      (o1, o2) -> (o1.lst() == o2.lst()) ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
+      (o1, o2) -> o1.lst() == o2.lst() ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
 
   private final Comparator<TaskView> taskIncEctComparator =
-      (o1, o2) -> (o1.ect() == o2.ect()) ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
+      (o1, o2) -> o1.ect() == o2.ect() ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
 
   /**
    * It creates a cumulative constraint.
@@ -90,10 +90,14 @@ public class CumulativeUnary extends Cumulative {
 
     String s = System.getProperty("max_edge_find_size");
     int limitOnEdgeFind = 100;
-    if (s != null) limitOnEdgeFind = Integer.parseInt(s);
-    doEdgeFind = (starts.length <= limitOnEdgeFind);
+    if (s != null) {
+      limitOnEdgeFind = Integer.parseInt(s);
+    }
+    doEdgeFind = starts.length <= limitOnEdgeFind;
 
-    if (!doEdgeFind) doProfile = true;
+    if (!doEdgeFind) {
+      doProfile = true;
+    }
   }
 
   /**
@@ -111,8 +115,11 @@ public class CumulativeUnary extends Cumulative {
 
     this(starts, durations, resources, limit);
 
-    if (doEdgeFind) this.doProfile = doProfile;
-    else this.doProfile = true;
+    if (doEdgeFind) {
+      this.doProfile = doProfile;
+    } else {
+      this.doProfile = true;
+    }
   }
 
   /**
@@ -136,9 +143,9 @@ public class CumulativeUnary extends Cumulative {
 
     this(starts, durations, resources, limit);
 
-    if (!doProfile && !doEdgeFind)
+    if (!doProfile && !doEdgeFind) {
       System.err.println("% Warning: CumulativeUnary has no effect (no propagators defined).");
-    else {
+    } else {
       this.doProfile = doProfile;
       this.doEdgeFind = doEdgeFind;
     }
@@ -194,18 +201,24 @@ public class CumulativeUnary extends Cumulative {
   public void consistency(Store store) {
 
     TaskView[] tn = filterZeroTasks(tvn);
-    if (tn == null) return;
+    if (tn == null) {
+      return;
+    }
     TaskView[] tr = filterZeroTasks(tvr);
 
     do {
 
       store.propagationHasOccurred = false;
 
-      if (doProfile) profileProp(store);
+      if (doProfile) {
+        profileProp(store);
+      }
 
       if (doEdgeFind && !store.propagationHasOccurred) {
 
-        if (!doProfile) overload(tn);
+        if (!doProfile) {
+          overload(tn);
+        }
         detectable(store, tn, tr);
         notFirstNotLast(store, tn, tr);
         edgeFind(store, tn, tr);
@@ -230,7 +243,9 @@ public class CumulativeUnary extends Cumulative {
 
     for (TaskView aT : t) {
       tree.enableNode(aT.treeIndex);
-      if (tree.get(tree.root()).ect > aT.lct()) throw Store.failException;
+      if (tree.get(tree.root()).ect > aT.lct()) {
+        throw Store.failException;
+      }
     }
   }
 
@@ -266,7 +281,9 @@ public class CumulativeUnary extends Cumulative {
 
     int n = t.length;
     int[] updateLCT = new int[n];
-    for (int i = 0; i < n; i++) updateLCT[i] = t[i].lct();
+    for (int i = 0; i < n; i++) {
+      updateLCT[i] = t[i].lct();
+    }
 
     int indexQ = 0;
     for (int i = 0; i < n; i++) {
@@ -274,8 +291,9 @@ public class CumulativeUnary extends Cumulative {
 
       while (indexQ < n && t[i].lct() > q[indexQ].lst()) {
 
-        if (tree.ect(t[i].treeIndex) > t[i].lst())
+        if (tree.ect(t[i].treeIndex) > t[i].lst()) {
           updateLCT[i] = Math.min(q[indexQ - 1].lst(), updateLCT[i]);
+        }
 
         j = tc[q[indexQ].index].treeIndex;
         tree.enableNode(j);
@@ -366,7 +384,9 @@ public class CumulativeUnary extends Cumulative {
     int n = lctList.length;
     TaskView t = lctList[0];
     for (int i = 0; i < n - 1; i++) {
-      if (tree.ect() > t.lct()) throw Store.failException;
+      if (tree.ect() > t.lct()) {
+        throw Store.failException;
+      }
 
       tree.moveToLambda(t.treeIndex);
       t = lctList[i + 1];
@@ -385,7 +405,9 @@ public class CumulativeUnary extends Cumulative {
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : cumulativeUnary([ ");
-    for (int i = 0; i < taskNormal.length - 1; i++) result.append(taskNormal[i]).append(", ");
+    for (int i = 0; i < taskNormal.length - 1; i++) {
+      result.append(taskNormal[i]).append(", ");
+    }
 
     result.append(taskNormal[taskNormal.length - 1]);
 

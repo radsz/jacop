@@ -45,13 +45,13 @@ import org.jacop.core.Var;
 public class CreditCalculator<T extends Var>
     implements ExitChildListener<T>, TimeOutListener, ConsistencyListener {
 
-  boolean timeOut = false;
+  boolean timeOut;
 
   int backtracks;
 
   int currentLevel = -1;
 
-  int currentBacktracks = 0;
+  int currentBacktracks;
 
   int[] creditsLeft;
 
@@ -125,12 +125,16 @@ public class CreditCalculator<T extends Var>
     StringBuilder desc = new StringBuilder();
 
     desc.append("credit-right\n");
-    for (int k : creditsRight) desc.append(k).append(" ");
+    for (int k : creditsRight) {
+      desc.append(k).append(" ");
+    }
 
     desc.append("\n");
 
     desc.append("credit-left\n");
-    for (int j : creditsLeft) desc.append(j).append(" ");
+    for (int j : creditsLeft) {
+      desc.append(j).append(" ");
+    }
 
     desc.append("\n");
 
@@ -160,10 +164,10 @@ public class CreditCalculator<T extends Var>
       }
     }
 
-    if (consistent)
+    if (consistent) {
       if (currentLevel > 0 && currentLevel < creditsLeft.length) {
 
-        if (leftChild)
+        if (leftChild) {
           if (creditsLeft[currentLevel - 1] > 1) {
             creditsRight[currentLevel] = creditsLeft[currentLevel - 1] / 2;
             creditsLeft[currentLevel] = creditsLeft[currentLevel - 1] - creditsRight[currentLevel];
@@ -172,8 +176,9 @@ public class CreditCalculator<T extends Var>
             currentBacktracks = backtracks;
             creditsLeft[currentLevel - 1] = 0;
           }
+        }
 
-        if (!leftChild)
+        if (!leftChild) {
           if (creditsRight[currentLevel - 1] > 1) {
             creditsRight[currentLevel] = creditsRight[currentLevel - 1] / 2;
             creditsLeft[currentLevel] = creditsRight[currentLevel - 1] - creditsRight[currentLevel];
@@ -182,6 +187,7 @@ public class CreditCalculator<T extends Var>
             currentBacktracks = backtracks;
             creditsRight[currentLevel - 1] = 0;
           }
+        }
 
       } else if (currentLevel == creditsLeft.length) {
 
@@ -197,17 +203,23 @@ public class CreditCalculator<T extends Var>
           }
         }
       }
+    }
 
     if (consistencyListeners != null) {
       boolean code = false;
-      for (ConsistencyListener consistencyListener : consistencyListeners)
+      for (ConsistencyListener consistencyListener : consistencyListeners) {
         code |= consistencyListener.executeAfterConsistency(consistent);
-      if (code) leftChild = true;
+      }
+      if (code) {
+        leftChild = true;
+      }
 
       return code && true;
     }
 
-    if (consistent) leftChild = true;
+    if (consistent) {
+      leftChild = true;
+    }
     return consistent;
   }
 
@@ -218,9 +230,11 @@ public class CreditCalculator<T extends Var>
       timeOut = true;
     }
 
-    if (timeOutListeners != null)
-      for (TimeOutListener timeOutListener : timeOutListeners)
+    if (timeOutListeners != null) {
+      for (TimeOutListener timeOutListener : timeOutListeners) {
         timeOutListener.executedAtTimeOut(noSolutions);
+      }
+    }
   }
 
   /**
@@ -244,8 +258,9 @@ public class CreditCalculator<T extends Var>
           && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
 
         if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
             exitChildListener.leftChild(var, value, status);
+          }
         }
 
         currentLevel--;
@@ -256,10 +271,13 @@ public class CreditCalculator<T extends Var>
     if (status) {
       if (exitChildListeners != null) {
         boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           code |= exitChildListener.leftChild(var, value, status);
+        }
 
-        if (!code) currentLevel--;
+        if (!code) {
+          currentLevel--;
+        }
         return code;
       }
       return true;
@@ -268,8 +286,9 @@ public class CreditCalculator<T extends Var>
     // !status since, status if clause is earlier and must cause exit.
     if (timeOut) {
       if (exitChildListeners != null) {
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           exitChildListener.leftChild(var, value, status);
+        }
         // return code is an and relationship with a parent
       }
 
@@ -281,8 +300,9 @@ public class CreditCalculator<T extends Var>
 
       if (exitChildListeners != null) {
         boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           code |= exitChildListener.leftChild(var, value, status);
+        }
         if (!code) {
           currentLevel--;
           return false;
@@ -314,8 +334,9 @@ public class CreditCalculator<T extends Var>
           && !(currentLevel < creditsLeft.length && creditsRight[currentLevel] > 0)) {
 
         if (exitChildListeners != null) {
-          for (ExitChildListener<T> exitChildListener : exitChildListeners)
+          for (ExitChildListener<T> exitChildListener : exitChildListeners) {
             exitChildListener.leftChild(choice, status);
+          }
         }
 
         currentLevel--;
@@ -326,8 +347,9 @@ public class CreditCalculator<T extends Var>
     if (status) {
       if (exitChildListeners != null) {
         boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           code |= exitChildListener.leftChild(choice, status);
+        }
         return code;
       }
       return true;
@@ -335,8 +357,9 @@ public class CreditCalculator<T extends Var>
 
     if (timeOut) {
       if (exitChildListeners != null) {
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           exitChildListener.leftChild(choice, status);
+        }
       }
 
       currentLevel--;
@@ -347,8 +370,9 @@ public class CreditCalculator<T extends Var>
 
       if (exitChildListeners != null) {
         boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           code |= exitChildListener.leftChild(choice, status);
+        }
         if (!code) {
           currentLevel--;
           return false;
@@ -376,12 +400,16 @@ public class CreditCalculator<T extends Var>
 
     if (!timeOut) {
 
-      if (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0) currentBacktracks--;
+      if (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0) {
+        currentBacktracks--;
+      }
     }
 
-    if (exitChildListeners != null)
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         exitChildListener.rightChild(var, value, status);
+      }
+    }
   }
 
   public void rightChild(PrimitiveConstraint choice, boolean status) {
@@ -397,12 +425,16 @@ public class CreditCalculator<T extends Var>
 
     if (!timeOut) {
 
-      if (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0) currentBacktracks--;
+      if (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0) {
+        currentBacktracks--;
+      }
     }
 
-    if (exitChildListeners != null)
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         exitChildListener.rightChild(choice, status);
+      }
+    }
   }
 
   public void setChildrenListeners(ConsistencyListener[] children) {

@@ -67,7 +67,7 @@ public class MineSweeper extends ExampleFD {
   /** It represents the unknown value in the problem matrix. */
   public static final int X = -1;
 
-  public int[][] problem = null;
+  public int[][] problem;
   int r; // number of rows
   int c; // number of cols
   IntVar[][] game; // The FDV version of the problem matrix.
@@ -94,8 +94,11 @@ public class MineSweeper extends ExampleFD {
       // the problem matrix
       for (int j = 0; j < c; j++) {
         String s = str.substring(j, j + 1);
-        if (s.equals(".")) problem[i][j] = X;
-        else problem[i][j] = Integer.parseInt(s);
+        if (".".equals(s)) {
+          problem[i][j] = X;
+        } else {
+          problem[i][j] = Integer.parseInt(s);
+        }
       } // end for
     } // end for
 
@@ -360,7 +363,7 @@ public class MineSweeper extends ExampleFD {
           String[] row = str.split("");
           for (int j = 1; j <= c; j++) {
             String s = row[j];
-            if (s.equals(".")) {
+            if (".".equals(s)) {
               problem[lineCount - 2][j - 1] = -1;
             } else {
               problem[lineCount - 2][j - 1] = Integer.parseInt(s);
@@ -408,10 +411,13 @@ public class MineSweeper extends ExampleFD {
       IO.println("\n\t*** Execution time = " + T + " ms");
     }
 
-    if (args.length > 0) minesweeper.problem = MineSweeper.readFile(args[0]);
+    if (args.length > 0) {
+      minesweeper.problem = MineSweeper.readFile(args[0]);
+    }
 
-    if (minesweeper.problem == null)
+    if (minesweeper.problem == null) {
       minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problem_kaye_splitter());
+    }
 
     minesweeper.model();
     minesweeper.searchSpecific(false);
@@ -430,7 +436,9 @@ public class MineSweeper extends ExampleFD {
 
     store = new Store();
 
-    if (problem == null) problem = readFromArray(problem2());
+    if (problem == null) {
+      problem = readFromArray(problem2());
+    }
 
     r = problem.length;
     c = problem[0].length;
@@ -513,8 +521,11 @@ public class MineSweeper extends ExampleFD {
         IO.println("Too many solutions to print...");
       }
 
-      if (numSolutions > 1) IO.println("\nThe last solution:");
-      else IO.println("\nThe solution:");
+      if (numSolutions > 1) {
+        IO.println("\nThe last solution:");
+      } else {
+        IO.println("\nThe solution:");
+      }
 
       for (int i = 0; i < r; i++) {
         for (int j = 0; j < c; j++) {

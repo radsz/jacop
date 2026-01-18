@@ -73,7 +73,9 @@ public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
     if (defValue.containsKey(v)) {
       int value = defValue.get(v);
 
-      if (((IntVar) v).dom().contains(value)) return value;
+      if (((IntVar) v).dom().contains(value)) {
+        return value;
+      }
     }
 
     return defIndomain.indomain(v);

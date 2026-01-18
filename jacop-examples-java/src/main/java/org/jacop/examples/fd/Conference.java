@@ -60,7 +60,9 @@ public class Conference extends ExampleFD {
 
     example.model();
 
-    if (example.searchAllAtOnce()) IO.println("Solution(s) found");
+    if (example.searchAllAtOnce()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -157,10 +159,14 @@ public class Conference extends ExampleFD {
     IntVar three = new IntVar(store, "three", 3, 3);
 
     IntVar[] durations = new IntVar[11];
-    for (int d = 0; d < 11; d++) durations[d] = one;
+    for (int d = 0; d < 11; d++) {
+      durations[d] = one;
+    }
 
     IntVar[] resources = new IntVar[11];
-    for (int r = 0; r < 11; r++) resources[r] = one;
+    for (int r = 0; r < 11; r++) {
+      resources[r] = one;
+    }
 
     resources[iJ] = two;
 

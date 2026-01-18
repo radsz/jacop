@@ -104,7 +104,7 @@ public record FloatInterval(double min, double max) implements Cloneable {
    */
   public boolean singleton() {
 
-    double large = (Math.abs(max) >= Math.abs(min)) ? max : min;
+    double large = Math.abs(max) >= Math.abs(min) ? max : min;
     // double small = (Math.abs(max) >= Math.abs(min)) ? min : max;
 
     return (max - min) <= FloatDomain.epsilon(large);
@@ -133,28 +133,29 @@ public record FloatInterval(double min, double max) implements Cloneable {
     } else {
       p = (long) Math.ceil(Math.log10(1 / FloatDomain.format()));
       form = // "%s";
-          (Math.abs(min) >= 1.0E+7d
+          Math.abs(min) >= 1.0E+7d
                   || Math.abs(max) >= 1.0E+7
                   || (Math.abs(min) <= 1.0E-3 && min != 0)
-                  || (Math.abs(max) <= 1.0E-3 && max != 0))
+                  || (Math.abs(max) <= 1.0E-3 && max != 0)
               ? "%." + p + "e"
               : "%." + p + "f";
     }
     String result;
 
-    if (!FloatDomain.intervalPrint && singleton())
+    if (!FloatDomain.intervalPrint && singleton()) {
       result =
           String.format(
-              locale, form, ((min + max) / 2)); // mean value if singleton considering precision
-    else
+              locale, form, (min + max) / 2); // mean value if singleton considering precision
+    } else {
       result =
           String.format(locale, form, min)
               + ".."
               + String.format(
                   locale, form, max); // String.format("%.16f..%.16f", min, max); // interval
 
-    // result += "[±"+ FloatDomain.ulp(min) + "]";
+      // result += "[±"+ FloatDomain.ulp(min) + "]";
 
+    }
     return result;
   }
 }

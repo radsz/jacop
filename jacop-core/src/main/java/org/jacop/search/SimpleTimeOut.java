@@ -40,10 +40,10 @@ package org.jacop.search;
 public class SimpleTimeOut implements TimeOutListener {
 
   /** It specifies if the timeout has already occurred. */
-  public boolean timeOutOccurred = false;
+  public boolean timeOutOccurred;
 
   /** It records number of found solutions. */
-  public int solutionsNo = 0;
+  public int solutionsNo;
 
   /** It contains child(ren) of this timeout listener. */
   public TimeOutListener[] timeOutListeners;
@@ -53,8 +53,9 @@ public class SimpleTimeOut implements TimeOutListener {
     this.timeOutOccurred = true;
 
     if (timeOutListeners != null) {
-      for (TimeOutListener timeOutListener : timeOutListeners)
+      for (TimeOutListener timeOutListener : timeOutListeners) {
         timeOutListener.executedAtTimeOut(solutionsNo);
+      }
     }
   }
 

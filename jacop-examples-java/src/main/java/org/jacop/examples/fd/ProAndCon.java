@@ -72,7 +72,9 @@ public class ProAndCon extends ExampleFD {
 
     example.model();
 
-    if (example.search()) IO.println("Solution(s) found");
+    if (example.search()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -106,23 +108,33 @@ public class ProAndCon extends ExampleFD {
 
     // Sum constraint for each group
     List<IntVar> votesMotion1 = new ArrayList<>();
-    for (int i = 0; i < 5; i++) votesMotion1.add(vote[i][iMotion1]);
+    for (int i = 0; i < 5; i++) {
+      votesMotion1.add(vote[i][iMotion1]);
+    }
     store.impose(new SumInt(votesMotion1, "==", sum4Group[iMotion1]));
 
     List<IntVar> votesMotion2 = new ArrayList<>();
-    for (int i = 0; i < 5; i++) votesMotion2.add(vote[i][iMotion2]);
+    for (int i = 0; i < 5; i++) {
+      votesMotion2.add(vote[i][iMotion2]);
+    }
     store.impose(new SumInt(votesMotion2, "==", sum4Group[iMotion2]));
 
     List<IntVar> votesMotion3 = new ArrayList<>();
-    for (int i = 0; i < 5; i++) votesMotion3.add(vote[i][iMotion3]);
+    for (int i = 0; i < 5; i++) {
+      votesMotion3.add(vote[i][iMotion3]);
+    }
     store.impose(new SumInt(votesMotion3, "==", sum4Group[iMotion3]));
 
     List<IntVar> votesMotion4 = new ArrayList<>();
-    for (int i = 0; i < 5; i++) votesMotion4.add(vote[i][iMotion4]);
+    for (int i = 0; i < 5; i++) {
+      votesMotion4.add(vote[i][iMotion4]);
+    }
     store.impose(new SumInt(votesMotion4, "==", sum4Group[iMotion4]));
 
     List<IntVar> votesMotion5 = new ArrayList<>();
-    for (int i = 0; i < 5; i++) votesMotion5.add(vote[i][iMotion5]);
+    for (int i = 0; i < 5; i++) {
+      votesMotion5.add(vote[i][iMotion5]);
+    }
     store.impose(new SumInt(votesMotion5, "==", sum4Group[iMotion5]));
 
     // Clues enconding
@@ -160,8 +172,9 @@ public class ProAndCon extends ExampleFD {
     int[] weights = {1, 2, 4, 8, 16};
 
     IntVar[] weightedVotes = new IntVar[5];
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++) {
       weightedVotes[i] = new IntVar(store, "weightedVotes4" + surname[i], 1, 32);
+    }
 
     store.impose(new LinearInt(vote[iAkerman], weights, "==", weightedVotes[iAkerman]));
     // store.impose(new SumWeight(vote[iAkerman], weights,
@@ -208,8 +221,9 @@ public class ProAndCon extends ExampleFD {
 
     // We take each pair and make sure they are not two yes votes
     IntVar two = new IntVar(store, "2", 2, 2);
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++) {
       store.impose(new XplusYlteqZ(vote[iChatham][i], vote[iChatham][i + 1], two));
+    }
 
     // 6. Mr. Akerman and Ms. Baird both voted in favor of motion 4.
     store.impose(new XeqC(vote[iAkerman][3], 1));

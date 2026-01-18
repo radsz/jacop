@@ -67,7 +67,7 @@ public class VarWeightNode extends VariableNode {
     double node_min = min();
     double node_max = max();
 
-    if (min > node_min)
+    if (min > node_min) {
       if (max < node_max) {
 
         updateBounds(min, max, lb, ub);
@@ -76,15 +76,19 @@ public class VarWeightNode extends VariableNode {
 
       } else {
 
-        if (min > node_max) throw Store.failException;
+        if (min > node_max) {
+          throw Store.failException;
+        }
 
         updateBounds(min, node_max, lb, ub);
 
         parent.propagate();
       }
-    else if (max < node_max) {
+    } else if (max < node_max) {
 
-      if (node_min > max) throw Store.failException;
+      if (node_min > max) {
+        throw Store.failException;
+      }
 
       updateBounds(node_min, max, lb, ub);
 
@@ -104,7 +108,7 @@ public class VarWeightNode extends VariableNode {
     double node_min = min();
     double node_max = max();
 
-    if (min > node_min)
+    if (min > node_min) {
       if (max < node_max) {
 
         updateBounds(min, max, lb, ub);
@@ -112,15 +116,19 @@ public class VarWeightNode extends VariableNode {
         parent.propagateAndPrune();
 
       } else {
-        if (min > node_max) throw Store.failException;
+        if (min > node_max) {
+          throw Store.failException;
+        }
 
         updateBounds(min, node_max, lb, ub);
 
         parent.propagateAndPrune();
       }
-    else if (max < node_max) {
+    } else if (max < node_max) {
 
-      if (node_min > max) throw Store.failException;
+      if (node_min > max) {
+        throw Store.failException;
+      }
 
       updateBounds(node_min, max, lb, ub);
 

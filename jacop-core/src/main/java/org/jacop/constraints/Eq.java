@@ -85,11 +85,17 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   public void consistency(Store store) {
 
     // Does not need to loop due to propagation occuring.
-    if (c2.satisfied()) c1.consistency(store);
-    else if (c2.notSatisfied()) c1.notConsistency(store);
+    if (c2.satisfied()) {
+      c1.consistency(store);
+    } else if (c2.notSatisfied()) {
+      c1.notConsistency(store);
+    }
 
-    if (c1.satisfied()) c2.consistency(store);
-    else if (c1.notSatisfied()) c2.notConsistency(store);
+    if (c1.satisfied()) {
+      c2.consistency(store);
+    } else if (c1.notSatisfied()) {
+      c2.notConsistency(store);
+    }
   }
 
   @Override
@@ -109,33 +115,46 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     int eventAcross = -1;
 
     if (c1.arguments().contains(var)) {
       int event = c1.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (c1.arguments().contains(var)) {
       int event = c1.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (c2.arguments().contains(var)) {
       int event = c2.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (c2.arguments().contains(var)) {
       int event = c2.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
@@ -149,44 +168,63 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     int eventAcross = -1;
 
     if (c1.arguments().contains(var)) {
       int event = c1.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (c1.arguments().contains(var)) {
       int event = c1.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (c2.arguments().contains(var)) {
       int event = c2.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (c2.arguments().contains(var)) {
       int event = c2.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
   public void notConsistency(Store store) {
 
     // No need for fixpoint loop in this context. Fixpoint always achieved after one execution.
-    if (c2.satisfied()) c1.notConsistency(store);
-    else if (c2.notSatisfied()) c1.consistency(store);
+    if (c2.satisfied()) {
+      c1.notConsistency(store);
+    } else if (c2.notSatisfied()) {
+      c1.consistency(store);
+    }
 
-    if (c1.satisfied()) c2.notConsistency(store);
-    else if (c1.notSatisfied()) c2.consistency(store);
+    if (c1.satisfied()) {
+      c2.notConsistency(store);
+    } else if (c1.notSatisfied()) {
+      c2.consistency(store);
+    }
   }
 
   @Override

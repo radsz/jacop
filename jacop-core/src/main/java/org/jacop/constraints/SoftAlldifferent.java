@@ -125,7 +125,9 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
       // compute union of all domains
       IntDomain all = new IntervalDomain();
-      for (IntVar v : xVars) all.addDom(v.domain);
+      for (IntVar v : xVars) {
+        all.addDom(v.domain);
+      }
 
       // create values
       int d = all.getSize();
@@ -151,9 +153,13 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (decomposition == null) decomposition = decompose(store);
+    if (decomposition == null) {
+      decomposition = decompose(store);
+    }
 
-    for (Constraint c : decomposition) store.impose(c);
+    for (Constraint c : decomposition) {
+      store.impose(c);
+    }
   }
 
   @Override
@@ -165,7 +171,9 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
     for (int i = 0; i < xVars.length; i++) {
       result.append(xVars[i]);
-      if (i < xVars.length - 1) result.append(", ");
+      if (i < xVars.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ").append(costVar).append(", ").append(violationMeasure).append(")");
 
@@ -190,8 +198,11 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
         }
       } else if (vm == ViolationMeasure.DECOMPOSITION_BASED) {
         // connect values to sink
-        for (int j = 0; j < m; j++)
-          for (int cost = 0; cost < n; cost++) addArc(d[j], t, cost, 0, 1);
+        for (int j = 0; j < m; j++) {
+          for (int cost = 0; cost < n; cost++) {
+            addArc(d[j], t, cost, 0, 1);
+          }
+        }
       } else {
 
         throw new UnsupportedOperationException("Unknown violation measure : " + vm);

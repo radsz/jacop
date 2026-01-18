@@ -120,20 +120,24 @@ public class LexOrder extends Constraint
     n = Math.min(x.length, y.length);
 
     // special cases; mostly on different sizes of vectors
-    if (x.length > 0 && y.length == 0)
+    if (x.length > 0 && y.length == 0) {
       lexLT =
           true; // changing relation to "<" to generate non-satisfiablity; empty is not greater than
-    // any non-empty vector
-    if (x.length == 0 && y.length > 0)
+      // any non-empty vector
+    }
+    if (x.length == 0 && y.length > 0) {
       lexLT = false; // changing relation to "<=" to generate always satisfiablity; empty vector is
-    // always smaller
-    if (x.length > 1 && y.length >= 1 && x.length > y.length)
+      // always smaller
+    }
+    if (x.length > 1 && y.length >= 1 && x.length > y.length) {
       lexLT = true; // changing relation to "<" to generate correct pruning; x is longer therefore y
-    // must be always lexicographically greater
-    if (x.length >= 1 && y.length > 1 && x.length < y.length)
+      // must be always lexicographically greater
+    }
+    if (x.length >= 1 && y.length > 1 && x.length < y.length) {
       lexLT = false; // changing relation to "<=" to generate correct pruning;
-    // x is shorter therefore y must be always lexicographically greater or equal
+      // x is shorter therefore y must be always lexicographically greater or equal
 
+    }
     setScope(Stream.concat(Arrays.stream(x), Arrays.stream(y)));
   }
 
@@ -209,7 +213,9 @@ public class LexOrder extends Constraint
       while (!index.isEmpty()) {
         int i = index.removeFirst();
 
-        if (!(i >= betaValue)) reestablishGAC(i);
+        if (!(i >= betaValue)) {
+          reestablishGAC(i);
+        }
       }
 
     } while (store.propagationHasOccurred);
@@ -221,16 +227,24 @@ public class LexOrder extends Constraint
   @Override
   public boolean satisfied() {
 
-    for (int i = 0; i < n; i++)
-      if (x[i].max() < y[i].min()) return true;
-      else if (x[i].max() > y[i].min()) return false;
-      else if (eqSingletons(x[i], y[i]))
-        if (lexLT) // <
+    for (int i = 0; i < n; i++) {
+      if (x[i].max() < y[i].min()) {
+        return true;
+      } else if (x[i].max() > y[i].min()) {
         return false;
-        else // <=
-        if (i == n - 1) return true;
-        else continue;
-      else return false;
+      } else if (eqSingletons(x[i], y[i])) {
+        if (lexLT) { // <
+          return false;
+        } else // <=
+        if (i == n - 1) {
+          return true;
+        } else {
+          continue;
+        }
+      } else {
+        return false;
+      }
+    }
 
     return false;
   }
@@ -241,13 +255,23 @@ public class LexOrder extends Constraint
     int[] iValX = varXToIndex.get(var);
     int[] iValY = varYToIndex.get(var);
 
-    if (iValX != null) for (int i : iValX) indexQueue.add(i);
-    if (iValY != null) for (int i : iValY) indexQueue.add(i);
+    if (iValX != null) {
+      for (int i : iValX) {
+        indexQueue.add(i);
+      }
+    }
+    if (iValY != null) {
+      for (int i : iValY) {
+        indexQueue.add(i);
+      }
+    }
   }
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -267,17 +291,24 @@ public class LexOrder extends Constraint
 
     for (int i = 0; i < x.length; i++) {
       result.append(x[i]);
-      if (i < x.length - 1) result.append(", ");
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], [");
 
     for (int i = 0; i < y.length; i++) {
       result.append(y[i]);
-      if (i < y.length - 1) result.append(", ");
+      if (i < y.length - 1) {
+        result.append(", ");
+      }
     }
-    if (originalLexLT) result.append("], <");
-    else result.append("], <=");
+    if (originalLexLT) {
+      result.append("], <");
+    } else {
+      result.append("], <=");
+    }
 
     result.append(");");
 
@@ -290,9 +321,13 @@ public class LexOrder extends Constraint
     int a = 0;
     int b = 0;
 
-    while (a < n && eqSingletons(x[a], y[a])) a++;
+    while (a < n && eqSingletons(x[a], y[a])) {
+      a++;
+    }
 
-    if (debug) IO.println("INIT entry: a = " + a);
+    if (debug) {
+      IO.println("INIT entry: a = " + a);
+    }
 
     if (a == n) {
       if (!lexLT) {
@@ -301,25 +336,37 @@ public class LexOrder extends Constraint
         satisfied = true;
         removeConstraint();
         return; // satisfied already for le
-      } else throw Store.failException; // fail for lt;
+      } else {
+        throw Store.failException; // fail for lt;
+      }
     } else {
       int i = a;
       b = -1;
       while (i != n && x[i].min() <= y[i].max()) {
         if (x[i].min() == y[i].max()) {
-          if (b == -1) b = i;
-        } else b = -1;
+          if (b == -1) {
+            b = i;
+          }
+        } else {
+          b = -1;
+        }
 
         i++;
       }
 
       if (!lexLT) {
-        if (i == n) b = n + 1; // IntDomain.MaxInt;
-        else if (b == -1) b = i;
-      } else if (b == -1) b = i;
+        if (i == n) {
+          b = n + 1; // IntDomain.MaxInt;
+        } else if (b == -1) {
+          b = i;
+        }
+      } else if (b == -1) {
+        b = i;
+      }
 
-      if (a >= b) throw Store.failException; // fail
-
+      if (a >= b) {
+        throw Store.failException; // fail
+      }
       alpha.update(a);
       beta.update(b);
       alphaValue = a;
@@ -328,7 +375,9 @@ public class LexOrder extends Constraint
       reestablishGAC(a);
     }
 
-    if (debug) IO.println("INIT exit: a = " + a + ", b = " + b);
+    if (debug) {
+      IO.println("INIT exit: a = " + a + ", b = " + b);
+    }
   }
 
   void reestablishGAC(int i) {
@@ -346,15 +395,22 @@ public class LexOrder extends Constraint
       return;
     }
 
-    if (i == a && (i + 1) == b) forceLT(i);
+    if (i == a && (i + 1) == b) {
+      forceLT(i);
+    }
 
     if (i == a && (i + 1) < b) {
       forceLE(i);
-      if (eqSingletons(x[i], y[i])) updateAlpha();
+      if (eqSingletons(x[i], y[i])) {
+        updateAlpha();
+      }
     }
 
-    if (a < i && i < b)
-      if ((i == (b - 1) && x[i].min() == y[i].max()) || x[i].min() > y[i].max()) updateBeta(i - 1);
+    if (a < i && i < b) {
+      if ((i == (b - 1) && x[i].min() == y[i].max()) || x[i].min() > y[i].max()) {
+        updateBeta(i - 1);
+      }
+    }
 
     if (debug) {
       IO.println("reestablishGAC exit for " + i + ", alpha = " + a + ", beta = " + b);
@@ -367,19 +423,24 @@ public class LexOrder extends Constraint
     int a = alphaValue + 1;
     int b = betaValue;
 
-    if (debug) IO.println("updateAlpha entry: a = " + a + ", b = " + b);
+    if (debug) {
+      IO.println("updateAlpha entry: a = " + a + ", b = " + b);
+    }
 
-    if (a == n)
-      if (lexLT) throw Store.failException; // fail
-      else {
+    if (a == n) {
+      if (lexLT) {
+        throw Store.failException; // fail
+      } else {
         // alpha.update(a);
         satisfied = true;
         removeConstraint();
         return;
       }
+    }
 
-    if (a == b) throw Store.failException; // fail
-
+    if (a == b) {
+      throw Store.failException; // fail
+    }
     if (!eqSingletons(x[a], y[a])) {
       alphaValue = a;
       reestablishGAC(a);
@@ -388,7 +449,9 @@ public class LexOrder extends Constraint
       updateAlpha();
     }
 
-    if (debug) IO.println("updateAlfa exit: a = " + a + ", b = " + b);
+    if (debug) {
+      IO.println("updateAlfa exit: a = " + a + ", b = " + b);
+    }
   }
 
   public void updateBeta(int i) {
@@ -397,16 +460,24 @@ public class LexOrder extends Constraint
     int b = i + 1;
     betaValue = b;
 
-    if (debug) IO.println("updateBeta entry: a = " + a + ", b = " + b);
+    if (debug) {
+      IO.println("updateBeta entry: a = " + a + ", b = " + b);
+    }
 
-    if (a == b) throw Store.failException; // fail
-
+    if (a == b) {
+      throw Store.failException; // fail
+    }
     if (x[i].min() < y[i].max()) {
-      if (i == a) forceLT(i);
-    } else // if (x[i].min() == y[i].max()) // ???
-    updateBeta(i - 1);
+      if (i == a) {
+        forceLT(i);
+      }
+    } else { // if (x[i].min() == y[i].max()) // ???
+      updateBeta(i - 1);
+    }
 
-    if (debug) IO.println("updateBeta exit: a = " + a + ", b = " + b);
+    if (debug) {
+      IO.println("updateBeta exit: a = " + a + ", b = " + b);
+    }
   }
 
   private boolean eqSingletons(IntVar x, IntVar y) {

@@ -80,8 +80,12 @@ class ThetaTree extends Tree {
 
     orderedTasks = task;
 
-    for (int i = treeSize - 1; i >= treeSize - n; i--) computeLeaveVals(i);
-    for (int i = treeSize - n - 1; i >= 0; i--) computeNodeVals(i);
+    for (int i = treeSize - 1; i >= treeSize - n; i--) {
+      computeLeaveVals(i);
+    }
+    for (int i = treeSize - n - 1; i >= 0; i--) {
+      computeNodeVals(i);
+    }
   }
 
   public void initTree(TaskView[] task) {
@@ -91,8 +95,12 @@ class ThetaTree extends Tree {
 
     orderedTasks = task;
 
-    for (int i = treeSize - 1; i >= treeSize - n; i--) addLeave(i);
-    for (int i = treeSize - n - 1; i >= 0; i--) addNode(i);
+    for (int i = treeSize - 1; i >= treeSize - n; i--) {
+      addLeave(i);
+    }
+    for (int i = treeSize - n - 1; i >= 0; i--) {
+      addNode(i);
+    }
   }
 
   private void addLeave(int i) {
@@ -193,7 +201,9 @@ class ThetaTree extends Tree {
   }
 
   void clearTree() {
-    for (int i = 0; i < treeSize; i++) clearNode(i);
+    for (int i = 0; i < treeSize; i++) {
+      clearNode(i);
+    }
   }
 
   void updateTree(int i) {
@@ -315,13 +325,14 @@ class ThetaTree extends Tree {
     StringBuilder result = new StringBuilder();
 
     result.append("ThetaTree\n");
-    for (int i = 0; i < treeSize; i++)
+    for (int i = 0; i < treeSize; i++) {
       result
           .append("Node ")
           .append(i)
           .append("\n============\n")
           .append(tree[i])
           .append("\n============\n");
+    }
 
     return result.toString();
   }

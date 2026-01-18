@@ -58,7 +58,7 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public boolean hasMoreElements() {
-    return (current < max);
+    return current < max;
   }
 
   @Override
@@ -71,6 +71,8 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
   public void domainHasChanged() {
     min = domain.min();
     max = domain.max();
-    if (current < min - 1) current = min - 1;
+    if (current < min - 1) {
+      current = min - 1;
+    }
   }
 }

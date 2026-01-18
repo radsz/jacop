@@ -43,7 +43,7 @@ public class MutableDomain implements MutableVar {
 
   final Store store;
 
-  MutableDomainValue value = null;
+  MutableDomainValue value;
 
   /**
    * @param store store in which the mutable domain is created.
@@ -92,7 +92,7 @@ public class MutableDomain implements MutableVar {
   public String toString() {
 
     StringBuilder buffer = new StringBuilder("MutableVar[");
-    buffer.append((index + 1)).append("] = ");
+    buffer.append(index + 1).append("] = ");
     buffer.append(value);
     return buffer.toString();
   }
@@ -101,21 +101,29 @@ public class MutableDomain implements MutableVar {
 
     if (value.stamp == store.level) {
 
-      if (debug) IO.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
+      if (debug) {
+        IO.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
+      }
 
       value.setValue(((MutableDomainValue) val).domain);
 
-      if (debug) IO.println(", OUT " + value);
+      if (debug) {
+        IO.println(", OUT " + value);
+      }
 
     } else if (value.stamp < store.level) {
-      if (debug) IO.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
+      if (debug) {
+        IO.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
+      }
 
       val.setStamp(store.level);
       val.setPrevious(value);
 
       value = (MutableDomainValue) val;
 
-      if (debug) IO.println("\n=> OUT " + this + "\nOLD " + value().previous());
+      if (debug) {
+        IO.println("\n=> OUT " + this + "\nOLD " + value().previous());
+      }
     }
   }
 

@@ -54,8 +54,12 @@ public class MinGlbCard<T extends SetVar> implements ComparatorVariable<T> {
 
     int right = SD.glb().getSize();
 
-    if (left < right) return 1;
-    if (left > right) return -1;
+    if (left < right) {
+      return 1;
+    }
+    if (left > right) {
+      return -1;
+    }
     return 0;
   }
 

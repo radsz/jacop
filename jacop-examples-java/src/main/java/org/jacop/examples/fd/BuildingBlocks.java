@@ -63,7 +63,9 @@ public class BuildingBlocks extends ExampleFD {
 
     example.model();
 
-    if (example.searchSmallestDomain(false)) IO.println("Solution(s) found");
+    if (example.searchSmallestDomain(false)) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -146,7 +148,9 @@ public class BuildingBlocks extends ExampleFD {
     IntVar six = new IntVar(store, "six", 6, 6);
 
     IntVar[] ones = new IntVar[24];
-    for (int i = 0; i < 24; i++) ones[i] = one;
+    for (int i = 0; i < 24; i++) {
+      ones[i] = one;
+    }
 
     // Each block can not contain more than six letters.
     store.impose(new Cumulative(letters, ones, ones, six));

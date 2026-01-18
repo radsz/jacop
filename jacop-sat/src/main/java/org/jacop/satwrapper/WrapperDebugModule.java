@@ -99,7 +99,9 @@ public final class WrapperDebugModule
   public void onAssertion(int literal, int level) {
     printLine(true);
 
-    if (literal == 26 && level == 1) Thread.dumpStack();
+    if (literal == 26 && level == 1) {
+      Thread.dumpStack();
+    }
 
     core.logc(
         3,
@@ -124,8 +126,9 @@ public final class WrapperDebugModule
         literal,
         wrapper.showLiteralMeaning(literal));
     // very dirty hack
-    if (core.dbStore.uniqueIdToDb(clauseId) == 0) core.logc(3, "cause: special database");
-    else {
+    if (core.dbStore.uniqueIdToDb(clauseId) == 0) {
+      core.logc(3, "cause: special database");
+    } else {
       mapClause.clear();
       core.dbStore.resolutionWith(clauseId, mapClause);
       core.logc(3, "cause: " + mapClause + " meaning " + wrapper.showClauseMeaning(mapClause));
@@ -197,8 +200,11 @@ public final class WrapperDebugModule
   }
 
   private void printLine(boolean start) {
-    if (start) core.logc(3, "/==================================");
-    else core.logc(3, "\\==================================");
+    if (start) {
+      core.logc(3, "/==================================");
+    } else {
+      core.logc(3, "\\==================================");
+    }
   }
 
   private void printBlank() {
@@ -209,7 +215,9 @@ public final class WrapperDebugModule
     StringBuilder sb = new StringBuilder().append("[ ");
     for (int var : clause.literals.keySet()) {
       int value = core.trail.values[var];
-      if (value >= 0) sb.append(' ');
+      if (value >= 0) {
+        sb.append(' ');
+      }
       sb.append(value);
       sb.append(' ');
     }

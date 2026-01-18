@@ -139,7 +139,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   @Override
   public void consistency(Store store) {
 
-    if (debugAll) IO.println("Begin " + this);
+    if (debugAll) {
+      IO.println("Begin " + this);
+    }
 
     if (firstConsistencyCheck) {
 
@@ -147,10 +149,14 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
       for (IntVar v : list) {
 
-        if (values[i].length == 0) throw Store.failException;
+        if (values[i].length == 0) {
+          throw Store.failException;
+        }
 
         IntervalDomain update = new IntervalDomain(values[i][0], values[i][0]);
-        for (int j = 1; j < values[i].length; j++) update.unionAdapt(values[i][j], values[i][j]);
+        for (int j = 1; j < values[i].length; j++) {
+          update.unionAdapt(values[i][j], values[i][j]);
+        }
         v.domain.in(store.level, v, update);
 
         i++;
@@ -174,11 +180,14 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
           int value = enumer.nextElement();
 
-          if (debugAll)
+          if (debugAll) {
             IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+          }
           int[] t = seekSupportVA(varPosition, value);
 
-          if (debugAll) IO.println("Found support?" + !(t == null));
+          if (debugAll) {
+            IO.println("Found support?" + !(t == null));
+          }
 
           if (t == null) {
             list[varPosition].domain.inComplement(store.level, list[varPosition], value);
@@ -188,7 +197,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       }
     }
 
-    if (debugAll) IO.println("End " + this);
+    if (debugAll) {
+      IO.println("End " + this);
+    }
   }
 
   protected int findPosition(int value, int[] values) {
@@ -200,13 +211,17 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     if (debugAll) {
       IO.println("Looking for " + value);
-      for (int v : values) IO.print("val " + v);
+      for (int v : values) {
+        IO.print("val " + v);
+      }
       IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) {
+        IO.println("left " + left + " right " + right + " position " + position);
+      }
 
       if (values[position] > value) {
         right = position;
@@ -217,9 +232,13 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       position = (left + right) >> 1;
     }
 
-    if (values[left] == value) return left;
+    if (values[left] == value) {
+      return left;
+    }
 
-    if (values[right] == value) return right;
+    if (values[right] == value) {
+      return right;
+    }
 
     return -1;
   }
@@ -235,7 +254,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     super.impose(store);
 
     if (debugAll) {
-      for (Var var : list) IO.println("Variable " + var);
+      for (Var var : list) {
+        IO.println("Variable " + var);
+      }
     }
 
     // TO DO, adjust (even simplify) all internal data structures
@@ -258,7 +279,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
       if (debugAll) {
         IO.print("support for analysis[");
-        for (int val : t) IO.print(val + " ");
+        for (int val : t) {
+          IO.print(val + " ");
+        }
         IO.println("]");
       }
 
@@ -272,12 +295,16 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         j++;
       }
 
-      if (stillSupport[i]) noSupports++;
+      if (stillSupport[i]) {
+        noSupports++;
+      }
 
       if (debugAll) {
         if (!stillSupport[i]) {
           IO.print("Not support [");
-          for (int val : t) IO.print(val + " ");
+          for (int val : t) {
+            IO.print(val + " ");
+          }
           IO.println("]");
         }
       }
@@ -302,7 +329,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
         if (debugAll) {
           IO.print("Still support [");
-          for (int val : t) IO.print(val + " ");
+          for (int val : t) {
+            IO.print(val + " ");
+          }
           IO.println("]");
         }
       }
@@ -331,21 +360,29 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         val.merge(value, 1, Integer::sum);
       }
 
-      if (debugAll) IO.println("values " + val.keySet());
+      if (debugAll) {
+        IO.println("values " + val.keySet());
+      }
 
       PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
-      if (debugAll) IO.println("Sorted val size " + sortedVal.size());
+      if (debugAll) {
+        IO.println("Sorted val size " + sortedVal.size());
+      }
 
       values[i] = new int[sortedVal.size()];
       supportCount[i] = new int[sortedVal.size()];
       this.tuples[i] = new int[sortedVal.size()][][];
 
-      if (debugAll) IO.println("values length " + values[i].length);
+      if (debugAll) {
+        IO.println("values length " + values[i].length);
+      }
 
       for (int j = 0; j < values[i].length; j++) {
 
-        if (debugAll) IO.println("sortedVal " + sortedVal);
+        if (debugAll) {
+          IO.println("sortedVal " + sortedVal);
+        }
 
         values[i][j] = sortedVal.poll();
         supportCount[i][j] = val.get(values[i][j]);
@@ -364,7 +401,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       }
 
       // TODO, check sorting functionality.
-      for (int j = 0; j < tuples[i].length; j++) TupleUtils.sortTuplesWithin(tuples[i][j]);
+      for (int j = 0; j < tuples[i].length; j++) {
+        TupleUtils.sortTuplesWithin(tuples[i][j]);
+      }
     }
 
     tuplesFromConstructor = null;
@@ -377,7 +416,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   @Override
   public void queueVariable(int level, Var var) {
 
-    if (debugAll) IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    if (debugAll) {
+      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    }
 
     variableQueue.add((IntVar) var);
   }
@@ -385,8 +426,11 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   boolean smaller(int[] tuple1, int[] tuple2) {
 
     int arity = tuple1.length;
-    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++)
-      if (tuple1[i] < tuple2[i]) return true;
+    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
+      if (tuple1[i] < tuple2[i]) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -394,7 +438,11 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   boolean equal(int[] tuple1, int[] tuple2) {
 
     int arity = tuple1.length;
-    for (int i = 0; i < arity; i++) if (tuple1[i] != tuple2[i]) return false;
+    for (int i = 0; i < arity; i++) {
+      if (tuple1[i] != tuple2[i]) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -409,7 +457,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     for (int i = 0; i < list.length; i++) {
       tupleString.append(list[i].toString());
-      if (i + 1 < list.length) tupleString.append(" ");
+      if (i + 1 < list.length) {
+        tupleString.append(" ");
+      }
     }
 
     tupleString.append(")");
@@ -418,21 +468,27 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
       int[][] subset = tuplesFromConstructor;
 
-      for (int p1 = 0; p1 < subset.length; p1++)
-        for (int p2 = subset.length - 1; p2 > p1; p2--)
+      for (int p1 = 0; p1 < subset.length; p1++) {
+        for (int p2 = subset.length - 1; p2 > p1; p2--) {
           if (smaller(subset[p2], subset[p2 - 1])) {
             int[] temp = subset[p2];
             subset[p2] = subset[p2 - 1];
             subset[p2 - 1] = temp;
           }
+        }
+      }
 
       for (int p1 = 0; p1 < subset.length; p1++) {
         for (int p2 = 0; p2 < subset[p1].length; p2++) {
           tupleString.append(subset[p1][p2]);
-          if (p2 != subset[p1].length - 1) tupleString.append(" ");
+          if (p2 != subset[p1].length - 1) {
+            tupleString.append(" ");
+          }
         }
 
-        if (p1 != subset.length - 1) tupleString.append("|");
+        if (p1 != subset.length - 1) {
+          tupleString.append("|");
+        }
       }
 
       tupleString.append(")");
@@ -453,29 +509,43 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   public int[] seekSupportVA(int varPosition, int value) {
 
-    if (debugAll) IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+    if (debugAll) {
+      IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+    }
 
     int[] t = setFirstValid(varPosition, value);
     int invalidPosition = -1;
     while (true) {
       t = findFirstAllowed(varPosition, value, t);
-      if (t == null) return null;
+      if (t == null) {
+        return null;
+      }
       invalidPosition = seekInvalidPosition(t);
-      if (invalidPosition == -1) return t;
+      if (invalidPosition == -1) {
+        return t;
+      }
       // setNextValidPart
       // t = setNextValid(varPosition, value, t, invalidPosition);
-      for (int i = invalidPosition + 1; i < list.length; i++)
-        if (i != varPosition) t[i] = list[i].min();
+      for (int i = invalidPosition + 1; i < list.length; i++) {
+        if (i != varPosition) {
+          t[i] = list[i].min();
+        }
+      }
       boolean cont = false;
-      for (int i = invalidPosition; i >= 0; i--)
-        if (i != varPosition)
-          if (t[i] >= list[i].max()) t[i] = list[i].min();
-          else {
+      for (int i = invalidPosition; i >= 0; i--) {
+        if (i != varPosition) {
+          if (t[i] >= list[i].max()) {
+            t[i] = list[i].min();
+          } else {
             t[i] = list[i].domain.nextValue(t[i]);
             cont = true;
             break;
           }
-      if (!cont) return null;
+        }
+      }
+      if (!cont) {
+        return null;
+      }
     }
   }
 
@@ -491,7 +561,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     int[] t = new int[list.length];
 
     int noVars = list.length;
-    for (int i = 0; i < noVars; i++) t[i] = list[i].min();
+    for (int i = 0; i < noVars; i++) {
+      t[i] = list[i].min();
+    }
 
     t[varPosition] = value;
 
@@ -508,8 +580,9 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    */
   public int[] findFirstAllowed(int varPosition, int value, int[] t) {
 
-    if (debugAll)
+    if (debugAll) {
       IO.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
+    }
 
     int[][] tuplesForGivenVariableValuePair =
         tuples[varPosition][findPosition(value, values[varPosition])];
@@ -555,7 +628,11 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   public int seekInvalidPosition(int[] t) {
 
     int noVars = list.length;
-    for (int i = 0; i < noVars; i++) if (!list[i].domain.contains(t[i])) return i;
+    for (int i = 0; i < noVars; i++) {
+      if (!list[i].domain.contains(t[i])) {
+        return i;
+      }
+    }
     return -1;
   }
 }

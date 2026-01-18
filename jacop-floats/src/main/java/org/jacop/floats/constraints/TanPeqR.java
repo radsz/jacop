@@ -87,13 +87,17 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
     // System.out.println ("1. " + this);
 
-    if (p.max() - p.min() >= FloatDomain.PI) return;
+    if (p.max() - p.min() >= FloatDomain.PI) {
+      return;
+    }
 
     do {
 
       store.propagationHasOccurred = false;
 
-      if (satisfied()) return;
+      if (satisfied()) {
+        return;
+      }
 
       double min = p.min();
       double max = p.max();
@@ -111,10 +115,12 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
       // System.out.println ("Normalized min/max = " + min+".."+max);
 
       FloatInterval minMax = new FloatInterval(min, max);
-      if (minMax.singleton())
+      if (minMax.singleton()) {
         if ((FloatDomain.PI / 2 >= min && FloatDomain.PI / 2 <= max)
-            || (-FloatDomain.PI / 2 >= min && -FloatDomain.PI / 2 <= max))
+            || (-FloatDomain.PI / 2 >= min && -FloatDomain.PI / 2 <= max)) {
           throw Store.failException;
+        }
+      }
 
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
@@ -131,7 +137,9 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               qMax = Math.tan(max);
               qMin = FloatDomain.down(qMin);
               qMax = FloatDomain.up(qMax);
-              if (qMax < 0) qMax = FloatDomain.MaxFloat;
+              if (qMax < 0) {
+                qMax = FloatDomain.MaxFloat;
+              }
               break;
             default:
               return;
@@ -147,8 +155,11 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               qMin = FloatDomain.down(qMin);
               qMax = FloatDomain.up(qMax);
               if (qMin > qMax) {
-                if (qMax > 0) qMin = -FloatDomain.MaxFloat;
-                else if (qMin < 0) qMax = FloatDomain.MaxFloat;
+                if (qMax > 0) {
+                  qMin = -FloatDomain.MaxFloat;
+                } else if (qMin < 0) {
+                  qMax = FloatDomain.MaxFloat;
+                }
               }
               break;
             default:
@@ -164,7 +175,9 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               qMax = Math.tan(max);
               qMin = FloatDomain.down(qMin);
               qMax = FloatDomain.up(qMax);
-              if (qMin > 0) qMin = -FloatDomain.MaxFloat;
+              if (qMin > 0) {
+                qMin = -FloatDomain.MaxFloat;
+              }
               break;
             default:
               return;
@@ -192,8 +205,12 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
       pMin = FloatDomain.down(pMin);
       pMax = FloatDomain.up(pMax);
-      if (java.lang.Double.isNaN(pMin)) pMin = -FloatDomain.PI / 2;
-      if (java.lang.Double.isNaN(pMax)) pMax = FloatDomain.PI / 2;
+      if (java.lang.Double.isNaN(pMin)) {
+        pMin = -FloatDomain.PI / 2;
+      }
+      if (java.lang.Double.isNaN(pMax)) {
+        pMax = FloatDomain.PI / 2;
+      }
 
       double low, high;
       double k = Math.floor(p.min() / FloatDomain.PI);
@@ -231,10 +248,17 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
   }
 
   int intervalNo(double d) {
-    if (d >= -FloatDomain.PI && d < -FloatDomain.PI / 2) return 1;
-    if (d >= -FloatDomain.PI / 2 && d < FloatDomain.PI / 2) return 2;
-    if (d >= FloatDomain.PI / 2 && d <= FloatDomain.PI) return 3;
-    else return 0; // undefined
+    if (d >= -FloatDomain.PI && d < -FloatDomain.PI / 2) {
+      return 1;
+    }
+    if (d >= -FloatDomain.PI / 2 && d < FloatDomain.PI / 2) {
+      return 2;
+    }
+    if (d >= FloatDomain.PI / 2 && d <= FloatDomain.PI) {
+      return 3; // undefined
+    } else {
+      return 0; // undefined
+    }
   }
 
   @Override
@@ -249,16 +273,18 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
       double tanMin = Math.tan(p.min()), tanMax = Math.tan(p.max());
 
       FloatInterval minDiff =
-          (tanMin < q.min())
+          tanMin < q.min()
               ? new FloatInterval(tanMin, q.min())
               : new FloatInterval(q.min(), tanMin);
       FloatInterval maxDiff =
-          (tanMax < q.max())
+          tanMax < q.max()
               ? new FloatInterval(tanMax, q.max())
               : new FloatInterval(q.max(), tanMax);
 
       return minDiff.singleton() && maxDiff.singleton();
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   @Override

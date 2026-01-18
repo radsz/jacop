@@ -32,6 +32,7 @@
 package org.jacop.jasat.core.clauses;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 
 /**
  * Interface for clause databases or database stores. Any entity that contains clauses and can
@@ -106,5 +107,5 @@ public interface ClauseDatabaseInterface {
    * @param output the output writer to which all the clauses will be written to.
    * @throws java.io.IOException execption from java.io package
    */
-  void toCNF(BufferedWriter output) throws java.io.IOException;
+  void toCNF(BufferedWriter output) throws IOException;
 }

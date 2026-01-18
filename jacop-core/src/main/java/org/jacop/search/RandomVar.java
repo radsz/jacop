@@ -43,7 +43,7 @@ import org.jacop.core.Var;
  */
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {
 
-  final Random generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  final Random generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /** It constructs RandomVar Comparator. */
   public RandomVar() {}

@@ -47,7 +47,7 @@ public class SimpleNode implements Node {
   }
 
   public int jjtGetNumChildren() {
-    return (children == null) ? 0 : children.length;
+    return children == null ? 0 : children.length;
   }
 
   public void jjtSetValue(Object value) {

@@ -32,6 +32,7 @@
 package org.jacop.jasat.core.clauses;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 import org.jacop.jasat.utils.Utils;
 
 /**
@@ -48,10 +49,10 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   private int[] clauses = new int[INITIAL_SIZE];
 
   // current clause index
-  private int currentIndex = 0;
+  private int currentIndex;
 
   // number of removed clauses
-  private int numRemoved = 0;
+  private int numRemoved;
 
   /**
    * TODO Efficiency,
@@ -90,9 +91,11 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
   public void assertLiteral(int literal) {
 
-    int var = (literal > 0) ? literal : -literal; // Math.abs(literal);
+    int var = literal > 0 ? literal : -literal; // Math.abs(literal);
 
-    if (watchLists.length <= var || watchLists[var] == null) return;
+    if (watchLists.length <= var || watchLists[var] == null) {
+      return;
+    }
 
     // notify all clauses
     int[] watchedClauses = watchLists[var];
@@ -104,7 +107,9 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
       // int state = notifyClause(clauses[i]);
 
       // conflict, abort
-      if (notifyClause(watchedClauses[i]) == ClauseState.UNSATISFIABLE_CLAUSE) return;
+      if (notifyClause(watchedClauses[i]) == ClauseState.UNSATISFIABLE_CLAUSE) {
+        return;
+      }
     }
   }
 
@@ -158,8 +163,11 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   @Override
   public int rateThisClause(int[] clause) {
 
-    if (clause.length == 2) return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
-    else return CLAUSE_RATE_UNSUPPORTED;
+    if (clause.length == 2) {
+      return CLAUSE_RATE_I_WANT_THIS_CLAUSE;
+    } else {
+      return CLAUSE_RATE_UNSUPPORTED;
+    }
   }
 
   /**
@@ -174,12 +182,16 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
 
     // get literals, values, and check for satisfied clause
     int literal0 = clauses[offset];
-    int value0 = core.trail.values[(literal0 < 0) ? -literal0 : literal0];
-    if (value0 == literal0) return ClauseState.SATISFIED_CLAUSE;
+    int value0 = core.trail.values[literal0 < 0 ? -literal0 : literal0];
+    if (value0 == literal0) {
+      return ClauseState.SATISFIED_CLAUSE;
+    }
 
     int literal1 = clauses[offset + 1];
-    int value1 = core.trail.values[(literal1 < 0) ? -literal1 : literal1];
-    if (value1 == literal1) return ClauseState.SATISFIED_CLAUSE;
+    int value1 = core.trail.values[literal1 < 0 ? -literal1 : literal1];
+    if (value1 == literal1) {
+      return ClauseState.SATISFIED_CLAUSE;
+    }
 
     if (value0 == 0 && value1 == 0) {
       return ClauseState.UNKNOWN_CLAUSE;
@@ -215,7 +227,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     return currentIndex - numRemoved;
   }
 
-  public void toCNF(BufferedWriter output) throws java.io.IOException {
+  public void toCNF(BufferedWriter output) throws IOException {
 
     for (int i = 0; i < currentIndex; i++) {
       int offset = i * 2;

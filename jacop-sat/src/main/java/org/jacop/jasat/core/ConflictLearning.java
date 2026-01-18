@@ -66,7 +66,7 @@ public final class ConflictLearning implements SolverComponent {
 
     IntStack assertionStack = trail.assertionStack;
     // find the first asserted literal before the one in explainClause
-    for (int i = assertionStack.size() - 1; i >= 0; --i) {
+    for (int i = assertionStack.size() - 1; i >= 0; i--) {
       int var = assertionStack.array[i];
 
       // this literal is in the clause
@@ -146,19 +146,25 @@ public final class ConflictLearning implements SolverComponent {
   private int findPositionTopLiteral(MapClause explanationClause, int level, int startingPosition) {
     // TODO : improve perfs.
 
-    for (int i = startingPosition; i >= 0; --i) {
+    for (int i = startingPosition; i >= 0; i--) {
       int var = trail.assertionStack.array[i];
       assert var > 0;
 
       assert trail.isSet(var);
 
       // we reached the asserted literal -- the first set in its level
-      if (trail.isAsserted(var)) return -1;
+      if (trail.isAsserted(var)) {
+        return -1;
+      }
       // we passed under the level
-      if (trail.getLevel(var) < level) return -1;
+      if (trail.getLevel(var) < level) {
+        return -1;
+      }
 
       // suitable literal, it is in the clause
-      if (explanationClause.containsVariable(var)) return i;
+      if (explanationClause.containsVariable(var)) {
+        return i;
+      }
     }
 
     // none has been found

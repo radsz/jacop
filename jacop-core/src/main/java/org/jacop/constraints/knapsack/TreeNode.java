@@ -170,7 +170,9 @@ public class TreeNode {
     wSum = left.getWSum() + right.getWSum();
 
     // recursion until we reach the root node.
-    if (parent != null) parent.recomputeUp(tree);
+    if (parent != null) {
+      parent.recomputeUp(tree);
+    }
   }
 
   /**

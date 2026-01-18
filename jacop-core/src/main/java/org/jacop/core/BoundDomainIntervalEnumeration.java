@@ -42,7 +42,7 @@ public class BoundDomainIntervalEnumeration extends IntervalEnumeration {
 
   final Interval i;
 
-  boolean done = false;
+  boolean done;
 
   /**
    * It creates an enumeration of intervals for BoundDomain.

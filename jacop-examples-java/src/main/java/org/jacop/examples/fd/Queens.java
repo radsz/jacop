@@ -75,11 +75,15 @@ public class Queens extends ExampleFD {
 
     // It is possible to supply the program
     // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.numberQ = Integer.parseInt(args[0]);
+    }
 
     example.model();
 
-    if (example.searchSmallestMiddle()) IO.println("Solution(s) found");
+    if (example.searchSmallestMiddle()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   /**
@@ -93,31 +97,43 @@ public class Queens extends ExampleFD {
 
     // It is possible to supply the program
     // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.numberQ = Integer.parseInt(args[0]);
+    }
 
     example.model();
 
-    if (example.searchSmallestMiddle()) IO.println("Solution(s) found");
+    if (example.searchSmallestMiddle()) {
+      IO.println("Solution(s) found");
+    }
 
     example = new Queens();
 
     // It is possible to supply the program
     // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.numberQ = Integer.parseInt(args[0]);
+    }
 
     example.modelBasic();
 
-    if (example.searchLDS(3)) IO.println("Solution(s) found");
+    if (example.searchLDS(3)) {
+      IO.println("Solution(s) found");
+    }
 
     example = new Queens();
 
     // It is possible to supply the program
     // with the chessboard size
-    if (args.length != 0) example.numberQ = Integer.parseInt(args[0]);
+    if (args.length != 0) {
+      example.numberQ = Integer.parseInt(args[0]);
+    }
 
     example.modelChanneling();
 
-    if (example.searchSmallestMiddle()) IO.println("Solution(s) found");
+    if (example.searchSmallestMiddle()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   /** This model uses only primitive constraints. */
@@ -141,11 +157,14 @@ public class Queens extends ExampleFD {
     // Queens from different columns can not be placed
     // in the same row, therefore the values
     // must be different
-    for (int i = 0; i < queens.length; i++)
-      for (int j = i - 1; j >= 0; j--) store.impose(new XneqY(queens[i], queens[j]));
+    for (int i = 0; i < queens.length; i++) {
+      for (int j = i - 1; j >= 0; j--) {
+        store.impose(new XneqY(queens[i], queens[j]));
+      }
+    }
 
     // Notice that j index starts from i+1
-    for (int i = 0; i < queens.length; i++)
+    for (int i = 0; i < queens.length; i++) {
       for (int j = i + 1; j < queens.length; j++) {
 
         // Temporary variable denotes the chessboard
@@ -167,6 +186,7 @@ public class Queens extends ExampleFD {
         store.impose(new XplusCeqZ(queens[j], -(j - i), temporary));
         store.impose(new XneqY(queens[i], temporary));
       }
+    }
   }
 
   /** This model uses dual model to solve Queens problems. */
@@ -216,10 +236,13 @@ public class Queens extends ExampleFD {
       vars.add(queensRows[i]);
     }
 
-    for (int i = 0; i < numberQ; i++) values[i] = new IntVar(store, "val-" + (i + 1), i + 1, i + 1);
+    for (int i = 0; i < numberQ; i++) {
+      values[i] = new IntVar(store, "val-" + (i + 1), i + 1, i + 1);
+    }
 
-    for (int i = 0; i < numberQ; i++)
+    for (int i = 0; i < numberQ; i++) {
       store.impose(Element.choose(queensRows[i], queens, values[i]));
+    }
   }
 
   @Override

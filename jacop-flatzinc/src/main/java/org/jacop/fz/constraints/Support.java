@@ -59,10 +59,10 @@ public class Support implements ParserTreeConstants {
   public Options options;
   // =========== Annotations ===========
   public boolean boundsConsistency = true;
-  public boolean domainConsistency = false;
+  public boolean domainConsistency;
   public int constraintPriority = -1;
   // defines_var-- not used yet
-  public IntVar definedVar = null;
+  public IntVar definedVar;
   final Store store;
   final Tables dictionary;
   // ============ SAT solver interface ==============
@@ -83,18 +83,21 @@ public class Support implements ParserTreeConstants {
   public int getInt(ASTScalarFlatExpr node) {
     intPresent = true;
 
-    if (node.getType() == 0) // int
-    return node.getInt();
-    if (node.getType() == 1) // bool
-    return node.getInt();
-    else if (node.getType() == 2) // ident
-    return dictionary.getInt(node.getIdent());
-    else if (node.getType() == 3) { // array access
+    if (node.getType() == 0) { // int
+      return node.getInt();
+    }
+    if (node.getType() == 1) { // bool
+      return node.getInt();
+    } else if (node.getType() == 2) { // ident
+      return dictionary.getInt(node.getIdent());
+    } else if (node.getType() == 3) { // array access
       int[] intTable = dictionary.getIntArray(node.getIdent());
       if (intTable == null) {
         intPresent = false;
         return Integer.MIN_VALUE;
-      } else return intTable[node.getInt()];
+      } else {
+        return intTable[node.getInt()];
+      }
     } else {
       throw new IllegalArgumentException("getInt: Wrong parameter " + node);
     }
@@ -133,14 +136,17 @@ public class Support implements ParserTreeConstants {
         ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
         int el = getInt(child);
         //              if (el == Integer.MIN_VALUE)
-        if (!intPresent) return null;
-        else aa[i] = el;
+        if (!intPresent) {
+          return null;
+        } else {
+          aa[i] = el;
+        }
       }
       return aa;
     } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) // ident
-      return dictionary.getIntArray(((ASTScalarFlatExpr) node).getIdent());
-      else {
+      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
+        return dictionary.getIntArray(((ASTScalarFlatExpr) node).getIdent());
+      } else {
         throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
       }
     } else {
@@ -196,7 +202,9 @@ public class Support implements ParserTreeConstants {
           || node.getFloat() < 0) {
         throw new IllegalArgumentException(
             "Index out of bound for " + node.getIdent() + "[" + (node.getInt() + 1) + "]");
-      } else return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
+      } else {
+        return dictionary.getVariableFloatArray(node.getIdent())[node.getInt()];
+      }
     } else {
       throw new IllegalArgumentException("getFloatVariable: Wrong parameter " + node);
     }
@@ -207,25 +215,26 @@ public class Support implements ParserTreeConstants {
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     if (child.getId() == JJTSETLITERAL) {
       int count = child.jjtGetNumChildren();
-      if (count == 0)
+      if (count == 0) {
         return new SetVar(store, new BoundSetDomain(new IntervalDomain(), new IntervalDomain()));
-      else {
+      } else {
         IntDomain s2 = getSetLiteral(node, index);
         return new SetVar(store, new BoundSetDomain(s2, s2));
       }
     } else if (child.getId() == JJTSCALARFLATEXPR) {
       if (((ASTScalarFlatExpr) child).getType() == 2) { // ident
         SetVar v = dictionary.getSetVariable(((ASTScalarFlatExpr) child).getIdent());
-        if (v != null) return v; // Variable ident
-        else { // Set ident
+        if (v != null) {
+          return v; // Variable ident
+        } else { // Set ident
           IntDomain s = dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
           return new SetVar(store, new BoundSetDomain(s, s));
         }
-      } else if (((ASTScalarFlatExpr) child).getType() == 3) // array access
-      return dictionary
+      } else if (((ASTScalarFlatExpr) child).getType() == 3) { // array access
+        return dictionary
             .getSetVariableArray(((ASTScalarFlatExpr) child).getIdent())[
             ((ASTScalarFlatExpr) child).getInt()];
-      else {
+      } else {
         throw new IllegalArgumentException("Wrong parameter in set " + child);
       }
     } else {
@@ -236,16 +245,18 @@ public class Support implements ParserTreeConstants {
   double getFloat(ASTScalarFlatExpr node) {
     floatPresent = true;
 
-    if (node.getType() == 5) // int
-    return node.getFloat();
-    else if (node.getType() == 2) // ident
-    return dictionary.getFloat(node.getIdent());
-    else if (node.getType() == 3) { // array access
+    if (node.getType() == 5) { // int
+      return node.getFloat();
+    } else if (node.getType() == 2) { // ident
+      return dictionary.getFloat(node.getIdent());
+    } else if (node.getType() == 3) { // array access
       double[] floatTable = dictionary.getFloatArray(node.getIdent());
       if (floatTable == null) {
         floatPresent = false;
         return VariablesParameters.MIN_FLOAT;
-      } else return floatTable[node.getInt()];
+      } else {
+        return floatTable[node.getInt()];
+      }
     } else {
       throw new IllegalArgumentException("getFloat: Wrong parameter " + node);
     }
@@ -258,14 +269,17 @@ public class Support implements ParserTreeConstants {
       for (int i = 0; i < count; i++) {
         ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
         double el = getFloat(child);
-        if (!floatPresent) return null;
-        else aa[i] = el;
+        if (!floatPresent) {
+          return null;
+        } else {
+          aa[i] = el;
+        }
       }
       return aa;
     } else if (node.getId() == JJTSCALARFLATEXPR) {
-      if (((ASTScalarFlatExpr) node).getType() == 2) // ident
-      return dictionary.getFloatArray(((ASTScalarFlatExpr) node).getIdent());
-      else {
+      if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
+        return dictionary.getFloatArray(((ASTScalarFlatExpr) node).getIdent());
+      } else {
         throw new IllegalArgumentException("Wrong type of int array; compilation aborted.");
       }
     } else {
@@ -287,13 +301,15 @@ public class Support implements ParserTreeConstants {
       if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
         // array of var
         IntVar[] v = dictionary.getVariableArray(((ASTScalarFlatExpr) node).getIdent());
-        if (v != null) return v;
-        else { // array of int
+        if (v != null) {
+          return v;
+        } else { // array of int
           int[] ia = dictionary.getIntArray(((ASTScalarFlatExpr) node).getIdent());
           if (ia != null) {
             IntVar[] aa = new IntVar[ia.length];
-            for (int i = 0; i < ia.length; i++)
+            for (int i = 0; i < ia.length; i++) {
               aa[i] = dictionary.getConstant(ia[i]); // new IntVar(store, ia[i], ia[i]);
+            }
             return aa;
           } else {
             throw new IllegalArgumentException(
@@ -349,10 +365,16 @@ public class Support implements ParserTreeConstants {
         if (s == null) { // there is still a chance that the var_array has constant sets ;)
           SetVar[] sVar = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
           int numberSingleton = 0;
-          for (SetVar setVar : sVar) if (setVar.singleton()) numberSingleton++;
+          for (SetVar setVar : sVar) {
+            if (setVar.singleton()) {
+              numberSingleton++;
+            }
+          }
           if (sVar.length == numberSingleton) {
             s = new IntDomain[sVar.length];
-            for (int i = 0; i < sVar.length; i++) s[i] = sVar[i].dom().glb();
+            for (int i = 0; i < sVar.length; i++) {
+              s[i] = sVar[i].dom().glb();
+            }
             //                          System.out.println(((SetDomain)sVar[i].dom()).glb());
           }
         }
@@ -378,10 +400,17 @@ public class Support implements ParserTreeConstants {
     } else if (node.getId() == JJTSCALARFLATEXPR) {
       if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
         s = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
-        if (s != null) return s;
-        else throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
-      } else throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
-    } else throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+        if (s != null) {
+          return s;
+        } else {
+          throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+        }
+      } else {
+        throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+      }
+    } else {
+      throw new IllegalArgumentException("Wrong set variable array; compilation aborted.");
+    }
   }
 
   IntDomain getSetLiteral(SimpleNode node, int index) {
@@ -395,8 +424,11 @@ public class Support implements ParserTreeConstants {
           if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
             int i1 = ((ASTIntFlatExpr) grand_child_1).getInt();
             int i2 = ((ASTIntFlatExpr) grand_child_2).getInt();
-            if (i1 > i2) return new IntervalDomain();
-            else return new IntervalDomain(i1, i2);
+            if (i1 > i2) {
+              return new IntervalDomain();
+            } else {
+              return new IntervalDomain(i1, i2);
+            }
           }
           break;
         case 1: // list
@@ -478,10 +510,10 @@ public class Support implements ParserTreeConstants {
       switch (ann.getAnnId()) {
         case "$expr" -> {
           ASTScalarFlatExpr n = (ASTScalarFlatExpr) ann.jjtGetChild(0).jjtGetChild(0);
-          if (n.getIdent().equals("bounds") || n.getIdent().equals("boundsZ")) {
+          if ("bounds".equals(n.getIdent()) || "boundsZ".equals(n.getIdent())) {
             boundsConsistency = true;
             domainConsistency = false;
-          } else if (n.getIdent().equals("domain")) {
+          } else if ("domain".equals(n.getIdent())) {
             boundsConsistency = false;
             domainConsistency = true;
           }
@@ -508,8 +540,9 @@ public class Support implements ParserTreeConstants {
   Var getAnnVar(ASTAnnExpr node) {
 
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) node.jjtGetChild(0);
-    if (e != null) return dictionary.getVariable(e.getIdent());
-    else {
+    if (e != null) {
+      return dictionary.getVariable(e.getIdent());
+    } else {
       throw new IllegalArgumentException(
           "Wrong variable identified in \"defines_var\" annotation" + node);
     }
@@ -565,7 +598,9 @@ public class Support implements ParserTreeConstants {
       IntVar b = e.getValue();
 
       // give values to output vars
-      if (dictionary.isOutput(v)) pose(new XeqY(v, b));
+      if (dictionary.isOutput(v)) {
+        pose(new XeqY(v, b));
+      }
     }
   }
 
@@ -580,9 +615,11 @@ public class Support implements ParserTreeConstants {
 
   void pose(Constraint c) throws FailException {
 
-    if (constraintPriority >= 0 && constraintPriority <= 4)
+    if (constraintPriority >= 0 && constraintPriority <= 4) {
       store.imposeWithConsistency(c, constraintPriority);
-    else store.imposeWithConsistency(c);
+    } else {
+      store.imposeWithConsistency(c);
+    }
 
     if (options.debug()) {
       String s = "% " + c;
@@ -625,8 +662,9 @@ public class Support implements ParserTreeConstants {
         } else if (b.max() == 0) { // x==c must be false
           x.domain.inComplement(store.level, x, c);
           removeConstraint();
-        } else if (b.min() == 1) // x==c must be true
-        x.domain.inValue(store.level, x, c);
+        } else if (b.min() == 1) { // x==c must be true
+          x.domain.inValue(store.level, x, c);
+        }
       }
 
       @Override

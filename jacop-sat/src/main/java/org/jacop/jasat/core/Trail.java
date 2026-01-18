@@ -151,7 +151,9 @@ public final class Trail implements SolverComponent {
 
     // pack level and some more data in an int
     int value = level;
-    if (asserted) value |= ASSERTED_MASK;
+    if (asserted) {
+      value |= ASSERTED_MASK;
+    }
     levels[var] = value;
   }
 
@@ -276,7 +278,7 @@ public final class Trail implements SolverComponent {
   public String toString() {
     StringBuilder sb = new StringBuilder("trail [");
     int n = assertionStack.size();
-    for (int i = n - 1; i >= 0; --i) {
+    for (int i = n - 1; i >= 0; i--) {
       int var = assertionStack.array[i];
       sb.append(values[var]);
       sb.append('(');

@@ -104,9 +104,10 @@ public class SimpleTable extends Constraint
     checkInput(
         tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
 
-    if (tuples.length > 64)
+    if (tuples.length > 64) {
       throw new IllegalArgumentException(
           "\nSimpleTable: number of tuples must be <= 64; is " + tuples.length);
+    }
 
     this.x = Arrays.copyOf(list, list.length);
     varMap = Var.positionMapping(list, false, this.getClass());
@@ -124,7 +125,9 @@ public class SimpleTable extends Constraint
             tuplesToRemove[i] = true;
           }
         }
-        if (tuplesToRemove[i]) n++;
+        if (tuplesToRemove[i]) {
+          n++;
+        }
       }
       int k = tuples.length - n;
       this.tuple = new int[k][size];
@@ -148,7 +151,9 @@ public class SimpleTable extends Constraint
     int n = t.length;
     int i = 0;
     while (i < n) {
-      if (!x[i].dom().contains(t[i])) return false;
+      if (!x[i].dom().contains(t[i])) {
+        return false;
+      }
       i++;
     }
     return true;
@@ -175,13 +180,13 @@ public class SimpleTable extends Constraint
       for (int j = 0; j < n; j++) {
         int v = tuple[j][i];
         if (validTuple(j)) {
-          wrds |= (1L << j);
+          wrds |= 1L << j;
           if (supports[i].containsKey(v)) {
             long bs = supports[i].get(v);
-            bs |= (1L << j);
+            bs |= 1L << j;
             supports[i].put(v, bs);
           } else {
-            long bs = (1L << j);
+            long bs = 1L << j;
             supports[i].put(v, bs);
           }
         }
@@ -205,7 +210,9 @@ public class SimpleTable extends Constraint
 
     } while (store.propagationHasOccurred);
 
-    if (noNoGround == 1) removeConstraint();
+    if (noNoGround == 1) {
+      removeConstraint();
+    }
   }
 
   void updateTable(Set<IntVar> fdvs) {
@@ -223,7 +230,9 @@ public class SimpleTable extends Constraint
       } else {
         rp = pd.subtract(cd);
         delta = rp.getSize();
-        if (delta == 0) continue;
+        if (delta == 0) {
+          continue;
+        }
       }
 
       mask = 0; // clear mask
@@ -234,7 +243,9 @@ public class SimpleTable extends Constraint
         ValueEnumeration e = rp.valueEnumeration();
         while (e.hasMoreElements()) {
           Long bs = xSupport.get(e.nextElement());
-          if (bs != null) mask |= (bs);
+          if (bs != null) {
+            mask |= bs;
+          }
         }
         mask = ~mask;
       } else { // reset-based update
@@ -244,20 +255,26 @@ public class SimpleTable extends Constraint
           ValueEnumeration e = cd.valueEnumeration();
           while (e.hasMoreElements()) {
             Long bs = xSupport.get(e.nextElement());
-            if (bs != null) mask |= (bs);
+            if (bs != null) {
+              mask |= bs;
+            }
           }
         } else {
           // updates based on table values
           for (Map.Entry<Integer, Long> e : xsEntry) {
             Integer val = e.getKey();
             Long bits = e.getValue();
-            if (cd.contains(val)) mask |= bits;
+            if (cd.contains(val)) {
+              mask |= bits;
+            }
           }
         }
       }
 
       boolean empty = intersectWithMask();
-      if (empty) throw Store.failException;
+      if (empty) {
+        throw Store.failException;
+      }
     }
   }
 
@@ -267,7 +284,9 @@ public class SimpleTable extends Constraint
 
     w &= mask;
 
-    if (w != wOriginal) words.update(w);
+    if (w != wOriginal) {
+      words.update(w);
+    }
 
     return w == 0; // empty
   }
@@ -279,7 +298,9 @@ public class SimpleTable extends Constraint
     for (int i = 0; i < x.length; i++) {
       IntVar xi = x[i];
       boolean xiSingleton = xi.singleton();
-      if (!xiSingleton) noNoGround++;
+      if (!xiSingleton) {
+        noNoGround++;
+      }
 
       // check only for not assign variables and variables that become single value at this store
       // level
@@ -299,7 +320,9 @@ public class SimpleTable extends Constraint
               if ((wrds & bs) == 0L) {
                 xi.domain.inComplement(store.level, xi, el);
               }
-            } else xi.domain.inComplement(store.level, xi, el);
+            } else {
+              xi.domain.inComplement(store.level, xi, el);
+            }
           }
         } else {
           // filter based on the table values
@@ -307,7 +330,9 @@ public class SimpleTable extends Constraint
           for (Map.Entry<Integer, Long> e : xsEntry) {
             Integer val = e.getKey();
             Long bits = e.getValue();
-            if (xi.domain.contains(val) && (wrds & bits) != 0L) xDom.unionAdapt(val);
+            if (xi.domain.contains(val) && (wrds & bits) != 0L) {
+              xDom.unionAdapt(val);
+            }
           }
           xi.domain.in(store.level, xi, xDom);
         }
@@ -323,7 +348,9 @@ public class SimpleTable extends Constraint
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     long wrds = words.value();
     for (int i = 0; i < x.length; i++) {
@@ -351,17 +378,21 @@ public class SimpleTable extends Constraint
     StringBuilder s = new StringBuilder(id());
 
     s.append(" : simpleTable(");
-    s.append(java.util.Arrays.asList(x));
+    s.append(Arrays.asList(x));
 
     s.append(", [");
     for (int i = 0; i < tuple.length; i++) {
       s.append("[");
       for (int j = 0; j < tuple[i].length; j++) {
         s.append(tuple[i][j]);
-        if (j < tuple[i].length - 1) s.append(", ");
+        if (j < tuple[i].length - 1) {
+          s.append(", ");
+        }
       }
       s.append("]");
-      if (i < tuple.length - 1) s.append(", ");
+      if (i < tuple.length - 1) {
+        s.append(", ");
+      }
     }
     s.append("])");
 

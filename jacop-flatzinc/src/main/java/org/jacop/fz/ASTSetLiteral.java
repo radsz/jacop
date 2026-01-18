@@ -25,7 +25,7 @@ public class ASTSetLiteral extends SimpleNode {
 
   public String toString() {
     String tt = "";
-    tt = (type == 0) ? "interval" : (type == 1) ? "list" : "range";
+    tt = type == 0 ? "interval" : type == 1 ? "list" : "range";
     return super.toString() + "(" + tt + ")";
   }
 }

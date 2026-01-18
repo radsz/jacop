@@ -82,7 +82,9 @@ public abstract class Var implements Backtrackable {
 
     for (int i = 0; i < list.length; i++) {
       if (position.get(list[i]) != null) {
-        if (skipSingletons && list[i].singleton()) continue;
+        if (skipSingletons && list[i].singleton()) {
+          continue;
+        }
         throw new IllegalArgumentException(
             "Constraint "
                 + clazz.getSimpleName()
@@ -105,7 +107,9 @@ public abstract class Var implements Backtrackable {
 
     for (T aList : list) {
       if (position.get(aList) != null) {
-        if (skipSingletons && aList.singleton()) continue;
+        if (skipSingletons && aList.singleton()) {
+          continue;
+        }
         throw new IllegalArgumentException(
             "Constraint "
                 + clazz.getSimpleName()
@@ -263,7 +267,9 @@ public abstract class Var implements Backtrackable {
 
   public float afcValue() {
     float value = 0.0f;
-    for (Constraint c : dom().constraints()) value += c.afc();
+    for (Constraint c : dom().constraints()) {
+      value += c.afc();
+    }
     return value;
   }
 

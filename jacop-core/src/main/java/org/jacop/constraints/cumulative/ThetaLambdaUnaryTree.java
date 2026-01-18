@@ -63,7 +63,9 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
     orderedTasks = task;
 
-    for (int i = treeSize - 1; i >= treeSize - n; i--) computeLeaveVals(i);
+    for (int i = treeSize - 1; i >= treeSize - n; i--) {
+      computeLeaveVals(i);
+    }
 
     for (int i = treeSize - n - 1; i >= 0; i--) {
 
@@ -104,8 +106,9 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
   void computeNodeVals(int i) {
 
-    if (notExist(left(i)) || notExist(right(i))) return;
-    else {
+    if (notExist(left(i)) || notExist(right(i))) {
+      return;
+    } else {
 
       ThetaLambdaUnaryNode node = tree[i];
       ThetaLambdaUnaryNode l = tree[left(i)];
@@ -261,13 +264,14 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     StringBuilder result = new StringBuilder();
 
     result.append("ThetaLambdaUnaryTree\n");
-    for (int i = 0; i < treeSize; i++)
+    for (int i = 0; i < treeSize; i++) {
       result
           .append("Node ")
           .append(i)
           .append("\n============\n")
           .append(tree[i])
           .append("\n============\n");
+    }
 
     return result.toString();
   }

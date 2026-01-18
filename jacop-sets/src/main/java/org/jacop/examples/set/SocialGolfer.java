@@ -168,7 +168,9 @@ public class SocialGolfer extends ExampleSet {
 
     weights[players - 1] = 1;
 
-    for (int i = players - 2; i >= 0; i--) weights[i] = weights[i + 1] * base;
+    for (int i = players - 2; i >= 0; i--) {
+      weights[i] = weights[i + 1] * base;
+    }
 
     IO.println("Social golfer problem " + weeks + "-" + groups + "-" + players);
 
@@ -178,18 +180,21 @@ public class SocialGolfer extends ExampleSet {
 
     vars = new ArrayList<>();
 
-    for (int i = 0; i < weeks; i++)
+    for (int i = 0; i < weeks; i++) {
       for (int j = 0; j < groups; j++) {
         golferGroup[i][j] = new SetVar(store, "g_" + i + "_" + j, new BoundSetDomain(1, N));
         vars.add(golferGroup[i][j]);
         store.impose(new CardA(golferGroup[i][j], players));
       }
+    }
 
-    for (int i = 0; i < weeks; i++)
-      for (int j = 0; j < groups; j++)
+    for (int i = 0; i < weeks; i++) {
+      for (int j = 0; j < groups; j++) {
         for (int k = j + 1; k < groups; k++) {
           store.impose(new AdisjointB(golferGroup[i][j], golferGroup[i][k]));
         }
+      }
+    }
 
     for (int i = 0; i < weeks; i++) {
 
@@ -206,10 +211,10 @@ public class SocialGolfer extends ExampleSet {
       store.impose(new AeqS(t, new IntervalDomain(1, N)));
     }
 
-    for (int i = 0; i < weeks; i++)
-      for (int j = i + 1; j < weeks; j++)
-        if (i != j)
-          for (int k = 0; k < groups; k++)
+    for (int i = 0; i < weeks; i++) {
+      for (int j = i + 1; j < weeks; j++) {
+        if (i != j) {
+          for (int k = 0; k < groups; k++) {
             for (int l = 0; l < groups; l++) {
               SetVar result =
                   new SetVar(
@@ -217,12 +222,18 @@ public class SocialGolfer extends ExampleSet {
               store.impose(new AintersectBeqC(golferGroup[i][k], golferGroup[j][l], result));
               store.impose(new CardA(result, 0, 1));
             }
+          }
+        }
+      }
+    }
 
     IntVar[] v = new IntVar[weeks];
     IntVar[][] var = new IntVar[weeks][players];
     for (int i = 0; i < weeks; i++) {
       v[i] = new IntVar(store, "v" + i, 0, 100000000);
-      for (int j = 0; j < players; j++) var[i][j] = new IntVar(store, "var" + i + "-" + j, 1, N);
+      for (int j = 0; j < players; j++) {
+        var[i][j] = new IntVar(store, "var" + i + "-" + j, 1, N);
+      }
       store.impose(new Match(golferGroup[i][0], var[i]));
 
       int n = var[i].length;
@@ -236,12 +247,14 @@ public class SocialGolfer extends ExampleSet {
       // store.impose(new SumWeight(var[i], weights, v[i]));
     }
 
-    for (int i = 0; i < weeks - 1; i++) store.impose(new XlteqY(v[i], v[i + 1]));
+    for (int i = 0; i < weeks - 1; i++) {
+      store.impose(new XlteqY(v[i], v[i + 1]));
+    }
   }
 
   public boolean search() {
 
-    Thread tread = java.lang.Thread.currentThread();
+    Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
     long startCPU = b.getThreadCpuTime(tread.getId());
@@ -273,7 +286,9 @@ public class SocialGolfer extends ExampleSet {
         }
         IO.println();
       }
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     IO.println(
         "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");

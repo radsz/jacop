@@ -90,7 +90,9 @@ public class PartitionSet extends Constraint implements UsesQueueVariable {
 
     if (firstConsistencyCheck) {
 
-      for (int i = 0; i < n; i++) s[i].domain.inLUB(store.level, s[i], u);
+      for (int i = 0; i < n; i++) {
+        s[i].domain.inLUB(store.level, s[i], u);
+      }
 
       firstConsistencyCheck = false;
     }
@@ -102,16 +104,19 @@ public class PartitionSet extends Constraint implements UsesQueueVariable {
       LinkedHashSet<Integer> fdvs = variableQueue;
       variableQueue = new LinkedHashSet<>();
 
-      for (Integer i : fdvs)
+      for (Integer i : fdvs) {
         if (i != null) {
           IntDomain glb = s[i].dom().glb();
           for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
             int si = e.nextElement();
             for (int j = 0; j < n; j++) {
-              if (i != j) s[j].dom().inLUBComplement(store.level, s[j], si);
+              if (i != j) {
+                s[j].dom().inLUBComplement(store.level, s[j], si);
+              }
             }
           }
         }
+      }
     } while (store.propagationHasOccurred);
 
     // check union constraint

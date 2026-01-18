@@ -201,9 +201,10 @@ public class LinearIntDom extends LinearInt {
         if (domainSize() < limitDomainPruning) {
           computeInit();
           pruneEq(); // domain consistency
-        } else
+        } else {
           // bound consistency
           super.propagate(rel);
+        }
 
         break;
 
@@ -214,8 +215,12 @@ public class LinearIntDom extends LinearInt {
 
           computeInit();
 
-          if (!reified && (sumMin > b || sumMax < b)) removeConstraint();
-        } else super.propagate(rel);
+          if (!reified && (sumMin > b || sumMax < b)) {
+            removeConstraint();
+          }
+        } else {
+          super.propagate(rel);
+        }
 
         break;
 
@@ -228,7 +233,9 @@ public class LinearIntDom extends LinearInt {
   double domainSize() {
 
     double s = 1;
-    for (int i = 0; i < l; i++) s *= (double) x[i].domain.getSize();
+    for (int i = 0; i < l; i++) {
+      s *= (double) x[i].domain.getSize();
+    }
 
     // System.out.println("s = " + s);
 
@@ -244,9 +251,13 @@ public class LinearIntDom extends LinearInt {
 
     // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " +
     // java.util.Arrays.asList(support));
-    for (int i = 0; i < l; i++)
-      if (support[i] == null) throw Store.failException;
-      else x[i].domain.in(store.level, x[i], support[i]);
+    for (int i = 0; i < l; i++) {
+      if (support[i] == null) {
+        throw Store.failException;
+      } else {
+        x[i].domain.in(store.level, x[i], support[i]);
+      }
+    }
   }
 
   void pruneNeq() {
@@ -258,10 +269,13 @@ public class LinearIntDom extends LinearInt {
 
     // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
-    for (int i = 0; i < l; i++)
-      if (support[i] == null) removeConstraint();
-      else if (support[i].singleton())
+    for (int i = 0; i < l; i++) {
+      if (support[i] == null) {
+        removeConstraint();
+      } else if (support[i].singleton()) {
         x[i].domain.inComplement(store.level, x[i], support[i].value());
+      }
+    }
   }
 
   void findSupport(int index, long sum) {
@@ -285,9 +299,13 @@ public class LinearIntDom extends LinearInt {
         // store assignments
         for (int i = 0; i < l; i++) {
           int a = assignments[i];
-          if (support[i] == null) support[i] = new IntervalDomain(a, a);
-          else if (support[i].max() < a) support[i].addLastElement(a);
-          else if (support[i].max() > a) support[i].unionAdapt(a, a);
+          if (support[i] == null) {
+            support[i] = new IntervalDomain(a, a);
+          } else if (support[i].max() < a) {
+            support[i].addLastElement(a);
+          } else if (support[i].max() > a) {
+            support[i].unionAdapt(a, a);
+          }
         }
       }
       return;
@@ -312,30 +330,45 @@ public class LinearIntDom extends LinearInt {
         for (int element = eMin; element <= eMax; element++) {
 
           long elementValue = (long) element * w;
-          if (elementValue < lb) continue; // value too low
-          else if (elementValue > ub) break outerloop; // value too large
-          else newPartialSum = partialSum + elementValue;
+          if (elementValue < lb) {
+            continue; // value too low
+          } else if (elementValue > ub) {
+            break outerloop; // value too large
+          } else {
+            newPartialSum = partialSum + elementValue;
+          }
 
           assignments[index] = element;
 
-          if (newIndex < pos) findSupportPositive(newIndex, newPartialSum);
-          else findSupportNegative(newIndex, newPartialSum);
+          if (newIndex < pos) {
+            findSupportPositive(newIndex, newPartialSum);
+          } else {
+            findSupportNegative(newIndex, newPartialSum);
+          }
         }
       }
-    } else
+    } else {
       for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
         int element = val.nextElement();
 
         long elementValue = (long) element * w;
-        if (elementValue < lb) continue; // value too low
-        else if (elementValue > ub) break; // value too large
-        else newPartialSum = partialSum + elementValue;
+        if (elementValue < lb) {
+          continue; // value too low
+        } else if (elementValue > ub) {
+          break; // value too large
+        } else {
+          newPartialSum = partialSum + elementValue;
+        }
 
         assignments[index] = element;
 
-        if (newIndex < pos) findSupportPositive(newIndex, newPartialSum);
-        else findSupportNegative(newIndex, newPartialSum);
+        if (newIndex < pos) {
+          findSupportPositive(newIndex, newPartialSum);
+        } else {
+          findSupportNegative(newIndex, newPartialSum);
+        }
       }
+    }
   }
 
   void findSupportNegative(int index, long partialSum) {
@@ -354,9 +387,13 @@ public class LinearIntDom extends LinearInt {
         // store assignments
         for (int i = 0; i < l; i++) {
           int a = assignments[i];
-          if (support[i] == null) support[i] = new IntervalDomain(a, a);
-          else if (support[i].max() < a) support[i].addLastElement(a);
-          else if (support[i].max() > a) support[i].unionAdapt(a, a);
+          if (support[i] == null) {
+            support[i] = new IntervalDomain(a, a);
+          } else if (support[i].max() < a) {
+            support[i].addLastElement(a);
+          } else if (support[i].max() > a) {
+            support[i].unionAdapt(a, a);
+          }
         }
       }
       return;
@@ -381,28 +418,37 @@ public class LinearIntDom extends LinearInt {
         for (int element = eMin; element <= eMax; element++) {
 
           long elementValue = (long) element * w;
-          if (elementValue < lb) break outerloop; // value too low
-          else if (elementValue > ub) continue; // value too large
-          else newPartialSum = partialSum + elementValue;
+          if (elementValue < lb) {
+            break outerloop; // value too low
+          } else if (elementValue > ub) {
+            continue; // value too large
+          } else {
+            newPartialSum = partialSum + elementValue;
+          }
 
           assignments[index] = element;
 
           findSupportNegative(newIndex, newPartialSum);
         }
       }
-    } else
+    } else {
       for (ValueEnumeration val = currentDom.valueEnumeration(); val.hasMoreElements(); ) {
         int element = val.nextElement();
 
         long elementValue = (long) element * w;
-        if (elementValue < lb) break; // value too low
-        else if (elementValue > ub) continue; // value too large
-        else newPartialSum = partialSum + elementValue;
+        if (elementValue < lb) {
+          break; // value too low
+        } else if (elementValue > ub) {
+          continue; // value too large
+        } else {
+          newPartialSum = partialSum + elementValue;
+        }
 
         assignments[index] = element;
 
         findSupportNegative(newIndex, newPartialSum);
       }
+    }
   }
 
   @Override
@@ -433,13 +479,17 @@ public class LinearIntDom extends LinearInt {
 
     for (int i = 0; i < x.length; i++) {
       result.append(x[i]);
-      if (i < x.length - 1) result.append(", ");
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < a.length; i++) {
       result.append(a[i]);
-      if (i < a.length - 1) result.append(", ");
+      if (i < a.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(rel2String()).append(", ").append(b).append(" )");

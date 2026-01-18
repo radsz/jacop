@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
@@ -60,7 +61,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
   /** It specifies variable r in constraint p * q = r. */
   public final FloatVar r;
 
-  boolean xSquare = false;
+  boolean xSquare;
 
   /**
    * It constructs a constraint P * Q = R.
@@ -75,7 +76,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
 
     numberId = idNumber.incrementAndGet();
 
-    xSquare = (p == q);
+    xSquare = p == q;
 
     this.p = p;
     this.q = q;
@@ -96,10 +97,12 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
       return;
     }
 
-    if (xSquare) // P^2 = R
-    do {
+    if (xSquare) { // P^2 = R
+      do {
 
-        if (r.max() < 0) throw Store.failException;
+        if (r.max() < 0) {
+          throw Store.failException;
+        }
 
         store.propagationHasOccurred = false;
 
@@ -109,8 +112,8 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
 
         double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
         double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
-        double min = (p1 <= p2) ? p1 : p2;
-        double max = (p1 >= p2) ? p1 : p2;
+        double min = p1 <= p2 ? p1 : p2;
+        double max = p1 >= p2 ? p1 : p2;
         if (p.min() <= 0.0 && p.max() >= 0.0) {
           min = 0.0;
           max = FloatDomain.up(max);
@@ -122,14 +125,22 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
 
         // Bounds for P
         double pMin;
-        if (r.min() <= 0.0) pMin = 0.0;
-        else pMin = Math.sqrt(r.min());
+        if (r.min() <= 0.0) {
+          pMin = 0.0;
+        } else {
+          pMin = Math.sqrt(r.min());
+        }
 
         double pMax;
-        if (r.max() < 0.0) throw Store.failException;
-        else pMax = Math.sqrt(r.max());
+        if (r.max() < 0.0) {
+          throw Store.failException;
+        } else {
+          pMax = Math.sqrt(r.max());
+        }
 
-        if (pMin > pMax) throw Store.failException;
+        if (pMin > pMax) {
+          throw Store.failException;
+        }
 
         FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
         dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
@@ -137,8 +148,8 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
         p.domain.in(store.level, p, dom);
 
       } while (store.propagationHasOccurred);
-    else // P*Q = R
-    do {
+    } else { // P*Q = R
+      do {
 
         store.propagationHasOccurred = false;
 
@@ -158,6 +169,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
         r.domain.in(store.level, r, rBounds); // .min(), rBounds.max());
 
       } while (store.propagationHasOccurred);
+    }
   }
 
   @Override
@@ -177,7 +189,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     return id() + " : PmulQeqR(" + p + ", " + q + ", " + r + " )";
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     if (f.equals(r)) {
       // f = p * q

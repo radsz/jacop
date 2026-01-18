@@ -48,8 +48,12 @@ public class LargestDomain<T extends Var> implements ComparatorVariable<T> {
   public int compare(double left, T var) {
     int right = var.getSize();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
+    if (left > right) {
+      return 1;
+    }
+    if (left < right) {
+      return -1;
+    }
     return 0;
   }
 

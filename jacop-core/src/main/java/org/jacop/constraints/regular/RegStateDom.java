@@ -68,14 +68,14 @@ public class RegStateDom extends RegState {
   @Override
   public boolean isActive(TimeStamp<Integer>[] activeLevels) {
 
-    return (pos < activeLevels[level].value());
+    return pos < activeLevels[level].value();
   }
 
   @Override
   public void removeTransition(int pos) {
 
     if (pos < outDegree) {
-      if (debugAll)
+      if (debugAll) {
         IO.println(
             "remove the SUC arc q_"
                 + level
@@ -84,6 +84,7 @@ public class RegStateDom extends RegState {
                 + "q_"
                 + this.successors[pos].level
                 + this.successors[pos].id);
+      }
 
       successors[pos].inDegree--;
       RegState tmp = successors[outDegree - 1];
@@ -99,9 +100,10 @@ public class RegStateDom extends RegState {
       return;
     }
 
-    if (debugAll)
+    if (debugAll) {
       System.err.println(
           "State q_" + level + id + ": Successors on position " + pos + " is already removed");
+    }
 
     assert false;
   }
@@ -109,11 +111,12 @@ public class RegStateDom extends RegState {
   @Override
   public void addTransition(RegState suc, Integer val) {
 
-    for (int i = 0; i < outDegree; i++)
+    for (int i = 0; i < outDegree; i++) {
       if (successors[i] == suc) {
         toSucDom[i].unionAdapt(val, val);
         return;
       }
+    }
 
     if (outDegree < successors.length) {
       successors[outDegree] = suc;
@@ -129,11 +132,12 @@ public class RegStateDom extends RegState {
   @Override
   public void addTransitions(RegState suc, IntervalDomain val) {
 
-    for (int i = 0; i < outDegree; i++)
+    for (int i = 0; i < outDegree; i++) {
       if (successors[i] == suc) {
         toSucDom[i].unionAdapt(val.min(), val.max());
         return;
       }
+    }
 
     if (outDegree < successors.length) {
       successors[outDegree] = suc;
@@ -159,7 +163,7 @@ public class RegStateDom extends RegState {
 
       int v = enumer.nextElement();
 
-      hashMap.computeIfAbsent(v, k -> new RegEdge(this, successors[i]));
+      hashMap.computeIfAbsent(v, _ -> new RegEdge(this, successors[i]));
     }
   }
 

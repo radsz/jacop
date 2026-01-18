@@ -73,12 +73,12 @@ public class VariablesParameters implements ParserTreeConstants {
   HashSet<String> annotations;
   ArrayList<IntDomain> indexBounds;
 
-  int numberBooleanVariables = 0;
-  int numberFloatVariables = 0;
-  int numberSetVariables = 0;
+  int numberBooleanVariables;
+  int numberFloatVariables;
+  int numberSetVariables;
 
   Options options;
-  boolean debug = false;
+  boolean debug;
 
   /** It constructs variables parameters. */
   public VariablesParameters() {}
@@ -154,9 +154,15 @@ public class VariablesParameters implements ParserTreeConstants {
     // System.out.println("*** Type = " + type + " init index = " + initChild);
     // System.out.println("*** Annotations: " + annotations);
 
-    if (annotations.contains("var_is_introduced")) var_introduced = true;
-    if (annotations.contains("output_var")) output_var = true;
-    if (annotations.contains("is_defined_var")) is_defined_var = true;
+    if (annotations.contains("var_is_introduced")) {
+      var_introduced = true;
+    }
+    if (annotations.contains("output_var")) {
+      output_var = true;
+    }
+    if (annotations.contains("is_defined_var")) {
+      is_defined_var = true;
+    }
 
     String ident;
     IntVar varInt;
@@ -188,15 +194,19 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchVar(varInt);
-        if (output_var) table.addOutVar(varInt);
+        if (output_var) {
+          table.addOutVar(varInt);
+        }
         break;
       case 1: // int interval
         ident = ((ASTVarDeclItem) node).getIdent();
 
-        if (lowInterval > highInterval) throw Store.failException;
+        if (lowInterval > highInterval) {
+          throw Store.failException;
+        }
 
-        if (checkBounds)
-          if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
+        if (checkBounds) {
+          if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt) {
             throw new ArithmeticException(
                 "Bounds for "
                     + ident
@@ -205,10 +215,14 @@ public class VariablesParameters implements ParserTreeConstants {
                     + ".."
                     + highInterval
                     + " are too low/high");
+          }
+        }
 
-        if (interval)
+        if (interval) {
           varInt = new IntVar(store, ident, new IntervalDomain(lowInterval, highInterval));
-        else varInt = new IntVar(store, ident, lowInterval, highInterval);
+        } else {
+          varInt = new IntVar(store, ident, lowInterval, highInterval);
+        }
 
         table.addVariable(ident, varInt);
         if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
@@ -224,7 +238,9 @@ public class VariablesParameters implements ParserTreeConstants {
         }
         //              if (!is_defined_var || output_var)
         table.addSearchVar(varInt);
-        if (output_var) table.addOutVar(varInt);
+        if (output_var) {
+          table.addOutVar(varInt);
+        }
         break;
       case 2: // int list
         ident = ((ASTVarDeclItem) node).getIdent();
@@ -232,10 +248,12 @@ public class VariablesParameters implements ParserTreeConstants {
         for (Integer e : intList) {
           int element = e;
 
-          if (checkBounds)
-            if (element < IntDomain.MinInt || element > IntDomain.MaxInt)
+          if (checkBounds) {
+            if (element < IntDomain.MinInt || element > IntDomain.MaxInt) {
               throw new ArithmeticException(
                   "Domain value for " + ident + " is too high/low (" + element + ")");
+            }
+          }
 
           varInt.addDom(element, element);
         }
@@ -254,7 +272,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchVar(varInt);
-        if (output_var) table.addOutVar(varInt);
+        if (output_var) {
+          table.addOutVar(varInt);
+        }
         break;
       case 3: // bool
         ident = ((ASTVarDeclItem) node).getIdent();
@@ -274,7 +294,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchVar(boolVar);
-        if (output_var) table.addOutVar(boolVar);
+        if (output_var) {
+          table.addOutVar(boolVar);
+        }
         numberBooleanVariables++;
         break;
       case 4: // set int
@@ -296,20 +318,24 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchSetVar(varSet);
-        if (output_var) table.addOutVar(varSet);
+        if (output_var) {
+          table.addOutVar(varSet);
+        }
         numberSetVariables++;
         break;
       case 5: // set interval
         ident = ((ASTVarDeclItem) node).getIdent();
 
-        if (lowInterval > highInterval) varSet = new SetVar(store, ident, new BoundSetDomain());
-        else
+        if (lowInterval > highInterval) {
+          varSet = new SetVar(store, ident, new BoundSetDomain());
+        } else {
           varSet =
               new SetVar(
                   store,
                   ident,
                   new BoundSetDomain(
                       new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
+        }
 
         table.addSetVariable(ident, varSet);
         if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
@@ -327,13 +353,17 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchSetVar(varSet);
-        if (output_var) table.addOutVar(varSet);
+        if (output_var) {
+          table.addOutVar(varSet);
+        }
         numberSetVariables++;
         break;
       case 6: // set list
         ident = ((ASTVarDeclItem) node).getIdent();
         SetDomain dom = new BoundSetDomain();
-        for (Integer e : intList) dom.addDom(e, e);
+        for (Integer e : intList) {
+          dom.addDom(e, e);
+        }
         varSet = new SetVar(store, ident, dom);
         table.addSetVariable(ident, varSet);
         if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
@@ -351,7 +381,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchSetVar(varSet);
-        if (output_var) table.addOutVar(varSet);
+        if (output_var) {
+          table.addOutVar(varSet);
+        }
         numberSetVariables++;
         break;
       case 10:
@@ -376,7 +408,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchSetVar(varSet);
-        if (output_var) table.addOutVar(varSet);
+        if (output_var) {
+          table.addOutVar(varSet);
+        }
         numberSetVariables++;
 
         break;
@@ -399,7 +433,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchSetVar(varSet);
-        if (output_var) table.addOutVar(varSet);
+        if (output_var) {
+          table.addOutVar(varSet);
+        }
         numberSetVariables++;
         break;
       case 8: // float
@@ -421,13 +457,17 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchFloatVar(varFloat);
-        if (output_var) table.addOutVar(varFloat);
+        if (output_var) {
+          table.addOutVar(varFloat);
+        }
         numberFloatVariables++;
         break;
       case 9: // float interval
         ident = ((ASTVarDeclItem) node).getIdent();
 
-        if (lowFloatInterval > highFloatInterval) throw Store.failException;
+        if (lowFloatInterval > highFloatInterval) {
+          throw Store.failException;
+        }
 
         if (lowFloatInterval < MIN_FLOAT) {
           System.err.println(
@@ -457,7 +497,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
         //              if (!is_defined_var || output_var)
         table.addSearchFloatVar(varFloat);
-        if (output_var) table.addOutVar(varFloat);
+        if (output_var) {
+          table.addOutVar(varFloat);
+        }
         numberFloatVariables++;
         break;
       default:
@@ -466,9 +508,11 @@ public class VariablesParameters implements ParserTreeConstants {
   }
 
   void generateArray(SimpleNode node, Tables table, Store store) {
-    if (((ASTVarDeclItem) node).getKind() == 2) generateArrayVariables(node, table, store);
-    else if (((ASTVarDeclItem) node).getKind() == 3) generateArrayParameters(node, table);
-    else {
+    if (((ASTVarDeclItem) node).getKind() == 2) {
+      generateArrayVariables(node, table, store);
+    } else if (((ASTVarDeclItem) node).getKind() == 3) {
+      generateArrayParameters(node, table);
+    } else {
       throw new IllegalArgumentException("Internal error");
     }
   }
@@ -547,7 +591,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
     String ident = ((ASTVarDeclItem) node).getIdent();
 
-    if (annotations.contains("var_is_introduced")) var_introduced = true;
+    if (annotations.contains("var_is_introduced")) {
+      var_introduced = true;
+    }
     if (annotations.contains("output_array")) {
       output_array = true;
       outArrayAnn = new OutputArrayAnnotation(ident, indexBounds);
@@ -568,8 +614,9 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchArray(varArrayInt);
         } else { // no init values
           varArrayInt = new IntVar[size];
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", MIN_INT, MAX_INT);
+          }
           table.addSearchArray(varArrayInt);
         }
         table.addVariableArray(ident, varArrayInt);
@@ -582,7 +629,9 @@ public class VariablesParameters implements ParserTreeConstants {
         size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
         varArrayInt = null;
 
-        if (lowInterval > highInterval) throw Store.failException;
+        if (lowInterval > highInterval) {
+          throw Store.failException;
+        }
 
         if (initChild < ((ASTVarDeclItem) node).jjtGetNumChildren()) {
           // array initialization
@@ -592,13 +641,15 @@ public class VariablesParameters implements ParserTreeConstants {
         } else { // no init values
           varArrayInt = new IntVar[size];
 
-          for (int i = 0; i < size; i++)
-            if (interval)
+          for (int i = 0; i < size; i++) {
+            if (interval) {
               varArrayInt[i] =
                   new IntVar(
                       store, ident + "[" + i + "]", new IntervalDomain(lowInterval, highInterval));
-            else
+            } else {
               varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", lowInterval, highInterval);
+            }
+          }
 
           table.addSearchArray(varArrayInt);
         }
@@ -620,7 +671,9 @@ public class VariablesParameters implements ParserTreeConstants {
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
             IntervalDomain dom = new IntervalDomain();
-            for (Integer e : intList) dom.unionAdapt(e, e);
+            for (Integer e : intList) {
+              dom.unionAdapt(e, e);
+            }
             varArrayInt[i] = new IntVar(store, ident + "[" + i + "]", dom);
           }
           table.addSearchArray(varArrayInt);
@@ -640,8 +693,9 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchArray(varArrayInt);
         } else { // no init values
           varArrayInt = new IntVar[size];
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArrayInt[i] = new BooleanVar(store, ident + "[" + i + "]");
+          }
           table.addSearchArray(varArrayInt);
           numberBooleanVariables += size;
         }
@@ -661,9 +715,10 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArraySet[i] =
                 new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(MIN_INT, MAX_INT));
+          }
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
@@ -683,16 +738,18 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++)
-            if (lowInterval > highInterval)
+          for (int i = 0; i < size; i++) {
+            if (lowInterval > highInterval) {
               varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain());
-            else
+            } else {
               varArraySet[i] =
                   new SetVar(
                       store,
                       ident + "[" + i + "]",
                       new BoundSetDomain(
                           new IntervalDomain(), new IntervalDomain(lowInterval, highInterval)));
+            }
+          }
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
@@ -714,7 +771,9 @@ public class VariablesParameters implements ParserTreeConstants {
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
             IntDomain sd = new IntervalDomain();
-            for (Integer e : intList) sd.unionAdapt(e, e);
+            for (Integer e : intList) {
+              sd.unionAdapt(e, e);
+            }
             varArraySet[i] =
                 new SetVar(
                     store, ident + "[" + i + "]", new BoundSetDomain(new IntervalDomain(), sd));
@@ -738,8 +797,9 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArraySet[i] = new SetVar(store, ident + "[" + i + "]", new BoundSetDomain(0, 1));
+          }
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
@@ -759,12 +819,13 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArraySet[i] =
                 new SetVar(
                     store,
                     ident + "[" + i + "]",
                     new BoundSetDomain(new IntervalDomain(), rangeDomain));
+          }
           table.addSearchSetArray(varArraySet);
           numberSetVariables += size;
         }
@@ -783,8 +844,9 @@ public class VariablesParameters implements ParserTreeConstants {
           //  table.addSearchFloatArray(varArrayFloat);
         } else { // no init values
           varArrayFloat = new FloatVar[size];
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArrayFloat[i] = new FloatVar(store, ident + "[" + i + "]", MIN_FLOAT, MAX_FLOAT);
+          }
           table.addSearchFloatArray(varArrayFloat);
           numberFloatVariables += size;
         }
@@ -798,7 +860,9 @@ public class VariablesParameters implements ParserTreeConstants {
         size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
         varArrayFloat = null;
 
-        if (lowFloatInterval > highFloatInterval) throw Store.failException;
+        if (lowFloatInterval > highFloatInterval) {
+          throw Store.failException;
+        }
 
         if (lowFloatInterval < MIN_FLOAT) {
           System.err.println(
@@ -825,9 +889,10 @@ public class VariablesParameters implements ParserTreeConstants {
         } else { // no init values
           varArrayFloat = new FloatVar[size];
 
-          for (int i = 0; i < size; i++)
+          for (int i = 0; i < size; i++) {
             varArrayFloat[i] =
                 new FloatVar(store, ident + "[" + i + "]", lowFloatInterval, highFloatInterval);
+          }
 
           table.addSearchFloatArray(varArrayFloat);
           numberFloatVariables += size;
@@ -861,25 +926,31 @@ public class VariablesParameters implements ParserTreeConstants {
         case 1: // int interval
           lowInterval = ((ASTIntTiExprTail) child).getLow();
           highInterval = ((ASTIntTiExprTail) child).getHigh();
-          if (checkBounds)
-            if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
+          if (checkBounds) {
+            if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt) {
               throw new ArithmeticException(
                   "Too large bounds on intervals " + lowInterval + ".." + highInterval);
+            }
+          }
           break;
         case 2: // int list
           SimpleNode grand_child = (SimpleNode) child.jjtGetChild(0);
           intList = ((ASTIntLiterals) grand_child).getList();
-          if (checkBounds)
-            for (Integer e : intList)
-              if (e < IntDomain.MinInt || e > IntDomain.MaxInt)
+          if (checkBounds) {
+            for (Integer e : intList) {
+              if (e < IntDomain.MinInt || e > IntDomain.MaxInt) {
                 throw new ArithmeticException("Too large element in set " + e);
+              }
+            }
+          }
           break;
         default:
           throw new RuntimeException("Internal error in " + getClass().getName());
       }
       return intType;
-    } else if (child.getId() == JJTBOOLTIEXPRTAIL) return 3;
-    else if (child.getId() == JJTSETTIEXPRTAIL) {
+    } else if (child.getId() == JJTBOOLTIEXPRTAIL) {
+      return 3;
+    } else if (child.getId() == JJTSETTIEXPRTAIL) {
       SimpleNode grand_child = (SimpleNode) child.jjtGetChild(0);
       if (grand_child.getId() == JJTINTTIEXPRTAIL) {
 
@@ -890,18 +961,23 @@ public class VariablesParameters implements ParserTreeConstants {
           case 1: // int interval
             lowInterval = ((ASTIntTiExprTail) grand_child).getLow();
             highInterval = ((ASTIntTiExprTail) grand_child).getHigh();
-            if (checkBounds)
-              if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt)
+            if (checkBounds) {
+              if (lowInterval < IntDomain.MinInt || highInterval > IntDomain.MaxInt) {
                 throw new ArithmeticException(
                     "Too large bounds on intervals " + lowInterval + ".." + highInterval);
+              }
+            }
             break;
           case 2: // int list
             SimpleNode grand_grand_child = (SimpleNode) grand_child.jjtGetChild(0);
             intList = ((ASTIntLiterals) grand_grand_child).getList();
-            if (checkBounds)
-              for (Integer e : intList)
-                if (e < IntDomain.MinInt || e > IntDomain.MaxInt)
+            if (checkBounds) {
+              for (Integer e : intList) {
+                if (e < IntDomain.MinInt || e > IntDomain.MaxInt) {
                   throw new ArithmeticException("Too large element in set " + e);
+                }
+              }
+            }
             break;
           case 3: // range set
             rangeDomain = new IntervalDomain();
@@ -925,8 +1001,11 @@ public class VariablesParameters implements ParserTreeConstants {
         }
         //              return ((ASTIntTiExprTail)grand_child).getType()+4;
         return intType + 4;
-      } else if (grand_child.getId() == JJTBOOLTIEXPRTAIL) return 7;
-      else return -1;
+      } else if (grand_child.getId() == JJTBOOLTIEXPRTAIL) {
+        return 7;
+      } else {
+        return -1;
+      }
     } else if (child.getId() == JJTFLOATTIEXPRTAIL) {
       int doubleType = ((ASTFloatTiExprTail) child).getType();
       switch (doubleType) {
@@ -941,8 +1020,10 @@ public class VariablesParameters implements ParserTreeConstants {
       }
       // System.out.println ("returns double type " + (int)(doubleType + 8));
 
-      return (doubleType + 8);
-    } else return -1;
+      return doubleType + 8;
+    } else {
+      return -1;
+    }
   }
 
   int getAnnotations(SimpleNode node, int i) {
@@ -953,10 +1034,14 @@ public class VariablesParameters implements ParserTreeConstants {
       while (j < count && child.getId() == JJTANNOTATION) {
         SimpleNode grandchild = (SimpleNode) child.jjtGetChild(0);
 
-        if (grandchild.getId() == JJTANNEXPR) annotations.add(parseAnnExpr(grandchild, 0));
+        if (grandchild.getId() == JJTANNEXPR) {
+          annotations.add(parseAnnExpr(grandchild, 0));
+        }
 
         j++;
-        if (j < count) child = (SimpleNode) node.jjtGetChild(j);
+        if (j < count) {
+          child = (SimpleNode) node.jjtGetChild(j);
+        }
       }
     }
     // System.out.println(annotations);
@@ -992,7 +1077,7 @@ public class VariablesParameters implements ParserTreeConstants {
         // child.dump("ch  ");
         String id = ((ASTAnnotation) child).getAnnId();
 
-        if (id != null && id.equals("output_array")) {
+        if ("output_array".equals(id)) {
           annotations.add(id);
 
           child = (SimpleNode) child.jjtGetChild(0);
@@ -1059,7 +1144,9 @@ public class VariablesParameters implements ParserTreeConstants {
           annotations.add(parseAnnExpr((SimpleNode) child.jjtGetChild(0), 0));
         }
         j++;
-        if (j < count) child = (SimpleNode) node.jjtGetChild(j);
+        if (j < count) {
+          child = (SimpleNode) node.jjtGetChild(j);
+        }
       }
     }
     // System.out.println(annotations +", "+indexBounds);
@@ -1237,27 +1324,33 @@ public class VariablesParameters implements ParserTreeConstants {
           return bb;
         case 2: // ident
           IntVar var = dictionary.getVariable(((ASTScalarFlatExpr) child).getIdent());
-          if (var != null) return var;
-          else {
+          if (var != null) {
+            return var;
+          } else {
             Integer n = dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
-            if (n != null)
+            if (n != null) {
               return dictionary.getConstant(n); // new IntVar(store, n.intValue(), n.intValue());
-            else break;
+            } else {
+              break;
+            }
           }
         case 3: // array acces
           IntVar avar =
               dictionary
                   .getVariableArray(((ASTScalarFlatExpr) child).getIdent())[
                   ((ASTScalarFlatExpr) child).getInt()];
-          if (avar != null) return avar;
-          else {
+          if (avar != null) {
+            return avar;
+          } else {
             Integer an =
                 dictionary
                     .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            if (an != null)
+            if (an != null) {
               return dictionary.getConstant(an); // new IntVar(store, an.intValue(), an.intValue());
-            else break;
+            } else {
+              break;
+            }
           }
         default: // string & float;
           throw new IllegalArgumentException(
@@ -1285,29 +1378,35 @@ public class VariablesParameters implements ParserTreeConstants {
         //      return bb;
         case 2: // ident
           FloatVar var = dictionary.getFloatVariable(((ASTScalarFlatExpr) child).getIdent());
-          if (var != null) return var;
-          else {
+          if (var != null) {
+            return var;
+          } else {
             Double n = dictionary.getFloat(((ASTScalarFlatExpr) child).getIdent());
-            if (n != null)
+            if (n != null) {
               return dictionary.getFloatConstant(
                   n); // new FloatVar(store, n.doubleValue(), n.doubleValue());
-            else break;
+            } else {
+              break;
+            }
           }
         case 3: // array acces
           FloatVar avar =
               dictionary
                   .getVariableFloatArray(((ASTScalarFlatExpr) child).getIdent())[
                   ((ASTScalarFlatExpr) child).getInt()];
-          if (avar != null) return avar;
-          else {
+          if (avar != null) {
+            return avar;
+          } else {
             Double an =
                 dictionary
                     .getFloatArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            if (an != null)
+            if (an != null) {
               return dictionary.getFloatConstant(
                   an); // new FloatVar(store, an.doubleValue(), an.doubleValue());
-            else break;
+            } else {
+              break;
+            }
           }
         case 5: // float
           return dictionary.getFloatConstant(((ASTScalarFlatExpr) child).getFloat());
@@ -1346,27 +1445,34 @@ public class VariablesParameters implements ParserTreeConstants {
       switch (((ASTScalarFlatExpr) child).getType()) {
         case 2: // ident
           SetVar var = dictionary.getSetVariable(((ASTScalarFlatExpr) child).getIdent());
-          if (var != null) return var;
-          else {
+          if (var != null) {
+            return var;
+          } else {
             IntDomain n = dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
-            if (n != null)
+            if (n != null) {
               // FIXME, why do we create int var inside this function? -- FIXED by KK
               return new SetVar(store, new BoundSetDomain(n, n));
-            else break;
+            } else {
+              break;
+            }
           }
         case 3: // array acces
           SetVar avar =
               dictionary
                   .getSetVariableArray(((ASTScalarFlatExpr) child).getIdent())[
                   ((ASTScalarFlatExpr) child).getInt()];
-          if (avar != null) return avar;
-          else {
+          if (avar != null) {
+            return avar;
+          } else {
             IntDomain an =
                 dictionary
                     .getSetArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            if (an != null) return new SetVar(store, new BoundSetDomain(an, an));
-            else break;
+            if (an != null) {
+              return new SetVar(store, new BoundSetDomain(an, an));
+            } else {
+              break;
+            }
           }
         default: // string & float;
           throw new IllegalArgumentException(
@@ -1428,8 +1534,11 @@ public class VariablesParameters implements ParserTreeConstants {
           if (grand_child_1.getId() == JJTINTFLATEXPR && grand_child_2.getId() == JJTINTFLATEXPR) {
             int i1 = ((ASTIntFlatExpr) grand_child_1).getInt();
             int i2 = ((ASTIntFlatExpr) grand_child_2).getInt();
-            if (i1 > i2) return new IntervalDomain();
-            else return new IntervalDomain(i1, i2);
+            if (i1 > i2) {
+              return new IntervalDomain();
+            } else {
+              return new IntervalDomain(i1, i2);
+            }
           }
           break;
         case 1: // list
@@ -1510,6 +1619,8 @@ public class VariablesParameters implements ParserTreeConstants {
 
     store.imposeWithConsistency(c);
 
-    if (options.debug()) IO.println("% " + c);
+    if (options.debug()) {
+      IO.println("% " + c);
+    }
   }
 }

@@ -94,8 +94,9 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     if (result) {
       Domain[] domSolution = label.getSolution();
       solution = new int[domSolution.length];
-      for (int i = 0; i < domSolution.length; i++)
+      for (int i = 0; i < domSolution.length; i++) {
         solution[i] = ((IntDomain) domSolution[i]).value();
+      }
     }
 
     return result;
@@ -104,7 +105,9 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
   public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
 
     Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
-    for (int i = 0; i < eliteSolution.length - 1; i++) mapping.put(vars[i], eliteSolution[i]);
+    for (int i = 0; i < eliteSolution.length - 1; i++) {
+      mapping.put(vars[i], eliteSolution[i]);
+    }
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
     // SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax<IntVar>(),
@@ -124,8 +127,9 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     if (result) {
       Domain[] domSolution = label.getSolution();
       solution = new int[domSolution.length];
-      for (int i = 0; i < domSolution.length; i++)
+      for (int i = 0; i < domSolution.length; i++) {
         solution[i] = ((IntDomain) domSolution[i]).value();
+      }
     }
 
     return result;
@@ -168,7 +172,9 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
       searchCost = cost.value();
 
-      if (printInfo) IO.println("----------\nCost = " + searchCost);
+      if (printInfo) {
+        IO.println("----------\nCost = " + searchCost);
+      }
 
       return returnCode;
     }

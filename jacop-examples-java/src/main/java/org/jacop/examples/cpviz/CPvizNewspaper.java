@@ -191,12 +191,13 @@ public class CPvizNewspaper {
     int[] algyPrecedence = {2, 1, 3, 4};
     // Constraints imposed below in for loop make sure that
     // algy reads newspapers sequentially and in the right order
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
       store.impose(
           new XplusYlteqZ(
               algy[algyPrecedence[i] - 1],
               durations[algyPrecedence[i] - 1][0],
               algy[algyPrecedence[i + 1] - 1]));
+    }
 
     // Make sure that makespan is at least equal to
     // the time point when algy finishes reading sun
@@ -205,12 +206,13 @@ public class CPvizNewspaper {
     int[] bertiePrecedence = {1, 3, 2, 4};
     // Constraints imposed below in for loop make sure that
     // bertie reads newspapers sequentially and in the right order
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
       store.impose(
           new XplusYlteqZ(
               bertie[bertiePrecedence[i] - 1],
               durations[bertiePrecedence[i] - 1][1],
               bertie[bertiePrecedence[i + 1] - 1]));
+    }
 
     // Make sure that makespan is at least equal to
     // the time point when bertie finishes reading sun
@@ -219,12 +221,13 @@ public class CPvizNewspaper {
     int[] charliePrecedence = {3, 1, 2, 4};
     // Constraints imposed below in for loop make sure that
     // charlie reads newspapers sequentially and in the right order
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
       store.impose(
           new XplusYlteqZ(
               charlie[charliePrecedence[i] - 1],
               durations[charliePrecedence[i] - 1][2],
               charlie[charliePrecedence[i + 1] - 1]));
+    }
 
     // Make sure that makespan is at least equal to
     // the time point when charlie finishes reading sun
@@ -233,12 +236,13 @@ public class CPvizNewspaper {
     int[] digbyPrecedence = {4, 2, 1, 3};
     // Constraints imposed below in for loop make sure that
     // digby reads newspapers sequentially and in the right order
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
       store.impose(
           new XplusYlteqZ(
               digby[digbyPrecedence[i] - 1],
               durations[digbyPrecedence[i] - 1][3],
               digby[digbyPrecedence[i + 1] - 1]));
+    }
 
     // Make sure that makespan is at least equal to
     // the time point when digby finishes reading express
@@ -259,10 +263,18 @@ public class CPvizNewspaper {
     // Trace --->
     IntVar[] abcd = new IntVar[16];
     int i = 0;
-    for (IntVar v : algy) abcd[i++] = v;
-    for (IntVar v : bertie) abcd[i++] = v;
-    for (IntVar v : charlie) abcd[i++] = v;
-    for (IntVar v : digby) abcd[i++] = v;
+    for (IntVar v : algy) {
+      abcd[i++] = v;
+    }
+    for (IntVar v : bertie) {
+      abcd[i++] = v;
+    }
+    for (IntVar v : charlie) {
+      abcd[i++] = v;
+    }
+    for (IntVar v : digby) {
+      abcd[i++] = v;
+    }
 
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, abcd);
 

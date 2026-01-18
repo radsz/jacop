@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Arrays;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
@@ -72,7 +73,7 @@ public class SumFloat extends LinearFloat {
 
   private static double[] getFilledArray(int n) {
     double[] a = new double[n];
-    java.util.Arrays.fill(a, 1);
+    Arrays.fill(a, 1);
     return a;
   }
 }

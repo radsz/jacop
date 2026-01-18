@@ -115,8 +115,8 @@ public class Max extends Constraint implements SatisfiedPresent {
         vDom = var.dom();
         double VdomMin = vDom.min(), VdomMax = vDom.max();
 
-        minValue = (minValue > VdomMin) ? minValue : VdomMin;
-        maxValue = (maxValue > VdomMax) ? maxValue : VdomMax;
+        minValue = minValue > VdomMin ? minValue : VdomMin;
+        maxValue = maxValue > VdomMax ? maxValue : VdomMax;
       }
 
       max.domain.in(store.level, max, minValue, maxValue);
@@ -124,13 +124,17 @@ public class Max extends Constraint implements SatisfiedPresent {
       int n = 0, pos = -1;
       for (int i = 0; i < list.length; i++) {
         var = list[i];
-        if (minValue > var.max()) n++;
-        else pos = i;
+        if (minValue > var.max()) {
+          n++;
+        } else {
+          pos = i;
+        }
       }
       if (n
           == list.length
-              - 1) // one variable on the list is maximal; its is min > max of all other variables
-      list[pos].domain.in(store.level, list[pos], max.dom());
+              - 1) { // one variable on the list is maximal; its is min > max of all other variables
+        list[pos].domain.in(store.level, list[pos], max.dom());
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -147,7 +151,9 @@ public class Max extends Constraint implements SatisfiedPresent {
     double MAX = max.min();
     int i = 0, eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() == MAX) eq++;
+      if (list[i].singleton() && list[i].value() == MAX) {
+        eq++;
+      }
       sat = list[i].max() <= MAX;
       i++;
     }
@@ -162,7 +168,9 @@ public class Max extends Constraint implements SatisfiedPresent {
     result.append(" : max(  [ ");
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(this.max);

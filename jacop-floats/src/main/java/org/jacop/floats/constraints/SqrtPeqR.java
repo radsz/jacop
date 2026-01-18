@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
@@ -68,7 +69,7 @@ public class SqrtPeqR extends PmulQeqR {
     return id() + " : SqrtPeqR(" + p + ", " + r + " )";
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     if (f.equals(r)) {
       // f = sqrt(p)

@@ -142,7 +142,9 @@ public class SixHumpCamelFunction {
     Optimize<FloatVar> min = new Optimize<>(store, label, s, f);
     boolean result = min.minimize();
 
-    if (!result) IO.println("NO SOLUTION");
+    if (!result) {
+      IO.println("NO SOLUTION");
+    }
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 

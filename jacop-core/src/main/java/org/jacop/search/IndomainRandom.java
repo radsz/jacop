@@ -49,7 +49,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
   /** It specifies Indomain function, which assigns values randomly. */
   public IndomainRandom() {
-    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   /**
@@ -70,12 +70,16 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
     int min = dom.min();
     int size = dom.getSize();
 
-    if (size == 0) return min;
+    if (size == 0) {
+      return min;
+    }
 
     int value = generator.nextInt(size);
 
     int domainSize = dom.noIntervals();
-    if (domainSize == 1) return value + min;
+    if (domainSize == 1) {
+      return value + min;
+    }
 
     for (int i = 0; i < domainSize; i++) {
 
@@ -83,8 +87,11 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
       int currentMax = dom.rightElement(i);
 
       // System.out.println( dom +", "+value);
-      if (currentMax - currentMin + 1 > value) return currentMin + value;
-      else value -= currentMax - currentMin + 1;
+      if (currentMax - currentMin + 1 > value) {
+        return currentMin + value;
+      } else {
+        value -= currentMax - currentMin + 1;
+      }
     }
 
     // Only to satisfy the compiler.

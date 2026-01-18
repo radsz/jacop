@@ -89,7 +89,9 @@ public class Pruning extends Network {
     this.strategy = new PercentStrategy(P_ATTEMPT_PRUNING, MIN_NUM_PRUNING);
 
     for (Arc arc : arcs) {
-      if (arc.hasCompanion() && arc.index != DELETED_ARC) queue.add(arc.getCompanion());
+      if (arc.hasCompanion() && arc.index != DELETED_ARC) {
+        queue.add(arc.getCompanion());
+      }
     }
     this.numActiveArcs = queue.size();
 
@@ -110,7 +112,7 @@ public class Pruning extends Network {
       int sizeAfter = xVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
         statistics.XVARS.arcsPruned++;
-        statistics.XVARS.amountPruned += (sizeBefore - sizeAfter);
+        statistics.XVARS.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -131,7 +133,7 @@ public class Pruning extends Network {
       int sizeAfter = xVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
         statistics.XVARS.arcsPruned++;
-        statistics.XVARS.amountPruned += (sizeBefore - sizeAfter);
+        statistics.XVARS.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -151,7 +153,7 @@ public class Pruning extends Network {
       int sizeAfter = nVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
         statistics.NVARS.arcsPruned++;
-        statistics.NVARS.amountPruned += (sizeBefore - sizeAfter);
+        statistics.NVARS.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -171,7 +173,7 @@ public class Pruning extends Network {
       int sizeAfter = nVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
         statistics.NVARS.arcsPruned++;
-        statistics.NVARS.amountPruned += (sizeBefore - sizeAfter);
+        statistics.NVARS.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -192,7 +194,7 @@ public class Pruning extends Network {
       int sizeAfter = wVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
         statistics.WVARS.arcsPruned++;
-        statistics.WVARS.amountPruned += (sizeBefore - sizeAfter);
+        statistics.WVARS.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -212,7 +214,7 @@ public class Pruning extends Network {
       int sizeAfter = sVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
         statistics.SVARS.arcsPruned++;
-        statistics.SVARS.amountPruned += (sizeBefore - sizeAfter);
+        statistics.SVARS.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -254,10 +256,10 @@ public class Pruning extends Network {
           int shift = -companion1.flowOffset;
 
           if (arc1.head == node) {
-            differentDir = (arc2.head != node);
+            differentDir = arc2.head != node;
             shift += node.balance;
           } else {
-            differentDir = (arc2.head == node);
+            differentDir = arc2.head == node;
             shift -= node.balance;
           }
 
@@ -277,17 +279,19 @@ public class Pruning extends Network {
 
             IntDomain xDom = xVar1.dom();
             IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);
-            for (int i = xDom.noIntervals() - 1; i >= 0; i--)
+            for (int i = xDom.noIntervals() - 1; i >= 0; i--) {
               yDomIn.unionAdapt(
                   new Interval(-shift - xDom.rightElement(i), -shift - xDom.leftElement(i)));
+            }
 
             nVarInShift(companion2, yDomIn, 0);
 
             IntDomain yDom = xVar2.domain;
             IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
-            for (int i = yDom.noIntervals() - 1; i >= 0; i--)
+            for (int i = yDom.noIntervals() - 1; i >= 0; i--) {
               xDomIn.unionAdapt(
                   new Interval(-shift - yDom.rightElement(i), -shift - yDom.leftElement(i)));
+            }
 
             nVarInShift(companion1, xDomIn, 0);
           }
@@ -349,7 +353,9 @@ public class Pruning extends Network {
   }
 
   private void analyzeArcHelper(Arc arc, int costLimit) {
-    if (arc.capacity == 0) return;
+    if (arc.capacity == 0) {
+      return;
+    }
 
     long cost = cost(Long.MAX_VALUE);
     int capacity = arc.capacity;
@@ -368,9 +374,15 @@ public class Pruning extends Network {
     assert (checkStructure(this));
 
     if (DO_INSTRUMENTATION) {
-      if (_companion.xVar != null) statistics.XVARS.arcsExamined++;
-      if (_companion.wVar != null) statistics.WVARS.arcsExamined++;
-      if (_companion.structure != null) statistics.SVARS.arcsExamined++;
+      if (_companion.xVar != null) {
+        statistics.XVARS.arcsExamined++;
+      }
+      if (_companion.wVar != null) {
+        statistics.WVARS.arcsExamined++;
+      }
+      if (_companion.structure != null) {
+        statistics.SVARS.arcsExamined++;
+      }
     }
 
     if (_capacity > 0) {
@@ -442,10 +454,16 @@ public class Pruning extends Network {
 
     IntVar wVar = arc.getCompanion().wVar;
 
-    if (arc.cost != -arc.sister.cost) throw new AssertionError();
+    if (arc.cost != -arc.sister.cost) {
+      throw new AssertionError();
+    }
     if (wVar != null) {
-      if (arc.forward && wVar.min() != arc.cost) throw new AssertionError();
-      if (!arc.forward && wVar.min() != -arc.cost) throw new AssertionError();
+      if (arc.forward && wVar.min() != arc.cost) {
+        throw new AssertionError();
+      }
+      if (!arc.forward && wVar.min() != -arc.cost) {
+        throw new AssertionError();
+      }
     }
     /*
      * if (maxWeight != Integer.MAX_VALUE || wVar != null) { // if
@@ -539,7 +557,9 @@ public class Pruning extends Network {
     public void init() {
       int numActiveArcs = 0;
       for (ArcCompanion c : queue) {
-        if (c.arc.index != DELETED_ARC) numActiveArcs++;
+        if (c.arc.index != DELETED_ARC) {
+          numActiveArcs++;
+        }
       }
 
       i = 0;

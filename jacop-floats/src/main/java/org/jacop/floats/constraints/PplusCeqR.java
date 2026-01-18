@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
@@ -121,9 +122,13 @@ public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableCons
 
       store.propagationHasOccurred = false;
 
-      if (r.singleton()) p.domain.inComplement(store.level, p, r.min() - c);
+      if (r.singleton()) {
+        p.domain.inComplement(store.level, p, r.min() - c);
+      }
 
-      if (p.singleton()) r.domain.inComplement(store.level, r, p.min() + c);
+      if (p.singleton()) {
+        r.domain.inComplement(store.level, r, p.min() + c);
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -131,15 +136,15 @@ public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableCons
   @Override
   public boolean notSatisfied() {
     FloatDomain pDom = p.dom(), rDom = r.dom();
-    return (pDom.max() + c < rDom.min() || pDom.min() + c > rDom.max());
+    return pDom.max() + c < rDom.min() || pDom.min() + c > rDom.max();
   }
 
   @Override
   public boolean satisfied() {
 
-    return (p.singleton()
+    return p.singleton()
         && r.singleton()
-        && r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c));
+        && r.value() - p.value() - c < FloatDomain.epsilon(r.value() - p.value() - c);
   }
 
   @Override
@@ -148,7 +153,7 @@ public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableCons
     return id() + " : PplusCeqR(" + p + ", " + c + ", " + r + " )";
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
     if (f.equals(r)) {
       // f = p + c
       // f' = d(p)

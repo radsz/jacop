@@ -86,10 +86,14 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
   public void consistency(Store store) {
 
     // A.lub = 1+2+4+5, A.glb = 4+5
-    if (bHasChanged) a.domain.inLUB(store.level, a, a.domain.lub().subtract(b.domain.glb()));
+    if (bHasChanged) {
+      a.domain.inLUB(store.level, a, a.domain.lub().subtract(b.domain.glb()));
+    }
 
     // B.lub = 2+3+7+8, B.glb = 7+8
-    if (aHasChanged) b.domain.inLUB(store.level, b, b.domain.lub().subtract(a.domain.glb()));
+    if (aHasChanged) {
+      b.domain.inLUB(store.level, b, b.domain.lub().subtract(a.domain.glb()));
+    }
 
     if (performCardinalityReasoning) {
       // TODO implement cardinality reasoning.
@@ -109,7 +113,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
           // how many elements can be added to B without affecting the cardinality of A = #(3).
           // subtract from elementsReservedForB
           elementsReservedForB -=
-              (b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection);
+              b.domain.lub().getSize() - b.domain.glb().getSize() - maxSizeOfIntersection;
 
           // now elementsReservedForB hold number of elements required for B from aLUB /\ bLUB
 
@@ -136,7 +140,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
           // how many elements can be added to A without affecting the cardinality of B = #(1).
           // subtract from elementsReservedForA
           elementsReservedForA -=
-              (a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection);
+              a.domain.lub().getSize() - a.domain.glb().getSize() - maxSizeOfIntersection;
 
           // now elementsReservedForA hold number of elements required for A from aLUB /\ bLUB
 

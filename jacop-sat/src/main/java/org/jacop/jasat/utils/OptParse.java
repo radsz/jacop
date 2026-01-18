@@ -56,8 +56,12 @@ public class OptParse<E> {
    * @param handler the handler
    */
   public void addHandler(OptHandler<E> handler) {
-    if (handler.longOpt != null) handlers.put("--" + handler.longOpt, handler);
-    if (handler.shortOpt != '\0') handlers.put("-" + handler.shortOpt, handler);
+    if (handler.longOpt != null) {
+      handlers.put("--" + handler.longOpt, handler);
+    }
+    if (handler.shortOpt != '\0') {
+      handlers.put("-" + handler.shortOpt, handler);
+    }
   }
 
   /**
@@ -77,15 +81,15 @@ public class OptParse<E> {
     // iterate on arguments
     for (String arg : args) {
       if (arg.startsWith("-") || arg.startsWith("--")) {
-        if (arg.equals("-")) {
+        if ("-".equals(arg)) {
           // exception: this is not an option
           realArgs[realIndex++] = arg;
           continue;
         }
         // parse this as an option
         int loc = arg.indexOf("=");
-        String key = (loc > 0) ? arg.substring(0, loc) : arg;
-        String value = (loc > 0) ? arg.substring(loc + 1) : "";
+        String key = loc > 0 ? arg.substring(0, loc) : arg;
+        String value = loc > 0 ? arg.substring(loc + 1) : "";
         if (!handlers.containsKey(key)) {
           // this option is not registered
           IO.println("unknown option: " + key);
@@ -112,8 +116,11 @@ public class OptParse<E> {
     // print (only once for each handler) its help
     Set<OptHandler<E>> printedHelps = new HashSet<>();
     for (OptHandler<E> handler : handlers.values()) {
-      if (printedHelps.contains(handler)) continue;
-      else printedHelps.add(handler);
+      if (printedHelps.contains(handler)) {
+        continue;
+      } else {
+        printedHelps.add(handler);
+      }
 
       // print help for this handler
       String msg = "-%c, --%-16s %s".formatted(handler.shortOpt, handler.longOpt, handler.help);

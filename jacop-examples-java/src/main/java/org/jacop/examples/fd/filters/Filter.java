@@ -101,8 +101,12 @@ public abstract class Filter {
     int[] delays = new int[ids.length];
 
     for (int i = 0; i < delays.length; i++) {
-      if (ids[i] == addId) delays[i] = addDel;
-      if (ids[i] == mulId) delays[i] = mulDel;
+      if (ids[i] == addId) {
+        delays[i] = addDel;
+      }
+      if (ids[i] == mulId) {
+        delays[i] = mulDel;
+      }
     }
 
     return delays;
@@ -134,7 +138,11 @@ public abstract class Filter {
    */
   public int noAdd() {
     int plusOp = 0;
-    for (int id : ids) if (id == addId) plusOp++;
+    for (int id : ids) {
+      if (id == addId) {
+        plusOp++;
+      }
+    }
     return plusOp;
   }
 
@@ -145,7 +153,11 @@ public abstract class Filter {
    */
   public int noMul() {
     int mulOp = 0;
-    for (int id : ids) if (id == mulId) mulOp++;
+    for (int id : ids) {
+      if (id == mulId) {
+        mulOp++;
+      }
+    }
     return mulOp;
   }
 

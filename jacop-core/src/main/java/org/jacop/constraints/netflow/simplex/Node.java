@@ -91,8 +91,12 @@ public final class Node {
     Node j = that;
     while (i != j) {
       int delta = i.depth - j.depth;
-      if (delta >= 0) i = i.parent;
-      if (delta <= 0) j = j.parent;
+      if (delta >= 0) {
+        i = i.parent;
+      }
+      if (delta <= 0) {
+        j = j.parent;
+      }
     }
     return i;
   }
@@ -105,7 +109,9 @@ public final class Node {
    */
   public Node rightMostLeaf() {
     Node i = this;
-    while (i.thread.depth > depth) i = i.thread;
+    while (i.thread.depth > depth) {
+      i = i.thread;
+    }
     return i;
   }
 
@@ -117,7 +123,9 @@ public final class Node {
    */
   public Node predecessorOnThread() {
     Node i = parent;
-    while (i.thread != this) i = i.thread;
+    while (i.thread != this) {
+      i = i.thread;
+    }
     return i;
   }
 
@@ -139,7 +147,9 @@ public final class Node {
     for (Node i = thread; true; i = i.thread) {
       // the depth value of i might be wrong so we use its parent's depth
       Node j = i.parent;
-      if (j == null || j.depth < depth) break;
+      if (j == null || j.depth < depth) {
+        break;
+      }
 
       // arc from i to j
       // c_ij^pi = 0 implies that pi_i = c_ij + pi_j

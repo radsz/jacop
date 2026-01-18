@@ -46,8 +46,9 @@ public class SophisticatedLengauerTarjan extends LengauerTarjan {
   }
 
   private int eval(int v) {
-    if (ancestor[v] == NIL) return label[v];
-    else {
+    if (ancestor[v] == NIL) {
+      return label[v];
+    } else {
       compress(v);
       return semi[label[ancestor[v]]] >= semi[label[v]] ? label[v] : label[ancestor[v]];
     }

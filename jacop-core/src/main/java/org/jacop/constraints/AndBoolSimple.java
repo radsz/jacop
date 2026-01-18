@@ -85,13 +85,18 @@ public class AndBoolSimple extends PrimitiveConstraint {
     if (a.max() == 0 || b.max() == 0) {
       result.domain.inValue(store.level, result, 0);
       removeConstraint();
-    } else if (a.min() == 1 && b.min() == 1) result.domain.inValue(store.level, result, 1);
-    else if (result.min() == 1) {
+    } else if (a.min() == 1 && b.min() == 1) {
+      result.domain.inValue(store.level, result, 1);
+    } else if (result.min() == 1) {
       a.domain.inValue(store.level, a, 1);
       b.domain.inValue(store.level, b, 1);
-    } else if (result.max() == 0)
-      if (a.min() == 1) b.domain.inValue(store.level, b, 0);
-      else if (b.min() == 1) a.domain.inValue(store.level, a, 0);
+    } else if (result.max() == 0) {
+      if (a.min() == 1) {
+        b.domain.inValue(store.level, b, 0);
+      } else if (b.min() == 1) {
+        a.domain.inValue(store.level, a, 0);
+      }
+    }
   }
 
   @Override
@@ -101,13 +106,18 @@ public class AndBoolSimple extends PrimitiveConstraint {
     if (a.max() == 0 || b.max() == 0) {
       result.domain.inValue(store.level, result, 1);
       removeConstraint();
-    } else if (a.min() == 1 && b.min() == 1) result.domain.inValue(store.level, result, 0);
-    else if (result.max() == 0) {
+    } else if (a.min() == 1 && b.min() == 1) {
+      result.domain.inValue(store.level, result, 0);
+    } else if (result.max() == 0) {
       a.domain.inValue(store.level, a, 1);
       b.domain.inValue(store.level, b, 1);
-    } else if (result.min() == 1)
-      if (a.min() == 1) b.domain.inValue(store.level, b, 0);
-      else if (b.min() == 1) a.domain.inValue(store.level, a, 0);
+    } else if (result.min() == 1) {
+      if (a.min() == 1) {
+        b.domain.inValue(store.level, b, 0);
+      } else if (b.min() == 1) {
+        a.domain.inValue(store.level, a, 0);
+      }
+    }
   }
 
   @Override
@@ -118,8 +128,8 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
   @Override
   public boolean notSatisfied() {
-    return ((result.min() == 1 && (a.max() == 0 || b.max() == 0))
-        || (result.max() == 0 && a.min() == 1 && b.min() == 1));
+    return (result.min() == 1 && (a.max() == 0 || b.max() == 0))
+        || (result.max() == 0 && a.min() == 1 && b.min() == 1);
   }
 
   @Override
@@ -130,9 +140,13 @@ public class AndBoolSimple extends PrimitiveConstraint {
 
   public String checkInvariants() {
 
-    if (a.min() < 0 || a.max() > 1) return "Variable " + a + " does not have boolean domain";
+    if (a.min() < 0 || a.max() > 1) {
+      return "Variable " + a + " does not have boolean domain";
+    }
 
-    if (b.min() < 0 || b.max() > 1) return "Variable " + b + " does not have boolean domain";
+    if (b.min() < 0 || b.max() > 1) {
+      return "Variable " + b + " does not have boolean domain";
+    }
 
     return null;
   }

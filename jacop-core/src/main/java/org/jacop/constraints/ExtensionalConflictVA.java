@@ -60,7 +60,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   /** It stores variables within this extensional constraint, order does matter. */
   public final IntVar[] list;
 
-  int numberTuples = 0;
+  int numberTuples;
   Store store;
 
   /**
@@ -76,7 +76,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   final int[] tuple;
   int[][][] lastofsequence;
   int[][][] supports;
-  private boolean satisfiedAlreadyAtImposition = false;
+  private boolean satisfiedAlreadyAtImposition;
 
   /**
    * Partial constructor which stores variables involved in a constraint but does not get
@@ -139,17 +139,23 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    */
   public int[] seekSupportVA(int varPosition, int value) {
 
-    if (debugAll) IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+    if (debugAll) {
+      IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+    }
 
     int[] t = tuple;
     int pos = findPosition(value, values[varPosition]);
 
-    if (pos == -1) return setFirstValid(varPosition, value);
+    if (pos == -1) {
+      return setFirstValid(varPosition, value);
+    }
 
     try {
-      if (supports[varPosition][pos] != null)
+      if (supports[varPosition][pos] != null) {
         System.arraycopy(supports[varPosition][pos], 0, t, 0, list.length);
-      else t = setFirstValid(varPosition, value);
+      } else {
+        t = setFirstValid(varPosition, value);
+      }
     } catch (Exception _) {
       t = setFirstValid(varPosition, value);
     }
@@ -173,37 +179,50 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       // finds the last of sequence of disallowed tuples from the
       // convex.
 
-      if (lastofsequenceVarValue[position] != position)
+      if (lastofsequenceVarValue[position] != position) {
         System.arraycopy(tuplesVarValue[lastofsequenceVarValue[position]], 0, t, 0, list.length);
+      }
 
       invalidPosition = seekInvalidPosition(t);
 
       if (invalidPosition == -1) {
         int i = list.length - 1;
         for (; i >= 0; i--) {
-          if (i != varPosition)
-            if (t[i] == list[i].max()) t[i] = list[i].min();
-            else {
+          if (i != varPosition) {
+            if (t[i] == list[i].max()) {
+              t[i] = list[i].min();
+            } else {
               t[i] = list[i].domain.nextValue(t[i]);
               break;
             }
+          }
         }
-        if (i == -1) return null;
+        if (i == -1) {
+          return null;
+        }
       } else {
         // setNextValidPart
         // t = setNextValid(varPosition, value, t, invalidPosition);
-        for (int i = invalidPosition + 1; i < list.length; i++)
-          if (i != varPosition) t[i] = list[i].min();
+        for (int i = invalidPosition + 1; i < list.length; i++) {
+          if (i != varPosition) {
+            t[i] = list[i].min();
+          }
+        }
         boolean cont = false;
-        for (int i = invalidPosition; i >= 0; i--)
-          if (i != varPosition)
-            if (t[i] >= list[i].max()) t[i] = list[i].min();
-            else {
+        for (int i = invalidPosition; i >= 0; i--) {
+          if (i != varPosition) {
+            if (t[i] >= list[i].max()) {
+              t[i] = list[i].min();
+            } else {
               t[i] = list[i].domain.nextValue(t[i]);
               cont = true;
               break;
             }
-        if (!cont) return null;
+          }
+        }
+        if (!cont) {
+          return null;
+        }
       }
     }
   }
@@ -219,7 +238,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       supports4variable[pos] = new int[list.length];
       System.arraycopy(t, 0, supports4variable[pos], 0, list.length);
     } else {
-      if (supports4variable[pos] == null) supports4variable[pos] = new int[list.length];
+      if (supports4variable[pos] == null) {
+        supports4variable[pos] = new int[list.length];
+      }
       System.arraycopy(t, 0, supports4variable[pos], 0, list.length);
     }
   }
@@ -237,7 +258,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     int[] t = tuple;
 
     int noVars = list.length;
-    for (int i = 0; i < noVars; i++) t[i] = list[i].min();
+    for (int i = 0; i < noVars; i++) {
+      t[i] = list[i].min();
+    }
 
     t[varPosition] = value;
 
@@ -255,8 +278,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    */
   public int isDisallowed(int varPosition, int value, int[] t) {
 
-    if (debugAll)
+    if (debugAll) {
       IO.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
+    }
 
     int[][] tuplesForGivenVariableValuePair =
         tuples[varPosition][findPosition(value, values[varPosition])];
@@ -287,7 +311,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       }
     } else {
 
-      if (equal(t, tuplesForGivenVariableValuePair[left])) return left;
+      if (equal(t, tuplesForGivenVariableValuePair[left])) {
+        return left;
+      }
     }
 
     return -1;
@@ -304,7 +330,11 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   public int seekInvalidPosition(int[] t) {
 
     int noVars = list.length;
-    for (int i = 0; i < noVars; i++) if (!list[i].domain.contains(t[i])) return i;
+    for (int i = 0; i < noVars; i++) {
+      if (!list[i].domain.contains(t[i])) {
+        return i;
+      }
+    }
     return -1;
   }
 
@@ -323,7 +353,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   @Override
   public void consistency(Store store) {
 
-    if (debugAll) IO.println("Begin " + this);
+    if (debugAll) {
+      IO.println("Begin " + this);
+    }
 
     if (satisfiedAlreadyAtImposition) {
       return;
@@ -343,11 +375,14 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
           int value = enumer.nextElement();
 
-          if (debugAll)
+          if (debugAll) {
             IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+          }
           int[] t = seekSupportVA(varPosition, value);
 
-          if (debugAll) IO.println("Found support?" + !(t == null));
+          if (debugAll) {
+            IO.println("Found support?" + !(t == null));
+          }
 
           if (t == null) {
             list[varPosition].domain.inComplement(store.level, list[varPosition], value);
@@ -358,7 +393,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       }
     }
 
-    if (debugAll) IO.println("End " + this);
+    if (debugAll) {
+      IO.println("End " + this);
+    }
   }
 
   protected int findPosition(int value, int[] values) {
@@ -370,13 +407,17 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     if (debugAll) {
       IO.println("Looking for " + value);
-      for (int v : values) IO.print("val " + v);
+      for (int v : values) {
+        IO.print("val " + v);
+      }
       IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) {
+        IO.println("left " + left + " right " + right + " position " + position);
+      }
 
       if (values[position] > value) {
         right = position;
@@ -387,9 +428,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       position = (left + right) >> 1;
     }
 
-    if (values[left] == value) return left;
+    if (values[left] == value) {
+      return left;
+    }
 
-    if (values[right] == value) return right;
+    if (values[right] == value) {
+      return right;
+    }
 
     return -1;
   }
@@ -406,7 +451,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     this.store = store;
 
     if (debugAll) {
-      for (Var var : list) IO.println("Variable " + var);
+      for (Var var : list) {
+        IO.println("Variable " + var);
+      }
     }
 
     // TO DO, adjust (even simplify) all internal data structures
@@ -429,7 +476,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
       if (debugAll) {
         IO.print("conflict for analysis[");
-        for (int val : t) IO.print(val + " ");
+        for (int val : t) {
+          IO.print(val + " ");
+        }
         IO.println("]");
       }
 
@@ -450,12 +499,16 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         j++;
       }
 
-      if (stillConflict[i]) noConflicts++;
+      if (stillConflict[i]) {
+        noConflicts++;
+      }
 
       if (debugAll) {
         if (!stillConflict[i]) {
           IO.print("Not support [");
-          for (int val : t) IO.print(val + " ");
+          for (int val : t) {
+            IO.print(val + " ");
+          }
           IO.println("]");
         }
       }
@@ -480,7 +533,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
         if (debugAll) {
           IO.print("Still support [");
-          for (int val : t) IO.print(val + " ");
+          for (int val : t) {
+            IO.print(val + " ");
+          }
           IO.println("]");
         }
       }
@@ -513,21 +568,29 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         val.merge(value, 1, Integer::sum);
       }
 
-      if (debugAll) IO.println("values " + val.keySet());
+      if (debugAll) {
+        IO.println("values " + val.keySet());
+      }
 
       PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
-      if (debugAll) IO.println("Sorted val size " + sortedVal.size());
+      if (debugAll) {
+        IO.println("Sorted val size " + sortedVal.size());
+      }
 
       values[i] = new int[sortedVal.size()];
       supportCount[i] = new int[sortedVal.size()];
       this.tuples[i] = new int[sortedVal.size()][][];
 
-      if (debugAll) IO.println("values length " + values[i].length);
+      if (debugAll) {
+        IO.println("values length " + values[i].length);
+      }
 
       for (int j = 0; j < values[i].length; j++) {
 
-        if (debugAll) IO.println("sortedVal " + sortedVal);
+        if (debugAll) {
+          IO.println("sortedVal " + sortedVal);
+        }
 
         values[i][j] = sortedVal.poll();
         supportCount[i][j] = val.get(values[i][j]);
@@ -547,7 +610,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
       // @todo, check & improve sorting functionality (possibly reuse existing sorting
       // functionality).
-      for (int j = 0; j < tuples[i].length; j++) TupleUtils.sortTuplesWithin(tuples[i][j]);
+      for (int j = 0; j < tuples[i].length; j++) {
+        TupleUtils.sortTuplesWithin(tuples[i][j]);
+      }
 
       lastofsequence[i] = new int[tuples[i].length][];
 
@@ -555,8 +620,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       // i - for each variable
       for (int j = 0; j < tuples[i].length; j++) { // for each value
         lastofsequence[i][j] = new int[tuples[i][j].length];
-        for (int l = 0; l < tuples[i][j].length; l++) // for each tuple
-        lastofsequence[i][j][l] = computeLastOfSequence(tuples[i][j], i, l);
+        for (int l = 0; l < tuples[i][j].length; l++) { // for each tuple
+          lastofsequence[i][j][l] = computeLastOfSequence(tuples[i][j], i, l);
+        }
       }
     }
 
@@ -577,16 +643,20 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     while (l + 1 < is.length) {
 
-      for (int i = list.length - 1; i >= 0; i--)
-        if (i != posVar)
-          if (t[i] >= list[i].max()) t[i] = list[i].min();
-          else {
+      for (int i = list.length - 1; i >= 0; i--) {
+        if (i != posVar) {
+          if (t[i] >= list[i].max()) {
+            t[i] = list[i].min();
+          } else {
             t[i] = list[i].domain.nextValue(t[i]);
             break;
           }
+        }
+      }
 
-      if (!equal(is[l + 1], t)) return l;
-      else {
+      if (!equal(is[l + 1], t)) {
+        return l;
+      } else {
 
         System.arraycopy(is[++l], 0, t, 0, list.length);
       }
@@ -598,7 +668,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   @Override
   public void queueVariable(int level, Var var) {
 
-    if (debugAll) IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    if (debugAll) {
+      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+    }
 
     variableQueue.add(var);
   }
@@ -606,8 +678,11 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   boolean smaller(int[] tuple1, int[] tuple2) {
 
     int arity = tuple1.length;
-    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++)
-      if (tuple1[i] < tuple2[i]) return true;
+    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
+      if (tuple1[i] < tuple2[i]) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -615,7 +690,11 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   boolean equal(int[] tuple1, int[] tuple2) {
 
     int arity = tuple1.length;
-    for (int i = 0; i < arity; i++) if (tuple1[i] != tuple2[i]) return false;
+    for (int i = 0; i < arity; i++) {
+      if (tuple1[i] != tuple2[i]) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -630,7 +709,9 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     for (int i = 0; i < list.length; i++) {
       tupleString.append(list[i].toString());
-      if (i + 1 < list.length) tupleString.append(" ");
+      if (i + 1 < list.length) {
+        tupleString.append(" ");
+      }
     }
 
     tupleString.append(")");
@@ -639,23 +720,29 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
       int[][] subset = tuplesFromConstructor;
 
-      for (int p1 = 0; p1 < subset.length; p1++)
-        for (int p2 = subset.length - 1; p2 > p1; p2--)
+      for (int p1 = 0; p1 < subset.length; p1++) {
+        for (int p2 = subset.length - 1; p2 > p1; p2--) {
           if (smaller(subset[p2], subset[p2 - 1])) {
             int[] temp = subset[p2];
             subset[p2] = subset[p2 - 1];
             subset[p2 - 1] = temp;
           }
+        }
+      }
 
       for (int p1 = 0; p1 < subset.length; p1++) {
         for (int p2 = 0; p2 < subset[p1].length; p2++) {
 
           tupleString.append(subset[p1][p2]);
 
-          if (p2 != subset[p1].length - 1) tupleString.append(" ");
+          if (p2 != subset[p1].length - 1) {
+            tupleString.append(" ");
+          }
         }
 
-        if (p1 != subset.length - 1) tupleString.append("|");
+        if (p1 != subset.length - 1) {
+          tupleString.append("|");
+        }
       }
 
       tupleString.append(")");

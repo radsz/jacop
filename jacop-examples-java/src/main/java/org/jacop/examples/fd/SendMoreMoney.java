@@ -65,13 +65,17 @@ public class SendMoreMoney extends ExampleFD {
 
     exampleBasic.modelBasic();
 
-    if (exampleBasic.search()) IO.println("Solution found.");
+    if (exampleBasic.search()) {
+      IO.println("Solution found.");
+    }
 
     SendMoreMoney exampleGlobal = new SendMoreMoney();
 
     exampleGlobal.model();
 
-    if (exampleGlobal.search()) IO.println("Solution found.");
+    if (exampleGlobal.search()) {
+      IO.println("Solution found.");
+    }
   }
 
   /**
@@ -111,8 +115,11 @@ public class SendMoreMoney extends ExampleFD {
     // Since there are 8 different letters this will create
     // 0+1+2+3+4+5+6+7 = 28 inequality constraints
 
-    for (int i = 0; i < letters.length; i++)
-      for (int j = i - 1; j >= 0; j--) store.impose(new XneqY(letters[j], letters[i]));
+    for (int i = 0; i < letters.length; i++) {
+      for (int j = i - 1; j >= 0; j--) {
+        store.impose(new XneqY(letters[j], letters[i]));
+      }
+    }
 
     // Each letter is SEND number has a different value
     // which depends on the position of this letter

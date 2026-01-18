@@ -36,6 +36,6 @@ import org.jacop.floats.core.FloatVar;
 public abstract class VariableNode extends BinaryNode {
 
   Store store;
-  FloatVar var = null;
+  FloatVar var;
   byte rel;
 }

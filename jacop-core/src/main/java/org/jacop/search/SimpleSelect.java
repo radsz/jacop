@@ -30,6 +30,7 @@
 
 package org.jacop.search;
 
+import java.util.Arrays;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
@@ -53,13 +54,13 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
   public final ComparatorVariable<T> variableOrdering;
 
-  public ComparatorVariable<T> tieBreakingComparator = null;
+  public ComparatorVariable<T> tieBreakingComparator;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public final Map<T, Integer> position;
 
   final Indomain<T> valueOrdering;
-  int currentIndex = 0;
+  int currentIndex;
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -74,7 +75,9 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int unique = 0;
     for (T variable : variables) {
-      if (position.get(variable) == null) position.put(variable, unique++);
+      if (position.get(variable) == null) {
+        position.put(variable, unique++);
+      }
     }
 
     this.searchVariables = (T[]) new Var[position.size()];
@@ -106,7 +109,9 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int unique = 0;
     for (T variable : variables) {
-      if (position.get(variable) == null) position.put(variable, unique++);
+      if (position.get(variable) == null) {
+        position.put(variable, unique++);
+      }
     }
 
     this.searchVariables = (T[]) new Var[position.size()];
@@ -118,7 +123,9 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
     variableOrdering = varSelect;
     tieBreakingComparator = tieBreakerVarSelect;
 
-    if (tieBreakingComparator != null) inputOrderTieBreaking = false;
+    if (tieBreakingComparator != null) {
+      inputOrderTieBreaking = false;
+    }
 
     valueOrdering = indomain;
   }
@@ -168,7 +175,9 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
           index++;
         } else {
 
-          while (index < currentPosition && searchVariables[index].singleton()) index++;
+          while (index < currentPosition && searchVariables[index].singleton()) {
+            index++;
+          }
 
           if (index != currentPosition) {
 
@@ -190,12 +199,13 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
         optimalPosition = currentPosition;
         optimalMetric = variableOrdering.metric(v);
       } else {
-        if (comparison == 0)
+        if (comparison == 0) {
           if (tieBreakingComparator != null) {
             int comp = tieBreakingComparator.compare(searchVariables[optimalPosition], v);
 
-            if (comp < 0) optimalPosition = currentPosition;
-            else if (comp == 0 && inputOrderTieBreaking) {
+            if (comp < 0) {
+              optimalPosition = currentPosition;
+            } else if (comp == 0 && inputOrderTieBreaking) {
               // Employs input order tie breaking
               int position1 = position.get(searchVariables[optimalPosition]);
               int position2 = position.get(searchVariables[currentPosition]);
@@ -223,6 +233,7 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
               }
             }
           }
+        }
       }
     }
 
@@ -292,7 +303,7 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
   public String toString() {
     return ""
-        + java.util.Arrays.asList(searchVariables)
+        + Arrays.asList(searchVariables)
         + ", SimpleSelect("
         + variableOrdering
         + ", "

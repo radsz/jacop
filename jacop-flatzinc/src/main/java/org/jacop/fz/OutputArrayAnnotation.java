@@ -83,7 +83,11 @@ public class OutputArrayAnnotation {
 
   boolean contains(Var x) {
 
-    for (Var v : array) if (x.equals(v)) return true;
+    for (Var v : array) {
+      if (x.equals(v)) {
+        return true;
+      }
+    }
     return false;
   }
 
@@ -91,18 +95,21 @@ public class OutputArrayAnnotation {
 
     StringBuilder s = new StringBuilder(id + " = array" + indexes.size() + "d(");
 
-    for (IntDomain index : indexes)
-      if (index.getSize() == 0)
+    for (IntDomain index : indexes) {
+      if (index.getSize() == 0) {
         // s.append(indexes.get(i)).append(",");
         s.append("{}, ");
-      else s.append(index.min()).append("..").append(index.max()).append(", ");
+      } else {
+        s.append(index.min()).append("..").append(index.max()).append(", ");
+      }
+    }
 
     s.append("[");
     for (int i = 0; i < array.length; i++) {
       Var v = array[i];
 
       if (v instanceof BooleanVar var1) {
-        if (v.singleton())
+        if (v.singleton()) {
           switch (var1.value()) {
             case 0:
               s.append("false");
@@ -113,7 +120,9 @@ public class OutputArrayAnnotation {
             default:
               s.append(v.dom().toString());
           }
-        else s.append("false..true");
+        } else {
+          s.append("false..true");
+        }
       } else if (v instanceof SetVar var) {
         if (v.singleton()) {
           IntDomain glb = var.dom().glb();
@@ -124,15 +133,21 @@ public class OutputArrayAnnotation {
             for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {
               int element = e.nextElement();
               s.append(element);
-              if (e.hasMoreElements()) s.append(", ");
+              if (e.hasMoreElements()) {
+                s.append(", ");
+              }
             }
             s.append("}");
           }
-        } else s.append(v.dom().toString());
+        } else {
+          s.append(v.dom().toString());
+        }
       } else {
         s.append(v.dom().toString());
       }
-      if (i < array.length - 1) s.append(", ");
+      if (i < array.length - 1) {
+        s.append(", ");
+      }
     }
     s.append("]);");
     return s.toString();

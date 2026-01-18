@@ -124,9 +124,15 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
       int rMin = IntDomain.subtractInt(x.min(), xMax);
       int rMax = IntDomain.subtractInt(x.max(), xMin);
 
-      if (reminderMin > rMin) rMin = reminderMin;
-      if (reminderMax < rMax) rMax = reminderMax;
-      if (rMin > rMax) throw Store.failException;
+      if (reminderMin > rMin) {
+        rMin = reminderMin;
+      }
+      if (reminderMax < rMax) {
+        rMax = reminderMax;
+      }
+      if (rMin > rMax) {
+        throw Store.failException;
+      }
 
       x.domain.in(store.level, x, IntDomain.addInt(xMin, rMin), IntDomain.addInt(xMax, rMax));
 

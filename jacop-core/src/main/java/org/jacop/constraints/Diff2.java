@@ -53,7 +53,7 @@ public class Diff2 extends Diff {
   public int[] exclusiveList = new int[0];
 
   Diff2Var[] EvalRects;
-  boolean exceptionListPresent = false;
+  boolean exceptionListPresent;
 
   /**
    * Conditional Diff2. The rectangles that are specified on the list Exclusive list is specified
@@ -228,10 +228,14 @@ public class Diff2 extends Diff {
 
     List<Integer> list = new ArrayList<>(exclusiveList.size() * 2);
 
-    for (List<Integer> pair : exclusiveList) list.addAll(pair);
+    for (List<Integer> pair : exclusiveList) {
+      list.addAll(pair);
+    }
 
     this.exclusiveList = new int[list.size()];
-    for (int i = 0; i < list.size(); i++) this.exclusiveList[i] = list.get(i);
+    for (int i = 0; i < list.size(); i++) {
+      this.exclusiveList[i] = list.get(i);
+    }
 
     setScope(rectangles.stream().map(Collection::stream).flatMap(i -> i));
   }
@@ -255,10 +259,14 @@ public class Diff2 extends Diff {
 
     List<Integer> list = new ArrayList<>(exclusive.size() * 2);
 
-    for (List<Integer> pair : exclusive) list.addAll(pair);
+    for (List<Integer> pair : exclusive) {
+      list.addAll(pair);
+    }
 
     this.exclusiveList = new int[list.size()];
-    for (int i = 0; i < list.size(); i++) this.exclusiveList[i] = list.get(i);
+    for (int i = 0; i < list.size(); i++) {
+      this.exclusiveList[i] = list.get(i);
+    }
 
     setScope(Rectangle.getStream(this.rectangles));
   }
@@ -267,8 +275,11 @@ public class Diff2 extends Diff {
 
     List<Rectangle> list = new ArrayList<>();
 
-    for (int i = 0; i < rectangles.length; i++)
-      if (notOverlapping(index + 1, i + 1, exclusiveList)) list.add(rectangles[i]);
+    for (int i = 0; i < rectangles.length; i++) {
+      if (notOverlapping(index + 1, i + 1, exclusiveList)) {
+        list.add(rectangles[i]);
+      }
+    }
 
     return list.toArray(new Rectangle[0]);
   }
@@ -297,14 +308,16 @@ public class Diff2 extends Diff {
     if (this.exclusiveList.length == 0) {
       EvalRects = new Diff2Var[rectangles.length];
 
-      for (int j = 0; j < EvalRects.length; j++)
+      for (int j = 0; j < EvalRects.length; j++) {
         EvalRects[j] = new Diff2Var(store, this.rectangles);
+      }
     } else {
 
       EvalRects = new Diff2Var[rectangles.length];
 
-      for (int j = 0; j < EvalRects.length; j++)
+      for (int j = 0; j < EvalRects.length; j++) {
         EvalRects[j] = new Diff2Var(store, onList(j, exclusiveList));
+      }
     }
   }
 
@@ -326,8 +339,12 @@ public class Diff2 extends Diff {
         minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
 
         int originStamp = rOrigin.stamp, lengthStamp = rLength.stamp;
-        if (maxLevel < originStamp) maxLevel = originStamp;
-        if (maxLevel < lengthStamp) maxLevel = lengthStamp;
+        if (maxLevel < originStamp) {
+          maxLevel = originStamp;
+        }
+        if (maxLevel < lengthStamp) {
+          maxLevel = lengthStamp;
+        }
       }
 
       if (!minLengthEq0
@@ -426,7 +443,9 @@ public class Diff2 extends Diff {
           if (start < stop) {
             Use.add(start, stop - start);
             j++;
-          } else use = false;
+          } else {
+            use = false;
+          }
 
           minLength0 = minLength0 || (sLengthMin[m] <= 0);
 
@@ -451,9 +470,15 @@ public class Diff2 extends Diff {
             checkArea = true;
             totalNumberOfRectangles++;
             for (int i = 0; i < dim; i++) {
-              if (sOriginMin[i] < startMin[i]) startMin[i] = sOriginMin[i];
-              if (sOriginMax[i] > stopMax[i]) stopMax[i] = sOriginMax[i];
-              if (minLength[i] > sLengthMin[i]) minLength[i] = sLengthMin[i];
+              if (sOriginMin[i] < startMin[i]) {
+                startMin[i] = sOriginMin[i];
+              }
+              if (sOriginMax[i] > stopMax[i]) {
+                stopMax[i] = sOriginMax[i];
+              }
+              if (minLength[i] > sLengthMin[i]) {
+                minLength[i] = sLengthMin[i];
+              }
 
               sArea = sArea * sLengthMin[i];
             }
@@ -465,35 +490,50 @@ public class Diff2 extends Diff {
             if (sOriginMin[i] <= r_min[i]) {
               if (sOriginMax[i] <= r_max[i]) {
                 int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
-                sLengthMin[i] = (distance1 > 0) ? distance1 : 0;
+                sLengthMin[i] = distance1 > 0 ? distance1 : 0;
               } else {
                 // sOriginMax[i] > r_max[i])
                 int rmax = r.origin[i].max() + r.length[i].min();
 
                 int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
                 int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
-                if (distance1 > rmax - r_min[i]) distance1 = rmax - r_min[i];
-                if (distance2 > rmax - r_min[i]) distance2 = rmax - r_min[i];
-                if (distance1 < distance2) sLengthMin[i] = (distance1 > 0) ? distance1 : 0;
-                else if (distance2 > 0) {
-                  if (distance2 < sLengthMin[i]) sLengthMin[i] = distance2;
-                } else sLengthMin[i] = 0;
+                if (distance1 > rmax - r_min[i]) {
+                  distance1 = rmax - r_min[i];
+                }
+                if (distance2 > rmax - r_min[i]) {
+                  distance2 = rmax - r_min[i];
+                }
+                if (distance1 < distance2) {
+                  sLengthMin[i] = distance1 > 0 ? distance1 : 0;
+                } else if (distance2 > 0) {
+                  if (distance2 < sLengthMin[i]) {
+                    sLengthMin[i] = distance2;
+                  }
+                } else {
+                  sLengthMin[i] = 0;
+                }
               }
             } else // sOriginMin[i] > r_min[i]
             if (sOriginMax[i] > r_max[i]) {
               int distance2 =
                   sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
               if (distance2 > 0) {
-                if (distance2 < sLengthMin[i]) sLengthMin[i] = distance2;
-              } else sLengthMin[i] = 0;
+                if (distance2 < sLengthMin[i]) {
+                  sLengthMin[i] = distance2;
+                }
+              } else {
+                sLengthMin[i] = 0;
+              }
             }
             partialCommonArea = partialCommonArea * sLengthMin[i];
           }
           commonArea += partialCommonArea;
         }
-        if (!exceptionListPresent)
-          if (commonArea + r.minArea() > (r_max[0] - r_min[0]) * (r_max[1] - r_min[1]))
+        if (!exceptionListPresent) {
+          if (commonArea + r.minArea() > (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
             throw Store.failException;
+          }
+        }
       }
     }
 
@@ -508,23 +548,33 @@ public class Diff2 extends Diff {
         int rOriginIMin = rOriginIdom.min(),
             rOriginIMax = rOriginIdom.max(),
             rLengthIMin = rLengthIdom.min();
-        if (rOriginIMin < startMin[i]) startMin[i] = rOriginIMin;
-        if (rOriginIMax + rLengthIMin > stopMax[i]) stopMax[i] = rOriginIMax + rLengthIMin;
+        if (rOriginIMin < startMin[i]) {
+          startMin[i] = rOriginIMin;
+        }
+        if (rOriginIMax + rLengthIMin > stopMax[i]) {
+          stopMax[i] = rOriginIMax + rLengthIMin;
+        }
       }
       boolean checkRectNumber = true;
       for (int i = 0; i < startMin.length; i++) {
         availArea = availArea * (stopMax[i] - startMin[i]);
-        if (minLength[i] != 0) rectNumber *= ((stopMax[i] - startMin[i]) / minLength[i]);
-        else checkRectNumber = false;
+        if (minLength[i] != 0) {
+          rectNumber *= (stopMax[i] - startMin[i]) / minLength[i];
+        } else {
+          checkRectNumber = false;
+        }
       }
 
-      if (!exceptionListPresent)
-        if (availArea < area) throw Store.failException;
-        else
+      if (!exceptionListPresent) {
+        if (availArea < area) {
+          throw Store.failException;
+        } else
         // check whether there is enough room for
         // all minimal rectangles
-        if (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1))
+        if (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1)) {
           throw Store.failException;
+        }
+      }
     }
 
     return contains;

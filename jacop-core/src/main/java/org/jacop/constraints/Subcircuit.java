@@ -54,9 +54,9 @@ public class Subcircuit extends Alldiff {
   boolean useSCC = true;
   boolean useDominance = true;
 
-  int idd = 0;
+  int idd;
 
-  int sccLength = 0;
+  int sccLength;
 
   final int[] val;
 
@@ -65,7 +65,7 @@ public class Subcircuit extends Alldiff {
   int firstConsistencyLevel;
 
   final SophisticatedLengauerTarjan graphDominance;
-  int sccCounter = 0;
+  int sccCounter;
   final int[] stack; // stack for strongly connected compoents algorithm
   int stack_pointer;
   BitSet cycleVar;
@@ -88,7 +88,9 @@ public class Subcircuit extends Alldiff {
     this.queueIndex = 2;
 
     int i = 0;
-    for (Var v : list) valueIndex.put(v, i++);
+    for (Var v : list) {
+      valueIndex.put(v, i++);
+    }
 
     val = new int[list.length];
 
@@ -97,10 +99,15 @@ public class Subcircuit extends Alldiff {
 
     String scc = System.getProperty("sub_circuit_scc_pruning");
     String dominance = System.getProperty("sub_circuit_dominance_pruning");
-    if (scc != null) useSCC = Boolean.parseBoolean(scc);
-    if (dominance != null) useDominance = Boolean.parseBoolean(dominance);
-    if (useSCC == false && useDominance == false)
+    if (scc != null) {
+      useSCC = Boolean.parseBoolean(scc);
+    }
+    if (dominance != null) {
+      useDominance = Boolean.parseBoolean(dominance);
+    }
+    if (useSCC == false && useDominance == false) {
       throw new java.lang.IllegalArgumentException("Wrong property configuration for Subcircuit");
+    }
 
     setScope(list);
   }
@@ -118,7 +125,9 @@ public class Subcircuit extends Alldiff {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      for (IntVar intVar : list) intVar.domain.in(store.level, intVar, 1, list.length);
+      for (IntVar intVar : list) {
+        intVar.domain.in(store.level, intVar, 1, list.length);
+      }
 
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
@@ -138,7 +147,9 @@ public class Subcircuit extends Alldiff {
     if (useSCC) {
       sccsBasedPruning(store); // strongly connected components
 
-      if (store.propagationHasOccurred) sccCounter = 0;
+      if (store.propagationHasOccurred) {
+        sccCounter = 0;
+      }
 
       // if 10 consecutive applications of SCC based pruning did
       // not give any pruning try domianance based pruning
@@ -146,17 +157,23 @@ public class Subcircuit extends Alldiff {
         sccCounter = 0;
         dominanceFilter(); // filter based on dominance of nodes
       }
-    } else if (useDominance) dominanceFilter(); // filter based on dominance of nodes
-
-    if (store.propagationHasOccurred) store.addChanged(this);
+    } else if (useDominance) {
+      dominanceFilter(); // filter based on dominance of nodes
+    }
+    if (store.propagationHasOccurred) {
+      store.addChanged(this);
+    }
   }
 
   void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
 
     for (IntVar changedVar : fdvs) {
       if (changedVar.singleton()) {
-        for (IntVar var : list)
-          if (var != changedVar) var.domain.inComplement(store.level, var, changedVar.min());
+        for (IntVar var : list) {
+          if (var != changedVar) {
+            var.domain.inComplement(store.level, var, changedVar.min());
+          }
+        }
       }
     }
   }
@@ -167,7 +184,9 @@ public class Subcircuit extends Alldiff {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
     return IntDomain.ANY;
   }
@@ -181,7 +200,9 @@ public class Subcircuit extends Alldiff {
   boolean needsListPruning() {
 
     for (IntVar el : list) {
-      if (!(el.min() >= 1 && el.max() <= list.length)) return true;
+      if (!(el.min() >= 1 && el.max() <= list.length)) {
+        return true;
+      }
     }
     return false;
   }
@@ -194,13 +215,17 @@ public class Subcircuit extends Alldiff {
 
     super.impose(store);
 
-    if (!needsListPruning()) firstConsistencyCheck = false;
+    if (!needsListPruning()) {
+      firstConsistencyCheck = false;
+    }
   }
 
   @Override
   public boolean satisfied() {
 
-    if (grounded.value() != list.length) return false;
+    if (grounded.value() != list.length) {
+      return false;
+    }
 
     boolean sat = super.satisfied(); // alldifferent
 
@@ -219,7 +244,9 @@ public class Subcircuit extends Alldiff {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("])");
 
@@ -228,7 +255,7 @@ public class Subcircuit extends Alldiff {
 
   private void sccsBasedPruning(Store store) {
 
-    java.util.Arrays.fill(val, 0);
+    Arrays.fill(val, 0);
 
     idd = 0;
     BitSet realCycle = null;
@@ -241,26 +268,29 @@ public class Subcircuit extends Alldiff {
 
         visit(i);
 
-        if (sccLength == 1)
+        if (sccLength == 1) {
           // the scc is of size one => it must be self-cycle
           list[i].domain.inValue(store.level, list[i], i + 1);
+        }
         // check if more than 1 sub-cycle possible
         for (int cv = cycleVar.nextSetBit(0); cv >= 0; cv = cycleVar.nextSetBit(cv + 1)) {
-          if (!list[cv].domain.contains(cv + 1))
-            if (realCycle != null) // second sub-cycle under creation -> wrong!
-            throw Store.failException;
-            else {
+          if (!list[cv].domain.contains(cv + 1)) {
+            if (realCycle != null) { // second sub-cycle under creation -> wrong!
+              throw Store.failException;
+            } else {
               realCycle = cycleVar;
               break;
             }
+          }
         }
       }
     }
 
     if (realCycle != null && realCycle.cardinality() < list.length) {
       // possible cycle found, the rest must be self-loop
-      for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1))
+      for (int j = realCycle.nextClearBit(0); j < list.length; j = realCycle.nextClearBit(j + 1)) {
         list[j].domain.inValue(store.level, list[j], j + 1);
+      }
     }
   }
 
@@ -268,7 +298,7 @@ public class Subcircuit extends Alldiff {
 
     int totalNodes = 0;
 
-    java.util.Arrays.fill(val, 0);
+    Arrays.fill(val, 0);
 
     idd = 0;
 
@@ -301,9 +331,14 @@ public class Subcircuit extends Alldiff {
       int t = e.nextElement() - 1;
 
       int m;
-      if (val[t] == 0) m = visit(t);
-      else m = val[t];
-      if (m < min) min = m;
+      if (val[t] == 0) {
+        m = visit(t);
+      } else {
+        m = val[t];
+      }
+      if (m < min) {
+        min = m;
+      }
     }
 
     if (min == val[k]) {
@@ -340,8 +375,9 @@ public class Subcircuit extends Alldiff {
     }
 
     if (pr > 0) {
-      if (!graphDominance(possibleRoots[random.nextInt(pr)]))
+      if (!graphDominance(possibleRoots[random.nextInt(pr)])) {
         reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
+      }
     }
   }
 
@@ -356,14 +392,17 @@ public class Subcircuit extends Alldiff {
     for (int v = 0; v < n; v++) {
       for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
         int w = e.nextElement() - 1;
-        if (v == root || v == w) graphDominance.addArc(n, w);
-        else graphDominance.addArc(v, w);
+        if (v == root || v == w) {
+          graphDominance.addArc(n, w);
+        } else {
+          graphDominance.addArc(v, w);
+        }
       }
     }
 
     if (graphDominance.dominators(n)) {
       for (int v = 0; v < n; v++) {
-        if (v != root)
+        if (v != root) {
           for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
             int w = e.nextElement() - 1;
             if (v != w && graphDominance.dominatedBy(v, w)) {
@@ -374,9 +413,11 @@ public class Subcircuit extends Alldiff {
               list[w].domain.inComplement(store.level, list[w], w + 1);
             }
           }
+        }
       }
-    } else // root does not reach all nodes -> FAIL
-    throw Store.failException;
+    } else { // root does not reach all nodes -> FAIL
+      throw Store.failException;
+    }
 
     return pruning;
   }
@@ -393,14 +434,17 @@ public class Subcircuit extends Alldiff {
     for (int v = 0; v < n; v++) {
       for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
         int w = e.nextElement() - 1;
-        if (w == root || v == w) graphDominance.addArc(n, v);
-        else graphDominance.addArc(w, v);
+        if (w == root || v == w) {
+          graphDominance.addArc(n, v);
+        } else {
+          graphDominance.addArc(w, v);
+        }
       }
     }
 
     if (graphDominance.dominators(n)) {
       for (int v = 0; v < n; v++) {
-        if (v != root)
+        if (v != root) {
           for (ValueEnumeration e = list[v].domain.valueEnumeration(); e.hasMoreElements(); ) {
             int w = e.nextElement() - 1;
             if (v != w && w != root && graphDominance.dominatedBy(w, v)) {
@@ -411,9 +455,11 @@ public class Subcircuit extends Alldiff {
               list[v].domain.inComplement(store.level, list[v], v + 1);
             }
           }
+        }
       }
-    } else // root does not reach all nodes -> FAIL
-    throw Store.failException;
+    } else { // root does not reach all nodes -> FAIL
+      throw Store.failException;
+    }
 
     return pruning;
   }

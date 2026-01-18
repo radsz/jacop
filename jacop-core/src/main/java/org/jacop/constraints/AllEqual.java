@@ -91,7 +91,9 @@ public class AllEqual extends PrimitiveConstraint {
 
   @Override
   public void notConsistency(final Store store) {
-    if (notSatisfied()) removeConstraint();
+    if (notSatisfied()) {
+      removeConstraint();
+    }
 
     int n = 0;
     int idx = -1;
@@ -100,10 +102,15 @@ public class AllEqual extends PrimitiveConstraint {
       if (!x[i].singleton()) {
         idx = i;
         n++;
-      } else sIndex = i;
+      } else {
+        sIndex = i;
+      }
     }
-    if (n == 0) throw Store.failException;
-    else if (n == 1) x[idx].domain.inComplement(store.level, x[idx], x[sIndex].value());
+    if (n == 0) {
+      throw Store.failException;
+    } else if (n == 1) {
+      x[idx].domain.inComplement(store.level, x[idx], x[sIndex].value());
+    }
   }
 
   @Override
@@ -111,7 +118,9 @@ public class AllEqual extends PrimitiveConstraint {
 
     for (int i = 0; i < x.length; i++) {
       for (int j = i + 1; j < x.length; j++) {
-        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) return false;
+        if (!(x[i].singleton() && x[j].singleton() && x[i].value() == x[j].value())) {
+          return false;
+        }
       }
     }
     return true;
@@ -122,7 +131,9 @@ public class AllEqual extends PrimitiveConstraint {
 
     for (int i = 0; i < x.length; i++) {
       for (int j = i + 1; j < x.length; j++) {
-        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) return true;
+        if (i != j && !x[i].domain.isIntersecting(x[j].domain)) {
+          return true;
+        }
       }
     }
     return false;

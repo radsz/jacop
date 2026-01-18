@@ -55,8 +55,12 @@ public class MinCardDiff<T extends SetVar> implements ComparatorVariable<T> {
 
     int right = SD.lub().getSize() - SD.glb().getSize();
 
-    if (left < right) return 1;
-    if (left > right) return -1;
+    if (left < right) {
+      return 1;
+    }
+    if (left > right) {
+      return -1;
+    }
     return 0;
   }
 

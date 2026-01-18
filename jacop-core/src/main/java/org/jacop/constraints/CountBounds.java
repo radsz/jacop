@@ -141,13 +141,15 @@ public class CountBounds extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.contains(value))
+      if (v.domain.contains(value)) {
         if (v.singleton()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
@@ -185,13 +187,15 @@ public class CountBounds extends PrimitiveConstraint {
     int start = position.value();
     for (int i = start; i < list.length; i++) {
       IntVar v = list[i];
-      if (v.domain.contains(value))
+      if (v.domain.contains(value)) {
         if (v.singleton()) {
           numberEq++;
           swap(start, i);
           start++;
-        } else numberMayBe++;
-      else { // does not have the value in its domain
+        } else {
+          numberMayBe++;
+        }
+      } else { // does not have the value in its domain
         swap(start, i);
         start++;
       }
@@ -202,7 +206,9 @@ public class CountBounds extends PrimitiveConstraint {
       return;
     }
 
-    if (start == list.length && numberEq >= lb && numberEq <= ub) throw Store.failException;
+    if (start == list.length && numberEq >= lb && numberEq <= ub) {
+      throw Store.failException;
+    }
 
     equal.update(numberEq);
     position.update(start);
@@ -222,11 +228,15 @@ public class CountBounds extends PrimitiveConstraint {
     int eq = 0;
     int notEq = 0;
 
-    for (IntVar v : list)
-      if (v.singleton(value)) eq++;
-      else if (!v.domain.contains(value)) notEq++;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        eq++;
+      } else if (!v.domain.contains(value)) {
+        notEq++;
+      }
+    }
 
-    return (eq + notEq == list.length && eq >= lb && eq <= ub);
+    return eq + notEq == list.length && eq >= lb && eq <= ub;
   }
 
   @Override
@@ -235,11 +245,15 @@ public class CountBounds extends PrimitiveConstraint {
     int eq = 0;
     int notEq = 0;
 
-    for (IntVar v : list)
-      if (v.singleton(value)) eq++;
-      else if (!v.domain.contains(value)) notEq++;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        eq++;
+      } else if (!v.domain.contains(value)) {
+        notEq++;
+      }
+    }
 
-    return (eq + notEq == list.length && (eq < lb || eq > ub));
+    return eq + notEq == list.length && (eq < lb || eq > ub);
   }
 
   @Override
@@ -251,7 +265,9 @@ public class CountBounds extends PrimitiveConstraint {
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(", ").append(lb).append(", ").append(ub).append(" )");

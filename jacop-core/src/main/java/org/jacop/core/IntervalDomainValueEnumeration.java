@@ -42,11 +42,11 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
   final IntervalDomain domain;
 
-  Interval i = null;
+  Interval i;
 
-  int intervalNo = 0;
+  int intervalNo;
 
-  int maxIntervalNo = 0;
+  int maxIntervalNo;
 
   /**
    * It create an enumeration for a given domain.
@@ -64,7 +64,7 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public boolean hasMoreElements() {
-    return (i != null);
+    return i != null;
   }
 
   @Override
@@ -97,18 +97,21 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
     maxIntervalNo = domain.size - 1;
     if (intervalNo == -1) {
 
-      for (int j = 0; j < maxIntervalNo; j++)
+      for (int j = 0; j < maxIntervalNo; j++) {
         if (domain.intervals[j].min() > current) {
           current = domain.intervals[j].min();
           intervalNo = j;
           i = domain.intervals[j];
           return;
         }
+      }
 
       i = null;
       return;
     }
 
-    if (i != null) i = domain.intervals[intervalNo];
+    if (i != null) {
+      i = domain.intervals[intervalNo];
+    }
   }
 }

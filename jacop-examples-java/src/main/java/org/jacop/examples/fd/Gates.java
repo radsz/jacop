@@ -62,7 +62,9 @@ public class Gates extends ExampleFD {
     Gates example = new Gates();
     example.model();
 
-    if (example.searchSpecific()) IO.println("Solution found.");
+    if (example.searchSpecific()) {
+      IO.println("Solution found.");
+    }
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;
@@ -102,7 +104,9 @@ public class Gates extends ExampleFD {
     BooleanVar nca = new BooleanVar(store, "nca");
 
     BooleanVar[] t = new BooleanVar[2];
-    for (int i = 0; i < t.length; i++) t[i] = new BooleanVar(store);
+    for (int i = 0; i < t.length; i++) {
+      t[i] = new BooleanVar(store);
+    }
 
     // sum part
     xor(c, nca, sum, tableConstraintProvider);
@@ -223,16 +227,24 @@ public class Gates extends ExampleFD {
     if (searchResult) {
       IO.println("\nYes");
       Domain[][] solutions = new Domain[search.getSolutionListener().solutionsNo()][];
-      for (int i = 1; i <= solutions.length; i++) solutions[i - 1] = search.getSolution(i);
+      for (int i = 1; i <= solutions.length; i++) {
+        solutions[i - 1] = search.getSolution(i);
+      }
 
       IO.println("\nAll solutions:\n");
-      for (IntVar v : vars) IO.print(v.id() + "\t");
+      for (IntVar v : vars) {
+        IO.print(v.id() + "\t");
+      }
       IO.println("\n-------------------------------------");
       for (Domain[] solution : solutions) {
-        for (int i = 0; i < solutions[0].length; i++) IO.print(solution[i] + "\t");
+        for (int i = 0; i < solutions[0].length; i++) {
+          IO.print(solution[i] + "\t");
+        }
         IO.println();
       }
-    } else IO.println("\nNo");
+    } else {
+      IO.println("\nNo");
+    }
 
     return searchResult;
   }

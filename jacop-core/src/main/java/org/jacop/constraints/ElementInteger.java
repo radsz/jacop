@@ -204,7 +204,9 @@ public class ElementInteger extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -243,15 +245,18 @@ public class ElementInteger extends Constraint
       IntDomain indexDom = index.dom().cloneLight();
       IntDomain domValue = new IntervalDomain(5);
 
-      if (checkDuplicates)
+      if (checkDuplicates) {
         // if (indexDom.getSize() < limitForDomainPruning)
         for (IntDomain duplicate : duplicates) {
           if (indexDom.isIntersecting(duplicate)) {
-            if (domValue.isEmpty()) domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-            else
+            if (domValue.isEmpty()) {
+              domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
+            } else {
               ((IntervalDomain) domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
+            }
           }
         }
+      }
 
       indexDom = indexDom.subtract(duplicatesIndexes);
 
@@ -291,24 +296,32 @@ public class ElementInteger extends Constraint
         int position = e.nextElement() - 1 - indexOffset;
         int val = list[position];
 
-        if (disjoint(value.domain, val))
-          if (indexDom.size == 0) indexDom.unionAdapt(position + 1 + indexOffset);
-          else
+        if (disjoint(value.domain, val)) {
+          if (indexDom.size == 0) {
+            indexDom.unionAdapt(position + 1 + indexOffset);
+          } else {
             // indexes are in ascending order and can be added at the end if the last element
             // plus 1 is not equal a new value. In such case the max must be changed.
             indexDom.addLastElement(position + 1 + indexOffset);
+          }
+        }
       }
 
       index.domain.in(store.level, index, indexDom.complement());
       indexHasChanged = false;
     }
 
-    if (value.singleton() && !index.singleton()) removeConstraint();
+    if (value.singleton() && !index.singleton()) {
+      removeConstraint();
+    }
   }
 
   boolean disjoint(IntDomain v1, int v2) {
-    if (v1.min() > v2 || v2 > v1.max()) return true;
-    else return !v1.contains(v2);
+    if (v1.min() > v2 || v2 > v1.max()) {
+      return true;
+    } else {
+      return !v1.contains(v2);
+    }
   }
 
   @Override
@@ -318,7 +331,7 @@ public class ElementInteger extends Constraint
 
   @Override
   public boolean isStateful() {
-    return (!(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset));
+    return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
 
   /**
@@ -348,7 +361,9 @@ public class ElementInteger extends Constraint
         if (indexes == null) {
           indexes = new IntervalDomain(elementIndex, elementIndex);
           map.put(el, indexes);
-        } else indexes.addLastElement(elementIndex);
+        } else {
+          indexes.addLastElement(elementIndex);
+        }
       }
 
       duplicatesIndexes = new IntervalDomain();
@@ -367,8 +382,11 @@ public class ElementInteger extends Constraint
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (var == index) indexHasChanged = true;
-    else valueHasChanged = true;
+    if (var == index) {
+      indexHasChanged = true;
+    } else {
+      valueHasChanged = true;
+    }
   }
 
   @Override
@@ -389,15 +407,20 @@ public class ElementInteger extends Constraint
 
       if (duplicate == null) {
 
-        if (!index.singleton()) return false;
-        else return list[index.value() - 1 - indexOffset] == v;
+        if (!index.singleton()) {
+          return false;
+        } else {
+          return list[index.value() - 1 - indexOffset] == v;
+        }
 
       } else {
 
         return duplicate.contains(index.domain) && list[index.min() - 1 - indexOffset] == v;
       }
 
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -410,7 +433,9 @@ public class ElementInteger extends Constraint
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
 
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(value).append(", ").append(indexOffset).append(" )");

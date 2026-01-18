@@ -287,12 +287,15 @@ public class NetworkFlow extends Constraint
     // flow, cost weight and structure. Specially structure variables are difficult since
     // they "dynamically" make arcs active/inactive.
     boolean allVarsGround = true;
-    for (IntVar v : map.keySet())
+    for (IntVar v : map.keySet()) {
       if (!v.singleton()) {
         allVarsGround = false;
         break;
       }
-    if (allVarsGround) costVariable.domain.inMax(store.level, costVariable, cost);
+    }
+    if (allVarsGround) {
+      costVariable.domain.inMax(store.level, costVariable, cost);
+    }
   }
 
   @Override

@@ -78,10 +78,15 @@ public class ForbiddenArea extends InternalConstraint {
    */
   public String checkInvariants() {
 
-    if (origin.length != length.length) return "dimension mismatch";
+    if (origin.length != length.length) {
+      return "dimension mismatch";
+    }
 
-    for (int i = 0; i < length.length; i++)
-      if (length[i] < 0) return "negative length on dimension " + i;
+    for (int i = 0; i < length.length; i++) {
+      if (length[i] < 0) {
+        return "negative length on dimension " + i;
+      }
+    }
 
     return null;
   }
@@ -129,7 +134,9 @@ public class ForbiddenArea extends InternalConstraint {
 
       assert (outBox.checkInvariants() == null) : outBox.checkInvariants();
 
-      if (outBox.containsPoint(c)) return outBox;
+      if (outBox.containsPoint(c)) {
+        return outBox;
+      }
     }
 
     return null;
@@ -150,7 +157,9 @@ public class ForbiddenArea extends InternalConstraint {
 
     } else { // SweepDirection.PRUNEMAX
 
-      for (int i = 0; i < dimension; i++) outOrigin[i] = origin[i] + length[i];
+      for (int i = 0; i < dimension; i++) {
+        outOrigin[i] = origin[i] + length[i];
+      }
 
       outOrigin[dimension] = Integer.MAX_VALUE;
     }

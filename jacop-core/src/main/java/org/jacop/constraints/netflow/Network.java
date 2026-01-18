@@ -134,7 +134,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   // removes an arc at its lower or upper bound
   public void remove(Arc arc) {
 
-    if (!arc.forward) arc = arc.sister;
+    if (!arc.forward) {
+      arc = arc.sister;
+    }
 
     assert (arc.capacity == 0 || arc.sister.capacity == 0) : "Arc not at lower or upper bound";
     assert (checkFlow(this));
@@ -225,7 +227,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public void increaseLevel() {
 
     // TODO does this solve the problem below ?
-    if (modifiedSize.stamp() < store.level) lastModifiedArcs.clear();
+    if (modifiedSize.stamp() < store.level) {
+      lastModifiedArcs.clear();
+    }
 
     // TODO the same arc can be marked as modified
     // multiple times on the same level if the consistency
@@ -321,10 +325,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     Iterator<Node> it = infeasibleNodes.iterator();
     while (it.hasNext()) {
       Node node = it.next();
-      if (node.deltaBalance != 0) return true;
+      if (node.deltaBalance != 0) {
+        return true;
+      }
       it.remove();
     }
     // Is the current flow more expensive than allowed ?
-    return (cost(maxCost + 1L) > maxCost);
+    return cost(maxCost + 1L) > maxCost;
   }
 }

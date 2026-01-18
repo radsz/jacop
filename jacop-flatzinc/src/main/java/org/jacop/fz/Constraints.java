@@ -32,6 +32,7 @@ package org.jacop.fz;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.Support;
 import org.jacop.satwrapper.SatTranslation;
 
@@ -44,17 +45,16 @@ import org.jacop.satwrapper.SatTranslation;
 public class Constraints implements ParserTreeConstants {
 
   static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
-  final org.jacop.fz.constraints.ConstraintFncs
-      cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
+  final ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
   final Tables dictionary;
   final Store store;
   String p;
   boolean debug;
   // ============ SAT solver interface ==============
   final float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
-  long boolClauses = 0;
-  long noConstraints = 0;
-  long bool2Int = 0;
+  long boolClauses;
+  long noConstraints;
+  long bool2Int;
   final SatTranslation sat;
   final Support support;
 
@@ -74,7 +74,7 @@ public class Constraints implements ParserTreeConstants {
 
     support = new Support(store, dict, sat);
 
-    cf = new org.jacop.fz.constraints.ConstraintFncs(support);
+    cf = new ConstraintFncs(support);
   }
 
   void setOptions(Options options) {
@@ -84,7 +84,7 @@ public class Constraints implements ParserTreeConstants {
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
-    if (support.options.debug())
+    if (support.options.debug()) {
       IO.println(
           "% bool constraints = "
               + boolClauses
@@ -92,9 +92,11 @@ public class Constraints implements ParserTreeConstants {
               + (noConstraints - bool2Int)
               + " p = "
               + (float) (boolClauses) / (float) (noConstraints - bool2Int));
+    }
 
-    if ((float) (boolClauses) / (float) (noConstraints - bool2Int) >= satThreshold)
+    if ((float) (boolClauses) / (float) (noConstraints - bool2Int) >= satThreshold) {
       support.options.setSat();
+    }
 
     sat.debug = debug;
 
@@ -118,7 +120,9 @@ public class Constraints implements ParserTreeConstants {
     // to be sure that all constraints queues are empty and the
     // model is consistent; it can happen that search will not
     // find out inconsistency if all variables are ground
-    if (!store.consistency()) throw Store.failException;
+    if (!store.consistency()) {
+      throw Store.failException;
+    }
   }
 
   void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {
@@ -186,10 +190,10 @@ public class Constraints implements ParserTreeConstants {
       if (p.startsWith("bool_clause")
           || p.startsWith("bool_not")
           || p.startsWith("bool_eq")
-          || p.startsWith("array_bool_or"))
+          || p.startsWith("array_bool_or")) {
         // || p.startsWith("array_bool") || p.startsWith("bool_xor"))
         boolClauses++;
-      else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
+      } else if (p.startsWith("bool2int") || p.startsWith("int2bool")) {
         bool2Int++;
 
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
@@ -202,7 +206,9 @@ public class Constraints implements ParserTreeConstants {
           v2.domain.in(store.level, v2, v1.domain);
         }
 
-        if (debug) IO.println("% Alias: " + v1 + " == " + v2);
+        if (debug) {
+          IO.println("% Alias: " + v1 + " == " + v2);
+        }
       } else if (p.startsWith("int_eq_reif")) {
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
@@ -217,8 +223,9 @@ public class Constraints implements ParserTreeConstants {
         } else if (p1.getType() == 0) { // first argument integer
           x = support.getVariable(p2);
           v = support.getInt(p1);
-        } else // no integers
-        return;
+        } else { // no integers
+          return;
+        }
 
         support.addReified(x, v, b);
       } else if (p.startsWith("int_eq_imp")) {
@@ -235,8 +242,9 @@ public class Constraints implements ParserTreeConstants {
         } else if (p1.getType() == 0) { // first argument integer
           x = support.getVariable(p2);
           v = support.getInt(p1);
-        } else // no integers
-        return;
+        } else { // no integers
+          return;
+        }
 
         support.addImplied(x, v, b);
       }

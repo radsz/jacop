@@ -77,9 +77,11 @@ public class Min extends Constraint implements SatisfiedPresent {
     this.min = min;
     this.list = Arrays.copyOf(list, list.length);
 
-    if (list.length > 1000) // rule of thumb
-    this.queueIndex = 2;
-    else this.queueIndex = 1;
+    if (list.length > 1000) { // rule of thumb
+      this.queueIndex = 2;
+    } else {
+      this.queueIndex = 1;
+    }
 
     this.numberId = idNumber.incrementAndGet();
 
@@ -126,23 +128,28 @@ public class Min extends Constraint implements SatisfiedPresent {
         if (varMin > maxMin) {
           swap(start, i);
           start++;
-        } else if (varMin < minMin) var.domain.inMin(store.level, var, minMin);
+        } else if (varMin < minMin) {
+          var.domain.inMin(store.level, var, minMin);
+        }
 
-        minValue = (minValue < varMin) ? minValue : varMin;
-        maxValue = (maxValue < varMax) ? maxValue : varMax;
+        minValue = minValue < varMin ? minValue : varMin;
+        maxValue = maxValue < varMax ? maxValue : varMax;
       }
 
       min.domain.in(store.level, min, minValue, maxValue);
 
-      if (start == l) // all variables have their min value greater than max value of min variable
-      throw Store.failException;
+      if (start == l) { // all variables have their min value greater than max value of min variable
+        throw Store.failException;
+      }
 
       if (start
           == list.length
               - 1) { // one variable on the list is minimal; its is max < min of all other variables
         list[start].domain.in(store.level, list[start], min.dom());
 
-        if (min.singleton()) removeConstraint();
+        if (min.singleton()) {
+          removeConstraint();
+        }
       }
     } while (store.propagationHasOccurred);
 
@@ -173,15 +180,21 @@ public class Min extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    if (!min.singleton()) return false;
+    if (!min.singleton()) {
+      return false;
+    }
 
     int minValue = min.max();
     int i = 0;
     boolean eq = false;
 
     while (i < list.length) {
-      if (list[i].min() < minValue) return false;
-      if (!eq && (list[i].singleton() && list[i].value() == minValue)) eq = true;
+      if (list[i].min() < minValue) {
+        return false;
+      }
+      if (!eq && (list[i].singleton() && list[i].value() == minValue)) {
+        eq = true;
+      }
       i++;
     }
 
@@ -195,7 +208,9 @@ public class Min extends Constraint implements SatisfiedPresent {
     result.append(" : min( [ ");
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(this.min);

@@ -59,7 +59,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
   // imposed variable to manifest that constraint has been imposed (top-level)
   // constraint
-  boolean imposed = false;
+  boolean imposed;
   Store store;
 
   /**
@@ -92,8 +92,11 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   @Override
   public void consistency(Store store) {
 
-    if (condC.satisfied()) thenC.consistency(store);
-    else if (condC.notSatisfied()) elseC.consistency(store);
+    if (condC.satisfied()) {
+      thenC.consistency(store);
+    } else if (condC.notSatisfied()) {
+      elseC.consistency(store);
+    }
 
     if (imposed) {
 
@@ -118,9 +121,13 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   @Override
   public void notConsistency(Store store) {
 
-    if (condC.notSatisfied()) elseC.notConsistency(store);
+    if (condC.notSatisfied()) {
+      elseC.notConsistency(store);
+    }
 
-    if (condC.satisfied()) thenC.notConsistency(store);
+    if (condC.satisfied()) {
+      thenC.notConsistency(store);
+    }
   }
 
   @Override
@@ -130,14 +137,18 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     if (mode) {
       if (consistencyPruningEvents != null) {
         Integer possibleEvent = consistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
     }
     // If notConsistency function mode
     else {
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
     }
 
@@ -145,36 +156,51 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (elseC.arguments().contains(var)) {
       int event = elseC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (elseC.arguments().contains(var)) {
       int event = elseC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
@@ -188,43 +214,60 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     int eventAcross = -1;
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (elseC.arguments().contains(var)) {
       int event = elseC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (elseC.arguments().contains(var)) {
       int event = elseC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override
@@ -238,43 +281,60 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     int eventAcross = -1;
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (condC.arguments().contains(var)) {
       int event = condC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (thenC.arguments().contains(var)) {
       int event = thenC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (elseC.arguments().contains(var)) {
       int event = elseC.getNestedPruningEvent(var, true);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
     if (elseC.arguments().contains(var)) {
       int event = elseC.getNestedPruningEvent(var, false);
-      if (event > eventAcross) eventAcross = event;
+      if (event > eventAcross) {
+        eventAcross = event;
+      }
     }
 
-    if (eventAcross == -1) return Domain.NONE;
-    else return eventAcross;
+    if (eventAcross == -1) {
+      return Domain.NONE;
+    } else {
+      return eventAcross;
+    }
   }
 
   @Override

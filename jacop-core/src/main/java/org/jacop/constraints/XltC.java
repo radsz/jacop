@@ -60,8 +60,9 @@ public class XltC extends PrimitiveConstraint {
    */
   public XltC(IntVar x, int c) {
 
-    if (x == null)
+    if (x == null) {
       throw new IllegalArgumentException("Constraint XltC has variable x that is null.");
+    }
 
     numberId = idNumber.incrementAndGet();
 

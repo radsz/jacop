@@ -47,7 +47,7 @@ import org.jacop.core.Var;
  */
 public class Element extends Constraint implements UsesQueueVariable {
 
-  Constraint c = null;
+  Constraint c;
 
   /**
    * It constructs element constraint based on variables. The default shift value is equal 0.

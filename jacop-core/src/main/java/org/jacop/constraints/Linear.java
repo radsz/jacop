@@ -84,7 +84,7 @@ public class Linear extends Constraint
 
   Map<Var, Integer> positionMaping;
 
-  boolean backtrackHasOccured = false;
+  boolean backtrackHasOccured;
   boolean reified = true;
 
   /** The sum of grounded variables. */
@@ -122,13 +122,16 @@ public class Linear extends Constraint
 
     for (int i = 0; i < list.length; i++) {
       if (weights[i] != 0) {
-        if (list[i].singleton()) this.sum -= list[i].value() * weights[i];
-        else if (parameters.get(list[i]) != null) {
+        if (list[i].singleton()) {
+          this.sum -= list[i].value() * weights[i];
+        } else if (parameters.get(list[i]) != null) {
           // variable ordered in the scope of the Linear constraint.
           Integer coeff = parameters.get(list[i]);
           Integer sumOfCoeff = coeff + weights[i];
           parameters.put(list[i], sumOfCoeff);
-        } else parameters.put(list[i], weights[i]);
+        } else {
+          parameters.put(list[i], weights[i]);
+        }
       }
     }
 
@@ -145,7 +148,9 @@ public class Linear extends Constraint
     sumGrounded = new TimeStamp<>(store, 0);
     nextGroundedPosition = new TimeStamp<>(store, 0);
     int capacity = list.length * 4 / 3 + 1;
-    if (capacity < 16) capacity = 16;
+    if (capacity < 16) {
+      capacity = 16;
+    }
 
     positionMaping = Var.positionMapping(this.list, false, this.getClass());
 
@@ -196,7 +201,11 @@ public class Linear extends Constraint
 
     pruneRelation(store, relationType);
 
-    if (relationType != eq) if (satisfied()) removeConstraint();
+    if (relationType != eq) {
+      if (satisfied()) {
+        removeConstraint();
+      }
+    }
   }
 
   private void pruneRelation(Store store, byte rel) {
@@ -208,7 +217,9 @@ public class Linear extends Constraint
       recomputeBounds();
     }
 
-    if (entailed(negRel[rel])) throw Store.failException;
+    if (entailed(negRel[rel])) {
+      throw Store.failException;
+    }
 
     do {
 
@@ -230,8 +241,8 @@ public class Linear extends Constraint
           case eq: // =============================================
             if ((lMaxArray[i] > max + lMinArray[i]) || (lMinArray[i] < min + lMaxArray[i])) {
 
-              d1 = ((float) (min + lMaxArray[i]) / weights[i]);
-              d2 = ((float) (max + lMinArray[i]) / weights[i]);
+              d1 = (float) (min + lMaxArray[i]) / weights[i];
+              d2 = (float) (max + lMinArray[i]) / weights[i];
 
               if (d1 <= d2) {
                 divMin = (int) (Math.round(Math.ceil(d1)));
@@ -241,7 +252,9 @@ public class Linear extends Constraint
                 divMax = (int) (Math.round(Math.floor(d1)));
               }
 
-              if (divMin > divMax) throw Store.failException;
+              if (divMin > divMax) {
+                throw Store.failException;
+              }
 
               v.domain.in(store.level, v, divMin, divMax);
             }
@@ -251,17 +264,23 @@ public class Linear extends Constraint
                 >= max + lMinArray[i]) { // based on "Bounds Consistency Techniques for Long Linear
               // Constraints", W. Harvey and J. Schimpf
 
-              d1 = ((float) (min + lMaxArray[i]) / weights[i]);
-              d2 = ((float) (max + lMinArray[i]) / weights[i]);
+              d1 = (float) (min + lMaxArray[i]) / weights[i];
+              d2 = (float) (max + lMinArray[i]) / weights[i];
 
               if (weights[i] < 0) {
-                if (d1 <= d2) divMin = (int) (Math.round(Math.floor(d1)));
-                else divMin = (int) (Math.round(Math.floor(d2)));
+                if (d1 <= d2) {
+                  divMin = (int) (Math.round(Math.floor(d1)));
+                } else {
+                  divMin = (int) (Math.round(Math.floor(d2)));
+                }
 
                 v.domain.inMin(store.level, v, divMin + 1);
               } else {
-                if (d1 <= d2) divMax = (int) (Math.round(Math.ceil(d2)));
-                else divMax = (int) (Math.round(Math.ceil(d1)));
+                if (d1 <= d2) {
+                  divMax = (int) (Math.round(Math.ceil(d2)));
+                } else {
+                  divMax = (int) (Math.round(Math.ceil(d1)));
+                }
 
                 v.domain.inMax(store.level, v, divMax - 1);
               }
@@ -272,17 +291,23 @@ public class Linear extends Constraint
                 > max + lMinArray[i]) { // based on "Bounds Consistency Techniques for Long Linear
               // Constraints", W. Harvey and J. Schimpf
 
-              d1 = ((float) (min + lMaxArray[i]) / weights[i]);
-              d2 = ((float) (max + lMinArray[i]) / weights[i]);
+              d1 = (float) (min + lMaxArray[i]) / weights[i];
+              d2 = (float) (max + lMinArray[i]) / weights[i];
 
               if (weights[i] < 0) {
-                if (d1 <= d2) divMin = (int) (Math.round(Math.ceil(d1)));
-                else divMin = (int) (Math.round(Math.ceil(d2)));
+                if (d1 <= d2) {
+                  divMin = (int) (Math.round(Math.ceil(d1)));
+                } else {
+                  divMin = (int) (Math.round(Math.ceil(d2)));
+                }
 
                 v.domain.inMin(store.level, v, divMin);
               } else {
-                if (d1 <= d2) divMax = (int) (Math.round(Math.floor(d2)));
-                else divMax = (int) (Math.round(Math.floor(d1)));
+                if (d1 <= d2) {
+                  divMax = (int) (Math.round(Math.floor(d2)));
+                } else {
+                  divMax = (int) (Math.round(Math.floor(d1)));
+                }
 
                 v.domain.inMax(store.level, v, divMax);
               }
@@ -291,29 +316,39 @@ public class Linear extends Constraint
           case ne: // =============================================
             int rem1 = (min + lMaxArray[i]) % weights[i];
             int rem2 = (max + lMinArray[i]) % weights[i];
-            if (rem1 != 0 || rem2 != 0) break;
+            if (rem1 != 0 || rem2 != 0) {
+              break;
+            }
 
             divMin = (min + lMaxArray[i]) / weights[i];
             divMax = (max + lMinArray[i]) / weights[i];
 
-            if (divMin == divMax) v.domain.inComplement(store.level, v, divMin);
+            if (divMin == divMax) {
+              v.domain.inComplement(store.level, v, divMin);
+            }
             break;
           case gt: // =============================================
             if (lMinArray[i]
                 <= min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear
               // Constraints", W. Harvey and J. Schimpf
 
-              d1 = ((float) (min + lMaxArray[i]) / weights[i]);
-              d2 = ((float) (max + lMinArray[i]) / weights[i]);
+              d1 = (float) (min + lMaxArray[i]) / weights[i];
+              d2 = (float) (max + lMinArray[i]) / weights[i];
 
               if (weights[i] < 0) {
-                if (d1 <= d2) divMax = (int) (Math.round(Math.ceil(d2)));
-                else divMax = (int) (Math.round(Math.ceil(d1)));
+                if (d1 <= d2) {
+                  divMax = (int) (Math.round(Math.ceil(d2)));
+                } else {
+                  divMax = (int) (Math.round(Math.ceil(d1)));
+                }
 
                 v.domain.inMax(store.level, v, divMax - 1);
               } else {
-                if (d1 <= d2) divMin = (int) (Math.round(Math.floor(d1)));
-                else divMin = (int) (Math.round(Math.floor(d2)));
+                if (d1 <= d2) {
+                  divMin = (int) (Math.round(Math.floor(d1)));
+                } else {
+                  divMin = (int) (Math.round(Math.floor(d2)));
+                }
 
                 v.domain.inMin(store.level, v, divMin + 1);
               }
@@ -324,17 +359,23 @@ public class Linear extends Constraint
                 < min + lMaxArray[i]) { // based on "Bounds Consistency Techniques for Long Linear
               // Constraints", W. Harvey and J. Schimpf
 
-              d1 = ((float) (min + lMaxArray[i]) / weights[i]);
-              d2 = ((float) (max + lMinArray[i]) / weights[i]);
+              d1 = (float) (min + lMaxArray[i]) / weights[i];
+              d2 = (float) (max + lMinArray[i]) / weights[i];
 
               if (weights[i] < 0) {
-                if (d1 <= d2) divMax = (int) (Math.round(Math.floor(d2)));
-                else divMax = (int) (Math.round(Math.floor(d1)));
+                if (d1 <= d2) {
+                  divMax = (int) (Math.round(Math.floor(d2)));
+                } else {
+                  divMax = (int) (Math.round(Math.floor(d1)));
+                }
 
                 v.domain.inMax(store.level, v, divMax);
               } else {
-                if (d1 <= d2) divMin = (int) (Math.round(Math.ceil(d1)));
-                else divMin = (int) (Math.round(Math.ceil(d2)));
+                if (d1 <= d2) {
+                  divMin = (int) (Math.round(Math.ceil(d1)));
+                } else {
+                  divMin = (int) (Math.round(Math.ceil(d2)));
+                }
 
                 v.domain.inMin(store.level, v, divMin);
               }
@@ -347,7 +388,9 @@ public class Linear extends Constraint
 
     } while (store.propagationHasOccurred);
 
-    if (entailed(negRel[rel])) throw Store.failException;
+    if (entailed(negRel[rel])) {
+      throw Store.failException;
+    }
   }
 
   @Override
@@ -374,7 +417,9 @@ public class Linear extends Constraint
 
       int i = positionMaping.get(var);
 
-      if (i < pointer) return;
+      if (i < pointer) {
+        return;
+      }
 
       int value = ((IntVar) var).min();
 
@@ -475,22 +520,34 @@ public class Linear extends Constraint
 
     switch (rel) {
       case eq:
-        if (lMin == lMax && lMin == sum) return true;
+        if (lMin == lMax && lMin == sum) {
+          return true;
+        }
         break;
       case lt:
-        if (lMax < sum) return true;
+        if (lMax < sum) {
+          return true;
+        }
         break;
       case le:
-        if (lMax <= sum) return true;
+        if (lMax <= sum) {
+          return true;
+        }
         break;
       case ne:
-        if (lMin > sum || lMax < sum) return true;
+        if (lMin > sum || lMax < sum) {
+          return true;
+        }
         break;
       case gt:
-        if (lMin > sum) return true;
+        if (lMin > sum) {
+          return true;
+        }
         break;
       case ge:
-        if (lMin >= sum) return true;
+        if (lMin >= sum) {
+          return true;
+        }
         break;
     }
 
@@ -603,13 +660,17 @@ public class Linear extends Constraint
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < weights.length; i++) {
       result.append(weights[i]);
-      if (i < weights.length - 1) result.append(", ");
+      if (i < weights.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(rel2String()).append(", ").append(sum).append(" )");

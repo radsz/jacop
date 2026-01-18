@@ -50,7 +50,7 @@ public class NoGoodsCollector<T extends IntVar>
     implements ExitChildListener<T>, TimeOutListener, ExitListener {
 
   /** It specifies if the timeout has occurred and search is being terminated. */
-  public boolean timeOut = false;
+  public boolean timeOut;
 
   List<List<T>> noGoodsVariables;
   List<List<Integer>> noGoodsValues;
@@ -69,9 +69,11 @@ public class NoGoodsCollector<T extends IntVar>
       noGoodsValues = new ArrayList<>();
     }
 
-    if (timeOutListeners != null)
-      for (TimeOutListener timeOutListener : timeOutListeners)
+    if (timeOutListeners != null) {
+      for (TimeOutListener timeOutListener : timeOutListeners) {
         timeOutListener.executedAtTimeOut(noSolutions);
+      }
+    }
   }
 
   /**
@@ -82,32 +84,42 @@ public class NoGoodsCollector<T extends IntVar>
   public boolean leftChild(T var, int value, boolean status) {
 
     if (timeOut) {
-      for (List<T> noGood : noGoodsVariables) noGood.add(var);
+      for (List<T> noGood : noGoodsVariables) {
+        noGood.add(var);
+      }
 
-      for (List<Integer> noGood : noGoodsValues) noGood.add(value);
+      for (List<Integer> noGood : noGoodsValues) {
+        noGood.add(value);
+      }
 
-      if (exitChildListeners != null)
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+      if (exitChildListeners != null) {
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           exitChildListener.leftChild(var, value, status);
+        }
+      }
 
       return false;
     } else {
-      if (exitChildListeners == null) return true;
-      else {
+      if (exitChildListeners == null) {
+        return true;
+      } else {
         boolean code = false;
-        for (ExitChildListener<T> exitChildListener : exitChildListeners)
+        for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           code |= exitChildListener.leftChild(var, value, status);
+        }
         return code;
       }
     }
   }
 
   public boolean leftChild(PrimitiveConstraint choice, boolean status) {
-    if (exitChildListeners == null) return true;
-    else {
+    if (exitChildListeners == null) {
+      return true;
+    } else {
       boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         code |= exitChildListener.leftChild(choice, status);
+      }
       return code;
     }
   }
@@ -124,28 +136,35 @@ public class NoGoodsCollector<T extends IntVar>
       noGoodsValues.add(newNoGoodVal);
     }
 
-    if (exitChildListeners != null)
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         exitChildListener.rightChild(var, value, status);
+      }
+    }
   }
 
   public void rightChild(PrimitiveConstraint choice, boolean status) {
-    if (exitChildListeners != null)
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+    if (exitChildListeners != null) {
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         exitChildListener.rightChild(choice, status);
+      }
+    }
     return;
   }
 
   public void executedAtExit(Store store, int solutionsNo) {
 
     if (timeOut && solutionsNo == 0) {
-      for (int i = 0; i < noGoodsVariables.size(); i++)
+      for (int i = 0; i < noGoodsVariables.size(); i++) {
         store.impose(new NoGood(noGoodsVariables.get(i), noGoodsValues.get(i)));
+      }
     }
 
-    if (exitListeners != null)
-      for (int i = 0; i < exitChildListeners.length; i++)
+    if (exitListeners != null) {
+      for (int i = 0; i < exitChildListeners.length; i++) {
         exitListeners[i].executedAtExit(store, solutionsNo);
+      }
+    }
   }
 
   public void setChildrenListeners(ExitChildListener<T>[] children) {
@@ -185,6 +204,8 @@ public class NoGoodsCollector<T extends IntVar>
       StringBuilder sb = new StringBuilder(noGoodsVariables.toString());
       sb.append(noGoodsValues.toString());
       return sb.toString();
-    } else return "[]";
+    } else {
+      return "[]";
+    }
   }
 }

@@ -30,6 +30,7 @@
 
 package org.jacop.search;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -53,9 +54,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
   public final Map<T, Integer> position;
 
   final Indomain<T> valueOrdering;
-  int currentIndex = 0;
+  int currentIndex;
 
-  final Random random = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+  final Random random = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -70,7 +71,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int unique = 0;
     for (T variable : variables) {
-      if (position.get(variable) == null) position.put(variable, unique++);
+      if (position.get(variable) == null) {
+        position.put(variable, unique++);
+      }
     }
 
     this.searchVariables = (T[]) new Var[position.size()];
@@ -96,7 +99,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     if (debugAll) {
       IO.println("index = " + index);
 
-      for (T searchVariable : searchVariables) IO.print(searchVariable + " ");
+      for (T searchVariable : searchVariables) {
+        IO.print(searchVariable + " ");
+      }
       IO.println();
     }
 
@@ -117,7 +122,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     } else {
       currentIndex = index;
 
-      if (debugAll) IO.println("selected " + currentVariable);
+      if (debugAll) {
+        IO.println("selected " + currentVariable);
+      }
 
       return currentVariable;
     }
@@ -179,6 +186,6 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
   }
 
   public String toString() {
-    return "" + java.util.Arrays.asList(searchVariables);
+    return "" + Arrays.asList(searchVariables);
   }
 }

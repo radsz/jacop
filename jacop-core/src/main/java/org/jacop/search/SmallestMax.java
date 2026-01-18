@@ -47,8 +47,12 @@ public class SmallestMax<T extends IntVar> implements ComparatorVariable<T> {
 
   public int compare(double left, T var) {
     int right = var.dom().max();
-    if (left < right) return 1;
-    if (left > right) return -1;
+    if (left < right) {
+      return 1;
+    }
+    if (left > right) {
+      return -1;
+    }
     return 0;
   }
 

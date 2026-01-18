@@ -32,6 +32,7 @@ package org.jacop.search;
 
 import java.util.Random;
 import org.jacop.constraints.*;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -64,7 +65,7 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
    */
   public SplitRandomSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
     super(variables, varSelect, indomain);
-    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   /**
@@ -82,7 +83,7 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
       ComparatorVariable<T> tieBreakerVarSelect,
       Indomain<T> indomain) {
     super(variables, varSelect, tieBreakerVarSelect, indomain);
-    generator = (Store.seedPresent()) ? new Random(Store.getSeed()) : new Random();
+    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   @Override
@@ -95,19 +96,29 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
 
     T var = super.getChoiceVariable(index);
 
-    if (var == null) return null;
+    if (var == null) {
+      return null;
+    }
 
     int value = var.min();
-    if (var.domain.getSize() == 2 && var.dom().domainID() == org.jacop.core.IntDomain.BoundDomainID)
+    if (var.domain.getSize() == 2 && var.dom().domainID() == IntDomain.BoundDomainID) {
       value = var.min();
-    else value = super.getChoiceValue();
+    } else {
+      value = super.getChoiceValue();
+    }
 
     leftFirst = generator.nextBoolean();
 
-    if (leftFirst)
-      if (var.max() != value) return new XlteqC(var, value);
-      else return new XltC(var, value);
-    else if (var.max() != value) return new XgtC(var, value);
-    else return new XeqC(var, value);
+    if (leftFirst) {
+      if (var.max() != value) {
+        return new XlteqC(var, value);
+      } else {
+        return new XltC(var, value);
+      }
+    } else if (var.max() != value) {
+      return new XgtC(var, value);
+    } else {
+      return new XeqC(var, value);
+    }
   }
 }

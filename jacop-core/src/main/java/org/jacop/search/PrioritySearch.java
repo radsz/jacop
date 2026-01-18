@@ -30,10 +30,7 @@
 
 package org.jacop.search;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.List;
+import java.util.*;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -63,7 +60,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   int n; // length of priority variables and sub-vectors
   T[] priority;
   ComparatorVariable<T> comparator;
-  ComparatorVariable<T> tieBreak = null;
+  ComparatorVariable<T> tieBreak;
 
   DepthFirstSearch<T>[] search;
 
@@ -71,10 +68,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   T[] allVars;
 
-  int noSolutions = 0;
+  int noSolutions;
 
   int solutionsLimit = -1; // Integer.MAX_VALUE;
-  boolean solutionsReached = false;
+  boolean solutionsReached;
 
   /**
    * It constructs a PrioritySearch.
@@ -88,9 +85,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   public PrioritySearch(T[] priority, ComparatorVariable<T> comparator, DepthFirstSearch<T>[] dfs) {
     int pLength = priority.length;
     int vLength = dfs.length;
-    if (pLength != vLength)
+    if (pLength != vLength) {
       throw new RuntimeException(
           "length of priority variables and depth first searches must be the same");
+    }
 
     n = priority.length;
     this.priority = priority;
@@ -102,9 +100,10 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       dfs[i].setMasterSearch(this);
       search[2 * i] = dfs[i];
-      if (!dfs[i].getClass().getName().equals("org.jacop.search.PrioritySearch")
-          && dfs[i].heuristic == null)
+      if (!"org.jacop.search.PrioritySearch".equals(dfs[i].getClass().getName())
+          && dfs[i].heuristic == null) {
         throw new RuntimeException("heuristic in depth first search must be set");
+      }
 
       search[2 * i + 1] = new LinkingSearch<>(this);
       DepthFirstSearch<T> last = lastSearch(dfs[i]);
@@ -140,8 +139,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     do {
       lastNotNullSearch = ns;
       // find next search
-      if (ns.childSearches == null) ns = null;
-      else ns = (DepthFirstSearch<T>) ns.childSearches[0];
+      if (ns.childSearches == null) {
+        ns = null;
+      } else {
+        ns = (DepthFirstSearch<T>) ns.childSearches[0];
+      }
     } while (ns != null);
 
     return lastNotNullSearch;
@@ -158,7 +160,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     this.store = store;
     ((SimpleSolutionListener) solutionListener).setVariables(allVars);
 
-    for (DepthFirstSearch<T> dfs : search) dfs.setStore(store);
+    for (DepthFirstSearch<T> dfs : search) {
+      dfs.setStore(store);
+    }
 
     if (store.raiseLevelBeforeConsistency) {
       store.raiseLevelBeforeConsistency = false;
@@ -167,9 +171,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     depth = store.level;
 
-    if (costVariable == null) optimize = false;
+    if (costVariable == null) {
+      optimize = false;
+    }
 
-    if (initializeListener != null) initializeListener.executedAtInitialize(store);
+    if (initializeListener != null) {
+      initializeListener.executedAtInitialize(store);
+    }
 
     boolean result = store.consistency();
     store.setLevel(store.level + 1);
@@ -185,7 +193,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         result = search[2 * subSearch].labeling();
       } catch (SolutionsLimitReached _) {
         solutionsReached = true;
-        if (printInfo) IO.println("Solution limit " + solutionsLimit + " reached");
+        if (printInfo) {
+          IO.println("Solution limit " + solutionsLimit + " reached");
+        }
       }
 
       visited.set(subSearch, false);
@@ -194,20 +204,30 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     store.setLevel(store.level - 1);
     depth--;
 
-    if (exitListener != null) exitListener.executedAtExit(store, noSolutions);
+    if (exitListener != null) {
+      exitListener.executedAtExit(store, noSolutions);
+    }
 
-    for (int i = 0; i < n; i++) timeOutOccured |= search[2 * i].timeOutOccured;
+    for (int i = 0; i < n; i++) {
+      timeOutOccured |= search[2 * i].timeOutOccured;
+    }
 
     if (timeOutOccured) {
 
-      if (printInfo) IO.println("Time-out " + tOut + "s");
+      if (printInfo) {
+        IO.println("Time-out " + tOut + "s");
+      }
     }
 
     if (noSolutions > 0) {
 
-      if (assignSolution) assignSolution();
+      if (assignSolution) {
+        assignSolution();
+      }
 
-      if (printInfo) IO.println(statistics());
+      if (printInfo) {
+        IO.println(statistics());
+      }
 
       return true;
     } else {
@@ -243,7 +263,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     this.store = store;
     ((SimpleSolutionListener) solutionListener).setVariables(allVars);
 
-    if (solutionsLimit == -1) solutionsLimit = Integer.MAX_VALUE;
+    if (solutionsLimit == -1) {
+      solutionsLimit = Integer.MAX_VALUE;
+    }
 
     for (DepthFirstSearch<T> dfs : search) {
       DepthFirstSearch<T> ns = dfs;
@@ -252,7 +274,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         ns.setCostVar(costVar);
         ns.respectSolutionListenerAdvice = true;
         // find next search
-        ns = (ns.childSearches == null) ? null : (DepthFirstSearch<T>) ns.childSearches[0];
+        ns = ns.childSearches == null ? null : (DepthFirstSearch<T>) ns.childSearches[0];
       } while (ns != null);
     }
 
@@ -270,7 +292,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     optimize = true;
     cost = null;
 
-    if (initializeListener != null) initializeListener.executedAtInitialize(store);
+    if (initializeListener != null) {
+      initializeListener.executedAtInitialize(store);
+    }
 
     boolean result = store.consistency();
     store.setLevel(store.level + 1);
@@ -287,7 +311,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         getStatistics();
 
         solutionsReached = true;
-        if (printInfo) IO.println("Solution limit " + solutionsLimit + " reached");
+        if (printInfo) {
+          IO.println("Solution limit " + solutionsLimit + " reached");
+        }
       }
 
       visited.set(subSearch, false);
@@ -298,18 +324,26 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     getStatistics();
 
-    if (exitListener != null) exitListener.executedAtExit(store, noSolutions);
+    if (exitListener != null) {
+      exitListener.executedAtExit(store, noSolutions);
+    }
 
-    for (int i = 0; i < n; i++) timeOutOccured |= search[2 * i].timeOutOccured;
+    for (int i = 0; i < n; i++) {
+      timeOutOccured |= search[2 * i].timeOutOccured;
+    }
 
     if (timeOutOccured) {
 
-      if (printInfo) IO.println("Time-out " + tOut + "s");
+      if (printInfo) {
+        IO.println("Time-out " + tOut + "s");
+      }
     }
 
     if (noSolutions > 0) {
 
-      if (assignSolution) assignSolution();
+      if (assignSolution) {
+        assignSolution();
+      }
 
       if (printInfo) {
         CostVariableHandler costHandler =
@@ -322,7 +356,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         }
       }
 
-      if (printInfo) IO.println(statistics());
+      if (printInfo) {
+        IO.println(statistics());
+      }
 
       return true;
 
@@ -344,7 +380,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     this.store = allVars[0].getStore();
     ((SimpleSolutionListener) solutionListener).setVariables(allVars);
 
-    for (DepthFirstSearch<T> dfs : search) dfs.setStore(store);
+    for (DepthFirstSearch<T> dfs : search) {
+      dfs.setStore(store);
+    }
 
     if (costVariable != null) {
       for (DepthFirstSearch<T> dfs : search) {
@@ -355,7 +393,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       optimize = true;
       cost = null;
 
-      if (solutionsLimit == -1) solutionsLimit = Integer.MAX_VALUE;
+      if (solutionsLimit == -1) {
+        solutionsLimit = Integer.MAX_VALUE;
+      }
     }
 
     boolean raisedLevel = false;
@@ -369,9 +409,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     depth = store.level;
     cost = null;
 
-    if (costVariable == null) optimize = false;
+    if (costVariable == null) {
+      optimize = false;
+    }
 
-    if (initializeListener != null) initializeListener.executedAtInitialize(store);
+    if (initializeListener != null) {
+      initializeListener.executedAtInitialize(store);
+    }
 
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
@@ -397,7 +441,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         getStatistics();
 
         solutionsReached = true;
-        if (printInfo) IO.println("Solution limit " + solutionsLimit + " reached");
+        if (printInfo) {
+          IO.println("Solution limit " + solutionsLimit + " reached");
+        }
       }
 
       visited.set(subSearch, false);
@@ -409,13 +455,19 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     getStatistics();
 
-    if (exitListener != null) exitListener.executedAtExit(store, solutionListener.solutionsNo());
+    if (exitListener != null) {
+      exitListener.executedAtExit(store, solutionListener.solutionsNo());
+    }
 
-    for (int i = 0; i < n; i++) timeOutOccured |= search[2 * i].timeOutOccured;
+    for (int i = 0; i < n; i++) {
+      timeOutOccured |= search[2 * i].timeOutOccured;
+    }
 
     if (timeOutOccured) {
 
-      if (printInfo) IO.println("Time-out " + tOut + "s");
+      if (printInfo) {
+        IO.println("Time-out " + tOut + "s");
+      }
     }
 
     if (noSolutions > 0) {
@@ -423,12 +475,17 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       ((SimpleSolutionListener<?>) solutionListener).setSolutionsNo(noSolutions);
 
       if (printInfo) {
-        if (costVariable != null)
-          if (costVariable instanceof IntVar) IO.println("Solution cost is " + costValue);
-          else if (costVariable instanceof IntVar)
+        if (costVariable != null) {
+          if (costVariable instanceof IntVar) {
+            IO.println("Solution cost is " + costValue);
+          } else if (costVariable instanceof IntVar) {
             IO.println("Solution cost is " + costVariable.dom());
+          }
+        }
 
-        if (printInfo) IO.println(statistics());
+        if (printInfo) {
+          IO.println(statistics());
+        }
       }
 
       if (raisedLevel) {
@@ -436,8 +493,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         store.setLevel(store.level - 1);
       }
 
-      if (masterSearch == null) return true;
-      else return result;
+      if (masterSearch == null) {
+        return true;
+      } else {
+        return result;
+      }
 
     } else {
 
@@ -468,7 +528,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     for (DepthFirstSearch<T> l : search) {
       nodes += l.getNodes();
 
-      if (l.childSearches != null) nodes += l.childSearches[0].getNodes();
+      if (l.childSearches != null) {
+        nodes += l.childSearches[0].getNodes();
+      }
     }
     return nodes;
   }
@@ -479,7 +541,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     for (DepthFirstSearch<T> l : search) {
       decisions += l.getDecisions();
 
-      if (l.childSearches != null) decisions += l.childSearches[0].getDecisions();
+      if (l.childSearches != null) {
+        decisions += l.childSearches[0].getDecisions();
+      }
     }
     return decisions;
   }
@@ -490,7 +554,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     for (DepthFirstSearch<T> l : search) {
       wrongDecisions += l.getWrongDecisions();
 
-      if (l.childSearches != null) wrongDecisions += l.childSearches[0].getWrongDecisions();
+      if (l.childSearches != null) {
+        wrongDecisions += l.childSearches[0].getWrongDecisions();
+      }
     }
     return wrongDecisions;
   }
@@ -501,7 +567,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     for (DepthFirstSearch<T> l : search) {
       numberBacktracks += l.getBacktracks();
 
-      if (l.childSearches != null) numberBacktracks += l.childSearches[0].getBacktracks();
+      if (l.childSearches != null) {
+        numberBacktracks += l.childSearches[0].getBacktracks();
+      }
     }
     return numberBacktracks;
   }
@@ -512,7 +580,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     for (DepthFirstSearch<T> l : search) {
       maxDepthExcludePaths += l.getMaximumDepth();
 
-      if (l.childSearches != null) maxDepthExcludePaths += l.childSearches[0].getMaximumDepth();
+      if (l.childSearches != null) {
+        maxDepthExcludePaths += l.childSearches[0].getMaximumDepth();
+      }
     }
     return maxDepthExcludePaths;
   }
@@ -547,8 +617,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   int getSubSearch() {
 
     int current = 0;
-    while (current < n && visited.get(current)) current++;
-    if (current == n) return n;
+    while (current < n && visited.get(current)) {
+      current++;
+    }
+    if (current == n) {
+      return n;
+    }
 
     if (comparator != null) {
       double currentMeasure = comparator.metric(priority[current]);
@@ -587,14 +661,16 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         vars.addAll(Arrays.asList(vs));
 
       } else {
-        java.util.Map<T, Integer> position = heuristic.getVariablesMapping();
+        Map<T, Integer> position = heuristic.getVariablesMapping();
 
         vars.addAll(position.keySet());
       }
     }
 
     varsArray = (T[]) new Var[vars.size()];
-    for (int i = 0; i < vars.size(); i++) varsArray[i] = vars.get(i);
+    for (int i = 0; i < vars.size(); i++) {
+      varsArray[i] = vars.get(i);
+    }
 
     return varsArray;
   }
@@ -602,10 +678,13 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   public void addRestartCalculator(DepthFirstSearch<T> s, Calculator calc) {
 
     DepthFirstSearch<T>[] ns = null;
-    if (s instanceof PrioritySearch prioritySearch) ns = prioritySearch.getSearchSeq();
-    else ns = new DepthFirstSearch[] {s};
+    if (s instanceof PrioritySearch prioritySearch) {
+      ns = prioritySearch.getSearchSeq();
+    } else {
+      ns = new DepthFirstSearch[] {s};
+    }
 
-    for (DepthFirstSearch<T> dfs : ns)
+    for (DepthFirstSearch<T> dfs : ns) {
       if (dfs instanceof PrioritySearch prioritySearch) {
         for (int i = 0; i < prioritySearch.search.length / 2; i++) {
           addRestartCalculator(prioritySearch.search[2 * i], calc);
@@ -615,6 +694,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         dfs.setConsistencyListener(calc);
         dfs.consistencyListener.setChildrenListeners(consist);
       }
+    }
   }
 
   public void setSolutionLimit(int no) {
@@ -629,12 +709,15 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     StringBuilder b = new StringBuilder();
 
     b.append("PrioritySearch(")
-        .append(java.util.Arrays.asList(priority))
+        .append(Arrays.asList(priority))
         .append(", ")
         .append(comparator.getClass().getName());
 
-    if (tieBreak == null) b.append(", null");
-    else b.append(", ").append(tieBreak.getClass().getName());
+    if (tieBreak == null) {
+      b.append(", null");
+    } else {
+      b.append(", ").append(tieBreak.getClass().getName());
+    }
 
     b.append(", [");
     for (int i = 0; i < search.length / 2; i++) {
@@ -768,7 +851,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
                   constraineCostFromChild(child);
 
-                  if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
+                  if (noSolutions >= solutionsLimit) {
+                    throw new SolutionsLimitReached();
+                  }
 
                   master.solutionListener.executeAfterSolution(this, null);
 
@@ -786,7 +871,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             constraineCost();
             noSolutions++;
           }
-          if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
+          if (noSolutions >= solutionsLimit) {
+            throw new SolutionsLimitReached();
+          }
           master.solutionListener.executeAfterSolution(this, null);
           visited.set(index, false);
           return false;
@@ -808,7 +895,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
               if (child.getSolutionListener().solutionsNo() > currentChildSolutionNo) {
                 noSolutions = child.getSolutionListener().solutionsNo();
 
-                if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
+                if (noSolutions >= solutionsLimit) {
+                  throw new SolutionsLimitReached();
+                }
 
                 master.solutionListener.executeAfterSolution(this, null);
 
@@ -819,7 +908,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           }
 
           noSolutions += childSearch.getSolutionListener().solutionsNo();
-          if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
+          if (noSolutions >= solutionsLimit) {
+            throw new SolutionsLimitReached();
+          }
 
           master.solutionListener.executeAfterSolution(this, null);
 
@@ -830,7 +921,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
           master.solutionListener.executeAfterSolution(this, null);
 
-          if (noSolutions >= solutionsLimit) throw new SolutionsLimitReached();
+          if (noSolutions >= solutionsLimit) {
+            throw new SolutionsLimitReached();
+          }
 
           visited.set(index, false);
           return false;

@@ -117,9 +117,11 @@ public class IntVar extends Var {
    */
   public IntVar(Store store, String name, int min, int max) {
 
-    if ((long) max - (long) min > 63L)
+    if ((long) max - (long) min > 63L) {
       commonInitialization(store, name, new IntervalDomain(min, max));
-    else commonInitialization(store, name, new SmallDenseDomain(min, max));
+    } else {
+      commonInitialization(store, name, new SmallDenseDomain(min, max));
+    }
   }
 
   private void commonInitialization(Store store, String name, IntDomain dom) {
@@ -285,7 +287,9 @@ public class IntVar extends Var {
     // It will be put in the queue and evaluated only once in the queue.
     // If constraint is consistent for a singleton then it will remain
     // consistent from the point of view of this variable.
-    if (singleton()) return;
+    if (singleton()) {
+      return;
+    }
 
     // if Event is NONE then constraint is not being attached, it will
     // be only evaluated once, as after imposition it is being put in the constraint
@@ -308,7 +312,9 @@ public class IntVar extends Var {
    */
   public void putSearchConstraint(Constraint c) {
 
-    if (singleton()) return;
+    if (singleton()) {
+      return;
+    }
 
     domain.putSearchConstraint(store.level, this, c);
 
@@ -335,14 +341,20 @@ public class IntVar extends Var {
    */
   public void removeConstraint(Constraint c) {
 
-    if (singleton()) return;
+    if (singleton()) {
+      return;
+    }
 
     int i = domain.searchConstraintsToEvaluate - 1;
-    for (; i >= 0; i--)
-      if (domain.searchConstraints.get(i) == c)
+    for (; i >= 0; i--) {
+      if (domain.searchConstraints.get(i) == c) {
         domain.removeSearchConstraint(store.level, this, i, c);
+      }
+    }
 
-    if (i == -1) domain.removeModelConstraint(store.level, this, c);
+    if (i == -1) {
+      domain.removeModelConstraint(store.level, this, c);
+    }
 
     store.recordChange(this);
   }
@@ -401,8 +413,11 @@ public class IntVar extends Var {
 
     StringBuilder result = new StringBuilder(id);
 
-    if (domain.singleton()) result.append(" = ");
-    else result.append("::");
+    if (domain.singleton()) {
+      result.append(" = ");
+    } else {
+      result.append("::");
+    }
 
     result.append(domain);
     return result.toString();

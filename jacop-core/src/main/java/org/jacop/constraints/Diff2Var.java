@@ -47,7 +47,7 @@ class Diff2Var implements MutableVar {
 
   final Store store;
 
-  Diff2VarValue value = null;
+  Diff2VarValue value;
 
   Diff2Var(Store store) {
     Diff2VarValue val = new Diff2VarValue();

@@ -75,14 +75,18 @@ public class KnapsackExample extends ExampleFD {
 
     example.model();
 
-    if (example.searchOptimal()) IO.println("Solution(s) found");
+    if (example.searchOptimal()) {
+      IO.println("Solution(s) found");
+    }
 
     example = new KnapsackExample();
 
     example.args = args;
     example.modelBasic();
 
-    if (example.searchOptimal()) IO.println("Solution(s) found");
+    if (example.searchOptimal()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -95,7 +99,9 @@ public class KnapsackExample extends ExampleFD {
     String[] names = {"whisky", "perfumes", "cigarets"};
 
     int[] maxs = new int[noItems];
-    for (int i = 0; i < noItems; i++) maxs[i] = volume / weights[i];
+    for (int i = 0; i < noItems; i++) {
+      maxs[i] = volume / weights[i];
+    }
 
     // It is possible to supply the program
     // with the volume size and items (weight, profit, maximum_quantity,
@@ -157,7 +163,9 @@ public class KnapsackExample extends ExampleFD {
     String[] names = {"whisky", "perfumes", "cigarets"};
 
     int[] maxs = new int[noItems];
-    for (int i = 0; i < noItems; i++) maxs[i] = volume / weights[i];
+    for (int i = 0; i < noItems; i++) {
+      maxs[i] = volume / weights[i];
+    }
 
     // It is possible to supply the program
     // with the volume size and items (weight, profit, maximum_quantity,
@@ -218,7 +226,9 @@ public class KnapsackExample extends ExampleFD {
     String[] names = {"whisky", "perfumes", "cigarets"};
 
     int[] maxs = new int[noItems];
-    for (int i = 0; i < noItems; i++) maxs[i] = volume / weights[i];
+    for (int i = 0; i < noItems; i++) {
+      maxs[i] = volume / weights[i];
+    }
 
     // It is possible to supply the program
     // with the volume size and items (weight, profit, maximum_quantity,
@@ -349,10 +359,13 @@ public class KnapsackExample extends ExampleFD {
     // symmetry breaking
     // if item ith is not taken then jth neither
     // (assuming the same item characteristics)
-    for (int i = 0; i < quantity.length; i++)
-      for (int j = i + 1; j < quantity.length; j++)
-        if (weights[i] == weights[j] && profits[i] == profits[j])
+    for (int i = 0; i < quantity.length; i++) {
+      for (int j = i + 1; j < quantity.length; j++) {
+        if (weights[i] == weights[j] && profits[i] == profits[j]) {
           store.impose(new XgteqY(quantity[i], quantity[j]));
+        }
+      }
+    }
 
     IntVar profitNegation = new IntVar(store, "ProfitNegation", -100000, 0);
 

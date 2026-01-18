@@ -242,29 +242,29 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * It counts the number of times the minimum values of geost objects origins are being examined
    * for pruning.
    */
-  long pruneMinCount = 0;
+  long pruneMinCount;
 
   /**
    * It counts the number of times the minimum values of geost objects origins are being examined
    * for pruning. It may be different (smaller than) prunedMinCount as constraint may have failed
    * during min domain pruning.
    */
-  long pruneMaxCount = 0;
+  long pruneMaxCount;
 
   /** It counts number of executions of outboxes generation. */
-  long findForbiddenDomainCount = 0;
+  long findForbiddenDomainCount;
 
   /** It counts the number of object updates. */
-  long onObjectUpdateCount = 0;
+  long onObjectUpdateCount;
 
   /**
    * It counts how many times the feasibility check is being performed by internal constraint on a
    * supplied point.
    */
-  long isFeasibleCount = 0;
+  long isFeasibleCount;
 
   /** It counts how many times the object has been queued. */
-  long queuedObjectCount = 0;
+  long queuedObjectCount;
 
   /** It indicates whether we are currently running the consistency function or not. */
   boolean inConsistency;
@@ -273,14 +273,14 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * If equal to true then modifying one object implies that all objects have to be added to object
    * queue.
    */
-  boolean allLinked = false;
+  boolean allLinked;
 
   /**
    * It is used to signal that some shape ID was pruned. It is required because pruning skip
    * condition (var grounded, and not in the queue) can only be safely used if no shape id field was
    * pruned. Indeed, if some shape ID was pruned, feasibility can change, thus a check is needed.
    */
-  boolean changedShapeID = false;
+  boolean changedShapeID;
 
   /**
    * It remembers if it is the first time the consistency check is being performed. If not, then the
@@ -339,7 +339,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   InternalConstraint[] stillUsefulInternalConstraints;
 
   /** It specifies the last useful constraint in the array of useful internal constraints. */
-  int lastConstraintToCheck = 0;
+  int lastConstraintToCheck;
 
   /**
    * It is used inside flushQueue function to separate timeconsistency execution from object update
@@ -416,13 +416,17 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // objectQueue.addAll(objects);
 
     objectQueue = new SimpleHashSet<>(objects.length);
-    for (GeostObject o : objects) objectQueue.add(o);
+    for (GeostObject o : objects) {
+      objectQueue.add(o);
+    }
 
     Map<Integer, Shape> idShapeMap = new HashMap<>();
 
     // add all shapes to the register
     for (Shape s : shapes) {
-      if (s.no < 0) throw new IllegalArgumentException("shape ID has to be positive");
+      if (s.no < 0) {
+        throw new IllegalArgumentException("shape ID has to be positive");
+      }
       idShapeMap.put(s.no, s);
     }
 
@@ -435,25 +439,29 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     for (GeostObject o : objects) {
 
-      if (objectIds.contains(o.no))
+      if (objectIds.contains(o.no)) {
         throw new IllegalArgumentException("all objects must have a different ID");
-      else if (o.no < 0) throw new IllegalArgumentException("object ID has to be positive");
-      else {
+      } else if (o.no < 0) {
+        throw new IllegalArgumentException("object ID has to be positive");
+      } else {
         objectIds.add(o.no);
         idMax = Math.max(o.no, idMax);
       }
 
-      if (dim == -1) dim = o.dimension;
-      else if (dim != o.dimension)
+      if (dim == -1) {
+        dim = o.dimension;
+      } else if (dim != o.dimension) {
         throw new IllegalArgumentException("all objects must have the same number of dimensions");
+      }
 
       // make sure that the shapes used are defined
       ValueEnumeration shapeIDVals = o.shapeID.domain.valueEnumeration();
       while (shapeIDVals.hasMoreElements()) {
         int sid = shapeIDVals.nextElement();
-        if (!idShapeMap.containsKey(sid))
+        if (!idShapeMap.containsKey(sid)) {
           throw new IllegalArgumentException(
               "shape id " + sid + " does not correspond to any shape");
+        }
       }
     }
 
@@ -473,8 +481,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       shapeRegister[e.getKey()] = e.getValue();
     }
 
-    if (partialShapeSweep) fullyPruned = new boolean[idMax + 1];
-    else fullyPruned = null;
+    if (partialShapeSweep) {
+      fullyPruned = new boolean[idMax + 1];
+    } else {
+      fullyPruned = null;
+    }
 
     // make sure the DBox pool is correctly initialized
     DBox.supportDimension(dimension);
@@ -506,11 +517,15 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       averageSizes[dimension] += o.end.max() - o.start.min();
     }
 
-    for (int i = 0; i < shapeRegister.length; i++)
-      for (int j = 0; j < averageSizes.length - 1; j++)
+    for (int i = 0; i < shapeRegister.length; i++) {
+      for (int j = 0; j < averageSizes.length - 1; j++) {
         averageSizes[j] += shapeRegister[i].boundingBox.length[j] * shapeNb[i];
+      }
+    }
 
-    for (int j = 0; j < averageSizes.length - 1; j++) averageSizes[j] /= totShapes;
+    for (int j = 0; j < averageSizes.length - 1; j++) {
+      averageSizes[j] /= totShapes;
+    }
 
     averageSizes[dimension] /= objects.length;
 
@@ -523,11 +538,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       // find smallest value
       double smallestYet = Double.MAX_VALUE;
       int smallestIndex = 0;
-      for (int j = 0; j < ordering.length; j++)
+      for (int j = 0; j < ordering.length; j++) {
         if (averageSizes[j] < smallestYet) {
           smallestYet = averageSizes[j];
           smallestIndex = j;
         }
+      }
       ordering[i] = smallestIndex;
       averageSizes[smallestIndex] = Double.MAX_VALUE;
     }
@@ -537,7 +553,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     variableObjectMap = Var.createEmptyPositioning();
 
-    for (GeostObject o : objects)
+    for (GeostObject o : objects) {
       for (Var v : o.getVariables()) {
         if (!v.singleton()) {
           GeostObject previousValue = variableObjectMap.put(v, o);
@@ -545,6 +561,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               : "Current implementation of Geost does not allow reuse of not singleton variables.";
         }
       }
+    }
 
     inConsistency = false;
 
@@ -570,13 +587,25 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   public String checkInvariants() {
 
-    if (order == null) return "lexical order is null";
-    if (variableQueue == null) return "variable queue is null";
+    if (order == null) {
+      return "lexical order is null";
+    }
+    if (variableQueue == null) {
+      return "variable queue is null";
+    }
     //		if(objectQueue == null) return "object queue is null";
-    if (objectQueue == null) return "object queue is null";
-    if (c.length != n.length) return "c and n must have the same size";
-    if (objects.length == 0) return "empty collection of objects";
-    if (externalConstraints.length == 0) return "empty collection of constraints";
+    if (objectQueue == null) {
+      return "object queue is null";
+    }
+    if (c.length != n.length) {
+      return "c and n must have the same size";
+    }
+    if (objects.length == 0) {
+      return "empty collection of objects";
+    }
+    if (externalConstraints.length == 0) {
+      return "empty collection of constraints";
+    }
 
     return null;
   }
@@ -606,7 +635,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       final Collection<? extends InternalConstraint> ics = ec.genInternalConstraints(this);
 
       // prepare all data structures
-      for (GeostObject o : objects) ec.onObjectUpdate(o);
+      for (GeostObject o : objects) {
+        ec.onObjectUpdate(o);
+      }
 
       internalConstraints.addAll(ics);
 
@@ -669,8 +700,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
         // collect related constraints
         Set<InternalConstraint> relatedConstraints = new HashSet<>();
-        for (ExternalConstraint ec : externalConstraints)
+        for (ExternalConstraint ec : externalConstraints) {
           relatedConstraints.addAll(ec.getObjectConstraints(o));
+        }
         objectConstraints[o.no] = relatedConstraints;
       }
     } else {
@@ -711,7 +743,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // if(USE_DISPLAY)
     //	display.eraseAll();
 
-    if (DEBUG_MAIN) IO.println("pruneMin");
+    if (DEBUG_MAIN) {
+      IO.println("pruneMin");
+    }
 
     Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMIN;
 
@@ -726,7 +760,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     c[dimension] = o.start.min();
     n[dimension] = o.start.max() + 1;
 
-    if (DEBUG_MAIN) IO.println("shape ID in pruneMin: " + currentShape);
+    if (DEBUG_MAIN) {
+      IO.println("shape ID in pruneMin: " + currentShape);
+    }
 
     if (DEBUG_MAIN) {
       IO.println("inital, c and n:");
@@ -770,9 +806,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         }
       }
 
-      if (c[d] >= limit)
+      if (c[d] >= limit) {
         // we were asked to stop searching here
         return limit;
+      }
 
       //	if(USE_DISPLAY) {
       //		display.display2DBox(f, Color.red);
@@ -794,7 +831,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               + " is outside domain "
               + (d != dimension ? o.coords[d] : o.start);
       return c[d]; // the check for sweep advance is done later by the consistency function
-    } else return IntDomain.MaxInt;
+    } else {
+      return IntDomain.MaxInt;
+    }
   }
 
   /**
@@ -911,7 +950,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               + " is outside domain "
               + (d != dimension ? o.coords[d] : o.end);
       return c[d]; // the check for sweep advance is done later by the consistency function
-    } else return IntDomain.MinInt;
+    } else {
+      return IntDomain.MinInt;
+    }
   }
 
   protected DBox findForbiddenDomain(
@@ -927,7 +968,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       IO.println("shape ID in findForbiddenDomain: " + currentShape);
     }
 
-    if (GATHER_STATS) findForbiddenDomainCount++;
+    if (GATHER_STATS) {
+      findForbiddenDomainCount++;
+    }
 
     //	assert constraints != null : "not using correct version";
 
@@ -942,30 +985,39 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // If the hole within domain can be used to generate the outbox then it is checked first.
     if (holeConstraint.stillHasHole()) {
 
-      if (GATHER_STATS) isFeasibleCount++;
+      if (GATHER_STATS) {
+        isFeasibleCount++;
+      }
 
       DBox f = holeConstraint.isFeasible(dir, order, o, currentShape, point);
 
-      if (f != null) return f;
+      if (f != null) {
+        return f;
+      }
     }
 
-    if (GATHER_STATS)
+    if (GATHER_STATS) {
       // BUG?
       // length is not ok to use since this array is allocated initially based on the count of
       // ALL internal constraints for all objects and not the internal constraints associated with
       // a given object. Should be objectConstraints[o.id].size() ?
       filteredConstraintCount += stillUsefulInternalConstraints.length - lastConstraintToCheck;
+    }
 
     // then go on with the standard filtered constraints
     for (int ci = lastConstraintToCheck - 1; ci >= 0; ci--) {
 
       final InternalConstraint c = stillUsefulInternalConstraints[ci];
 
-      if (GATHER_STATS) isFeasibleCount++;
+      if (GATHER_STATS) {
+        isFeasibleCount++;
+      }
 
       DBox f = c.isFeasible(dir, order, o, currentShape, point);
 
-      if (f != null) return f;
+      if (f != null) {
+        return f;
+      }
     }
 
     return null;
@@ -980,8 +1032,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       inConsistency = true;
       changedShapeID = false;
 
-      if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING)
+      if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
         IO.println("consistency(" + store.level + ")");
+      }
 
       if (firstConsistencyCheck) {
 
@@ -1000,7 +1053,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         firstConsistencyLevel = store.level;
       }
 
-      if (partialShapeSweep) Arrays.fill(fullyPruned, false);
+      if (partialShapeSweep) {
+        Arrays.fill(fullyPruned, false);
+      }
 
       // update the objects that are defined by some variables that changed
       flushQueue(variableQueue);
@@ -1013,23 +1068,34 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
         // an object can be in the queue even though it is grounded,
         // if it was grounded twice in the same pruning
-        while (o.isGrounded() && !pruneIfGrounded[o.no] && !emptyQueue)
-          if (!objectQueue.isEmpty()) o = objectQueue.removeFirst();
-          else emptyQueue = true;
+        while (o.isGrounded() && !pruneIfGrounded[o.no] && !emptyQueue) {
+          if (!objectQueue.isEmpty()) {
+            o = objectQueue.removeFirst();
+          } else {
+            emptyQueue = true;
+          }
+        }
 
-        if (emptyQueue) break; // all objects done, get out of consistency()
+        if (emptyQueue) {
+          break; // all objects done, get out of consistency()
 
-        // object o will be checked now and since it is grounded then there is no need for
-        // another check after that.
+          // object o will be checked now and since it is grounded then there is no need for
+          // another check after that.
+        }
         pruneIfGrounded[o.no] = false;
 
-        if (DEBUG_OBJECT_GROUNDING) IO.println("pruning object " + o);
+        if (DEBUG_OBJECT_GROUNDING) {
+          IO.println("pruning object " + o);
+        }
 
         boolean fullSweep = true;
         if (partialShapeSweep) {
           // if object already had a full sweep in this node, do partial sweep only
-          if (fullyPruned[o.no] == true) fullSweep = false;
-          else fullyPruned[o.no] = true;
+          if (fullyPruned[o.no] == true) {
+            fullSweep = false;
+          } else {
+            fullyPruned[o.no] = true;
+          }
         }
 
         updateInternalConstraintsGeneratingOutboxes(o);
@@ -1038,7 +1104,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
           IO.println("pruning " + o);
 
-          if (DEBUG_SHAPE_SKIP) IO.println("o.bestShapeID = " + Arrays.toString(o.bestShapeID));
+          if (DEBUG_SHAPE_SKIP) {
+            IO.println("o.bestShapeID = " + Arrays.toString(o.bestShapeID));
+          }
         }
 
         boolean inconsistent = false;
@@ -1063,7 +1131,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
            */
           boolean needPruning = true;
           // if no shape ID changed and o.shapeID is a singleton, consider skipping variable
-          if (!changedShapeID && o.shapeID.singleton())
+          if (!changedShapeID && o.shapeID.singleton()) {
             if (d != dimension) {
               final Var prunedVar = o.coords[d];
               needPruning = !(prunedVar.singleton() && !variableQueue.contains(prunedVar));
@@ -1075,8 +1143,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                       && !variableQueue.contains(o.end)
                       && !variableQueue.contains(o.duration));
             }
+          }
 
-          if (enforceNoSkip) needPruning = true;
+          if (enforceNoSkip) {
+            needPruning = true;
+          }
 
           if (needPruning) {
 
@@ -1117,9 +1188,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
               int sid = shapeIdsToPrune[i];
 
-              if (DEBUG_MAIN) IO.println("shape ID in consistency: " + sid);
+              if (DEBUG_MAIN) {
+                IO.println("shape ID in consistency: " + sid);
+              }
 
-              if (GATHER_STATS) pruneMinCount++;
+              if (GATHER_STATS) {
+                pruneMinCount++;
+              }
 
               int lowerBound =
                   pruneMin(
@@ -1133,8 +1208,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               if (lowerBound >= IntDomain.MaxInt) {
 
                 // remove shape ID, it is infeasible
-                if (DEBUG_DOUBLE_LAYER)
+                if (DEBUG_DOUBLE_LAYER) {
                   IO.println("geost " + id() + " changing " + o.shapeID + ", removing " + sid);
+                }
 
                 changedShapeID = true;
 
@@ -1150,7 +1226,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                 minLowerBound = Math.min(minLowerBound, lowerBound);
 
                 // consider pruning in the other direction only if the first did not fail
-                if (GATHER_STATS) pruneMaxCount++;
+                if (GATHER_STATS) {
+                  pruneMaxCount++;
+                }
 
                 int upperBound =
                     pruneMax(
@@ -1164,8 +1242,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                 if (upperBound <= IntDomain.MinInt) {
 
                   // remove shape ID, it is infeasible
-                  if (DEBUG_DOUBLE_LAYER)
+                  if (DEBUG_DOUBLE_LAYER) {
                     IO.println("geost " + id() + " changing " + o.shapeID + ", removing " + sid);
+                  }
 
                   changedShapeID = true;
 
@@ -1196,8 +1275,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
               IntVar prunedVariable = d != dimension ? o.coords[d] : o.start;
 
-              if (DEBUG_DOUBLE_LAYER)
-                if (minLowerBound > prunedVariable.min())
+              if (DEBUG_DOUBLE_LAYER) {
+                if (minLowerBound > prunedVariable.min()) {
                   IO.println(
                       "geost "
                           + id()
@@ -1205,6 +1284,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                           + prunedVariable
                           + " min bound to "
                           + minLowerBound);
+                }
+              }
 
               prunedVariable.domain.inMin(store.level, prunedVariable, minLowerBound);
 
@@ -1216,14 +1297,16 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                 oneTimeVarChanged = false;
               }
 
-            } else inconsistent = true;
+            } else {
+              inconsistent = true;
+            }
 
             if (!inconsistent && maxUpperBound > IntDomain.MinInt) {
 
               IntVar prunedVariable = d != dimension ? o.coords[d] : o.end;
 
-              if (DEBUG_DOUBLE_LAYER)
-                if (maxUpperBound < prunedVariable.max())
+              if (DEBUG_DOUBLE_LAYER) {
+                if (maxUpperBound < prunedVariable.max()) {
                   IO.println(
                       "geost "
                           + id()
@@ -1231,6 +1314,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                           + prunedVariable
                           + " max bound to "
                           + maxUpperBound);
+                }
+              }
 
               prunedVariable.domain.inMax(store.level, prunedVariable, maxUpperBound);
 
@@ -1242,11 +1327,15 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                 oneTimeVarChanged = false;
               }
 
-            } else inconsistent = true;
+            } else {
+              inconsistent = true;
+            }
           }
         }
 
-        if (inconsistent) throw Store.failException;
+        if (inconsistent) {
+          throw Store.failException;
+        }
 
         if (DEBUG_MAIN) {
           IO.print("pruned " + o);
@@ -1262,15 +1351,18 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         // level.
         // need to create the set for this level
         // flush last set
-        for (GeostObject uo : updatedObjectSet) objectList.add(uo);
+        for (GeostObject uo : updatedObjectSet) {
+          objectList.add(uo);
+        }
 
         updatedObjectSet.clear();
 
         // mark beginning of new set
         setStart.update(objectList.size());
 
-        if (DEBUG_BACKTRACK)
+        if (DEBUG_BACKTRACK) {
           IO.println("new set, begins at " + setStart.value() + ", stamp: " + setStart);
+        }
       }
 
     } finally {
@@ -1298,7 +1390,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       workingList.clearNoGC();
       ValueEnumeration sids = o.shapeID.domain.valueEnumeration();
 
-      while (sids.hasMoreElements()) workingList.add(getShape(sids.nextElement()).boundingBox);
+      while (sids.hasMoreElements()) {
+        workingList.add(getShape(sids.nextElement()).boundingBox);
+      }
 
       // bb - boundingBox over all shapes.
       DBox bb = DBox.boundingBox(workingList).copyInto(DBox.newBox(dimension));
@@ -1324,17 +1418,20 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       int[] constraintBoxLength = constraintBox.length;
 
       lastConstraintToCheck = 0;
-      for (InternalConstraint c : objectConstraints[o.no])
+      for (InternalConstraint c : objectConstraints[o.no]) {
         if (c.cardInfeasible() > 0) {
 
           // increase size by one unit because intersection is empty if of size zero
           int[] lowerBound = c.absInfeasible(Geost.SweepDirection.PRUNEMIN);
-          for (int i = 0; i < dimension + 1; i++) constraintBoxOrigin[i] = lowerBound[i] - 1;
+          for (int i = 0; i < dimension + 1; i++) {
+            constraintBoxOrigin[i] = lowerBound[i] - 1;
+          }
 
           // note: need to to them one after the other because of array reuse in absInfeasible
           int[] upperBound = c.absInfeasible(Geost.SweepDirection.PRUNEMAX);
-          for (int i = 0; i < dimension + 1; i++)
+          for (int i = 0; i < dimension + 1; i++) {
             constraintBoxLength[i] = upperBound[i] - constraintBoxOrigin[i] + 2;
+          }
 
           // if the constraint can propagate within current domains then the internal
           // constraint can be useful and can not be filtered out, otherwise the constraint
@@ -1344,6 +1441,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
             lastConstraintToCheck++;
           }
         }
+      }
 
       DBox.dispatchBox(bb);
       DBox.dispatchBox(constraintBox);
@@ -1352,14 +1450,17 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     } else {
 
       lastConstraintToCheck = 0;
-      for (InternalConstraint c : objectConstraints[o.no])
+      for (InternalConstraint c : objectConstraints[o.no]) {
         if (c.cardInfeasible() > 0) {
           stillUsefulInternalConstraints[lastConstraintToCheck] = c;
           lastConstraintToCheck++;
         }
+      }
     }
 
-    if (DEBUG_REORDER) IO.println("changed pruning object");
+    if (DEBUG_REORDER) {
+      IO.println("changed pruning object");
+    }
   }
 
   /**
@@ -1376,21 +1477,25 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       GeostObject o = variableObjectMap.get(v);
 
-      if (o == null)
+      if (o == null) {
         // can be ignored as the variable was singleton upon imposition.
         continue;
+      }
 
       // if it is a time variable, run time constraint
-      if (v == o.start || v == o.end || v == o.duration)
+      if (v == o.start || v == o.end || v == o.duration) {
         o.timeConstraint.consistencyStartPlusDurationEqEnd(store);
-      else if (v == o.shapeID)
+      } else if (v == o.shapeID) {
         // some shape ID was changed by some external source, remember it
         changedShapeID = true;
+      }
 
       objectList4Flush.add(o);
     }
 
-    for (GeostObject o : objectList4Flush) onObjectUpdate(o);
+    for (GeostObject o : objectList4Flush) {
+      onObjectUpdate(o);
+    }
   }
 
   /**
@@ -1401,17 +1506,23 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   public final void queueObject(GeostObject o) {
 
     // Important to keep and ensure.
-    assert (inConsistency) : "It is improperly called outside the consistency function.";
+    assert inConsistency : "It is improperly called outside the consistency function.";
 
     if (!(o.isGrounded() && pruneIfGrounded[o.no] == false)) {
 
-      if (DEBUG_OBJECT_GROUNDING) IO.println("queued " + o);
+      if (DEBUG_OBJECT_GROUNDING) {
+        IO.println("queued " + o);
+      }
 
-      if (GATHER_STATS) queuedObjectCount++;
+      if (GATHER_STATS) {
+        queuedObjectCount++;
+      }
 
       objectQueue.add(o);
 
-    } else if (DEBUG_OBJECT_GROUNDING) IO.println("The object " + o + " was skipped.");
+    } else if (DEBUG_OBJECT_GROUNDING) {
+      IO.println("The object " + o + " was skipped.");
+    }
   }
 
   /**
@@ -1428,11 +1539,17 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   protected void onObjectUpdate(GeostObject o) {
 
-    if (GATHER_STATS) onObjectUpdateCount++;
+    if (GATHER_STATS) {
+      onObjectUpdateCount++;
+    }
 
-    if (DEBUG_MAIN) IO.println("adding objects to the queue");
+    if (DEBUG_MAIN) {
+      IO.println("adding objects to the queue");
+    }
 
-    for (ExternalConstraint ec : externalConstraints) ec.onObjectUpdate(o);
+    for (ExternalConstraint ec : externalConstraints) {
+      ec.onObjectUpdate(o);
+    }
 
     // no need to queue objects if backtracking
     if (!backtracking) {
@@ -1440,11 +1557,15 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       // add object to the set of this level
       updatedObjectSet.add(o);
 
-      if (DEBUG_BACKTRACK) IO.println("updating object " + o);
+      if (DEBUG_BACKTRACK) {
+        IO.println("updating object " + o);
+      }
 
       if (allLinked) {
         // executing the else part would end up in the same result
-        for (GeostObject lo : objects) queueObject(lo);
+        for (GeostObject lo : objects) {
+          queueObject(lo);
+        }
 
       } else {
 
@@ -1455,7 +1576,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         for (ExternalConstraint ec : externalConstraints) {
 
           ec.addPrunableObjects(o, temporaryObjectSet);
-          while (!temporaryObjectSet.isEmpty()) queueObject(temporaryObjectSet.removeFirst());
+          while (!temporaryObjectSet.isEmpty()) {
+            queueObject(temporaryObjectSet.removeFirst());
+          }
         }
       }
     }
@@ -1467,14 +1590,20 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     GeostObject o = variableObjectMap.get(var);
 
-    if (o == null) return Domain.NONE;
+    if (o == null) {
+      return Domain.NONE;
+    }
 
-    if (o.shapeID == var) return IntDomain.ANY;
+    if (o.shapeID == var) {
+      return IntDomain.ANY;
+    }
 
     return IntDomain.BOUND;
   }
@@ -1508,7 +1637,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   @Override
   public void increaseWeight() {
 
-    if (increaseWeight) for (GeostObject o : objects) for (Var v : o.getVariables()) v.weight++;
+    if (increaseWeight) {
+      for (GeostObject o : objects) {
+        for (Var v : o.getVariables()) {
+          v.weight++;
+        }
+      }
+    }
   }
 
   @Override
@@ -1528,11 +1663,17 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       o.onGround(v);
 
-      if (DEBUG_OBJECT_GROUNDING) IO.println("grounding " + v);
+      if (DEBUG_OBJECT_GROUNDING) {
+        IO.println("grounding " + v);
+      }
 
-      if (!inConsistency) pruneIfGrounded[o.no] = true;
+      if (!inConsistency) {
+        pruneIfGrounded[o.no] = true;
+      }
 
-      if (lastLevelLastVar.stamp() < store.level) lastLevelLastVar.update(groundedVars.size());
+      if (lastLevelLastVar.stamp() < store.level) {
+        lastLevelLastVar.update(groundedVars.size());
+      }
 
       groundedVars.add(v);
     }
@@ -1551,7 +1692,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
 
       // if it is a time variable, run time constraint
-      if (v == o.start || v == o.end || v == o.duration) oneTimeVarChanged = true;
+      if (v == o.start || v == o.end || v == o.duration) {
+        oneTimeVarChanged = true;
+      }
 
       onObjectUpdate(o);
 
@@ -1560,14 +1703,16 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       variableQueue.add(v);
     }
 
-    if (DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING)
-      if (inConsistency)
+    if (DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
+      if (inConsistency) {
         IO.println("The variable " + v + " was pruned by geost consistency function itself");
-      else
+      } else {
         IO.println(
             "The variable "
                 + v
                 + " was pruned by outside constraints and it is queued as changed within geost");
+      }
+    }
   }
 
   @Override
@@ -1575,14 +1720,19 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   public void removeLevel(int level) {
 
     // added.
-    if (level > currentLevel) return;
+    if (level > currentLevel) {
+      return;
+    }
 
-    if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING)
+    if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
       IO.println("removeLevel(" + store.level + ")");
+    }
 
     assert !inConsistency;
 
-    if (firstConsistencyLevel == level) firstConsistencyCheck = true;
+    if (firstConsistencyLevel == level) {
+      firstConsistencyCheck = true;
+    }
 
     removeLimit = lastLevelLastVar.value();
 
@@ -1595,28 +1745,36 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     assert !inConsistency;
 
     // added. to mask a bug if multiple remove levels are being executed for the same level.
-    if (level > currentLevel) return;
+    if (level > currentLevel) {
+      return;
+    }
 
-    if (lastLevelLastVar.value() < removeLimit)
+    if (lastLevelLastVar.value() < removeLimit) {
       for (int i = groundedVars.size() - 1; i >= removeLimit; i--) {
 
         Var v = groundedVars.remove(i);
         assert v != null;
 
-        if (DEBUG_OBJECT_GROUNDING) IO.println("The variable " + v + " is being ungrounded");
+        if (DEBUG_OBJECT_GROUNDING) {
+          IO.println("The variable " + v + " is being ungrounded");
+        }
 
         // no need to check for null as only not null variables are put in groundedVars.
         variableObjectMap.get(v).onUnGround(v);
       }
+    }
 
     backtracking = true;
 
-    if (!updatedObjectSet.isEmpty())
+    if (!updatedObjectSet.isEmpty()) {
       for (GeostObject o : updatedObjectSet) {
 
         onObjectUpdate(o);
-        if (DEBUG_BACKTRACK) IO.println("restored object " + o);
+        if (DEBUG_BACKTRACK) {
+          IO.println("restored object " + o);
+        }
       }
+    }
 
     updatedObjectSet.clear();
 
@@ -1631,7 +1789,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       //		// else it was already updated
       onObjectUpdate(o);
 
-      if (DEBUG_BACKTRACK) IO.println("restored object " + o);
+      if (DEBUG_BACKTRACK) {
+        IO.println("restored object " + o);
+      }
     }
 
     // updatedObjectSet.clear();

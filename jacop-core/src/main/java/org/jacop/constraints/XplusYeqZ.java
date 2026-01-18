@@ -156,11 +156,17 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
       store.propagationHasOccurred = false;
 
-      if (z.singleton() && y.singleton()) x.domain.inComplement(store.level, x, z.min() - y.min());
+      if (z.singleton() && y.singleton()) {
+        x.domain.inComplement(store.level, x, z.min() - y.min());
+      }
 
-      if (z.singleton() && x.singleton()) y.domain.inComplement(store.level, y, z.min() - x.min());
+      if (z.singleton() && x.singleton()) {
+        y.domain.inComplement(store.level, y, z.min() - x.min());
+      }
 
-      if (x.singleton() && y.singleton()) z.domain.inComplement(store.level, z, x.min() + y.min());
+      if (x.singleton() && y.singleton()) {
+        z.domain.inComplement(store.level, z, x.min() + y.min());
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -168,7 +174,7 @@ public class XplusYeqZ extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
     IntDomain xDom = x.dom(), yDom = y.dom(), zDom = z.dom();
-    return (xDom.max() + yDom.max() < zDom.min() || xDom.min() + yDom.min() > zDom.max());
+    return xDom.max() + yDom.max() < zDom.min() || xDom.min() + yDom.min() > zDom.max();
   }
 
   @Override

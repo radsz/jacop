@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.XeqY;
 import org.jacop.core.*;
 
 /**
@@ -57,14 +58,14 @@ class ChannelMap {
   public void add(IntVar x, int v, IntVar b) {
     Map<Integer, IntVar> map = cs.get(x);
 
-    if (map != null)
+    if (map != null) {
       if (map.get(v) != null) {
-        support.delayedConstraints.add(new org.jacop.constraints.XeqY(map.get(v), b));
+        support.delayedConstraints.add(new XeqY(map.get(v), b));
       } else {
         map.put(v, b);
         cs.put(x, map);
       }
-    else {
+    } else {
       map = new HashMap<>();
       map.put(v, b);
       cs.put(x, map);
@@ -74,8 +75,11 @@ class ChannelMap {
   public int size(IntVar v) {
     Map<Integer, IntVar> m = cs.get(v);
 
-    if (m != null) return m.size();
-    else return 0;
+    if (m != null) {
+      return m.size();
+    } else {
+      return 0;
+    }
   }
 
   public String toString() {

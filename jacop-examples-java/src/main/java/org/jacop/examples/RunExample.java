@@ -70,7 +70,7 @@ public class RunExample {
       fz2jacop.callMain(args);
       return;
 
-    } else
+    } else {
       try {
         // load the target class, and get a reference to its main method
         Class<?>[] mainArgs = new Class[1];
@@ -116,5 +116,6 @@ public class RunExample {
         // e.printStackTrace();
         System.exit(-1);
       }
+    }
   }
 }

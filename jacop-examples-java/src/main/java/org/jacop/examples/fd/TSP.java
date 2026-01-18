@@ -58,7 +58,9 @@ public class TSP extends ExampleFD {
 
     example.model();
 
-    if (example.searchMaxRegretForMatrixOptimal()) IO.println("Solution(s) found");
+    if (example.searchMaxRegretForMatrixOptimal()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override
@@ -138,8 +140,11 @@ public class TSP extends ExampleFD {
     T2 = System.currentTimeMillis();
     T = T2 - T1;
 
-    if (result) IO.println("Variables " + store.toStringOrderedVars());
-    else IO.println("Failed to find any solution");
+    if (result) {
+      IO.println("Variables " + store.toStringOrderedVars());
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + T + " ms");
 

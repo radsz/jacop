@@ -119,10 +119,14 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
    * @return domain that specifies Pascal triangle element at positions (level, place)
    */
   private IntDomain getPascal(int level, int place) {
-    if (level == this.maxLevel) return this.max.cloneLight();
+    if (level == this.maxLevel) {
+      return this.max.cloneLight();
+    }
 
     IntDomain ret = this.min.cloneLight();
-    if (level == 0) return ret;
+    if (level == 0) {
+      return ret;
+    }
     int maxPlace = this.getMaxPascal(level);
     assert (place <= maxPlace);
     int occLevel = this.maxLevel - 1;
@@ -165,10 +169,13 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
    * @return The element on this position in Pascal's triangle.
    */
   private int getPascalNbr(int level, int place) {
-    if (level < 1 || place < 1) return 1;
-    if (place == (level + 1) || place == 1) return 1;
-    else {
-      return (getPascalNbr(level - 1, place - 1) + getPascalNbr(level - 1, place));
+    if (level < 1 || place < 1) {
+      return 1;
+    }
+    if (place == (level + 1) || place == 1) {
+      return 1;
+    } else {
+      return getPascalNbr(level - 1, place - 1) + getPascalNbr(level - 1, place);
     }
   }
 }

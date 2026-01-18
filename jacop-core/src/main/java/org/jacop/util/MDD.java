@@ -95,7 +95,7 @@ public class MDD {
    * After reducing MDD adding tuples is not allowed to maintain cannonic and minimal
    * representation.
    */
-  private boolean extendable = false;
+  private boolean extendable;
 
   /**
    * It creates an MDD. Please note that diagram argument which is potentially a very large array
@@ -118,9 +118,10 @@ public class MDD {
       this.views[i] = new IndexDomainView(vars[i], true);
       assert (domainLimits[i] >= vars[i].getSize())
           : i + "-th variable has a size larger than its domain limit size";
-      if (domainLimits[i] < vars[i].domain.getSize())
+      if (domainLimits[i] < vars[i].domain.getSize()) {
         throw new IllegalArgumentException(
             "domain limites are smaller than actual domain of an mdd.");
+      }
       this.domainLimits[i] = domainLimits[i];
     }
 
@@ -158,7 +159,9 @@ public class MDD {
     for (int i = 0; i < vars.length; i++) {
       views[i] = new IndexDomainView(vars[i], true);
       domainLimits[i] = vars[i].domain.getSize();
-      if (domainLimits[i] < minimumDomainLimits[i]) domainLimits[i] = minimumDomainLimits[i];
+      if (domainLimits[i] < minimumDomainLimits[i]) {
+        domainLimits[i] = minimumDomainLimits[i];
+      }
     }
 
     freePosition = domainLimits[0];
@@ -202,7 +205,9 @@ public class MDD {
       views[i] = new IndexDomainView(vars[i], true);
       domainLimits[i] = vars[i].domain.getSize();
 
-      if (maxDomainSize < domainLimits[i]) maxDomainSize = domainLimits[i];
+      if (maxDomainSize < domainLimits[i]) {
+        maxDomainSize = domainLimits[i];
+      }
     }
 
     freePosition = domainLimits[0];
@@ -285,7 +290,9 @@ public class MDD {
 
     for (int i = 0; i < vars.length; i++) {
       result.views[i] = new IndexDomainView(vars[i], true);
-      if (domainLimits[i] < vars[i].domain.getSize()) return null;
+      if (domainLimits[i] < vars[i].domain.getSize()) {
+        return null;
+      }
       result.domainLimits[i] = domainLimits[i];
     }
 
@@ -302,7 +309,7 @@ public class MDD {
    */
   public void addTuple(int[] tuple) {
 
-    assert (extendable) : "MDD can not be extended after shrinking operation was performed";
+    assert extendable : "MDD can not be extended after shrinking operation was performed";
 
     int nodePosition = 0;
     int varNo = 0;
@@ -317,8 +324,9 @@ public class MDD {
 
       if (diagram[nodePosition] == NOEDGE) {
         // new node and path.
-        if (varNo == tuple.length) diagram[nodePosition] = TERMINAL;
-        else {
+        if (varNo == tuple.length) {
+          diagram[nodePosition] = TERMINAL;
+        } else {
           diagram[nodePosition] = freePosition;
           freePosition += domainLimits[varNo];
           nodePosition = diagram[nodePosition];
@@ -340,8 +348,11 @@ public class MDD {
 
       int[] newDiagram;
 
-      if (diagram.length * 2 < size) newDiagram = new int[size * 2];
-      else newDiagram = new int[diagram.length * 2];
+      if (diagram.length * 2 < size) {
+        newDiagram = new int[size * 2];
+      } else {
+        newDiagram = new int[diagram.length * 2];
+      }
 
       System.arraycopy(diagram, 0, newDiagram, 0, diagram.length);
       diagram = newDiagram;
@@ -389,17 +400,20 @@ public class MDD {
         shiftPosition++;
       }
 
-      if (positionInShrankDiagram < shrankDiagram.length)
+      if (positionInShrankDiagram < shrankDiagram.length) {
         System.arraycopy(
             diagram,
             range[shiftPosition - 1] + previousShift,
             shrankDiagram,
             positionInShrankDiagram,
             shrankDiagram.length - positionInShrankDiagram);
+      }
 
       for (int i = 0; i < shrankDiagram.length; i++) {
 
-        if (shrankDiagram[i] == TERMINAL || shrankDiagram[i] == NOEDGE) continue;
+        if (shrankDiagram[i] == TERMINAL || shrankDiagram[i] == NOEDGE) {
+          continue;
+        }
 
         int shiftForI = shift[findRange(shrankDiagram[i], range)];
         shrankDiagram[i] -= shiftForI;
@@ -429,7 +443,9 @@ public class MDD {
         }
       }
 
-      if (badTuple) continue;
+      if (badTuple) {
+        continue;
+      }
 
       for (int i = 0; i < tuple.length; i++) {
 
@@ -447,8 +463,9 @@ public class MDD {
         // it works with i+1 not i value.
         if (diagram[nodePosition] == NOEDGE) {
           // new node and path.
-          if (i + 1 == tuple.length) diagram[nodePosition] = TERMINAL;
-          else {
+          if (i + 1 == tuple.length) {
+            diagram[nodePosition] = TERMINAL;
+          } else {
             diagram[nodePosition] = freePosition;
             freePosition += domainLimits[i + 1];
             nodePosition = diagram[nodePosition];
@@ -476,13 +493,17 @@ public class MDD {
 
     if (debugAll) {
       IO.println("Looking for " + value);
-      for (int v : values) IO.print("val " + v);
+      for (int v : values) {
+        IO.print("val " + v);
+      }
       IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) {
+        IO.println("left " + left + " right " + right + " position " + position);
+      }
 
       if (values[position] > value) {
         right = position;
@@ -493,9 +514,13 @@ public class MDD {
       position = (left + right) >> 1;
     }
 
-    if (values[left] == value) return left;
+    if (values[left] == value) {
+      return left;
+    }
 
-    if (values[right] == value) return right;
+    if (values[right] == value) {
+      return right;
+    }
 
     return -1;
   }
@@ -509,13 +534,17 @@ public class MDD {
 
     if (debugAll) {
       IO.println("Looking for " + value);
-      for (int v : values) IO.print("val " + v);
+      for (int v : values) {
+        IO.print("val " + v);
+      }
       IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
-      if (debugAll) IO.println("left " + left + " right " + right + " position " + position);
+      if (debugAll) {
+        IO.println("left " + left + " right " + right + " position " + position);
+      }
 
       if (values[position] > value) {
         right = position;
@@ -526,8 +555,11 @@ public class MDD {
       position = (left + right) >> 1;
     }
 
-    if (values[right] <= value) return right;
-    else return left;
+    if (values[right] <= value) {
+      return right;
+    } else {
+      return left;
+    }
   }
 
   /** It reduces MDD to minimal size. */
@@ -588,22 +620,23 @@ public class MDD {
       }
     }
 
-    if (same[level][numberOfChildren] != null)
+    if (same[level][numberOfChildren] != null) {
       for (int j = same[level][numberOfChildren].size() - 1; j >= 0; j--) {
         int[] currentNode = same[level][numberOfChildren].get(j);
         boolean equal = true;
-        for (int i = currentNode.length - 1; i >= 0 && equal; i--)
+        for (int i = currentNode.length - 1; i >= 0 && equal; i--) {
           if (currentNode[i] != nodeChildren[i]) {
             equal = false;
             break;
           }
+        }
         if (equal) {
           reducedNodes.put(node, domainLimits[level]);
           memorySavings += domainLimits[level];
           return id[level][numberOfChildren].get(j);
         }
       }
-    else {
+    } else {
 
       same[level][numberOfChildren] = new ArrayList<>();
       id[level][numberOfChildren] = new ArrayList<>();
@@ -627,13 +660,21 @@ public class MDD {
 
     int position = views[0].indexOfValue(tuple[0]);
 
-    if (position == -1) return false;
+    if (position == -1) {
+      return false;
+    }
 
     for (int i = 1; i < tuple.length; i++) {
-      if (diagram[position] == NOEDGE) return false;
-      if (diagram[position] == TERMINAL) return true;
+      if (diagram[position] == NOEDGE) {
+        return false;
+      }
+      if (diagram[position] == TERMINAL) {
+        return true;
+      }
       int delta = views[i].indexOfValue(tuple[i]);
-      if (delta == -1) return false;
+      if (delta == -1) {
+        return false;
+      }
       position = diagram[position] + delta;
     }
 
@@ -646,14 +687,22 @@ public class MDD {
    */
   public boolean checkIfAllowed() {
 
-    if (!vars[0].singleton()) return false;
+    if (!vars[0].singleton()) {
+      return false;
+    }
 
     int position = views[0].indexOfValue(vars[0].value());
 
     for (int i = 1; i < vars.length; i++) {
-      if (diagram[position] == NOEDGE) return false;
-      if (diagram[position] == TERMINAL) return true;
-      if (!vars[i].singleton()) return false;
+      if (diagram[position] == NOEDGE) {
+        return false;
+      }
+      if (diagram[position] == TERMINAL) {
+        return true;
+      }
+      if (!vars[i].singleton()) {
+        return false;
+      }
       int delta = views[i].indexOfValue(vars[i].value());
       position = diagram[position] + delta;
     }
@@ -665,8 +714,9 @@ public class MDD {
   public String toString() {
 
     StringBuilder buffer = new StringBuilder("");
-    for (int i = 0; i < diagram.length && i < freePosition; i++)
+    for (int i = 0; i < diagram.length && i < freePosition; i++) {
       buffer.append(diagram[i]).append(" ");
+    }
 
     return buffer.toString().trim();
   }

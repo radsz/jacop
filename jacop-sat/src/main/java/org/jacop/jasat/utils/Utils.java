@@ -65,7 +65,9 @@ public final class Utils {
     if (size > 4) {
       System.arraycopy(array, 0, answer, 0, size);
     } else {
-      if (size >= 0) System.arraycopy(array, 0, answer, 0, size);
+      if (size >= 0) {
+        System.arraycopy(array, 0, answer, 0, size);
+      }
     }
 
     // store the old array (if not too large)
@@ -111,7 +113,9 @@ public final class Utils {
       Integer[] answer = new Integer[2 * size];
       System.arraycopy(array, 0, answer, 0, array.length);
       return answer;
-    } else return array;
+    } else {
+      return array;
+    }
   }
 
   public static <E> Set<E>[] ensure(HashSet<E>[] array, int size) {
@@ -120,7 +124,9 @@ public final class Utils {
       Set<E>[] answer = (HashSet<E>[]) new HashSet[2 * size];
       System.arraycopy(array, 0, answer, 0, array.length);
       return answer;
-    } else return array;
+    } else {
+      return array;
+    }
   }
 
   /*
@@ -137,7 +143,7 @@ public final class Utils {
   public static String showClause(int[] clause) {
     StringBuilder sb = new StringBuilder();
 
-    for (int i = 0; i < clause.length - 1; ++i) {
+    for (int i = 0; i < clause.length - 1; i++) {
       int literal = clause[i];
       sb.append(literal).append(" ");
     }
@@ -166,4 +172,6 @@ public final class Utils {
   public static int not(int i) {
     return i | Integer.MIN_VALUE;
   }
+
+  private Utils() {}
 }

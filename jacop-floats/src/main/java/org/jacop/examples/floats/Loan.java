@@ -50,8 +50,9 @@ public class Loan {
 
     Loan example = new Loan();
 
-    if (args.length != 4) IO.println("Wring number of parameters");
-    else {
+    if (args.length != 4) {
+      IO.println("Wring number of parameters");
+    } else {
       double i = Double.parseDouble(args[0]);
       double p = Double.parseDouble(args[1]);
       double r = Double.parseDouble(args[2]);

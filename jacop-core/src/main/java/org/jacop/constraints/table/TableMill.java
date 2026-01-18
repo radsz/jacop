@@ -53,7 +53,9 @@ public class TableMill {
     ArrayList<int[]> table = linearSupport(x, w, b, 0, 0, support, assignment);
 
     int[][] t = null;
-    if (table != null) t = table.toArray(new int[table.size()][x.length]);
+    if (table != null) {
+      t = table.toArray(new int[table.size()][x.length]);
+    }
 
     return t;
   }
@@ -66,9 +68,11 @@ public class TableMill {
         int[] a = new int[assignment.length];
         System.arraycopy(assignment, 0, a, 0, assignment.length);
         support.add(a);
-        if (support.size() > tableMaxSize) return null;
+        if (support.size() > tableMaxSize) {
+          return null;
+        }
       }
-    } else
+    } else {
       for (ValueEnumeration val = x[index].domain.valueEnumeration(); val.hasMoreElements(); ) {
         int element = val.nextElement();
 
@@ -77,6 +81,7 @@ public class TableMill {
         assignment[index] = element;
         linearSupport(x, w, b, newSum, index + 1, support, assignment);
       }
+    }
     return support;
   }
 
@@ -87,11 +92,17 @@ public class TableMill {
     for (ValueEnumeration val = index.domain.valueEnumeration(); val.hasMoreElements(); ) {
       int e = val.nextElement();
       int listEl = list[e - 1 - offset];
-      if (valDom.contains(listEl)) support.add(new int[] {e, listEl});
-      if (support.size() > tableMaxSize) return null;
+      if (valDom.contains(listEl)) {
+        support.add(new int[] {e, listEl});
+      }
+      if (support.size() > tableMaxSize) {
+        return null;
+      }
     }
 
     int[][] t = support.toArray(new int[support.size()][2]);
     return t;
   }
+
+  private TableMill() {}
 }

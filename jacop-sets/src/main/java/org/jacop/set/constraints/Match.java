@@ -124,7 +124,9 @@ public class Match extends Constraint implements SatisfiedPresent {
         if (i >= list.length - sizeOfaGLB) {
           // -1 since indexing of arrays starts from 0.
           int minValueFromGLB = glbA.getElementAt(sizeOfaGLB - list.length + i);
-          if (minValueFromGLB > minValue) minValue = minValueFromGLB;
+          if (minValueFromGLB > minValue) {
+            minValue = minValueFromGLB;
+          }
         }
 
         list[i].domain.inMin(store.level, list[i], minValue);
@@ -133,7 +135,9 @@ public class Match extends Constraint implements SatisfiedPresent {
 
         if (i < sizeOfaGLB) {
           int maxValueFromGLB = glbA.getElementAt(i);
-          if (maxValueFromGLB < maxValue) maxValue = maxValueFromGLB;
+          if (maxValueFromGLB < maxValue) {
+            maxValue = maxValueFromGLB;
+          }
         }
 
         list[i].domain.inMax(store.level, list[i], maxValue);
@@ -141,8 +145,12 @@ public class Match extends Constraint implements SatisfiedPresent {
 
       IntDomain lubFromList = list[0].domain.cloneLight();
       for (int i = 0; i < list.length; i++) {
-        if (list[i].singleton()) a.domain.inGLB(store.level, a, list[i].value());
-        if (i > 0) lubFromList.unionAdapt(list[i].domain);
+        if (list[i].singleton()) {
+          a.domain.inGLB(store.level, a, list[i].value());
+        }
+        if (i > 0) {
+          lubFromList.unionAdapt(list[i].domain);
+        }
       }
       a.domain.inLUB(store.level, a, lubFromList);
     }
@@ -154,11 +162,16 @@ public class Match extends Constraint implements SatisfiedPresent {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == a) return SetDomain.ANY;
-    else return IntDomain.ANY;
+    if (var == a) {
+      return SetDomain.ANY;
+    } else {
+      return IntDomain.ANY;
+    }
   }
 
   @Override
@@ -169,14 +182,18 @@ public class Match extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    if (!grounded()) return false;
+    if (!grounded()) {
+      return false;
+    }
 
     if (a.domain.glb().getSize() == list.length) {
 
       ValueEnumeration ve = a.domain.glb().valueEnumeration();
 
       for (IntVar intVar : list) {
-        if (ve.nextElement() != intVar.value()) return false;
+        if (ve.nextElement() != intVar.value()) {
+          return false;
+        }
       }
 
       return true;
@@ -191,7 +208,9 @@ public class Match extends Constraint implements SatisfiedPresent {
 
     StringBuilder ret = new StringBuilder(id());
     ret.append(" : Match(").append(a).append(", [ ");
-    for (Var fdv : list) ret.append(fdv).append(" ");
+    for (Var fdv : list) {
+      ret.append(fdv).append(" ");
+    }
     ret.append("] )");
     return ret.toString();
   }

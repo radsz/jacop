@@ -41,7 +41,7 @@ public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumera
 
   final FloatIntervalDomain domain;
 
-  FloatInterval i = null;
+  FloatInterval i;
 
   int intervalNo = -1;
 
@@ -59,7 +59,7 @@ public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumera
 
   @Override
   public boolean hasMoreElements() {
-    return (intervalNo < maxIntervalNo);
+    return intervalNo < maxIntervalNo;
   }
 
   @Override

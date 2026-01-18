@@ -90,7 +90,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 1) ¬ [x<=d] \/ [x<=d+1]
        */
-      for (int i = domain.min; i < domain.max - 1; ++i) {
+      for (int i = domain.min; i < domain.max - 1; i++) {
         clause.clear();
         // System.out.println(i);
         clause.add(-domain.cpValueToBoolVar(i, false));
@@ -101,7 +101,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 2) ¬ [x=d] \/ [x<=d]
        */
-      for (int i = domain.min; i < domain.max; ++i) {
+      for (int i = domain.min; i < domain.max; i++) {
         clause.clear();
         clause.add(-domain.cpValueToBoolVar(i, true));
         clause.add(domain.cpValueToBoolVar(i, false));
@@ -111,7 +111,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 3) ¬ [x=d] \/ ¬ [x<=d-1]
        */
-      for (int i = domain.min + 1; i <= domain.max; ++i) {
+      for (int i = domain.min + 1; i <= domain.max; i++) {
         clause.clear();
         clause.add(-domain.cpValueToBoolVar(i, true));
         clause.add(-domain.cpValueToBoolVar(i - 1, false));
@@ -129,7 +129,7 @@ public final class DomainTranslator implements WrapperComponent {
       /*
        * rule 5) [x=d] \/ ¬ [x<=d] \/ [x<=d-1]
        */
-      for (int i = domain.min + 1; i < domain.max; ++i) {
+      for (int i = domain.min + 1; i < domain.max; i++) {
         clause.clear();
         clause.add(domain.cpValueToBoolVar(i, true));
         clause.add(-domain.cpValueToBoolVar(i, false));

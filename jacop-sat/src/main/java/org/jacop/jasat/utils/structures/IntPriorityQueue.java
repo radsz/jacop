@@ -88,8 +88,11 @@ public final class IntPriorityQueue {
    */
   public int getPriority(int i) {
     Node n = map.get(i);
-    if (n == null) return 0;
-    else return n.priority;
+    if (n == null) {
+      return 0;
+    } else {
+      return n.priority;
+    }
   }
 
   /**
@@ -136,7 +139,9 @@ public final class IntPriorityQueue {
    * @return this node, or null
    */
   private Node findLastNode() {
-    if (root == null) return null;
+    if (root == null) {
+      return null;
+    }
 
     Node current = root;
     int depth = root.depth;

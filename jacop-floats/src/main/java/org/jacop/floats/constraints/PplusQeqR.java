@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
@@ -123,11 +124,17 @@ public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableCons
 
       store.propagationHasOccurred = false;
 
-      if (r.singleton() && q.singleton()) p.domain.inComplement(store.level, p, r.min() - q.min());
+      if (r.singleton() && q.singleton()) {
+        p.domain.inComplement(store.level, p, r.min() - q.min());
+      }
 
-      if (r.singleton() && p.singleton()) q.domain.inComplement(store.level, q, r.min() - p.min());
+      if (r.singleton() && p.singleton()) {
+        q.domain.inComplement(store.level, q, r.min() - p.min());
+      }
 
-      if (p.singleton() && q.singleton()) r.domain.inComplement(store.level, r, p.min() + q.min());
+      if (p.singleton() && q.singleton()) {
+        r.domain.inComplement(store.level, r, p.min() + q.min());
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -135,16 +142,16 @@ public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableCons
   @Override
   public boolean notSatisfied() {
     FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
-    return (pDom.max() + qDom.max() < rDom.min() || pDom.min() + qDom.min() > rDom.max());
+    return pDom.max() + qDom.max() < rDom.min() || pDom.min() + qDom.min() > rDom.max();
   }
 
   @Override
   public boolean satisfied() {
-    return (p.singleton()
+    return p.singleton()
         && q.singleton()
         && r.singleton()
         && r.value() - p.value() - q.value()
-            < FloatDomain.epsilon(r.value() - p.value() - q.value()));
+            < FloatDomain.epsilon(r.value() - p.value() - q.value());
   }
 
   @Override
@@ -153,7 +160,7 @@ public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableCons
     return id() + " : PplusQeqR(" + p + ", " + q + ", " + r + " )";
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
     if (f.equals(r)) {
       // f = p + q
       // f' = d(p) + d(q)

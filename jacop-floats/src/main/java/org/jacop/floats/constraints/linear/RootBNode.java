@@ -74,22 +74,34 @@ public class RootBNode extends BNode {
 
     switch (rel) {
       case Linear.eq:
-        if (min > val || max < val) throw Store.failException;
+        if (min > val || max < val) {
+          throw Store.failException;
+        }
         break;
       case Linear.lt:
-        if (min >= val) throw Store.failException;
+        if (min >= val) {
+          throw Store.failException;
+        }
         break;
       case Linear.le:
-        if (min > val) throw Store.failException;
+        if (min > val) {
+          throw Store.failException;
+        }
         break;
       case Linear.gt:
-        if (max <= val) throw Store.failException;
+        if (max <= val) {
+          throw Store.failException;
+        }
         break;
       case Linear.ge:
-        if (max < val) throw Store.failException;
+        if (max < val) {
+          throw Store.failException;
+        }
         break;
       case Linear.ne:
-        if (min == max && min == val) throw Store.failException;
+        if (min == max && min == val) {
+          throw Store.failException;
+        }
         break;
       default:
         throw new RuntimeException("Internal error in " + getClass().getName());
@@ -109,25 +121,31 @@ public class RootBNode extends BNode {
     // }
 
     // =====
-    if (min > current_min)
+    if (min > current_min) {
       if (max < current_max) {
 
-        if (min > max) throw Store.failException;
+        if (min > max) {
+          throw Store.failException;
+        }
 
         bound.update(min, max, lb, ub);
 
         return true;
       } else {
 
-        if (min > current_max) throw Store.failException;
+        if (min > current_max) {
+          throw Store.failException;
+        }
 
         bound.update(min, current_max, lb, ub);
 
         return true;
       }
-    else if (max < current_max) {
+    } else if (max < current_max) {
 
-      if (current_min > max) throw Store.failException;
+      if (current_min > max) {
+        throw Store.failException;
+      }
 
       bound.update(current_min, max, lb, ub);
 
@@ -155,17 +173,23 @@ public class RootBNode extends BNode {
         max = val;
         break;
       case Linear.ne: // =============================================
-        if (val >= min && val <= max)
+        if (val >= min && val <= max) {
           if (min == val) {
             if (FloatDomain.next(min) <= max) {
               min = FloatDomain.next(min);
-            } else throw Store.failException;
+            } else {
+              throw Store.failException;
+            }
           } else {
-            if (max == val)
+            if (max == val) {
               if (FloatDomain.previous(max) >= min) {
                 max = FloatDomain.previous(max);
-              } else throw Store.failException;
+              } else {
+                throw Store.failException;
+              }
+            }
           }
+        }
         break;
       case Linear.gt: // =============================================
         min = FloatDomain.next(val);

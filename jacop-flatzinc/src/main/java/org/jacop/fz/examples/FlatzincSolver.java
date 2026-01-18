@@ -85,11 +85,15 @@ public class FlatzincSolver {
     Var cost = fl.getCost();
 
     boolean result = false;
-    if (cost != null) result = label.labeling(fl.getStore(), select, cost);
-    else result = label.labeling(fl.getStore(), select);
+    if (cost != null) {
+      result = label.labeling(fl.getStore(), select, cost);
+    } else {
+      result = label.labeling(fl.getStore(), select);
+    }
 
-    if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null)
+    if (!fl.getOptions().getAll() && fl.getSolve().lastSolution != null) {
       IO.print(fl.getSolve().lastSolution);
+    }
 
     fl.getSolve().statistics(result);
 
@@ -99,8 +103,11 @@ public class FlatzincSolver {
 
     // System.out.println("cost: " + fl.getCost());
 
-    if (result) IO.println("*** Yes");
-    else IO.println("*** No");
+    if (result) {
+      IO.println("*** Yes");
+    } else {
+      IO.println("*** No");
+    }
 
     T2 = System.currentTimeMillis();
     T = T2 - T1;

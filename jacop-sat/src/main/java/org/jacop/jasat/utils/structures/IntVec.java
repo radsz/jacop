@@ -50,7 +50,7 @@ public final class IntVec implements Iterable<Integer> {
   public int[] array;
 
   // number of elements
-  public int numElem = 0;
+  public int numElem;
 
   // memory pool
   public final MemoryPool pool;
@@ -74,7 +74,9 @@ public final class IntVec implements Iterable<Integer> {
   public IntVec(MemoryPool pool, Iterable<Integer> clause) {
     this(pool);
 
-    for (int i : clause) add(i);
+    for (int i : clause) {
+      add(i);
+    }
   }
 
   /**
@@ -144,7 +146,9 @@ public final class IntVec implements Iterable<Integer> {
 
     // how many elements to move
     int numToCopy = numElem - index - 1;
-    if (numToCopy > 0) System.arraycopy(array, index + 1, array, index, numToCopy);
+    if (numToCopy > 0) {
+      System.arraycopy(array, index + 1, array, index, numToCopy);
+    }
   }
 
   /**
@@ -159,8 +163,11 @@ public final class IntVec implements Iterable<Integer> {
 
     numElem--;
     // the last element ? easy !
-    if (index == numElem) return;
-    else array[index] = array[numElem];
+    if (index == numElem) {
+      return;
+    } else {
+      array[index] = array[numElem];
+    }
 
     // note: we just move the last element in place of the one we remove
   }
@@ -183,7 +190,9 @@ public final class IntVec implements Iterable<Integer> {
 
   public Iterator<Integer> iterator() {
     List<Integer> list = new ArrayList<>();
-    for (int i = 0; i < numElem; ++i) list.add(array[i]);
+    for (int i = 0; i < numElem; i++) {
+      list.add(array[i]);
+    }
     return list.iterator();
   }
 }

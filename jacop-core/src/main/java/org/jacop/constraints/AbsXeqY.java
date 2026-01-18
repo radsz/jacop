@@ -55,7 +55,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
   public final IntVar y;
 
   boolean firstConsistencyCheck = true;
-  boolean domainConsistent = false;
+  boolean domainConsistent;
   int firstConsistencyLevel;
 
   /**
@@ -89,13 +89,18 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
     domainConsistent = domConsistency;
 
-    if (domainConsistent) this.queueIndex = 1;
-    else this.queueIndex = 0;
+    if (domainConsistent) {
+      this.queueIndex = 1;
+    } else {
+      this.queueIndex = 0;
+    }
   }
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -107,8 +112,11 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
       firstConsistencyLevel = store.level;
     }
 
-    if (domainConsistent) domainConsistency(store);
-    else boundConsistency(store);
+    if (domainConsistent) {
+      domainConsistency(store);
+    } else {
+      boundConsistency(store);
+    }
   }
 
   void domainConsistency(final Store store) {
@@ -117,16 +125,19 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       store.propagationHasOccurred = false;
 
-      if (debugAll) IO.println("X " + x + " Y " + y);
+      if (debugAll) {
+        IO.println("X " + x + " Y " + y);
+      }
 
       IntervalDomain xDom;
 
-      if (x.domain.domainID() == IntDomain.IntervalDomainID) xDom = (IntervalDomain) x.domain;
-      else {
+      if (x.domain.domainID() == IntDomain.IntervalDomainID) {
+        xDom = (IntervalDomain) x.domain;
+      } else {
 
-        if (x.domain.domainID() == IntDomain.SmallDenseDomainID)
+        if (x.domain.domainID() == IntDomain.SmallDenseDomainID) {
           xDom = ((SmallDenseDomain) x.domain).toIntervalDomain();
-        else {
+        } else {
 
           xDom = new IntervalDomain();
           IntervalEnumeration enumer = x.domain.intervalEnumeration();
@@ -141,39 +152,56 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       int i = 0;
       Interval[] intervals = xDom.intervals;
-      for (; i < xDom.size; i++) if (intervals[i].max() > 0) break;
+      for (; i < xDom.size; i++) {
+        if (intervals[i].max() > 0) {
+          break;
+        }
+      }
 
       int j = i;
-      if (j == xDom.size) j--;
+      if (j == xDom.size) {
+        j--;
+      }
 
-      for (; j >= 0; j--)
-        if (intervals[j].max() <= 0) yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
+      for (; j >= 0; j--) {
+        if (intervals[j].max() <= 0) {
+          yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
+        }
+      }
 
       if (i < xDom.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
 
-        if (-intervals[i].min() > intervals[i].max()) yDom1.unionAdapt(0, -intervals[i].min());
-        else yDom1.unionAdapt(0, intervals[i].max());
+        if (-intervals[i].min() > intervals[i].max()) {
+          yDom1.unionAdapt(0, -intervals[i].min());
+        } else {
+          yDom1.unionAdapt(0, intervals[i].max());
+        }
       }
 
       IntervalDomain yDom = new IntervalDomain(xDom.size + 1);
 
-      for (; i < xDom.size; i++) yDom.unionAdapt(intervals[i]);
+      for (; i < xDom.size; i++) {
+        yDom.unionAdapt(intervals[i]);
+      }
 
       yDom.addDom(yDom1);
 
-      if (debugAll) IO.println("new Ydom " + yDom);
+      if (debugAll) {
+        IO.println("new Ydom " + yDom);
+      }
 
       // @todo, test more the change from yDom1 to yDom.
       y.domain.in(store.level, y, yDom);
 
       xDom = new IntervalDomain(xDom.size + 1);
 
-      if (y.domain.domainID() == IntDomain.IntervalDomainID) yDom = (IntervalDomain) y.domain;
-      else {
+      if (y.domain.domainID() == IntDomain.IntervalDomainID) {
+        yDom = (IntervalDomain) y.domain;
+      } else {
 
-        if (y.domain.domainID() == IntDomain.SmallDenseDomainID)
+        if (y.domain.domainID() == IntDomain.SmallDenseDomainID) {
           yDom = ((SmallDenseDomain) y.domain).toIntervalDomain();
-        else {
+        } else {
 
           yDom = new IntervalDomain();
           IntervalEnumeration enumer = y.domain.intervalEnumeration();
@@ -184,12 +212,15 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
         }
       }
 
-      for (i = yDom.size - 1; i >= 0; i--)
+      for (i = yDom.size - 1; i >= 0; i--) {
         xDom.unionAdapt(-yDom.intervals[i].max(), -yDom.intervals[i].min());
+      }
 
       xDom.addDom(yDom);
 
-      if (debugAll) IO.println("new Xdom " + xDom);
+      if (debugAll) {
+        IO.println("new Xdom " + xDom);
+      }
 
       x.domain.in(store.level, x, xDom);
 
@@ -220,8 +251,9 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
         y.domain.in(store.level, y, -x.max(), -x.min());
       } else { // x.min() < 0 && x.max() >= 0
         IntervalDomain xBound;
-        if (y.min() == 0) xBound = new IntervalDomain(-y.max(), y.max());
-        else {
+        if (y.min() == 0) {
+          xBound = new IntervalDomain(-y.max(), y.max());
+        } else {
           xBound = new IntervalDomain(-y.max(), -y.min());
           xBound.unionAdapt(new Interval(y.min(), y.max()));
         }
@@ -238,8 +270,11 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
   @Override
   protected int getDefaultNestedConsistencyPruningEvent() {
-    if (domainConsistent) return IntDomain.ANY;
-    else return IntDomain.BOUND;
+    if (domainConsistent) {
+      return IntDomain.ANY;
+    } else {
+      return IntDomain.BOUND;
+    }
   }
 
   @Override
@@ -254,8 +289,11 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    if (domainConsistent) return IntDomain.ANY;
-    else return IntDomain.BOUND;
+    if (domainConsistent) {
+      return IntDomain.ANY;
+    } else {
+      return IntDomain.BOUND;
+    }
   }
 
   @Override
@@ -272,8 +310,11 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       if (x.singleton()) {
 
-        if (x.value() >= 0) y.domain.inComplement(store.level, y, x.value());
-        else y.domain.inComplement(store.level, y, -x.value());
+        if (x.value() >= 0) {
+          y.domain.inComplement(store.level, y, x.value());
+        } else {
+          y.domain.inComplement(store.level, y, -x.value());
+        }
       }
 
     } while (store.propagationHasOccurred);
@@ -290,16 +331,24 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
       int right = xDom.rightElement(i);
 
       if (right <= 0) {
-        if (yDom.isIntersecting(-right, -xDom.leftElement(i))) return false;
+        if (yDom.isIntersecting(-right, -xDom.leftElement(i))) {
+          return false;
+        }
       } else {
 
         int left = xDom.leftElement(i);
         if (left >= 0) {
-          if (yDom.isIntersecting(left, right)) return false;
+          if (yDom.isIntersecting(left, right)) {
+            return false;
+          }
         } else {
 
-          if (yDom.isIntersecting(0, -left)) return false;
-          if (yDom.isIntersecting(0, right)) return false;
+          if (yDom.isIntersecting(0, -left)) {
+            return false;
+          }
+          if (yDom.isIntersecting(0, right)) {
+            return false;
+          }
         }
       }
     }

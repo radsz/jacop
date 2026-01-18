@@ -40,12 +40,12 @@ import org.jacop.core.MutableVarValue;
  */
 class BoundsVarValue implements MutableVarValue, Cloneable {
 
-  BoundsVarValue previousBoundsVarValue = null;
+  BoundsVarValue previousBoundsVarValue;
 
   double min, max;
   double lb, ub;
 
-  int stamp = 0;
+  int stamp;
 
   // Constructors
   BoundsVarValue() {}

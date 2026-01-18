@@ -78,7 +78,7 @@ public class SumWeight extends Constraint
   private long[] lMinArray;
   private long[] lMaxArray;
   private Map<Var, Integer> positionMaping;
-  private boolean backtrackHasOccured = false;
+  private boolean backtrackHasOccured;
 
   /**
    * SumWeight constraint implements the weighted summation over several variables.
@@ -106,11 +106,12 @@ public class SumWeight extends Constraint
 
     checkInputForNullness(new String[] {"list", "weights"}, new Object[][] {list, {weights}});
 
-    if (list.length != weights.length)
+    if (list.length != weights.length) {
       throw new IllegalArgumentException(
           "Constraint "
               + this.getClass().getSimpleName()
               + "has length of list and weights parameter different.");
+    }
 
     queueIndex = 1;
     numberId = idNumber.incrementAndGet();
@@ -118,7 +119,9 @@ public class SumWeight extends Constraint
     Map<IntVar, Long> parameters = Var.createEmptyPositioning();
 
     for (int i = 0; i < list.length; i++) {
-      if (weights[i] == 0L) continue;
+      if (weights[i] == 0L) {
+        continue;
+      }
       Long accumulatedCoefficient = parameters.getOrDefault(list[i], 0L);
       accumulatedCoefficient += weights[i];
       if (accumulatedCoefficient != 0) {
@@ -212,7 +215,9 @@ public class SumWeight extends Constraint
 
     do {
 
-      if (!(lMin <= equalTo && equalTo <= lMax)) throw Store.failException;
+      if (!(lMin <= equalTo && equalTo <= lMax)) {
+        throw Store.failException;
+      }
 
       store.propagationHasOccurred = false;
 
@@ -229,14 +234,16 @@ public class SumWeight extends Constraint
         int divMin;
         int divMax;
         if (w > 0) {
-          divMin = long2int(IntDomain.divRoundUp((min + lMaxArray[i]), w));
-          divMax = long2int(IntDomain.divRoundDown((max + lMinArray[i]), w));
+          divMin = long2int(IntDomain.divRoundUp(min + lMaxArray[i], w));
+          divMax = long2int(IntDomain.divRoundDown(max + lMinArray[i], w));
         } else { // w < 0
           divMin = long2int(IntDomain.divRoundUp(-(max + lMinArray[i]), -w));
           divMax = long2int(IntDomain.divRoundDown(-(min + lMaxArray[i]), -w));
         }
 
-        if (divMin > divMax) throw Store.failException;
+        if (divMin > divMax) {
+          throw Store.failException;
+        }
 
         v.domain.in(store.level, v, divMin, divMax);
       }
@@ -287,7 +294,9 @@ public class SumWeight extends Constraint
 
         int pointer = nextGroundedPosition.value();
 
-        if (i < pointer) return;
+        if (i < pointer) {
+          return;
+        }
 
         long value = (long) var.min();
 
@@ -395,13 +404,17 @@ public class SumWeight extends Constraint
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], [");
 
     for (int i = 0; i < weights.length; i++) {
       result.append(weights[i]);
-      if (i < weights.length - 1) result.append(", ");
+      if (i < weights.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(equalTo).append(" )");

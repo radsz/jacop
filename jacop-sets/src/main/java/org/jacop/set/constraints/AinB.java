@@ -56,7 +56,7 @@ public class AinB extends PrimitiveConstraint {
   public final SetVar b;
 
   /** It specifies if the inclusion relation is strict. */
-  public boolean strict = false;
+  public boolean strict;
 
   /**
    * It constructs an AinB constraint to restrict the domain of the variables A and B. By default
@@ -95,7 +95,11 @@ public class AinB extends PrimitiveConstraint {
 
     // FIXME, take into account strict relation.
 
-    if (strict) if (b.domain.isEmpty()) throw Store.failException;
+    if (strict) {
+      if (b.domain.isEmpty()) {
+        throw Store.failException;
+      }
+    }
 
     // if (bHasChanged)
     a.domain.inLUB(store.level, a, b.domain.lub());
@@ -103,19 +107,25 @@ public class AinB extends PrimitiveConstraint {
     // if (aHasChanged)
     b.domain.inGLB(store.level, b, a.domain.glb());
 
-    if (strict)
+    if (strict) {
       a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max() - 1);
-    else a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
+    } else {
+      a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max());
+    }
 
-    if (strict)
+    if (strict) {
       b.domain.inCardinality(store.level, b, a.domain.card().min() + 1, Integer.MAX_VALUE);
-    else b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
+    } else {
+      b.domain.inCardinality(store.level, b, a.domain.card().min(), Integer.MAX_VALUE);
+    }
   }
 
   @Override
   public void notConsistency(Store store) {
 
-    if (b.domain.glb().contains(a.domain.lub())) throw Store.failException;
+    if (b.domain.glb().contains(a.domain.lub())) {
+      throw Store.failException;
+    }
   }
 
   @Override

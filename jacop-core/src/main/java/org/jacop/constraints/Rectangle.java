@@ -114,7 +114,7 @@ public class Rectangle {
 
     Rectangle[] result = new Rectangle[rectangles.size()];
 
-    for (int i = 0; i < rectangles.size(); i++)
+    for (int i = 0; i < rectangles.size(); i++) {
       if (rectangles.get(i).size() == 4) {
         result[i] = new Rectangle(rectangles.get(i));
       } else {
@@ -126,6 +126,7 @@ public class Rectangle {
                 + " instead of 4.";
         throw new IllegalArgumentException(s);
       }
+    }
 
     return result;
   }
@@ -237,8 +238,12 @@ public class Rectangle {
     int i = 0;
     while (i < dim) {
       int originStamp = origin[i].level(), lengthStamp = length[i].level();
-      if (level < originStamp) level = originStamp;
-      if (level < lengthStamp) level = lengthStamp;
+      if (level < originStamp) {
+        level = originStamp;
+      }
+      if (level < lengthStamp) {
+        level = lengthStamp;
+      }
       i++;
     }
     return level;
@@ -246,7 +251,9 @@ public class Rectangle {
 
   long minArea() {
     long area = 1;
-    for (int i = 0; i < dim; i++) area *= length[i].min();
+    for (int i = 0; i < dim; i++) {
+      area *= length[i].min();
+    }
     return area;
   }
 
@@ -261,7 +268,7 @@ public class Rectangle {
 
     int i = 0;
     while (!use && i < dim) {
-      use = (length[i].min() == 0);
+      use = length[i].min() == 0;
       i++;
     }
     return use;
@@ -281,7 +288,9 @@ public class Rectangle {
         if (start < stop) {
           u.add(start, stop - start);
           //					j++;
-        } else use = false;
+        } else {
+          use = false;
+        }
       } else {
         u.add(-1, -1);
       }
@@ -303,7 +312,9 @@ public class Rectangle {
       if (start < stop) {
         u.add(start, stop - start);
         //				j++;
-      } else use = false;
+      } else {
+        use = false;
+      }
       i++;
     }
     return use;
@@ -338,7 +349,9 @@ public class Rectangle {
     }
     for (int i = 0; i < dim; i++) {
       result.append(length[i]);
-      if (i < dim - 1) result.append(", ");
+      if (i < dim - 1) {
+        result.append(", ");
+      }
     }
     result.append("]");
     return result.toString();

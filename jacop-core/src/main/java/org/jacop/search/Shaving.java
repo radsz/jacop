@@ -86,13 +86,13 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
    * pairs which lead to wrong decisions as shaving values higher in the search tree (until the
    * first time shaving attempt for this value fails).
    */
-  public boolean quickShave = false;
+  public boolean quickShave;
 
   /** It stores number of successful shaving attempts. */
-  public int successes = 0;
+  public int successes;
 
   /** It stores number of failed shaving attempts. */
-  public int failures = 0;
+  public int failures;
 
   /** It contains list of constraints which suggest shaving explorations. */
   final List<Constraint> shavingConstraints = new ArrayList<>();
@@ -105,16 +105,16 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
    */
   Store store;
 
-  Constraint recentlyFailedConstraint = null;
+  Constraint recentlyFailedConstraint;
   final boolean leftChildShaving = true;
-  boolean rightChild = false;
+  boolean rightChild;
   boolean wrongDecisionEncountered;
   final List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
   final Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
   private ExitChildListener<T>[] exitChildListeners;
   private ConsistencyListener[] consistencyListeners;
-  private boolean leftChildWrongDecision = false;
-  private int depth = 0;
+  private boolean leftChildWrongDecision;
+  private int depth;
 
   public boolean leftChild(IntVar var, int value, boolean status) {
 
@@ -143,13 +143,17 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
         int position = shavable.size() - 1;
 
-        if (position > depth) position = depth - 1;
+        if (position > depth) {
+          position = depth - 1;
+        }
 
-        if (position < 0) position = 0;
+        if (position < 0) {
+          position = 0;
+        }
 
         Map<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
         LinkedHashSet<Integer> shaveVarList =
-            current.computeIfAbsent(var, k -> new LinkedHashSet<>());
+            current.computeIfAbsent(var, _ -> new LinkedHashSet<>());
 
         shaveVarList.add(value);
       }
@@ -208,14 +212,16 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
         for (Integer shaveVal : list) {
 
-          if (!shaveVar.domain.contains(shaveVal) || shaveVar.singleton()) continue;
+          if (!shaveVar.domain.contains(shaveVal) || shaveVar.singleton()) {
+            continue;
+          }
 
           boolean shavablePair = checkIfShavable(shaveVar, shaveVal);
 
           if (shavablePair) {
 
             LinkedHashSet<Integer> shaveVarList =
-                shavableCurrent.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
+                shavableCurrent.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
             shaveVarList.add(shaveVal);
 
             store.impose(new XneqC(shaveVar, shaveVal));
@@ -231,7 +237,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
             // record that pair (shaveVar,shareValue) was not
             // shaved.
             LinkedHashSet<Integer> notShaveVarList =
-                notShavable.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
+                notShavable.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
             notShaveVarList.add(shaveVal);
           }
         }
@@ -240,23 +246,35 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
       current++;
     }
 
-    while (!shavable.isEmpty() && shavable.size() != depth) shavable.removeLast();
+    while (!shavable.isEmpty() && shavable.size() != depth) {
+      shavable.removeLast();
+    }
 
     depth++;
     shavable.add(shavableCurrent);
 
-    if (!leftChildShaving || leftChild)
+    if (!leftChildShaving || leftChild) {
       for (Constraint g : shavingConstraints) {
 
-        if (onlyFailedConstraint) if (recentlyFailedConstraint != g) continue;
+        if (onlyFailedConstraint) {
+          if (recentlyFailedConstraint != g) {
+            continue;
+          }
+        }
 
         IntVar shaveVar = (T) g.getGuideVariable();
 
-        if (shaveVar == null) continue;
+        if (shaveVar == null) {
+          continue;
+        }
 
         int shaveVal = g.getGuideValue();
 
-        if (onlyIntVarsOfFailedConstraint) if (!varsOfFailedConstraint.contains(shaveVar)) continue;
+        if (onlyIntVarsOfFailedConstraint) {
+          if (!varsOfFailedConstraint.contains(shaveVar)) {
+            continue;
+          }
+        }
 
         LinkedHashSet<Integer> notShavableListShaveVar;
 
@@ -271,23 +289,26 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
         if (shavablePair) {
 
           LinkedHashSet<Integer> shaveVarList =
-              shavableCurrent.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
+              shavableCurrent.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
 
           shaveVarList.add(shaveVal);
 
           store.impose(new XneqC(shaveVar, shaveVal));
           boolean result = store.consistency();
 
-          if (!result) return false;
+          if (!result) {
+            return false;
+          }
 
         } else {
 
           // record that pair (shaveVar,shareValue) was not shaved.
           LinkedHashSet<Integer> notShaveVarList =
-              notShavable.computeIfAbsent(shaveVar, k -> new LinkedHashSet<>());
+              notShavable.computeIfAbsent(shaveVar, _ -> new LinkedHashSet<>());
           notShaveVarList.add(shaveVal);
         }
       }
+    }
 
     leftChild = true;
 
@@ -306,13 +327,16 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
     var.domain.in(store.level, var, val, val);
 
-    boolean shavable = !(store.consistency());
+    boolean shavable = !store.consistency();
 
     store.removeLevel(depth);
     store.setLevel(--depth);
 
-    if (shavable) successes++;
-    else failures++;
+    if (shavable) {
+      successes++;
+    } else {
+      failures++;
+    }
 
     return shavable;
   }

@@ -62,7 +62,9 @@ public abstract class PrimitiveConstraint extends Constraint
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
     if (!constraintScope.isEmpty()) {
@@ -74,8 +76,9 @@ public abstract class PrimitiveConstraint extends Constraint
               .max()
               .orElseGet(this::getDefaultNotConsistencyPruningEvent);
 
-      if (eventAcross < getDefaultNotConsistencyPruningEvent())
+      if (eventAcross < getDefaultNotConsistencyPruningEvent()) {
         eventAcross = getDefaultNotConsistencyPruningEvent();
+      }
 
       return eventAcross;
     }
@@ -103,7 +106,9 @@ public abstract class PrimitiveConstraint extends Constraint
     if (mode) {
       if (consistencyPruningEvents != null) {
         Integer possibleEvent = consistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
 
       if (constraintScope != null && !constraintScope.isEmpty()) {
@@ -115,7 +120,9 @@ public abstract class PrimitiveConstraint extends Constraint
                 .max()
                 .orElseGet(() -> Integer.MIN_VALUE);
 
-        if (eventAcross != Integer.MIN_VALUE) return eventAcross;
+        if (eventAcross != Integer.MIN_VALUE) {
+          return eventAcross;
+        }
       }
 
       return getDefaultNestedConsistencyPruningEvent();
@@ -124,7 +131,9 @@ public abstract class PrimitiveConstraint extends Constraint
     else {
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
       if (constraintScope != null && !constraintScope.isEmpty()) {
 
@@ -135,7 +144,9 @@ public abstract class PrimitiveConstraint extends Constraint
                 .max()
                 .orElse(Integer.MIN_VALUE);
 
-        if (eventAcross != Integer.MIN_VALUE) return eventAcross;
+        if (eventAcross != Integer.MIN_VALUE) {
+          return eventAcross;
+        }
       }
       return getDefaultNestedNotConsistencyPruningEvent();
     }
@@ -174,12 +185,16 @@ public abstract class PrimitiveConstraint extends Constraint
    */
   public void setNotConsistencyPruningEvent(Var var, int pruningEvent) {
 
-    if (notConsistencyPruningEvents == null) notConsistencyPruningEvents = new Hashtable<>();
+    if (notConsistencyPruningEvents == null) {
+      notConsistencyPruningEvents = new Hashtable<>();
+    }
 
     notConsistencyPruningEvents.put(var, pruningEvent);
   }
 
   public void include(Store store) {
-    if (constraintScope != null) constraintScope.forEach(i -> i.include(store));
+    if (constraintScope != null) {
+      constraintScope.forEach(i -> i.include(store));
+    }
   }
 }

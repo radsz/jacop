@@ -252,7 +252,9 @@ public class TraceGenerator<T extends Var>
     PrimitiveConstraint c = select.getChoiceConstraint(index);
 
     if (c == null) {
-      if (currentSearchNode == null) currentSearchNode = new SearchNode();
+      if (currentSearchNode == null) {
+        currentSearchNode = new SearchNode();
+      }
 
       generateSuccessNode(currentSearchNode.id);
       generateVisualizationNode(currentSearchNode.id, true);
@@ -299,8 +301,9 @@ public class TraceGenerator<T extends Var>
 
     if (consistencyListeners != null) {
       boolean code = false;
-      for (ConsistencyListener consistencyListener : consistencyListeners)
+      for (ConsistencyListener consistencyListener : consistencyListeners) {
         code |= consistencyListener.executeAfterConsistency(consistent);
+      }
       consistent = code;
     }
 
@@ -364,8 +367,9 @@ public class TraceGenerator<T extends Var>
 
     if (exitChildListeners != null) {
       boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         code |= exitChildListener.leftChild(var, value, status);
+      }
       returnCode = code;
     }
 
@@ -377,9 +381,9 @@ public class TraceGenerator<T extends Var>
       currentSearchNode = new SearchNode();
       currentSearchNode.v = var;
 
-      if (previousSearchNode.dom instanceof IntDomain domain)
+      if (previousSearchNode.dom instanceof IntDomain domain) {
         currentSearchNode.dom = domain.subtract(value);
-      else {
+      } else {
         // Handle SetDomain using reflection to avoid import
         try {
           Class<?> setDomainClass = Class.forName("org.jacop.set.core.SetDomain");
@@ -411,8 +415,9 @@ public class TraceGenerator<T extends Var>
 
     if (exitChildListeners != null) {
       boolean code = false;
-      for (ExitChildListener<T> exitChildListener : exitChildListeners)
+      for (ExitChildListener<T> exitChildListener : exitChildListeners) {
         code |= exitChildListener.leftChild(choice, status);
+      }
       returnCode = code;
     }
 
@@ -610,16 +615,22 @@ public class TraceGenerator<T extends Var>
 
   private int minValue(List<Var> vars) {
     int min = IntDomain.MaxInt;
-    if (vars.getFirst() instanceof IntVar)
-      for (Var v : vars) min = (min < ((IntVar) v).min()) ? min : ((IntVar) v).min();
+    if (vars.getFirst() instanceof IntVar) {
+      for (Var v : vars) {
+        min = min < ((IntVar) v).min() ? min : ((IntVar) v).min();
+      }
+    }
 
     return min;
   }
 
   private int maxValue(List<Var> vars) {
     int max = IntDomain.MinInt;
-    if (vars.getFirst() instanceof IntVar)
-      for (Var v : vars) max = (max > ((IntVar) v).max()) ? max : ((IntVar) v).max();
+    if (vars.getFirst() instanceof IntVar) {
+      for (Var v : vars) {
+        max = max > ((IntVar) v).max() ? max : ((IntVar) v).max();
+      }
+    }
 
     return max;
   }
@@ -684,9 +695,9 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", "parent", "CDATA", "" + parentNode);
       atts.addAttribute("", "", "name", "CDATA", name);
       atts.addAttribute("", "", "size", "CDATA", "" + size);
-      if (dom instanceof IntDomain domain)
+      if (dom instanceof IntDomain domain) {
         atts.addAttribute("", "", "choice", "CDATA", "" + intDomainToString(domain));
-      else {
+      } else {
         // Handle SetDomain using reflection to avoid import
         try {
           Class<?> setDomainClass = Class.forName("org.jacop.set.core.SetDomain");
@@ -853,14 +864,18 @@ public class TraceGenerator<T extends Var>
 
     for (IntervalEnumeration enumer = domain.intervalEnumeration(); enumer.hasMoreElements(); ) {
       Interval next = enumer.nextElement();
-      if (next.singleton()) result.append(next.min());
-      else if (next.max() - next.min() >= 2)
+      if (next.singleton()) {
+        result.append(next.min());
+      } else if (next.max() - next.min() >= 2) {
         result.append(next.min()).append(" .. ").append(next.max());
-      else
+      } else {
         // two elements interval represented as two single entries.
         result.append(next.min()).append(" ").append(next.max());
+      }
 
-      if (enumer.hasMoreElements()) result.append(" ");
+      if (enumer.hasMoreElements()) {
+        result.append(" ");
+      }
     }
 
     return result.toString();

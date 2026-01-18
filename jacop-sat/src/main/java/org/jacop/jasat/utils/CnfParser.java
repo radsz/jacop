@@ -45,8 +45,8 @@ import org.jacop.jasat.utils.structures.IntVec;
 public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 
   // data of the problem
-  public int numClauses = 0;
-  public int numVars = 0;
+  public int numClauses;
+  public int numVars;
 
   // stream from which to read values
   private final InputStream stream;
@@ -55,13 +55,13 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   private final MemoryPool pool;
 
   // current char
-  private int c = 0;
+  private int c;
 
   // next clause
-  private IntVec nextClause = null;
+  private IntVec nextClause;
 
   // have we already given an iterator on clauses
-  private boolean hasGivenIterator = false;
+  private boolean hasGivenIterator;
 
   /**
    * creates an instance of the parser for some input stream
@@ -96,11 +96,15 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    */
   private int parseInt() throws IOException {
     int answer = 0;
-    if (c == -1) throw new IOException();
+    if (c == -1) {
+      throw new IOException();
+    }
     assert (c == '-') || (c >= '0' && c <= '9');
 
-    boolean negative = (c == '-');
-    if (negative) c = stream.read();
+    boolean negative = c == '-';
+    if (negative) {
+      c = stream.read();
+    }
 
     // read digits
     while (c >= '0' && c <= '9') {
@@ -109,7 +113,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
       c = stream.read();
     }
 
-    return (negative ? -answer : answer);
+    return negative ? -answer : answer;
   }
 
   /**
@@ -118,10 +122,14 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    * @throws IOException
    */
   private void skipComments() throws IOException {
-    if (c != 'c') return;
+    if (c != 'c') {
+      return;
+    }
 
     // skip lines which begin with 'c'
-    while (c == 'c') skipLine();
+    while (c == 'c') {
+      skipLine();
+    }
   }
 
   /**
@@ -131,7 +139,9 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    */
   private void skipLine() throws IOException {
     // read until \n
-    while (c != '\n') c = stream.read();
+    while (c != '\n') {
+      c = stream.read();
+    }
 
     // skip \n
     assert c == '\n';
@@ -144,7 +154,9 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    * @throws IOException
    */
   private void skipSpaces() throws IOException {
-    while (c == ' ' || c == '\t' || c == '\n') c = stream.read();
+    while (c == ' ' || c == '\t' || c == '\n') {
+      c = stream.read();
+    }
   }
 
   /**
@@ -178,7 +190,9 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 
     try {
       // maybe we just read a clause, so we must discard the 0
-      if (c == '0') c = stream.read();
+      if (c == '0') {
+        c = stream.read();
+      }
     } catch (IOException _) {
       return;
     }
@@ -187,16 +201,22 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
       try {
         skipSpaces();
         int curInt = parseInt();
-        if (curInt == 0) break;
-        else answer.add(curInt);
+        if (curInt == 0) {
+          break;
+        } else {
+          answer.add(curInt);
+        }
       } catch (IOException _) {
         break;
       }
     }
 
     // set nextClause
-    if (answer.isEmpty()) nextClause = null;
-    else nextClause = answer;
+    if (answer.isEmpty()) {
+      nextClause = null;
+    } else {
+      nextClause = answer;
+    }
   }
 
   public boolean hasNext() {
@@ -218,7 +238,9 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 
   /** to be called only once! */
   public Iterator<IntVec> iterator() {
-    if (hasGivenIterator) throw new AssertionError("should only iterate once on Parser");
+    if (hasGivenIterator) {
+      throw new AssertionError("should only iterate once on Parser");
+    }
     hasGivenIterator = true;
     return this;
   }

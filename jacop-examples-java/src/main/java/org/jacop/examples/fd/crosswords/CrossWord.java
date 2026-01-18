@@ -113,12 +113,15 @@ public class CrossWord extends ExampleFD {
 
     blank = new IntVar(store, "blank", 'a', 'z');
 
-    for (int s : wordSizesPrimitive) wordSizes.add(s);
+    for (int s : wordSizesPrimitive) {
+      wordSizes.add(s);
+    }
 
     x = new IntVar[crosswordTemplate.length][];
 
-    for (int i = 0; i < crosswordTemplate.length; i++)
+    for (int i = 0; i < crosswordTemplate.length; i++) {
       x[i] = new IntVar[crosswordTemplate[i].length];
+    }
 
     readDictionaryFromFile(defaultDictionary, wordSizes);
 
@@ -150,7 +153,9 @@ public class CrossWord extends ExampleFD {
           }
           // System.out.println(word);
           word.clear();
-        } else word.add(x[i][j]);
+        } else {
+          word.add(x[i][j]);
+        }
       }
 
       if (!word.isEmpty()) {
@@ -177,7 +182,9 @@ public class CrossWord extends ExampleFD {
             // System.out.println(word);
           }
           word.clear();
-        } else word.add(x[i][j]);
+        } else {
+          word.add(x[i][j]);
+        }
       }
 
       if (!word.isEmpty()) {
@@ -192,7 +199,13 @@ public class CrossWord extends ExampleFD {
 
     vars = new ArrayList<>();
 
-    for (int i = 0; i < r; i++) for (int j = 0; j < c; j++) if (x[i][j] != null) vars.add(x[i][j]);
+    for (int i = 0; i < r; i++) {
+      for (int j = 0; j < c; j++) {
+        if (x[i][j] != null) {
+          vars.add(x[i][j]);
+        }
+      }
+    }
   }
 
   /**
@@ -205,8 +218,11 @@ public class CrossWord extends ExampleFD {
     IO.println();
     for (int i = 0; i < r; i++) {
       for (int j = 0; j < c; j++) {
-        if (crossWordTemplate[i][j] != '*') IO.print((char) x[i][j].value() + " ");
-        else IO.print("* ");
+        if (crossWordTemplate[i][j] != '*') {
+          IO.print((char) x[i][j].value() + " ");
+        } else {
+          IO.print("* ");
+        }
       }
       IO.println();
     }
@@ -226,7 +242,9 @@ public class CrossWord extends ExampleFD {
       int wordCount = 0;
 
       IntVar[] list = new IntVar[wordSize];
-      for (int i = 0; i < wordSize; i++) list[i] = blank;
+      for (int i = 0; i < wordSize; i++) {
+        list[i] = blank;
+      }
 
       int[] tupleForGivenWord = new int[wordSize];
       MDD resultForWordSize = new MDD(list);
@@ -246,7 +264,9 @@ public class CrossWord extends ExampleFD {
             continue;
           }
 
-          if (str.length() != wordSize) continue;
+          if (str.length() != wordSize) {
+            continue;
+          }
 
           for (int i = 0; i < wordSize; i++) {
             tupleForGivenWord[i] = str.charAt(i);
@@ -297,7 +317,9 @@ public class CrossWord extends ExampleFD {
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
       search.printAllSolutions();
-    } else IO.println("Failed to find any solution");
+    } else {
+      IO.println("Failed to find any solution");
+    }
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 

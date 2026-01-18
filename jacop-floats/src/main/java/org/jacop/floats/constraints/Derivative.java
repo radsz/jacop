@@ -77,11 +77,13 @@ public class Derivative {
 
     List<Constraint> constraints = new ArrayList<>();
 
-    if (f == x) return new FloatVar(store, 1.0, 1.0);
-    else if (vars.contains(f)) return new FloatVar(store, 0.0, 0.0);
-    else
-      for (int i = 0; i < f.dom().modelConstraints.length; i++)
-        if (f.dom().modelConstraints[i] != null)
+    if (f == x) {
+      return new FloatVar(store, 1.0, 1.0);
+    } else if (vars.contains(f)) {
+      return new FloatVar(store, 0.0, 0.0);
+    } else {
+      for (int i = 0; i < f.dom().modelConstraints.length; i++) {
+        if (f.dom().modelConstraints[i] != null) {
           for (int j = 0; j < f.dom().modelConstraints[i].length; j++) {
             if (f.dom().modelConstraints[i][j] != null) {
 
@@ -90,11 +92,15 @@ public class Derivative {
 
                 // System.out.println ("["+i+"]["+j+"]" + f.dom().modelConstraints[i][j]);
 
-                if (!derivateConstraints.contains(currentConstraint))
+                if (!derivateConstraints.contains(currentConstraint)) {
                   constraints.add(currentConstraint);
+                }
               }
             }
           }
+        }
+      }
+    }
 
     if (constraints.size() == 1) {
 
@@ -112,8 +118,9 @@ public class Derivative {
       eval.pop();
 
       return v;
-    } else if (constraints.isEmpty() && f.singleton()) return new FloatVar(store, 0.0, 0.0);
-    else {
+    } else if (constraints.isEmpty() && f.singleton()) {
+      return new FloatVar(store, 0.0, 0.0);
+    } else {
 
       Constraint c = resolveConstraint(f, constraints);
       if (c != null) {
@@ -158,34 +165,51 @@ public class Derivative {
     // basically we look for a constraint on a list of possibel constraints
     // that has output equal variable defining the function
     List<Constraint> resolved = new ArrayList<>();
-    if (c == null)
+    if (c == null) {
       for (Constraint cc : cs) {
         if (cc instanceof PmulQeqR qeqR) {
-          if (f.equals(qeqR.r)) resolved.add(cc);
+          if (f.equals(qeqR.r)) {
+            resolved.add(cc);
+          }
         }
         if (cc instanceof PmulCeqR ceqR1) {
-          if (f.equals(ceqR1.r)) resolved.add(cc);
+          if (f.equals(ceqR1.r)) {
+            resolved.add(cc);
+          }
         } else if (cc instanceof PplusQeqR qeqR2) {
-          if (f.equals(qeqR2.r)) resolved.add(cc);
+          if (f.equals(qeqR2.r)) {
+            resolved.add(cc);
+          }
         } else if (cc instanceof PplusCeqR ceqR) {
-          if (f.equals(ceqR.r)) resolved.add(cc);
+          if (f.equals(ceqR.r)) {
+            resolved.add(cc);
+          }
         } else if (cc instanceof PminusQeqR qeqR1) {
-          if (f.equals(qeqR1.p)) resolved.add(cc);
+          if (f.equals(qeqR1.p)) {
+            resolved.add(cc);
+          }
         } else if (cc instanceof PdivQeqR qeqR) {
-          if (f.equals(qeqR.p)) resolved.add(cc);
+          if (f.equals(qeqR.p)) {
+            resolved.add(cc);
+          }
         } else if (cc instanceof LinearFloat float1) {
           if (float1.relationType == LinearFloat.eq) {
             double[] ws = float1.weights;
             FloatVar[] ls = float1.list;
             for (int i = 0; i < ls.length; i++) {
-              if (f.equals(ls[i]) && ws[i] == -1.0) resolved.add(cc);
+              if (f.equals(ls[i]) && ws[i] == -1.0) {
+                resolved.add(cc);
+              }
             }
           }
         } // else if (cc instanceof EquationSystem)
         // ;
       }
+    }
 
-    if (resolved.size() == 1) return resolved.getFirst();
+    if (resolved.size() == 1) {
+      return resolved.getFirst();
+    }
 
     return c;
   }
@@ -201,4 +225,6 @@ public class Derivative {
   public static Set<Constraint> derivativeConstraints() {
     return derivateConstraints;
   }
+
+  private Derivative() {}
 }

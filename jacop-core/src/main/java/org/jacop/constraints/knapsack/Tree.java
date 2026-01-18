@@ -100,13 +100,13 @@ public class Tree {
   /**
    * It specifies if the mandatory check has run out of right items to complement mandatory items.
    */
-  public boolean exhaustedRightItems = false;
+  public boolean exhaustedRightItems;
 
   /**
    * It specifies that computeForbidden part of the consistency function has run out of left
    * mandatory items.
    */
-  public boolean exhaustedLeftItems = false;
+  public boolean exhaustedLeftItems;
 
   /**
    * It specifies the current right item of the tree which have been yet included in computation of
@@ -170,7 +170,9 @@ public class Tree {
 
     int totalLength = items.length;
 
-    if (totalLength % 2 == 1) totalLength++;
+    if (totalLength % 2 == 1) {
+      totalLength++;
+    }
 
     TreeNode[] currentLevel = new TreeNode[totalLength];
 
@@ -194,7 +196,9 @@ public class Tree {
       varPositionMaping.put(v, leaf);
     }
 
-    if (items.length < totalLength) currentLevel[items.length] = nullLeaf;
+    if (items.length < totalLength) {
+      currentLevel[items.length] = nullLeaf;
+    }
 
     first = leaves[0];
     last = leaves[items.length - 1];
@@ -202,18 +206,22 @@ public class Tree {
     // Create internal nodes.
     while (currentLevel.length != 1) {
 
-      for (int i = 0; i < currentLevel.length - 1; i++)
+      for (int i = 0; i < currentLevel.length - 1; i++) {
         currentLevel[i].setRightNeighbor(currentLevel[i + 1]);
+      }
 
-      for (int i = 1; i < currentLevel.length; i++)
+      for (int i = 1; i < currentLevel.length; i++) {
         currentLevel[i].setLeftNeighbor(currentLevel[i - 1]);
+      }
 
       int k = 0;
       int next = 0;
 
       int length = currentLevel.length / 2;
 
-      if (length % 2 == 1 && length != 1) length++;
+      if (length % 2 == 1 && length != 1) {
+        length++;
+      }
 
       TreeNode[] nextLevel = new TreeNode[length];
 
@@ -221,7 +229,9 @@ public class Tree {
 
         TreeNode left = currentLevel[k];
         TreeNode right = null;
-        if (k + 1 < currentLevel.length) right = currentLevel[k + 1];
+        if (k + 1 < currentLevel.length) {
+          right = currentLevel[k + 1];
+        }
 
         if (right == null) {
           // one item only.
@@ -236,7 +246,9 @@ public class Tree {
         k += 2;
       }
 
-      if (nextLevel[length - 1] == null) nextLevel[length - 1] = new TreeNode(nullLeaf, nullLeaf);
+      if (nextLevel[length - 1] == null) {
+        nextLevel[length - 1] = new TreeNode(nullLeaf, nullLeaf);
+      }
 
       currentLevel = nextLevel;
     }
@@ -311,8 +323,8 @@ public class Tree {
     availableWeightOfCriticalItem = criticalLeaf.getWSum() - takenWeightOfCriticalItem;
 
     obtainedProfit +=
-        (((double) criticalLeaf.getPSum() * (double) takenWeightOfCriticalItem)
-            / (double) criticalLeaf.getWSum());
+        ((double) criticalLeaf.getPSum() * (double) takenWeightOfCriticalItem)
+            / (double) criticalLeaf.getWSum();
 
     optimalProfit = obtainedProfit;
 
@@ -331,9 +343,13 @@ public class Tree {
    */
   public int getCriticalPosition(int capacity) {
 
-    if (capacity < 0) return 0;
+    if (capacity < 0) {
+      return 0;
+    }
 
-    if (capacity > root.getWSum()) return last.positionInTheTree;
+    if (capacity > root.getWSum()) {
+      return last.positionInTheTree;
+    }
 
     TreeNode current = root;
     int usedCapacity = 0;
@@ -469,8 +485,9 @@ public class Tree {
                       (criticalLeaf.weightOfOne * profitOfItemChecked
                           - weightOfItemChecked * criticalLeaf.profitOfOne));
 
-    } else if (currentWeight < availableWeightOfCriticalItem)
+    } else if (currentWeight < availableWeightOfCriticalItem) {
       currentWeight = availableWeightOfCriticalItem;
+    }
 
     int weightNoPruning = weightOfItemChecked * maxNoOfItems;
 
@@ -500,7 +517,9 @@ public class Tree {
 
           continue;
 
-        } else break;
+        } else {
+          break;
+        }
       }
 
       // currentNode is the right child.
@@ -524,13 +543,15 @@ public class Tree {
 
           continue;
 
-        } else break;
+        } else {
+          break;
+        }
       }
     }
 
     // Slack has been almost exhausted or left items has been exhausted.
 
-    if (!exhaustedRightItems)
+    if (!exhaustedRightItems) {
       while (true) {
 
         // move right does not exceed slack.
@@ -546,15 +567,22 @@ public class Tree {
         } else {
           // Going to right neighbor does exhaust slack.
 
-          if (!currentNode.isLeaf()) currentNode = currentNode.right;
-          else break;
+          if (!currentNode.isLeaf()) {
+            currentNode = currentNode.right;
+          } else {
+            break;
+          }
         }
 
-        if (currentNode.isLeaf()) break;
+        if (currentNode.isLeaf()) {
+          break;
+        }
       }
+    }
 
-    if (!exhaustedRightItems && currentNode.rightNeighbor.getPSum() == 0)
+    if (!exhaustedRightItems && currentNode.rightNeighbor.getPSum() == 0) {
       currentNode = currentNode.rightNeighbor;
+    }
 
     // Found the last leaf before exceeding slack.
 
@@ -574,7 +602,9 @@ public class Tree {
 
     if (!exhaustedRightItems) {
 
-      if (currentNode.rightNeighbor == null) IO.println("Problem " + this);
+      if (currentNode.rightNeighbor == null) {
+        IO.println("Problem " + this);
+      }
 
       double efficiencyLoss =
           profitOfItemChecked / (double) weightOfItemChecked
@@ -614,27 +644,39 @@ public class Tree {
    */
   public TreeLeaf findNextLeafAtLeastOfWeight(TreeLeaf leaf, int weight) {
 
-    if (leaf.rightNeighbor == null) return null;
+    if (leaf.rightNeighbor == null) {
+      return null;
+    }
 
-    if (leaf.rightNeighbor.getWMax() > weight) return (TreeLeaf) leaf.rightNeighbor;
+    if (leaf.rightNeighbor.getWMax() > weight) {
+      return (TreeLeaf) leaf.rightNeighbor;
+    }
 
     TreeNode currentNode = leaf.parent;
 
     while (currentNode != null) {
-      if (currentNode.rightNeighbor == null) return null;
-      if (currentNode.rightNeighbor.getWMax() <= weight) currentNode = currentNode.parent;
-      else {
+      if (currentNode.rightNeighbor == null) {
+        return null;
+      }
+      if (currentNode.rightNeighbor.getWMax() <= weight) {
+        currentNode = currentNode.parent;
+      } else {
         currentNode = currentNode.rightNeighbor;
         break;
       }
     }
 
-    if (currentNode == null) return null;
+    if (currentNode == null) {
+      return null;
+    }
 
     while (!currentNode.isLeaf()) {
       // Preference to left node if both nodes are above weight.
-      if (currentNode.left.getWMax() > weight) currentNode = currentNode.left;
-      else currentNode = currentNode.right;
+      if (currentNode.left.getWMax() > weight) {
+        currentNode = currentNode.left;
+      } else {
+        currentNode = currentNode.right;
+      }
     }
 
     return (TreeLeaf) currentNode;
@@ -692,7 +734,9 @@ public class Tree {
                       (criticalLeaf.profitOfOne * weightOfItemChecked
                           - profitOfItemChecked * criticalLeaf.weightOfOne));
 
-    } else if (currentWeight < takenWeightOfCriticalItem) currentWeight = takenWeightOfCriticalItem;
+    } else if (currentWeight < takenWeightOfCriticalItem) {
+      currentWeight = takenWeightOfCriticalItem;
+    }
 
     int weightNoPruning = weightOfItemChecked * maxNoOfItems;
 
@@ -759,7 +803,7 @@ public class Tree {
 
     // Slack has been almost exhausted or left items has been exhausted.
 
-    if (!exhaustedLeftItems)
+    if (!exhaustedLeftItems) {
       while (true) {
 
         if (profitSlack
@@ -769,8 +813,11 @@ public class Tree {
             < 0) {
 
           // Going to left neighbor exhausts slack.
-          if (!currentNode.isLeaf()) currentNode = currentNode.left;
-          else break;
+          if (!currentNode.isLeaf()) {
+            currentNode = currentNode.left;
+          } else {
+            break;
+          }
 
         } else {
           // Going to left neighbor does not exhaust slack.
@@ -780,11 +827,15 @@ public class Tree {
           currentProfit += currentNode.getPSum();
         }
 
-        if (currentNode.isLeaf()) break;
+        if (currentNode.isLeaf()) {
+          break;
+        }
       }
+    }
 
-    if (!exhaustedLeftItems && currentNode.leftNeighbor.getPSum() == 0)
+    if (!exhaustedLeftItems && currentNode.leftNeighbor.getPSum() == 0) {
       currentNode = currentNode.leftNeighbor;
+    }
 
     // Found the last leaf before exceeding slack.
 
@@ -833,27 +884,39 @@ public class Tree {
    */
   public TreeLeaf findPreviousLeafAtLeastOfWeight(TreeLeaf leaf, int weight) {
 
-    if (leaf.leftNeighbor == null) return null;
+    if (leaf.leftNeighbor == null) {
+      return null;
+    }
 
-    if (leaf.leftNeighbor.getWMax() > weight) return (TreeLeaf) leaf.leftNeighbor;
+    if (leaf.leftNeighbor.getWMax() > weight) {
+      return (TreeLeaf) leaf.leftNeighbor;
+    }
 
     TreeNode currentNode = leaf.parent;
 
     while (currentNode != null) {
-      if (currentNode.leftNeighbor == null) return null;
-      if (currentNode.leftNeighbor.getWMax() <= weight) currentNode = currentNode.parent;
-      else {
+      if (currentNode.leftNeighbor == null) {
+        return null;
+      }
+      if (currentNode.leftNeighbor.getWMax() <= weight) {
+        currentNode = currentNode.parent;
+      } else {
         currentNode = currentNode.leftNeighbor;
         break;
       }
     }
 
-    if (currentNode == null) return null;
+    if (currentNode == null) {
+      return null;
+    }
 
     while (!currentNode.isLeaf()) {
       // Preference to right node if both nodes are above weight.
-      if (currentNode.right.getWMax() > weight) currentNode = currentNode.right;
-      else currentNode = currentNode.left;
+      if (currentNode.right.getWMax() > weight) {
+        currentNode = currentNode.right;
+      } else {
+        currentNode = currentNode.left;
+      }
     }
 
     return (TreeLeaf) currentNode;
@@ -868,7 +931,9 @@ public class Tree {
    */
   public int computeMinWeight(int minProfit) {
 
-    if (minProfit == 0) return 0;
+    if (minProfit == 0) {
+      return 0;
+    }
 
     TreeNode current = root;
     //		int usedCapacity = 0;
@@ -913,7 +978,9 @@ public class Tree {
    */
   public int computeMinProfit(int minWeight) {
 
-    if (minWeight == 0) return 0;
+    if (minWeight == 0) {
+      return 0;
+    }
 
     TreeNode current = root;
     int usedCapacity = 0;

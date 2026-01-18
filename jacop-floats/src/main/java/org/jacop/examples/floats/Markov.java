@@ -64,12 +64,15 @@ public class Markov {
     FloatDomain.intervalPrint(false);
 
     FloatVar[] mean_first_return_time = new FloatVar[3];
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
       mean_first_return_time[i] =
           new FloatVar(store, "mean_first_return_time[" + i + "]", 0.0, 1.0);
+    }
 
     FloatVar[] p = new FloatVar[3];
-    for (int i = 0; i < 3; i++) p[i] = new FloatVar(store, "p[" + i + "]", 0.0, 1.0);
+    for (int i = 0; i < 3; i++) {
+      p[i] = new FloatVar(store, "p[" + i + "]", 0.0, 1.0);
+    }
 
     FloatVar tot_cost = new FloatVar(store, "tot_cost", 0.0, 385.0);
 
@@ -124,8 +127,11 @@ public class Markov {
 
     boolean result = label.labeling(store, s, tot_cost);
 
-    if (result) IO.println(tot_cost);
-    else IO.println("NO SOLUTION");
+    if (result) {
+      IO.println(tot_cost);
+    } else {
+      IO.println("NO SOLUTION");
+    }
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 

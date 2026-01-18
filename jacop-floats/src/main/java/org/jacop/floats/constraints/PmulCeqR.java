@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
@@ -116,7 +117,7 @@ public class PmulCeqR extends Constraint implements SatisfiedPresent, FloatDeriv
     return id() + " : PmulCeqR(" + p + ", " + c + ", " + r + " )";
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     if (f.equals(r)) {
       // f = c * p

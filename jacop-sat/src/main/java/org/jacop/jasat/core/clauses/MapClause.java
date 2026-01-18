@@ -101,7 +101,7 @@ public final class MapClause implements Iterable<Integer> {
    */
   public boolean removeLiteral(int literal) {
     int var = Math.abs(literal);
-    boolean sign = (var == literal);
+    boolean sign = var == literal;
 
     Boolean b = literals.get(var);
     if (b != null && b == sign) {
@@ -122,12 +122,15 @@ public final class MapClause implements Iterable<Integer> {
   public void partialResolveWith(int literal) {
 
     int var = Math.abs(literal);
-    boolean sign = (var == literal);
+    boolean sign = var == literal;
 
     Boolean b = literals.get(var);
 
-    if (b == null) literals.put(var, sign);
-    else if (b != sign) literals.remove(var);
+    if (b == null) {
+      literals.put(var, sign);
+    } else if (b != sign) {
+      literals.remove(var);
+    }
   }
 
   /**
@@ -140,7 +143,7 @@ public final class MapClause implements Iterable<Integer> {
 
     // key, value
     int var = Math.abs(literal);
-    boolean sign = (var == literal);
+    boolean sign = var == literal;
 
     Boolean value = literals.get(var);
     return value != null && value == sign;
@@ -169,7 +172,9 @@ public final class MapClause implements Iterable<Integer> {
       int value = trail.values[var];
 
       // if this literal is not falsified
-      if (value == 0 || lit == value) return false;
+      if (value == 0 || lit == value) {
+        return false;
+      }
     }
 
     return true;
@@ -190,9 +195,13 @@ public final class MapClause implements Iterable<Integer> {
        * one of the other literals is not set or is satisfied
        */
       if (lit == literal) {
-        if (trail.isSet(var)) return false;
+        if (trail.isSet(var)) {
+          return false;
+        }
       } else {
-        if ((!trail.isSet(var)) || trail.values[var] == lit) return false;
+        if ((!trail.isSet(var)) || trail.values[var] == lit) {
+          return false;
+        }
       }
     }
     return true;
@@ -202,7 +211,9 @@ public final class MapClause implements Iterable<Integer> {
     // number of non set literals
     int num = 0;
     for (int var : literals.keySet()) {
-      if (!trail.isSet(var)) num++;
+      if (!trail.isSet(var)) {
+        num++;
+      }
     }
 
     return num == 1;
@@ -239,7 +250,9 @@ public final class MapClause implements Iterable<Integer> {
   private int[] toIntArray(int[] array) {
     assert array.length == literals.size();
     int i = 0;
-    for (int literal : this) array[i++] = literal;
+    for (int literal : this) {
+      array[i++] = literal;
+    }
     return array;
   }
 
@@ -269,7 +282,9 @@ public final class MapClause implements Iterable<Integer> {
   public String toString() {
     StringBuilder sb = new StringBuilder().append('[');
     for (int literal : this) {
-      if (literal > 0) sb.append(' '); // to balance with the '-'
+      if (literal > 0) {
+        sb.append(' '); // to balance with the '-'
+      }
       sb.append(literal);
       sb.append(' ');
     }
@@ -290,7 +305,9 @@ public final class MapClause implements Iterable<Integer> {
    */
   public boolean addAll(Iterable<Integer> clause) {
     boolean answer = false;
-    for (int literal : clause) answer |= addLiteral(literal);
+    for (int literal : clause) {
+      answer |= addLiteral(literal);
+    }
     return answer;
   }
 
@@ -302,7 +319,9 @@ public final class MapClause implements Iterable<Integer> {
    */
   public boolean addAll(int[] clause) {
     boolean answer = false;
-    for (int literal : clause) answer |= addLiteral(literal);
+    for (int literal : clause) {
+      answer |= addLiteral(literal);
+    }
     return answer;
   }
 

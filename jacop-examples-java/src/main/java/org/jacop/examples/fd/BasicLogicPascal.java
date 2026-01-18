@@ -61,7 +61,9 @@ public class BasicLogicPascal extends ExampleFD {
 
     example.model();
 
-    if (example.searchMostConstrainedStatic()) IO.println("Solution(s) found");
+    if (example.searchMostConstrainedStatic()) {
+      IO.println("Solution(s) found");
+    }
   }
 
   @Override

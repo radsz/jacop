@@ -54,8 +54,12 @@ public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {
 
     int right = SD.lub().getSize();
 
-    if (left > right) return 1;
-    if (left < right) return -1;
+    if (left > right) {
+      return 1;
+    }
+    if (left < right) {
+      return -1;
+    }
     return 0;
   }
 

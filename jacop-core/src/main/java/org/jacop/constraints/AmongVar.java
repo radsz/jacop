@@ -150,7 +150,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       x = listOfX[i];
       inLb = false;
       // watch the relation with lbS
-      if (lbSDom.getSize() > 0)
+      if (lbSDom.getSize() > 0) {
         if (lbSDom.contains(x.domain)) {
           // put in the beginning  of the array
           if (i != lb0) {
@@ -164,8 +164,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           inLb = true;
           x.removeConstraint(this);
         }
+      }
 
-      if (!inLb)
+      if (!inLb) {
         if (!lbSDom.isIntersecting(x.domain)) {
           // X is not intersecting the domain of y
           // put at the end of the array
@@ -180,10 +181,15 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           i--;
           x.removeConstraint(this);
         }
+      }
     }
 
-    if (lb0 != lb0TS.value()) lb0TS.update(lb0);
-    if (ub0 != ub0TS.value()) ub0TS.update(ub0);
+    if (lb0 != lb0TS.value()) {
+      lb0TS.update(lb0);
+    }
+    if (ub0 != ub0TS.value()) {
+      ub0TS.update(ub0);
+    }
 
     if (debugAll) {
       IO.println("-------------Consistency FOR X -------------");
@@ -197,15 +203,19 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int minN = Math.max(n.min(), lb0);
     int maxN = Math.min(n.max(), ub0);
 
-    if (minN > maxN) throw Store.failException;
+    if (minN > maxN) {
+      throw Store.failException;
+    }
 
     n.domain.in(store.level, n, minN, maxN);
 
-    if (debugAll) IO.println("-- K =  " + lbSDom);
+    if (debugAll) {
+      IO.println("-- K =  " + lbSDom);
+    }
 
     if (n.domain.singleton()) {
 
-      if (lb0 == n.min() && (ub0) == n.min()) {
+      if (lb0 == n.min() && ub0 == n.min()) {
         removeConstraint();
         return;
       }
@@ -215,7 +225,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           x = listOfX[i];
 
           x.domain.in(store.level, x, x.domain.subtract(lbSDom));
-          if (debugAll) IO.println("-- " + x.id() + " in " + x.domain);
+          if (debugAll) {
+            IO.println("-- " + x.id() + " in " + x.domain);
+          }
         }
       }
 
@@ -223,7 +235,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         for (int i = lb0; i < ub0; i++) {
           x = listOfX[i];
           x.domain.in(store.level, x, x.domain.intersect(lbSDom));
-          if (debugAll) IO.println("-- " + x.id() + " in " + x.domain);
+          if (debugAll) {
+            IO.println("-- " + x.id() + " in " + x.domain);
+          }
         }
       }
     }
@@ -247,7 +261,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int potentialCover = 0;
     for (i = yGround; i < listOfY.length; i++) {
       y = listOfY[i];
-      if (y.domain.isIntersecting(futureDom)) potentialCover++;
+      if (y.domain.isIntersecting(futureDom)) {
+        potentialCover++;
+      }
     }
 
     if (debugAll) {
@@ -262,7 +278,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (potentialCover < futureDom.getSize()) {
-      if (debugAll) IO.println("Fail beacuase there are not enough of y to cover x");
+      if (debugAll) {
+        IO.println("Fail beacuase there are not enough of y to cover x");
+      }
       throw Store.failException;
     }
 
@@ -275,9 +293,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
       for (i = yGround; i < listOfY.length; i++) {
         y = listOfY[i];
-        if (y.domain.isIntersecting(futureDom))
+        if (y.domain.isIntersecting(futureDom)) {
           y.domain.in(store.level, y, y.domain.intersect(futureDom));
-        else y.removeConstraint(this);
+        } else {
+          y.removeConstraint(this);
+        }
       }
     }
   }
@@ -290,21 +310,28 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   public void consistencyForY(Store store) {
 
     IntDomain K = new IntervalDomain();
-    for (IntVar x : listOfX)
-      if (x.singleton()) K = K.union(x.min());
-      else {
-        assert (false) : "consistencyForY is called without all X being grounded";
+    for (IntVar x : listOfX) {
+      if (x.singleton()) {
+        K = K.union(x.min());
+      } else {
+        assert false : "consistencyForY is called without all X being grounded";
         return;
       }
+    }
 
     IntDomain lbSDom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
     IntDomain futureDomain = (IntDomain) ((MutableDomainValue) futureLbS.value()).domain;
     IntDomain U = null;
 
     if (lbSDom.getSize() > 0) {
-      if (futureDomain.getSize() > 0) U = lbSDom.subtract(futureDomain);
-      else U = lbSDom.clone();
-    } else U = new IntervalDomain();
+      if (futureDomain.getSize() > 0) {
+        U = lbSDom.subtract(futureDomain);
+      } else {
+        U = lbSDom.clone();
+      }
+    } else {
+      U = new IntervalDomain();
+    }
 
     if (debugAll) {
       IO.println("-------------Consistency FOR Y -------------");
@@ -335,13 +362,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     for (int i = 0; i < ub0; i++) {
       x = this.listOfX[i];
-      if (U.contains(x.value())) countCoverMin++;
+      if (U.contains(x.value())) {
+        countCoverMin++;
+      }
     }
 
     for (int i = 0; i < yGr; i++) {
       y = listOfY[i];
-      if (K.contains(y.domain)) alreadyCover++;
-      else noRoleY++;
+      if (K.contains(y.domain)) {
+        alreadyCover++;
+      } else {
+        noRoleY++;
+      }
     }
 
     IntDomain intersectK = new IntervalDomain();
@@ -349,20 +381,26 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     for (int i = yGr; i < listOfY.length; i++) {
       y = listOfY[i];
       if (y.singleton()) {
-        if (K.contains(y.domain)) alreadyCover++;
-        else noRoleY++;
+        if (K.contains(y.domain)) {
+          alreadyCover++;
+        } else {
+          noRoleY++;
+        }
       } else {
 
-        intersectK = (y.domain.intersect(K)).subtract(U);
+        intersectK = y.domain.intersect(K).subtract(U);
 
-        if (intersectK.getSize() == 0) noRoleY++;
-        else if (intersectK.getSize() == y.domain.getSize()) {
+        if (intersectK.getSize() == 0) {
+          noRoleY++;
+        } else if (intersectK.getSize() == y.domain.getSize()) {
           potentialCover++;
           if (!disjoint.isIntersecting(y.domain)) {
             disjointCover++;
             disjoint = disjoint.union(y.domain);
           }
-        } else potentialCover++;
+        } else {
+          potentialCover++;
+        }
       }
     }
 
@@ -376,13 +414,16 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     }
 
     if (countCoverMin > n.max()) {
-      if (debugAll)
+      if (debugAll) {
         IO.println("........Fail because the number of covered X is bigger than N........");
+      }
       throw Store.failException;
     }
 
     if (noRoleY == (listOfY.length - alreadyCover)) {
-      if (debugAll) IO.println("........N must be equal to " + countCoverMin);
+      if (debugAll) {
+        IO.println("........N must be equal to " + countCoverMin);
+      }
       n.domain.inValue(store.level, n, countCoverMin); // , countCoverMin);
     }
 
@@ -390,7 +431,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     if ((countCoverMin == n.min()) && n.singleton()) {
 
-      if (debugAll) IO.println("--K \\ U = " + K);
+      if (debugAll) {
+        IO.println("--K \\ U = " + K);
+      }
 
       for (int i = yGr; i < listOfY.length; i++) {
         y = listOfY[i];
@@ -404,7 +447,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int mayLeftToCover = listOfX.length - ub0;
     for (int i = 0; i < ub0; i++) {
       x = listOfX[i];
-      if (K.contains(x.min())) mayLeftToCover++;
+      if (K.contains(x.min())) {
+        mayLeftToCover++;
+      }
     }
 
     if (K.getSize() == mayLeftToCover) {
@@ -422,13 +467,14 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           }
         }
       }
-      if (potentialCover == n.min() - countCoverMin && K.getSize() == mayLeftToCover)
+      if (potentialCover == n.min() - countCoverMin && K.getSize() == mayLeftToCover) {
         for (int i = yGr; i < listOfY.length; i++) {
           y = listOfY[i];
           if (y.domain.isIntersecting(K)) {
             y.domain.in(store.level, y, K);
           }
         }
+      }
     }
   }
 
@@ -448,8 +494,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // Ubs domain must be recalculated on the each level because the
     // shrinking of the Y domain will cause ubs's decrease
     IntDomain ubSDom = null;
-    if (lbSDom.getSize() > 0) ubSDom = lbSDom.clone();
-    else ubSDom = new IntervalDomain();
+    if (lbSDom.getSize() > 0) {
+      ubSDom = lbSDom.clone();
+    } else {
+      ubSDom = new IntervalDomain();
+    }
 
     // Future domain contains the Y values that are not must be present in S
     // meaning that one (or more) Y must be grounded to such values
@@ -487,15 +536,20 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         for (Integer yi : this.variableQueueY) {
           y = this.listOfY[yi];
           if (y.singleton()) {
-            if (debugAll) IO.println("New y " + y.id + " was grouded to " + y.value());
+            if (debugAll) {
+              IO.println("New y " + y.id + " was grouded to " + y.value());
+            }
             // Increase the lbSDom with grounded y
             lbSDom = lbSDom.union(y.domain);
-            if (futureDom.getSize() > 0) futureDom = futureDom.subtract(y.value(), y.value());
+            if (futureDom.getSize() > 0) {
+              futureDom = futureDom.subtract(y.value(), y.value());
+            }
             if (y.domain.getPreviousDomain() != null) {
               mustBeCoveredNow =
-                  (IntervalDomain) mustBeCoveredNow.union((y.domain.getPreviousDomain()));
-              if (!firstTimeWhileLoop)
-                pureUbs = (IntervalDomain) pureUbs.union((y.domain.getPreviousDomain()));
+                  (IntervalDomain) mustBeCoveredNow.union(y.domain.getPreviousDomain());
+              if (!firstTimeWhileLoop) {
+                pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
+              }
             }
             //						countGY ++;
 
@@ -511,26 +565,32 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               lastIndex++;
             }
           } else {
-            if (!firstTimeWhileLoop)
-              if (y.domain.getPreviousDomain() != null)
-                pureUbs = (IntervalDomain) pureUbs.union((y.domain.getPreviousDomain()));
-            if ((y.domain.getPreviousDomain()) != null)
+            if (!firstTimeWhileLoop) {
+              if (y.domain.getPreviousDomain() != null) {
+                pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
+              }
+            }
+            if ((y.domain.getPreviousDomain()) != null) {
               mustBeCoveredNow =
-                  (IntervalDomain) mustBeCoveredNow.union((y.domain.getPreviousDomain()));
+                  (IntervalDomain) mustBeCoveredNow.union(y.domain.getPreviousDomain());
+            }
           }
         }
         variableQueueY.clear();
         yGrounded.update(lastIndex);
 
-        if (futureDom.getSize() > 0)
+        if (futureDom.getSize() > 0) {
           mustBeCoveredNow = (IntervalDomain) mustBeCoveredNow.intersect(futureDom);
-        else mustBeCoveredNow = (IntervalDomain) futureDom;
+        } else {
+          mustBeCoveredNow = (IntervalDomain) futureDom;
+        }
 
         // If there appeared the Y values that have a risk to stay ungrounded
         // we will count their cardinality and FAIL if its 0, ground some Y if it is 1
         if (mustBeCoveredNow.getSize() > 0) {
-          if (debugAll)
+          if (debugAll) {
             IO.println("It appears that we must cover such values : " + mustBeCoveredNow);
+          }
           int cardinalityV = 0;
           int last;
           IntVar y_last;
@@ -558,11 +618,15 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 }
               }
               if (cardinalityV == 0) {
-                if (debugAll) IO.println("Cardinality of " + v + " is 0 => FAIL ");
+                if (debugAll) {
+                  IO.println("Cardinality of " + v + " is 0 => FAIL ");
+                }
                 throw Store.failException;
               } else if (cardinalityV == 1) {
                 y_last = this.listOfY[last];
-                if (debugAll) IO.println("Cardinality of " + v + " is 1 => Groud " + y_last.id);
+                if (debugAll) {
+                  IO.println("Cardinality of " + v + " is 1 => Groud " + y_last.id);
+                }
 
                 if (last != lastIndex) {
                   int yInt = last;
@@ -592,15 +656,17 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
 
       if (this.listOfY.length - this.yGrounded.value() < futureDom.getSize()) {
-        if (debugAll)
+        if (debugAll) {
           IO.println(
               "Fail because the number of not grounded y is not enough to cover future lbS domain");
+        }
         throw Store.failException;
       }
       if (this.yGrounded.value() == this.listOfY.length) {
-        if (debugAll)
+        if (debugAll) {
           IO.println(
               "All Y were grounded, thus we can pass to simple ve rsion of Among contrians where GAC can be reached");
+        }
         consistencyForX(store);
         return;
       }
@@ -634,7 +700,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           // a) count the grounded x
 
           // b) watch the relation with lbS
-          if (lbSDom.getSize() > 0)
+          if (lbSDom.getSize() > 0) {
             if (lbSDom.contains(x.domain)) {
 
               // put in the beginning  of the array
@@ -653,6 +719,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             } else if (lbSDom.isIntersecting(x.domain)) {
               glb0++;
             }
+          }
 
           if (!ubSDom.isIntersecting(x.domain)) {
             // X is not intersecting the domain of y
@@ -670,11 +737,17 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           }
         }
 
-        if (lb0 != lb0TS.value()) lb0TS.update(lb0);
-        if (ub0 != ub0TS.value()) ub0TS.update(ub0);
+        if (lb0 != lb0TS.value()) {
+          lb0TS.update(lb0);
+        }
+        if (ub0 != ub0TS.value()) {
+          ub0TS.update(ub0);
+        }
       }
 
-      if (this.satisfied()) return;
+      if (this.satisfied()) {
+        return;
+      }
 
       if (debugAll) {
         IO.println("--------");
@@ -695,7 +768,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       int minN = Math.max(n.min(), lb0);
       int maxN = Math.min(n.max(), ub0);
 
-      if (minN > maxN) throw Store.failException;
+      if (minN > maxN) {
+        throw Store.failException;
+      }
 
       n.domain.in(store.level, n, minN, maxN);
 
@@ -723,15 +798,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
       int LB = Integer.MAX_VALUE;
       int UB = Integer.MIN_VALUE;
-      if (firstTimeWhileLoop) pureUbs = (IntervalDomain) ubSDom.subtract(lbSDom);
-      else pureUbs = (IntervalDomain) pureUbs.intersect(ubSDom.subtract(lbSDom));
+      if (firstTimeWhileLoop) {
+        pureUbs = (IntervalDomain) ubSDom.subtract(lbSDom);
+      } else {
+        pureUbs = (IntervalDomain) pureUbs.intersect(ubSDom.subtract(lbSDom));
+      }
 
       Interval inv;
 
-      for (int h = 0; h < (pureUbs).size; h++) {
-        inv = (pureUbs).intervals[h];
+      for (int h = 0; h < pureUbs.size; h++) {
+        inv = pureUbs.intervals[h];
         // for each interval of UBS
-        if (inv != null)
+        if (inv != null) {
           // For each value of the interval
           for (int v = inv.min(); v <= inv.max(); v++) {
             lbTmp = lb0;
@@ -740,36 +818,58 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
             for (int i = 0; i < lb0; i++) {
               x = listOfX[i];
-              if (ubSDom.subtract(v, v).isIntersecting(x.domain)) ubTmp++;
+              if (ubSDom.subtract(v, v).isIntersecting(x.domain)) {
+                ubTmp++;
+              }
             }
 
             for (int i = lb0; i < ub0; i++) {
               x = listOfX[i];
               // a) count the weight
-              if (firstTimeWhileLoop) if (x.domain.contains(v)) weight++;
+              if (firstTimeWhileLoop) {
+                if (x.domain.contains(v)) {
+                  weight++;
+                }
+              }
               // b)count the relation with lbS
-              if (lbSDom.union(v).contains(x.domain)) lbTmp++;
+              if (lbSDom.union(v).contains(x.domain)) {
+                lbTmp++;
+              }
               // c)count the relation with ubs
-              if (ubSDom.subtract(v, v).isIntersecting(x.domain)) ubTmp++;
+              if (ubSDom.subtract(v, v).isIntersecting(x.domain)) {
+                ubTmp++;
+              }
             }
-            if (debugAll) IO.println("--- lb[" + v + "] = " + lbTmp);
-            if (debugAll) IO.println("--- ub[" + v + "] = " + ubTmp);
+            if (debugAll) {
+              IO.println("--- lb[" + v + "] = " + lbTmp);
+            }
+            if (debugAll) {
+              IO.println("--- ub[" + v + "] = " + ubTmp);
+            }
             lbV.put(v, lbTmp);
             ubV.put(v, ubTmp);
-            if (ubTmp > UB) UB = ubTmp;
+            if (ubTmp > UB) {
+              UB = ubTmp;
+            }
 
-            if (lbTmp < LB) LB = lbTmp;
+            if (lbTmp < LB) {
+              LB = lbTmp;
+            }
 
-            if (debugAll) if (firstTimeWhileLoop) IO.println("--- weight[" + v + "] = " + weight);
+            if (debugAll) {
+              if (firstTimeWhileLoop) {
+                IO.println("--- weight[" + v + "] = " + weight);
+              }
+            }
 
-            if (firstTimeWhileLoop)
-              if (weight != 0)
-                if ((!lbVubV.contains(n.domain))) {
+            if (firstTimeWhileLoop) {
+              if (weight != 0) {
+                if (!lbVubV.contains(n.domain)) {
                   int max = 0;
                   int min = 0;
                   lbTmp = lbTmp - lb0;
 
-                  if (lbVubV.getSize() > 0)
+                  if (lbVubV.getSize() > 0) {
                     for (Interval a : lbVubV.intervals) {
                       if (a != null) {
                         max = Math.min(weight + a.max(), ub0);
@@ -777,25 +877,38 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
                         if (min <= max) {
                           lbVubV = (IntervalDomain) lbVubV.union(min, max);
-                          if (debugAll)
-                            if (a != null)
+                          if (debugAll) {
+                            if (a != null) {
                               IO.println(
                                   " >>>> " + a + " + [" + lbTmp + ", " + weight + "] = [" + min
                                       + ", " + max + " ]");
-                        } else if (debugAll)
-                          if (a != null)
+                            }
+                          }
+                        } else if (debugAll) {
+                          if (a != null) {
                             IO.println(
                                 " >>>> " + a + " + [" + lbTmp + ", " + weight + "] = NOTHING");
+                          }
+                        }
                       }
                     }
+                  }
                 }
+              }
+            }
           }
+        }
       }
 
-      if (debugAll) IO.println(" Made up n domain = " + lbVubV);
+      if (debugAll) {
+        IO.println(" Made up n domain = " + lbVubV);
+      }
 
-      if (firstTimeWhileLoop) n.domain.in(store.level, n, lbVubV.intersect(n.domain));
-      else n.domain.in(store.level, n, Math.max(lb0, n.min()), Math.min(ub0, n.max()));
+      if (firstTimeWhileLoop) {
+        n.domain.in(store.level, n, lbVubV.intersect(n.domain));
+      } else {
+        n.domain.in(store.level, n, Math.max(lb0, n.min()), Math.min(ub0, n.max()));
+      }
 
       boolean recalculateLB0 = false;
       boolean recalculateUB0 = false;
@@ -807,9 +920,13 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         if (inv != null) {
 
           for (int v = inv.min(); v <= inv.max(); v++) {
-            if (debugAll) IO.println(">>>>>>>>>>>>>>>>>>>" + v + "  ");
+            if (debugAll) {
+              IO.println(">>>>>>>>>>>>>>>>>>>" + v + "  ");
+            }
             if (ubV.get(v) < n.min()) {
-              if (debugAll) IO.println(v + " must be be present in S");
+              if (debugAll) {
+                IO.println(v + " must be be present in S");
+              }
               lbSDom = lbSDom.union(v);
               recalculateLB0 = true;
 
@@ -827,11 +944,12 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
               if (cardinalityV == 1) {
                 y_last = this.listOfY[last];
-                if (!(y_last.singleton())) {
+                if (!y_last.singleton()) {
                   y_last = this.listOfY[last];
 
-                  if (debugAll)
+                  if (debugAll) {
                     IO.println("Only " + y_last.id + " can cover " + v + " so I ground it");
+                  }
 
                   mustBeCoveredNow =
                       (IntervalDomain) mustBeCoveredNow.union(y_last.domain.subtract(v, v));
@@ -850,7 +968,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                   y_last.domain.in(store.level, y_last, v, v);
                 }
               } else {
-                if (cardinalityV == 0) throw Store.failException;
+                if (cardinalityV == 0) {
+                  throw Store.failException;
+                }
                 futureDom = futureDom.union(v);
               }
             }
@@ -859,18 +979,23 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               ubSDom = ubSDom.subtract(v, v);
               recalculateUB0 = true;
 
-              if (debugAll) IO.println(v + " must be pruned out of all y");
+              if (debugAll) {
+                IO.println(v + " must be pruned out of all y");
+              }
 
               for (int i = yGrounded.value(); i < listOfY.length; i++) {
                 y = listOfY[i];
 
                 if (y.singleton()) {
-                  if (y.value() == v) throw Store.failException;
+                  if (y.value() == v) {
+                    throw Store.failException;
+                  }
                 } else {
                   y.domain.inComplement(store.level, y, v);
                   if (y.singleton()) {
-                    if (futureDom.getSize() > 0)
+                    if (futureDom.getSize() > 0) {
                       futureDom = futureDom.subtract(y.value(), y.value());
+                    }
                     lbSDom = lbSDom.union(y.value());
                     recalculateLB0 = true;
 
@@ -893,7 +1018,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
         }
       }
 
-      if (debugAll) IO.println("Future domain is " + futureDom);
+      if (debugAll) {
+        IO.println("Future domain is " + futureDom);
+      }
       this.futureLbS.update(new MutableDomainValue(futureDom));
 
       skipInitialLB0UB0calculation = false;
@@ -905,7 +1032,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           inLb = false;
 
           // watch the relation with lbS
-          if (lbSDom.getSize() > 0)
+          if (lbSDom.getSize() > 0) {
             if (lbSDom.contains(x.domain)) {
               // put in the beginning  of the array
               if (i != lb0) {
@@ -919,8 +1046,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               inLb = true;
               x.removeConstraint(this);
             }
+          }
 
-          if (!inLb && recalculateUB0)
+          if (!inLb && recalculateUB0) {
             if (!ubSDom.isIntersecting(x.domain)) {
               // X is not intersecting the domain of y
               // put at the end of the array
@@ -935,10 +1063,15 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               i--;
               x.removeConstraint(this);
             }
+          }
         }
 
-        if (lb0 != lb0TS.value()) lb0TS.update(lb0);
-        if (ub0 != ub0TS.value()) ub0TS.update(ub0);
+        if (lb0 != lb0TS.value()) {
+          lb0TS.update(lb0);
+        }
+        if (ub0 != ub0TS.value()) {
+          ub0TS.update(ub0);
+        }
       }
 
       lbS.update(new MutableDomainValue(lbSDom));
@@ -962,37 +1095,44 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       n.domain.in(store.level, n, Math.max(n.min(), lb0), Math.min(n.max(), ub0));
 
       if (lbSDom.getSize() > ubSDom.getSize() || lbSDom.getSize() > listOfY.length) {
-        if (debugAll)
+        if (debugAll) {
           IO.println(
               "........Fail because lbSDom.getSize() > ubSDom.getSize()  || lbSDom.getSize() > this.yVarList.length........");
+        }
         throw Store.failException;
       }
 
       if (n.singleton()) {
         if (lbSDom.getSize() > 0) {
-          if (n.value() == lb0)
+          if (n.value() == lb0) {
             for (int i = lb0; i < ub0; i++) {
               x = listOfX[i];
               x.domain.in(store.level, x, x.domain.subtract(lbSDom));
             }
+          }
         }
-        if (n.value() == ub0)
+        if (n.value() == ub0) {
           for (int i = lb0; i < ub0; i++) {
             x = listOfX[i];
             x.domain.in(store.level, x, x.domain.intersect(ubSDom));
           }
+        }
       }
 
       if (xGrounded.value() == listOfX.length) {
         consistencyForY(store);
-      } else if (lb0 == ub0) consistencyWhen_LB0_EQ_UB0(store);
+      } else if (lb0 == ub0) {
+        consistencyWhen_LB0_EQ_UB0(store);
+      }
 
       if (satisfied()) {
         removeConstraint();
         return;
       }
 
-      if (debugAll) IO.println(this);
+      if (debugAll) {
+        IO.println(this);
+      }
 
       firstTimeWhileLoop = false;
     }
@@ -1045,7 +1185,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     if (var != this.n) {
       // It can be only X
-      if (var.singleton()) xGrounded.update(xGrounded.value() + 1);
+      if (var.singleton()) {
+        xGrounded.update(xGrounded.value() + 1);
+      }
     }
   }
 
@@ -1057,11 +1199,13 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       int lb0 = lb0TS.value();
       int ub0 = ub0TS.value();
 
-      boolean allYGrounded = (yGrounded.value() == listOfY.length);
-      boolean allXGrounded = (xGrounded.value() == listOfX.length);
+      boolean allYGrounded = yGrounded.value() == listOfY.length;
+      boolean allXGrounded = xGrounded.value() == listOfX.length;
 
       if (allYGrounded) {
-        if (n.value() == lb0 && lb0 == ub0) return true;
+        if (n.value() == lb0 && lb0 == ub0) {
+          return true;
+        }
       }
 
       assert !allYGrounded || !allXGrounded || (n.value() == lb0)

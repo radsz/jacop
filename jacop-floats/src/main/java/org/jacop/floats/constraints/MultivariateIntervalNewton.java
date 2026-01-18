@@ -76,16 +76,20 @@ public class MultivariateIntervalNewton {
 
     fprime = new FloatVar[f.length][x.length];
     Derivative.init(store);
-    for (int i = 0; i < f.length; i++)
+    for (int i = 0; i < f.length; i++) {
       for (int j = 0; j < x.length; j++) {
 
-        if (debug)
+        if (debug) {
           IO.println("Derivative of " + f[i] + " on " + x[j] + " primitive variables = " + vars);
+        }
 
         fprime[i][j] = Derivative.getDerivative(store, f[i], vars, x[j]);
 
-        if (debug) IO.println("\t derivate = " + fprime[i][j]);
+        if (debug) {
+          IO.println("\t derivate = " + fprime[i][j]);
+        }
       }
+    }
   }
 
   public FloatInterval[] solve() {
@@ -99,27 +103,37 @@ public class MultivariateIntervalNewton {
     }
 
     xInit = new double[x.length];
-    for (int i = 0; i < x.length; i++) xInit[i] = (x[i].max() + x[i].min()) / 2.0;
+    for (int i = 0; i < x.length; i++) {
+      xInit[i] = (x[i].max() + x[i].min()) / 2.0;
+    }
 
     b = values();
 
     if (debug) {
       IO.println("Middle values for x");
-      for (double value : xInit) IO.print(value + " ");
+      for (double value : xInit) {
+        IO.print(value + " ");
+      }
       IO.println();
 
       IO.println("Middle values for f");
-      for (double v : b) IO.print(v + ", ");
+      for (double v : b) {
+        IO.print(v + ", ");
+      }
       IO.println();
     }
 
     IntervalGaussSeidel igs = new IntervalGaussSeidel(A, b);
 
-    if (debug) IO.println(igs);
+    if (debug) {
+      IO.println(igs);
+    }
 
     FloatInterval[] v = igs.solve();
 
-    if (v == null) return null;
+    if (v == null) {
+      return null;
+    }
 
     FloatInterval[] result = new FloatInterval[v.length];
     for (int i = 0; i < v.length; i++) {
@@ -141,9 +155,13 @@ public class MultivariateIntervalNewton {
     double[] b = new double[xInit.length];
 
     // need also -f(xInit)
-    for (int i = 0; i < xInit.length; i++) map.put(x[i], xInit[i]);
+    for (int i = 0; i < xInit.length; i++) {
+      map.put(x[i], xInit[i]);
+    }
 
-    for (int i = 0; i < f.length; i++) b[i] = -value(f[i]);
+    for (int i = 0; i < f.length; i++) {
+      b[i] = -value(f[i]);
+    }
 
     // if (debug) {
     //     for (int i = 0; i < b.length; i++)
@@ -156,13 +174,18 @@ public class MultivariateIntervalNewton {
 
   double value(FloatVar f) {
 
-    if (map.get(f) != null) return map.get(f);
+    if (map.get(f) != null) {
+      return map.get(f);
+    }
     // else if (f.singleton())
     //     return f.value();
 
     Constraint c = constraint(f);
-    if (c != null) eval.push(c);
-    else if (f.singleton()) return f.value();
+    if (c != null) {
+      eval.push(c);
+    } else if (f.singleton()) {
+      return f.value();
+    }
 
     // if (debug)
     //      System.out.println ("current constraint for variable " + f + " is " + c);
@@ -195,8 +218,9 @@ public class MultivariateIntervalNewton {
         }
       }
       case PmulCeqR ceqR1 -> {
-        if (f.equals(ceqR1.r)) result = value(ceqR1.p) * ceqR1.c;
-        else {
+        if (f.equals(ceqR1.r)) {
+          result = value(ceqR1.p) * ceqR1.c;
+        } else {
           throw new RuntimeException(
               "!!! Anable to compute middle value for "
                   + f
@@ -206,8 +230,9 @@ public class MultivariateIntervalNewton {
         }
       }
       case PminusQeqR qeqR -> {
-        if (f.equals(qeqR.r)) result = value(qeqR.p) - value(qeqR.q);
-        else {
+        if (f.equals(qeqR.r)) {
+          result = value(qeqR.p) - value(qeqR.q);
+        } else {
           throw new RuntimeException(
               "!!! Anable to compute middle value for "
                   + f
@@ -217,8 +242,9 @@ public class MultivariateIntervalNewton {
         }
       }
       case PplusQeqR qeqR1 -> {
-        if (f.equals(qeqR1.r)) result = value(qeqR1.p) + value(qeqR1.q);
-        else {
+        if (f.equals(qeqR1.r)) {
+          result = value(qeqR1.p) + value(qeqR1.q);
+        } else {
           throw new RuntimeException(
               "!!! Anable to compute middle value for "
                   + f
@@ -228,8 +254,9 @@ public class MultivariateIntervalNewton {
         }
       }
       case PplusCeqR ceqR -> {
-        if (f.equals(ceqR.r)) result = value(ceqR.p) + ceqR.c;
-        else {
+        if (f.equals(ceqR.r)) {
+          result = value(ceqR.p) + ceqR.c;
+        } else {
           throw new RuntimeException(
               "!!! Anable to compute middle value for "
                   + f
@@ -247,15 +274,17 @@ public class MultivariateIntervalNewton {
         double wOut = 1000.0;
 
         for (int i = 0; i < v.length; i++) {
-          if (!v[i].equals(f)) sum -= value(v[i]) * w[i];
-          else {
+          if (!v[i].equals(f)) {
+            sum -= value(v[i]) * w[i];
+          } else {
             vOut = v[i];
             wOut = w[i];
           }
         }
 
-        if (vOut != null) result = sum / wOut;
-        else {
+        if (vOut != null) {
+          result = sum / wOut;
+        } else {
           throw new RuntimeException(
               "!!! Anable to compute middle value for "
                   + f
@@ -281,34 +310,47 @@ public class MultivariateIntervalNewton {
 
     List<Constraint> list = new ArrayList<>();
 
-    for (int i = 0; i < v.dom().modelConstraints.length; i++)
-      if (v.dom().modelConstraints[i] != null)
+    for (int i = 0; i < v.dom().modelConstraints.length; i++) {
+      if (v.dom().modelConstraints[i] != null) {
         for (int j = 0; j < v.dom().modelConstraints[i].length; j++) {
           if (v.dom().modelConstraints[i][j] != null) {
 
             Constraint c = v.dom().modelConstraints[i][j];
 
             if (eval.search(c) == -1) {
-              if (Derivative.derivateConstraints.contains(c)) continue;
+              if (Derivative.derivateConstraints.contains(c)) {
+                continue;
+              }
 
-              if (!list.contains(c)) list.add(c);
+              if (!list.contains(c)) {
+                list.add(c);
+              }
             }
           }
         }
+      }
+    }
 
     // if (debug)
     //     System.out.println ("Possible constraints for variable " + v + " are " + list);
 
     Constraint c;
-    if (list.size() == 1) c = list.getFirst();
-    else c = Derivative.resolveConstraint(v, list);
+    if (list.size() == 1) {
+      c = list.getFirst();
+    } else {
+      c = Derivative.resolveConstraint(v, list);
+    }
 
     return c;
   }
 
   boolean contains(FloatVar[] fs, FloatVar r) {
 
-    for (FloatVar f : fs) if (f.equals(r)) return true;
+    for (FloatVar f : fs) {
+      if (f.equals(r)) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -318,8 +360,8 @@ public class MultivariateIntervalNewton {
 
     s.append(Arrays.asList(f)).append("\n");
     s.append(Arrays.asList(x)).append("\n");
-    for (int i = 0; i < fprime.length; i++)
-      for (int j = 0; j < fprime[i].length; j++)
+    for (int i = 0; i < fprime.length; i++) {
+      for (int j = 0; j < fprime[i].length; j++) {
         s.append("f")
             .append(i)
             .append("/d")
@@ -327,6 +369,8 @@ public class MultivariateIntervalNewton {
             .append(" = ")
             .append(fprime[i][j])
             .append("\n");
+      }
+    }
     // for (int i = 0; i < xInit.length; i++)
     //     s.append(xInit[i] + ", ");
     s.append("\n");

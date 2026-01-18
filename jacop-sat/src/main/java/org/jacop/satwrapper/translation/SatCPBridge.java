@@ -60,7 +60,7 @@ public abstract class SatCPBridge implements WrapperComponent {
   public int max;
   // the wrapper
   protected SatWrapper wrapper;
-  protected boolean hasSetDomain = false;
+  protected boolean hasSetDomain;
 
   /**
    * simple constructor with a variable

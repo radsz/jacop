@@ -68,7 +68,9 @@ class ThetaLambdaTree extends Tree {
 
     orderedTasks = task;
 
-    for (int i = treeSize - 1; i >= treeSize - n; i--) computeLeaveVals(i);
+    for (int i = treeSize - 1; i >= treeSize - n; i--) {
+      computeLeaveVals(i);
+    }
 
     for (int i = treeSize - n - 1; i >= 0; i--) {
 
@@ -110,8 +112,9 @@ class ThetaLambdaTree extends Tree {
 
   private void computeNodeVals(int i) {
 
-    if (notExist(left(i)) || notExist(right(i))) return;
-    else {
+    if (notExist(left(i)) || notExist(right(i))) {
+      return;
+    } else {
 
       ThetaLambdaNode node = tree[i];
       ThetaLambdaNode l = tree[left(i)];
@@ -349,13 +352,14 @@ class ThetaLambdaTree extends Tree {
     StringBuilder result = new StringBuilder();
 
     result.append("ThetaLambdaTree\n");
-    for (int i = 0; i < treeSize; i++)
+    for (int i = 0; i < treeSize; i++) {
       result
           .append("Node ")
           .append(i)
           .append("\n============\n")
           .append(tree[i])
           .append("\n============\n");
+    }
 
     return result.toString();
   }

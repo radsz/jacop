@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -81,7 +82,9 @@ public class SinPeqR extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    if (level == firstConsistencyLevel) firstConsistencyCheck = true;
+    if (level == firstConsistencyLevel) {
+      firstConsistencyCheck = true;
+    }
   }
 
   @Override
@@ -100,13 +103,17 @@ public class SinPeqR extends Constraint
 
     // System.out.println ("1. SinPeqR("+p+", "+q+")");
 
-    if (p.max() - p.min() >= 2 * FloatDomain.PI) return;
+    if (p.max() - p.min() >= 2 * FloatDomain.PI) {
+      return;
+    }
 
     do {
 
       store.propagationHasOccurred = false;
 
-      if (satisfied()) return;
+      if (satisfied()) {
+        return;
+      }
 
       double min = p.min();
       double max = p.max();
@@ -253,8 +260,12 @@ public class SinPeqR extends Constraint
 
       pMin = FloatDomain.down(pMin);
       pMax = FloatDomain.up(pMax);
-      if (java.lang.Double.isNaN(pMin)) pMin = -FloatDomain.PI / 2;
-      if (java.lang.Double.isNaN(pMax)) pMax = FloatDomain.PI / 2;
+      if (java.lang.Double.isNaN(pMin)) {
+        pMin = -FloatDomain.PI / 2;
+      }
+      if (java.lang.Double.isNaN(pMax)) {
+        pMax = FloatDomain.PI / 2;
+      }
 
       double low, high;
       double k = Math.floor(p.min() / (2 * FloatDomain.PI));
@@ -308,12 +319,23 @@ public class SinPeqR extends Constraint
   // }
 
   int intervalNo(double d) {
-    if (d >= -2.0 * FloatDomain.PI && d <= -1.5 * FloatDomain.PI) return 1;
-    if (d >= -1.5 * FloatDomain.PI && d <= -0.5 * FloatDomain.PI) return 2;
-    if (d >= -0.5 * FloatDomain.PI && d <= 0.5 * FloatDomain.PI) return 3;
-    if (d >= 0.5 * FloatDomain.PI && d <= 1.5 * FloatDomain.PI) return 4;
-    if (d >= 1.5 * FloatDomain.PI && d <= 2.0 * FloatDomain.PI) return 5;
-    else return 0; // should not return this
+    if (d >= -2.0 * FloatDomain.PI && d <= -1.5 * FloatDomain.PI) {
+      return 1;
+    }
+    if (d >= -1.5 * FloatDomain.PI && d <= -0.5 * FloatDomain.PI) {
+      return 2;
+    }
+    if (d >= -0.5 * FloatDomain.PI && d <= 0.5 * FloatDomain.PI) {
+      return 3;
+    }
+    if (d >= 0.5 * FloatDomain.PI && d <= 1.5 * FloatDomain.PI) {
+      return 4;
+    }
+    if (d >= 1.5 * FloatDomain.PI && d <= 2.0 * FloatDomain.PI) {
+      return 5; // should not return this
+    } else {
+      return 0; // should not return this
+    }
   }
 
   @Override
@@ -328,11 +350,11 @@ public class SinPeqR extends Constraint
       double sinMin = Math.sin(p.min()), sinMax = Math.sin(p.max());
 
       FloatInterval minDiff =
-          (sinMin < q.min())
+          sinMin < q.min()
               ? new FloatInterval(sinMin, q.min())
               : new FloatInterval(q.min(), sinMin);
       FloatInterval maxDiff =
-          (sinMax < q.max())
+          sinMax < q.max()
               ? new FloatInterval(sinMax, q.max())
               : new FloatInterval(q.max(), sinMax);
 
@@ -353,7 +375,7 @@ public class SinPeqR extends Constraint
     return result.toString();
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
     if (f.equals(q)) {
       // f = sin(p)
       // f' = cos(p) * d(p)

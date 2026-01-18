@@ -100,12 +100,12 @@ public class DisjointConditional extends Diff {
 
     queueIndex = 2;
 
-    int size = (rectangles.getFirst()).size();
+    int size = rectangles.getFirst().size();
     this.rectangles = new Rectangle[rectangles.size()];
 
     int i = 0;
 
-    for (List<? extends IntVar> R : rectangles)
+    for (List<? extends IntVar> R : rectangles) {
       if (R.size() == size) {
         Rectangle rect = new Rectangle(R);
         this.rectangles[i] = rect;
@@ -114,6 +114,7 @@ public class DisjointConditional extends Diff {
         String s = "\nNot equal sizes of rectangle vectors in Diff";
         throw new IllegalArgumentException(s);
       }
+    }
     // }
     if (size / 2 != 2) {
       String s = "\nRectangles of size > 2 not currently supported by Diff";
@@ -351,7 +352,7 @@ public class DisjointConditional extends Diff {
   }
 
   boolean checkRect(RectangleWithCondition r) {
-    return (r.condition() == null) ? true : ((r.condition().min() == 1) ? true : false);
+    return r.condition() == null ? true : (r.condition().min() == 1 ? true : false);
   }
 
   boolean conditionChanged(Set<IntVar> fdvQueue, int j) {
@@ -381,11 +382,15 @@ public class DisjointConditional extends Diff {
       int hinderStart = p.min;
       int hinderStop = p.max;
       // System.out.println(hinder);
-      if (hinderStart - currentJposition >= durJ) excludedState = false;
+      if (hinderStart - currentJposition >= durJ) {
+        excludedState = false;
+      }
       currentJposition = hinderStop;
       k++;
     }
-    if (excludedState && maxJ - currentJposition >= durJ) excludedState = false;
+    if (excludedState && maxJ - currentJposition >= durJ) {
+      excludedState = false;
+    }
     return excludedState;
   }
 
@@ -397,7 +402,9 @@ public class DisjointConditional extends Diff {
 
     for (int m = 0; m < origin.noIntervals(); m++) {
       int intervalLength = origin.rightElement(m) - origin.leftElement(m) + dur;
-      if (maxLength < intervalLength) maxLength = intervalLength;
+      if (maxLength < intervalLength) {
+        maxLength = intervalLength;
+      }
     }
     return maxLength;
   }
@@ -467,7 +474,9 @@ public class DisjointConditional extends Diff {
           // to occupy o length space !!!
           Use.add(start, stop - start);
           j++;
-        } else use = false;
+        } else {
+          use = false;
+        }
 
         // min length == 0
         minLength0 = minLength0 || (sLengthMin[m] <= 0);
@@ -476,8 +485,11 @@ public class DisjointConditional extends Diff {
       }
 
       if (overlap) {
-        if (s.condition() == null) OverlappingRects.add(s);
-        else if (s.condition().max() != 0) OverlappingRects.add(s);
+        if (s.condition() == null) {
+          OverlappingRects.add(s);
+        } else if (s.condition().max() != 0) {
+          OverlappingRects.add(s);
+        }
 
         if (checkRect(s)) {
           if (use) {
@@ -497,9 +509,15 @@ public class DisjointConditional extends Diff {
               checkArea = true;
               totalNumberOfRectangles++;
               for (int i = 0; i < dim; i++) {
-                if (sOriginMin[i] < startMin[i]) startMin[i] = sOriginMin[i];
-                if (sOriginMax[i] > stopMax[i]) stopMax[i] = sOriginMax[i];
-                if (minLength[i] > sLengthMin[i]) minLength[i] = sLengthMin[i];
+                if (sOriginMin[i] < startMin[i]) {
+                  startMin[i] = sOriginMin[i];
+                }
+                if (sOriginMax[i] > stopMax[i]) {
+                  stopMax[i] = sOriginMax[i];
+                }
+                if (minLength[i] > sLengthMin[i]) {
+                  minLength[i] = sLengthMin[i];
+                }
 
                 sArea = sArea * sLengthMin[i];
               }
@@ -521,17 +539,25 @@ public class DisjointConditional extends Diff {
         int rOriginIMin = rOriginIdom.min(),
             rOriginIMax = rOriginIdom.max(),
             rLengthIMin = rLengthIdom.min();
-        if (rOriginIMin < startMin[i]) startMin[i] = rOriginIMin;
-        if (rOriginIMax + rLengthIMin > stopMax[i]) stopMax[i] = rOriginIMax + rLengthIMin;
+        if (rOriginIMin < startMin[i]) {
+          startMin[i] = rOriginIMin;
+        }
+        if (rOriginIMax + rLengthIMin > stopMax[i]) {
+          stopMax[i] = rOriginIMax + rLengthIMin;
+        }
       }
       boolean minEqZero = false;
       for (int i = 0; i < startMin.length; i++) {
         availArea = availArea * (stopMax[i] - startMin[i]);
         if (minLength[i] == 0) {
           minEqZero = true;
-        } else rectNumber = rectNumber * ((stopMax[i] - startMin[i]) / minLength[i]);
+        } else {
+          rectNumber = rectNumber * ((stopMax[i] - startMin[i]) / minLength[i]);
+        }
       }
-      if (minEqZero) rectNumber = Long.MAX_VALUE;
+      if (minEqZero) {
+        rectNumber = Long.MAX_VALUE;
+      }
 
       if (availArea < area) {
         // System.out.println("Fail area: "+ availArea+" < "+area+" at
@@ -592,8 +618,11 @@ public class DisjointConditional extends Diff {
   Interval minForbiddenInterval(
       int start, int i, Rectangle r, List<IntRectangle> ConsideredRect, int minI) {
 
-    if (notFit(i, r, ConsideredRect)) return new Interval(start, minI);
-    else return new Interval(-1, -1);
+    if (notFit(i, r, ConsideredRect)) {
+      return new Interval(start, minI);
+    } else {
+      return new Interval(-1, -1);
+    }
   }
 
   void narrowIthCondition(
@@ -603,13 +632,14 @@ public class DisjointConditional extends Diff {
       List<RectangleWithCondition> ProfileCandidates) {
     Interval exclude;
     int s;
-    int j = (i == 0) ? 1 : 0;
+    int j = i == 0 ? 1 : 0;
     int rSize = r.origin[j].max() - r.origin[j].min();
     int rLengthJMin = r.length[j].min(), rLengthIMin = r.length[i].min();
     int barierSize = 0;
 
-    if (!ProfileCandidates.isEmpty() && doProfile)
+    if (!ProfileCandidates.isEmpty() && doProfile) {
       profileNarrowingCondition(i, r, ProfileCandidates);
+    }
 
     if (!UsedRect.isEmpty()) {
 
@@ -625,8 +655,11 @@ public class DisjointConditional extends Diff {
       for (int k = 0; k < r.dim; k++) {
         IntDomain rOrigin = r.origin[k].dom(), rLength = r.length[k].dom();
         strtR.add(rOrigin.min(), rLength.min());
-        if (k == i) maxRect.add(rOrigin.max(), rLength.max());
-        else maxRect.add(rOrigin.min(), rLength.min());
+        if (k == i) {
+          maxRect.add(rOrigin.max(), rLength.max());
+        } else {
+          maxRect.add(rOrigin.min(), rLength.min());
+        }
       }
       starts.add(strtR);
 
@@ -645,7 +678,9 @@ public class DisjointConditional extends Diff {
             rectSize += t.length[j];
             // Determine minimum length in direction i
             // (possibly new start time)
-            if (tempMin < minI) minI = tempMin;
+            if (tempMin < minI) {
+              minI = tempMin;
+            }
           }
         }
 
@@ -675,7 +710,7 @@ public class DisjointConditional extends Diff {
                   IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, min);
                   Update.unionAdapt(exclude.max(), IntDomain.MaxInt);
 
-                  if (traceNarr)
+                  if (traceNarr) {
                     IO.print(
                         "7. Obligatory rectangles Narrow "
                             + ConsideredRect
@@ -688,11 +723,14 @@ public class DisjointConditional extends Diff {
                             + "length="
                             + r.length[i].min()
                             + "\n");
+                  }
 
                   // currentStore.in(r.origin[i], Update);
                   r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
-                  if (traceNarr) IO.println(" -->" + r.origin[i]);
+                  if (traceNarr) {
+                    IO.println(" -->" + r.origin[i]);
+                  }
                 }
               }
             }
@@ -735,8 +773,8 @@ public class DisjointConditional extends Diff {
             lengthOK = false;
             newMaxLength =
                 hinder.origin[i]
-                    -
                     // ((Interval)r.origin[i].dom().lastElement()).Min;
+                    - // ((Interval)r.origin[i].dom().lastElement()).Min;
                     r.origin[i].min();
           }
           n++;
@@ -748,7 +786,7 @@ public class DisjointConditional extends Diff {
           int maxLength = findMaxLength(i, newMaxLength, r);
 
           if (maxLength < r.length[i].max()) {
-            if (traceNarr)
+            if (traceNarr) {
               IO.println(
                   "9. Obligatory rectangles Narrow "
                       + r.length[i]
@@ -756,6 +794,7 @@ public class DisjointConditional extends Diff {
                       + IntDomain.MinInt
                       + ".."
                       + maxLength);
+            }
             r.length[i].domain.inMax(currentStore.level, r.length[i], maxLength);
             // currentStore.in(r.length[i], MinInt, maxLength);
           }
@@ -858,11 +897,15 @@ public class DisjointConditional extends Diff {
           int hinderStop = p.max;
           // System.out.println("Hinder =
           // "+hinderStart+".."+hinderStop);
-          if (hinderStart - currentJposition >= durJ) excludedState = false;
+          if (hinderStart - currentJposition >= durJ) {
+            excludedState = false;
+          }
           currentJposition = hinderStop;
           k++;
         }
-        if (excludedState && maxJ - currentJposition >= durJ) excludedState = false;
+        if (excludedState && maxJ - currentJposition >= durJ) {
+          excludedState = false;
+        }
       }
       j++;
     }
@@ -882,7 +925,9 @@ public class DisjointConditional extends Diff {
 
     int dur = Duration.min();
     for (ProfileItem p : Profile) {
-      if (trace) IO.println("Comparing [" + _min + " " + _max + "] with profile item " + p);
+      if (trace) {
+        IO.println("Comparing [" + _min + " " + _max + "] with profile item " + p);
+      }
       if (intervalOverlap(_min, _max + dur, p.min, p.max)) {
         if (limit - p.value < Resources.min()) {
           // Check for possible narrowing of Start or fail
@@ -892,7 +937,7 @@ public class DisjointConditional extends Diff {
             IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
             Update.unionAdapt(p.max, IntDomain.MaxInt);
 
-            if (traceNarr)
+            if (traceNarr) {
               IO.print(
                   "6. Profile Narrowed "
                       + Start
@@ -907,10 +952,13 @@ public class DisjointConditional extends Diff {
                       + "\n"
                       + Profile
                       + "\n");
+            }
 
             Start.domain.in(store.level, Start, Update);
 
-            if (traceNarr) IO.println(" => " + Start);
+            if (traceNarr) {
+              IO.println(" => " + Start);
+            }
           }
         } else {
           IntDomain StartDom = Start.dom();
@@ -919,11 +967,15 @@ public class DisjointConditional extends Diff {
             int updateMax = limit - p.value;
             IntervalDomain Update = new IntervalDomain(0, updateMax);
             if (updateMax < Resources.max()) {
-              if (traceNarr) IO.println("8. Profile Narrowed " + Resources + " in " + Update);
+              if (traceNarr) {
+                IO.println("8. Profile Narrowed " + Resources + " in " + Update);
+              }
 
               Resources.domain.in(store.level, Resources, Update);
 
-              if (traceNarr) IO.println(" => " + Resources);
+              if (traceNarr) {
+                IO.println(" => " + Resources);
+              }
             }
           }
         }
@@ -939,12 +991,15 @@ public class DisjointConditional extends Diff {
     IntDomain rOriginJdom = r.origin[j].dom();
     int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
-    if (trace) IO.println("Start time = " + s + ", resource use = " + resUse);
+    if (trace) {
+      IO.println("Start time = " + s + ", resource use = " + resUse);
+    }
 
     IntDomain d = s.dom();
-    for (int m = 0; m < d.noIntervals(); m++)
+    for (int m = 0; m < d.noIntervals(); m++) {
       profileCheckInterval(
           currentStore, Profile, limit, s, dur, d.leftElement(m), d.rightElement(m), resUse);
+    }
   }
 
   void profileNarrowingCondition(
@@ -1010,7 +1065,9 @@ public class DisjointConditional extends Diff {
     int i = 0;
     for (Rectangle rectangle : rectangles) {
       result.append(rectangle);
-      if (i < rectangles.length - 1) result.append(", ");
+      if (i < rectangles.length - 1) {
+        result.append(", ");
+      }
       i++;
     }
 

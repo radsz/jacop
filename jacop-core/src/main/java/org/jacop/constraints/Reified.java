@@ -69,9 +69,10 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
   public Reified(PrimitiveConstraint c, IntVar b) {
 
     checkInputForNullness(new String[] {"c", "b"}, new Object[] {c, b});
-    if (b.min() > 1 || b.max() < 0)
+    if (b.min() > 1 || b.max() < 0) {
       throw new IllegalArgumentException(
           "Variable b in reified constraint must have domain at most 0..1");
+    }
 
     numberId = idNumber.incrementAndGet();
     this.c = c;
@@ -91,10 +92,11 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     } else if (c.notSatisfied()) {
       b.domain.inValue(store.level, b, 0);
       removeConstraint();
-    } else if (b.max() == 0) // C must be false
-    c.notConsistency(store);
-    else if (b.min() == 1) // C must be true
-    c.consistency(store);
+    } else if (b.max() == 0) { // C must be false
+      c.notConsistency(store);
+    } else if (b.min() == 1) { // C must be true
+      c.consistency(store);
+    }
   }
 
   @Override
@@ -106,10 +108,11 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     } else if (c.notSatisfied()) {
       b.domain.inValue(store.level, b, 1);
       removeConstraint();
-    } else if (b.max() == 0) // C must be true
-    c.consistency(store);
-    else if (b.min() == 1) // C must be false
-    c.notConsistency(store);
+    } else if (b.max() == 0) { // C must be true
+      c.consistency(store);
+    } else if (b.min() == 1) { // C must be false
+      c.notConsistency(store);
+    }
   }
 
   @Override
@@ -128,25 +131,35 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == b) return IntDomain.GROUND;
-    else {
+    if (var == b) {
+      return IntDomain.GROUND;
+    } else {
 
       int eventAcross = -1;
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, true);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, false);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
-      if (eventAcross == -1) return Domain.NONE;
-      else return eventAcross;
+      if (eventAcross == -1) {
+        return Domain.NONE;
+      } else {
+        return eventAcross;
+      }
     }
   }
 
@@ -161,25 +174,35 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
-    if (var == b) return IntDomain.GROUND;
-    else {
+    if (var == b) {
+      return IntDomain.GROUND;
+    } else {
 
       int eventAcross = -1;
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, true);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
       if (c.arguments().contains(var)) {
         int event = c.getNestedPruningEvent(var, false);
-        if (event > eventAcross) eventAcross = event;
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
       }
 
-      if (eventAcross == -1) return Domain.NONE;
-      else return eventAcross;
+      if (eventAcross == -1) {
+        return Domain.NONE;
+      } else {
+        return eventAcross;
+      }
     }
   }
 

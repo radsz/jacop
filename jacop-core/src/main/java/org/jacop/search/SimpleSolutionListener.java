@@ -56,7 +56,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
   // TODO, change one solution only to limit of solutions.
 
-  public T[] vars = null;
+  public T[] vars;
 
   /** It specifies the number of solutions we want to find. */
   public int solutionLimit = -1;
@@ -80,9 +80,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   /** It contains children of the solution listener. */
   public SolutionListener<T>[] childrenSolutionListeners;
 
-  protected int noSolutions = 0;
+  protected int noSolutions;
   boolean alwaysUpdateToMostRecentSolution = true;
-  boolean recordSolutions = false;
+  boolean recordSolutions;
 
   /**
    * It returns null if no solution was recorded, or the variables for which the solution(s) was
@@ -122,7 +122,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public Domain[] getSolution(int no) {
 
     assert (no <= noSolutions);
-    assert (recordSolutions);
+    assert recordSolutions;
 
     return solutions[no - 1];
   }
@@ -148,8 +148,11 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
    */
   public void searchAll(boolean status) {
 
-    if (status) solutionLimit = Integer.MAX_VALUE;
-    else solutionLimit = 1;
+    if (status) {
+      solutionLimit = Integer.MAX_VALUE;
+    } else {
+      solutionLimit = 1;
+    }
   }
 
   /**
@@ -174,8 +177,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       Domain[] currentSolution = new Domain[vars.length];
 
       for (int i = 0; i < vars.length; i++) {
-        if (!vars[i].singleton())
+        if (!vars[i].singleton()) {
           throw new RuntimeException("Variable is not grounded in the solution");
+        }
         currentSolution[i] = vars[i].dom();
       }
 
@@ -196,8 +200,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     } else {
 
       for (int i = 0; i < vars.length; i++) {
-        if (!vars[i].singleton())
+        if (!vars[i].singleton()) {
           throw new RuntimeException("Variable is not grounded in the solution");
+        }
         solutions[0][i] = vars[i].dom();
       }
 
@@ -243,12 +248,15 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       }
     }
 
-    if (vars != null) recordSolution();
+    if (vars != null) {
+      recordSolution();
+    }
 
     if (childrenSolutionListeners != null) {
       boolean code = false;
-      for (SolutionListener<T> childrenSolutionListener : childrenSolutionListeners)
+      for (SolutionListener<T> childrenSolutionListener : childrenSolutionListeners) {
         code |= childrenSolutionListener.executeAfterSolution(search, select);
+      }
       return code && (solutionLimit <= noSolutions);
     }
 
@@ -265,13 +273,18 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
    * @return true if the store is consistent after assigning a solution, false otherwise.
    */
   public boolean assignSolution(Store store) {
-    if (recordSolutions) return assignSolution(store, noSolutions - 1);
-    else return assignSolution(store, 0);
+    if (recordSolutions) {
+      return assignSolution(store, noSolutions - 1);
+    } else {
+      return assignSolution(store, 0);
+    }
   }
 
   public boolean assignSolution(Store store, int number) {
 
-    if (number == noSolutions - 1 && !recordSolutions) number = 0;
+    if (number == noSolutions - 1 && !recordSolutions) {
+      number = 0;
+    }
 
     assert (number < noSolutions) : "Smaller number of solutions were found.";
     assert (recordSolutions || number == 0) : "The solutions were not stored.";
@@ -288,7 +301,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       boolean result = store.consistency();
 
       return result;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -299,17 +314,24 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     if (noSolutions > 1) {
       buf.append("\nNo of solutions : ").append(noSolutions);
       buf.append("\nLast Solution : [");
-    } else buf.append("\nSolution : [");
+    } else {
+      buf.append("\nSolution : [");
+    }
 
     int solutionIndex = 0;
 
-    if (recordSolutions) solutionIndex = noSolutions - 1;
+    if (recordSolutions) {
+      solutionIndex = noSolutions - 1;
+    }
 
-    if (vars != null)
+    if (vars != null) {
       for (int i = 0; i < vars.length; i++) {
         buf.append(vars[i].id()).append("=").append(solutions[solutionIndex][i]);
-        if (i < vars.length - 1) buf.append(", ");
+        if (i < vars.length - 1) {
+          buf.append(", ");
+        }
       }
+    }
 
     buf.append("]\n");
 
@@ -340,8 +362,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
       for (int i = 0; i < vars.length; i++) {
 
-        if (vars[i] instanceof IntVar var)
+        if (vars[i] instanceof IntVar var) {
           result[no] = new XeqC(var, ((IntDomain) solutions[i][number]).min());
+        }
 
         no++;
       }
@@ -370,19 +393,30 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     while (!(left + 1 >= right)) {
 
-      if (debug) IO.println("left " + left + " right " + right + " middle " + middle);
+      if (debug) {
+        IO.println("left " + left + " right " + right + " middle " + middle);
+      }
 
       middle = (left + right) >> 1;
 
-      if (parentSolutionNo[middle] < parentNo) left = middle;
-      else if (parentSolutionNo[middle] > parentNo) right = middle;
-      else break;
+      if (parentSolutionNo[middle] < parentNo) {
+        left = middle;
+      } else if (parentSolutionNo[middle] > parentNo) {
+        right = middle;
+      } else {
+        break;
+      }
     }
 
-    if (parentSolutionNo[middle] == parentNo) return middle;
-    else if (parentSolutionNo[right] == parentNo) return right;
-    else if (parentSolutionNo[left] == parentNo) return left;
-    else return -1;
+    if (parentSolutionNo[middle] == parentNo) {
+      return middle;
+    } else if (parentSolutionNo[right] == parentNo) {
+      return right;
+    } else if (parentSolutionNo[left] == parentNo) {
+      return left;
+    } else {
+      return -1;
+    }
   }
 
   public void setChildrenListeners(SolutionListener<T>[] children) {
@@ -437,7 +471,9 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
   public int getParentSolution(int childSolutionNo) {
 
-    if (parentSolutionNo == null || parentSolutionNo.length < childSolutionNo) return -1;
+    if (parentSolutionNo == null || parentSolutionNo.length < childSolutionNo) {
+      return -1;
+    }
 
     return parentSolutionNo[childSolutionNo - 1];
   }

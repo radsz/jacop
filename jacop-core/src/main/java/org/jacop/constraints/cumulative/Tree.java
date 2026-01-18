@@ -50,7 +50,9 @@ abstract class Tree {
   abstract void clearNode(int i);
 
   void clearTree() {
-    for (int i = 0; i < treeSize; i++) clearNode(i);
+    for (int i = 0; i < treeSize; i++) {
+      clearNode(i);
+    }
   }
 
   int root() {
@@ -102,13 +104,18 @@ abstract class Tree {
   }
 
   long plus(long x, long y) {
-    if (x == Long.MIN_VALUE) return Long.MIN_VALUE;
-    else return x + y;
+    if (x == Long.MIN_VALUE) {
+      return Long.MIN_VALUE;
+    } else {
+      return x + y;
+    }
   }
 
   int plus(int x, int y) {
     if (x == Integer.MIN_VALUE) {
       return Integer.MIN_VALUE;
-    } else return x + y;
+    } else {
+      return x + y;
+    }
   }
 }

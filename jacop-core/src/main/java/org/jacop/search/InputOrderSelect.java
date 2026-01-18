@@ -30,6 +30,7 @@
 
 package org.jacop.search;
 
+import java.util.Arrays;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
@@ -98,11 +99,12 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int finalIndex = searchVariables.length;
 
-    for (int i = currentIndex.value(); i < finalIndex; i++)
+    for (int i = currentIndex.value(); i < finalIndex; i++) {
       if (!searchVariables[i].singleton()) {
         currentIndex.update(i);
         return searchVariables[i];
       }
+    }
 
     return null;
   }
@@ -141,6 +143,6 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
   }
 
   public String toString() {
-    return "" + java.util.Arrays.asList(searchVariables) + ", InputOrder, (" + valueOrdering + ")";
+    return "" + Arrays.asList(searchVariables) + ", InputOrder, (" + valueOrdering + ")";
   }
 }

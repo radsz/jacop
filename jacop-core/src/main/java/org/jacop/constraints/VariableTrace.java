@@ -136,7 +136,9 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
 
     for (int i = 0; i < vars.length; i++) {
       result.append(vars[i]);
-      if (i < vars.length - 1) result.append(", ");
+      if (i < vars.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("])");
 

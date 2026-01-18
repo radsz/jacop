@@ -119,7 +119,9 @@ public class GeostObject {
     this.timeConstraint = new TimeBoundConstraint();
 
     bestShapeID = new int[dimension + 1]; // +1 because of time
-    for (int i = 0; i < dimension + 1; i++) bestShapeID[i] = shapeID.min();
+    for (int i = 0; i < dimension + 1; i++) {
+      bestShapeID[i] = shapeID.min();
+    }
 
     groundCount = 0;
   }
@@ -226,7 +228,9 @@ public class GeostObject {
               store.level, end, start.min() + duration.min(), start.max() + duration.max());
         }
 
-        if (store.propagationHasOccurred) updated = true;
+        if (store.propagationHasOccurred) {
+          updated = true;
+        }
 
       } while (store.propagationHasOccurred);
 

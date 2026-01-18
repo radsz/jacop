@@ -72,7 +72,9 @@ public class Cryptogram extends ExampleFD {
 
     weights[length - 1] = 1;
 
-    for (int i = length - 2; i >= 0; i--) weights[i] = weights[i + 1] * base;
+    for (int i = length - 2; i >= 0; i--) {
+      weights[i] = weights[i + 1] * base;
+    }
 
     return weights;
   }
@@ -88,7 +90,9 @@ public class Cryptogram extends ExampleFD {
 
     example.model();
 
-    if (example.searchMostConstrainedStatic()) IO.println("\nSolution(s) found");
+    if (example.searchMostConstrainedStatic()) {
+      IO.println("\nSolution(s) found");
+    }
   }
 
   @Override
@@ -104,16 +108,20 @@ public class Cryptogram extends ExampleFD {
                 new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
         String str;
 
-        while ((str = in.readLine()) != null)
+        while ((str = in.readLine()) != null) {
           if (!str.trim().isEmpty()) {
 
             int commentPosition = str.indexOf("//");
-            if (commentPosition == 0) continue;
-            else str = str.substring(0, commentPosition);
+            if (commentPosition == 0) {
+              continue;
+            } else {
+              str = str.substring(0, commentPosition);
+            }
 
             lines[noLines] = str;
             noLines++;
           }
+        }
         // in.close(); not needed; aouto close
       } catch (FileNotFoundException _) {
         System.err.println("File " + filename + " could not be found");
@@ -144,7 +152,9 @@ public class Cryptogram extends ExampleFD {
       }
 
       IO.println("No input file was supplied, using lines : ");
-      for (int i = 0; i < noLines; i++) IO.println(lines[0]);
+      for (int i = 0; i < noLines; i++) {
+        IO.println(lines[0]);
+      }
     }
 
     /* Creating constraint store */
@@ -153,7 +163,9 @@ public class Cryptogram extends ExampleFD {
     List<List<String>> words = new ArrayList<>();
 
     // Adding array list for each inputed line
-    for (int i = 0; i < noLines; i++) words.add(new ArrayList<>());
+    for (int i = 0; i < noLines; i++) {
+      words.add(new ArrayList<>());
+    }
 
     // letters used in the file.
     Map<String, IntVar> letters = new HashMap<>();
@@ -163,13 +175,15 @@ public class Cryptogram extends ExampleFD {
       Pattern pat = Pattern.compile("[=+]");
       String[] result = pat.split(lines[i]);
 
-      for (String s : result) words.get(i).add(s);
+      for (String s : result) {
+        words.get(i).add(s);
+      }
     }
 
     vars = new ArrayList<>();
 
-    for (int i = 0; i < noLines; i++)
-      for (int j = words.get(i).size() - 1; j >= 0; j--)
+    for (int i = 0; i < noLines; i++) {
+      for (int j = words.get(i).size() - 1; j >= 0; j--) {
         for (int z = words.get(i).get(j).length() - 1; z >= 0; z--) {
           char[] currentChar = {words.get(i).get(j).charAt(z)};
           if (letters.get(new String(currentChar)) == null) {
@@ -178,6 +192,8 @@ public class Cryptogram extends ExampleFD {
             letters.put(new String(currentChar), currentLetter);
           }
         }
+      }
+    }
 
     if (letters.size() > base) {
       IO.println("Expressions contain more than letters than base of the number system used ");
@@ -203,7 +219,9 @@ public class Cryptogram extends ExampleFD {
         // stores fdvs corresponding to all but the last one in the
         // separate
         // array for later use.
-        if (j < noWords - 1) terms[j] = fdv4words[j];
+        if (j < noWords - 1) {
+          terms[j] = fdv4words[j];
+        }
 
         IntVar[] lettersWithinCurrentWord = new IntVar[currentWord.length()];
 

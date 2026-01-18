@@ -41,11 +41,11 @@ import org.jacop.core.MutableVarValue;
  */
 class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
-  DisjointCondVarValue previousDisjointCondVarValue = null;
+  DisjointCondVarValue previousDisjointCondVarValue;
 
   RectangleWithCondition[] Rects;
 
-  int stamp = 0;
+  int stamp;
 
   DisjointCondVarValue() {}
 
@@ -80,7 +80,9 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
   void setValue(List<RectangleWithCondition> VR) {
     Rects = new RectangleWithCondition[VR.size()];
-    for (int i = 0; i < Rects.length; i++) Rects[i] = VR.get(i);
+    for (int i = 0; i < Rects.length; i++) {
+      Rects[i] = VR.get(i);
+    }
   }
 
   public int stamp() {
@@ -92,9 +94,13 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
     StringBuilder result = new StringBuilder();
 
-    for (int i = 0; i < Rects.length; i++)
-      if (i == Rects.length - 1) result.append(Rects[i]);
-      else result.append(Rects[i]).append(", ");
+    for (int i = 0; i < Rects.length; i++) {
+      if (i == Rects.length - 1) {
+        result.append(Rects[i]);
+      } else {
+        result.append(Rects[i]).append(", ");
+      }
+    }
 
     return result.toString();
   }

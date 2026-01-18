@@ -79,21 +79,27 @@ public class Gardner extends ExampleSet {
 
     SetVar[] days = new SetVar[num_days];
 
-    for (int i = 0; i < days.length; i++)
+    for (int i = 0; i < days.length; i++) {
       days[i] = new SetVar(store, "days[" + i + "]", new BoundSetDomain(1, persons));
+    }
 
     vars = new ArrayList<>();
 
     vars.addAll(Arrays.asList(days));
 
     // all_different(days)
-    for (int i = 0; i < days.length - 1; i++)
-      for (int j = i + 1; j < days.length; j++) store.impose(new Not(new AeqB(days[i], days[j])));
+    for (int i = 0; i < days.length - 1; i++) {
+      for (int j = i + 1; j < days.length; j++) {
+        store.impose(new Not(new AeqB(days[i], days[j])));
+      }
+    }
 
     // card(days[i]) = num_persons_per_meeting
-    for (SetVar day : days) store.impose(new CardA(day, num_persons_per_meeting));
+    for (SetVar day : days) {
+      store.impose(new CardA(day, num_persons_per_meeting));
+    }
 
-    for (int i = 0; i < days.length - 1; i++)
+    for (int i = 0; i < days.length - 1; i++) {
       for (int j = i + 1; j < days.length; j++) {
         SetVar intersect =
             new SetVar(store, "intersect" + i + "-" + j, new BoundSetDomain(1, persons));
@@ -101,6 +107,7 @@ public class Gardner extends ExampleSet {
         IntVar card = new IntVar(store, 0, 1);
         store.impose(new CardAeqX(intersect, card));
       }
+    }
 
     IO.println(
         "\nVariable store size: "
@@ -111,7 +118,7 @@ public class Gardner extends ExampleSet {
 
   public boolean search() {
 
-    Thread tread = java.lang.Thread.currentThread();
+    Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
     long startCPU = b.getThreadCpuTime(tread.getId());
@@ -136,7 +143,9 @@ public class Gardner extends ExampleSet {
       for (SetVar var : vars) {
         IO.println(var);
       }
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     IO.println(
         "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");

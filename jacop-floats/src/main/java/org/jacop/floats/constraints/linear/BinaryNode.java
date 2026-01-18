@@ -44,9 +44,9 @@ public abstract class BinaryNode {
   int id;
 
   // tree structure
-  BinaryNode parent = null;
-  BinaryNode left = null;
-  BinaryNode right = null;
+  BinaryNode parent;
+  BinaryNode left;
+  BinaryNode right;
 
   // BinaryNode sibling = null;  // currently not used
 

@@ -130,7 +130,9 @@ public class DeBruijn extends ExampleFD {
   // integer power method
   static int pow(int x, int y) {
     int z = x;
-    for (int i = 1; i < y; i++) z *= x;
+    for (int i = 1; i < y; i++) {
+      z *= x;
+    }
     return z;
   } // end pow
 
@@ -150,7 +152,9 @@ public class DeBruijn extends ExampleFD {
 
     // decimal representation, ranges from 0..base^n-1
     x = new IntVar[m];
-    for (int i = 0; i < m; i++) x[i] = new IntVar(store, "x_" + i, 0, pow_base_n - 1);
+    for (int i = 0; i < m; i++) {
+      x[i] = new IntVar(store, "x_" + i, 0, pow_base_n - 1);
+    }
 
     //
     // convert between decimal number in x[i] and "base-ary" numbers
@@ -182,11 +186,16 @@ public class DeBruijn extends ExampleFD {
     // assert the the deBruijn property:  element i in binary starts
     // with the end of element i-1
     //
-    for (int i = 1; i < m; i++)
-      for (int j = 1; j < n; j++) store.impose(new XeqY(binary[i - 1][j], binary[i][j - 1]));
+    for (int i = 1; i < m; i++) {
+      for (int j = 1; j < n; j++) {
+        store.impose(new XeqY(binary[i - 1][j], binary[i][j - 1]));
+      }
+    }
 
     // ... "around the corner": last element is connected to the first
-    for (int j = 1; j < n; j++) store.impose(new XeqY(binary[m - 1][j], binary[0][j - 1]));
+    for (int j = 1; j < n; j++) {
+      store.impose(new XeqY(binary[m - 1][j], binary[0][j - 1]));
+    }
 
     vars = new ArrayList<>();
     //

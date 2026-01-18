@@ -92,7 +92,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       LinkedHashSet<IntVar> fdvs = variableQueue;
       variableQueue = new LinkedHashSet<>();
 
-      for (IntVar Q : fdvs)
+      for (IntVar Q : fdvs) {
         if (Q.singleton()) {
           int qPos = positionMapping.get(Q);
           if (qPos > groundPos) {
@@ -101,14 +101,17 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
             positionMapping.put(Q, groundPos);
             positionMapping.put(list[qPos], qPos);
             groundPos++;
-            for (int i = groundPos; i < list.length; i++)
+            for (int i = groundPos; i < list.length; i++) {
               list[i].domain.inComplement(store.level, list[i], Q.min());
+            }
           } else if (qPos == groundPos) {
             groundPos++;
-            for (int i = groundPos; i < list.length; i++)
+            for (int i = groundPos; i < list.length; i++) {
               list[i].domain.inComplement(store.level, list[i], Q.min());
+            }
           }
         }
+      }
 
     } while (store.propagationHasOccurred);
     grounded.update(groundPos);
@@ -122,11 +125,19 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   @Override
   public boolean satisfied() {
 
-    for (int i = grounded.value(); i < list.length; i++) if (!list[i].singleton()) return false;
+    for (int i = grounded.value(); i < list.length; i++) {
+      if (!list[i].singleton()) {
+        return false;
+      }
+    }
 
     Set<Integer> values = new HashSet<>();
 
-    for (IntVar aList : list) if (!values.add(aList.value())) return false;
+    for (IntVar aList : list) {
+      if (!values.add(aList.value())) {
+        return false;
+      }
+    }
 
     return true;
   }
@@ -140,7 +151,9 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     while (i < list.length - 1) {
 
-      if (list[i].domain.isIntersecting(result)) return false;
+      if (list[i].domain.isIntersecting(result)) {
+        return false;
+      }
 
       result.addDom(list[i].domain);
 
@@ -219,7 +232,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       int j = i + 1;
       while (sat && j < list.length) {
         IntDomain ljDom = list[j].dom();
-        sat = (vMin > ljDom.max() || vMax < ljDom.min());
+        sat = vMin > ljDom.max() || vMax < ljDom.min();
         j++;
       }
       i++;
@@ -236,7 +249,9 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("])");
 

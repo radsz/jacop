@@ -112,10 +112,15 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     T var = super.getChoiceVariable(index);
 
-    if (variableOrdering == null && roundRobin) var = roundRobinVarSelection(index);
-    else var = super.getChoiceVariable(index);
+    if (variableOrdering == null && roundRobin) {
+      var = roundRobinVarSelection(index);
+    } else {
+      var = super.getChoiceVariable(index);
+    }
 
-    if (var == null) return null;
+    if (var == null) {
+      return null;
+    }
 
     assert (index >= 0);
     // assert (index < searchVar.length);
@@ -125,11 +130,17 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     // System.out.println (var + ", value = " + value);
 
-    if (leftFirst)
-      if (((FloatVar) var).max() > value) return new PlteqC((FloatVar) var, value);
-      else return new PltC((FloatVar) var, value);
-    else if (((FloatVar) var).max() > value) return new PgtC((FloatVar) var, value);
-    else return new PeqC((FloatVar) var, value);
+    if (leftFirst) {
+      if (((FloatVar) var).max() > value) {
+        return new PlteqC((FloatVar) var, value);
+      } else {
+        return new PltC((FloatVar) var, value);
+      }
+    } else if (((FloatVar) var).max() > value) {
+      return new PgtC((FloatVar) var, value);
+    } else {
+      return new PeqC((FloatVar) var, value);
+    }
   }
 
   T roundRobinVarSelection(int index) {

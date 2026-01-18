@@ -70,12 +70,14 @@ public class Conditional extends Constraint implements SatisfiedPresent {
     checkInputForNullness(new String[] {"b", "c"}, new Object[][] {b, c});
     assert (b.length == c.length)
         : "The length of the two lists in Conditional constraints must be equal";
-    for (IntVar be : b)
+    for (IntVar be : b) {
       assert (be.min() >= 0 && be.max() <= 1)
           : "The elements of condition list must be 0/1 variables";
-    if (b[b.length - 1].min() != 1)
+    }
+    if (b[b.length - 1].min() != 1) {
       throw new IllegalArgumentException(
           "Conditional constraint: the last element of conditions list must be 1 (true)");
+    }
 
     this.queueIndex = 0;
     this.numberId = idNumber.incrementAndGet();
@@ -119,14 +121,18 @@ public class Conditional extends Constraint implements SatisfiedPresent {
       while (i < b.length) {
         if (b[i].max() == 0) {
           i++;
-        } else break LOOP;
+        } else {
+          break LOOP;
+        }
       }
       prune = false;
 
       if (b[i].min() == 1) {
         c[i].consistency(store);
 
-        if (c[i].satisfied()) removeConstraint();
+        if (c[i].satisfied()) {
+          removeConstraint();
+        }
       } else if (c[i].notSatisfied()) {
         b[i].domain.inValue(store.level, b[i], 0);
         prune = true;
@@ -147,7 +153,9 @@ public class Conditional extends Constraint implements SatisfiedPresent {
       if (b[i].max() == 0) {
         i++;
         continue;
-      } else break LOOP;
+      } else {
+        break LOOP;
+      }
     }
     return b[i].min() == 1 && c[i].satisfied();
   }
@@ -161,13 +169,17 @@ public class Conditional extends Constraint implements SatisfiedPresent {
 
     for (int i = 0; i < b.length; i++) {
       result.append(b[i]);
-      if (i < b.length - 1) result.append(", ");
+      if (i < b.length - 1) {
+        result.append(", ");
+      }
     }
     result.append("], ");
 
     for (int i = 0; i < c.length; i++) {
       result.append(c[i]);
-      if (i < c.length - 1) result.append(", ");
+      if (i < c.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("]").append(" )");

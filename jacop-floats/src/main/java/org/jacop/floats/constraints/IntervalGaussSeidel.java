@@ -65,12 +65,14 @@ public class IntervalGaussSeidel {
 
   double minAbs(FloatInterval v) {
 
-    if (v.min() <= 0 && v.max() >= 0) return 0;
+    if (v.min() <= 0 && v.max() >= 0) {
+      return 0;
+    }
 
     double vMin = Math.abs(v.min());
     double vMax = Math.abs(v.max());
 
-    return (vMax < vMin) ? vMax : vMin;
+    return vMax < vMin ? vMax : vMin;
   }
 
   double maxAbs(FloatInterval v) {
@@ -78,7 +80,7 @@ public class IntervalGaussSeidel {
     double vMin = Math.abs(v.min());
     double vMax = Math.abs(v.max());
 
-    return (vMax > vMin) ? vMax : vMin;
+    return vMax > vMin ? vMax : vMin;
   }
 
   public boolean restructure(int currentRow, boolean[] done, int[] row) {
@@ -98,17 +100,25 @@ public class IntervalGaussSeidel {
     }
 
     for (int i = 0; i < A.length; i++) {
-      if (done[i]) continue;
+      if (done[i]) {
+        continue;
+      }
 
       double sumMax = 0;
 
-      for (int j = 0; j < A.length; j++) if (j != currentRow) sumMax += maxAbs(A[i][j]);
+      for (int j = 0; j < A.length; j++) {
+        if (j != currentRow) {
+          sumMax += maxAbs(A[i][j]);
+        }
+      }
 
       if (minAbs(A[i][currentRow]) > sumMax) { // interval version of diagonal dominance
         done[i] = true;
         row[currentRow] = i;
 
-        if (restructure(currentRow + 1, done, row)) return true;
+        if (restructure(currentRow + 1, done, row)) {
+          return true;
+        }
 
         done[i] = false;
       }
@@ -120,7 +130,9 @@ public class IntervalGaussSeidel {
     int N = 0;
     FloatInterval[] x = new FloatInterval[b.length];
     FloatInterval[] previousX = new FloatInterval[x.length];
-    for (int i = 0; i < x.length; i++) x[i] = new FloatInterval(0.0, 0.0);
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new FloatInterval(0.0, 0.0);
+    }
 
     boolean[] d = new boolean[A.length];
     Arrays.fill(d, false);
@@ -140,17 +152,24 @@ public class IntervalGaussSeidel {
       r = new int[A.length];
       dominant = restructure(0, d, r);
 
-      if (!dominant) return null;
+      if (!dominant) {
+        return null;
+      }
     }
 
     if (debug) {
       IO.println("dominant = " + dominant + " ===================================");
       for (FloatInterval[] floatIntervals : A) {
         for (FloatInterval floatInterval : floatIntervals) {
-          if (floatInterval.min() <= 0 && floatInterval.max() >= 0) IO.print("0 ");
-          else if (floatInterval.min() > 0) IO.print("+ ");
-          else if (floatInterval.min() < 0) IO.print("- ");
-          else IO.print("? ");
+          if (floatInterval.min() <= 0 && floatInterval.max() >= 0) {
+            IO.print("0 ");
+          } else if (floatInterval.min() > 0) {
+            IO.print("+ ");
+          } else if (floatInterval.min() < 0) {
+            IO.print("- ");
+          } else {
+            IO.print("? ");
+          }
         }
         IO.println();
       }
@@ -161,12 +180,13 @@ public class IntervalGaussSeidel {
       for (int i = 0; i < b.length; i++) {
         FloatIntervalDomain sum = new FloatIntervalDomain(b[i], b[i]);
 
-        for (int j = 0; j < A[i].length; j++)
+        for (int j = 0; j < A[i].length; j++) {
           if (j != i) {
             FloatIntervalDomain v1 =
                 FloatDomain.mulBounds(A[i][j].min(), A[i][j].max(), x[j].min(), x[j].max());
             sum = FloatDomain.subBounds(sum.min(), sum.max(), v1.min(), v1.max());
           }
+        }
 
         FloatIntervalDomain w =
             FloatDomain.divBounds(sum.min(), sum.max(), A[i][i].min(), A[i][i].max());
@@ -176,28 +196,43 @@ public class IntervalGaussSeidel {
       if (debug) {
         IO.print("iteration " + N + ": {");
         for (int i = 0; i < x.length; i++) {
-          if (i == x.length - 1) IO.print(x[i]);
-          else IO.print(x[i] + ", ");
+          if (i == x.length - 1) {
+            IO.print(x[i]);
+          } else {
+            IO.print(x[i] + ", ");
+          }
         }
         IO.println("}");
       }
 
       if (N == 0) {
         N++;
-        for (int i = 0; i < x.length; i++) previousX[i] = (FloatInterval) x[i].clone();
+        for (int i = 0; i < x.length; i++) {
+          previousX[i] = (FloatInterval) x[i].clone();
+        }
 
         continue;
       } else {
         N++;
-        if (N == MaxIterations) break;
+        if (N == MaxIterations) {
+          break;
+        }
       }
 
       boolean converged = true;
-      for (int i = 0; i < x.length; i++) if (!x[i].eq(previousX[i])) converged = false;
+      for (int i = 0; i < x.length; i++) {
+        if (!x[i].eq(previousX[i])) {
+          converged = false;
+        }
+      }
 
-      if (converged) break;
+      if (converged) {
+        break;
+      }
 
-      for (int i = 0; i < x.length; i++) previousX[i] = (FloatInterval) x[i].clone();
+      for (int i = 0; i < x.length; i++) {
+        previousX[i] = (FloatInterval) x[i].clone();
+      }
     }
 
     return x;
@@ -205,34 +240,44 @@ public class IntervalGaussSeidel {
 
   void precondition(FloatInterval[][] AA, double[] bb) {
 
-    if (debug) IO.println("Before preconditioning\n" + this);
+    if (debug) {
+      IO.println("Before preconditioning\n" + this);
+    }
 
     double[][] midPoint = new double[AA.length][AA[0].length];
 
-    for (int i = 0; i < midPoint.length; i++)
-      for (int j = 0; j < midPoint[i].length; j++)
+    for (int i = 0; i < midPoint.length; i++) {
+      for (int j = 0; j < midPoint[i].length; j++) {
         midPoint[i][j] = (AA[i][j].min() + AA[i][j].max()) / 2;
+      }
+    }
 
     Matrix m = new Matrix(midPoint);
 
     double[][] inv = m.inverse();
 
     FloatInterval[][] F = new FloatInterval[AA.length][A[0].length];
-    for (int i = 0; i < F.length; i++)
-      for (int j = 0; j < F[0].length; j++)
+    for (int i = 0; i < F.length; i++) {
+      for (int j = 0; j < F[0].length; j++) {
         F[i][j] = new FloatInterval(AA[i][j].min(), AA[i][j].max());
+      }
+    }
 
     FloatIntervalDomain[][] newA = Matrix.mult(F, inv);
     Matrix comp = new Matrix(inv);
     double[] newB = comp.mult(bb);
 
     A = new FloatInterval[newA.length][newA[0].length];
-    for (int i = 0; i < newA.length; i++)
-      for (int j = 0; j < newA[i].length; j++)
+    for (int i = 0; i < newA.length; i++) {
+      for (int j = 0; j < newA[i].length; j++) {
         A[i][j] = new FloatInterval(newA[i][j].min(), newA[i][j].max());
+      }
+    }
     b = newB;
 
-    if (debug) IO.println("After preconditioning\n" + this);
+    if (debug) {
+      IO.println("After preconditioning\n" + this);
+    }
   }
 
   public String toString() {
@@ -240,7 +285,9 @@ public class IntervalGaussSeidel {
     StringBuilder s = new StringBuilder();
 
     for (int i = 0; i < A.length; i++) {
-      for (int j = 0; j < A[i].length; j++) s.append(A[i][j]).append(" ");
+      for (int j = 0; j < A[i].length; j++) {
+        s.append(A[i][j]).append(" ");
+      }
       s.append(" = ").append(b[i]).append("\n");
     }
 

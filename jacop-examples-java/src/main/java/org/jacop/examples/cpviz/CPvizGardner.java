@@ -68,7 +68,7 @@ public class CPvizGardner {
     //       long T1, T2, T;
     //       T1 = System.currentTimeMillis();
 
-    Thread tread = java.lang.Thread.currentThread();
+    Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
     long startCPU = b.getThreadCpuTime(tread.getId());
@@ -82,23 +82,30 @@ public class CPvizGardner {
     store = new Store();
 
     SetVar[] days = new SetVar[35];
-    for (int i = 0; i < days.length; i++)
+    for (int i = 0; i < days.length; i++) {
       days[i] = new SetVar(store, "days[" + i + "]", 1, persons);
+    }
 
     // all_different(days)
-    for (int i = 0; i < days.length - 1; i++)
-      for (int j = i + 1; j < days.length; j++) store.impose(new Not(new AeqB(days[i], days[j])));
+    for (int i = 0; i < days.length - 1; i++) {
+      for (int j = i + 1; j < days.length; j++) {
+        store.impose(new Not(new AeqB(days[i], days[j])));
+      }
+    }
 
     // card(days[i]) = num_persons_per_meeting
-    for (SetVar setVar : days) store.impose(new CardA(setVar, num_persons_per_meeting));
+    for (SetVar setVar : days) {
+      store.impose(new CardA(setVar, num_persons_per_meeting));
+    }
 
-    for (int i = 0; i < days.length - 1; i++)
+    for (int i = 0; i < days.length - 1; i++) {
       for (int j = i + 1; j < days.length; j++) {
         SetVar intersect = new SetVar(store, "" + i + j, 1, persons);
         store.impose(new AintersectBeqC(days[i], days[j], intersect));
         IntVar card = new BooleanVar(store); // IntVar(store, 0, 1);
         store.impose(new CardAeqX(intersect, card));
       }
+    }
 
     IO.println(
         "\nVariable store size: "
@@ -131,7 +138,9 @@ public class CPvizGardner {
       for (SetVar day : days) {
         IO.println(day);
       }
-    } else IO.println("*** No");
+    } else {
+      IO.println("*** No");
+    }
 
     //       T2 = System.currentTimeMillis();
     //       T = T2 - T1;

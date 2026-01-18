@@ -84,8 +84,11 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     assert (checkInvariants() == null) : checkInvariants();
 
-    if (l > 2) queueIndex = 1;
-    else queueIndex = 0;
+    if (l > 2) {
+      queueIndex = 1;
+    } else {
+      queueIndex = 0;
+    }
 
     setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
   }
@@ -109,9 +112,11 @@ public class AndBoolVector extends PrimitiveConstraint {
    */
   public String checkInvariants() {
 
-    for (IntVar var : list)
-      if (var.min() < 0 || var.max() > 1)
+    for (IntVar var : list) {
+      if (var.min() < 0 || var.max() > 1) {
         return "Variable " + var + " does not have boolean domain";
+      }
+    }
 
     return null;
   }
@@ -147,7 +152,9 @@ public class AndBoolVector extends PrimitiveConstraint {
     int index_01 = l - 1;
 
     if (result.min() == 1) {
-      for (int i = start; i < l; i++) list[i].domain.inValue(store.level, list[i], 1);
+      for (int i = start; i < l; i++) {
+        list[i].domain.inValue(store.level, list[i], 1);
+      }
       return;
     }
 
@@ -168,10 +175,13 @@ public class AndBoolVector extends PrimitiveConstraint {
       return;
     }
 
-    if (result.max() == 0 && start == l - 1)
+    if (result.max() == 0 && start == l - 1) {
       list[index_01].domain.inValue(store.level, list[index_01], 0);
+    }
 
-    if ((l - start) < 3) queueIndex = 0;
+    if ((l - start) < 3) {
+      queueIndex = 0;
+    }
   }
 
   private void swap(int i, int j) {
@@ -190,7 +200,9 @@ public class AndBoolVector extends PrimitiveConstraint {
     int index_01 = l - 1;
 
     if (result.max() == 0) {
-      for (int i = start; i < l; i++) list[i].domain.inValue(store.level, list[i], 1);
+      for (int i = start; i < l; i++) {
+        list[i].domain.inValue(store.level, list[i], 1);
+      }
       return;
     }
 
@@ -210,10 +222,13 @@ public class AndBoolVector extends PrimitiveConstraint {
       return;
     }
 
-    if (result.max() == 0 && start == l - 1)
+    if (result.max() == 0 && start == l - 1) {
       list[index_01].domain.inValue(store.level, list[index_01], 1);
+    }
 
-    if ((l - start) < 3) queueIndex = 0;
+    if ((l - start) < 3) {
+      queueIndex = 0;
+    }
   }
 
   @Override
@@ -222,22 +237,26 @@ public class AndBoolVector extends PrimitiveConstraint {
     int start = position.value();
 
     if (result.min() == 1) {
-      for (int i = start; i < l; i++)
-        if (list[i].min() != 1) return false;
-        else {
+      for (int i = start; i < l; i++) {
+        if (list[i].min() != 1) {
+          return false;
+        } else {
           swap(start, i);
           start++;
           position.update(start);
         }
+      }
       return true;
     } else if (result.max() == 0) {
-      for (int i = start; i < l; i++)
-        if (list[i].max() == 0) return true;
-        else if (list[i].min() == 1) {
+      for (int i = start; i < l; i++) {
+        if (list[i].max() == 0) {
+          return true;
+        } else if (list[i].min() == 1) {
           swap(start, i);
           start++;
           position.update(start);
         }
+      }
       return false;
     }
 
@@ -251,13 +270,15 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     if (result.max() == 0) {
 
-      for (int i = start; i < l; i++)
-        if (list[i].min() != 1) return false;
-        else {
+      for (int i = start; i < l; i++) {
+        if (list[i].min() != 1) {
+          return false;
+        } else {
           swap(start, i);
           start++;
           position.update(start);
         }
+      }
 
       return true;
 
@@ -265,13 +286,15 @@ public class AndBoolVector extends PrimitiveConstraint {
 
       if (result.min() == 1) {
 
-        for (int i = start; i < l; i++)
-          if (list[i].max() == 0) return true;
-          else if (list[i].min() == 1) {
+        for (int i = start; i < l; i++) {
+          if (list[i].max() == 0) {
+            return true;
+          } else if (list[i].min() == 1) {
             swap(start, i);
             start++;
             position.update(start);
           }
+        }
       }
     }
 
@@ -286,7 +309,9 @@ public class AndBoolVector extends PrimitiveConstraint {
     resultString.append(" : andBool([ ");
     for (int i = 0; i < l; i++) {
       resultString.append(list[i]);
-      if (i < l - 1) resultString.append(", ");
+      if (i < l - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append("], ");
     resultString.append(result);
@@ -318,8 +343,12 @@ public class AndBoolVector extends PrimitiveConstraint {
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 }

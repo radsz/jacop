@@ -91,7 +91,9 @@ public class AeqS extends PrimitiveConstraint {
 
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
     return SetDomain.GROUND;
   }
@@ -99,23 +101,30 @@ public class AeqS extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    if (a.singleton() && a.dom().glb().eq(set)) throw Store.failException;
+    if (a.singleton() && a.dom().glb().eq(set)) {
+      throw Store.failException;
+    }
 
     if (sizeOfB == a.domain.glb().getSize() + 1
         && sizeOfB == a.domain.lub().getSize()
         && set.contains(a.domain.glb())) {
       int value = a.domain.lub().subtract(a.domain.glb()).value();
-      if (set.contains(value)) a.domain.inLUBComplement(store.level, a, value);
-      else a.domain.inValue(store.level, a, a.domain.lub());
+      if (set.contains(value)) {
+        a.domain.inLUBComplement(store.level, a, value);
+      } else {
+        a.domain.inValue(store.level, a, a.domain.lub());
+      }
     }
   }
 
   @Override
   public boolean notSatisfied() {
 
-    if (!a.domain.lub().contains(set)) return true;
+    if (!a.domain.lub().contains(set)) {
+      return true;
+    }
 
-    return a.singleton() && !(a.domain.glb().eq(set));
+    return a.singleton() && !a.domain.glb().eq(set);
   }
 
   @Override

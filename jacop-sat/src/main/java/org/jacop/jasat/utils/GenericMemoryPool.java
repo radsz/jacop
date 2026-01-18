@@ -59,8 +59,11 @@ public final class GenericMemoryPool<E> {
    * @return an instance of type E stored here, or a fresh instance from the factory
    */
   public E getNew() {
-    if (set.isEmpty()) return factory.newInstance();
-    else return set.poll();
+    if (set.isEmpty()) {
+      return factory.newInstance();
+    } else {
+      return set.poll();
+    }
   }
 
   /**

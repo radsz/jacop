@@ -130,7 +130,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   int[] lastNumberOfActiveStates;
 
   /** This is the counter of save-to-latex calls. */
-  private int calls = 0;
+  private int calls;
 
   /** The ith smallest level of Layered Graph which have changed. */
   private TimeStamp<Integer> leftChange;
@@ -150,7 +150,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   private int[] activeLevelsTemp;
   private Integer leftPosition;
   private Integer rightPosition;
-  private int currentTouchedIndex = 0;
+  private int currentTouchedIndex;
 
   /**
    * Constructor need Store to initialize the time-stamps.
@@ -208,7 +208,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     FSMState[] array = new FSMState[stateNumber];
 
     dfa.resize();
-    for (FSMState s : dfa.allStates) array[s.id] = s;
+    for (FSMState s : dfa.allStates) {
+      array[s.id] = s;
+    }
 
     // ----- compute the reachable region of the graph -----
 
@@ -219,15 +221,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable)
+      for (FSMState s : reachable) {
         // watch it's edges
         for (FSMTransition t : s.transitions) {
           // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(list[level].dom());
 
-          if (outarc[level][s.id][t.successor.id] != null)
+          if (outarc[level][s.id][t.successor.id] != null) {
             outarc[level][s.id][t.successor.id].addDom(dom);
-          else outarc[level][s.id][t.successor.id] = dom;
+          } else {
+            outarc[level][s.id][t.successor.id] = dom;
+          }
 
           /* If the edge is not empty them add the state to tmp set
            * check that such states wasn't previously added.
@@ -236,10 +240,15 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
            * belongs to the set of accepted states
            */
 
-          if (dom.getSize() > 0)
-            if (level < levels - 1) tmp.add(t.successor);
-            else if (dfa.finalStates.contains(t.successor)) tmp.add(t.successor);
+          if (dom.getSize() > 0) {
+            if (level < levels - 1) {
+              tmp.add(t.successor);
+            } else if (dfa.finalStates.contains(t.successor)) {
+              tmp.add(t.successor);
+            }
+          }
         }
+      }
 
       // copy the tmp set of states into reachable region
       reachable.clear();
@@ -261,14 +270,18 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
       stateLevels[level] = new RegState[reachable.size()];
 
-      for (int i = 0; i < stateNumber; i++)
-        for (int j = 0; j < stateNumber; j++)
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0)
-            if (!reachable.contains(array[i])) outarc[level - 1][j][i].clear();
-            else {
+      for (int i = 0; i < stateNumber; i++) {
+        for (int j = 0; j < stateNumber; j++) {
+          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
+            if (!reachable.contains(array[i])) {
+              outarc[level - 1][j][i].clear();
+            } else {
               outdeg[level - 1][j] += outarc[level - 1][j][i].getSize();
               tmp.add(array[j]);
             }
+          }
+        }
+      }
 
       reachable.clear();
       reachable.addAll(tmp);
@@ -291,14 +304,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           // If the outdegree of the sate is not 0 then its should be created
           RegState s = getState(level, i); // Check if it wasn't already created
           if (s == null) { // If not -> create the state
-            if (listRepresentation) s = new RegStateInt(level, i, outdeg[level][i], index);
-            else s = new RegStateDom(level, i, outdeg[level][i], index);
+            if (listRepresentation) {
+              s = new RegStateInt(level, i, outdeg[level][i], index);
+            } else {
+              s = new RegStateDom(level, i, outdeg[level][i], index);
+            }
 
             stateLevels[level][index++] = s; // Add new state to the list of states of this level
 
             activeLevelsTemp[level] = index;
 
-            if (debugAll)
+            if (debugAll) {
               IO.println(
                   "Create new state q_"
                       + level
@@ -307,23 +323,26 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                       + s.inDegree
                       + " and out degree : "
                       + s.outDegree);
+            }
           }
 
           // For every outgoing arc
-          for (int j = 0; j < stateNumber; j++)
+          for (int j = 0; j < stateNumber; j++) {
             // If transition is active
             if (outarc[level][i][j] != null && outarc[level][i][j].getSize() > 0) {
               RegState suc = getState(level + 1, j); // See if such state already exists
               if (suc == null) {
-                if (listRepresentation)
+                if (listRepresentation) {
                   suc = new RegStateInt(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
-                else suc = new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
+                } else {
+                  suc = new RegStateDom(level + 1, j, outdeg[level + 1][j], nextLevelIndex);
+                }
 
                 stateLevels[level + 1][nextLevelIndex++] = suc;
 
                 activeLevelsTemp[level + 1] = nextLevelIndex;
 
-                if (debugAll)
+                if (debugAll) {
                   IO.println(
                       "Create new state q_"
                           + (level + 1)
@@ -332,11 +351,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                           + suc.inDegree
                           + " and out degree : "
                           + suc.outDegree);
+                }
               }
 
               s.addTransitions(suc, (IntervalDomain) outarc[level][i][j]);
 
-              if (debugAll)
+              if (debugAll) {
                 IO.println(
                     "--  state q_"
                         + level
@@ -345,8 +365,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                         + s.inDegree
                         + " and out degree : "
                         + s.outDegree);
+              }
 
-              if (debugAll)
+              if (debugAll) {
                 IO.println(
                     "--  state q_"
                         + (level + 1)
@@ -355,7 +376,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                         + suc.inDegree
                         + " and out degree : "
                         + suc.outDegree);
+              }
             }
+          }
         }
       }
     }
@@ -371,8 +394,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   public RegState getState(int level, int id) {
 
     for (int i = 0; i < stateLevels[level].length; i++) {
-      if (stateLevels[level][i] != null && stateLevels[level][i].id == id)
+      if (stateLevels[level][i] != null && stateLevels[level][i].id == id) {
         return stateLevels[level][i];
+      }
     }
     return null;
   }
@@ -403,15 +427,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     for (state = preThisLevelStateNb - 1; state >= 0; state--) {
 
       s = stateLevels[varIndex][state];
-      if (debugAll) IO.println(state + ": watch state q_" + varIndex + s.id);
+      if (debugAll) {
+        IO.println(state + ": watch state q_" + varIndex + s.id);
+      }
 
       boolean alreadyTouched = false;
 
-      for (int i = s.outDegree - 1; i >= 0; i--)
+      for (int i = s.outDegree - 1; i >= 0; i--) {
         // If this transition must be removes because it is not in var's domain
         if (!s.intersects(domVar, i)) {
 
-          if (debugAll)
+          if (debugAll) {
             IO.println(
                 "must remove transition q_"
                     + varIndex
@@ -421,6 +447,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     + "-> q_"
                     + (varIndex + 1)
                     + s.successors[i].id);
+          }
 
           // we remove this transition (we know its index, so its easy)
           // This will automatically reduce the out-degree of this state
@@ -456,7 +483,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert (s.outDegree >= 0);
 
           if (s.outDegree == 0) {
-            if (debugAll) IO.println("Move OUT state out of scope : q_" + varIndex + s.id);
+            if (debugAll) {
+              IO.println("Move OUT state out of scope : q_" + varIndex + s.id);
+            }
             assert (s.level == varIndex);
             disableState(varIndex, s.pos);
           }
@@ -464,12 +493,15 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           assert (suc.inDegree >= 0);
 
           if (suc.inDegree == 0) {
-            if (debugAll) IO.println("Move IN state out of scope : q_" + suc.level + suc.id);
+            if (debugAll) {
+              IO.println("Move IN state out of scope : q_" + suc.level + suc.id);
+            }
             assert (suc.level == varIndex + 1);
             disableState(nextVar, suc.pos);
             levelHadChanged[nextVar] = true;
           }
         }
+      }
     }
 
     unreachForwardLoop(preNextLevelStateNb, varIndex + 1);
@@ -478,8 +510,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
   private void addTouchedState(RegState s) {
 
-    if (currentTouchedIndex < touchedStates.length) touchedStates[currentTouchedIndex++] = s;
-    else {
+    if (currentTouchedIndex < touchedStates.length) {
+      touchedStates[currentTouchedIndex++] = s;
+    } else {
 
       RegState[] newTouchedStates = new RegState[touchedStates.length * 2];
       System.arraycopy(touchedStates, 0, newTouchedStates, 0, touchedStates.length);
@@ -512,7 +545,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         s = this.stateLevels[level][sPos];
 
         boolean alreadyTouched = false;
-        for (int sucIndex = s.outDegree - 1; sucIndex >= 0; sucIndex--)
+        for (int sucIndex = s.outDegree - 1; sucIndex >= 0; sucIndex--) {
           if (!s.successors[sucIndex].isActive(activeLevels)) {
             s.removeTransition(sucIndex);
             if (!alreadyTouched) {
@@ -520,6 +553,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               alreadyTouched = true;
             }
           }
+        }
 
         assert (s.outDegree >= 0) : "Negative successor number of q_" + s.level + s.id;
 
@@ -578,7 +612,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           suc = s.successors[i];
           suc.inDegree--;
 
-          if (debugAll)
+          if (debugAll) {
             IO.println(
                 "watch transition q_"
                     + s.level
@@ -588,11 +622,14 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     + "-> q_"
                     + (suc.level)
                     + suc.id);
+          }
 
           assert (suc.inDegree >= 0) : "Negative indegree of successor state" + suc.level + suc.id;
 
           if (suc.inDegree == 0) {
-            if (debugAll) IO.println("> Move IN state out of scope : q_" + suc.level + suc.id);
+            if (debugAll) {
+              IO.println("> Move IN state out of scope : q_" + suc.level + suc.id);
+            }
             // changed to directl disableState(int, int).
             assert (suc.level == level + 1);
             disableState(level + 1, suc.pos);
@@ -646,12 +683,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     this.variableQueue.clear();
 
-    if (leftChange.value() < leftPosition) leftPosition = leftChange.value();
+    if (leftChange.value() < leftPosition) {
+      leftPosition = leftChange.value();
+    }
 
-    if (rightChange.value() > rightPosition) rightPosition = rightChange.value();
+    if (rightChange.value() > rightPosition) {
+      rightPosition = rightChange.value();
+    }
 
-    for (int l = leftPosition; l <= rightPosition; l++)
+    for (int l = leftPosition; l <= rightPosition; l++) {
       lastNumberOfActiveStates[l] = activeLevels[l].value();
+    }
   }
 
   /** Sweep the graph upon backtracking. */
@@ -671,10 +713,14 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       prevVal = curState.outDegree;
       curState.outDegree = successors.length;
 
-      for (int i = prevVal; i < curState.outDegree; i++)
+      for (int i = prevVal; i < curState.outDegree; i++) {
         if (!(successors[i].isActive(activeLevels)
-            && curState.intersects(list[curState.level].domain, i))) curState.outDegree = i;
-        else successors[i].inDegree++;
+            && curState.intersects(list[curState.level].domain, i))) {
+          curState.outDegree = i;
+        } else {
+          successors[i].inDegree++;
+        }
+      }
     }
 
     int stateNb = 0;
@@ -694,15 +740,22 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         curState.outDegree = successors.length;
         // for every new added edge is active
         // if it is not, then stop
-        for (int i = prevVal; i < curState.outDegree; i++)
-          if (!(successors[i].isActive(activeLevels) && curState.intersects(list[l].domain, i)))
+        for (int i = prevVal; i < curState.outDegree; i++) {
+          if (!(successors[i].isActive(activeLevels) && curState.intersects(list[l].domain, i))) {
             curState.outDegree = i;
-          else successors[i].inDegree++;
+          } else {
+            successors[i].inDegree++;
+          }
+        }
       }
     }
 
-    if (debugAll) IO.println("..next prunning");
-    if (saveAllToLatex) saveLatexToFile("After graph sweep");
+    if (debugAll) {
+      IO.println("..next prunning");
+    }
+    if (saveAllToLatex) {
+      saveLatexToFile("After graph sweep");
+    }
 
     leftPosition = list.length;
     rightPosition = 0;
@@ -729,7 +782,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
           IntervalDomain initial = new IntervalDomain();
 
-          for (Integer value : supports[level].keySet()) initial.unionAdapt(value, value);
+          for (Integer value : supports[level].keySet()) {
+            initial.unionAdapt(value, value);
+          }
 
           this.list[level].domain.in(store.level, list[level], initial);
 
@@ -751,11 +806,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
             if (!edge.check(activeLevels)) {
               boolean stillSuported = false;
-              for (int st = activeLevels[level].value() - 1; st >= 0; st--)
+              for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
                 if (stateLevels[level][st].updateSupport(edge, v)) {
                   stillSuported = true;
                   break;
                 }
+              }
 
               if (!stillSuported) {
                 list[level].domain.inComplement(store.level, list[level], v);
@@ -772,9 +828,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           varDom = new IntervalDomain();
           for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
             state = this.stateLevels[level][s];
-            for (int i = state.outDegree - 1; i >= 0; i--) state.add(varDom, i);
+            for (int i = state.outDegree - 1; i >= 0; i--) {
+              state.add(varDom, i);
+            }
           }
-          if (debugAll)
+          if (debugAll) {
             IO.println(
                 ">>> Variable x_"
                     + level
@@ -782,16 +840,21 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     + this.list[level].domain
                     + " and now its "
                     + varDom);
+          }
           this.list[level].domain.in(store.level, list[level], varDom);
         }
       }
 
-      if (saveAllToLatex) saveLatexToFile("End of consistency level " + store.level);
+      if (saveAllToLatex) {
+        saveLatexToFile("End of consistency level " + store.level);
+      }
 
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
 
-      if (variableQueue.isEmpty()) return;
+      if (variableQueue.isEmpty()) {
+        return;
+      }
     }
 
     RegState state;
@@ -809,38 +872,42 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     // updated correctly.
 
     if (leftChange.stamp() < store.level) {
-      for (int i = 0; i < levelHadChanged.length; i++)
+      for (int i = 0; i < levelHadChanged.length; i++) {
         if (levelHadChanged[i]) {
           leftChange.update(i);
           break;
         }
+      }
     } else {
       int leftEnd = leftChange.value();
-      for (int i = 0; i < leftEnd; i++)
+      for (int i = 0; i < leftEnd; i++) {
         if (levelHadChanged[i]) {
           leftChange.update(i);
           break;
         }
+      }
     }
 
     if (rightChange.stamp() < store.level) {
-      for (int i = levelHadChanged.length - 1; i >= 0; i--)
+      for (int i = levelHadChanged.length - 1; i >= 0; i--) {
         if (levelHadChanged[i]) {
           rightChange.update(i);
           break;
         }
+      }
     } else {
       int rightEnd = rightChange.value();
-      for (int i = levelHadChanged.length - 1; i > rightEnd; i--)
+      for (int i = levelHadChanged.length - 1; i > rightEnd; i--) {
         if (levelHadChanged[i]) {
           rightChange.update(i);
           break;
         }
+      }
     }
 
     if (oneSupport) {
 
-      for (int level = this.list.length - 1; level >= 0; level--)
+      for (int level = this.list.length - 1; level >= 0; level--) {
         if (levelHadChanged[level]) {
 
           ValueEnumeration enumer = this.list[level].domain.valueEnumeration();
@@ -855,11 +922,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
               boolean stillSuported = false;
 
-              for (int st = activeLevels[level].value() - 1; st >= 0; st--)
+              for (int st = activeLevels[level].value() - 1; st >= 0; st--) {
                 if (stateLevels[level][st].updateSupport(edge, v)) {
                   stillSuported = true;
                   break;
                 }
+              }
 
               if (!stillSuported) {
                 this.list[level].domain.inComplement(store.level, list[level], v);
@@ -868,18 +936,21 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             }
           }
         }
+      }
     } else {
       IntDomain varDom;
-      for (int level = list.length - 1; level >= 0; level--)
+      for (int level = list.length - 1; level >= 0; level--) {
         if (levelHadChanged[level]) {
           varDom = new IntervalDomain();
 
           for (int s = activeLevels[level].value() - 1; s >= 0; s--) {
             state = stateLevels[level][s];
-            for (int i = state.outDegree - 1; i >= 0; i--) state.add(varDom, i);
+            for (int i = state.outDegree - 1; i >= 0; i--) {
+              state.add(varDom, i);
+            }
           }
 
-          if (debugAll)
+          if (debugAll) {
             IO.println(
                 ">>> Variable x_"
                     + level
@@ -887,12 +958,16 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                     + list[level].domain
                     + " and now its "
                     + varDom);
+          }
 
           list[level].domain.in(store.level, list[level], varDom);
         }
+      }
     }
 
-    if (saveAllToLatex) saveLatexToFile("End of consistency level " + store.level);
+    if (saveAllToLatex) {
+      saveLatexToFile("End of consistency level " + store.level);
+    }
 
     touchedIndex.update(this.currentTouchedIndex);
   }
@@ -901,8 +976,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @SuppressWarnings("unchecked")
   public void impose(Store store) {
 
-    if (optimizedMDD) initializeARRAY(fsm.transformIntoMDD(list));
-    else initializeARRAY(fsm);
+    if (optimizedMDD) {
+      initializeARRAY(fsm.transformIntoMDD(list));
+    } else {
+      initializeARRAY(fsm);
+    }
 
     super.impose(store);
 
@@ -912,8 +990,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     lastNumberOfActiveStates = new int[list.length + 1];
     activeLevels = new TimeStamp[list.length + 1];
-    for (int i = list.length; i >= 0; i--)
+    for (int i = list.length; i >= 0; i--) {
       activeLevels[i] = new TimeStamp<>(store, activeLevelsTemp[i]);
+    }
 
     leftChange = new TimeStamp<>(store, 0);
     touchedIndex = new TimeStamp<>(store, 0);
@@ -930,7 +1009,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
         for (int s = this.activeLevels[level].value() - 1; s >= 0; s--) {
           state = this.stateLevels[level][s];
-          for (int i = state.outDegree - 1; i >= 0; i--) state.setSupports(supports[level], i);
+          for (int i = state.outDegree - 1; i >= 0; i--) {
+            state.setSupports(supports[level], i);
+          }
         }
 
         /*
@@ -964,7 +1045,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     StringBuilder result = new StringBuilder(id());
     result.append("( [ ");
-    for (IntVar intVar : list) result.append(intVar.id()).append(" ");
+    for (IntVar intVar : list) {
+      result.append(intVar.id()).append(" ");
+    }
     result.append(" ], FSM \n");
     result.append(fsm.toString());
     result.append(")");
@@ -975,9 +1058,13 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @Override
   public void imposeDecomposition(Store store) {
 
-    if (constraints == null) constraints = decompose(store);
+    if (constraints == null) {
+      constraints = decompose(store);
+    }
 
-    for (Constraint c : constraints) store.impose(c, queueIndex);
+    for (Constraint c : constraints) {
+      store.impose(c, queueIndex);
+    }
   }
 
   @Override
@@ -1008,7 +1095,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     IntVar[] q = new IntVar[list.length + 1];
 
-    for (int i = 0; i < q.length; i++) q[i] = new IntVar(store, "Q" + i, 0, fsm.allStates.size());
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "Q" + i, 0, fsm.allStates.size());
+    }
 
     constraints = new ArrayList<>();
 
@@ -1020,13 +1109,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     constraints.add(new XeqC(q[0], fsm.initState.id));
 
     IntervalDomain finalQ = new IntervalDomain();
-    for (FSMState finalState : fsm.finalStates) finalQ.unionAdapt(finalState.id, finalState.id);
+    for (FSMState finalState : fsm.finalStates) {
+      finalQ.unionAdapt(finalState.id, finalState.id);
+    }
 
     constraints.add(new In(q[q.length - 1], finalQ));
 
     if (debugAll) {
       for (int[] tuple : tuples) {
-        for (int val : tuple) IO.print(val + " ");
+        for (int val : tuple) {
+          IO.print(val + " ");
+        }
         IO.println("");
 
         IO.println(fsm);
@@ -1088,15 +1181,19 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
         .append("\n");
     RegState curState;
     String style;
-    for (int l = 1; l < list.length + 1; l++)
+    for (int l = 1; l < list.length + 1; l++) {
       for (int i = 0; i < stateNumber; i++) {
         curState = getState(l, i);
 
-        if (curState == null) style = "n";
-        else if (curState.isActive(activeLevels)) style = "active";
-        else style = "stateS";
+        if (curState == null) {
+          style = "n";
+        } else if (curState.isActive(activeLevels)) {
+          style = "active";
+        } else {
+          style = "stateS";
+        }
 
-        if (i > 0)
+        if (i > 0) {
           res.append("\\node[")
               .append(style)
               .append("] (q_")
@@ -1110,7 +1207,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               .append(i)
               .append("}$};")
               .append("\n");
-        else
+        } else {
           res.append("\\node[")
               .append(style)
               .append("] (q_")
@@ -1124,14 +1221,16 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
               .append(i)
               .append("}$};")
               .append("\n");
+        }
       }
+    }
 
     res.append("\\path[ann,->]");
-    for (int i = 0; i < stateLevels.length; i++)
+    for (int i = 0; i < stateLevels.length; i++) {
       for (int r = 0; r < this.activeLevels[i].value(); r++) {
         RegState s = stateLevels[i][r];
         for (int j = 0; j < s.outDegree; j++) {
-          if (dNames != null)
+          if (dNames != null) {
             res.append("     (q_")
                 .append(s.level)
                 .append(s.id)
@@ -1142,7 +1241,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 .append(s.successors[j].id)
                 .append(")")
                 .append("\n");
-          else
+          } else {
             res.append("     (q_")
                 .append(s.level)
                 .append(s.id)
@@ -1153,8 +1252,10 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 .append(s.successors[j].id)
                 .append(")")
                 .append("\n");
+          }
         }
       }
+    }
     res.append(";\n");
     res.append("\\end{tikzpicture}\\\\ " + "\n");
     res.append("}\n }\n");
@@ -1228,7 +1329,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     List<RegState>[] layeredGraph =
         (ArrayList<RegState>[]) Array.newInstance(ArrayList.class, levels + 1);
-    for (int i = 0; i < layeredGraph.length; i++) layeredGraph[i] = new ArrayList<>();
+    for (int i = 0; i < layeredGraph.length; i++) {
+      layeredGraph[i] = new ArrayList<>();
+    }
 
     this.activeLevelsTemp = new int[this.list.length + 1];
 
@@ -1239,7 +1342,11 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     int currentLevel = 0;
     int noNeighbours = 0;
 
-    for (int i = 0; i < list[0].getSize(); i++) if (mdd.diagram[i] != MDD.NOEDGE) noNeighbours++;
+    for (int i = 0; i < list[0].getSize(); i++) {
+      if (mdd.diagram[i] != MDD.NOEDGE) {
+        noNeighbours++;
+      }
+    }
 
     currentState[0] =
         new RegStateInt(currentLevel, 0, noNeighbours, activeLevelsTemp[currentLevel]++);
@@ -1256,7 +1363,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
       if (currentOffset[currentLevel] >= list[currentLevel].getSize()) {
         currentLevel--;
-        if (currentLevel >= 0) currentOffset[currentLevel]++;
+        if (currentLevel >= 0) {
+          currentOffset[currentLevel]++;
+        }
         continue;
       }
 
@@ -1280,19 +1389,25 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       boolean visited = false;
 
       RegState s = null;
-      for (RegState state : layeredGraph[currentLevel + 1])
+      for (RegState state : layeredGraph[currentLevel + 1]) {
         if (state.id == nextNodePosition) {
           s = state;
           visited = true;
         }
+      }
 
       if (s == null) {
         noNeighbours = 0;
 
-        if (currentLevel + 1 < list.length)
+        if (currentLevel + 1 < list.length) {
           for (int j = nextNodePosition;
               j < nextNodePosition + list[currentLevel + 1].getSize();
-              j++) if (mdd.diagram[j] != MDD.NOEDGE) noNeighbours++;
+              j++) {
+            if (mdd.diagram[j] != MDD.NOEDGE) {
+              noNeighbours++;
+            }
+          }
+        }
 
         s =
             new RegStateInt(

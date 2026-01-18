@@ -100,14 +100,18 @@ public class FSM {
       result.initState.addTransition(new FSMTransition(t.domain, addState));
     }
 
-    for (FSMState f : finalStates) result.finalStates.add(f.deepClone(result.allStates));
+    for (FSMState f : finalStates) {
+      result.finalStates.add(f.deepClone(result.allStates));
+    }
 
     for (FSMTransition t : other.initState.transitions) {
       FSMState addState = t.successor.deepClone(result.allStates);
       result.initState.addTransition(new FSMTransition(t.domain, addState));
     }
 
-    for (FSMState f : other.finalStates) result.finalStates.add(f.deepClone(result.allStates));
+    for (FSMState f : other.finalStates) {
+      result.finalStates.add(f.deepClone(result.allStates));
+    }
 
     return result;
   }
@@ -149,9 +153,15 @@ public class FSM {
       }
     }
 
-    if (!otherIsStar)
-      for (FSMState f : other.finalStates) result.finalStates.add(f.deepClone(result.allStates));
-    else for (FSMState f : finalStates) result.finalStates.add(f.deepClone(result.allStates));
+    if (!otherIsStar) {
+      for (FSMState f : other.finalStates) {
+        result.finalStates.add(f.deepClone(result.allStates));
+      }
+    } else {
+      for (FSMState f : finalStates) {
+        result.finalStates.add(f.deepClone(result.allStates));
+      }
+    }
 
     return result;
   }
@@ -189,7 +199,9 @@ public class FSM {
             length = length + 1;
           }
           s.addTransition(new FSMTransition(t.domain, suc));
-        } else s.addTransition(new FSMTransition(t.domain, result.initState));
+        } else {
+          s.addTransition(new FSMTransition(t.domain, result.initState));
+        }
       }
     }
     result.finalStates.add(result.initState);
@@ -205,7 +217,11 @@ public class FSM {
    */
   public FSMState getState(int id) {
 
-    for (FSMState s : this.allStates) if (s.id == id) return s;
+    for (FSMState s : this.allStates) {
+      if (s.id == id) {
+        return s;
+      }
+    }
 
     return null;
   }
@@ -219,7 +235,9 @@ public class FSM {
 
     result.append("node [shape = doubleoctagon]; ");
 
-    for (FSMState s : finalStates) result.append(s.id).append(" ");
+    for (FSMState s : finalStates) {
+      result.append(s.id).append(" ");
+    }
 
     result.append(";  /* Final states */\nnode [shape = circle];\n\n");
 
@@ -227,7 +245,7 @@ public class FSM {
 
       // 			result.append( s.id ).append("\n");
 
-      for (FSMTransition t : s.transitions)
+      for (FSMTransition t : s.transitions) {
         // 				result.append( "-" ).append( t.domain ).append( "> " ).append(t.successor.id
         // ).append("\n");
         result
@@ -237,6 +255,7 @@ public class FSM {
             .append(" [label = \"")
             .append(t.domain)
             .append("\"]\n");
+      }
     }
 
     result.append("}\n");
@@ -289,7 +308,9 @@ public class FSM {
 
     resize();
     FSMState[] array = new FSMState[stateNumber];
-    for (FSMState s : this.allStates) array[s.id] = s;
+    for (FSMState s : this.allStates) {
+      array[s.id] = s;
+    }
 
     // ----- compute the reachable region of the graph -----
 
@@ -300,7 +321,7 @@ public class FSM {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable)
+      for (FSMState s : reachable) {
         // watch it's edges
         for (FSMTransition t : s.transitions) {
           // prepare the set of values of this edge
@@ -314,14 +335,19 @@ public class FSM {
            * belongs to the set of accepted states
            */
 
-          if (dom.getSize() > 0)
-            if (level < levels - 1) tmp.add(t.successor);
-            else if (finalStates.contains(t.successor)) tmp.add(t.successor);
+          if (dom.getSize() > 0) {
+            if (level < levels - 1) {
+              tmp.add(t.successor);
+            } else if (finalStates.contains(t.successor)) {
+              tmp.add(t.successor);
+            }
+          }
 
           //					if (dom.getSize() > 0 && !tmp.contains(t.succesor))
           //						if (level < levels -1) tmp.push(t.succesor);
           //						else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
+      }
       // copy the tmp set of states into reachable region
       reachable.clear();
       reachable.addAll(tmp);
@@ -339,11 +365,17 @@ public class FSM {
     while (level > 0) {
       tmp.clear();
 
-      for (int i = 0; i < stateNumber; i++)
-        for (int j = 0; j < stateNumber; j++)
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0)
-            if (!reachable.contains(array[i])) outarc[level - 1][j][i].clear();
-            else tmp.add(array[j]);
+      for (int i = 0; i < stateNumber; i++) {
+        for (int j = 0; j < stateNumber; j++) {
+          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
+            if (!reachable.contains(array[i])) {
+              outarc[level - 1][j][i].clear();
+            } else {
+              tmp.add(array[j]);
+            }
+          }
+        }
+      }
 
       reachable.clear();
       reachable.addAll(tmp);
@@ -354,21 +386,24 @@ public class FSM {
     int[] tuple = new int[levels];
     List<int[]> result = new ArrayList<>();
 
-    for (int i = 0; i < stateNumber; i++)
-      for (int j = 0; j < stateNumber; j++)
+    for (int i = 0; i < stateNumber; i++) {
+      for (int j = 0; j < stateNumber; j++) {
         if (outarc[0][i][j] != null && outarc[0][i][j].getSize() > 0) {
           dom = outarc[0][i][j];
           for (int h = 0; h < dom.size; h++) {
-            Interval inv = (dom).intervals[h];
+            Interval inv = dom.intervals[h];
             // for each interval of val
-            if (inv != null)
+            if (inv != null) {
               // For each value of the interval
               for (int v = inv.min(); v <= inv.max(); v++) {
                 tuple[0] = v;
                 recursiveCall(j, 1, stateNumber, outarc, tuple, result);
               }
+            }
           }
         }
+      }
+    }
 
     return result.toArray(new int[result.size()][]);
   }
@@ -389,22 +424,24 @@ public class FSM {
 
     IntervalDomain dom;
 
-    for (int i = 0; i < stateNumber; i++)
+    for (int i = 0; i < stateNumber; i++) {
       if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
         dom = outarc[level][prevSuc][i];
 
         for (int h = 0; h < dom.size; h++) {
 
-          Interval inv = (dom).intervals[h];
+          Interval inv = dom.intervals[h];
 
-          if (inv != null)
+          if (inv != null) {
             // For each value of the interval
             for (int v = inv.min(); v <= inv.max(); v++) {
               tuple[level] = v;
               recursiveCall(i, level + 1, stateNumber, outarc, tuple, tuples);
             }
+          }
         }
       }
+    }
   }
 
   /**
@@ -450,7 +487,7 @@ public class FSM {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable)
+      for (FSMState s : reachable) {
         // watch it's edges
         for (FSMTransition t : s.transitions) {
           // prepare the set of values of this edge
@@ -464,14 +501,19 @@ public class FSM {
            * belongs to the set of accepted states
            */
 
-          if (dom.getSize() > 0)
-            if (level < levels - 1) tmp.add(t.successor);
-            else if (finalStates.contains(t.successor)) tmp.add(t.successor);
+          if (dom.getSize() > 0) {
+            if (level < levels - 1) {
+              tmp.add(t.successor);
+            } else if (finalStates.contains(t.successor)) {
+              tmp.add(t.successor);
+            }
+          }
 
           // if (dom.getSize() > 0 && !tmp.contains(t.succesor))
           //	if (level < levels -1) tmp.push(t.succesor);
           //	else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
+      }
 
       // copy the tmp set of states into reachable region
       reachable.clear();
@@ -491,11 +533,17 @@ public class FSM {
 
       tmp.clear();
 
-      for (int i = 0; i < stateNumber; i++)
-        for (int j = 0; j < stateNumber; j++)
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0)
-            if (!reachable.contains(array[i])) outarc[level - 1][j][i].clear();
-            else tmp.add(array[j]);
+      for (int i = 0; i < stateNumber; i++) {
+        for (int j = 0; j < stateNumber; j++) {
+          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
+            if (!reachable.contains(array[i])) {
+              outarc[level - 1][j][i].clear();
+            } else {
+              tmp.add(array[j]);
+            }
+          }
+        }
+      }
 
       reachable.clear();
       reachable.addAll(tmp);
@@ -506,22 +554,25 @@ public class FSM {
     int[] tuple = new int[levels];
 
     // Part exploring all tuples and adding one by one to MDD.
-    for (int i = 0; i < stateNumber; i++)
-      for (int j = 0; j < stateNumber; j++)
+    for (int i = 0; i < stateNumber; i++) {
+      for (int j = 0; j < stateNumber; j++) {
         // for level 0 (first variable in the tuple)
         if (outarc[0][i][j] != null && outarc[0][i][j].getSize() > 0) {
           dom = outarc[0][i][j];
           for (int h = 0; h < dom.size; h++) {
             Interval inv = dom.intervals[h];
             // for each interval of val
-            if (inv != null)
+            if (inv != null) {
               // For each value of the interval
               for (int v = inv.min(); v <= inv.max(); v++) {
                 tuple[0] = v;
                 recursiveCall(j, 1, stateNumber, outarc, tuple, result);
               }
+            }
           }
         }
+      }
+    }
 
     result.reduce();
     return result;
@@ -544,23 +595,25 @@ public class FSM {
 
     IntervalDomain dom;
 
-    for (int i = 0; i < stateNumber; i++)
+    for (int i = 0; i < stateNumber; i++) {
       if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
 
         dom = outarc[level][prevSuc][i];
 
         for (int h = 0; h < dom.size; h++) {
 
-          Interval inv = (dom).intervals[h];
+          Interval inv = dom.intervals[h];
 
-          if (inv != null)
+          if (inv != null) {
             // For each value of the interval
             for (int v = inv.min(); v <= inv.max(); v++) {
               tuple[level] = v;
               recursiveCall(i, level + 1, stateNumber, outarc, tuple, result);
             }
+          }
         }
       }
+    }
   }
 
   /**
@@ -607,7 +660,7 @@ public class FSM {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable)
+      for (FSMState s : reachable) {
         // watch it's edges
         for (FSMTransition t : s.transitions) {
           // prepare the set of values of this edge
@@ -621,14 +674,19 @@ public class FSM {
            * belongs to the set of accepted states
            */
 
-          if (dom.getSize() > 0)
-            if (level < levels - 1) tmp.add(t.successor);
-            else if (finalStates.contains(t.successor)) tmp.add(t.successor);
+          if (dom.getSize() > 0) {
+            if (level < levels - 1) {
+              tmp.add(t.successor);
+            } else if (finalStates.contains(t.successor)) {
+              tmp.add(t.successor);
+            }
+          }
 
           // if (dom.getSize() > 0 && !tmp.contains(t.succesor))
           //	if (level < levels -1) tmp.push(t.succesor);
           //	else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
+      }
 
       // copy the tmp set of states into reachable region
       reachable.clear();
@@ -648,11 +706,17 @@ public class FSM {
 
       tmp.clear();
 
-      for (int i = 0; i < stateNumber; i++)
-        for (int j = 0; j < stateNumber; j++)
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0)
-            if (!reachable.contains(array[i])) outarc[level - 1][j][i].clear();
-            else tmp.add(array[j]);
+      for (int i = 0; i < stateNumber; i++) {
+        for (int j = 0; j < stateNumber; j++) {
+          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
+            if (!reachable.contains(array[i])) {
+              outarc[level - 1][j][i].clear();
+            } else {
+              tmp.add(array[j]);
+            }
+          }
+        }
+      }
 
       reachable.clear();
       reachable.addAll(tmp);
@@ -666,9 +730,9 @@ public class FSM {
     // result.freePosition += vars[0].getSize();
 
     // Part exploring all tuples and adding one by one to MDD.
-    for (int l = 0; l < vars.length; l++)
-      for (int i = 0; i < stateNumber; i++)
-        for (int j = 0; j < stateNumber; j++)
+    for (int l = 0; l < vars.length; l++) {
+      for (int i = 0; i < stateNumber; i++) {
+        for (int j = 0; j < stateNumber; j++) {
           // for level 0 (first variable in the tuple)
           if (outarc[l][i][j] != null && outarc[l][i][j].getSize() > 0) {
 
@@ -689,7 +753,9 @@ public class FSM {
 
               if (positions[(l + 1) * stateNumber + j] == 0) {
                 positions[(l + 1) * stateNumber + j] = result.freePosition;
-                if (l + 1 < vars.length) result.freePosition += result.domainLimits[l + 1];
+                if (l + 1 < vars.length) {
+                  result.freePosition += result.domainLimits[l + 1];
+                }
                 // else {
                 //	result.ensureSize(result.freePosition + 1);
                 //	result.diagram[result.freePosition] = MDD.TERMINAL;
@@ -707,6 +773,9 @@ public class FSM {
               }
             }
           }
+        }
+      }
+    }
 
     return result;
   }

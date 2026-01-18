@@ -52,7 +52,9 @@ public final class IntSet extends IntTrie<IntTrie.SimpleNode> {
    */
   public IntSet(Iterable<Integer> toAdd) {
     this();
-    for (int i : toAdd) add(i);
+    for (int i : toAdd) {
+      add(i);
+    }
   }
 
   public void set(int i) {

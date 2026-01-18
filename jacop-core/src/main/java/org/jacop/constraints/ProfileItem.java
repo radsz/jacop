@@ -127,10 +127,10 @@ public class ProfileItem {
       if (a.max < max) {
         if (min != a.max) {
           int v =
-              (type == Profile.cumul)
+              type == Profile.cumul
                   ? v = a.value + value // cumulative
                   // is sum
-                  : ((a.value > value) ? a.value : value); // diff2
+                  : (a.value > value ? a.value : value); // diff2
           // is
           // max
           overlap.set(min, a.max, v);
@@ -139,23 +139,25 @@ public class ProfileItem {
       } else {
         // Max <= a.Max
         int v =
-            (type == Profile.cumul)
+            type == Profile.cumul
                 ? v = a.value + value // cumulative is
                 // sum
-                : ((a.value > value) ? a.value : value); // diff2 is
+                : (a.value > value ? a.value : value); // diff2 is
         // max
         overlap.set(min, max, v);
-        if (max != a.max) right.set(max, a.max, a.value);
+        if (max != a.max) {
+          right.set(max, a.max, a.value);
+        }
       }
     } else {
       if (a.min < min) {
         left.set(a.min, min, a.value);
         if (a.max == max) {
           int v =
-              (type == Profile.cumul)
+              type == Profile.cumul
                   ? v = a.value + value // cumulative
                   // is sum
-                  : ((a.value > value) ? a.value : value); // diff2
+                  : (a.value > value ? a.value : value); // diff2
           // is
           // max
           overlap.set(min, max, v);
@@ -164,11 +166,11 @@ public class ProfileItem {
           if (a.max < max) {
             if (min != a.max) {
               int v =
-                  (type == Profile.cumul)
+                  type == Profile.cumul
                       ? v = a.value + value // cumulative
                       // is
                       // sum
-                      : ((a.value > value) ? a.value : value); // diff2
+                      : (a.value > value ? a.value : value); // diff2
               // is
               // max
               overlap.set(min, a.max, v);
@@ -177,15 +179,17 @@ public class ProfileItem {
           } else {
             // Max <= a.Max
             int v =
-                (type == Profile.cumul)
+                type == Profile.cumul
                     ? v = a.value + value // cumulative
                     // is
                     // sum
-                    : ((a.value > value) ? a.value : value); // diff2
+                    : (a.value > value ? a.value : value); // diff2
             // is
             // max
             overlap.set(min, max, v);
-            if (max != a.max) right.set(max, a.max, a.value);
+            if (max != a.max) {
+              right.set(max, a.max, a.value);
+            }
           }
         }
       } else {
@@ -193,10 +197,10 @@ public class ProfileItem {
         left.set(min, a.min, value);
         if (a.max == max) {
           int v =
-              (type == Profile.cumul)
+              type == Profile.cumul
                   ? v = a.value + value // cumulative
                   // is sum
-                  : ((a.value > value) ? a.value : value); // diff2
+                  : (a.value > value ? a.value : value); // diff2
           // is
           // max
           overlap.set(a.min, a.max, v);
@@ -204,11 +208,11 @@ public class ProfileItem {
         } else {
           if (a.max < max) {
             int v =
-                (type == Profile.cumul)
+                type == Profile.cumul
                     ? v = a.value + value // cumulative
                     // is
                     // sum
-                    : ((a.value > value) ? a.value : value); // diff2
+                    : (a.value > value ? a.value : value); // diff2
             // is
             // max
             overlap.set(a.min, a.max, v);
@@ -216,15 +220,17 @@ public class ProfileItem {
           } else {
             // Max <= a.Max
             int v =
-                (type == Profile.cumul)
+                type == Profile.cumul
                     ? v = a.value + value // cumulative
                     // is
                     // sum
-                    : ((a.value > value) ? a.value : value); // diff2
+                    : (a.value > value ? a.value : value); // diff2
             // is
             // max
             overlap.set(a.min, max, v);
-            if (max != a.max) right.set(max, a.max, a.value);
+            if (max != a.max) {
+              right.set(max, a.max, a.value);
+            }
           }
         }
       }
@@ -281,13 +287,17 @@ public class ProfileItem {
   public void subtract(ProfileItem a, ProfileItem left, ProfileItem right) {
 
     if (min == a.min) {
-      if (max > a.max) right.set(a.max, max, value);
+      if (max > a.max) {
+        right.set(a.max, max, value);
+      }
     } else {
       if (min < a.min) {
-        if (max <= a.min) left.set(min, max, value);
-        else {
-          if (max > a.min && max <= a.max) left.set(min, a.min, value);
-          else if (max > a.max) {
+        if (max <= a.min) {
+          left.set(min, max, value);
+        } else {
+          if (max > a.min && max <= a.max) {
+            left.set(min, a.min, value);
+          } else if (max > a.max) {
             // a.Max < Max
             right.set(a.max, max, value);
             left.set(min, a.min, value);
@@ -296,10 +306,13 @@ public class ProfileItem {
       } else {
         // a.Min < Min
         if (min <= a.max) {
-          if (max > a.max) right.set(a.max, max, value);
-        } else
+          if (max > a.max) {
+            right.set(a.max, max, value);
+          }
+        } else {
           // Min > a.Max
           right.set(min, max, value);
+        }
       }
     }
   }

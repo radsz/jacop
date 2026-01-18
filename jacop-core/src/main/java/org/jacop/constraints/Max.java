@@ -79,9 +79,11 @@ public class Max extends Constraint implements SatisfiedPresent {
     this.max = max;
     this.list = Arrays.copyOf(list, list.length);
 
-    if (list.length > 1000) // rule of thumb
-    this.queueIndex = 2;
-    else this.queueIndex = 1;
+    if (list.length > 1000) { // rule of thumb
+      this.queueIndex = 2;
+    } else {
+      this.queueIndex = 1;
+    }
 
     this.numberId = idNumber.incrementAndGet();
 
@@ -124,23 +126,28 @@ public class Max extends Constraint implements SatisfiedPresent {
         if (varMax < minMax) {
           swap(start, i);
           start++;
-        } else if (varMax > maxMax) var.domain.inMax(store.level, var, maxMax);
+        } else if (varMax > maxMax) {
+          var.domain.inMax(store.level, var, maxMax);
+        }
 
-        minValue = (minValue > varMin) ? minValue : varMin;
-        maxValue = (maxValue > varMax) ? maxValue : varMax;
+        minValue = minValue > varMin ? minValue : varMin;
+        maxValue = maxValue > varMax ? maxValue : varMax;
       }
 
       max.domain.in(store.level, max, minValue, maxValue);
 
-      if (start == l) // all variables have their max value lower than min value of max variable
-      throw Store.failException;
+      if (start == l) { // all variables have their max value lower than min value of max variable
+        throw Store.failException;
+      }
 
       if (start
           == list.length
               - 1) { // one variable on the list is maximal; its is min > max of all other variables
         list[start].domain.in(store.level, list[start], max.dom());
 
-        if (max.singleton()) removeConstraint();
+        if (max.singleton()) {
+          removeConstraint();
+        }
       }
     } while (store.propagationHasOccurred);
 
@@ -175,7 +182,9 @@ public class Max extends Constraint implements SatisfiedPresent {
     int MAX = max.min();
     int i = 0, eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() == MAX) eq++;
+      if (list[i].singleton() && list[i].value() == MAX) {
+        eq++;
+      }
       sat = list[i].max() <= MAX;
       i++;
     }
@@ -190,7 +199,9 @@ public class Max extends Constraint implements SatisfiedPresent {
     result.append(" : max(  [ ");
     for (int i = 0; i < list.length; i++) {
       result.append(list[i]);
-      if (i < list.length - 1) result.append(", ");
+      if (i < list.length - 1) {
+        result.append(", ");
+      }
     }
 
     result.append("], ").append(this.max);

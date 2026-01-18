@@ -41,7 +41,7 @@ import org.jacop.core.IntDomain;
  */
 class IntRectangle {
 
-  int dim = 0;
+  int dim;
 
   final int[] length;
 
@@ -137,7 +137,9 @@ class IntRectangle {
     }
     for (int i = 0; i < dim; i++) {
       s.append(length[i]);
-      if (i < dim - 1) s.append(", ");
+      if (i < dim - 1) {
+        s.append(", ");
+      }
     }
     s.append("]");
     return s.toString();

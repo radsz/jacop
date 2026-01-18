@@ -30,6 +30,7 @@
 
 package org.jacop.floats.constraints;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
@@ -87,15 +88,20 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
       } else {
         if (q.min() > 0) {
           pMin = java.lang.Math.log(q.min());
-          if (Double.isNaN(pMin) || Double.isInfinite(pMin))
+          if (Double.isNaN(pMin) || Double.isInfinite(pMin)) {
             throw new InternalException("Floating-point overflow in constraint " + this);
+          }
           pMin = FloatDomain.down(pMin);
         } else // q.min() <= 0
-        if (q.max() > 0) pMin = FloatDomain.MinFloat;
-        else throw Store.failException;
+        if (q.max() > 0) {
+          pMin = FloatDomain.MinFloat;
+        } else {
+          throw Store.failException;
+        }
         pMax = java.lang.Math.log(q.max());
-        if (Double.isNaN(pMax) || Double.isInfinite(pMax))
+        if (Double.isNaN(pMax) || Double.isInfinite(pMax)) {
           throw new InternalException("Floating-point overflow in constraint " + this);
+        }
         pMax = FloatDomain.up(pMax);
       }
 
@@ -109,13 +115,15 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
         qMax = 1.0;
       } else {
         qMin = java.lang.Math.exp(p.min());
-        if (Double.isNaN(qMin) || Double.isInfinite(qMin))
+        if (Double.isNaN(qMin) || Double.isInfinite(qMin)) {
           throw new InternalException("Floating-point overflow in constraint " + this);
+        }
         qMin = FloatDomain.down(qMin);
 
         qMax = java.lang.Math.exp(p.max());
-        if (Double.isNaN(qMax) || Double.isInfinite(qMax))
+        if (Double.isNaN(qMax) || Double.isInfinite(qMax)) {
           throw new InternalException("Floating-point overflow in constraint " + this);
+        }
         qMax = FloatDomain.up(qMax);
       }
 
@@ -139,7 +147,7 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
     return id() + " : ExpPeqR(" + p + ", " + q + " )";
   }
 
-  public FloatVar derivative(Store store, FloatVar f, java.util.Set<FloatVar> vars, FloatVar x) {
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     if (f.equals(q)) {
       // f = exp(p)

@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  */
 public class CustomReport {
 
-  Var[] vars = null;
+  Var[] vars;
 
   public CustomReport(Var[] vs) {
     addVariables(vs);

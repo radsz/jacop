@@ -69,27 +69,34 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
    */
   public ChannelImply(IntVar x, IntVar[] bs, int[] value) {
 
-    if (value.length != bs.length)
+    if (value.length != bs.length) {
       throw new IllegalArgumentException(
           "ChannelImply: Status array size ("
               + bs.length
               + "), has not equal size as number of values "
               + value.length);
+    }
 
     checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
-    for (IntVar b : bs)
-      if (b.min() > 1 || b.max() < 0)
+    for (IntVar b : bs) {
+      if (b.min() > 1 || b.max() < 0) {
         throw new IllegalArgumentException(
             "ChannelImply: Variable b in reified constraint must have domain at most 0..1");
+      }
+    }
 
     numberId = idNumber.incrementAndGet();
     this.x = x;
     this.n = bs.length;
 
     item = new Item[n];
-    for (int i = 0; i < n; i++) item[i] = new Item(bs[i], value[i]);
+    for (int i = 0; i < n; i++) {
+      item[i] = new Item(bs[i], value[i]);
+    }
 
-    for (int i = 0; i < value.length; i++) valueMap.put(value[i], bs[i]);
+    for (int i = 0; i < value.length; i++) {
+      valueMap.put(value[i], bs[i]);
+    }
 
     setScope(Stream.concat(Stream.of(x), Arrays.stream(bs)));
     this.queueIndex = 0;
@@ -159,7 +166,9 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
         start++;
         startChanged = true;
         continue;
-      } else if (item[i].b.min() == 1) x.domain.inValue(store.level, x, item[i].value);
+      } else if (item[i].b.min() == 1) {
+        x.domain.inValue(store.level, x, item[i].value);
+      }
 
       if (!x.domain.contains(item[i].value)) {
         item[i].b.domain.inValue(store.level, item[i].b, 0);
@@ -169,18 +178,25 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
       }
     }
 
-    if (startChanged) position.update(start);
+    if (startChanged) {
+      position.update(start);
+    }
 
     if (start == n) {
-      if (!x.singleton()) removeConstraint();
+      if (!x.singleton()) {
+        removeConstraint();
+      }
       return;
     }
 
     if (x.singleton()) {
       IntVar b = valueMap.get(x.value());
 
-      for (int i = start; i < n; i++)
-        if (item[i].b != b) item[i].b.domain.inValue(store.level, item[i].b, 0);
+      for (int i = start; i < n; i++) {
+        if (item[i].b != b) {
+          item[i].b.domain.inValue(store.level, item[i].b, 0);
+        }
+      }
     }
   }
 
@@ -203,15 +219,24 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
     if (x.singleton()) {
       for (int i = 0; i < n; i++) {
         if (item[i].b.singleton()) {
-          if (item[i].b.value() == 1)
-            if (one == -1) one = i;
-            else return false;
-          else return false;
-        } else return false;
+          if (item[i].b.value() == 1) {
+            if (one == -1) {
+              one = i;
+            } else {
+              return false;
+            }
+          } else {
+            return false;
+          }
+        } else {
+          return false;
+        }
       }
-    } else return false;
+    } else {
+      return false;
+    }
 
-    return (one == Integer.MIN_VALUE) ? false : x.value() == item[one].value;
+    return one == Integer.MIN_VALUE ? false : x.value() == item[one].value;
   }
 
   @Override

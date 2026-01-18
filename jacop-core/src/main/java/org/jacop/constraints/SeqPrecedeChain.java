@@ -106,7 +106,9 @@ public class SeqPrecedeChain extends Constraint {
     for (int i = 1; i < n + 1; i++) {
       IntVar xi = x[i - 1];
 
-      if (xi.max() > up + 1) xi.domain.inMax(store.level, xi, up + 1);
+      if (xi.max() > up + 1) {
+        xi.domain.inMax(store.level, xi, up + 1);
+      }
       if (xi.max() == up + 1) {
         up++;
         first[up] = i;
@@ -121,12 +123,16 @@ public class SeqPrecedeChain extends Constraint {
       IntVar xi = x[i - 1];
 
       last[i] = xi.min();
-      if (first[low] == i) xi.domain.inMin(store.level, xi, low);
+      if (first[low] == i) {
+        xi.domain.inMin(store.level, xi, low);
+      }
       if (i <= last[low] && xi.domain.contains(low)) {
         last[i] = low;
         last[low] = i;
         low--;
-        if (low < 0) break;
+        if (low < 0) {
+          break;
+        }
       }
     }
   }
@@ -140,7 +146,9 @@ public class SeqPrecedeChain extends Constraint {
     int lx = x.length;
     for (int i = 0; i < lx; i++) {
       resultString.append(x[i]);
-      if (i < lx - 1) resultString.append(", ");
+      if (i < lx - 1) {
+        resultString.append(", ");
+      }
     }
     resultString.append("])");
 

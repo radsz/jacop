@@ -107,11 +107,17 @@ public class PrintSchedule {
       List<String> name, List<? extends IntVar> t, List<Integer> d, List<? extends IntVar> r) {
     n = name;
     this.t = new IntVar[t.size()];
-    for (int i = 0; i < t.size(); i++) this.t[i] = t.get(i);
+    for (int i = 0; i < t.size(); i++) {
+      this.t[i] = t.get(i);
+    }
     this.r = new IntVar[r.size()];
-    for (int i = 0; i < r.size(); i++) this.r[i] = r.get(i);
+    for (int i = 0; i < r.size(); i++) {
+      this.r[i] = r.get(i);
+    }
     this.d = new int[d.size()];
-    for (int i = 0; i < d.size(); i++) this.d[i] = d.get(i);
+    for (int i = 0; i < d.size(); i++) {
+      this.d[i] = d.get(i);
+    }
   }
 
   /**
@@ -128,9 +134,13 @@ public class PrintSchedule {
     n.addAll(name);
 
     this.t = new IntVar[t.size()];
-    for (int i = 0; i < t.size(); i++) this.t[i] = t.get(i);
+    for (int i = 0; i < t.size(); i++) {
+      this.t[i] = t.get(i);
+    }
     this.r = new IntVar[r.size()];
-    for (int i = 0; i < r.size(); i++) this.r[i] = r.get(i);
+    for (int i = 0; i < r.size(); i++) {
+      this.r[i] = r.get(i);
+    }
     this.d = new int[d.length];
     System.arraycopy(d, 0, this.d, 0, d.length);
   }
@@ -172,24 +182,38 @@ public class PrintSchedule {
     this.r = new IntVar[r.length];
     System.arraycopy(r, 0, this.r, 0, r.length);
     this.d = new int[d.length];
-    for (int i = 0; i < d.length; i++) this.d[i] = d[i].min();
+    for (int i = 0; i < d.length; i++) {
+      this.d[i] = d[i].min();
+    }
   }
 
   int findMaxR() {
     int m = 0;
-    for (IntVar intVar : r) if (m < intVar.min()) m = intVar.min();
+    for (IntVar intVar : r) {
+      if (m < intVar.min()) {
+        m = intVar.min();
+      }
+    }
     return m;
   }
 
   int findMaxT() {
     int m = 0;
-    for (int i = 0; i < d.length; i++) if (m < t[i].min() + d[i] - 1) m = t[i].min() + d[i] - 1;
+    for (int i = 0; i < d.length; i++) {
+      if (m < t[i].min() + d[i] - 1) {
+        m = t[i].min() + d[i] - 1;
+      }
+    }
     return m;
   }
 
   int findMinR() {
     int m = IntDomain.MaxInt;
-    for (IntVar intVar : r) if (m > intVar.min()) m = intVar.min();
+    for (IntVar intVar : r) {
+      if (m > intVar.min()) {
+        m = intVar.min();
+      }
+    }
     return m;
   }
 
@@ -228,7 +252,9 @@ public class PrintSchedule {
 
     // s = s + "\t" + minR;
 
-    for (int i = minR + 1; i <= maxR; i++) result.append("\t\t").append(i);
+    for (int i = minR + 1; i <= maxR; i++) {
+      result.append("\t\t").append(i);
+    }
 
     //	s = s + "\t\t" + i;
 
@@ -247,7 +273,9 @@ public class PrintSchedule {
 
       List<List<Integer>> Line = new ArrayList<>(resSize);
 
-      for (int n = 0; n < resSize; n++) Line.add(new ArrayList<>());
+      for (int n = 0; n < resSize; n++) {
+        Line.add(new ArrayList<>());
+      }
 
       while (start <= i && j < TaskArr.length) {
         int res = ((IntVar) TaskArr[j].get(3)).min();
@@ -261,10 +289,13 @@ public class PrintSchedule {
 
       for (List<Integer> integers : Line) {
         int sp = result.length();
-        for (Integer integer : integers)
+        for (Integer integer : integers) {
           result.append("[").append(TaskArr[integer].getFirst()).append("]");
+        }
 
-        if (integers.isEmpty()) result.append("-");
+        if (integers.isEmpty()) {
+          result.append("-");
+        }
         //		s = s + "-";
 
         result.append(tab(16 - result.length() + sp));

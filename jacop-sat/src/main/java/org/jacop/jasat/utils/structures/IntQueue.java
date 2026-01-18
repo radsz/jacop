@@ -46,10 +46,10 @@ public final class IntQueue implements Iterable<Integer> {
   public int[] array = new int[40];
 
   // pointer to the first element slot
-  public int start = 0;
+  public int start;
 
   // pointer to the first empty slot at the right of the FIFO
-  public int stop = 0;
+  public int stop;
 
   // pool of int[]
   public MemoryPool pool;
@@ -76,10 +76,14 @@ public final class IntQueue implements Iterable<Integer> {
 
     // add the element at the free position
     array[stop++] = element;
-    if (stop == array.length) stop = 0;
+    if (stop == array.length) {
+      stop = 0;
+    }
 
     // resize if needed
-    if (start == stop) resize();
+    if (start == stop) {
+      resize();
+    }
   }
 
   /**
@@ -104,14 +108,19 @@ public final class IntQueue implements Iterable<Integer> {
     int answer = array[start];
     // increase start
     start++;
-    if (start == array.length) start = 0;
+    if (start == array.length) {
+      start = 0;
+    }
 
     return answer;
   }
 
   public int size() {
-    if (start <= stop) return stop - start;
-    else return array.length - start + stop;
+    if (start <= stop) {
+      return stop - start;
+    } else {
+      return array.length - start + stop;
+    }
   }
 
   /** increase the size of the queue */
@@ -131,7 +140,9 @@ public final class IntQueue implements Iterable<Integer> {
     // copy elements from start to start+numRight
     System.arraycopy(array, start, newArray, 0, numRight);
     // then, copy elements from 0 to stop-1
-    if (stop > 0) System.arraycopy(array, 0, newArray, numRight, stop);
+    if (stop > 0) {
+      System.arraycopy(array, 0, newArray, numRight, stop);
+    }
 
     // update indexes
     start = 0;
@@ -145,7 +156,9 @@ public final class IntQueue implements Iterable<Integer> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("IntQueue [");
-    for (int i : this) sb.append(i).append(' ');
+    for (int i : this) {
+      sb.append(i).append(' ');
+    }
     return sb.append(']').toString();
   }
 
@@ -179,8 +192,12 @@ public final class IntQueue implements Iterable<Integer> {
     /** find the next index */
     private void findNext() {
       index++;
-      if (index == array.length) index = 0;
-      if (index == stop) hasNext = false;
+      if (index == array.length) {
+        index = 0;
+      }
+      if (index == stop) {
+        hasNext = false;
+      }
     }
   }
 }

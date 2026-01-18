@@ -98,11 +98,16 @@ public class XeqA extends PrimitiveConstraint {
     // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == a) return SetDomain.ANY;
-    else return IntDomain.ANY;
+    if (var == a) {
+      return SetDomain.ANY;
+    } else {
+      return IntDomain.ANY;
+    }
   }
 
   @Override
@@ -116,11 +121,16 @@ public class XeqA extends PrimitiveConstraint {
     // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
-      if (possibleEvent != null) return possibleEvent;
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
     }
 
-    if (var == a) return SetDomain.ANY;
-    else return IntDomain.ANY;
+    if (var == a) {
+      return SetDomain.ANY;
+    } else {
+      return IntDomain.ANY;
+    }
   }
 
   @Override
@@ -128,16 +138,22 @@ public class XeqA extends PrimitiveConstraint {
 
     if (a.domain.card().min() == 1 && a.domain.card().max() == 1) {
 
-      if (x.singleton()) a.domain.inLUBComplement(store.level, a, x.value());
+      if (x.singleton()) {
+        a.domain.inLUBComplement(store.level, a, x.value());
+      }
 
-      if (a.domain.singleton()) x.domain.inComplement(store.level, x, a.domain.glb().min());
+      if (a.domain.singleton()) {
+        x.domain.inComplement(store.level, x, a.domain.glb().min());
+      }
     }
   }
 
   @Override
   public boolean notSatisfied() {
 
-    if (!a.domain.card().contains(1)) return true;
+    if (!a.domain.card().contains(1)) {
+      return true;
+    }
 
     return !a.domain.lub().isIntersecting(x.domain);
   }
@@ -154,7 +170,9 @@ public class XeqA extends PrimitiveConstraint {
     if (mode) {
       if (consistencyPruningEvents != null) {
         Integer possibleEvent = consistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
       return getConsistencyPruningEvent(var);
     }
@@ -162,7 +180,9 @@ public class XeqA extends PrimitiveConstraint {
     else {
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
-        if (possibleEvent != null) return possibleEvent;
+        if (possibleEvent != null) {
+          return possibleEvent;
+        }
       }
       return getNotConsistencyPruningEvent(var);
     }

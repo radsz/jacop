@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
@@ -46,25 +47,25 @@ public class Options {
   public RestartType restartType = RestartType.none;
   FileInputStream file;
   String fileName;
-  boolean all = false;
-  boolean verbose = false;
-  boolean statistics = false;
-  boolean freeSearch = false;
-  int time_out = 0;
+  boolean all;
+  boolean verbose;
+  boolean statistics;
+  boolean freeSearch;
+  int time_out;
   int number_solutions = -1;
-  boolean interval = false;
-  boolean precisionDefined = false;
+  boolean interval;
+  boolean precisionDefined;
   double precision;
   double format;
-  boolean boundConsistency = false;
+  boolean boundConsistency;
   boolean runSearch = true;
-  boolean use_sat = false;
-  boolean complementary_search = false;
+  boolean use_sat;
+  boolean complementary_search;
   float decay = 0.99f;
   double step = 0.0d;
-  boolean debug = false;
+  boolean debug;
   String outputFilename = "";
-  int restartLimit = 0;
+  int restartLimit;
   int scale = 250;
   double base = 1.5;
 
@@ -82,7 +83,7 @@ public class Options {
       System.exit(0);
     } else if (args.length == 1) {
       String arg = args[0];
-      if (arg.equals("-h") || arg.equals("--help")) {
+      if ("-h".equals(arg) || "--help".equals(arg)) {
         IO.println(
             """
             Usage: java org.jacop.fz.Fz2jacop [<options>] <file>.fzn
@@ -128,10 +129,12 @@ public class Options {
         switch (args[i]) {
           case "-a", "--all-solutions", "--all" -> {
             all = true;
-            if (number_solutions == -1) number_solutions = Integer.MAX_VALUE;
-            else
+            if (number_solutions == -1) {
+              number_solutions = Integer.MAX_VALUE;
+            } else {
               System.err.println(
                   "%% Option -a ignored since number of solutions has been specified by option -n");
+            }
             i++;
           }
           case "-t", "--time-out" -> {
@@ -151,11 +154,14 @@ public class Options {
             i++;
           }
           case "-n", "--num-solutions" -> {
-            if (number_solutions == Integer.MAX_VALUE)
+            if (number_solutions == Integer.MAX_VALUE) {
               System.err.println(
                   "%% Option -a ignored since number of solutions has been specified by option -n");
+            }
             number_solutions = Integer.parseInt(args[++i]);
-            if (number_solutions > 1) all = true;
+            if (number_solutions > 1) {
+              all = true;
+            }
             i++;
           }
           case "-v", "--verbose" -> {
@@ -169,8 +175,9 @@ public class Options {
           case "--precision" -> {
             precisionDefined = true;
             precision = Double.parseDouble(args[++i]);
-            if (precision >= 0) FloatDomain.setPrecision(precision);
-            else {
+            if (precision >= 0) {
+              FloatDomain.setPrecision(precision);
+            } else {
               precision = FloatDomain.precision();
               System.err.println(
                   "%% Precisison parameter not correct; using default precision " + precision);
@@ -179,8 +186,9 @@ public class Options {
           }
           case "--format" -> {
             format = Double.parseDouble(args[++i]);
-            if (format >= 0) FloatDomain.setFormat(format);
-            else {
+            if (format >= 0) {
+              FloatDomain.setFormat(format);
+            } else {
               format = Double.MAX_VALUE;
               System.err.println("%% Format parameter not correct;");
             }
@@ -204,8 +212,9 @@ public class Options {
           }
           case "-d", "--decay" -> {
             decay = Float.parseFloat(args[++i]);
-            if (decay < 0.0f || decay > 1.0f)
+            if (decay < 0.0f || decay > 1.0f) {
               System.err.println("%% Decay parameter incorrect; assumed default value 0.99");
+            }
             i++;
           }
           case "--step" -> {
@@ -278,7 +287,7 @@ public class Options {
   public FileInputStream getFile() {
     try {
       file = new FileInputStream(fileName);
-    } catch (java.io.FileNotFoundException _) {
+    } catch (FileNotFoundException _) {
       IO.println("% Flatzinc2JaCoP Parser Version 1.0:  File " + fileName + " not found.");
       System.exit(0);
     }

@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
@@ -164,7 +165,7 @@ public class Rectangle {
         && length[1].singleton();
   }
 
-  boolean instantiatedBefore(org.jacop.core.Store store) {
+  boolean instantiatedBefore(Store store) {
     int level = store.level;
     return origin[0].singleton()
         && origin[1].singleton()
@@ -192,7 +193,9 @@ public class Rectangle {
     }
     for (int i = 0; i < dim; i++) {
       result.append(length[i]);
-      if (i < dim - 1) result.append(", ");
+      if (i < dim - 1) {
+        result.append(", ");
+      }
     }
     result.append("]");
     return result.toString();

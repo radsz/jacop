@@ -145,8 +145,11 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
               break;
             }
           }
-          if (found) x.domain.inMin(store.level, x, xMin);
-          else throw Store.failException;
+          if (found) {
+            x.domain.inMin(store.level, x, xMin);
+          } else {
+            throw Store.failException;
+          }
 
           // compute UB
           int xMax = x.max();
@@ -154,16 +157,21 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
           while (!zDom.contains(xMax % absY) && xMax >= xMin) {
             xMax--;
           }
-          if (xMax >= xMin) x.domain.inMax(store.level, x, xMax);
-          else throw Store.failException;
+          if (xMax >= xMin) {
+            x.domain.inMax(store.level, x, xMax);
+          } else {
+            throw Store.failException;
+          }
         }
       }
 
-      if (x.singleton())
-        if (!z.domain.contains(x.value() % Math.abs(y.min())))
+      if (x.singleton()) {
+        if (!z.domain.contains(x.value() % Math.abs(y.min()))) {
           y.domain.inMin(store.level, y, y.min() + 1);
-        else if (!z.domain.contains(x.value() % Math.abs(y.max())))
+        } else if (!z.domain.contains(x.value() % Math.abs(y.max()))) {
           y.domain.inMax(store.level, y, y.max() - 1);
+        }
+      }
 
       reminderMin = z.min();
       reminderMax = z.max();
@@ -179,8 +187,9 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
         resultMin = result.min();
         resultMax = result.max();
 
-        if (oldResultMin != resultMin || oldResultMax != resultMax)
+        if (oldResultMin != resultMin || oldResultMax != resultMax) {
           store.propagationHasOccurred = true;
+        }
 
         // Bounds for Y
         Interval yBounds =
@@ -214,11 +223,16 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
       int val = e.nextElement();
       if (zDom.contains(val % y)) {
         empty = false;
-        if (d.getSize() == 0) d.unionAdapt(val);
-        else d.addLastElement(val);
+        if (d.getSize() == 0) {
+          d.unionAdapt(val);
+        } else {
+          d.addLastElement(val);
+        }
       }
     }
-    if (empty) throw Store.failException;
+    if (empty) {
+      throw Store.failException;
+    }
     return d;
   }
 
@@ -254,9 +268,13 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
               + ".."
               + resultMax;
       for (int i = resultMin; i <= resultMax; i++) {
-        if (i * y.value() + z.value() == x.value()) result = null;
+        if (i * y.value() + z.value() == x.value()) {
+          result = null;
+        }
       }
-    } else result = null;
+    } else {
+      result = null;
+    }
     return result;
   }
 
