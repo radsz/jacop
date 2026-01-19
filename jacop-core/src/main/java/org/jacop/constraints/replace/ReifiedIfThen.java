@@ -33,7 +33,12 @@ package org.jacop.constraints.replace;
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.api.Replaceable;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.XeqC;
 import org.jacop.core.Store;
 
 /**

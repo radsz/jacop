@@ -124,6 +124,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
+  final long first8 = 255L << 56;
+
   /**
    * The minimal value present in this domain encoding. The domain can only encode small domains
    * within a range [min .. min + 63].
@@ -137,7 +139,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
    */
   public long bits;
 
-  final long first8 = 255L << 56;
   private boolean singleton;
   private int size;
   private int max;

@@ -257,10 +257,10 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       }
 
       // the current literal should be the second watch, to simplify many things
-      // 		if (myWatchPos == 0) {
-      // 			swap(clause, 0, 1);
-      // 			myWatchPos = 1;
-      // 		}
+      //     if (myWatchPos == 0) {
+      //       swap(clause, 0, 1);
+      //       myWatchPos = 1;
+      //     }
 
       /*
        * case c)  Maybe unit clause, maybe unknown clause if another watch

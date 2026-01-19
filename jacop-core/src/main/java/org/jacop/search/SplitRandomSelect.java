@@ -31,7 +31,11 @@
 package org.jacop.search;
 
 import java.util.Random;
-import org.jacop.constraints.*;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XltC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;

@@ -33,7 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.ChannelReif;
-import org.jacop.core.*;
+import org.jacop.core.IntVar;
 
 /**
  * It collects all int_eq_reif constraint to create ChannelReif constraints, if possible.

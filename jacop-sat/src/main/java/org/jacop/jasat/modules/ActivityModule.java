@@ -58,10 +58,12 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   private final int LEARNT_COUNT_TO_INCREASE = 20;
   // how often do we sort again the priority queue
   private final int CONFLICT_COUNT_TO_SORT = 100;
-  // solver instance
-  public Core core;
   // number by which activity bump rate is multiplied
   private final int BUMP_INCREASE_FACTOR = 2;
+  // set of literals that are in priorities
+  private final BitSet prioritizedVars = new BitSet();
+  // solver instance
+  public Core core;
   // the rates, for each variable and polarity.
   private int[] posActivities;
   private int[] negActivities;
@@ -94,8 +96,6 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   // hand-managed priority queue for literals (always sorted by activity)
   private Integer[] priorities = new Integer[50];
   private int prioritiesIndex;
-  // set of literals that are in priorities
-  private final BitSet prioritizedVars = new BitSet();
   // used to update sorting of priorities sometimes
   private int conflictCount;
 

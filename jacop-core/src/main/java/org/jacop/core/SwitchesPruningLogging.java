@@ -73,11 +73,11 @@ public final class SwitchesPruningLogging {
   /** It traces the decisions within search. */
   public static final boolean traceSearchTree = trace && traceSearch && true;
 
-  /** It turns on all trace printouts in variables. */
-  public static boolean traceVar = trace && true;
-
   /** It turns on all trace printouts in constraints. */
   public static final boolean traceConstraint = trace && true;
+
+  /** It turns on all trace printouts in variables. */
+  public static boolean traceVar = trace && true;
 
   /** It traces all constraints have failed. */
   public static boolean traceConstraintFailure = trace && true;

@@ -30,11 +30,19 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
 
 /**
  * Cumulative implements the cumulative/4 constraint using edge-finding algorithm and profile
@@ -45,8 +53,14 @@ import org.jacop.core.*;
  */
 public class Cumulative extends Constraint implements SatisfiedPresent {
 
-  private static final boolean debug = false, debugNarr = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
+  private static final boolean debug = false, debugNarr = false;
+  private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
+  private final Task[] Ts;
+  private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
+  private final Comparator<IntDomain> domainMinComparator = Comparator.comparingInt(IntDomain::min);
+  private final Comparator<Task> taskAscEctComparator = Comparator.comparingInt(Task::ect);
+  private final Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
 
   /** It specifies the limit of the profile of cumulative use of resources. */
   public IntVar limit;
@@ -77,16 +91,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
    * tasks.
    */
   private Profile minProfile;
-
-  private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
-  private final Task[] Ts;
-  private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
-
-  private final Comparator<IntDomain> domainMinComparator = Comparator.comparingInt(IntDomain::min);
-
-  private final Comparator<Task> taskAscEctComparator = Comparator.comparingInt(Task::ect);
-
-  private final Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
 
   /**
    * It creates a cumulative constraint.

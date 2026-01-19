@@ -40,12 +40,9 @@ package org.jacop.floats.core;
 public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumeration {
 
   final FloatIntervalDomain domain;
-
-  FloatInterval i;
-
-  int intervalNo = -1;
-
   final int maxIntervalNo;
+  FloatInterval i;
+  int intervalNo = -1;
 
   /**
    * It creates an enumeration for a given interval domain.

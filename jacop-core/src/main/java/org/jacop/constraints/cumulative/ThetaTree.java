@@ -47,14 +47,13 @@ import java.nio.charset.StandardCharsets;
  */
 class ThetaTree extends Tree {
 
+  private final ThetaNode empty = new ThetaNode();
   // number of leaves (tasks)
   int n;
   // array that keeps all nodes of the balanced binary tree and organizes the tree structure
   private ThetaNode[] tree;
   // list of ordered tasks
   private TaskView[] orderedTasks;
-
-  private final ThetaNode empty = new ThetaNode();
 
   public ThetaTree() {}
 

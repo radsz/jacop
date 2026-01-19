@@ -30,7 +30,11 @@
 
 package org.jacop.examples.fd;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,10 +63,10 @@ public class Cryptogram extends ExampleFD {
   /** It specifies the base of the numerical system to be used in the calculations. */
   public final int base = 10;
 
+  public final String[] lines = new String[maxInputLines];
+
   /** It specifies the file which contains the puzzle to be solved. */
   public String filename;
-
-  public final String[] lines = new String[maxInputLines];
 
   public int noLines;
 
@@ -237,8 +241,8 @@ public class Cryptogram extends ExampleFD {
                 "==",
                 fdv4words[j]));
         // store.impose(new SumWeight(lettersWithinCurrentWord,
-        // 		createWeights(currentWord.length(), base),
-        //  		fdv4words[j]));
+        //     createWeights(currentWord.length(), base),
+        //      fdv4words[j]));
 
         store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
       }

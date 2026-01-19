@@ -33,7 +33,11 @@ package org.jacop.constraints.netflow;
 import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.RemoveLevelLate;
@@ -61,22 +65,17 @@ public class NetworkFlow extends Constraint
   private static final boolean DO_INSTRUMENTATION = false;
   private static final boolean SHOW_LEVEL = false;
 
-  Statistics statistics = new Statistics();
+  /** Instance counter */
+  static AtomicInteger idNumber = new AtomicInteger(0);
 
   static {
     // fails if asserts are disabled
     // asserts.Assert.forceAsserts();
   }
 
-  /** Instance counter */
-  static AtomicInteger idNumber = new AtomicInteger(0);
-
   /** The network */
   // public final Network network;
   public final Pruning network;
-
-  /** The cost variable */
-  public IntVar costVariable;
 
   /** The variables and their handlers */
   public final Map<IntVar, VarHandler> map;
@@ -84,10 +83,14 @@ public class NetworkFlow extends Constraint
   /** The set of queued variables */
   public final Set<IntVar> queue;
 
+  /** The cost variable */
+  public IntVar costVariable;
+
   /** Disables the queue variable function during consistency */
   public boolean disableQueueVariable;
 
   public int previousLevel = -1;
+  Statistics statistics = new Statistics();
 
   /********************/
   /** Initialization */
@@ -184,7 +187,7 @@ public class NetworkFlow extends Constraint
     // DomainStructure structure = map.get(variable);
 
     if (!disableQueueVariable) {
-      // 		System.out.println("\tQueue var : " + variable);
+      //     System.out.println("\tQueue var : " + variable);
       if (variable == costVariable) {
         // System.out.println("** Cost var queued, abort");
         return;

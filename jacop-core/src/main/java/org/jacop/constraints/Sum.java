@@ -35,7 +35,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /*
  * Sum constraint implements the summation over several Variable's . It provides

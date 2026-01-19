@@ -30,10 +30,21 @@
 
 package org.jacop.constraints.regular;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
@@ -42,7 +53,13 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportSTR;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XeqC;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.MDD;
 import org.jacop.util.fsm.FSM;
 import org.jacop.util.fsm.FSMState;
@@ -75,6 +92,25 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    */
   public final boolean optimizedMDD = false;
 
+  /** It specifies if the edges should have a list of values associated with them. */
+  public final boolean listRepresentation = true;
+
+  /** It specifies if the support functionality should be used. */
+  public final boolean oneSupport = true;
+
+  /** It specifies finite state machine used by this regular. */
+  public final FSM fsm;
+
+  /** Array of the variables of the graph levels. */
+  public final IntVar[] list;
+
+  /**
+   * Queue of changed variables. TODO try to use PriorityQueue based on the number of states for a
+   * given variable or a domain size to pickup first variables which may result in failure faster.
+   * It does not have to be fully correct ordering.
+   */
+  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+
   /**
    * Name of the file to store the latex output after consistency call The output will be :
    * file_name + "call number" + ".tex"
@@ -91,27 +127,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** It keeps for each variable value pair a current support. */
   public Map<Integer, RegEdge>[] supports;
 
-  /** It specifies if the edges should have a list of values associated with them. */
-  public final boolean listRepresentation = true;
-
-  /** It specifies if the support functionality should be used. */
-  public final boolean oneSupport = true;
-
-  /** It specifies finite state machine used by this regular. */
-  public final FSM fsm;
-
-  /** Array of the variables of the graph levels. */
-  public final IntVar[] list;
-
   /** Number of states in the graph used only during the printing to latex function. */
   int stateNumber;
-
-  /**
-   * Queue of changed variables. TODO try to use PriorityQueue based on the number of states for a
-   * given variable or a domain size to pickup first variables which may result in failure faster.
-   * It does not have to be fully correct ordering.
-   */
-  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   Map<IntVar, Integer> mapping;
 

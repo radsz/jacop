@@ -46,20 +46,18 @@ import org.jacop.core.Var;
 public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
 
   static final boolean debugAll = false;
-
-  /** It chooses if input order tie breaking is used. */
-  public boolean inputOrderTieBreaking = true;
-
   public final T[] searchVariables;
-
   public final ComparatorVariable<T> variableOrdering;
-
-  public ComparatorVariable<T> tieBreakingComparator;
 
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public final Map<T, Integer> position;
 
   final Indomain<T> valueOrdering;
+
+  /** It chooses if input order tie breaking is used. */
+  public boolean inputOrderTieBreaking = true;
+
+  public ComparatorVariable<T> tieBreakingComparator;
   int currentIndex;
 
   /**

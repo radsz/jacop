@@ -30,8 +30,67 @@
 
 package org.jacop.fz.constraints;
 
-import java.util.*;
-import org.jacop.constraints.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import org.jacop.constraints.AllEqual;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongVar;
+import org.jacop.constraints.And;
+import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.Assignment;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Circuit;
+import org.jacop.constraints.Conditional;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
+import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.GCC;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.IfThenElseBool;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.Increasing;
+import org.jacop.constraints.LexOrder;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.Or;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
+import org.jacop.constraints.Sequence;
+import org.jacop.constraints.SoftAlldifferent;
+import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Stretch;
+import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.ValuePrecede;
+import org.jacop.constraints.Values;
+import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -39,7 +98,13 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.geost.*;
+import org.jacop.constraints.geost.DBox;
+import org.jacop.constraints.geost.ExternalConstraint;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
@@ -47,7 +112,14 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
-import org.jacop.core.*;
+import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.core.FloatVar;
@@ -89,6 +161,7 @@ class GlobalConstraints implements ParserTreeConstants {
           return 0; // all equal
         }
       };
+  ArrayList<Pair> duplicates;
 
   public GlobalConstraints(Support support) {
     this.store = support.store;
@@ -1908,6 +1981,8 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  // optional global constraints
+
   void gen_jacop_all_equal_int(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
@@ -1917,8 +1992,6 @@ class GlobalConstraints implements ParserTreeConstants {
       support.pose(new AllEqual(x));
     }
   }
-
-  // optional global constraints
 
   void gen_jacop_cumulative_optional(SimpleNode node) {
     IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
@@ -1998,8 +2071,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     return true;
   }
-
-  ArrayList<Pair> duplicates;
 
   int[] uniqueIndex(IntVar[] vs) {
 

@@ -30,13 +30,22 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
@@ -73,15 +82,14 @@ public class ElementFloat extends Constraint
    */
   public final double[] list;
 
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
-
   /**
    * It specifies for each value what are the possible values of the index variable (it takes into
    * account indexOffset.
    */
   final Hashtable<Double, IntDomain> mappingValuesToIndex = new Hashtable<>();
 
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
   boolean indexHasChanged = true;
   boolean valueHasChanged = true;
 
@@ -228,8 +236,8 @@ public class ElementFloat extends Constraint
           if (indexDom.size == 0) {
             indexDom.unionAdapt(position + 1 + indexOffset);
           } else {
-            // 	// indexes are in ascending order and can be added at the end if the last element
-            // 	// plus 1 is not equal a new value. In such case the max must be changed.
+            //   // indexes are in ascending order and can be added at the end if the last element
+            //   // plus 1 is not equal a new value. In such case the max must be changed.
             indexDom.addLastElement(position + 1 + indexOffset);
           }
         }

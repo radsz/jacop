@@ -66,12 +66,12 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
 
   final IntDomain valuesDomain;
   final IntDomain valuesDomainComplement;
-  private final int n; // length of the list
   /*
    * lower and upper bounds on values occurence
    */
   final int[] lb;
   final int[] ub;
+  private final int n; // length of the list
   /*
    * Defines first position of the variable that are not considered;
    * either equal to value or missing the value in their domain.

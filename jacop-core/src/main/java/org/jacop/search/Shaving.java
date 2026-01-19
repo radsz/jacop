@@ -30,7 +30,11 @@
 
 package org.jacop.search;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XneqC;
@@ -81,6 +85,13 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   /** It stores the variables of the last failed constraints. */
   public final HashSet<IntVar> varsOfFailedConstraint = new HashSet<>();
 
+  /** It contains list of constraints which suggest shaving explorations. */
+  final List<Constraint> shavingConstraints = new ArrayList<>();
+
+  final boolean leftChildShaving = true;
+  final List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
+  final Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
+
   /**
    * It specifies if the quickShave approach should be also used. Quickshave uses variable-value
    * pairs which lead to wrong decisions as shaving values higher in the search tree (until the
@@ -94,9 +105,6 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   /** It stores number of failed shaving attempts. */
   public int failures;
 
-  /** It contains list of constraints which suggest shaving explorations. */
-  final List<Constraint> shavingConstraints = new ArrayList<>();
-
   /** It specifies if the search is in the left child. */
   boolean leftChild = true;
 
@@ -106,11 +114,8 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   Store store;
 
   Constraint recentlyFailedConstraint;
-  final boolean leftChildShaving = true;
   boolean rightChild;
   boolean wrongDecisionEncountered;
-  final List<Map<IntVar, LinkedHashSet<Integer>>> shavable = new ArrayList<>();
-  final Map<IntVar, LinkedHashSet<Integer>> notShavable = Var.createEmptyPositioning();
   private ExitChildListener<T>[] exitChildListeners;
   private ConsistencyListener[] consistencyListeners;
   private boolean leftChildWrongDecision;

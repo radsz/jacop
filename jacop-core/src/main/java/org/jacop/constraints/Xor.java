@@ -32,7 +32,11 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
 /**

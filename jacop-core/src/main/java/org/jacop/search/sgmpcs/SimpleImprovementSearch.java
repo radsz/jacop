@@ -31,8 +31,20 @@
 package org.jacop.search.sgmpcs;
 
 import java.util.Map;
-import org.jacop.core.*;
-import org.jacop.search.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainDefaultValue;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.RandomSelect;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestMin;
 
 /**
  * Defines an interface for defining different methods for selecting next search decision to be
@@ -54,14 +66,14 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
    */
   public final IntVar[] vars;
   /*
+   * cost variable
+   */ final IntVar cost;
+  /*
    * The solution produced by last search
    */
   public int[] solution;
   public SGMPCSCalculator<Var> failCalculator;
   boolean printInfo = true;
-  /*
-   * cost variable
-   */ final IntVar cost;
   /*
    * The cost produced by last search
    */ int searchCost;
@@ -111,7 +123,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
     // SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax<IntVar>(),
-    // 					       new IndomainDefaultValue<IntVar>(mapping, new IndomainRandom<IntVar>()));
+    //                  new IndomainDefaultValue<IntVar>(mapping, new IndomainRandom<IntVar>()));
     SelectChoicePoint<IntVar> select =
         new RandomSelect<>(vars, new IndomainDefaultValue<>(mapping, new IndomainMin<>()));
     label.setAssignSolution(false);

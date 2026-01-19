@@ -44,6 +44,10 @@ import java.util.List;
  */
 public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManager {
 
+  final int minHoleSizeAfterSplit = 4;
+  final Boolean valueFalse = Boolean.FALSE;
+  final Boolean valueTrue = Boolean.TRUE;
+
   /**
    * It specifies a trail. A recorded changes which will be used upon backtracking to inform the
    * objects about backtracking.
@@ -51,21 +55,12 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   List<Boolean> intervalBasedTrail;
 
   int intervalCutOffValue;
-
   int maxNoOfIntervals;
-
   int minHoleSize;
-
-  final int minHoleSizeAfterSplit = 4;
-
   int[] currentIntervals;
-
   int[] temporaryArray;
-
   int removeCount;
   boolean addingToIntervals;
-  final Boolean valueFalse = Boolean.FALSE;
-  final Boolean valueTrue = Boolean.TRUE;
 
   /**
    * It creates a interval based backtrackable manager. At some point, instead of storing a list of
@@ -425,7 +420,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
         : "It is only possible to remove the most recent not removed level";
 
     // if ( checkRemoveInvariant(removedLevel) != null)
-    // 	System.out.println(" " + removeCount);
+    //   System.out.println(" " + removeCount);
 
     assert (checkRemoveInvariant(removedLevel) == null) : checkRemoveInvariant(removedLevel);
   }

@@ -30,12 +30,20 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.util.BipartiteGraphMatching;
 
 /**

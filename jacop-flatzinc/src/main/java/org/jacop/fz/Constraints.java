@@ -48,15 +48,15 @@ public class Constraints implements ParserTreeConstants {
   final ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
   final Tables dictionary;
   final Store store;
-  String p;
-  boolean debug;
   // ============ SAT solver interface ==============
   final float satThreshold = 1.0f; // 1.0 pure SAT problem, 0.85 good heuristic ;)
+  final SatTranslation sat;
+  final Support support;
+  String p;
+  boolean debug;
   long boolClauses;
   long noConstraints;
   long bool2Int;
-  final SatTranslation sat;
-  final Support support;
 
   /**
    * It creates an object to parse the constraint part of the flatzinc file.

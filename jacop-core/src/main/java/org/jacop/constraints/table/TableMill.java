@@ -45,6 +45,8 @@ public class TableMill {
 
   static final int tableMaxSize = 50_000;
 
+  private TableMill() {}
+
   public static int[][] linear(IntVar[] x, int[] w, int b) {
 
     ArrayList<int[]> support = new ArrayList<>();
@@ -103,6 +105,4 @@ public class TableMill {
     int[][] t = support.toArray(new int[support.size()][2]);
     return t;
   }
-
-  private TableMill() {}
 }

@@ -33,11 +33,29 @@ package org.jacop.examples.fd.filters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Cumulative;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.CreditCalculator;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.MostConstrainedStatic;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleMatrixSelect;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.SmallestMax;
+import org.jacop.search.SmallestMin;
 import org.jacop.ui.PrintSchedule;
 
 /**
@@ -55,6 +73,8 @@ public class FilterBenchmark {
   static List<String> Ns;
 
   static IntVar cost;
+
+  protected FilterBenchmark() {}
 
   /**
    * It executes the program for number of filters, number of resources (adders, multipliers) and
@@ -1437,6 +1457,4 @@ public class FilterBenchmark {
     }
     return list;
   }
-
-  protected FilterBenchmark() {}
 }

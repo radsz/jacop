@@ -32,7 +32,13 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Stateful;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.SmallDenseDomain;
+import org.jacop.core.Store;
 
 /**
  * Constraints |X| #= Y

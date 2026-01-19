@@ -30,10 +30,22 @@
 
 package org.jacop.constraints.diffn;
 
-import java.util.*;
-import org.jacop.constraints.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.List;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.CumulativeBasic;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles does not overlap in
@@ -48,12 +60,11 @@ public class Diffn extends Nooverlap {
   // event type
   static final int profileSubtract = 0, profileAdd = 1, pruneStart = 2, pruneEnd = 3;
   private static final boolean debug = false, debugNarr = false;
-  // for decomposed diffn
-  protected List<Constraint> constraints;
-
   protected final List<Var> auxVar = new ArrayList<>();
   final Comparator<Event> eventComparator =
       (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
+  // for decomposed diffn
+  protected List<Constraint> constraints;
 
   /**
    * It specifies a diff constraint.

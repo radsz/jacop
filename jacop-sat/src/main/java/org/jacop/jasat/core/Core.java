@@ -39,7 +39,15 @@ import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
 import org.jacop.jasat.core.clauses.DatabasesStore;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.SearchModule;
-import org.jacop.jasat.modules.interfaces.*;
+import org.jacop.jasat.modules.interfaces.AssertionListener;
+import org.jacop.jasat.modules.interfaces.BackjumpListener;
+import org.jacop.jasat.modules.interfaces.ClauseListener;
+import org.jacop.jasat.modules.interfaces.ConflictListener;
+import org.jacop.jasat.modules.interfaces.ExplanationListener;
+import org.jacop.jasat.modules.interfaces.ForgetListener;
+import org.jacop.jasat.modules.interfaces.PropagateListener;
+import org.jacop.jasat.modules.interfaces.SolutionListener;
+import org.jacop.jasat.modules.interfaces.StartStopListener;
 import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.structures.IntQueue;
 import org.jacop.jasat.utils.structures.IntVec;
@@ -55,18 +63,31 @@ import org.jacop.jasat.utils.structures.IntVec;
  */
 public final class Core implements SolverComponent {
 
+  // timer for scheduled events (daemon thread)
+  public final Timer timer = new Timer(true);
+  // stream to log messages to
+  public final PrintStream logStream = System.out;
+  // for modules.
+  public final AssertionListener[] assertionModules = new AssertionListener[5];
+  public final BackjumpListener[] backjumpModules = new BackjumpListener[5];
+  public final ConflictListener[] conflictModules = new ConflictListener[5];
+  public final PropagateListener[] propagateModules = new PropagateListener[5];
+  public final SolutionListener[] solutionModules = new SolutionListener[5];
+  public final ForgetListener[] forgetModules = new ForgetListener[5];
+  public final ClauseListener[] clauseModules = new ClauseListener[5];
+  public final ExplanationListener[] explanationModules = new ExplanationListener[5];
+  public final StartStopListener[] startStopModules = new StartStopListener[5];
+  public final BackjumpListener[] restartModules = new BackjumpListener[5];
+  // a time counter
+  private final Map<String, Long> timeMap = new HashMap<>();
   // asynchronous unit propagation
   public IntQueue toPropagate;
-
   // the conflict explanation clause
   public MapClause explanationClause = new MapClause();
-
   // used to compute throughput of the solver
   public long assignmentNum;
   // is the solver stopped ?
   public boolean isStopped;
-  // timer for scheduled events (daemon thread)
-  public final Timer timer = new Timer(true);
   // pool of int[] to avoir allocating too much
   public MemoryPool pool;
   // all current clauses
@@ -81,25 +102,12 @@ public final class Core implements SolverComponent {
   // debug messages will be printed.
   // 0 means no messages at all, 1 means only important messages
   public int verbosity;
-  // stream to log messages to
-  public final PrintStream logStream = System.out;
   // the current level of research
   public int currentLevel;
   // current state of the solver (indicates what to do next)
   public int currentState = SolverState.UNKNOWN;
   // the conflict learning module
   public ConflictLearning conflictLearning;
-  // for modules.
-  public final AssertionListener[] assertionModules = new AssertionListener[5];
-  public final BackjumpListener[] backjumpModules = new BackjumpListener[5];
-  public final ConflictListener[] conflictModules = new ConflictListener[5];
-  public final PropagateListener[] propagateModules = new PropagateListener[5];
-  public final SolutionListener[] solutionModules = new SolutionListener[5];
-  public final ForgetListener[] forgetModules = new ForgetListener[5];
-  public final ClauseListener[] clauseModules = new ClauseListener[5];
-  public final ExplanationListener[] explanationModules = new ExplanationListener[5];
-  public final StartStopListener[] startStopModules = new StartStopListener[5];
-  public final BackjumpListener[] restartModules = new BackjumpListener[5];
   public int numAssertionModules;
   public int numBackjumpModules;
   public int numConflictModules;
@@ -114,8 +122,6 @@ public final class Core implements SolverComponent {
   private boolean mustForget;
   // the maximum variable allowed
   private int maxVariable;
-  // a time counter
-  private final Map<String, Long> timeMap = new HashMap<>();
 
   /**
    * creates the solver, which in turn creates all inner components and connect them together.
@@ -433,7 +439,7 @@ public final class Core implements SolverComponent {
 
     assert explanationClause.isEmpty() || !explanationClause.isUnsatisfiableIn(trail);
 
-    // 	assert explanationClause.isEmpty() ||
+    //   assert explanationClause.isEmpty() ||
     // explanationClause.isUnitIn(explanationClause.assertedLiteral, trail);
 
     currentState = SolverState.UNKNOWN;

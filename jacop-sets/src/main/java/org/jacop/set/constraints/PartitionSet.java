@@ -37,8 +37,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
-import org.jacop.set.core.*;
+import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
 
 /**
  * Channel constraint requires that array of int variables x and array of set variables y are

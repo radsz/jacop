@@ -30,13 +30,23 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 
 /**
  * ElementVariable constraint defines a relation list[index - indexOffset] = value.
@@ -70,20 +80,16 @@ public class ElementVariable extends Constraint
    */
   public final IntVar[] list;
 
+  final IntDomain indexRange;
+  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+  final Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
+  final Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
+  final Random generator = new Random(2);
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   boolean indexHasChanged;
-
-  final IntDomain indexRange;
-
-  final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
-
-  final Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
-
-  final Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
   // For each variable from the list it specifies the values it supports
   IntDomain[] supports;
-  final Random generator = new Random(2);
   private boolean valueHasChanged;
 
   /**

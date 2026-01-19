@@ -55,9 +55,9 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
     // int rmin = rEnum.nextElement();
     // int rminNext = 0;
     // if (rEnum.hasMoreElements())
-    // 	rminNext = rEnum.nextElement();
+    //   rminNext = rEnum.nextElement();
     // else
-    // 	rminNext = IntDomain.MaxInt;
+    //   rminNext = IntDomain.MaxInt;
     double rmin = var.min();
     double rminNext = ((FloatIntervalDomain) var.domain).nextValue(rmin);
 

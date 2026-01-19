@@ -30,7 +30,11 @@
 
 package org.jacop.search;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.List;
+import java.util.Map;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;

@@ -39,11 +39,11 @@ import java.util.Set;
  */
 public class FSMState {
 
-  /** Id of the state. There can be multiple copies of the same state with the same id. */
-  public int id;
-
   /** It specifies the list of transitions outgoing from this state. */
   public final Set<FSMTransition> transitions;
+
+  /** Id of the state. There can be multiple copies of the same state with the same id. */
+  public int id;
 
   /**
    * It constructs a FSM state.

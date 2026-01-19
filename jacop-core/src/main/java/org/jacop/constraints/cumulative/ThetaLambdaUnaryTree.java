@@ -47,12 +47,11 @@ import java.nio.charset.StandardCharsets;
  */
 class ThetaLambdaUnaryTree extends ThetaTree {
 
+  final ThetaLambdaUnaryNode empty = new ThetaLambdaUnaryNode();
   // array that keeps all nodes of the balanced binary tree and organizes the tree structure
   ThetaLambdaUnaryNode[] tree;
   // list of ordered tasks
   TaskView[] orderedTasks;
-
-  final ThetaLambdaUnaryNode empty = new ThetaLambdaUnaryNode();
 
   public ThetaLambdaUnaryTree() {}
 

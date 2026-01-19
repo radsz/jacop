@@ -35,7 +35,11 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import org.jacop.jasat.core.clauses.*;
+import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
+import org.jacop.jasat.core.clauses.BinaryClausesDatabase;
+import org.jacop.jasat.core.clauses.DefaultClausesDatabase;
+import org.jacop.jasat.core.clauses.TernaryClausesDatabase;
+import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
 
 /**
  * The configuration for a solver. It contains all numeric values or enumerations needed to set the
@@ -65,18 +69,6 @@ public class Config extends Properties {
   /** initial number of variables in the trail */
   public final int trail_size = 100;
 
-  /** controls default solver verbosity */
-  public int verbosity;
-
-  /** the default timeout, in seconds, for searches. */
-  public long timeout;
-
-  /** switch for debug mode */
-  public boolean debug;
-
-  /** random seed, to be changed if we want to redo the same run */
-  public long seed = System.currentTimeMillis();
-
   /** factor by which restart threshold is increased */
   public final double RESTART_THRESHOLD_INCREASE_RATE = 1.5;
 
@@ -88,6 +80,18 @@ public class Config extends Properties {
 
   /** the list of databases the solver must add */
   public final List<AbstractClausesDatabase> clausesDatabases = new ArrayList<>();
+
+  /** controls default solver verbosity */
+  public int verbosity;
+
+  /** the default timeout, in seconds, for searches. */
+  public long timeout;
+
+  /** switch for debug mode */
+  public boolean debug;
+
+  /** random seed, to be changed if we want to redo the same run */
+  public long seed = System.currentTimeMillis();
 
   /**
    * constructor for config, that adds some default components. If you want to choose all

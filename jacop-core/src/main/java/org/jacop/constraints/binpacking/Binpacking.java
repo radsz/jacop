@@ -30,14 +30,26 @@
 
 package org.jacop.constraints.binpacking;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.SimpleHashSet;
 
 /**
@@ -488,11 +500,11 @@ public class Binpacking extends Constraint
       sum_c += x[N - kPrime];
       kPrime++;
     }
-    // 	System.out.println("sum_c = " + sum_c + " k' = " + kPrime);
+    //   System.out.println("sum_c = " + sum_c + " k' = " + kPrime);
 
     sum_b = x[N - kPrime];
     while (sum_a < alpha && sum_b <= beta) {
-      // 	    System.out.println(sum_a +" < " +alpha + "  "+sum_b + " <= " + beta);
+      //       System.out.println(sum_a +" < " +alpha + "  "+sum_b + " <= " + beta);
       sum_a += x[k++];
       if (sum_a < alpha) {
         kPrime--;
@@ -505,8 +517,8 @@ public class Binpacking extends Constraint
         }
       }
     }
-    // 	System.out.println("k = "+k+" k' = "+kPrime);
-    // 	System.out.println("sum_a = "+sum_a+" sum_b = "+sum_b+" sum_c = "+sum_c) ;
+    //   System.out.println("k = "+k+" k' = "+kPrime);
+    //   System.out.println("sum_a = "+sum_a+" sum_b = "+sum_b+" sum_c = "+sum_c) ;
 
     alphaP = sum_a + sum_c;
     betaP = sum_b;

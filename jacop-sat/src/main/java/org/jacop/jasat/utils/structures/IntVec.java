@@ -46,14 +46,12 @@ import org.jacop.jasat.utils.Utils;
  */
 public final class IntVec implements Iterable<Integer> {
 
-  // real array
-  public int[] array;
-
-  // number of elements
-  public int numElem;
-
   // memory pool
   public final MemoryPool pool;
+  // real array
+  public int[] array;
+  // number of elements
+  public int numElem;
 
   /**
    * initializes the array with a memory pool

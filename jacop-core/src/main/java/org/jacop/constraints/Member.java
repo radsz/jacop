@@ -49,8 +49,6 @@ import org.jacop.core.TimeStamp;
 public class Member extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  Store store;
-  boolean reified = true;
 
   /** It specifies a list of variables being summed. */
   final IntVar[] x;
@@ -61,6 +59,8 @@ public class Member extends PrimitiveConstraint {
   /** It specifies the number of variables on the list. */
   final int l;
 
+  Store store;
+  boolean reified = true;
   /*
    * Defines first position of the variable that might equal e
    */

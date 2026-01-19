@@ -35,7 +35,12 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 import org.jacop.util.IndexDomainView;
 
 /**
@@ -55,6 +60,14 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
   /** It stores variables within this extensional constraint, order does matter. */
   public final IntVar[] list;
+
+  /** It specifies if the tuples previously removed are re-inserted at the beginning. */
+  public final boolean reinsertBefore;
+
+  /** It specifies if the residues are moved at the beginning of the list. */
+  public final boolean residuesBefore;
+
+  final IndexDomainView[] views;
 
   /** */
   public int[][] tuples;
@@ -116,12 +129,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   /** */
   public int lastAssignedVariablePosition = -1;
 
-  /** It specifies if the tuples previously removed are re-inserted at the beginning. */
-  public final boolean reinsertBefore;
-
-  /** It specifies if the residues are moved at the beginning of the list. */
-  public final boolean residuesBefore;
-
   /** It specifies if there was no first consistency check yet. */
   public boolean firstConsistencyCheck = true;
 
@@ -133,7 +140,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
   // FIXME, remove the need for this attribute.
   Store store;
-  final IndexDomainView[] views;
   // for each variable computes the domain as given by all tuples.
   IntervalDomain[] valuesInFocus;
   int[] domainSizeAfterConsistency;
@@ -253,7 +259,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     assert (level > firstConsistencyLevel)
         : "Constraint has the level at which it has computed its initial state being removed.";
 
-    // 	It is called upon removing level
+    //   It is called upon removing level
 
     backtrackOccured = true;
     lastAssignedVariablePosition = -1;
@@ -398,7 +404,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
       nexts[nexts.length - 1] = -1;
       last = nexts.length - 1;
 
-      // 	domainSizeAfterConsistency = new int[list.length];
+      //   domainSizeAfterConsistency = new int[list.length];
 
       for (int j = 0; j < views.length; j++) {
 

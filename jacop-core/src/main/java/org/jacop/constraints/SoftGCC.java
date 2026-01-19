@@ -36,7 +36,12 @@ import org.jacop.constraints.netflow.DomainStructure;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * This class provides soft-gcc constraint by decomposing it either into a network flow constraint
@@ -51,24 +56,17 @@ import org.jacop.core.*;
  */
 public class SoftGCC extends DecomposedConstraint<Constraint> {
 
-  public List<Constraint> decomposition;
-
   public final IntVar[] xVars;
-
+  public final int[] countedValue;
+  public final IntVar costVar;
+  public final ViolationMeasure violationMeasure;
+  public List<Constraint> decomposition;
   public IntVar[] hardCounters;
   public IntVar[] softCounters;
-
-  public final int[] countedValue;
-
   public int[] softLowerBound;
   public int[] softUpperBound;
-
   public int[] hardLowerBound;
   public int[] hardUpperBound;
-
-  public final IntVar costVar;
-
-  public final ViolationMeasure violationMeasure;
 
   /**
    * It specifies soft-GCC constraint.
@@ -682,13 +680,13 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
         /*
               for (int i = 0; i < n; i++) {
-        				List<Arc> arcs = new ArrayList<Arc>();
-        				arcs.add( addArc(s, xNodes[i], 0, 0, 1) );
-        				List<Domain> domains = new ArrayList<Domain>();
-        				domains.add(all);
-        // 			varList.add(new DomainStructure(xVars[i], domains, arcs));
-        			}
-        			*/
+                List<Arc> arcs = new ArrayList<Arc>();
+                arcs.add( addArc(s, xNodes[i], 0, 0, 1) );
+                List<Domain> domains = new ArrayList<Domain>();
+                domains.add(all);
+        //       varList.add(new DomainStructure(xVars[i], domains, arcs));
+              }
+              */
 
         for (int i = 0; i < doms.length; i++) {
 

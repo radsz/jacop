@@ -34,7 +34,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 
 /**
  * Increasing constraint assures that all variables are in increasing order.
@@ -45,10 +47,10 @@ import org.jacop.core.*;
 public class Increasing extends Constraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  // List of decomposed constraints
-  protected List<Constraint> constraints;
   final IntVar[] x;
   final int n;
+  // List of decomposed constraints
+  protected List<Constraint> constraints;
   byte strict = 0;
 
   /*

@@ -48,19 +48,15 @@ import org.jacop.core.Store;
  */
 public class Kakro extends ExampleFD {
 
-  public IntVar[][] elements;
-
   public final int noRows = 4;
-
   public final int noColumns = 4;
-
   // >1 - wall with row sum
   // <0 - wall with column sum
   // 1 - field
   // 0 - clean wall.
   final int[][] rowDescription = {{0, 0, 0, 0}, {3, 1, 1, 0}, {6, 1, 1, 1}, {0, 5, 1, 1}};
-
   final int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
+  public IntVar[][] elements;
 
   /**
    * It executes the program to solve simple Kakro puzzle.

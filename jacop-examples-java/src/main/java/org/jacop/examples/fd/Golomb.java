@@ -33,10 +33,20 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.InputOrderSelect;
+import org.jacop.search.PrintOutListener;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
 
 /**
  * It models a Golomb ruler problem.
@@ -173,7 +183,7 @@ public class Golomb extends ExampleFD {
 
         // sub + jth = ith since sub = ith - jth
         // Add constraint so the above relationship holds
-        // 		store.imposePropagators(new XplusYeqZ(sub, numbers[j], numbers[i]));
+        //     store.imposePropagators(new XplusYeqZ(sub, numbers[j], numbers[i]));
         store.impose(new XplusYeqZ(sub, numbers[j], numbers[i]));
       }
     }
@@ -181,8 +191,8 @@ public class Golomb extends ExampleFD {
     int index = 0;
     for (int i = 1; i < noMarks; i++) {
       for (int j = 0; j < i; j++) {
-        // 			store.imposePropagators(new XplusClteqZ(subs.get(index++), (noMarks - 1 - i + j)
-        // 					* (noMarks - i + j) / 2, numbers[noMarks - 1]));
+        //       store.imposePropagators(new XplusClteqZ(subs.get(index++), (noMarks - 1 - i + j)
+        //           * (noMarks - i + j) / 2, numbers[noMarks - 1]));
         store.impose(
             new XplusClteqZ(
                 subs.get(index++),

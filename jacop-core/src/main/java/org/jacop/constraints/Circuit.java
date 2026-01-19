@@ -37,7 +37,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Stateful;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.MutableVar;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.SophisticatedLengauerTarjan;
 
 /**
@@ -50,18 +55,16 @@ import org.jacop.util.SophisticatedLengauerTarjan;
 public class Circuit extends Alldiff implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+  final int[] val;
+  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
+  final SophisticatedLengauerTarjan graphDominance;
+  final Random random = new Random(0);
   int chainLength;
   boolean firstConsistencyCheck = true;
   MutableVar[] graph;
   int idd;
   int sccLength;
-  final int[] val;
-  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
-
   int firstConsistencyLevel;
-
-  final SophisticatedLengauerTarjan graphDominance;
-  final Random random = new Random(0);
 
   /**
    * It constructs a circuit constraint.

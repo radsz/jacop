@@ -30,7 +30,31 @@
 
 package org.jacop.fz.constraints;
 
-import org.jacop.constraints.*;
+import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.OrBoolSimple;
+import org.jacop.constraints.OrBoolVector;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XorBool;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;

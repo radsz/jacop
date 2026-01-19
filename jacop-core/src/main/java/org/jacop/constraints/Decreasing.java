@@ -31,7 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
-import org.jacop.core.*;
+import org.jacop.core.IntVar;
 
 /**
  * Decreasing constraint assures that all variables are in decreasing order.

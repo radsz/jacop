@@ -35,7 +35,13 @@ import java.util.TimerTask;
 import org.jacop.jasat.core.Core;
 import org.jacop.jasat.core.clauses.AbstractClausesDatabase;
 import org.jacop.jasat.core.clauses.MapClause;
-import org.jacop.jasat.modules.interfaces.*;
+import org.jacop.jasat.modules.interfaces.AssertionListener;
+import org.jacop.jasat.modules.interfaces.BackjumpListener;
+import org.jacop.jasat.modules.interfaces.ClauseListener;
+import org.jacop.jasat.modules.interfaces.ConflictListener;
+import org.jacop.jasat.modules.interfaces.ForgetListener;
+import org.jacop.jasat.modules.interfaces.PropagateListener;
+import org.jacop.jasat.modules.interfaces.StartStopListener;
 
 /**
  * collects statistics about the solver

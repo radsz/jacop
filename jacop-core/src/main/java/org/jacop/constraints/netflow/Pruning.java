@@ -39,7 +39,11 @@ import java.util.PriorityQueue;
 import org.jacop.constraints.netflow.DomainStructure.Behavior;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
 
 /**
  * @author Robin Steiger and Radoslaw Szymanek
@@ -61,9 +65,7 @@ public class Pruning extends Network {
 
   // Decrease in score upon successful pruning
   private static final int FAIL_SCORE = 2;
-  public int numActiveArcs;
   private final Statistics statistics;
-
   // int z;
   // private void checkCount() {
   // z++;
@@ -79,6 +81,7 @@ public class Pruning extends Network {
   // }
   private final PriorityQueue<ArcCompanion> queue;
   private final PruningStrategy strategy;
+  public int numActiveArcs;
 
   public Pruning(List<Node> nodes, List<Arc> arcs, Statistics statistics) {
 

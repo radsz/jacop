@@ -34,7 +34,12 @@ import org.jacop.constraints.Not;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.TraceGenerator;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.CardA;
@@ -153,7 +158,8 @@ public class CPvizGardner {
             + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6
             + "ms");
 
-    // 	System.out.printf("CPU time = %5.3fs%n", (float)(((float)b.getThreadCpuTime(tread.getId()) -
+    //   System.out.printf("CPU time = %5.3fs%n", (float)(((float)b.getThreadCpuTime(tread.getId())
+    // -
     // startCPU)/1e+9));
   }
 }

@@ -32,7 +32,11 @@ package org.jacop.constraints.diffn;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -51,12 +55,12 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
   // private int numberArgs;
 
+  protected final List<Var> auxVar = new ArrayList<>();
   final IntVar[] x;
   final IntVar[] y;
   final IntVar[] lx;
   final IntVar[] ly;
   protected List<Constraint> constraints;
-  protected final List<Var> auxVar = new ArrayList<>();
 
   /**
    * It specifies a diffn constraint.

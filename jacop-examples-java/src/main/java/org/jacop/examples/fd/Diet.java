@@ -67,20 +67,13 @@ import org.jacop.core.Store;
  */
 public class Diet extends ExampleFD {
 
-  public IntVar[] x;
-
   public final int n = 4; // number of ingredients
   public final int m = 4; // number of food types
-
   public final String[] food = {
     "Chocolate Cake", "Chocolate ice cream", "Cola", "Pineapple cheesecake"
   };
-
-  public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
-
   public final int[] price = {50, 20, 30, 80}; // in cents
   public final int[] limits = {500, 6, 10, 8}; // minimum required for a diet
-
   // Food: 0   1     2    3
   public final int[][] matrix = {
     {400, 200, 150, 500}, // calories
@@ -88,6 +81,8 @@ public class Diet extends ExampleFD {
     {2, 2, 4, 4}, // sugar
     {2, 4, 1, 5}
   }; // fat
+  public IntVar[] x;
+  public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
 
   public static void printLastSolution(Diet diet) {
 

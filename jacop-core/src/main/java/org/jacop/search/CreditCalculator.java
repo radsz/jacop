@@ -158,7 +158,7 @@ public class CreditCalculator<T extends Var>
       currentLevel--;
       if (currentLevel > 0 && currentLevel < creditsLeft.length) {
 
-        // TODO, do we need that?	if (creditsLeft[currentLevel - 1] > 1)
+        // TODO, do we need that?  if (creditsLeft[currentLevel - 1] > 1)
         creditsRight[currentLevel] += creditsLeft[currentLevel];
         creditsLeft[currentLevel] = 0;
       }

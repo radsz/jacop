@@ -35,7 +35,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
 
 /*
  * ElementIntegerFast constraint defines a relation
@@ -70,6 +75,9 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   protected final int indexOffset;
 
+  private final short detect = 0;
+  private final short ascending = 1;
+  private final short descending = 2; // , none = 3;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   /*
@@ -77,10 +85,6 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    * or is not checked (none).
    */
   private TimeStamp<Short> order;
-
-  private final short detect = 0;
-  private final short ascending = 1;
-  private final short descending = 2; // , none = 3;
 
   /**
    * It constructs an element constraint.

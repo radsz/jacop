@@ -24,7 +24,20 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.constraints.*;
+import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XexpYeqZ;
+import org.jacop.constraints.XmodYeqZ;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
+import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.XeqP;

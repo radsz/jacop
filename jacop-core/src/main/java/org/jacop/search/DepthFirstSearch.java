@@ -36,7 +36,13 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XltC;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.SwitchesPruningLogging;
+import org.jacop.core.Var;
 
 /**
  * Implements Depth First Search with number of possible plugins (listeners) to be attached to
@@ -51,6 +57,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   // @todo make debugAll be used in printing statements.
   static final boolean debugAll = true;
   static final AtomicInteger no = new AtomicInteger(0);
+
+  /** It specifies if for setVar based search the left branch should impose EinA constraint. */
+  public final boolean einAinleftTree = true;
 
   /**
    * If it is set to true then the optimizing search will quit the search if this action is
@@ -96,9 +105,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It specifies the id of the search. */
   public String id;
-
-  /** It specifies if for setVar based search the left branch should impose EinA constraint. */
-  public final boolean einAinleftTree = true;
 
   /** It remembers what child search has been already examined. */
   public int currentChildSearch = -1;
@@ -468,8 +474,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         val = heuristic.getChoiceValue();
         assert (store.currentConstraint == null);
 
-        // 	maybe a boolean flag, if search should work
-        // 	C, not(C) versus not(C), C;
+        //   maybe a boolean flag, if search should work
+        //   C, not(C) versus not(C), C;
 
         DomainOperationHandler domainHandler =
             SearchHandlerRegistry.getInstance().findDomainHandler(fdv);
@@ -746,7 +752,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           store.removeLevel(depth);
 
         }
-        // 			else if (!fdv.dom().singleton(val)) {
+        //       else if (!fdv.dom().singleton(val)) {
         else if (!fdv.dom().singleton()) {
 
           assert (store.currentConstraint == null);
@@ -815,19 +821,19 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     depth = store.level;
     cost = null;
-    // 		timeOutOccured = false;
-    // 		timeOut = System.currentTimeMillis() + tOut * 1000;
+    //     timeOutOccured = false;
+    //     timeOut = System.currentTimeMillis() + tOut * 1000;
 
     if (costVariable == null) {
       optimize = false;
     }
 
-    // 		decisions = 0;
-    // 		numberBacktracks = 0;
-    // 		nodes = 0;
-    // 		wrongDecisions = 0;
-    // 		depthExcludePaths = 0;
-    // 		maxDepthExcludePaths = 0;
+    //     decisions = 0;
+    //     numberBacktracks = 0;
+    //     nodes = 0;
+    //     wrongDecisions = 0;
+    //     depthExcludePaths = 0;
+    //     maxDepthExcludePaths = 0;
 
     if (initializeListener != null) {
       initializeListener.executedAtInitialize(store);
@@ -946,19 +952,19 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     heuristic = select;
     depth = store.level;
-    // 		timeOutOccured = false;
-    // 		timeOut = System.currentTimeMillis() + tOut * 1000;
+    //     timeOutOccured = false;
+    //     timeOut = System.currentTimeMillis() + tOut * 1000;
 
     if (costVariable == null) {
       optimize = false;
     }
 
-    // 		decisions = 0;
-    // 		numberBacktracks = 0;
-    // 		nodes = 0;
-    // 		wrongDecisions = 0;
-    // 		depthExcludePaths = 0;
-    // 		maxDepthExcludePaths = 0;
+    //     decisions = 0;
+    //     numberBacktracks = 0;
+    //     nodes = 0;
+    //     wrongDecisions = 0;
+    //     depthExcludePaths = 0;
+    //     maxDepthExcludePaths = 0;
 
     if (initializeListener != null) {
       initializeListener.executedAtInitialize(store);
@@ -1063,15 +1069,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     optimize = true;
     cost = null;
 
-    // 		timeOutOccured = false;
-    // 		timeOut = System.currentTimeMillis() + tOut * 1000;
+    //     timeOutOccured = false;
+    //     timeOut = System.currentTimeMillis() + tOut * 1000;
 
-    // 		decisions = 0;
-    // 		numberBacktracks = 0;
-    // 		nodes = 0;
-    // 		wrongDecisions = 0;
-    // 		depthExcludePaths = 0;
-    // 		maxDepthExcludePaths = 0;
+    //     decisions = 0;
+    //     numberBacktracks = 0;
+    //     nodes = 0;
+    //     wrongDecisions = 0;
+    //     depthExcludePaths = 0;
+    //     maxDepthExcludePaths = 0;
 
     if (initializeListener != null) {
       initializeListener.executedAtInitialize(store);

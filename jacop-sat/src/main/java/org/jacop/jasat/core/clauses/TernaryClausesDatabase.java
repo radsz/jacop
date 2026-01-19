@@ -51,14 +51,11 @@ import org.jacop.jasat.utils.Utils;
 public final class TernaryClausesDatabase extends AbstractClausesDatabase {
 
   private static final int INITIAL_SIZE = 90;
-
-  // the clauses
-  private int[] clauses = new int[INITIAL_SIZE];
-
   // some util array
   private final int[] curValues = new int[3];
   private final int[] curLit = new int[3];
-
+  // the clauses
+  private int[] clauses = new int[INITIAL_SIZE];
   // current clause index
   private int currentIndex;
 

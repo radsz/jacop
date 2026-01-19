@@ -30,7 +30,8 @@
 
 package org.jacop.constraints.cumulative;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;

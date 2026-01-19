@@ -41,7 +41,11 @@ import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.*;
+import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
@@ -71,6 +75,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   };
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+  final Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
+  // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
+  final SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
 
   /** It specifies what relations is used by this constraint */
   public byte relationType;
@@ -85,11 +92,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public double sum;
 
   Store store;
-  final Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
-
-  // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
-  final SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
-
   boolean reified = true;
 
   BTree linearTree;

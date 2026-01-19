@@ -46,7 +46,11 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.jasat.core.*;
+import org.jacop.jasat.core.Config;
+import org.jacop.jasat.core.Core;
+import org.jacop.jasat.core.SolverComponent;
+import org.jacop.jasat.core.SolverState;
+import org.jacop.jasat.core.Trail;
 import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.modules.ActivityModule;
 import org.jacop.jasat.modules.HeuristicAssertionModule;
@@ -90,13 +94,18 @@ public final class SatWrapper extends Constraint
 
   // registered CP variables
   public final Set<IntVar> registeredVars = new HashSet<>();
+  // guide assertions
+  public final HeuristicAssertionModule assertionModule = null;
+  // the DomainClausesDatabase, if any
+  public final DomainClausesDatabase domainDatabase;
+  // level of verbosity (the higher, the more verbose)
+  public final int verbosity = 0;
   // association from CP variables to their SAT bridge (replaces IntVar.satBridge field)
   private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<>();
   // model clauses waiting to be added to the SAT solver
   private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<>();
   // sat solver instance
   public Core core;
-
   // association from CP variables to boolean variables
   // public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
   // new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
@@ -106,8 +115,6 @@ public final class SatWrapper extends Constraint
    */
   // keep track of literals activity, and give search advices (optional)
   public ActivityModule activity;
-  // guide assertions
-  public final HeuristicAssertionModule assertionModule = null;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
   public SatCPBridge[] boolVarToDomains = new SatCPBridge[50];
   // the change listene to plug in the SAT solver
@@ -116,19 +123,13 @@ public final class SatWrapper extends Constraint
   public Store store;
   // pool of int[]
   public MemoryPool pool;
-  // the DomainClausesDatabase, if any
-  public final DomainClausesDatabase domainDatabase;
   // the translator of domains
   public DomainTranslator domainTranslator;
   // SAT level to backjump to if failure
   public int levelToBackjumpTo;
-
   // maps SAT levels to CP levels and conversely
   public Integer[] satToCpLevels = new Integer[5];
   public Integer[] cpToSatLevels = new Integer[5];
-
-  // level of verbosity (the higher, the more verbose)
-  public final int verbosity = 0;
   // empty == true if no cluases has been added
   boolean empty = true;
   // the trail of the solver
@@ -344,9 +345,9 @@ public final class SatWrapper extends Constraint
 
     // print what literal we assert, and its meaning
     // log(this, "wrapper assert literal "+literal+
-    // 	" at (cp level " + store.level +
-    // 	", sat level "+currentSatLevel+
-    // 	") standing for "+showLiteralMeaning(literal));
+    //   " at (cp level " + store.level +
+    //   ", sat level "+currentSatLevel+
+    //   ") standing for "+showLiteralMeaning(literal));
 
     // trigger propagation in *SAT-solver*
     core.assertLiteral(literal, currentSatLevel);
@@ -426,7 +427,7 @@ public final class SatWrapper extends Constraint
       }
     }
     // log(this, "remove cp level "+cpLevel +
-    // 	" (previous : "+previousCpLevel+")");
+    //   " (previous : "+previousCpLevel+")");
 
     // this CP level does not correspond to anything anymore
     cpToSatLevels[cpLevel] = null;
@@ -452,9 +453,9 @@ public final class SatWrapper extends Constraint
 
         mustBacktrack = clauseToLearn.isUnsatisfiableIn(trail);
       }
-      // 		else {
-      // 			core.triggerIdleEvent();
-      // 		}
+      //     else {
+      //       core.triggerIdleEvent();
+      //     }
 
     }
   }

@@ -36,7 +36,13 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.TraceGenerator;
 
 /**
  * The class Run is used to run test programs for JaCoP package. It is used for test purpose only.

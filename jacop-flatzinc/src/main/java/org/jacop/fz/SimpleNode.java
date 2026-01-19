@@ -4,9 +4,9 @@ package org.jacop.fz;
 
 public class SimpleNode implements Node {
 
+  protected final int id;
   protected Node parent;
   protected Node[] children;
-  protected final int id;
   protected Object value;
   protected Parser parser;
 

@@ -30,7 +30,11 @@
 
 package org.jacop.examples.fd.qcp;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +44,14 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMiddle;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.Shaving;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.TransformExtensional;
 
 /**
  * It solves QuasiGroup Completion Problem (QCP).
@@ -52,11 +63,11 @@ public class QCP extends ExampleFD {
 
   // It uses correct InputOrder tie breaking (lex)
 
-  /** It specifies the file containing the description of the problem. */
-  public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
-
   /** It contains constraints which can be used to guide shaving. */
   public final List<Constraint> shavingConstraints = new ArrayList<>();
+
+  /** It specifies the file containing the description of the problem. */
+  public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
 
   /** It contains the order of the QCP being solved. */
   public int n;
@@ -109,12 +120,12 @@ public class QCP extends ExampleFD {
     example = new QCP();
 
     if (args.length > 0)
-    	example.filename = args[0];
+      example.filename = args[0];
 
     example.model();
 
     if (example.searchAllTransform())
-    	System.out.print(" Solution(s) found ");
+      System.out.print(" Solution(s) found ");
     */
 
     example = new QCP();

@@ -1,14 +1,21 @@
 package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,9 +29,9 @@ import org.mockito.Mockito;
 @RunWith(Parameterized.class)
 public class SmallDenseDomainTest {
 
+  private final Method prepareMethod;
   @Mock IntVar var;
   IntDomain intervalDomain;
-  private final Method prepareMethod;
 
   @SuppressWarnings("unchecked")
   public SmallDenseDomainTest(String prepareMethodName) throws NoSuchMethodException {

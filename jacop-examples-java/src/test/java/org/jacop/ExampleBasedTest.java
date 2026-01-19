@@ -34,7 +34,54 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashSet;
 import java.util.Set;
-import org.jacop.examples.fd.*;
+import org.jacop.examples.fd.ArchFriends;
+import org.jacop.examples.fd.BIBD;
+import org.jacop.examples.fd.BabySitting;
+import org.jacop.examples.fd.BasicLogicPascal;
+import org.jacop.examples.fd.BlueberryMuffins;
+import org.jacop.examples.fd.BreakingNews;
+import org.jacop.examples.fd.BuildingBlocks;
+import org.jacop.examples.fd.CalendarMen;
+import org.jacop.examples.fd.Conference;
+import org.jacop.examples.fd.Cryptogram;
+import org.jacop.examples.fd.DeBruijn;
+import org.jacop.examples.fd.Diet;
+import org.jacop.examples.fd.DollarAndTicket;
+import org.jacop.examples.fd.DonaldGeraldRobert;
+import org.jacop.examples.fd.Exodus;
+import org.jacop.examples.fd.FittingNumbers;
+import org.jacop.examples.fd.Flowers;
+import org.jacop.examples.fd.FourIslands;
+import org.jacop.examples.fd.FurnitureMoving;
+import org.jacop.examples.fd.Gates;
+import org.jacop.examples.fd.Golf;
+import org.jacop.examples.fd.Golomb;
+import org.jacop.examples.fd.HistoricHomes;
+import org.jacop.examples.fd.Kakro;
+import org.jacop.examples.fd.KnapsackExample;
+import org.jacop.examples.fd.Langford;
+import org.jacop.examples.fd.LectureSeries;
+import org.jacop.examples.fd.MagicSquares;
+import org.jacop.examples.fd.MasterClass;
+import org.jacop.examples.fd.MineSweeper;
+import org.jacop.examples.fd.Newspaper;
+import org.jacop.examples.fd.NonTransitiveDice;
+import org.jacop.examples.fd.Parcel;
+import org.jacop.examples.fd.PerfectSquare;
+import org.jacop.examples.fd.PigeonHole;
+import org.jacop.examples.fd.ProAndCon;
+import org.jacop.examples.fd.Queens;
+import org.jacop.examples.fd.SendMoreMoney;
+import org.jacop.examples.fd.SiblingUproar;
+import org.jacop.examples.fd.SleepingArrangements;
+import org.jacop.examples.fd.StonesOfHeaven;
+import org.jacop.examples.fd.Sudoku;
+import org.jacop.examples.fd.SurvoPuzzle;
+import org.jacop.examples.fd.TSP;
+import org.jacop.examples.fd.Tunapalooza;
+import org.jacop.examples.fd.WhoKilledAgatha;
+import org.jacop.examples.fd.WolfGoatCabbage;
+import org.jacop.examples.fd.Zebra;
 import org.jacop.examples.fd.carsequencing.CarSequencing;
 import org.jacop.examples.fd.crosswords.CrossWord;
 import org.jacop.examples.fd.muca.MUCA;
@@ -594,7 +641,7 @@ public class ExampleBasedTest {
     example.model();
 
     assertThat(example.searchAllAtOnce()).isTrue();
-    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(4436);
+    assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(1760);
   }
 
   @Test

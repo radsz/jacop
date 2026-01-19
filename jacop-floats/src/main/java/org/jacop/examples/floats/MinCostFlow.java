@@ -161,7 +161,7 @@ public class MinCostFlow {
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
     //     System.out.println ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + "
     // result =" +
-    // 			(double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
+    //       (double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
     // }
 
     IO.println("\nPrecision = " + FloatDomain.precision());

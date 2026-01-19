@@ -38,13 +38,10 @@ package org.jacop.core;
  */
 public class BoundDomainValueEnumeration extends ValueEnumeration {
 
-  int current;
-
-  int min;
-
-  int max;
-
   final BoundDomain domain;
+  int current;
+  int min;
+  int max;
 
   /**
    * @param dom It specifies the BoundDomain for which enumeration of values is performed.

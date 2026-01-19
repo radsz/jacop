@@ -41,14 +41,12 @@ import org.jacop.jasat.utils.MemoryPool;
  */
 public final class IntStack {
 
-  // inner array of integers
-  public int[] array = new int[40];
-
-  // pointer to the first free slot
-  public int currentIndex;
-
   // pool of int[]
   public final MemoryPool pool;
+  // inner array of integers
+  public int[] array = new int[40];
+  // pointer to the first free slot
+  public int currentIndex;
 
   public IntStack(MemoryPool pool) {
     this.pool = pool;

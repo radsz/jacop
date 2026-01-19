@@ -56,6 +56,8 @@ import org.jacop.search.SimpleSelect;
  */
 public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
+  final TimeStamp<Integer> currentIndex;
+
   /**
    * It specifies if the left branch (values smaller or equal to the value selected) are first
    * considered.
@@ -63,8 +65,6 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
   public boolean leftFirst = true;
 
   public boolean roundRobin = true;
-
-  final TimeStamp<Integer> currentIndex;
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -95,7 +95,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
       ComparatorVariable<T> varSelect,
       ComparatorVariable<T> tieBreakerVarSelect) {
     // ,
-    // 	   Indomain<T> indomain) {
+    //      Indomain<T> indomain) {
 
     super(variables, varSelect, tieBreakerVarSelect, null);
 

@@ -30,15 +30,34 @@
 
 package org.jacop.fz.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.XeqY;
-import org.jacop.core.*;
+import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.fz.*;
+import org.jacop.fz.ASTAnnExpr;
+import org.jacop.fz.ASTAnnotation;
+import org.jacop.fz.ASTIntFlatExpr;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ASTSetLiteral;
+import org.jacop.fz.Options;
+import org.jacop.fz.ParserTreeConstants;
+import org.jacop.fz.SimpleNode;
+import org.jacop.fz.Tables;
+import org.jacop.fz.VariablesParameters;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -50,30 +69,30 @@ import org.jacop.set.core.SetVar;
  */
 public class Support implements ParserTreeConstants {
 
-  Store store;
-  Tables dictionary;
-
-  // ============ SAT solver interface ==============
-  SatTranslation sat;
-
+  // comparison operators
+  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+  static final AtomicInteger n1 = new AtomicInteger(0);
+  static final AtomicInteger n2 = new AtomicInteger(0);
+  static final AtomicInteger n3 = new AtomicInteger(0);
+  static final AtomicInteger n4 = new AtomicInteger(0);
+  static final AtomicInteger n5 = new AtomicInteger(0);
+  static final AtomicInteger n6 = new AtomicInteger(0);
+  static final AtomicInteger n7 = new AtomicInteger(0);
   public Options options;
-
   // =========== Annotations ===========
   public boolean boundsConsistency = true;
   public boolean domainConsistency;
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar;
-
-  // comparison operators
-  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
-
+  Store store;
+  Tables dictionary;
+  // ============ SAT solver interface ==============
+  SatTranslation sat;
   boolean intPresent = true;
   boolean floatPresent = true;
-
   ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
   ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
-
   ReificationConstraints reif = new ReificationConstraints(this);
   ImplicationConstraints imply = new ImplicationConstraints(this);
 
@@ -587,6 +606,8 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  // =========== Specialized constraints ===================
+
   void aliasConstraints() {
 
     Set<Map.Entry<IntVar, IntVar>> entries = dictionary.aliasTable.entrySet();
@@ -641,10 +662,6 @@ public class Support implements ParserTreeConstants {
     imply.pose();
   }
 
-  // =========== Specialized constraints ===================
-
-  static final AtomicInteger n1 = new AtomicInteger(0);
-
   Constraint fzXeqCReified(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
@@ -683,8 +700,6 @@ public class Support implements ParserTreeConstants {
     };
   }
 
-  static final AtomicInteger n2 = new AtomicInteger(0);
-
   Constraint fzXeqCImplied(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
@@ -721,8 +736,6 @@ public class Support implements ParserTreeConstants {
       }
     };
   }
-
-  static final AtomicInteger n3 = new AtomicInteger(0);
 
   Constraint fzXneqCReified(IntVar x, int c, IntVar b) {
 
@@ -763,8 +776,6 @@ public class Support implements ParserTreeConstants {
     };
   }
 
-  static final AtomicInteger n4 = new AtomicInteger(0);
-
   Constraint fzXneqCImplied(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
@@ -800,8 +811,6 @@ public class Support implements ParserTreeConstants {
       }
     };
   }
-
-  static final AtomicInteger n5 = new AtomicInteger(0);
 
   Constraint fzXeqYReified(IntVar x, IntVar y, IntVar b) {
 
@@ -856,8 +865,6 @@ public class Support implements ParserTreeConstants {
     };
   }
 
-  static final AtomicInteger n6 = new AtomicInteger(0);
-
   Constraint fzXeqYImplied(IntVar x, IntVar y, IntVar b) {
 
     return new Constraint(new IntVar[] {x, y, b}) {
@@ -903,8 +910,6 @@ public class Support implements ParserTreeConstants {
       }
     };
   }
-
-  static final AtomicInteger n7 = new AtomicInteger(0);
 
   Constraint fzIfThenBool(IntVar b, IntVar x) {
 

@@ -19,13 +19,13 @@ public class ASTIntFlatExpr extends SimpleNode {
   }
 
   public void setInt(int i) {
-    //   	if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
+    //     if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
     value = i;
-    //   	else {
-    //   	    System.err.println("Error: Too large or too small integer " + i +
-    //   			       "; execution aborted");
-    //  	    System.exit(0);
-    //   	}
+    //     else {
+    //         System.err.println("Error: Too large or too small integer " + i +
+    //                "; execution aborted");
+    //        System.exit(0);
+    //     }
   }
 
   public String toString() {

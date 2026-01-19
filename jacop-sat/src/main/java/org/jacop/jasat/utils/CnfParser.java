@@ -44,16 +44,13 @@ import org.jacop.jasat.utils.structures.IntVec;
  */
 public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 
+  // stream from which to read values
+  private final InputStream stream;
+  // memory pool
+  private final MemoryPool pool;
   // data of the problem
   public int numClauses;
   public int numVars;
-
-  // stream from which to read values
-  private final InputStream stream;
-
-  // memory pool
-  private final MemoryPool pool;
-
   // current char
   private int c;
 

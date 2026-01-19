@@ -29,8 +29,12 @@
  */
 package org.jacop.constraints.geost;
 
-import java.awt.*;
-import java.util.*;
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -73,6 +77,12 @@ public class ObstacleObjectFrame extends InternalConstraint {
   final boolean useTime;
 
   /**
+   * the collection of holes that are included in all possible shapes, enlarged to include the whole
+   * domain that can be covered for any feasible choice of the origin
+   */
+  private final SimpleArrayList<DBox> extendedHoles;
+
+  /**
    * the frame is the area that is ensured to be covered by the obstacle, given the domain of its
    * origin variables
    */
@@ -86,12 +96,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
   /** it computes the area/volume of the frame. */
   private int frameArea;
-
-  /**
-   * the collection of holes that are included in all possible shapes, enlarged to include the whole
-   * domain that can be covered for any feasible choice of the origin
-   */
-  private final SimpleArrayList<DBox> extendedHoles;
 
   /**
    * It creates an internal constraint to enforce non-overlapping relation with this obstacle

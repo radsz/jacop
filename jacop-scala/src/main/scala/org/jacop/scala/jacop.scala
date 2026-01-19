@@ -68,7 +68,6 @@ class Model extends org.jacop.core.Store {
   * Implicit conversions of Int and Bool to IntVar and BoolVar. Used in overloaded operators.
   */
 trait jacop {
-  import scala.LowPriorityImplicits
   /**
     * Converts integer to IntVar.
     *

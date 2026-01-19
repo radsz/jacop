@@ -41,14 +41,13 @@ import org.jacop.core.ValueEnumeration;
  */
 public class SetDomainValueEnumeration extends ValueEnumeration {
 
+  final SetDomain domain;
   IntDomain current;
   IntDomain min;
   IntDomain max;
   int maxLevel;
   int currentLevel;
   int pascalPlace;
-
-  final SetDomain domain;
 
   /**
    * @param dom It specifies the SetDomain for which enumeration of sets is performed.

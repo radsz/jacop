@@ -40,12 +40,9 @@ package org.jacop.core;
 public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
 
   final IntervalDomain domain;
-
-  Interval i;
-
-  int intervalNo = -1;
-
   final int maxIntervalNo;
+  Interval i;
+  int intervalNo = -1;
 
   /**
    * It creates an enumeration for a given interval domain.

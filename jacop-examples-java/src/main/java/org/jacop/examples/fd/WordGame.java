@@ -65,6 +65,8 @@ public class WordGame {
   public static final String defaultDictionary =
       "src/main/java/org/jacop/examples/fd/crosswords/words";
 
+  private WordGame() {}
+
   static void main(String[] args) {
 
     Store store = new Store();
@@ -206,6 +208,4 @@ public class WordGame {
       return returnCode;
     }
   }
-
-  private WordGame() {}
 } // end class

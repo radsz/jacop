@@ -55,16 +55,14 @@ public class CumulativeUnary extends Cumulative {
    */
   final TaskView[] tvn;
   final TaskView[] tvr;
-  boolean doProfile;
-  boolean doEdgeFind = true;
   private final Comparator<TaskView> taskIncLctComparator =
       (o1, o2) -> o1.lct() == o2.lct() ? (o1.est() - o2.est()) : (o1.lct() - o2.lct());
-
   private final Comparator<TaskView> taskIncLstComparator =
       (o1, o2) -> o1.lst() == o2.lst() ? (o1.est() - o2.est()) : (o1.lst() - o2.lst());
-
   private final Comparator<TaskView> taskIncEctComparator =
       (o1, o2) -> o1.ect() == o2.ect() ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
+  boolean doProfile;
+  boolean doEdgeFind = true;
 
   /**
    * It creates a cumulative constraint.

@@ -32,7 +32,17 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -178,19 +188,19 @@ public class ProAndCon extends ExampleFD {
 
     store.impose(new LinearInt(vote[iAkerman], weights, "==", weightedVotes[iAkerman]));
     // store.impose(new SumWeight(vote[iAkerman], weights,
-    // 		weightedVotes[iAkerman]));
+    //     weightedVotes[iAkerman]));
     store.impose(new LinearInt(vote[iBaird], weights, "==", weightedVotes[iBaird]));
     // store.impose(new SumWeight(vote[iBaird], weights,
-    // 				weightedVotes[iBaird]));
+    //         weightedVotes[iBaird]));
     store.impose(new LinearInt(vote[iChatham], weights, "==", weightedVotes[iChatham]));
     // store.impose(new SumWeight(vote[iChatham], weights,
-    // 		weightedVotes[iChatham]));
+    //     weightedVotes[iChatham]));
     store.impose(new LinearInt(vote[iDuval], weights, "==", weightedVotes[iDuval]));
     // store.impose(new SumWeight(vote[iDuval], weights,
-    // 				weightedVotes[iDuval]));
+    //         weightedVotes[iDuval]));
     store.impose(new LinearInt(vote[iEtting], weights, "==", weightedVotes[iEtting]));
     // store.impose(new SumWeight(vote[iEtting], weights,
-    // 		weightedVotes[iEtting]));
+    //     weightedVotes[iEtting]));
 
     // All weightes votes must be different.
     store.impose(new Alldifferent(weightedVotes));

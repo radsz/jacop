@@ -37,7 +37,11 @@ import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.floats.core.*;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints sin(P) = R
@@ -308,14 +312,14 @@ public class SinPeqR extends Constraint
 
   // double rest(double d, boolean min) {
 
-  // 	double rest = d % (2*FloatDomain.PI);
+  //   double rest = d % (2*FloatDomain.PI);
 
-  // 	if (min)
-  // 	    rest = FloatDomain.down(rest);
-  // 	else
-  // 	    rest = FloatDomain.up(rest);
+  //   if (min)
+  //       rest = FloatDomain.down(rest);
+  //   else
+  //       rest = FloatDomain.up(rest);
 
-  // 	return rest;
+  //   return rest;
   // }
 
   int intervalNo(double d) {

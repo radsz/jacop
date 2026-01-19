@@ -30,11 +30,20 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.TupleUtils;
 
 /**
@@ -54,11 +63,14 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies the tuples given in the constructor. */
-  public int[][] tuplesFromConstructor;
-
   /** It stores variables within this extensional constraint, order does matter. */
   public final IntVar[] list;
+
+  final LinkedHashSet<Var> variableQueue = new LinkedHashSet<>();
+  final int[] tuple;
+
+  /** It specifies the tuples given in the constructor. */
+  public int[][] tuplesFromConstructor;
 
   int numberTuples;
   Store store;
@@ -72,8 +84,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   /** It represents values which are supported for a variable. */
   int[][] values;
 
-  final LinkedHashSet<Var> variableQueue = new LinkedHashSet<>();
-  final int[] tuple;
   int[][][] lastofsequence;
   int[][][] supports;
   private boolean satisfiedAlreadyAtImposition;
@@ -597,14 +607,14 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         this.tuples[i][j] = new int[supportCount[i][j]][];
       }
 
-      // 		int m = 0;
+      //     int m = 0;
       for (int[] t : tuplesFromConstructor) {
 
         int value = t[i];
         int position = findPosition(value, values[i]);
 
         this.tuples[i][position][--supportCount[i][position]] = t;
-        // 			m++;
+        //       m++;
 
       }
 

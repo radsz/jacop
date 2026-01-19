@@ -30,13 +30,28 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
@@ -66,24 +81,12 @@ public class Alldistinct extends Constraint
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It counts the number of executions of the consistency function. */
-  public int consistencyChecks;
-
-  /**
-   * It computes how many times did consistency execution has been re-executed due to narrowing
-   * event at the end of the consistency function.
-   */
-  public int fullConsistencyPassesWithNarrowingEvent;
-
   /** It specifies all variables which have to have different values. */
   public final IntVar[] list;
 
-  boolean backtrackOccured = true;
   // Any variable which matched edge ends up deleted is added to this
   // structure to obtain a new matched edge
   final LinkedHashSet<IntVar> freeVariables = new LinkedHashSet<>();
-  // failure (inconsistency) discovered during imposition
-  boolean impositionFailure;
   // each fdv has a matched value in maximal matching
   // this can change from consistency execution to consistency execution
   // any maximum matching is good for analysis.
@@ -92,31 +95,10 @@ public class Alldistinct extends Constraint
   // If a matched edge was removed then the remains of maximum matching
   // are used to compute a new maximum matching.
   final Map<IntVar, TimeStamp<Integer>> matching;
-  boolean maximumMatchingNotRecomputed = true;
-  // Important global variables for visitTarjan and revisitTarjan
-  // Probably vn can be replaced by n.
-  int n;
-  TimeStamp<Integer> nStamp;
-  boolean permutationConsistency = true;
   // Until pointer stampValues it stores all values still in domain of
   // at least one variable
   final Integer[] potentialFreeValues;
-  // Represents for each Variable a scc to which it belongs.
-  // This can change from a lot from matching to matching.
-  // Variable may belong to different components given different matching.
-  // Only if old maximum matching is used than the old components numbers can
-  // be reused.
-  Map<IntVar, Integer> scc;
   final Map<IntVar, TimeStamp<Integer>> sccStamp;
-  // All grounded variables are not taken into account, they have
-  // their consistent value and can be simply omitted in any kind of
-  // analysis.
-  TimeStamp<Integer> stampNotGroundedVariables;
-  // Stores how many variables were reached by free values. for
-  // efficiency purposes. If equal number of variables where reached
-  // then previously then we can stop doing reachability analysis.
-  TimeStamp<Integer> stampReachability;
-
   // Variables for revisited Tarjan scc algorithm Reuse of scc
   // numbers previously computed, is only possible when matching is
   // not changed, since then any change can only split component
@@ -128,13 +110,6 @@ public class Alldistinct extends Constraint
   // stamps specify the position of the last fdv which posses given integer
   // it decrease with increase of the store level.
   final Map<Integer, TimeStamp<Integer>> stamps;
-  // For discovery of situation when number of values is equal
-  // to number of variables, which means that there is no free
-  // values
-  // It also can say when to stop looking for free values since
-  // it is easy to compute number of free values
-  // "stampValues.value() - x.length"
-  TimeStamp<Integer> stampValues;
   // Stores index for values in array potentialFreeValues it speeds
   // up significantly the swap operation when a value is not free
   // anymore and needs to be moved at the end of potentialFreeValues
@@ -142,11 +117,51 @@ public class Alldistinct extends Constraint
   final Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
   final Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
+  final boolean greedy = true;
+
+  /** It counts the number of executions of the consistency function. */
+  public int consistencyChecks;
+
+  /**
+   * It computes how many times did consistency execution has been re-executed due to narrowing
+   * event at the end of the consistency function.
+   */
+  public int fullConsistencyPassesWithNarrowingEvent;
+
+  boolean backtrackOccured = true;
+  // failure (inconsistency) discovered during imposition
+  boolean impositionFailure;
+  boolean maximumMatchingNotRecomputed = true;
+  // Important global variables for visitTarjan and revisitTarjan
+  // Probably vn can be replaced by n.
+  int n;
+  TimeStamp<Integer> nStamp;
+  boolean permutationConsistency = true;
+  // Represents for each Variable a scc to which it belongs.
+  // This can change from a lot from matching to matching.
+  // Variable may belong to different components given different matching.
+  // Only if old maximum matching is used than the old components numbers can
+  // be reused.
+  Map<IntVar, Integer> scc;
+  // All grounded variables are not taken into account, they have
+  // their consistent value and can be simply omitted in any kind of
+  // analysis.
+  TimeStamp<Integer> stampNotGroundedVariables;
+  // Stores how many variables were reached by free values. for
+  // efficiency purposes. If equal number of variables where reached
+  // then previously then we can stop doing reachability analysis.
+  TimeStamp<Integer> stampReachability;
+  // For discovery of situation when number of values is equal
+  // to number of variables, which means that there is no free
+  // values
+  // It also can say when to stop looking for free values since
+  // it is easy to compute number of free values
+  // "stampValues.value() - x.length"
+  TimeStamp<Integer> stampValues;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   int vn;
   IntVar guideVariable;
   int guideValue;
-  final boolean greedy = true;
 
   /**
    * It constructs an alldistinct constraint.
@@ -1542,7 +1557,7 @@ public class Alldistinct extends Constraint
 
     guideVariable = null;
 
-    // 	System.out.println("1. var " + guideVariable + " value " + guideValue);
+    //   System.out.println("1. var " + guideVariable + " value " + guideValue);
 
     int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
@@ -1643,7 +1658,7 @@ public class Alldistinct extends Constraint
       }
     }
 
-    // 	System.out.println("2. var " + guideVariable + " value " + guideValue);
+    //   System.out.println("2. var " + guideVariable + " value " + guideValue);
 
     // Permutation only at this moment
 

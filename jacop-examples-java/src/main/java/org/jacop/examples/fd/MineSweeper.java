@@ -42,7 +42,11 @@ import org.jacop.constraints.XeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleMatrixSelect;
+import org.jacop.search.SmallestDomain;
 
 /**
  * It models and solves Minesweeper problem.

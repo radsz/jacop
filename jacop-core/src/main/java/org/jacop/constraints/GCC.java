@@ -30,13 +30,26 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalDomainValueEnumeration;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * GCC constraint counts the number of occurences of given values in x variables. The counters are
@@ -49,8 +62,8 @@ import org.jacop.core.*;
  */
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  private static final boolean debug = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
+  private static final boolean debug = false;
 
   /** It specifies variables x whose values are counted. */
   public final IntVar[] x;
@@ -60,31 +73,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    * domain of x variables.
    */
   protected final IntVar[] counters;
-
-  /**
-   * TODO An improvement to increase the incrementality even further.
-   *
-   * <p>1. The first matching uses minimal values. Remember which minimal value has changed which
-   * removed from the domain the value which was used in the matching. Reuse from old matching 1 all
-   * values smaller than the minimal which has changed.
-   *
-   * <p>Similar principle applies to matching 2 (skip the positions (variables) until the first
-   * index for which m1 did change or for which the m2 value is no longer in the domain.
-   *
-   * <p>
-   *
-   * <p>2. Use IndexDomainView instead of local solution.
-   *
-   * <p>
-   *
-   * <p>3. boolean variable first - is it only once in the consistency function? Then this
-   * functionality can be moved out of the while(newPropagation), if it should be executed every
-   * time consistency is executed then (it should be setup to true somewhere).
-   */
-  boolean firstConsistencyCheck = true;
-
-  TimeStamp<Integer> stamp;
-  int firstConsistencyLevel;
 
   /**
    * The array which stores the first computed matching, which may not take into account the lower
@@ -117,10 +105,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private final PriorityQueue<XDomain> pFirst;
   private final PriorityQueue<XDomain> pSecond;
   private final PriorityQueue<Integer> pCount;
-  private int[] domainHash;
   private final Map<IntVar, Integer> xNodesHash;
   private final Set<IntVar> xVariableToChange;
-  private int stampValue;
   private final Comparator<XDomain> compareLowerBound =
       (o1, o2) -> {
         if (o1.min() < o2.min()) {
@@ -130,7 +116,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         }
         return 0;
       };
-
   private final Comparator<XDomain> sortPriorityMinOrder =
       (o1, o2) -> {
         if (o1.max() < o2.max()) {
@@ -141,8 +126,34 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
         return 0;
       };
-
   private final Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
+
+  /**
+   * TODO An improvement to increase the incrementality even further.
+   *
+   * <p>1. The first matching uses minimal values. Remember which minimal value has changed which
+   * removed from the domain the value which was used in the matching. Reuse from old matching 1 all
+   * values smaller than the minimal which has changed.
+   *
+   * <p>Similar principle applies to matching 2 (skip the positions (variables) until the first
+   * index for which m1 did change or for which the m2 value is no longer in the domain.
+   *
+   * <p>
+   *
+   * <p>2. Use IndexDomainView instead of local solution.
+   *
+   * <p>
+   *
+   * <p>3. boolean variable first - is it only once in the consistency function? Then this
+   * functionality can be moved out of the while(newPropagation), if it should be executed every
+   * time consistency is executed then (it should be setup to true somewhere).
+   */
+  boolean firstConsistencyCheck = true;
+
+  TimeStamp<Integer> stamp;
+  int firstConsistencyLevel;
+  private int[] domainHash;
+  private int stampValue;
   private Set<IntVar> zeroCounters;
 
   /**
@@ -670,7 +681,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void firstPass() {
 
     pFirst.clear();
-    // 	int j = 0;
+    //   int j = 0;
     int xIndex = 0;
     int maxY;
     int match1XOrderIndex = 0;
@@ -707,7 +718,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           // it was checked that the min == i so max cannot be under min. Well, yes there are cases
           // where it's useful.
         }
-        // 			j++;
+        //       j++;
       }
     }
 
@@ -744,7 +755,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void secondPass() {
 
     pSecond.clear();
-    // 	int j = 0;
+    //   int j = 0;
     int top;
     int xIndex = 0;
     int minY;
@@ -777,7 +788,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         match2XOrder[match2XOrderIndex] = top;
         match2XOrderIndex++;
         nbOfMatchPerY[i]++;
-        // 			j++;
+        //       j++;
       }
       while (!pSecond.isEmpty() && ((pSecond.element().max()) < i + 1)) {
         top = pSecond.remove().index;
@@ -786,7 +797,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         match2XOrder[match2XOrderIndex] = top;
         match2XOrderIndex++;
         nbOfMatchPerY[i]++;
-        // 			j++;
+        //       j++;
       }
     }
 

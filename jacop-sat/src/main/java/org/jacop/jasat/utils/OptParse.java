@@ -31,7 +31,11 @@
 
 package org.jacop.jasat.utils;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * util to parse command-line arguments
@@ -41,12 +45,10 @@ import java.util.*;
  */
 public class OptParse<E> {
 
-  // remaining (true) args
-  public String[] realArgs;
-
   // handlers
   private final Map<String, OptHandler<E>> handlers = new HashMap<>();
-
+  // remaining (true) args
+  public String[] realArgs;
   // the main help string
   private String mainHelp = "";
 

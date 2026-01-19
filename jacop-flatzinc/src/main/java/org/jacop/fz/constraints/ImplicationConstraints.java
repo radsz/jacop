@@ -33,7 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.ChannelImply;
-import org.jacop.core.*;
+import org.jacop.core.IntVar;
 
 /**
  * It collects all int_eq_imp constraint to create ChannelImply constraints, if possible.

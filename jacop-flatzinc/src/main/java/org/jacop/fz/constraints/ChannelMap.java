@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.XeqY;
-import org.jacop.core.*;
+import org.jacop.core.IntVar;
 
 /**
  * It collects all int_eq_(reif|imp) constraint to create Channel(Reif|Imply) constraints, if

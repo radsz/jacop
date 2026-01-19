@@ -38,10 +38,8 @@ package org.jacop.core;
  */
 public class SmallDenseDomainIntervalEnumeration extends IntervalEnumeration {
 
-  int current;
-
   final SmallDenseDomain domain;
-
+  int current;
   long bits;
 
   /**

@@ -45,23 +45,18 @@ import org.jacop.jasat.utils.structures.IntStack;
  */
 public final class Trail implements SolverComponent {
 
-  // pool for fast int[] allocation
-  public MemoryPool pool;
-
-  // the values of variables
-  public int[] values;
-
-  // the explanations for assertions
-  public int[] explanations;
-
-  // to remember successive assertions, to backjump in an efficient way
-  public IntStack assertionStack;
-
-  // the levels at which variables are set
-  private int[] levels;
-
   private final int ASSERTED_MASK = Integer.MIN_VALUE; // 100000....000
   private final int LEVEL_MASK = Integer.MAX_VALUE >>> 1; // 011111....111
+  // pool for fast int[] allocation
+  public MemoryPool pool;
+  // the values of variables
+  public int[] values;
+  // the explanations for assertions
+  public int[] explanations;
+  // to remember successive assertions, to backjump in an efficient way
+  public IntStack assertionStack;
+  // the levels at which variables are set
+  private int[] levels;
 
   /**
    * It adds a variable to the trail.

@@ -40,7 +40,11 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
 
 /**
  * It is a simple logic puzzle about furniture moving.

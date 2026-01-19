@@ -48,14 +48,13 @@ import org.jacop.core.IntVar;
  */
 class ThetaLambdaTree extends Tree {
 
+  private final ThetaLambdaNode empty = new ThetaLambdaNode();
   // capacity
   IntVar C;
   // array that keeps all nodes of the balanced binary tree and organizes the tree structure
   private ThetaLambdaNode[] tree;
   // list of ordered tasks
   private TaskView[] orderedTasks;
-
-  private final ThetaLambdaNode empty = new ThetaLambdaNode();
 
   public ThetaLambdaTree(IntVar capacity) {
     C = capacity;

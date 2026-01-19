@@ -66,22 +66,21 @@ public class LexOrder extends Constraint
   public final IntVar[] x;
 
   public final IntVar[] y;
-
-  /** Lex enforcing "{@literal <}" relationship (true). */
-  public boolean lexLT;
-
   public final boolean originalLexLT;
 
   /** size of the longest vector. */
   final int n;
 
-  boolean satisfied;
+  final Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
+  final Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
 
+  /** Lex enforcing "{@literal <}" relationship (true). */
+  public boolean lexLT;
+
+  boolean satisfied;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   SimpleHashSet<Integer> indexQueue = new SimpleHashSet<>();
-  final Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
-  final Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
   private Store store;
   private TimeStamp<Integer> alpha;
   private TimeStamp<Integer> beta;

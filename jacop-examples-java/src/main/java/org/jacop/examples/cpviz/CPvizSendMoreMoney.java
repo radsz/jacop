@@ -33,10 +33,20 @@ package org.jacop.examples.cpviz;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.TraceGenerator;
 
 /**
  * It shows how to visualize solving process for SendMoreMoney problem.
@@ -64,19 +74,19 @@ public class CPvizSendMoreMoney {
 
   static void main(String[] args) {
 
-    // 		SendMoreMoney exampleBasic = new SendMoreMoney();
+    //     SendMoreMoney exampleBasic = new SendMoreMoney();
 
-    // 		exampleBasic.model();
+    //     exampleBasic.model();
 
-    // 		if (exampleBasic.search())
-    // 			System.out.println("Solution found");
+    //     if (exampleBasic.search())
+    //       System.out.println("Solution found");
 
     CPvizSendMoreMoney exampleGlobal = new CPvizSendMoreMoney();
 
     exampleGlobal.modelGlobal();
 
-    // 		if (exampleGlobal.search())
-    // 			System.out.println();
+    //     if (exampleGlobal.search())
+    //       System.out.println();
 
   }
 
@@ -115,8 +125,8 @@ public class CPvizSendMoreMoney {
       }
     }
 
-    // 		// Main equation of the problem SEND + MORE = MONEY
-    // 		store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
+    //     // Main equation of the problem SEND + MORE = MONEY
+    //     store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
 
     // Since S is the first digit of SEND
     // and M is the first digit of MORE or MONEY
@@ -151,14 +161,14 @@ public class CPvizSendMoreMoney {
     store.impose(new XplusYeqZ(t5, letters[iD], letters[iY]));
 
     store.consistency();
-    //   		System.out.println(vars);
-    // 	}
+    //       System.out.println(vars);
+    //   }
 
-    // 	/**
-    // 	 * This creates a standard search, which looks for a single solution.
-    // 	 */
+    //   /**
+    //    * This creates a standard search, which looks for a single solution.
+    //    */
 
-    // 	public boolean search() {
+    //   public boolean search() {
 
     SelectChoicePoint<IntVar> varSelect =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
@@ -169,17 +179,17 @@ public class CPvizSendMoreMoney {
 
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect);
 
-    // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true);
+    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true);
     select.addTracedVar(letters[iE]);
 
-    // 		search.setConsistencyListener((ConsistencyListener)select);
-    // 		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    // 	search.setExitListener((ExitListener)select);
+    //     search.setConsistencyListener((ConsistencyListener)select);
+    //     search.setExitChildListener((ExitChildListener<IntVar>)select);
+    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
 
-    // 		return result;
+    //     return result;
 
   }
 
@@ -235,10 +245,10 @@ public class CPvizSendMoreMoney {
     // Main equation of the problem SEND + MORE = MONEY
     store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
 
-    // 		// 1000*S + 91*E - 90*N + D - 9000*M - 900*O + 10*R = Y
-    // 		int[] w = {1000, 91, -90, 1, -9000, -900, 10};
-    // 		IntVar[] vs = {s, e, n, d, m, o, r};
-    // 		store.impose(new SumWeight(vs, w, y));
+    //     // 1000*S + 91*E - 90*N + D - 9000*M - 900*O + 10*R = Y
+    //     int[] w = {1000, 91, -90, 1, -9000, -900, 10};
+    //     IntVar[] vs = {s, e, n, d, m, o, r};
+    //     store.impose(new SumWeight(vs, w, y));
 
     // Since S is the first digit of SEND
     // and M is the first digit of MORE or MONEY
@@ -257,17 +267,17 @@ public class CPvizSendMoreMoney {
     TraceGenerator<IntVar> select =
         new TraceGenerator<>(search, varSelect, new IntVar[] {s, e, n, d, m, o, r, y});
 
-    // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true, new IntVar[]
+    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true, new IntVar[]
     // {s, e, n, d, m, o, r, y});
 
-    // 		search.setConsistencyListener((ConsistencyListener)select);
-    //  		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    // 	search.setExitListener((ExitListener)select);
+    //     search.setConsistencyListener((ConsistencyListener)select);
+    //      search.setExitChildListener((ExitChildListener<IntVar>)select);
+    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
 
-    // 		return result;
+    //     return result;
 
   }
 }

@@ -33,7 +33,11 @@ package org.jacop.set.core;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Interval;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 
 /**
  * Defines a set interval determined by a least upper bound(lub) and a greatest lower bound(glb).
@@ -776,34 +780,34 @@ public abstract class SetDomain extends Domain {
     Domain domain = this;
 
     do {
-    	if (!domain.singleton()) {
-    		S.append(toString()).append("(").append(domain.stamp()).append(") ");
-    	} else
-    		S.append(min).append("(").append(
-    				String.valueOf(domain.stamp())).append(") ");
+      if (!domain.singleton()) {
+        S.append(toString()).append("(").append(domain.stamp()).append(") ");
+      } else
+        S.append(min).append("(").append(
+            String.valueOf(domain.stamp())).append(") ");
 
-    	S.append("constraints: ");
+      S.append("constraints: ");
 
-    	for (Iterator<Constraint> e = domain.searchConstraints.iterator(); e
-    			.hasNext();)
-    		S.append(e.next());
+      for (Iterator<Constraint> e = domain.searchConstraints.iterator(); e
+          .hasNext();)
+        S.append(e.next());
 
-    	if (domain.domainID() == IntervalDomainID) {
+      if (domain.domainID() == IntervalDomainID) {
 
-    		IntervalDomain dom = (IntervalDomain) domain;
-    		domain = dom.previousDomain;
+        IntervalDomain dom = (IntervalDomain) domain;
+        domain = dom.previousDomain;
 
-    	}
-    	else if (domain.domainID() == BoundDomainID) {
+      }
+      else if (domain.domainID() == BoundDomainID) {
 
-    		BoundDomain dom = (BoundDomain) domain;
-    		domain = dom.previousDomain;
+        BoundDomain dom = (BoundDomain) domain;
+        domain = dom.previousDomain;
 
-    		}
-    	else {
+        }
+      else {
 
-    		// Other type.
-    	}
+        // Other type.
+      }
 
     } while (domain != null);
 

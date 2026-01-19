@@ -38,7 +38,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.ExtensionalSupportMDD;
+import org.jacop.constraints.Sequence;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -56,6 +60,22 @@ import org.jacop.util.fsm.FSMTransition;
  * @version 4.10
  */
 public class CarSequencing extends ExampleFD {
+
+  /**
+   * It specifies if the slide based decomposition of the regular constraint should be applied. This
+   * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
+   * deterministic.
+   */
+  public final boolean slideDecomposition = false;
+
+  /** It specifies if the regular constraint should be used. */
+  public final boolean regular = true;
+
+  /**
+   * It specifies if one extensional constraint based on MDD created from FSM should be used. The
+   * translation process works if FSM is deterministic.
+   */
+  public final boolean extensionalMDD = false;
 
   /** It specifies number of cars. */
   public int noCar;
@@ -82,22 +102,6 @@ public class CarSequencing extends ExampleFD {
    * dimension).
    */
   public boolean[][] required;
-
-  /**
-   * It specifies if the slide based decomposition of the regular constraint should be applied. This
-   * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
-   * deterministic.
-   */
-  public final boolean slideDecomposition = false;
-
-  /** It specifies if the regular constraint should be used. */
-  public final boolean regular = true;
-
-  /**
-   * It specifies if one extensional constraint based on MDD created from FSM should be used. The
-   * translation process works if FSM is deterministic.
-   */
-  public final boolean extensionalMDD = false;
 
   /**
    * A simple car sequencing problem.
@@ -264,41 +268,41 @@ public class CarSequencing extends ExampleFD {
   /*
    public void modelNestedDecomposed() {
 
-  	store = new FDstore();
-  	vars = new ArrayList<Variable>();
+    store = new FDstore();
+    vars = new ArrayList<Variable>();
 
-  	Variable[] cars = new Variable[noCar];
+    Variable[] cars = new Variable[noCar];
 
-  	for (int i = 0; i < noCar; i++) {
-  		cars[i] = new Variable(store, "car" + (i+1), 0, noClass);
-  		vars.add(cars[i]);
-  	}
+    for (int i = 0; i < noCar; i++) {
+      cars[i] = new Variable(store, "car" + (i+1), 0, noClass);
+      vars.add(cars[i]);
+    }
 
-  	for (int i = 0; i < noOption; i++) {
+    for (int i = 0; i < noOption; i++) {
 
-  		IntervalDomain classesWithGivenOption = new IntervalDomain();
-  		for (int j = 0; j < noClass; j++)
-  			if (required[j][i])
-  				classesWithGivenOption.addDom(j, j);
+      IntervalDomain classesWithGivenOption = new IntervalDomain();
+      for (int j = 0; j < noClass; j++)
+        if (required[j][i])
+          classesWithGivenOption.addDom(j, j);
 
-  		DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-  		ArrayList<Constraint> decomposition = c.decompose(store);
+      DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+      ArrayList<Constraint> decomposition = c.decompose(store);
 
-  		for (Constraint regular : decomposition)
-  			store.imposeDecomposition(regular);
-  	}
+      for (Constraint regular : decomposition)
+        store.imposeDecomposition(regular);
+    }
 
-  	for (int i = 0; i < noClass; i++) {
+    for (int i = 0; i < noClass; i++) {
 
-  		Variable counter = new Variable(store, "counter" + i, noOfCarsPerClass[i], noOfCarsPerClass[i]);
-  		store.impose(new Count(i, cars, counter));
+      Variable counter = new Variable(store, "counter" + i, noOfCarsPerClass[i], noOfCarsPerClass[i]);
+      store.impose(new Count(i, cars, counter));
 
-  	    // Possible replacement for Count constraint.
-  		//IntervalDomain dom = new IntervalDomain(i, i);
-  		//store.impose(new Among(cars, dom, counter));
-  		///
+        // Possible replacement for Count constraint.
+      //IntervalDomain dom = new IntervalDomain(i, i);
+      //store.impose(new Among(cars, dom, counter));
+      ///
 
-  	}
+    }
 
   }
 
@@ -307,71 +311,71 @@ public class CarSequencing extends ExampleFD {
   /* @TODO Add functionality to FSM to be able to do intersections and use the model below.
    public void modelIntersection() {
 
-  	store = new FDstore();
-  	vars = new ArrayList<Variable>();
+    store = new FDstore();
+    vars = new ArrayList<Variable>();
 
-  	Variable[] cars = new Variable[noCar];
+    Variable[] cars = new Variable[noCar];
 
-  	for (int i = 0; i < noCar; i++) {
-  		cars[i] = new Variable(store, "car" + (i+1), 0, noClass);
-  		vars.add(cars[i]);
-  	}
+    for (int i = 0; i < noCar; i++) {
+      cars[i] = new Variable(store, "car" + (i+1), 0, noClass);
+      vars.add(cars[i]);
+    }
 
-  	ArrayList<Constraint> regulars = new ArrayList<Constraint>();
+    ArrayList<Constraint> regulars = new ArrayList<Constraint>();
 
-  	for (int i = 0; i < noOption; i++) {
+    for (int i = 0; i < noOption; i++) {
 
-  		IntervalDomain classesWithGivenOption = new IntervalDomain();
-  		for (int j = 0; j < noClass; j++)
-  			if (required[j][i])
-  				classesWithGivenOption.addDom(j, j);
+      IntervalDomain classesWithGivenOption = new IntervalDomain();
+      for (int j = 0; j < noClass; j++)
+        if (required[j][i])
+          classesWithGivenOption.addDom(j, j);
 
-  		DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-  		ArrayList<Constraint> decomposition = c.decompose(store);
+      DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+      ArrayList<Constraint> decomposition = c.decompose(store);
 
-  		regulars.addAll(decomposition);
+      regulars.addAll(decomposition);
 
-  		for (Constraint regular : decomposition)
-  			store.imposeDecomposition(regular);
-  	}
+      for (Constraint regular : decomposition)
+        store.imposeDecomposition(regular);
+    }
 
-  	FSM union = null;
+    FSM union = null;
 
-  	for (Constraint constraint : regulars)
-  		if (union == null)
-  			union = ((Regular) constraint).fsm;
-  		else
-  			union = union.union( ((Regular) constraint).fsm );
+    for (Constraint constraint : regulars)
+      if (union == null)
+        union = ((Regular) constraint).fsm;
+      else
+        union = union.union( ((Regular) constraint).fsm );
 
-  	System.out.println("Size +++++++++++ " + union.states.size());
+    System.out.println("Size +++++++++++ " + union.states.size());
 
-  	store.impose(new Regular(union, cars));
+    store.impose(new Regular(union, cars));
 
-  	for (int i = 0; i < noClass; i++) {
+    for (int i = 0; i < noClass; i++) {
 
-  		IntervalDomain yes = new IntervalDomain(i, i);
-  		IntervalDomain no = new IntervalDomain(0, noClass);
-  		no = (IntervalDomain) no.subtract(i);
+      IntervalDomain yes = new IntervalDomain(i, i);
+      IntervalDomain no = new IntervalDomain(0, noClass);
+      no = (IntervalDomain) no.subtract(i);
 
-  		FSM counter = createFSM(noOfCarsPerClass[i], yes, no);
+      FSM counter = createFSM(noOfCarsPerClass[i], yes, no);
 
-  		System.out.println( counter );
+      System.out.println( counter );
 
-  	// store.impose(new Regular(counter, cars));
+    // store.impose(new Regular(counter, cars));
 
-  		if (i == 0)
-  			union = counter;
-  		else
-  			//union = union.concatenation( counter );
-  			union = union.union( counter );
+      if (i == 0)
+        union = counter;
+      else
+        //union = union.concatenation( counter );
+        union = union.union( counter );
 
-  		System.out.println("Union +++++++++++ " + union);
+      System.out.println("Union +++++++++++ " + union);
 
-  	}
+    }
 
-  	System.out.println(union);
+    System.out.println(union);
 
-  	store.impose(new Regular(union, cars));
+    store.impose(new Regular(union, cars));
 
 
   }

@@ -30,10 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 /**
  * If at least one variable from the list is equal 1 then result variable is equal 1 too. Otherwise,
@@ -47,9 +55,6 @@ public class OrBoolVector extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies the length of the list of variables. */
-  final int l;
-
   /**
    * It specifies a list of variables among which one must be equal to 1 to set result variable to
    * 1.
@@ -60,6 +65,9 @@ public class OrBoolVector extends PrimitiveConstraint {
    * It specifies variable result, storing the result of or function performed a list of variables.
    */
   public final IntVar result;
+
+  /** It specifies the length of the list of variables. */
+  final int l;
 
   List<Constraint> constraints;
   /*

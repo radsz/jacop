@@ -30,13 +30,30 @@
 
 package org.jacop.examples.fd;
 
-import java.util.*;
-import org.jacop.constraints.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.In;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.MaxRegret;
+import org.jacop.search.PrintOutListener;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleMatrixSelect;
+import org.jacop.search.SmallestDomain;
 
 /**
  * It solves a simple conference talk placement problem.

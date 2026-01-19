@@ -37,7 +37,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * @deprecated As of release 4.3.1 replaced by LinearInt constraint.
@@ -64,6 +68,14 @@ public class Linear extends Constraint
   /** It specifies what relations is used by this constraint */
   public final byte relationType;
 
+  final Store store;
+
+  /** The sum of grounded variables. */
+  private final TimeStamp<Integer> sumGrounded;
+
+  /** The position for the next grounded variable. */
+  private final TimeStamp<Integer> nextGroundedPosition;
+
   /** It specifies a list of variables being summed. */
   public IntVar[] list;
 
@@ -73,25 +85,13 @@ public class Linear extends Constraint
   /** It specifies variable for the overall sum. */
   public int sum;
 
-  final Store store;
   int lMin;
-
   int lMax;
-
   int[] lMinArray;
-
   int[] lMaxArray;
-
   Map<Var, Integer> positionMaping;
-
   boolean backtrackHasOccured;
   boolean reified = true;
-
-  /** The sum of grounded variables. */
-  private final TimeStamp<Integer> sumGrounded;
-
-  /** The position for the next grounded variable. */
-  private final TimeStamp<Integer> nextGroundedPosition;
 
   /**
    * It constructs the constraint Linear.
@@ -492,13 +492,13 @@ public class Linear extends Constraint
       if (!reified) {
         if (backtrackHasOccured) {
 
-    	backtrackHasOccured = false;
+      backtrackHasOccured = false;
 
-    	recomputeBounds();
+      recomputeBounds();
         }
 
         if (entailed(negRel[relationType]))
-        	throw Store.failException;
+          throw Store.failException;
     }
     */
   }

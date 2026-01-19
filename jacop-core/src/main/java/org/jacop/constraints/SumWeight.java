@@ -38,7 +38,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /*
  * SumWeight constraint implements the weighted summation over several

@@ -39,7 +39,12 @@ import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 
 /**
  * Assignment constraint implements facility to improve channeling constraints between dual
@@ -57,17 +62,17 @@ public class Assignment extends Constraint
   /** It specifies a list of variables d. */
   public final IntVar[] d;
 
-  /** It specifies a shift applied to variables d. */
-  public int shiftD;
-
   /** It specifies a list of variables x. */
   public final IntVar[] x;
 
-  /** It specifies a shift applied to variables x. */
-  public int shiftX;
-
   final Map<IntVar, Integer> ds;
   final Map<IntVar, Integer> xs;
+
+  /** It specifies a shift applied to variables d. */
+  public int shiftD;
+
+  /** It specifies a shift applied to variables x. */
+  public int shiftX;
 
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   boolean firstConsistencyCheck = true;

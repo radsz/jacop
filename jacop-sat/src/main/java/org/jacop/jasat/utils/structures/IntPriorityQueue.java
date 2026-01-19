@@ -187,10 +187,10 @@ public final class IntPriorityQueue {
    * @author simon
    */
   static final class Node {
+    public final int depth = 0; // depth of the deepest leaf in this subtree;
     public Node leftSon; // left node in binary tree
     public Node rightSon; // right tree in binary tree
     public Node parentNode; // the parent node of this node
     public int priority; // current priority in the tree
-    public final int depth = 0; // depth of the deepest leaf in this subtree;
   }
 }

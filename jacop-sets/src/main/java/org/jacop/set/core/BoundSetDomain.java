@@ -30,7 +30,13 @@
 
 package org.jacop.set.core;
 
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * Defines a set interval determined by a least upper bound(lub) and a greatest lower bound(glb).
@@ -217,7 +223,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   public SetDomain cloneLight() {
     // FIXME, why no glb and lub cloning is safe?
     return new BoundSetDomain(glb, lub, cardinality);
-    // 		return new SetDomain(glb.cloneLight(), lub.cloneLight());
+    //     return new SetDomain(glb.cloneLight(), lub.cloneLight());
   }
 
   /**
@@ -431,7 +437,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   // public void in(int storeLevel, SetVar var, IntDomain set) {
-  // 	this.in(storeLevel, var, IntDomain.emptyIntDomain, set);
+  //   this.in(storeLevel, var, IntDomain.emptyIntDomain, set);
   // }
 
   /**
@@ -972,13 +978,13 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       int event;
 
-      // 		if (intersect.domainID() == IntDomain.SmallDenseDomainID && lub.domainID() ==
+      //     if (intersect.domainID() == IntDomain.SmallDenseDomainID && lub.domainID() ==
       // IntDomain.IntervalDomainID) {
-      // 			IntDomain replacement = intersect.cloneLight();
-      // 			event = replacement.intersectAdapt(lub);
-      // 			lub = replacement;
-      // 		}
-      // 		else
+      //       IntDomain replacement = intersect.cloneLight();
+      //       event = replacement.intersectAdapt(lub);
+      //       lub = replacement;
+      //     }
+      //     else
       event = lub.intersectAdapt(intersect);
 
       if (event == Domain.NONE) {

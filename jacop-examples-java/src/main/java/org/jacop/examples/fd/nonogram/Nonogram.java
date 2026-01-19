@@ -30,7 +30,11 @@
 
 package org.jacop.examples.fd.nonogram;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -63,9 +67,6 @@ public class Nonogram extends ExampleFD {
   /** The value that represents a white dot. */
   public final int white = 0;
 
-  /** A board to be painted in white/black dots. */
-  public IntVar[][] board;
-
   /**
    * It specifies if the slide based decomposition of the regular constraint should be applied. This
    * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
@@ -81,6 +82,9 @@ public class Nonogram extends ExampleFD {
    * translation process works if FSM is deterministic.
    */
   public final boolean extensionalMDD = false;
+
+  /** A board to be painted in white/black dots. */
+  public IntVar[][] board;
 
   /** It specifies a rule for each row. */
   public int[][] row_rules = {
@@ -450,7 +454,7 @@ public class Nonogram extends ExampleFD {
   }
 
   /*
-   public int[][]	row_rules = {
+   public int[][]  row_rules = {
   {2},
   {2},
   {2},
@@ -552,7 +556,7 @@ public class Nonogram extends ExampleFD {
   {11,5,7,8,2,14,5,11,1},
   {7,7,6,13,9,15,15}};
 
-  public int[][]	col_rules = {
+  public int[][]  col_rules = {
   {2},
   {4},
   {8},
@@ -655,30 +659,30 @@ public class Nonogram extends ExampleFD {
   {3}};
   */
   /*
-   public int[][]	row_rules = {
-  		  {3},
-  		  {5},
-  		  {3,1},
-  		  {2,1},
-  		  {3,3,4},
-  		  {2,2,7},
-  		  {6,1,1},
-  		  {4,2,2},
-  		  {1,1},
-  		  {3,1},
-  		  {6},
-  		  {2,7},
-  		  {6,3,1},
-  		  {1,2,2,1,1},
-  		  {4,1,1,3},
-  		  {4,2,2},
-  		  {3,3,1},
-  		  {3,3},
-  		  {3},
-  		  {2,1}
-  		};
+   public int[][]  row_rules = {
+        {3},
+        {5},
+        {3,1},
+        {2,1},
+        {3,3,4},
+        {2,2,7},
+        {6,1,1},
+        {4,2,2},
+        {1,1},
+        {3,1},
+        {6},
+        {2,7},
+        {6,3,1},
+        {1,2,2,1,1},
+        {4,1,1,3},
+        {4,2,2},
+        {3,3,1},
+        {3,3},
+        {3},
+        {2,1}
+      };
 
-  public int[][]	col_rules =
+  public int[][]  col_rules =
    {
     {2},
     {1,2},

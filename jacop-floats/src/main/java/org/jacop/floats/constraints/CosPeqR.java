@@ -37,7 +37,11 @@ import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.floats.core.*;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatInterval;
+import org.jacop.floats.core.FloatIntervalDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.core.InternalException;
 
 /**
  * Constraints cos(P) = R

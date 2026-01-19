@@ -74,21 +74,19 @@ public class SumBool extends PrimitiveConstraint {
    */
   public final byte relationType;
   final Store store;
-  boolean reified = true;
   /*
    * It specifies a list of variables being summed.
    */
   final IntVar[] x;
-
   /*
    * It specifies variable for the overall sum.
    */
   final IntVar sum;
-
   /*
    * It specifies the number of variables.
    */
   final int l;
+  boolean reified = true;
 
   /*
    * @param store current store

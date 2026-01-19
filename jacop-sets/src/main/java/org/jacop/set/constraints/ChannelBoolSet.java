@@ -35,8 +35,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
-import org.jacop.set.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
 
 /**
  * Channel constraint reqires the array of Booleans b to be a representation of the set s: i in s
@@ -51,8 +57,8 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   final IntVar[] b;
-  SetVar s;
   final int n;
+  SetVar s;
   int offset;
 
   boolean firstConsistencyCheck = true;

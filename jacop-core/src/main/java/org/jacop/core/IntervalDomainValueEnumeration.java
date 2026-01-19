@@ -38,10 +38,8 @@ package org.jacop.core;
  */
 public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
-  int current;
-
   final IntervalDomain domain;
-
+  int current;
   Interval i;
 
   int intervalNo;

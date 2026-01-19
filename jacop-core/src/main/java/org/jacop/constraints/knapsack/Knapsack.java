@@ -30,14 +30,23 @@
 
 package org.jacop.constraints.knapsack;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * It specifies a knapsack constraint. This implementation was inspired by the paper by Irit
@@ -63,6 +72,24 @@ public class Knapsack extends Constraint
   public static final boolean debugAll = false;
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /**
+   * It specifies how many removeLevel functions must be executed before the information about the
+   * constraint is being printed out.
+   */
+  private final int REMOVE_INFO_FROM = 0;
+
+  /**
+   * It specifies how many queueVariable functions must be executed before the information about the
+   * constraint is being printed out.
+   */
+  private final int QUEUE_INFO_FROM = 0;
+
+  /**
+   * It specifies how many consistency functions must be executed before the information about the
+   * constraint is being printed out.
+   */
+  private final int CONSISTENCY_INFO_FROM = 0;
 
   /**
    * It specifies the current level of the constraint store at which the consistency function of
@@ -150,24 +177,6 @@ public class Knapsack extends Constraint
 
   /** It counts the number of time the removeLevel function has been executed. */
   private int countRemoveLevel;
-
-  /**
-   * It specifies how many removeLevel functions must be executed before the information about the
-   * constraint is being printed out.
-   */
-  private final int REMOVE_INFO_FROM = 0;
-
-  /**
-   * It specifies how many queueVariable functions must be executed before the information about the
-   * constraint is being printed out.
-   */
-  private final int QUEUE_INFO_FROM = 0;
-
-  /**
-   * It specifies how many consistency functions must be executed before the information about the
-   * constraint is being printed out.
-   */
-  private final int CONSISTENCY_INFO_FROM = 0;
 
   /**
    * It constructs an knapsack constraint.
@@ -556,7 +565,7 @@ public class Knapsack extends Constraint
     }
 
     // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
-    // 			  tree.alreadyObtainedProfit - knapsackProfit.min();
+    //         tree.alreadyObtainedProfit - knapsackProfit.min();
     // @TODO, check that lack of safe rounding (ceil) is not a problem
     // rounding errors may suggest that there is too little slack for an item.
     double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();
@@ -621,7 +630,7 @@ public class Knapsack extends Constraint
     }
 
     // double profitSlack = (int) Math.ceil( tree.optimalProfit ) +
-    // 			  tree.alreadyObtainedProfit - knapsackProfit.min();
+    //         tree.alreadyObtainedProfit - knapsackProfit.min();
     // @todo Test, that there is no rounding errors due to using double for
     // profitSlack and not safe ceil(profitSlack).
     double profitSlack = tree.optimalProfit + tree.alreadyObtainedProfit - knapsackProfit.min();

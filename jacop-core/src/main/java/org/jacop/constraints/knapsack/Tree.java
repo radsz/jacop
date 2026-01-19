@@ -936,7 +936,7 @@ public class Tree {
     }
 
     TreeNode current = root;
-    // 	int usedCapacity = 0;
+    //   int usedCapacity = 0;
     int obtainedProfit = 0;
 
     while (!current.isLeaf()) {
@@ -947,7 +947,7 @@ public class Tree {
         current = current.left;
       } else if (obtainedProfit + current.left.getPSum() <= minProfit) {
 
-        // 				usedCapacity += current.left.getWSum();
+        //         usedCapacity += current.left.getWSum();
         /* we add the profit of all the left part */
         obtainedProfit += current.left.getPSum();
 
@@ -984,7 +984,7 @@ public class Tree {
 
     TreeNode current = root;
     int usedCapacity = 0;
-    // 	int obtainedProfit = 0;
+    //   int obtainedProfit = 0;
 
     while (!current.isLeaf()) {
 
@@ -996,7 +996,7 @@ public class Tree {
 
         usedCapacity += current.right.getWSum();
         /* we add the profit of all the left part */
-        // 				obtainedProfit += current.right.getPSum();
+        //         obtainedProfit += current.right.getPSum();
 
         current = current.left;
       } else {

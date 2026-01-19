@@ -39,15 +39,38 @@ import java.util.ArrayList;
 import java.util.Locale;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
-import org.jacop.core.*;
+import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.search.*;
-import org.jacop.search.restart.*;
+import org.jacop.search.AFCMax;
+import org.jacop.search.AFCMaxDeg;
+import org.jacop.search.ComparatorVariable;
+import org.jacop.search.CreditCalculator;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.FailConstraintsStatistics;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.InitializeListener;
+import org.jacop.search.LDS;
+import org.jacop.search.PrioritySearch;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.restart.Calculator;
+import org.jacop.search.restart.ConstantCalculator;
+import org.jacop.search.restart.GeometricCalculator;
+import org.jacop.search.restart.LinearCalculator;
+import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.RestartSearch;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
@@ -64,10 +87,14 @@ import org.jacop.set.search.IndomainSetMin;
 public class Solve<T extends Var> implements ParserTreeConstants {
 
   static final String p = System.getProperty("fz_system_timer");
+  final Store store;
+  final boolean debug = false;
+  final boolean print_search_info = false;
+  final SatTranslation sat;
+  final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
   Tables dictionary;
   Options options;
-  final Store store;
   int initNumberConstraints;
   Timer timer;
   long startCPU;
@@ -76,8 +103,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // ComparatorVariable tieBreaking=null;
   SelectChoicePoint<T> variable_selection;
   ArrayList<Search<T>> list_seq_searches;
-  final boolean debug = false;
-  final boolean print_search_info = false;
   boolean heuristicSeqSearch;
   Var costVariable;
   // restart search
@@ -101,9 +126,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   SelectChoicePoint<T> flatzincVariableSelection;
   Var flatzincCost;
   int solveKind = -1;
-  final SatTranslation sat;
   FailConstraintsStatistics failStatistics;
-  final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   int numberSolutions;
   // relax and reconstruct
   IntVar[] relaxVars;
@@ -2190,9 +2213,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   public static class PrecisionSetting implements InitializeListener {
 
-    InitializeListener[] initializeChildListeners;
-
     final double precision;
+    InitializeListener[] initializeChildListeners;
 
     PrecisionSetting(double p) {
       precision = p;

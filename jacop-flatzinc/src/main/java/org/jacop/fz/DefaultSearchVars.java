@@ -50,20 +50,17 @@ import org.jacop.set.core.SetVar;
  */
 public class DefaultSearchVars {
 
-  IntVar[] int_search_variables = new IntVar[0];
-  SetVar[] set_search_variables = new SetVar[0];
-  BooleanVar[] bool_search_variables = new BooleanVar[0];
-
-  FloatVar[] float_search_variables = new FloatVar[0];
-
   final Tables dictionary;
-
   private final Comparator<Var> domainSizeComparator =
       (o1, o2) -> {
         int v1 = o1.getSize();
         int v2 = o2.getSize();
         return v1 - v2;
       };
+  IntVar[] int_search_variables = new IntVar[0];
+  SetVar[] set_search_variables = new SetVar[0];
+  BooleanVar[] bool_search_variables = new BooleanVar[0];
+  FloatVar[] float_search_variables = new FloatVar[0];
 
   /**
    * It constructs the class for collecting default and complementary search variables.

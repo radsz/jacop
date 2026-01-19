@@ -35,7 +35,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * LinearIntDom constraint implements the weighted summation over several variables.
@@ -52,14 +57,14 @@ public class LinearIntDom extends LinearInt {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
+  /** Limit on the product of sizes of domains when domain consistency is carried out. */
+  final double limitDomainPruning = 1e+7;
+
   /** Defines support (valid values) for each variable */
   IntervalDomain[] support;
 
   /** Collects support (valid assignments) for variables */
   int[] assignments;
-
-  /** Limit on the product of sizes of domains when domain consistency is carried out. */
-  final double limitDomainPruning = 1e+7;
 
   /**
    * It constructs the constraint LinearIntDom.

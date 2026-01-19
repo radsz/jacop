@@ -38,6 +38,8 @@ public final class SolverState {
   public static final int SATISFIABLE = 2; // the solver reached the "SAT" solution
   public static final int UNSATISFIABLE = 3; // the solver reached the "UNSAT" solution
 
+  private SolverState() {}
+
   /**
    * It gives a nice representation of the state.
    *
@@ -54,6 +56,4 @@ public final class SolverState {
       default -> throw new AssertionError("bad SolverState int");
     };
   }
-
-  private SolverState() {}
 }

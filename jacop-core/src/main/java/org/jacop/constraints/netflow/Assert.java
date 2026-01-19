@@ -42,6 +42,8 @@ import org.jacop.constraints.netflow.simplex.Node;
  */
 public class Assert {
 
+  private Assert() {}
+
   public static boolean checkFlow(NetworkSimplex g) {
 
     List<Arc> allArcsForDebug = allArcsForDebug(g);
@@ -90,7 +92,7 @@ public class Assert {
             continue;
           }
         }
-        // 			System.out.println("  " + a);
+        //       System.out.println("  " + a);
       }
 
       assert (n.balance == out - in)
@@ -199,7 +201,7 @@ public class Assert {
       }
       // non-tree arc
       else if (arc.index != -3) {
-        // 			String s = arc.toString();
+        //       String s = arc.toString();
 
         assert (arc.index == arc.sister.index);
         assert (0 <= arc.index && arc.index < g.numArcs) : g.numArcs + ", " + arc;
@@ -275,7 +277,7 @@ public class Assert {
         for (Arc arc : node.adjacencyList) {
           if (arc != null) {
             // TODO, CRUCIAL, BUG?, assert removed.
-            // 				assertTrue(arc.forward);
+            //         assertTrue(arc.forward);
             assert ((arc.head == node) ^ (arc.tail() == node));
             assert (arc.index != NetworkSimplex.DELETED_ARC);
             count2++;
@@ -342,6 +344,4 @@ public class Assert {
     }
     return arcs;
   }
-
-  private Assert() {}
 }

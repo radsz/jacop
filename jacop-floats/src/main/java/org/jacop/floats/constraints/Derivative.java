@@ -30,7 +30,12 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -59,6 +64,8 @@ public class Derivative {
 
   // static FloatVar zero;
   // static FloatVar one;
+
+  private Derivative() {}
 
   public static void init(Store s) {
     store = s;
@@ -225,6 +232,4 @@ public class Derivative {
   public static Set<Constraint> derivativeConstraints() {
     return derivateConstraints;
   }
-
-  private Derivative() {}
 }

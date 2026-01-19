@@ -35,7 +35,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.util.MDD;
 
 /**
@@ -243,10 +247,10 @@ public class FSM {
 
     for (FSMState s : allStates) {
 
-      // 			result.append( s.id ).append("\n");
+      //       result.append( s.id ).append("\n");
 
       for (FSMTransition t : s.transitions) {
-        // 				result.append( "-" ).append( t.domain ).append( "> " ).append(t.successor.id
+        //         result.append( "-" ).append( t.domain ).append( "> " ).append(t.successor.id
         // ).append("\n");
         result
             .append(s.id)
@@ -343,9 +347,9 @@ public class FSM {
             }
           }
 
-          // 				if (dom.getSize() > 0 && !tmp.contains(t.succesor))
-          // 					if (level < levels -1) tmp.push(t.succesor);
-          // 					else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
+          //         if (dom.getSize() > 0 && !tmp.contains(t.succesor))
+          //           if (level < levels -1) tmp.push(t.succesor);
+          //           else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
       }
       // copy the tmp set of states into reachable region

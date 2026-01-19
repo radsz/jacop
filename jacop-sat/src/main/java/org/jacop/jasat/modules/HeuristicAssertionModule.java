@@ -42,14 +42,12 @@ import org.jacop.jasat.core.Trail;
  */
 public final class HeuristicAssertionModule implements SolverComponent {
 
-  // solver instance
-  private Core core;
-
-  // trail instance (from the solver)
-  private Trail trail;
-
   // the activity count
   private final ActivityModule activity;
+  // solver instance
+  private Core core;
+  // trail instance (from the solver)
+  private Trail trail;
 
   public HeuristicAssertionModule(ActivityModule activity) {
     this.activity = activity;

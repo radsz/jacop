@@ -45,7 +45,13 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestDomain;
 import org.jacop.util.MDD;
 
 /**
@@ -58,7 +64,6 @@ import org.jacop.util.MDD;
  */
 public class CrossWord extends ExampleFD {
 
-  public String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
   final int r = 5; // number of rows
   final int c = 5; // number of column
   final int[] wordSizesPrimitive = {4, 5};
@@ -66,10 +71,7 @@ public class CrossWord extends ExampleFD {
   // letter - letter which must be in crossword
   // _ - unknown letter, any letter is accepted.
   final List<Integer> wordSizes = new ArrayList<>();
-  IntVar[][] x; // the solution
-  IntVar blank;
   final Map<Integer, MDD> mdds = new HashMap<>();
-
   final char[][] crosswordTemplate = {
     {'*', '_', '_', '_', '_'},
     {'_', '_', '_', 'l', '_'},
@@ -77,6 +79,9 @@ public class CrossWord extends ExampleFD {
     {'_', 'e', '_', '_', '_'},
     {'_', '_', 'm', '_', '_'}
   };
+  public String defaultDictionary = "src/main/java/org/jacop/examples/fd/crosswords/words";
+  IntVar[][] x; // the solution
+  IntVar blank;
 
   /**
    * It executes the program to create a model and solve crossword problem.
@@ -273,7 +278,7 @@ public class CrossWord extends ExampleFD {
           wordCount++;
           resultForWordSize.addTuple(tupleForGivenWord);
 
-          //   				lineCount++;
+          //           lineCount++;
 
         } // end while
 

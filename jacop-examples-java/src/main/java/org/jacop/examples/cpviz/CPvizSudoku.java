@@ -38,7 +38,11 @@ import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.TraceGenerator;
 
 /**
  * It shows how to visualize the solving process for Sudoku problem.
@@ -147,10 +151,10 @@ public class CPvizSudoku {
 
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, el);
 
-    // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
-    // 		search.setConsistencyListener((ConsistencyListener)select);
-    // 		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    // 	search.setExitListener((ExitListener)select);
+    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
+    //     search.setConsistencyListener((ConsistencyListener)select);
+    //     search.setExitChildListener((ExitChildListener<IntVar>)select);
+    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
@@ -251,10 +255,10 @@ public class CPvizSudoku {
     // Trace --->
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, el);
 
-    // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
-    // 		search.setConsistencyListener((ConsistencyListener)select);
-    //  		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    // 	search.setExitListener((ExitListener)select);
+    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, el);
+    //     search.setConsistencyListener((ConsistencyListener)select);
+    //      search.setExitChildListener((ExitChildListener<IntVar>)select);
+    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);

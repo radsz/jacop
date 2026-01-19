@@ -30,7 +30,13 @@
 
 package org.jacop.floats.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -53,14 +59,11 @@ public class MultivariateIntervalNewton {
   final FloatVar[] f;
   final FloatVar[] x;
   final FloatVar[][] fprime;
-
+  final Stack<Constraint> eval;
   double[] xInit;
-
   FloatInterval[][] A;
   double[] b;
-
   Map<FloatVar, Double> map;
-  final Stack<Constraint> eval;
 
   public MultivariateIntervalNewton(Store store, FloatVar[] f, FloatVar[] x) {
 
@@ -164,7 +167,7 @@ public class MultivariateIntervalNewton {
 
     // if (debug) {
     //     for (int i = 0; i < b.length; i++)
-    // 	System.out.print (b[i] + ", ");
+    //   System.out.print (b[i] + ", ");
     //     System.out.println ();
     // }
 

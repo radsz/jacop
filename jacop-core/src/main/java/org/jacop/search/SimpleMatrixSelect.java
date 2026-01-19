@@ -55,6 +55,12 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
   /// @todo implement subListSize functionality or remove it from the description.
   static final boolean debugAll = false;
 
+  /** It stores the original positions of variables to be used for input order tie-breaking. */
+  public final Map<T, Integer> position = Var.createEmptyPositioning();
+
+  /** It stores variables which need to be labelled. */
+  public final List<List<T>> searchVariables = new ArrayList<>();
+
   /**
    * It decides if input order tiebreaking is used. If input tiebreaking is not used than the
    * current arrangement of row, variables within rows decides on the priority. The arrangement of
@@ -64,15 +70,9 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public boolean inputOrderTieBreaking = true;
 
+  // int subListSize;
   /** It specifies the pivot position (first element has index 0). */
   public int pivotPosition;
-
-  /** It stores the original positions of variables to be used for input order tie-breaking. */
-  public final Map<T, Integer> position = Var.createEmptyPositioning();
-
-  // int subListSize;
-  /** It stores variables which need to be labelled. */
-  public final List<List<T>> searchVariables = new ArrayList<>();
 
   ComparatorVariable<T> mainComparator;
   ComparatorVariable<T> tieBreakingComparator;

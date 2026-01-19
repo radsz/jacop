@@ -31,12 +31,15 @@
 package org.jacop.constraints.cumulative;
 
 // import org.jacop.constraints.Constraint;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
-import org.jacop.core.*;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
 
 // import java.util.concurrent.atomic.AtomicInteger;
 // import java.util.stream.Stream;
@@ -60,18 +63,19 @@ public class ProfileOptional {
    * All tasks of the constraint
    */
   // final TaskView[] taskNormal;
+  final boolean debugNarr = false;
+  final boolean debug = false;
+
   /** It specifies the limit of the profile of cumulative use of resources. */
   private final IntVar limit;
 
-  final boolean debugNarr = false;
-  final boolean debug = false;
-  List<Event> utilizationProfile;
-  boolean existsOpt = true;
   private final Comparator<Event> eventComparator =
       (Event o1, Event o2) -> {
         int dateDiff = o1.date() - o2.date();
         return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
       };
+  List<Event> utilizationProfile;
+  boolean existsOpt = true;
 
   /**
    * It creates a profile for optional tasks.

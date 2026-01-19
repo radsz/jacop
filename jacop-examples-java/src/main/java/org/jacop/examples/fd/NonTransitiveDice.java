@@ -33,7 +33,16 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -57,6 +66,12 @@ import org.jacop.search.SimpleSelect;
  */
 public class NonTransitiveDice extends ExampleFD {
 
+  /** It contains constraints which can be used for shaving guidance. */
+  public final List<Constraint> shavingConstraints = new ArrayList<>();
+
+  /** If true then faces on non consequtive faces can be the same. */
+  public final boolean reuseOfNumbers = false;
+
   /** It specifies number of dices in the problem. */
   public int noDices = 3;
 
@@ -76,12 +91,6 @@ public class NonTransitiveDice extends ExampleFD {
    */
   public int currentBest = 16;
 
-  /** It contains constraints which can be used for shaving guidance. */
-  public final List<Constraint> shavingConstraints = new ArrayList<>();
-
-  /** If true then faces on non consequtive faces can be the same. */
-  public final boolean reuseOfNumbers = false;
-
   /**
    * It executes the program solving non transitive dice problem using two different methods. The
    * second method employs constraint guided shaving.
@@ -91,7 +100,7 @@ public class NonTransitiveDice extends ExampleFD {
    */
   static void main(String[] args) {
 
-    // 	int sols = 0;
+    //   int sols = 0;
 
     boolean firstSolutionFound = false;
 
@@ -129,7 +138,7 @@ public class NonTransitiveDice extends ExampleFD {
 
       if (result) {
         firstSolutionFound = true;
-        // 			sols++;
+        //       sols++;
       }
 
       if (!result && firstSolutionFound) {
@@ -166,7 +175,7 @@ public class NonTransitiveDice extends ExampleFD {
 
       if (result) {
         firstSolutionFound = true;
-        // 			sols++;
+        //       sols++;
       }
 
       if (!result && firstSolutionFound) {

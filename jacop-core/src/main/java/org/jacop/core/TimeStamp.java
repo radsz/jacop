@@ -50,14 +50,13 @@ import org.jacop.api.Stateful;
 public class TimeStamp<T> implements Stateful {
 
   static final boolean debug = false;
+  final int index;
+  final Store store;
   public int pointer4Last = -1;
   public transient int[] stamps = new int[10];
 
   @SuppressWarnings("unchecked")
   public transient T[] values = (T[]) new Object[10];
-
-  final int index;
-  final Store store;
 
   /**
    * The constructor.

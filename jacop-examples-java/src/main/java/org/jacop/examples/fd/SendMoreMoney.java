@@ -32,10 +32,19 @@ package org.jacop.examples.fd;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
 
 /**
  * It is a simple arithmetic logic puzzle, where SEND+MORE=MONEY.
@@ -230,8 +239,8 @@ public class SendMoreMoney extends ExampleFD {
   public boolean search() {
 
     /*
-    	store.consistency();
-    	store.print();
+      store.consistency();
+      store.print();
     */
 
     SelectChoicePoint<IntVar> select =

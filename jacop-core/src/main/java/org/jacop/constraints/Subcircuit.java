@@ -30,9 +30,18 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Hashtable;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.SophisticatedLengauerTarjan;
 
 /**
@@ -46,30 +55,21 @@ import org.jacop.util.SophisticatedLengauerTarjan;
 public class Subcircuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
+  final int[] val;
+  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
+  final SophisticatedLengauerTarjan graphDominance;
+  final int[] stack; // stack for strongly connected compoents algorithm
+  final Random random = new Random(0);
   Store store;
-
   boolean firstConsistencyCheck = true;
-
   boolean useSCC = true;
   boolean useDominance = true;
-
   int idd;
-
   int sccLength;
-
-  final int[] val;
-
-  final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
-
   int firstConsistencyLevel;
-
-  final SophisticatedLengauerTarjan graphDominance;
   int sccCounter;
-  final int[] stack; // stack for strongly connected compoents algorithm
   int stack_pointer;
   BitSet cycleVar;
-  final Random random = new Random(0);
 
   /**
    * It constructs a circuit constraint.

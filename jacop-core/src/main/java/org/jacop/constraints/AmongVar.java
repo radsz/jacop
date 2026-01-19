@@ -30,13 +30,26 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.MutableDomain;
+import org.jacop.core.MutableDomainValue;
+import org.jacop.core.MutableVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * Among constraint in its general form. It establishes the following relation. The given number N
@@ -75,13 +88,13 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    */
   public final IntVar n;
 
+  private final LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<>();
   // All variables attributes
   private Map<IntVar, Integer> xIndex;
   private Map<IntVar, Integer> yIndex;
   // FIXME, check if timestamp over IntervalDomain is not better/cleaner.
   private MutableVar lbS;
   private MutableVar futureLbS;
-  private final LinkedHashSet<Integer> variableQueueY = new LinkedHashSet<>();
   // Time stamps
   private TimeStamp<Integer> lb0TS;
   private TimeStamp<Integer> ub0TS;
@@ -512,7 +525,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // in the beginning of the array and move the pointer. It helps to avoid
     // some recalculations and give potential to fail if the number of ungrounded Y
     // is not enough to cover the future domain
-    // 	int countGY = 0;
+    //   int countGY = 0;
     IntVar y;
     int lastIndex = yGrounded.value();
     IntervalDomain lbVubV = new IntervalDomain();
@@ -551,7 +564,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
               }
             }
-            // 					countGY ++;
+            //           countGY ++;
 
             if (yi >= lastIndex) {
               if (yi != lastIndex) {
@@ -1221,18 +1234,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     for (IntVar var : this.listOfX) {
       result.append("X variable ").append(var.id).append(" : ").append(var.domain);
-      result.append(" 			among attached : ");
+      result.append("       among attached : ");
       result.append(var.domain.constraints().contains(this)).append(" \n");
     }
 
     for (IntVar var : this.listOfY) {
       result.append("Y variable ").append(var.id).append(" : ").append(var.domain);
-      result.append(" 			among attached : ");
+      result.append("       among attached : ");
       result.append(var.domain.constraints().contains(this)).append(" \n");
     }
 
     result.append("variable ").append(n.id).append(" : ").append(n.domain);
-    result.append(" 			among attached : ");
+    result.append("       among attached : ");
     result.append(n.domain.constraints().contains(this)).append("\n");
 
     return result.toString();

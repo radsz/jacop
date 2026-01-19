@@ -44,6 +44,9 @@ public final class Node {
   /** a label, great for debugging */
   public final String name;
 
+  /** adjacency list (recorded when degree reaches 2) */
+  public final Arc[] adjacencyList;
+
   /** the potential (or dual variable) of the network simplex */
   public int potential;
 
@@ -64,9 +67,6 @@ public final class Node {
 
   /** number of connected arcs */
   public int degree;
-
-  /** adjacency list (recorded when degree reaches 2) */
-  public final Arc[] adjacencyList;
 
   /** marks the cut (S,T) for dual pivot */
   boolean marked;

@@ -30,7 +30,16 @@
 
 package org.jacop.core;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
@@ -58,21 +67,11 @@ public class Store {
 
   static boolean seedPresent;
 
-  /** It switches on/off debuging of remove level facilities. */
-  final boolean removeDebug = false;
-
   /**
    * It stores constraints scheduled for reevaluation. It does not register constraints which are
    * already scheduled for reevaluation.
    */
   public final SimpleHashSet<Constraint>[] changed;
-
-  /**
-   * It stores boolean variables as soon as they change (become grounded or number of constraints
-   * being attached is changed). Later each level remembers the part of the array which contains
-   * variables changed at this level (efficient backtracking).
-   */
-  public BooleanVar[] changeHistory4BooleanVariables;
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -89,6 +88,57 @@ public class Store {
    * be informed about level being removed after it has been removed.
    */
   public final Set<RemoveLevelLate> removeLevelLateListeners = new HashSet<>(10);
+
+  /**
+   * It indicates that consistency function should immediately return fail if last inconsistency was
+   * not followed yet by removeLevel function.
+   */
+  public final boolean strict = true;
+
+  /**
+   * It allows to manage information about changed variables in efficient/specialized/tailored
+   * manner.
+   */
+  public final BacktrackableManager trailManager;
+
+  /**
+   * It may be used for faster retrieval of variables given their id. However, by default this
+   * variable is not created to reduce memory consumption. If it exists then it will be used by
+   * functions looking for a variable given the name.
+   */
+  public final Map<String, Var> variablesHashMap = new HashMap<>();
+
+  /**
+   * A mutable variable is a special variable which can change value during the search. In the event
+   * of backtracks the old value must be restored, therefore the store keeps information about all
+   * mutable variables.
+   */
+  protected final List<MutableVar> mutableVariables = new ArrayList<>(100);
+
+  /**
+   * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
+   * search items are push onto the stack. If the search backtracks then the old values can be
+   * simply restored. Simple and efficient way for getting mutable variable functionality for simple
+   * data types.
+   */
+  protected final List<Stateful> timeStamps = new ArrayList<>(100);
+
+  /** It switches on/off debuging of remove level facilities. */
+  final boolean removeDebug = false;
+
+  /**
+   * It stores all the active replacements of constraints that are being applied upon constraint
+   * imposition. It makes it possible to replace constraints into other constraints. It can be very
+   * useful for efficiency or testing purposes.
+   */
+  private final Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
+
+  /**
+   * It stores boolean variables as soon as they change (become grounded or number of constraints
+   * being attached is changed). Later each level remembers the part of the array which contains
+   * variables changed at this level (efficient backtracking).
+   */
+  public BooleanVar[] changeHistory4BooleanVariables;
 
   /**
    * It contains all auxilary variables created by decomposable constraints. They have to be
@@ -157,12 +207,6 @@ public class Store {
   /** Number of calls to consistency methods of constraints. */
   public long numberConsistencyCalls;
 
-  /**
-   * It indicates that consistency function should immediately return fail if last inconsistency was
-   * not followed yet by removeLevel function.
-   */
-  public final boolean strict = true;
-
   /** This flag is set to true when consistency function of the store encounters failure. */
   public boolean isLastConsistencyFailure;
 
@@ -177,45 +221,17 @@ public class Store {
   /** It stores integer variables created within a store. */
   public Var[] vars;
 
-  /**
-   * It allows to manage information about changed variables in efficient/specialized/tailored
-   * manner.
-   */
-  public final BacktrackableManager trailManager;
-
-  /**
-   * It may be used for faster retrieval of variables given their id. However, by default this
-   * variable is not created to reduce memory consumption. If it exists then it will be used by
-   * functions looking for a variable given the name.
-   */
-  public final Map<String, Var> variablesHashMap = new HashMap<>();
-
   /** It is used by Extensional MDD constraints. It is to represent G_yes. */
   public SparseSet sparseSet;
 
   /** It is used by Extensional MDD constraints. It is to represent the size of G_yes. */
   public int sparseSetSize;
 
-  /**
-   * A mutable variable is a special variable which can change value during the search. In the event
-   * of backtracks the old value must be restored, therefore the store keeps information about all
-   * mutable variables.
-   */
-  protected final List<MutableVar> mutableVariables = new ArrayList<>(100);
-
   /** It stores the number of constraints which were imposed to the store. */
   protected int numberOfConstraints;
 
   /** Number of variables stored within a store. */
   protected int size;
-
-  /**
-   * TimeStamp variable is a simpler version of a mutable variable. It is basically a stack. During
-   * search items are push onto the stack. If the search backtracks then the old values can be
-   * simply restored. Simple and efficient way for getting mutable variable functionality for simple
-   * data types.
-   */
-  protected final List<Stateful> timeStamps = new ArrayList<>(100);
 
   /** The prefix of any variable which was noname. */
   protected String variableIdPrefix = "_";
@@ -236,13 +252,6 @@ public class Store {
   boolean variableActivityManagement;
 
   Set<Var> variablesPrunned;
-
-  /**
-   * It stores all the active replacements of constraints that are being applied upon constraint
-   * imposition. It makes it possible to replace constraints into other constraints. It can be very
-   * useful for efficiency or testing purposes.
-   */
-  private final Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
 
   /** It specifies the default constructor of the store. */
   public Store() {

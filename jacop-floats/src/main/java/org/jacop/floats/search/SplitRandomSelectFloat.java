@@ -57,6 +57,9 @@ import org.jacop.search.SimpleSelect;
  */
 public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
+  public final boolean roundRobin = true;
+  final TimeStamp<Integer> currentIndex;
+
   /** Select parameters are kept here sicne we use floats ansd Simple select uses int */
   private final Random generator;
 
@@ -65,9 +68,6 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
    * considered.
    */
   public boolean leftFirst = true;
-
-  public final boolean roundRobin = true;
-  final TimeStamp<Integer> currentIndex;
 
   /**
    * The constructor to create a simple choice select mechanism.

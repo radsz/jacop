@@ -32,7 +32,15 @@ package org.jacop.constraints.netflow;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Eq;
+import org.jacop.constraints.In;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.netflow.DomainStructure.Behavior;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;

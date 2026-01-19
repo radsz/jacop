@@ -45,6 +45,8 @@ public final class Utils {
   // mask for the leftmost bit
   private static final int MASK = ~Integer.MIN_VALUE;
 
+  private Utils() {}
+
   /**
    * Resize the array to newSize, using the given memory pool
    *
@@ -118,6 +120,11 @@ public final class Utils {
     }
   }
 
+  /*
+   * TODO: try to replace arithmetic negation by this var(), not() methods
+   * (which should be faster) about representation of signed literals
+   */
+
   public static <E> Set<E>[] ensure(HashSet<E>[] array, int size) {
     if (array.length <= size) {
       @SuppressWarnings("unchecked")
@@ -128,11 +135,6 @@ public final class Utils {
       return array;
     }
   }
-
-  /*
-   * TODO: try to replace arithmetic negation by this var(), not() methods
-   * (which should be faster) about representation of signed literals
-   */
 
   /**
    * facility to print a clause to a string
@@ -172,6 +174,4 @@ public final class Utils {
   public static int not(int i) {
     return i | Integer.MIN_VALUE;
   }
-
-  private Utils() {}
 }

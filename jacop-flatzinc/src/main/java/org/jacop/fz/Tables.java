@@ -53,8 +53,6 @@ import org.jacop.set.core.SetVar;
 public class Tables {
 
   public final Map<IntVar, IntVar> aliasTable = new HashMap<>();
-  // IntVar zero, one;
-  Store store;
   final HashMap<Integer, IntVar> constantTable = new HashMap<>();
   final HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<>();
   final HashMap<Double, FloatVar> constantFloatTable = new HashMap<>();
@@ -80,6 +78,8 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
   final ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
+  // IntVar zero, one;
+  Store store;
   int numberBoolVariables;
   int numberFloatVariables;
   int numberSetVariables;

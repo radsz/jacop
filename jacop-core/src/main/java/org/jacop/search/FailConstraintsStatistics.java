@@ -30,7 +30,10 @@
 
 package org.jacop.search;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
@@ -47,9 +50,8 @@ public class FailConstraintsStatistics implements ConsistencyListener {
   // data structures to collect fail constraint statistics
   public final Map<String, Integer> failConstraintsStatistics = new HashMap<>();
   public final Map<String, Integer> failConstraintsIdStatistics = new HashMap<>();
-  public long otherFails;
-
   final Store store;
+  public long otherFails;
 
   public FailConstraintsStatistics(Store s) {
     store = s;

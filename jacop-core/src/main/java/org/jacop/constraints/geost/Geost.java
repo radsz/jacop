@@ -29,13 +29,27 @@
  */
 package org.jacop.constraints.geost;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.util.SimpleArrayList;
 import org.jacop.util.SimpleHashSet;
 
@@ -139,6 +153,21 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   public final Shape[] shapeRegister;
 
+  /** if set to true, a variable will never be skipped, even if grounded and not in queue */
+  public final boolean enforceNoSkip =
+      true; // setting to false is causing a bug that allows incorrect solution to be accepted.
+
+  /** set to false to disable relaxed shape pruning */
+  public final boolean partialShapeSweep = true;
+
+  /**
+   * It defines whether outbox generation should always rely on overlapping frames. For problems
+   * that contain objects that have small domains compared to their size, then using only frames may
+   * provide a better performance (up to 50% faster). It can only be changed before impose()
+   * function, changing it afterwards will lead to improper behavior.
+   */
+  public final boolean alwaysUseFrames = false;
+
   /**
    * It specifies for each object if consistency function should be run if this object becomes
    * grounded. It is set to true if the object was grounded outside consistency function call or
@@ -201,13 +230,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   /** It specifies the number of dimensions of each object given to the geost constraint. */
   final int dimension;
 
-  /** if set to true, a variable will never be skipped, even if grounded and not in queue */
-  public final boolean enforceNoSkip =
-      true; // setting to false is causing a bug that allows incorrect solution to be accepted.
+  /**
+   * It is used inside flushQueue function to separate timeconsistency execution from object update
+   * (potentially expensive if for example object frame is recomputed).
+   */
+  final SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<>();
 
-  /** set to false to disable relaxed shape pruning */
-  public final boolean partialShapeSweep = true;
-
+  // int lowerBound;
   /**
    * It stores all generated internal constraints for all objects/constraints. It is used to speed
    * up some visualization functions. If not for that reason it could have been a local variable
@@ -215,15 +244,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   public Collection<InternalConstraint> internalConstraints;
 
-  /**
-   * It defines whether outbox generation should always rely on overlapping frames. For problems
-   * that contain objects that have small domains compared to their size, then using only frames may
-   * provide a better performance (up to 50% faster). It can only be changed before impose()
-   * function, changing it afterwards will lead to improper behavior.
-   */
-  public final boolean alwaysUseFrames = false;
-
-  // int lowerBound;
   /**
    * It is a flag set to true during remove level late function execution so objects which are being
    * updated upon backtracking can be handled properly.
@@ -340,12 +360,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
   /** It specifies the last useful constraint in the array of useful internal constraints. */
   int lastConstraintToCheck;
-
-  /**
-   * It is used inside flushQueue function to separate timeconsistency execution from object update
-   * (potentially expensive if for example object frame is recomputed).
-   */
-  final SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<>();
 
   /**
    * It is set by queueVariable after a time variable has been changed. It indicates that we should
@@ -593,7 +607,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     if (variableQueue == null) {
       return "variable queue is null";
     }
-    // 	if(objectQueue == null) return "object queue is null";
+    //   if(objectQueue == null) return "object queue is null";
     if (objectQueue == null) {
       return "object queue is null";
     }
@@ -735,7 +749,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       GeostObject o,
       int currentShape,
       int d,
-      // 		   Set<InternalConstraint> I,
+      //        Set<InternalConstraint> I,
       int limit) {
 
     boolean feasiblePointFound = true;
@@ -812,9 +826,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
 
       // if(USE_DISPLAY) {
-      // 	display.display2DBox(f, Color.red);
-      // 	display.display2DPoint(c, Color.green);
-      // 	display.display2DPoint(n, Color.blue);
+      //   display.display2DBox(f, Color.red);
+      //   display.display2DPoint(c, Color.green);
+      //   display.display2DPoint(n, Color.blue);
       // }
 
       if (DEBUG_MAIN) {
@@ -855,13 +869,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       GeostObject o,
       int currentShape,
       int d,
-      // 			   Set<InternalConstraint> I,
+      //          Set<InternalConstraint> I,
       int limit) {
 
     boolean feasiblePointFound = true;
 
     // if(USE_DISPLAY)
-    // 	display.eraseAll();
+    //   display.eraseAll();
 
     if (DEBUG_MAIN) {
       IO.println("pruneMax");
@@ -924,11 +938,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           c[lexI] = domainMax;
         }
 
-        // 			if(USE_DISPLAY){
-        // 				display.display2DBox(f, Color.red);
-        // 				display.display2DPoint(c, Color.green);
-        // 				display.display2DPoint(n, Color.blue);
-        // 			}
+        //       if(USE_DISPLAY){
+        //         display.display2DBox(f, Color.red);
+        //         display.display2DPoint(c, Color.green);
+        //         display.display2DPoint(n, Color.blue);
+        //       }
 
       }
       if (c[d] <= limit) {
@@ -959,12 +973,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       GeostObject o,
       int currentShape,
       int[] point,
-      // 		   Collection<InternalConstraint> constraints,
+      //        Collection<InternalConstraint> constraints,
       Geost.SweepDirection dir,
       LexicographicalOrder order) {
 
     if (DEBUG_MAIN) {
-      // 	System.out.println("findForbidenDomain: constraints:" + constraints.size());
+      //   System.out.println("findForbidenDomain: constraints:" + constraints.size());
       IO.println("shape ID in findForbiddenDomain: " + currentShape);
     }
 
@@ -1202,7 +1216,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                       o,
                       sid,
                       d,
-                      // 									  internalConstraintsToUse,
+                      //                     internalConstraintsToUse,
                       fullSweep ? IntDomain.MaxInt : minLowerBound);
 
               if (lowerBound >= IntDomain.MaxInt) {
@@ -1236,7 +1250,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                         o,
                         sid,
                         d,
-                        // 										  internalConstraintsToUse,
+                        //                       internalConstraintsToUse,
                         fullSweep ? IntDomain.MinInt : maxUpperBound);
 
                 if (upperBound <= IntDomain.MinInt) {
@@ -1292,8 +1306,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               if (oneTimeVarChanged) {
                 o.timeConstraint.consistencyStartPlusDurationEqEnd(store);
                 // if(o.timeConstraint.consistencyStartPlusDurationEqEnd(store))
-                // 	//modification of some of the time variables, sweep again
-                // 	queueObject(o);
+                //   //modification of some of the time variables, sweep again
+                //   queueObject(o);
                 oneTimeVarChanged = false;
               }
 
@@ -1322,8 +1336,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               if (oneTimeVarChanged) {
                 o.timeConstraint.consistencyStartPlusDurationEqEnd(store);
                 // if(o.timeConstraint.consistencyStartPlusDurationEqEnd(store))
-                // 	//modification of some of the time variables, sweep again
-                // 	queueObject(o);
+                //   //modification of some of the time variables, sweep again
+                //   queueObject(o);
                 oneTimeVarChanged = false;
               }
 
@@ -1786,7 +1800,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       assert o != null;
 
       // if(!updatedObjectSet.contains(o))
-      // 	// else it was already updated
+      //   // else it was already updated
       onObjectUpdate(o);
 
       if (DEBUG_BACKTRACK) {

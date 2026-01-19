@@ -38,10 +38,8 @@ package org.jacop.core;
  */
 public class SmallDenseDomainValueEnumeration extends ValueEnumeration {
 
-  int current;
-
   final SmallDenseDomain domain;
-
+  int current;
   long bits;
 
   /**

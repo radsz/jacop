@@ -41,11 +41,9 @@ import org.jacop.core.IntDomain;
  */
 class IntRectangle {
 
-  int dim;
-
   final int[] length;
-
   final int[] origin;
+  int dim;
 
   public IntRectangle(List<Integer> R) {
     dim = R.size() / 2;

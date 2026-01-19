@@ -61,9 +61,13 @@ public final class SatChangesListener
    * invariant: upperBounds.lenght == lowerBounds.length == excludedValues.length
    */
 
+  // set of variables to update
+  private final BitSet intVarsToUpdate = new BitSet();
+  private final Set<BooleanVar> booleanVarsToUpdate = new HashSet<>();
   // the wrapper
   private SatWrapper wrapper;
 
+  // private IntSet[] excludedValues = new IntSet[5];
   // the core of the SAT solver
   private Core core;
 
@@ -72,17 +76,10 @@ public final class SatChangesListener
   @SuppressWarnings("unchecked")
   private Set<Integer>[] excludedValues = new HashSet[40];
 
-  // private IntSet[] excludedValues = new IntSet[5];
-
   // set of (true) literals representing 'x<=v' assertions on CP vars
   private Integer[] upperBounds = new Integer[40];
-
   // set of literals (false) representing 'x>v' assertions
   private Integer[] lowerBounds = new Integer[40];
-
-  // set of variables to update
-  private final BitSet intVarsToUpdate = new BitSet();
-  private final Set<BooleanVar> booleanVarsToUpdate = new HashSet<>();
 
   /** clears all sets, so that elements occurring in them later result only from later events */
   public void clear() {

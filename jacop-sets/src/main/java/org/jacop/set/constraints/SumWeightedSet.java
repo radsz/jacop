@@ -35,7 +35,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -60,13 +64,13 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   /** Integer variable containing the total weight of all elements within a set variable a. */
   public final IntVar totalWeight;
 
+  /** It provides a quick access to the weights of given elements of the set. */
+  final Map<Integer, Integer> elementWeights;
+
   /**
    * It specifies if the costs of elements are increasing given the lexical order of the elements.
    */
   boolean increasingCosts;
-
-  /** It provides a quick access to the weights of given elements of the set. */
-  final Map<Integer, Integer> elementWeights;
 
   /**
    * It constructs a weighted set sum constraint.

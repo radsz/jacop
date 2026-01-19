@@ -69,6 +69,10 @@ public class SGMPCSearch {
   /** Cost variable. */
   public final IntVar cost;
 
+  final boolean trace = false;
+  final ImproveSolution<IntVar> search;
+  final Function<Integer, Comparator<int[]>> solutionComparator =
+      p -> Comparator.comparingInt((int[] o) -> o[p]);
   // e- number of elite solutions
   public int e = 4;
   // eInit- number of solution for selecting the best e elite solutions
@@ -77,7 +81,6 @@ public class SGMPCSearch {
   // at position 0 is cost and values of variables start at positions 1
   public int[][] elite;
   public int costPosition;
-  final boolean trace = false;
   boolean printInfo = true;
   // Start time of the search to compute termination criteria
   long searchStartTime;
@@ -102,9 +105,6 @@ public class SGMPCSearch {
   int[] solution;
   // time-out value in miliseconds (default 10 second)
   long timeOut = 10000;
-  final ImproveSolution<IntVar> search;
-  final Function<Integer, Comparator<int[]>> solutionComparator =
-      p -> Comparator.comparingInt((int[] o) -> o[p]);
 
   public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
 

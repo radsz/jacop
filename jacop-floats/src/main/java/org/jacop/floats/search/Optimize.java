@@ -57,12 +57,10 @@ public class Optimize<T extends Var> {
   final SplitSelectFloat<FloatVar> split;
   final SelectChoicePoint<T> select;
   final Var[] variables;
-  double costValue = Double.NaN;
-
   final boolean printInfo = true;
-
-  FloatInterval lastCost;
   final FloatInterval[] lastVarValues;
+  double costValue = Double.NaN;
+  FloatInterval lastCost;
 
   public Optimize(Store store, Search<T> search, SelectChoicePoint<T> select, FloatVar cost) {
 

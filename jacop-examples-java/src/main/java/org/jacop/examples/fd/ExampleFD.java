@@ -35,7 +35,23 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.*;
+import org.jacop.search.CreditCalculator;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMedian;
+import org.jacop.search.IndomainMiddle;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.IndomainSimpleRandom;
+import org.jacop.search.LDS;
+import org.jacop.search.MaxRegret;
+import org.jacop.search.MostConstrainedStatic;
+import org.jacop.search.NoGoodsCollector;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.Shaving;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.SmallestMin;
+import org.jacop.search.WeightedDegree;
 
 /**
  * It is an abstract class to describe all necessary functions of any store.

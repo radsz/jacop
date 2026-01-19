@@ -38,7 +38,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 
 /**
  * ElementInteger constraint defines a relation list[index - indexOffset] = value.
@@ -229,8 +234,8 @@ public class ElementInteger extends Constraint
     //     int valueOfElement = list[i];
 
     //     if (value.domain.contains(valueOfElement)) {
-    // 	vs.unionAdapt(valueOfElement);
-    // 	xs.unionAdapt(idx);
+    //   vs.unionAdapt(valueOfElement);
+    //   xs.unionAdapt(idx);
     //     }
     // }
     // index.domain.in(store.level, index, xs);

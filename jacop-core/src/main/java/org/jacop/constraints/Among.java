@@ -30,13 +30,22 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * Among constraint in its simplest form. It establishes the following relation. The given number N
@@ -185,13 +194,13 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     // Changed KK, 2015-10-17;
     // Not needed, in method will fail in such case
     // if (Math.max(n.min(), currentLB) > Math.min(n.max(), currentUB))
-    // 	throw Store.failException;
+    //   throw Store.failException;
     if (currentLB > currentUB) {
       throw Store.failException;
     }
 
     // n.domain.in(store.level, n, Math.max(n.min(), currentLB), Math.min(n.max(),
-    // 		currentUB));
+    //     currentUB));
 
     // Changed KK, 2015-10-17;
     // Math.max is not needed since method in is doing

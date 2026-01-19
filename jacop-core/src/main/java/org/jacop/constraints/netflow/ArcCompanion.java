@@ -184,8 +184,8 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
     // arc already deleted ?
     // (This can happen if the arc is attached to an S-variable)
-    // 	if (arc.index == DELETED_ARC)
-    // 		return;
+    //   if (arc.index == DELETED_ARC)
+    //     return;
 
     // Capacity variable was bounded
     if (variable == xVar && arc.index != DELETED_ARC) {
@@ -226,12 +226,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
           int deltaCost = newCost - arc.cost;
           int flow = flowOffset + arc.sister.capacity;
           network.changeCostOffset((long) flow * (long) deltaCost);
-          // 				System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
-          // 				throw new RuntimeException();
+          //         System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
+          //         throw new RuntimeException();
         } /*else if (flowOffset != 0) {
                 int deltaCost = newCost - arc.cost;
-          	int flow = flowOffset;
-          	network.changeCostOffset((long) flow * (long) deltaCost);
+            int flow = flowOffset;
+            network.changeCostOffset((long) flow * (long) deltaCost);
           }*/
 
         arc.cost = newCost;
@@ -257,12 +257,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
         int deltaCost = newCost - arc.cost;
         int flow = flowOffset + arc.sister.capacity;
         network.changeCostOffset((long) flow * (long) deltaCost);
-        // 			System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
-        // 			throw new RuntimeException();
+        //       System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
+        //       throw new RuntimeException();
       } /*else if (flowOffset != 0) {
              int deltaCost = newCost - arc.cost;
-        	int flow = flowOffset;
-        	network.changeCostOffset((long) flow * (long) deltaCost);
+          int flow = flowOffset;
+          network.changeCostOffset((long) flow * (long) deltaCost);
         }*/
       arc.cost = newCost;
       arc.sister.cost = -newCost;
@@ -270,7 +270,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
     if (xVar != null) {
       changeCapacity(xVar.min(), xVar.max());
-      // 		assert (!xVar.singleton()) : " " + xVar + ", " + xVar.domain;
+      //     assert (!xVar.singleton()) : " " + xVar + ", " + xVar.domain;
     }
   }
 

@@ -33,7 +33,13 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.geost.*;
+import org.jacop.constraints.geost.DBox;
+import org.jacop.constraints.geost.ExternalConstraint;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -183,7 +189,7 @@ public class GeostExample extends ExampleFD {
 
     //      Variable[] vars = {X_o1, Y_o1, X_o2, Y_o2, X_o3, Y_o3, X_o4, Y_o4};
     //      SelectChoicePoint select = new SimpleSelect(vars, null,
-    //  						    new IndomainMin());
+    //                  new IndomainMin());
     //      Result = label.labeling(store, select);
 
     if (result) {

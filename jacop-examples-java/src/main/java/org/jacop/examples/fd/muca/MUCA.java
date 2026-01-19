@@ -30,17 +30,32 @@
 
 package org.jacop.examples.fd.muca;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
-import org.jacop.constraints.*;
+import org.jacop.constraints.Among;
+import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XplusYgtC;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.examples.fd.ExampleFD;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.MaxRegret;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
 
 /**
  * It solves the Mixed Multi-Unit Combinatorial Auctions.
@@ -55,6 +70,15 @@ import org.jacop.search.*;
  * @version 4.10
  */
 public class MUCA extends ExampleFD {
+
+  /** It specifies the minimal value for the cost. */
+  public final int minCost = -100000;
+
+  /** It specifies the maximal value for the cost. */
+  public final int maxCost = 100000;
+
+  /** The maximal number of products. */
+  public final int maxProducts = 100;
 
   /**
    * ArrayList of bids issued by different bidders. Each bidder issues an ArrayList of xor bids.
@@ -79,15 +103,6 @@ public class MUCA extends ExampleFD {
 
   /** It specifies the maximal possible delta of goods for any transformation. */
   public int maxDelta = 10;
-
-  /** It specifies the minimal value for the cost. */
-  public final int minCost = -100000;
-
-  /** It specifies the maximal value for the cost. */
-  public final int maxCost = 100000;
-
-  /** The maximal number of products. */
-  public final int maxProducts = 100;
 
   /** For each bidder it specifies variable representing the cost of the chosen xor bid. */
   public List<IntVar> bidCosts;

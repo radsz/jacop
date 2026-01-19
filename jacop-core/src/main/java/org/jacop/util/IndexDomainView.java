@@ -49,9 +49,8 @@ public class IndexDomainView {
   public final int[] indexToValue;
 
   final IntVar var;
-  boolean[] forRemoval;
-
   final boolean viewOfSparseDomain;
+  boolean[] forRemoval;
 
   /**
    * It creates an index domain view for a given variable. It currently implements only sparse

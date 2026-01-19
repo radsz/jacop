@@ -73,7 +73,6 @@ public class SumInt extends PrimitiveConstraint {
   public final byte relationType;
 
   final Store store;
-  boolean reified = true;
 
   /** It specifies a list of variables being summed. */
   final IntVar[] x;
@@ -86,6 +85,8 @@ public class SumInt extends PrimitiveConstraint {
 
   /** It specifies "variability" of each variable */
   final long[] I;
+
+  boolean reified = true;
 
   /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values) */
   long sumXmin, sumXmax;

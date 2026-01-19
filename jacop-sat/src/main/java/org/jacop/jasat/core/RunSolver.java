@@ -31,7 +31,11 @@
 
 package org.jacop.jasat.core;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import org.jacop.jasat.modules.DebugModule;
 import org.jacop.jasat.modules.SearchModule;
 import org.jacop.jasat.modules.StatModule;
@@ -51,7 +55,6 @@ import org.jacop.jasat.utils.structures.IntVec;
  */
 public final class RunSolver {
 
-  private static String filename;
   private static final OptParse<Config> parser = new OptParse<>();
   private static final String helpString = "usage : RunSolver [option [option...]] <filename>";
   // set the verbosity
@@ -122,6 +125,7 @@ public final class RunSolver {
           return e;
         }
       };
+  private static String filename;
 
   static {
     parser.setHelp(helpString);

@@ -64,11 +64,10 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
   /** It specifies a multiple value decision diagram used by this constraint. */
   public final MDD mdd;
 
-  TimeStamp<Integer> G_no_size;
   final SparseSet G_no;
-  SparseSet G_yes;
-
   final IndexDomainView[] views;
+  TimeStamp<Integer> G_no_size;
+  SparseSet G_yes;
 
   /**
    * It creates an extensional constraint.

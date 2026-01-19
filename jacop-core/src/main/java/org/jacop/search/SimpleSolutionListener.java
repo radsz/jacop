@@ -34,7 +34,11 @@ import java.lang.reflect.Array;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * It defines a simple solution listener which should be used if some basic functionality of search
@@ -382,7 +386,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       // if (parentSolutionNo[0] == parentNo)
       return 0;
       // else
-      // 	return -1;
+      //   return -1;
 
     }
 

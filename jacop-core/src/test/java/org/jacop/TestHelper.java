@@ -33,7 +33,11 @@ package org.jacop;
 import java.util.Arrays;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.MostConstrainedStatic;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
 
 /**
  * It is helper class that allows perform quickly operation to setup tests.

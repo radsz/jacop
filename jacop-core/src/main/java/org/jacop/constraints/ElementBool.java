@@ -34,7 +34,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 
 /**
  * ElementBool constraint defines a relation list[index - indexOffset] = value.
@@ -52,9 +57,6 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean firstConsistencyCheck = true;
-  int firstConsistencyLevel;
-
   /** It specifies variable index within an element constraint list[index-indexOffset] = value. */
   public final IntVar index;
 
@@ -70,11 +72,12 @@ public class ElementBool extends Constraint implements UsesQueueVariable {
    */
   public final int[] list;
 
-  boolean indexHasChanged = true;
-  boolean valueHasChanged = true;
-
   final IntDomain indexAtZero = new IntervalDomain(5);
   final IntDomain indexAtOne = new IntervalDomain(5);
+  boolean firstConsistencyCheck = true;
+  int firstConsistencyLevel;
+  boolean indexHasChanged = true;
+  boolean valueHasChanged = true;
 
   /**
    * It constructs an element constraint.

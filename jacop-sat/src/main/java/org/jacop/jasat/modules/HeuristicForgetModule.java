@@ -56,15 +56,15 @@ public final class HeuristicForgetModule
   // after how many learnt clauses can we try to forget() ?
   public final int LEARNT_CLAUSES_NUMBER_THRESHOLD = 1000;
 
+  // lists of learnt clauses, indexed by their LBD
+  @SuppressWarnings("unchecked")
+  private final LinkedList<Integer>[] learntClauses = (LinkedList<Integer>[]) new LinkedList[6];
+
   /** threshold of activity under which a clause is removed */
   public double FORGET_THRESHOLD = 10;
 
   // solver instance
   private Core core;
-
-  // lists of learnt clauses, indexed by their LBD
-  @SuppressWarnings("unchecked")
-  private final LinkedList<Integer>[] learntClauses = (LinkedList<Integer>[]) new LinkedList[6];
 
   /**
    * When a forget() event occurs, this component will try to find clauses that can be forgotten,

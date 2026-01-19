@@ -30,14 +30,25 @@
 
 package org.jacop.constraints;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * @deprecated As of release 4.3.1 replaced by LinearIntDom constraint.
@@ -509,25 +520,25 @@ public class SumWeightDom extends Constraint
   }
 
   // IntDomain plusDom(IntDomain d1, IntDomain d2) {
-  // 	IntDomain temp;
-  // 	// System.out.println (d1 + " + " + d2);
+  //   IntDomain temp;
+  //   // System.out.println (d1 + " + " + d2);
 
-  // 	temp = new IntervalDomain();
+  //   temp = new IntervalDomain();
 
-  // 	for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
-  // 	    Interval i1 = e1.nextElement();
-  // 	    int i1min = i1.min(), i1Max = i1.max();
+  //   for (IntervalEnumeration e1 = d1.intervalEnumeration(); e1.hasMoreElements();) {
+  //       Interval i1 = e1.nextElement();
+  //       int i1min = i1.min(), i1Max = i1.max();
 
-  // 	    for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
-  // 		Interval i2 = e2.nextElement();
-  // 		// temp.addDom(new IntervalDomain(i1min+i2.min(), i1Max+i2.max()));
-  // 		temp.unionAdapt(i1min+i2.min(), i1Max+i2.max());
-  // 	    }
-  // 	}
+  //       for (IntervalEnumeration e2 = d2.intervalEnumeration(); e2.hasMoreElements();) {
+  //     Interval i2 = e2.nextElement();
+  //     // temp.addDom(new IntervalDomain(i1min+i2.min(), i1Max+i2.max()));
+  //     temp.unionAdapt(i1min+i2.min(), i1Max+i2.max());
+  //       }
+  //   }
 
-  // 	// System.out.println ("result+ = " + temp);
+  //   // System.out.println ("result+ = " + temp);
 
-  // 	return temp;
+  //   return temp;
   // }
 
   IntDomain subtractDom(IntDomain d1, IntDomain d2) {
@@ -630,9 +641,9 @@ public class SumWeightDom extends Constraint
       //     int eMax = e.max();
 
       //     if (temp.getSize() > 0 && temp.max() <= eMin)
-      //      	temp.unionAdapt(e);
+      //        temp.unionAdapt(e);
       //     else
-      // 	temp.unionAdapt(eMin, eMax);  // need to check correctness of union
+      //   temp.unionAdapt(eMin, eMax);  // need to check correctness of union
       //                                       //and not only add intervals at the end
       //                                       // as in above cases
       // }

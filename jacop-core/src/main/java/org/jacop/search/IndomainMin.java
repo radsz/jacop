@@ -50,7 +50,7 @@ public class IndomainMin<T extends IntVar> implements Indomain<T> {
   // FIXME. check and remove.
   /*
    public int indomain(IntDomain dom) {
-  	return dom.min();
+    return dom.min();
   }
    */
 

@@ -60,10 +60,10 @@ public class MinizincBasedTestsHelper {
   protected static final String relativePath = "src/test/fz/";
   protected static final String listFileName = "list.txt";
   protected static final boolean printInfo = false;
-  protected static Fz2jacop fz2jacop;
   private static final int counter = 0;
-  protected String testFilename;
+  protected static Fz2jacop fz2jacop;
   final String timeCategory;
+  protected String testFilename;
 
   protected MinizincBasedTestsHelper(String timeCategory) {
     this.timeCategory = timeCategory;

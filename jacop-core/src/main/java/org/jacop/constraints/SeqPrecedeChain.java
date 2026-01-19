@@ -33,7 +33,9 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.*;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 
 /*
  * It defines Sequence Precedence Chain constraint for integers.  <p>

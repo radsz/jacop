@@ -125,12 +125,12 @@ public class BoxDisplay extends JFrame {
   /*
    public static final void displayPool(BoxDisplay display, Color color){
 
-  	for(int i = 0; i<DBox.freeBoxes.size(); i++){
-  		SimpleArrayList<DBox> boxes = DBox.freeBoxes.get(i);
-  		for(int j = 0; j<boxes.size(); j++){
-  			display.display2DBox(boxes.get(j), color);
-  		}
-  	}
+    for(int i = 0; i<DBox.freeBoxes.size(); i++){
+      SimpleArrayList<DBox> boxes = DBox.freeBoxes.get(i);
+      for(int j = 0; j<boxes.size(); j++){
+        display.display2DBox(boxes.get(j), color);
+      }
+    }
 
   }
   */

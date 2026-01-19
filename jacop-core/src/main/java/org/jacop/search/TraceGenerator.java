@@ -36,7 +36,11 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Stack;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -45,7 +49,13 @@ import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.*;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalEnumeration;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
@@ -88,12 +98,14 @@ public class TraceGenerator<T extends Var>
   public final List<Var> tracedVar = new ArrayList<>();
 
   public final Map<Var, Integer> varIndex = Var.createEmptyPositioning();
-  ConsistencyListener[] consistencyListeners;
-  ExitChildListener<T>[] exitChildListeners;
-  ExitListener[] exitListeners;
 
   /** It stores the original select choice point method that is used by this trace wrapper. */
   final SelectChoicePoint<T> select;
+
+  final Stack<SearchNode> searchStack = new Stack<>();
+  ConsistencyListener[] consistencyListeners;
+  ExitChildListener<T>[] exitChildListeners;
+  ExitListener[] exitListeners;
 
   /** It stores information about var being selected by internal select choice point. */
   T selectedVar;
@@ -107,7 +119,6 @@ public class TraceGenerator<T extends Var>
   /** An xml handler for visualization file. */
   TransformerHandler hdVis;
 
-  final Stack<SearchNode> searchStack = new Stack<>();
   SearchNode currentSearchNode;
   int searchNodeId = 1;
   int visualisationNodeId = 1;
@@ -168,7 +179,7 @@ public class TraceGenerator<T extends Var>
     rootNode.id = 0;
     searchStack.push(rootNode);
 
-    // 		for (Var v : vars) {
+    //     for (Var v : vars) {
     for (int i = 0; i < vars.length; i++) {
       tracedVar.add(vars[i]);
       varIndex.put(vars[i], i);
@@ -422,17 +433,17 @@ public class TraceGenerator<T extends Var>
     }
 
     currentSearchNode = searchStack.pop();
-    // 	SearchNode previousSearchNode = currentSearchNode;
+    //   SearchNode previousSearchNode = currentSearchNode;
 
     if (!status && returnCode) {
 
       currentSearchNode = new SearchNode();
       // currentSearchNode.v = var;
 
-      // 		if (previousSearchNode.dom instanceof JaCoP.core.IntDomain)
-      // 			currentSearchNode.dom = ((IntDomain)previousSearchNode.dom).subtract( value );
-      // 		else if (previousSearchNode.dom instanceof JaCoP.set.core.SetDomain)
-      // 			currentSearchNode.dom = ((SetDomain)previousSearchNode.dom).subtract( value, value );
+      //     if (previousSearchNode.dom instanceof JaCoP.core.IntDomain)
+      //       currentSearchNode.dom = ((IntDomain)previousSearchNode.dom).subtract( value );
+      //     else if (previousSearchNode.dom instanceof JaCoP.set.core.SetDomain)
+      //       currentSearchNode.dom = ((SetDomain)previousSearchNode.dom).subtract( value, value );
 
       // currentSearchNode.val = value;
       currentSearchNode.id = searchNodeId++;

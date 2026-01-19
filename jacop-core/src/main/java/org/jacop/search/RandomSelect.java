@@ -54,9 +54,8 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
   public final Map<T, Integer> position;
 
   final Indomain<T> valueOrdering;
-  int currentIndex;
-
   final Random random = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
+  int currentIndex;
 
   /**
    * The constructor to create a simple choice select mechanism.

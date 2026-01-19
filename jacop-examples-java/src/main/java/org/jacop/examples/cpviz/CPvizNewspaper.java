@@ -39,7 +39,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.search.*;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestMax;
+import org.jacop.search.TraceGenerator;
 
 /**
  * It is a simple newspaper reading job-shop like scheduling problem.
@@ -73,8 +78,8 @@ public class CPvizNewspaper {
 
     example.model();
 
-    // 		if ( label() )
-    // 		    System.out.println("Solution(s) found");
+    //     if ( label() )
+    //         System.out.println("Solution(s) found");
 
   }
 
@@ -251,9 +256,9 @@ public class CPvizNewspaper {
     cost = makespan;
     vars.add(makespan);
 
-    // 	}
+    //   }
 
-    // 	public static boolean label() {
+    //   public static boolean label() {
 
     SelectChoicePoint<IntVar> varSelect =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), new SmallestMax<>(), new IndomainMin<>());
@@ -278,10 +283,10 @@ public class CPvizNewspaper {
 
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, abcd);
 
-    // 		TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, abcd);
-    // 		search.setConsistencyListener((ConsistencyListener)select);
-    //  		search.setExitChildListener((ExitChildListener<IntVar>)select);
-    // 	search.setExitListener((ExitListener)select);
+    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, abcd);
+    //     search.setConsistencyListener((ConsistencyListener)select);
+    //      search.setExitChildListener((ExitChildListener<IntVar>)select);
+    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select, cost);

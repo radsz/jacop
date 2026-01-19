@@ -24,14 +24,30 @@
  */
 package org.jacop.fz.constraints;
 
-import org.jacop.constraints.*;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.In;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
-import org.jacop.set.constraints.*;
+import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.set.constraints.AeqB;
+import org.jacop.set.constraints.AinB;
+import org.jacop.set.constraints.AintersectBeqC;
+import org.jacop.set.constraints.AleB;
+import org.jacop.set.constraints.AltB;
+import org.jacop.set.constraints.AunionBeqC;
+import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.ChannelBoolSet;
+import org.jacop.set.constraints.ChannelIntSet;
+import org.jacop.set.constraints.EinA;
+import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
