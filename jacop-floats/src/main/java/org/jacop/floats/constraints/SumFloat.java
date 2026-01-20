@@ -31,7 +31,6 @@
 package org.jacop.floats.constraints;
 
 import java.util.Arrays;
-import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
@@ -45,20 +44,6 @@ import org.jacop.floats.core.FloatVar;
  * @version 4.10
  */
 public class SumFloat extends LinearFloat {
-
-  /**
-   * @param store current store
-   * @param list variables which are being multiplied by weights.
-   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
-   *     "{@literal >=}", "{@literal !=}"
-   * @param sum variable containing the sum of weighted variables.
-   * @deprecated SumFloat constraint does not use Store parameter any longer.
-   */
-  @Deprecated
-  public SumFloat(Store store, FloatVar[] list, String rel, FloatVar sum) {
-
-    super(store, list, getFilledArray(list.length), rel, sum);
-  }
 
   /**
    * @param list variables which are being multiplied by weights.

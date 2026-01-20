@@ -89,25 +89,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   private boolean satisfiedAlreadyAtImposition;
 
   /**
-   * Partial constructor which stores variables involved in a constraint but does not get
-   * information about tuples yet. The tuples must set separately.
-   *
-   * @param list list of variables for constraint
-   */
-  @Deprecated
-  public ExtensionalConflictVA(IntVar[] list) {
-
-    checkInputForNullness("list", list);
-
-    this.list = Arrays.copyOf(list, list.length);
-    supports = new int[list.length][][];
-    tuple = new int[list.length];
-
-    this.numberId = idNumber.incrementAndGet();
-    setScope(list);
-  }
-
-  /**
    * Constructor stores reference to tuples until imposition, any changes to tuples parameter will
    * be reflected in the constraint behavior. Changes to tuples should not performed under any
    * circumstances. The tuples array is not copied to save memory and time.

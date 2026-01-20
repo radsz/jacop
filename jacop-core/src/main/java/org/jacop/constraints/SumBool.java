@@ -89,23 +89,19 @@ public class SumBool extends PrimitiveConstraint {
   boolean reified = true;
 
   /*
-   * @param store current store
-   * @param list  variables which are being multiplied by weights.
-   * @param rel   the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum   variable containing the sum of weighted variables.
-   * @deprecated SumBool constraint does not use Store parameter any longer.
+   * @param list variables which are being multiplied by weights.
+   * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
+   * @param sum  variable containing the sum of weighted variables.
    */
-  @Deprecated
-  public SumBool(Store store, IntVar[] list, String rel, IntVar sum) {
-
+  public SumBool(IntVar[] list, String rel, IntVar sum) {
     checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
     checkInput(list, l -> l.min() >= 0 && l.max() <= 1, "domain must lie within 0..1 domain");
 
     numberId = idNumber.incrementAndGet();
     this.relationType = relation(rel);
-    this.store = store;
+    this.store = sum.getStore();
     this.sum = sum;
-    x = filterAndOverflow(list); // Arrays.copyOf(list, list.length);
+    x = filterAndOverflow(list);
     this.l = x.length;
 
     if (l <= 2) {
@@ -115,29 +111,6 @@ public class SumBool extends PrimitiveConstraint {
     }
 
     setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
-  }
-
-  /*
-   * It constructs the constraint SumBool.
-   *
-   * @param store     current store
-   * @param variables variables which are being multiplied by weights.
-   * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum       variable containing the sum of weighted variables.
-   * @deprecated SumBool constraint does not use Store parameter any longer.
-   */
-  @Deprecated
-  public SumBool(Store store, List<? extends IntVar> variables, String rel, IntVar sum) {
-    this(store, variables.toArray(new IntVar[0]), rel, sum);
-  }
-
-  /*
-   * @param list variables which are being multiplied by weights.
-   * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum  variable containing the sum of weighted variables.
-   */
-  public SumBool(IntVar[] list, String rel, IntVar sum) {
-    this(sum.getStore(), list, rel, sum);
   }
 
   /*

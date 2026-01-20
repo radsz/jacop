@@ -57,12 +57,6 @@
         </license>
     </licenses>
 
-    <!-- <scm>
-        <connection>scm:svn:http://sourceforge.net/projects/jacop-solver/</connection>
-        <developerConnection>scm:svn:http://sourceforge.net/projects/jacop-solver/</developerConnection>
-        <url>http://sourceforge.net/projects/jacop-solver/</url>
-    </scm> -->
-
     <scm>
         <connection>scm:git:git@github.com:radsz/jacop.git</connection>
         <developerConnection>scm:git:git@github.com:radsz/jacop.git</developerConnection>
@@ -80,7 +74,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
-        <aspectj.version>1.8.10</aspectj.version>
         <scala.version>2.13.18</scala.version>
         <checkstyle.config.location>resources/checkstyle.xml</checkstyle.config.location>
         <dependency.locations.enabled>false</dependency.locations.enabled>

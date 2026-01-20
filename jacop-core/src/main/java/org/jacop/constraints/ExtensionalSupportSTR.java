@@ -146,20 +146,6 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   int firstConsistencyLevel;
 
   /**
-   * Partial constructor which stores variables involved in a constraint but does not get
-   * information about tuples yet. The tuples must set separately.
-   *
-   * @param list the variables in the scope of the constraint.
-   * @param reinsertBefore it specifies if the tuples which were removed and are reinstatiated are
-   *     inserted at the beginning.
-   * @param residuesBefore it specifies if the residue tuples are moved to the beginning.
-   */
-  @Deprecated
-  public ExtensionalSupportSTR(IntVar[] list, boolean reinsertBefore, boolean residuesBefore) {
-    this(list, new int[0][0], reinsertBefore, residuesBefore);
-  }
-
-  /**
    * It constructs an extensional constraint.
    *
    * @param list the variables in the scope of the constraint.

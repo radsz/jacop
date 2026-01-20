@@ -266,17 +266,6 @@ public final class MapClause implements Iterable<Integer> {
     return toIntArray(answer);
   }
 
-  /**
-   * true iff the clause is trivial (contains a literal and its opposite). Now, by construction, a
-   * MapClause cannot be trivial
-   *
-   * @return true iff the clause is trivial
-   */
-  @Deprecated
-  public boolean isTrivial() {
-    return false;
-  }
-
   /** returns a nice representation of the clause */
   @Override
   public String toString() {

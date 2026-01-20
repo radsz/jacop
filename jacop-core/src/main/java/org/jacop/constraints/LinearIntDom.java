@@ -66,72 +66,7 @@ public class LinearIntDom extends LinearInt {
   /** Collects support (valid assignments) for variables */
   int[] assignments;
 
-  /**
-   * It constructs the constraint LinearIntDom.
-   *
-   * @param store current store
-   * @param list variables which are being multiplied by weights.
-   * @param weights weight for each variable.
-   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
-   *     "{@literal >=}", "{@literal !=}"
-   * @param sum the sum of weighted variables.
-   * @deprecated LinearIntDom constraint does not use Store parameter any longer.
-   */
-  @Deprecated
-  public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, int sum) {
-    commonInitialization(store, list, weights, rel, sum);
-    numberId = idNumber.incrementAndGet();
-    queueIndex = 4;
-  }
-
-  /**
-   * It constructs the constraint LinearIntDom.
-   *
-   * @param store current store
-   * @param list variables which are being multiplied by weights.
-   * @param weights weight for each variable.
-   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
-   *     "{@literal >=}", "{@literal !=}"
-   * @param sum variable containing the sum of weighted variables.
-   * @deprecated LinearIntDom constraint does not use Store parameter any longer.
-   */
-  @Deprecated
-  public LinearIntDom(Store store, IntVar[] list, int[] weights, String rel, IntVar sum) {
-    commonInitialization(
-        store,
-        Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
-        IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(),
-        rel,
-        0);
-    numberId = idNumber.incrementAndGet();
-    queueIndex = 4;
-  }
-
-  /**
-   * It constructs the constraint LinearIntDom.
-   *
-   * @param store current store
-   * @param variables variables which are being multiplied by weights.
-   * @param weights weight for each variable.
-   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
-   *     "{@literal >=}", "{@literal !=}"
-   * @param sum variable containing the sum of weighted variables.
-   * @deprecated LinearIntDom constraint does not use Store parameter any longer.
-   */
-  @Deprecated
-  public LinearIntDom(
-      Store store, List<? extends IntVar> variables, List<Integer> weights, String rel, int sum) {
-    commonInitialization(
-        store,
-        variables.toArray(new IntVar[0]),
-        weights.stream().mapToInt(i -> i).toArray(),
-        rel,
-        sum);
-    numberId = idNumber.incrementAndGet();
-    queueIndex = 4;
-  }
-
-  // ================ new constructors ===================
+  // ================ constructors ===================
 
   /**
    * It constructs the constraint LinearIntDom.
