@@ -212,7 +212,6 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
 
     if (variable == c) {
       cHasChanged = true;
-      return;
     }
   }
 }

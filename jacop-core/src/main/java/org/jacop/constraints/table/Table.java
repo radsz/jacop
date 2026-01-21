@@ -106,7 +106,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
    */
   public Table(IntVar[] list, int[][] tuples, boolean reuseTuplesArgument) {
 
-    checkInputForNullness(new String[] {"list", "tuples"}, new Object[][] {list, tuples});
+    checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
     checkInputForDuplication("list", list);
     checkInput(
         tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");

@@ -80,7 +80,7 @@ public class Wilkinson {
     FloatVar[] temp = new FloatVar[20];
     for (int i = 0; i < 20; i++) {
       temp[i] = new FloatVar(store, "temp[" + i + "]", MIN_FLOAT, MAX_FLOAT);
-      FloatVar c = new FloatVar(store, (double) (i + 1), (double) (i + 1));
+      FloatVar c = new FloatVar(store, i + 1, i + 1);
       store.impose(new PplusQeqR(x, c, temp[i]));
     }
 

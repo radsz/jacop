@@ -211,7 +211,7 @@ public final class IntHashMap<E> {
 
   public boolean containsKey(Object arg0) {
     if (Integer.class.isInstance(arg0)) {
-      return containsKey((Integer) arg0);
+      return containsKey(arg0);
     }
     return false;
   }

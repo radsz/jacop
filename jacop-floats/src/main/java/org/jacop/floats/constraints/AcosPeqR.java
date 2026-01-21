@@ -55,10 +55,6 @@ public class AcosPeqR extends CosPeqR {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : AcosPeqR(").append(q).append(", ").append(p).append(" )");
-
-    return result.toString();
+    return id() + " : AcosPeqR(" + q + ", " + p + " )";
   }
 }

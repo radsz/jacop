@@ -54,7 +54,6 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
 
   @Override
   public Object clone() {
-
     MutableDomainValue val = new MutableDomainValue(domain.clone());
     val.stamp = stamp;
     val.previousMutableDomainVariableValue = previousMutableDomainVariableValue;

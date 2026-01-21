@@ -693,7 +693,6 @@ public class Store {
                     r -> {
                       if (r.isReplaceable(c)) {
                         r.replace(c).imposeDecomposition(this);
-                        return;
                       }
                     }));
     c.impose(this);
@@ -1173,7 +1172,7 @@ public class Store {
     for (MutableVar var : mutableVariables) {
       result
           .append("MutableVar[")
-          .append((int) i++)
+          .append(i++)
           .append("] ")
           .append("(")
           .append(var.value().stamp())
@@ -1296,7 +1295,7 @@ public class Store {
     for (MutableVar var : mutableVariables) {
       result
           .append("MutableVar[")
-          .append((int) i++)
+          .append(i++)
           .append("] ")
           .append("(")
           .append(var.value().stamp())

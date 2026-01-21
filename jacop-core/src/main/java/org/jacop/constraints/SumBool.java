@@ -330,19 +330,13 @@ public class SumBool extends PrimitiveConstraint {
 
   public byte relation(String r) {
     switch (r) {
-      case "==" -> {
-        return eq;
-      }
-      case "=" -> {
+      case "==", "=" -> {
         return eq;
       }
       case "<" -> {
         return lt;
       }
-      case "<=" -> {
-        return le;
-      }
-      case "=<" -> {
+      case "<=", "=<" -> {
         return le;
       }
       case "!=" -> {
@@ -351,10 +345,7 @@ public class SumBool extends PrimitiveConstraint {
       case ">" -> {
         return gt;
       }
-      case ">=" -> {
-        return ge;
-      }
-      case "=>" -> {
+      case ">=", "=>" -> {
         return ge;
       }
       default -> {

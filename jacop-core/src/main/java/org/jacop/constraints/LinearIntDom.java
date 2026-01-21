@@ -174,7 +174,7 @@ public class LinearIntDom extends LinearInt {
 
     double s = 1;
     for (int i = 0; i < l; i++) {
-      s *= (double) x[i].domain.getSize();
+      s *= x[i].domain.getSize();
     }
 
     // System.out.println("s = " + s);

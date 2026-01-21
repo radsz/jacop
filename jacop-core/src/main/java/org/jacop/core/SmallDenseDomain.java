@@ -614,7 +614,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       } else {
         var.domainHasChanged(IntDomain.BOUND);
       }
-      return;
 
     } else {
 
@@ -656,10 +655,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
         var.domainHasChanged(IntDomain.BOUND);
-        return;
       }
     }
   }
@@ -726,7 +723,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
           var.domainHasChanged(IntDomain.ANY);
         }
       }
-      return;
 
     } else {
 
@@ -750,7 +746,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
 
         if (previousMin != result.min || previousMax != result.max) {
@@ -758,7 +753,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         } else {
           var.domainHasChanged(IntDomain.ANY);
         }
-        return;
       }
     }
   }
@@ -805,7 +799,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       for (; i < input.size; i++) {
         if (input.intervals[i].max() < this.min) {
-          continue;
         } else {
           break;
         }
@@ -939,7 +932,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
           var.domainHasChanged(IntDomain.ANY);
         }
       }
-      return;
 
     } else {
 
@@ -983,15 +975,12 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
         if (boundEvent) {
           var.domainHasChanged(IntDomain.BOUND);
         } else {
           var.domainHasChanged(IntDomain.ANY);
         }
-
-        return;
       }
     }
   }
@@ -1075,7 +1064,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
           var.domainHasChanged(IntDomain.ANY);
         }
       }
-      return;
 
     } else {
 
@@ -1119,15 +1107,12 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
         if (boundEvent) {
           var.domainHasChanged(IntDomain.BOUND);
         } else {
           var.domainHasChanged(IntDomain.ANY);
         }
-
-        return;
       }
     }
   }
@@ -1195,7 +1180,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       for (; i < input.size; i++) {
         if (input.intervals[i].max() + shift < this.min) {
-          continue;
         } else {
           break;
         }
@@ -1274,7 +1258,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     for (; i < input.size; i++) {
       if (input.intervals[i].max() + shift < this.min) {
-        continue;
       } else {
         break;
       }
@@ -1723,7 +1706,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       if (sequence8 == 0) {
         temp = temp << 8;
         shift += 8;
-        continue;
       } else {
         for (int i = 7; i >= 0; i--) {
           if (temp < 0) {
@@ -1792,7 +1774,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       if (sequence8 == 0) {
         temp = temp >>> 8;
         shift += 8;
-        continue;
       } else {
         for (int i = 7; i >= 0; i--) {
           if ((temp & 0x1) != 0) {
@@ -1824,9 +1805,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     IntDomain previous = this.previousDomain;
     while (previous.stamp > storeLevel) {
       if (previous.domainID() == SmallDenseDomainID) {
-        previous = ((SmallDenseDomain) previous).previousDomain;
+        previous = previous.previousDomain;
       } else if (previous.domainID() == IntervalDomainID) {
-        previous = ((IntervalDomain) previous).previousDomain;
+        previous = previous.previousDomain;
       }
     }
 
@@ -1893,8 +1874,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         }
       }
 
-      return;
-
     } else {
 
       this.clear();
@@ -1904,8 +1883,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       while (enumer.hasMoreElements()) {
         this.unionAdapt(enumer.nextElement());
       }
-
-      return;
     }
   }
 

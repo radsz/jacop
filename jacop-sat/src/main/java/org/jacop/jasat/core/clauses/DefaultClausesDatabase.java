@@ -133,7 +133,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
        */
       if (myWatch == myValue) {
         newWatchList[newWatchNum++] = clauseIndex;
-        continue IterateOnWatchedClauses;
+        continue;
       }
 
       // get the other watch and its value, and perform some checks
@@ -152,7 +152,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       if (otherValue == otherWatch) {
         // keep the watch
         newWatchList[newWatchNum++] = clauseIndex;
-        continue IterateOnWatchedClauses;
+        continue;
       }
 
       /*
@@ -235,7 +235,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             assert new MapClause(clause).isUnitIn(trail);
             assert new MapClause(clause).isUnitIn(clause[watch1pos], trail);
             core.triggerPropagateEvent(clause[watch1pos], uniqueClauseId);
-            continue IterateOnWatchedClauses;
+            continue;
           case 2:
             /*
              * case b4)  two new watches have been found. Forget about
@@ -250,7 +250,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
             addWatch(clause[1], clauseIndex);
             assert trail.values[Math.abs(clause[0])] == 0;
             assert trail.values[Math.abs(clause[1])] == 0;
-            continue IterateOnWatchedClauses;
+            continue;
           default:
             throw new AssertionError("wrong case!");
         }

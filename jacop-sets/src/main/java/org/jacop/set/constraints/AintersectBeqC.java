@@ -211,7 +211,6 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
 
     if (variable == c) {
       cHasChanged = true;
-      return;
     }
   }
 }

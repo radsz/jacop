@@ -83,7 +83,7 @@ public class CeilPeqX extends Constraint implements SatisfiedPresent {
 
     do {
       // ceil(p) = x, n - 1 < x <= n
-      p.domain.in(store.level, p, Math.nextUp((double) x.min() - 1), (double) (x.max()));
+      p.domain.in(store.level, p, Math.nextUp((double) x.min() - 1), x.max());
 
       store.propagationHasOccurred = false;
 

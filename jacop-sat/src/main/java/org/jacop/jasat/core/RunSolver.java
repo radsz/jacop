@@ -166,7 +166,6 @@ public final class RunSolver {
                 core.currentState = SolverState.UNKNOWN;
                 core.printSolution();
               }
-              return;
             });
     handler.setDaemon(true);
     Runtime.getRuntime().addShutdownHook(handler);

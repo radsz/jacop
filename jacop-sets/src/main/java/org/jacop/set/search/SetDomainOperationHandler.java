@@ -56,7 +56,7 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
     if (!(var instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
-    SetDomain setDomain = (SetDomain) setVar.dom();
+    SetDomain setDomain = setVar.dom();
     if (leftBranch) {
       // Left branch: add element to GLB (Greatest Lower Bound)
       setDomain.inGLB(store.level, setVar, value);
@@ -71,7 +71,7 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
     if (!(var instanceof SetVar setVar)) {
       throw new IllegalArgumentException("SetDomainOperationHandler can only handle SetVar");
     }
-    SetDomain setDomain = (SetDomain) setVar.dom();
+    SetDomain setDomain = setVar.dom();
     if (leftBranch) {
       // Left branch: remove from GLB (add to LUB complement)
       setDomain.inLUBComplement(store.level, setVar, value);

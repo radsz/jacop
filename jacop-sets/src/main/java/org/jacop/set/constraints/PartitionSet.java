@@ -228,10 +228,7 @@ public class PartitionSet extends Constraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer();
-    result.append(id()).append(" : PartitionSet(");
-    result.append(Arrays.asList(s)).append(", ").append(u);
-    result.append(")");
-    return result.toString();
+    String result = id() + " : PartitionSet(" + Arrays.asList(s) + ", " + u + ")";
+    return result;
   }
 }

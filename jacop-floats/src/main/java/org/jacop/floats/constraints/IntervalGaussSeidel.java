@@ -72,7 +72,7 @@ public class IntervalGaussSeidel {
     double vMin = Math.abs(v.min());
     double vMax = Math.abs(v.max());
 
-    return vMax < vMin ? vMax : vMin;
+    return Math.min(vMax, vMin);
   }
 
   double maxAbs(FloatInterval v) {
@@ -80,7 +80,7 @@ public class IntervalGaussSeidel {
     double vMin = Math.abs(v.min());
     double vMax = Math.abs(v.max());
 
-    return vMax > vMin ? vMax : vMin;
+    return Math.max(vMax, vMin);
   }
 
   public boolean restructure(int currentRow, boolean[] done, int[] row) {
@@ -130,9 +130,7 @@ public class IntervalGaussSeidel {
     int N = 0;
     FloatInterval[] x = new FloatInterval[b.length];
     FloatInterval[] previousX = new FloatInterval[x.length];
-    for (int i = 0; i < x.length; i++) {
-      x[i] = new FloatInterval(0.0, 0.0);
-    }
+    Arrays.fill(x, new FloatInterval(0.0, 0.0));
 
     boolean[] d = new boolean[A.length];
     Arrays.fill(d, false);

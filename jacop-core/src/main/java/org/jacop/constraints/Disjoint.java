@@ -149,7 +149,10 @@ public class Disjoint extends Diff {
 
     checkInputForNullness(
         new String[] {"origin1", "origin2", "length1", "length2"},
-        new Object[][] {origin1, origin2, length1, length2});
+        origin1,
+        origin2,
+        length1,
+        length2);
 
     queueIndex = 2;
     this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
@@ -379,7 +382,7 @@ public class Disjoint extends Diff {
             if (sOriginMin[i] <= r_min[i]) {
               if (sOriginMax[i] <= r_max[i]) {
                 int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
-                sLengthMin[i] = distance1 > 0 ? distance1 : 0;
+                sLengthMin[i] = Math.max(distance1, 0);
               } else {
                 // sOriginMax[i] > r_max[i])
                 int rmax = r.origin[i].max() + r.length[i].min();
@@ -393,7 +396,7 @@ public class Disjoint extends Diff {
                   distance2 = rmax - r_min[i];
                 }
                 if (distance1 < distance2) {
-                  sLengthMin[i] = distance1 > 0 ? distance1 : 0;
+                  sLengthMin[i] = Math.max(distance1, 0);
                 } else if (distance2 > 0) {
                   if (distance2 < sLengthMin[i]) {
                     sLengthMin[i] = distance2;

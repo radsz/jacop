@@ -33,7 +33,6 @@ package org.jacop.constraints.cumulative;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -141,11 +140,6 @@ public class CumulativeOptional extends Cumulative {
     TaskView[] t = new TaskView[k];
     System.arraycopy(nonZeroTasks, 0, t, 0, k);
     return t;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

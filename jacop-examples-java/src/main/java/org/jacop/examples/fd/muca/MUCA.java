@@ -56,6 +56,8 @@ import org.jacop.search.MaxRegret;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * It solves the Mixed Multi-Unit Combinatorial Auctions.
@@ -70,6 +72,8 @@ import org.jacop.search.SimpleSelect;
  * @version 4.10
  */
 public class MUCA extends ExampleFD {
+
+  private static final Logger log = LoggerFactory.getLogger(MUCA.class);
 
   /** It specifies the minimal value for the cost. */
   public final int minCost = -100000;
@@ -1277,14 +1281,13 @@ public class MUCA extends ExampleFD {
       }
 
     } catch (FileNotFoundException ex) {
-      System.err.println(
-          "You need to run this program in a directory that contains the required file.");
-      System.err.println(ex);
+      log.error("You need to run this program in a directory that contains the required file.", ex);
       throw new RuntimeException(
-          "You need to run this program in a directory that contains the required file : "
+          "You need to run this program in a directory that contains the "
+              + "required file : "
               + filename);
     } catch (IOException ex) {
-      System.err.println(ex);
+      log.error("Exception occurred", ex);
     } finally {
       if (br != null) {
         try {

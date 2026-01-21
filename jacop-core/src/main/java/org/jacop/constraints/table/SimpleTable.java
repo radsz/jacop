@@ -110,7 +110,7 @@ public class SimpleTable extends Constraint
    */
   public SimpleTable(IntVar[] list, int[][] tuples, boolean reuseTupleArguments) {
 
-    checkInputForNullness(new String[] {"list", "tuples"}, new Object[][] {list, tuples});
+    checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
     checkInput(
         tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
 

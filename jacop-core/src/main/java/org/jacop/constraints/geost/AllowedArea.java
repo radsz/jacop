@@ -213,12 +213,9 @@ public class AllowedArea extends InternalConstraint {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
+    String result = "AllowedArea(" + Arrays.toString(origin) + ", " + Arrays.toString(length) + ")";
 
-    result.append("AllowedArea(").append(Arrays.toString(origin));
-    result.append(", ").append(Arrays.toString(length)).append(")");
-
-    return result.toString();
+    return result;
   }
 
   @Override

@@ -372,11 +372,7 @@ public class SinPeqR extends Constraint
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : SinPeqR(").append(p).append(", ").append(q).append(" )");
-
-    return result.toString();
+    return id() + " : SinPeqR(" + p + ", " + q + " )";
   }
 
   public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {

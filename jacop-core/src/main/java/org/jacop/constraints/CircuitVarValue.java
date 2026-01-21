@@ -55,7 +55,6 @@ class CircuitVarValue implements MutableVarValue, Cloneable {
 
   @Override
   public Object clone() {
-
     CircuitVarValue val = new CircuitVarValue(next, previous);
     val.stamp = stamp;
     val.nextCircuitVarValue = nextCircuitVarValue;

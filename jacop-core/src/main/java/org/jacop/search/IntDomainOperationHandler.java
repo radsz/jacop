@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -55,7 +54,7 @@ public class IntDomainOperationHandler implements DomainOperationHandler {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
     // For IntVar, leftBranch parameter is ignored - always use inValue
-    ((IntDomain) intVar.dom()).inValue(store.level, intVar, value);
+    intVar.dom().inValue(store.level, intVar, value);
   }
 
   @Override
@@ -64,7 +63,7 @@ public class IntDomainOperationHandler implements DomainOperationHandler {
       throw new IllegalArgumentException("IntDomainOperationHandler can only handle IntVar");
     }
     // For IntVar, leftBranch parameter is ignored - always use inComplement
-    ((IntDomain) intVar.dom()).inComplement(store.level, intVar, value);
+    intVar.dom().inComplement(store.level, intVar, value);
   }
 
   @Override

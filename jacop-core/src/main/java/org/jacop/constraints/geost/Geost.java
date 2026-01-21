@@ -405,10 +405,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     checkInputForDuplicationSkipSingletons(
         "objects",
-        Arrays.stream(objects)
-            .map(obj -> obj.getVariables().stream())
-            .flatMap(i -> i)
-            .toArray(IntVar[]::new));
+        Arrays.stream(objects).flatMap(obj -> obj.getVariables().stream()).toArray(IntVar[]::new));
 
     // This comes from the frame computation for NonOverlapping external constraint.
     assert (IntDomain.MaxInt < Integer.MAX_VALUE / 4 - 1)

@@ -84,8 +84,8 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
     x1.domain.inMax(store.level, x1, maxMax);
     x2.domain.inMax(store.level, x2, maxMax);
 
-    int minValue = x1.min() > x2.min() ? x1.min() : x2.min();
-    int maxValue = x1.max() > x2.max() ? x1.max() : x2.max();
+    int minValue = Math.max(x1.min(), x2.min());
+    int maxValue = Math.max(x1.max(), x2.max());
 
     max.domain.in(store.level, max, minValue, maxValue);
 

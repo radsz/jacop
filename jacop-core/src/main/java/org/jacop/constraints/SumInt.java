@@ -254,8 +254,8 @@ public class SumInt extends PrimitiveConstraint {
 
     for (int i = 0; i < l; i++) {
       IntDomain xd = x[i].dom();
-      min = (long) xd.min();
-      max = (long) xd.max();
+      min = xd.min();
+      max = xd.max();
       f += min;
       e += max;
       I[i] = max - min;
@@ -270,14 +270,14 @@ public class SumInt extends PrimitiveConstraint {
     sum.domain.inMin(store.level, sum, long2int(sumXmin + b));
 
     long min, max;
-    long sMax = (long) sum.max();
+    long sMax = sum.max();
 
     for (int i = 0; i < l; i++) {
       if (I[i] > (sMax - sumXmin - b)) {
-        min = (long) x[i].min();
+        min = x[i].min();
         max = min + I[i];
         if (pruneMax(x[i], sMax - sumXmin + min - b)) {
-          long newMax = (long) x[i].max();
+          long newMax = x[i].max();
           sumXmax -= max - newMax;
           I[i] = newMax - min;
         }
@@ -290,14 +290,14 @@ public class SumInt extends PrimitiveConstraint {
     sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
 
     long min, max;
-    long sMin = (long) sum.min();
+    long sMin = sum.min();
 
     for (int i = 0; i < l; i++) {
       if (I[i] > -(sMin - sumXmax + b)) {
-        max = (long) x[i].max();
+        max = x[i].max();
         min = max - I[i];
         if (pruneMin(x[i], sMin - sumXmax + max + b)) {
-          long newMin = (long) x[i].min();
+          long newMin = x[i].min();
           sumXmin += newMin - min;
           I[i] = max - newMin;
         }
@@ -315,12 +315,12 @@ public class SumInt extends PrimitiveConstraint {
     long min, max;
 
     for (int i = 0; i < l; i++) {
-      min = (long) x[i].min();
+      min = x[i].min();
       max = min + I[i];
 
       if (pruneNe(x[i], (long) sum.min() - sumXmax + max, sum.max() - sumXmin + min)) {
-        long newMin = (long) x[i].min();
-        long newMax = (long) x[i].max();
+        long newMin = x[i].min();
+        long newMax = x[i].max();
         sumXmin += newMin - min;
         sumXmax += newMax - max;
         I[i] = newMax - newMin;
@@ -364,8 +364,8 @@ public class SumInt extends PrimitiveConstraint {
     long sMin = 0, sMax = 0;
 
     for (int i = 0; i < l; i++) {
-      sMin += (long) x[i].min();
-      sMax += (long) x[i].max();
+      sMin += x[i].min();
+      sMax += x[i].max();
     }
 
     return sMax <= (long) sum.min()
@@ -377,8 +377,8 @@ public class SumInt extends PrimitiveConstraint {
     long sMax = 0, sMin = 0;
 
     for (int i = 0; i < l; i++) {
-      sMin += (long) x[i].min();
-      sMax += (long) x[i].max();
+      sMin += x[i].min();
+      sMax += x[i].max();
     }
 
     return sMin > (long) sum.max() || sMax < (long) sum.min();
@@ -389,7 +389,7 @@ public class SumInt extends PrimitiveConstraint {
     long sMax = 0;
 
     for (int i = 0; i < l; i++) {
-      sMax += (long) x[i].max();
+      sMax += x[i].max();
     }
 
     return sMax <= (long) sum.min() - b;
@@ -400,7 +400,7 @@ public class SumInt extends PrimitiveConstraint {
     long sMin = 0;
 
     for (int i = 0; i < l; i++) {
-      sMin += (long) x[i].min();
+      sMin += x[i].min();
     }
 
     return sMin >= (long) sum.max() + b;
@@ -433,19 +433,13 @@ public class SumInt extends PrimitiveConstraint {
 
   public byte relation(String r) {
     switch (r) {
-      case "==" -> {
-        return eq;
-      }
-      case "=" -> {
+      case "==", "=" -> {
         return eq;
       }
       case "<" -> {
         return lt;
       }
-      case "<=" -> {
-        return le;
-      }
-      case "=<" -> {
+      case "<=", "=<" -> {
         return le;
       }
       case "!=" -> {
@@ -454,10 +448,7 @@ public class SumInt extends PrimitiveConstraint {
       case ">" -> {
         return gt;
       }
-      case ">=" -> {
-        return ge;
-      }
-      case "=>" -> {
+      case ">=", "=>" -> {
         return ge;
       }
       default -> {

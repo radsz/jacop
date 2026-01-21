@@ -297,17 +297,18 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
+    String result =
+        id()
+            + " : CountValuesBounds("
+            + Arrays.asList(list)
+            + ", "
+            + Arrays.toString(lb)
+            + ", "
+            + Arrays.toString(ub)
+            + ", "
+            + Arrays.toString(values);
 
-    result.append(" : CountValuesBounds(").append(Arrays.asList(list)).append(", ");
-    result
-        .append(Arrays.toString(lb))
-        .append(", ")
-        .append(Arrays.toString(ub))
-        .append(", ")
-        .append(Arrays.toString(values));
-
-    return result.toString();
+    return result;
   }
 
   private static class Bounds {
@@ -328,17 +329,9 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
       if (min > ub || max < lb) {
         throw Store.failException;
       } else {
-        if (min > lb) {
-          this.min = min;
-        } else {
-          this.min = lb;
-        }
+        this.min = Math.max(min, lb);
 
-        if (max < ub) {
-          this.max = max;
-        } else {
-          this.max = ub;
-        }
+        this.max = Math.min(max, ub);
       }
     }
 
@@ -357,18 +350,8 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
     @Override
     public String toString() {
 
-      StringBuilder result = new StringBuilder();
-
-      result
-          .append(min)
-          .append("(")
-          .append(lb)
-          .append(")..")
-          .append(max)
-          .append("(")
-          .append(ub)
-          .append(")");
-      return result.toString();
+      String result = min + "(" + lb + ").." + max + "(" + ub + ")";
+      return result;
     }
   }
 }

@@ -203,7 +203,6 @@ public class ChannelReif extends Constraint implements SatisfiedPresent {
           item[i].b.domain.inValue(store.level, item[i].b, 0);
         }
       }
-      return;
     }
   }
 

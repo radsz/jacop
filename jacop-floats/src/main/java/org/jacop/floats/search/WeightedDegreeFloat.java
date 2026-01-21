@@ -32,7 +32,6 @@ package org.jacop.floats.search;
 
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 
 /**
@@ -54,22 +53,22 @@ public class WeightedDegreeFloat<T extends Var> implements ComparatorVariable<T>
 
   public int compare(double left, T var) {
 
-    double right = ((double) var.weight) / ((FloatVar) var).getSizeFloat();
+    double right = ((double) var.weight) / var.getSizeFloat();
 
     return Double.compare(left, right);
   }
 
   public int compare(T leftVar, T rightVar) {
 
-    double left = ((double) leftVar.weight) / ((FloatVar) leftVar).getSizeFloat();
+    double left = ((double) leftVar.weight) / leftVar.getSizeFloat();
 
-    double right = ((double) rightVar.weight) / ((FloatVar) rightVar).getSizeFloat();
+    double right = ((double) rightVar.weight) / rightVar.getSizeFloat();
 
     return Double.compare(left, right);
   }
 
   public double metric(T var) {
 
-    return var.weight / ((FloatVar) var).getSizeFloat();
+    return var.weight / var.getSizeFloat();
   }
 }

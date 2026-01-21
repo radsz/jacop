@@ -757,7 +757,7 @@ public abstract class SetDomain extends Domain {
   @Override
   public String toStringConstraints() {
 
-    StringBuilder S = new StringBuilder("");
+    StringBuilder S = new StringBuilder();
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       S.append(e.next().id());

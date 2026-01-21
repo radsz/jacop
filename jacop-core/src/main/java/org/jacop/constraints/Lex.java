@@ -146,7 +146,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     for (int i = 0; i < x.length - 1; i++) {
 
-      int sizeToCompare = x[i].length < x[i + 1].length ? x[i].length : x[i + 1].length;
+      int sizeToCompare = Math.min(x[i].length, x[i + 1].length);
 
       lt[i] = new BooleanVar[sizeToCompare];
       eq[i] = new BooleanVar[sizeToCompare];
@@ -278,7 +278,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
     for (int i = 0; i < x.length - 1; i++) {
 
-      int sizeToCompare = x[i].length < x[i + 1].length ? x[i].length : x[i + 1].length;
+      int sizeToCompare = Math.min(x[i].length, x[i + 1].length);
 
       lt[i] = new BooleanVar[sizeToCompare];
       eq[i] = new BooleanVar[sizeToCompare - 1];
@@ -413,7 +413,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
-    int sizeToCompare = x[0].length < x[1].length ? x[0].length : x[1].length;
+    int sizeToCompare = Math.min(x[0].length, x[1].length);
 
     BooleanVar[] b = new BooleanVar[sizeToCompare + 1];
     for (int i = 0; i < b.length; i++) {
@@ -449,7 +449,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
-    int sizeToCompare = x[0].length < x[1].length ? x[0].length : x[1].length;
+    int sizeToCompare = Math.min(x[0].length, x[1].length);
 
     BooleanVar[] b = new BooleanVar[sizeToCompare];
     for (int i = 0; i < b.length; i++) {

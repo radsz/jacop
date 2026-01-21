@@ -44,7 +44,7 @@ public class LinearCalculator extends Calculator {
   public LinearCalculator(int scale) {
     n = 1;
     failLimit = scale;
-    increment = (long) scale;
+    increment = scale;
   }
 
   public void newLimit() {

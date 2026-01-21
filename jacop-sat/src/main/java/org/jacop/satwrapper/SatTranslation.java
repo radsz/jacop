@@ -177,15 +177,12 @@ public class SatTranslation {
 
     if (a.length == 3) {
       generate_xor(a[0], a[1], a[2], c);
-      return;
     } else if (a.length == 2) {
       generate_xor(a[0], a[1], c);
-      return;
     } else if (a.length == 1) {
       // this case should not normally happen;
       // the only case if the user specified this case
       generate_eq(a[0], c);
-      return;
     } else { // must be a.length > 3
       IntVar[] as = new IntVar[a.length - 2];
       BooleanVar t = new BooleanVar(store);

@@ -299,16 +299,15 @@ public class CountValues extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
+    String result =
+        id()
+            + " : CountValues("
+            + Arrays.asList(list)
+            + ", "
+            + Arrays.asList(counter)
+            + ", "
+            + Arrays.toString(values);
 
-    result
-        .append(" : CountValues(")
-        .append(Arrays.asList(list))
-        .append(", ")
-        .append(Arrays.asList(counter))
-        .append(", ")
-        .append(Arrays.toString(values));
-
-    return result.toString();
+    return result;
   }
 }

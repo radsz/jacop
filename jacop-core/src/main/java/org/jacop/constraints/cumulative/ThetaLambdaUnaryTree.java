@@ -106,7 +106,6 @@ class ThetaLambdaUnaryTree extends ThetaTree {
   void computeNodeVals(int i) {
 
     if (notExist(left(i)) || notExist(right(i))) {
-      return;
     } else {
 
       ThetaLambdaUnaryNode node = tree[i];
@@ -235,27 +234,6 @@ class ThetaLambdaUnaryTree extends ThetaTree {
     result.append("}");
 
     return result.toString();
-  }
-
-  StringBuffer treeToGraph(int i) {
-
-    StringBuffer result = new StringBuffer("");
-
-    if (notExist(i)) {
-      return result;
-    } else {
-      String s = "node_" + i + " -> "; // "[label = \""+ tree[i] +"\"] -> ";
-      if (exist(left(i))) {
-        result.append(s).append("node_").append(left(i)).append("\n");
-        result.append(treeToGraph(left(i)));
-      }
-      if (exist(right(i))) {
-        result.append(s).append("node_").append(right(i)).append("\n");
-        result.append(treeToGraph(right(i)));
-      }
-
-      return result;
-    }
   }
 
   public String toString() {

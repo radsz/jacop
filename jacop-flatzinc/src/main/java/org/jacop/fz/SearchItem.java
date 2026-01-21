@@ -434,7 +434,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       }
     }
     IntVar[] searchVars;
-    if (sv.size() == 0) {
+    if (sv.isEmpty()) {
       searchVars = new IntVar[1];
       searchVars[0] = dictionary.getConstant(0); // needed for SimpleSelect to not fail
     } else {
@@ -1111,7 +1111,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
     if (search_type == null) {
       s.append("defult_search\n");
-    } else if (search_seq.size() == 0) {
+    } else if (search_seq.isEmpty()) {
       s.append(search_type).append("(");
       if (search_variables == null) {
         s.append("[]");
@@ -1170,7 +1170,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     return s.toString();
   }
 
-  public class ComparatorsVar<T extends Var> {
+  public static class ComparatorsVar<T extends Var> {
     ComparatorVariable<T> v1;
     ComparatorVariable<T> v2;
 

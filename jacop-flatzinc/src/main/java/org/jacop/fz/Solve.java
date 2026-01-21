@@ -321,7 +321,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     for (SearchItem<T> s : search_seq) {
       if ("restart_none".equals(s.search_type)) {
-        continue;
       } else if ("restart_constant".equals(s.search_type)
           || "restart_linear".equals(s.search_type)
           || "restart_geometric".equals(s.search_type)
@@ -1846,8 +1845,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // ComparatorVariable<IntVar> comparator = si.getVarSelect();
     // ComparatorVariable<IntVar> tieBreak = (ComparatorVariable<IntVar>)si.tieBreaking;
-    SearchItem<IntVar>.ComparatorsVar<IntVar> vs =
-        (SearchItem<IntVar>.ComparatorsVar<IntVar>) si.getVarSelect();
+    SearchItem.ComparatorsVar<IntVar> vs = (SearchItem.ComparatorsVar<IntVar>) si.getVarSelect();
     ComparatorVariable<IntVar> comparator = vs.v1;
     ComparatorVariable<IntVar> tieBreak = vs.v2;
 
@@ -1873,7 +1871,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if (options.getNumberSolutions() > 0) {
-      ((PrioritySearch<?>) label).setSolutionLimit(options.getNumberSolutions());
+      label.setSolutionLimit(options.getNumberSolutions());
     }
 
     return label;

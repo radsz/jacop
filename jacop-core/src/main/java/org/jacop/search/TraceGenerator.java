@@ -628,7 +628,7 @@ public class TraceGenerator<T extends Var>
     int min = IntDomain.MaxInt;
     if (vars.getFirst() instanceof IntVar) {
       for (Var v : vars) {
-        min = min < ((IntVar) v).min() ? min : ((IntVar) v).min();
+        min = Math.min(min, ((IntVar) v).min());
       }
     }
 
@@ -639,7 +639,7 @@ public class TraceGenerator<T extends Var>
     int max = IntDomain.MinInt;
     if (vars.getFirst() instanceof IntVar) {
       for (Var v : vars) {
-        max = max > ((IntVar) v).max() ? max : ((IntVar) v).max();
+        max = Math.max(max, ((IntVar) v).max());
       }
     }
 
@@ -707,7 +707,7 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", "name", "CDATA", name);
       atts.addAttribute("", "", "size", "CDATA", "" + size);
       if (dom instanceof IntDomain domain) {
-        atts.addAttribute("", "", "choice", "CDATA", "" + intDomainToString(domain));
+        atts.addAttribute("", "", "choice", "CDATA", intDomainToString(domain));
       } else {
         // Handle SetDomain using reflection to avoid import
         try {
@@ -845,7 +845,7 @@ public class TraceGenerator<T extends Var>
         if (varIndex.get(selectedVar) != null) {
           AttributesImpl vFocus = new AttributesImpl();
           vFocus.addAttribute("", "", "index", "CDATA", "" + (varIndex.get(selectedVar) + 1));
-          vFocus.addAttribute("", "", "group", "CDATA", "" + "default");
+          vFocus.addAttribute("", "", "group", "CDATA", "default");
           if (tryNode) {
             vFocus.addAttribute("", "", "type", "CDATA", "");
             hdVis.startElement("", "", "focus", vFocus);
@@ -924,7 +924,7 @@ public class TraceGenerator<T extends Var>
   // TODO, what happens if DepthFirstSearch first evaluates x != v branch before evaluating x = v
   // branch?
 
-  class SearchNode {
+  static class SearchNode {
 
     Var v;
     Domain dom;

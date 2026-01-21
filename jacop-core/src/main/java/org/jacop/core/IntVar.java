@@ -260,7 +260,7 @@ public class IntVar extends Var {
    * @return the size of the variables domain.
    */
   public double getSizeFloat() {
-    return (double) getSize();
+    return getSize();
   }
 
   /**

@@ -109,7 +109,6 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
       if (x.min() == 1) {
         return null;
       } else if (x.max() == 0) {
-        continue;
       } else {
         result.add(x);
       }

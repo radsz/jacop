@@ -181,7 +181,6 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
 
     if (variable == b) {
       bHasChanged = true;
-      return;
     }
   }
 }

@@ -141,8 +141,8 @@ public abstract class IntDomain extends Domain {
 
     int aa = multiplyInt(a, a);
     int bb = multiplyInt(b, b);
-    int min = aa < bb ? aa : bb; // Math.min(aa, bb);
-    int max = aa > bb ? aa : bb; // Math.max(aa, bb);
+    int min = Math.min(aa, bb); // Math.min(aa, bb);
+    int max = Math.max(aa, bb); // Math.max(aa, bb);
 
     if (a < 0 && b > 0) {
       min = 0;

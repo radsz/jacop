@@ -162,7 +162,6 @@ public final class IntVec implements Iterable<Integer> {
     numElem--;
     // the last element ? easy !
     if (index == numElem) {
-      return;
     } else {
       array[index] = array[numElem];
     }

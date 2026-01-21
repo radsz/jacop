@@ -300,7 +300,7 @@ class ThetaTree extends Tree {
 
   StringBuffer treeToGraph(int i) {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuffer result = new StringBuffer();
 
     if (notExist(i)) {
       return result;

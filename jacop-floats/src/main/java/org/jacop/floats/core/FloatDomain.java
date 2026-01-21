@@ -166,7 +166,7 @@ public abstract class FloatDomain extends Domain {
 
   public static double epsilon(double f) {
 
-    return precision() < Math.ulp(f) ? Math.ulp(f) : precision();
+    return Math.max(precision(), Math.ulp(f));
   }
 
   // Unit in the last place
@@ -1127,7 +1127,7 @@ public abstract class FloatDomain extends Domain {
 
   @Override
   public void in(int level, Var var, Domain domain) {
-    in(level, (FloatVar) var, (FloatDomain) domain);
+    in(level, var, (FloatDomain) domain);
   }
 
   @Override

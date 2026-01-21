@@ -626,7 +626,7 @@ public class FilterBenchmark {
     int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
     int mulLB = rMul == 0 ? tMul : tMul + 1;
-    int pipeLB = addLB > mulLB ? addLB : mulLB;
+    int pipeLB = Math.max(addLB, mulLB);
     IO.println("Lower bound = " + pipeLB);
 
     List<IntVar> cc = new ArrayList<>();
@@ -727,7 +727,7 @@ public class FilterBenchmark {
     int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
     int mulLB = rMul == 0 ? tMul : tMul + 1;
-    int pipeLB = addLB > mulLB ? addLB : mulLB;
+    int pipeLB = Math.max(addLB, mulLB);
     IO.println("Lower bound = " + pipeLB);
 
     IntVar[] varsTs = new IntVar[Ts.size()];

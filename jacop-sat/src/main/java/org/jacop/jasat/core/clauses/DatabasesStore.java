@@ -244,8 +244,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("DatabaseStore (with ");
-    return sb.append(currentIndex).append(" databases)").toString();
+    return "DatabaseStore (with " + currentIndex + " databases)";
   }
 
   public void initialize(Core core) {

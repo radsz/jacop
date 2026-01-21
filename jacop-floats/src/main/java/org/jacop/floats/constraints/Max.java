@@ -115,8 +115,8 @@ public class Max extends Constraint implements SatisfiedPresent {
         vDom = var.dom();
         double VdomMin = vDom.min(), VdomMax = vDom.max();
 
-        minValue = minValue > VdomMin ? minValue : VdomMin;
-        maxValue = maxValue > VdomMax ? maxValue : VdomMax;
+        minValue = Math.max(minValue, VdomMin);
+        maxValue = Math.max(maxValue, VdomMax);
       }
 
       max.domain.in(store.level, max, minValue, maxValue);

@@ -164,8 +164,8 @@ public class ProfileOptional {
       if (min < max && tResMin > 0) {
         es[j++] = new Event(profile, t, min, tResMin);
         es[j++] = new Event(profile, t, max, -tResMin);
-        minProfile = min < minProfile ? min : minProfile;
-        maxProfile = max > maxProfile ? max : maxProfile;
+        minProfile = Math.min(min, minProfile);
+        maxProfile = Math.max(max, maxProfile);
       }
     }
     if (j == 0) {

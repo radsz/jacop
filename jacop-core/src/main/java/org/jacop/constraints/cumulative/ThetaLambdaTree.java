@@ -106,13 +106,12 @@ class ThetaLambdaTree extends Tree {
     orderedTasks[t].treeIndex = i;
 
     tree[i].e = orderedTasks[t].e();
-    tree[i].env = tree[i].task.env((long) C.max());
+    tree[i].env = tree[i].task.env(C.max());
   }
 
   private void computeNodeVals(int i) {
 
     if (notExist(left(i)) || notExist(right(i))) {
-      return;
     } else {
 
       ThetaLambdaNode node = tree[i];
@@ -154,9 +153,7 @@ class ThetaLambdaTree extends Tree {
   private void computeThetaNode(int i) {
 
     if (notExist(left(i))) {
-      return;
     } else if (notExist(right(i))) {
-      return;
     } else {
 
       ThetaLambdaNode node = tree[i];
@@ -327,7 +324,7 @@ class ThetaLambdaTree extends Tree {
 
   StringBuffer treeToGraph(int i) {
 
-    StringBuffer result = new StringBuffer("");
+    StringBuffer result = new StringBuffer();
 
     if (notExist(i)) {
       return result;

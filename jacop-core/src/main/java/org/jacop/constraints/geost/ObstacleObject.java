@@ -281,23 +281,10 @@ public class ObstacleObject extends ObstacleObjectFrame {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
+    String result =
+        "ObstacleObject(o" + obstacle.no + ", " + Arrays.toString(selectedDimensions) + ")";
 
-    result.append("ObstacleObject(o").append(obstacle.no).append(", ");
-    result.append(Arrays.toString(selectedDimensions)).append(")");
-
-    return result.toString();
-  }
-
-  @Override
-  public boolean isStatic() {
-    // if obstacle object is grounded, frame will not change anymore
-    return obstacle.isGrounded();
-  }
-
-  @Override
-  public boolean isSingleUse() {
-    return false;
+    return result;
   }
 
   @Override

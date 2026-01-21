@@ -123,7 +123,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     this.listOfY = Arrays.copyOf(listOfY, listOfY.length);
     this.n = n;
 
-    setScope(Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
+    setScope(
+        Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
   }
 
   /**

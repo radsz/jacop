@@ -287,24 +287,6 @@ public class BooleanVar extends IntVar {
   }
 
   /**
-   * It returns the size of the current domain.
-   *
-   * @return the size of the variables domain.
-   */
-  public int getSize() {
-    return domain.getSize();
-  }
-
-  /**
-   * It checks if the domain is empty.
-   *
-   * @return true if variable domain is empty.
-   */
-  public boolean isEmpty() {
-    return domain.isEmpty();
-  }
-
-  /**
    * It returns the values which have been removed at current store level. It does _not_ return the
    * recent pruning in between the calls to that function.
    *
@@ -313,29 +295,6 @@ public class BooleanVar extends IntVar {
   public BoundDomain recentDomainPruning() {
 
     return (BoundDomain) domain.recentDomainPruning(store.level);
-  }
-
-  /**
-   * It checks if the domain contains only one value.
-   *
-   * @return true if the variable domain is a singleton, false otherwise.
-   */
-  public boolean singleton() {
-    return domain.singleton();
-  }
-
-  /**
-   * This function returns stamp of the current domain of variable. It is equal or smaller to the
-   * stamp of store. Larger difference indicates that variable has been changed for a longer time.
-   *
-   * @return level for which the most recent changes have been applied to.
-   */
-  public int level() {
-    return domain.stamp;
-  }
-
-  public void remove(int removedLevel) {
-    domain.removeLevel(removedLevel, this);
   }
 
   /**

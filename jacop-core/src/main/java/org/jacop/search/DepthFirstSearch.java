@@ -461,7 +461,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     } else { // consistent
 
       store.setLevel(++depth);
-      maxDepth = depth > maxDepth ? depth : maxDepth;
+      maxDepth = Math.max(depth, maxDepth);
 
       // Delete function indicates which is next variable for
       // labeling
@@ -910,17 +910,28 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         IO.println("No solution found.");
 
-        StringBuilder buf = new StringBuilder();
+        String buf =
+            "Depth First Search "
+                + id
+                + "\n"
+                + "\n"
+                + "Nodes : "
+                + nodes
+                + "\n"
+                + "Decisions : "
+                + decisions
+                + "\n"
+                + "Wrong Decisions : "
+                + wrongDecisions
+                + "\n"
+                + "Backtracks : "
+                + numberBacktracks
+                + "\n"
+                + "Max Depth : "
+                + maxDepthExcludePaths
+                + "\n";
 
-        buf.append("Depth First Search ").append(id).append("\n");
-        buf.append("\n");
-        buf.append("Nodes : ").append(nodes).append("\n");
-        buf.append("Decisions : ").append(decisions).append("\n");
-        buf.append("Wrong Decisions : ").append(wrongDecisions).append("\n");
-        buf.append("Backtracks : ").append(numberBacktracks).append("\n");
-        buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
-
-        IO.println(buf.toString());
+        IO.println(buf);
       }
 
       if (raisedLevel) {
@@ -1016,17 +1027,28 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         IO.println("No solution found.");
 
-        StringBuilder buf = new StringBuilder();
+        String buf =
+            "Depth First Search "
+                + id
+                + "\n"
+                + "\n"
+                + "Nodes : "
+                + nodes
+                + "\n"
+                + "Decisions : "
+                + decisions
+                + "\n"
+                + "Wrong Decisions : "
+                + wrongDecisions
+                + "\n"
+                + "Backtracks : "
+                + numberBacktracks
+                + "\n"
+                + "Max Depth : "
+                + maxDepthExcludePaths
+                + "\n";
 
-        buf.append("Depth First Search ").append(id).append("\n");
-        buf.append("\n");
-        buf.append("Nodes : ").append(nodes).append("\n");
-        buf.append("Decisions : ").append(decisions).append("\n");
-        buf.append("Wrong Decisions : ").append(wrongDecisions).append("\n");
-        buf.append("Backtracks : ").append(numberBacktracks).append("\n");
-        buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
-
-        IO.println(buf.toString());
+        IO.println(buf);
       }
       return false;
     }
@@ -1149,17 +1171,28 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         IO.println("No solution found.");
 
-        StringBuilder buf = new StringBuilder();
+        String buf =
+            "Depth First Search "
+                + id
+                + "\n"
+                + "\n"
+                + "Nodes : "
+                + nodes
+                + "\n"
+                + "Decisions : "
+                + decisions
+                + "\n"
+                + "Wrong Decisions : "
+                + wrongDecisions
+                + "\n"
+                + "Backtracks : "
+                + numberBacktracks
+                + "\n"
+                + "Max Depth : "
+                + maxDepthExcludePaths
+                + "\n";
 
-        buf.append("Depth First Search ").append(id).append("\n");
-        buf.append("\n");
-        buf.append("Nodes : ").append(nodes).append("\n");
-        buf.append("Decisions : ").append(decisions).append("\n");
-        buf.append("Wrong Decisions : ").append(wrongDecisions).append("\n");
-        buf.append("Backtracks : ").append(numberBacktracks).append("\n");
-        buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
-
-        IO.println(buf.toString());
+        IO.println(buf);
       }
       return false;
     }
@@ -1254,13 +1287,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   @Override
   public String toString() {
 
-    StringBuilder buf = new StringBuilder();
+    String buf = id + ": DFS(" + heuristic + ")";
 
-    buf.append(id).append(": DFS(");
-
-    buf.append(heuristic).append(")");
-
-    return buf.toString();
+    return buf;
   }
 
   public String toStringFull() {

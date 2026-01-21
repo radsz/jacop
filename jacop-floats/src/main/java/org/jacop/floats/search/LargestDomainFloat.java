@@ -31,7 +31,6 @@
 package org.jacop.floats.search;
 
 import org.jacop.core.Var;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
 
 /**
@@ -48,19 +47,19 @@ public class LargestDomainFloat<T extends Var> implements ComparatorVariable<T> 
   public LargestDomainFloat() {}
 
   public int compare(double left, T var) {
-    double right = ((FloatVar) var).getSizeFloat();
+    double right = var.getSizeFloat();
 
     return Double.compare(left, right);
   }
 
   public int compare(T leftVar, T rightVar) {
-    double left = ((FloatVar) leftVar).getSizeFloat();
-    double right = ((FloatVar) rightVar).getSizeFloat();
+    double left = leftVar.getSizeFloat();
+    double right = rightVar.getSizeFloat();
 
     return Double.compare(left, right);
   }
 
   public double metric(T var) {
-    return ((FloatVar) var).getSizeFloat();
+    return var.getSizeFloat();
   }
 }

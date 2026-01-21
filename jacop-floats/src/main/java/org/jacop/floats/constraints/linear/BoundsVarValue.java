@@ -62,7 +62,6 @@ class BoundsVarValue implements MutableVarValue, Cloneable {
 
   @Override
   public Object clone() {
-
     BoundsVarValue Val = new BoundsVarValue(min, max, lb, ub);
     Val.stamp = stamp;
     Val.previousBoundsVarValue = previousBoundsVarValue;

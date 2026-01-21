@@ -240,7 +240,7 @@ public class RegularExpressionParser {
   }
 
   /** It creates an abstract class expression which specifies basic methods of the expression. */
-  public abstract class Expression {
+  public abstract static class Expression {
 
     /**
      * @return type
@@ -277,7 +277,7 @@ public class RegularExpressionParser {
 
     @Override
     public String toString() {
-      return "" + a + "." + b;
+      return a + "." + b;
     }
 
     @Override

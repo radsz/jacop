@@ -106,8 +106,8 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
         store.propagationHasOccurred = false;
 
         // Bounds for X
-        int xMin = toInt(Math.round(Math.ceil(Math.sqrt((double) z.min()))));
-        int xMax = toInt(Math.round(Math.floor(Math.sqrt((double) z.max()))));
+        int xMin = toInt(Math.round(Math.ceil(Math.sqrt(z.min()))));
+        int xMax = toInt(Math.round(Math.floor(Math.sqrt(z.max()))));
 
         if (xMin > xMax) {
           throw Store.failException;

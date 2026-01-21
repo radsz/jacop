@@ -953,7 +953,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // |--------------|
         // est lct
         int temp2 = lct - tlst;
-        tDur_min = temp2 < tdur ? temp2 : tdur;
+        tDur_min = Math.min(temp2, tdur);
       } else {
         // tect < lct
         // |---t----|
@@ -969,13 +969,13 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // |--------------|
         // est lct
         int temp1 = tect - est;
-        tDur_min = temp1 < tdur ? temp1 : tdur;
+        tDur_min = Math.min(temp1, tdur);
       } else {
         // tect > lct
         // |--------t---------|
         // |--------------|
         // est lct
-        tDur_min = lct - est < tdur ? lct - est : tdur;
+        tDur_min = Math.min(lct - est, tdur);
       }
     } else {
       // tect <= est

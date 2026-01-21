@@ -238,7 +238,6 @@ public class LexOrder extends Constraint
         if (i == n - 1) {
           return true;
         } else {
-          continue;
         }
       } else {
         return false;

@@ -101,7 +101,10 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
 
     checkInputForNullness(
         new String[] {"origin1", "origin2", "length1", "length2"},
-        new Object[][] {origin1, origin2, length1, length2});
+        origin1,
+        origin2,
+        length1,
+        length2);
 
     int size = origin1.length;
     if (size == origin1.length

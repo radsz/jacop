@@ -375,7 +375,6 @@ public class MDD {
 
       System.arraycopy(diagram, 0, shrankDiagram, 0, freePosition);
       diagram = shrankDiagram;
-      return;
     } else {
       int positionInShrankDiagram = 0;
 
@@ -713,7 +712,7 @@ public class MDD {
   @Override
   public String toString() {
 
-    StringBuilder buffer = new StringBuilder("");
+    StringBuilder buffer = new StringBuilder();
     for (int i = 0; i < diagram.length && i < freePosition; i++) {
       buffer.append(diagram[i]).append(" ");
     }

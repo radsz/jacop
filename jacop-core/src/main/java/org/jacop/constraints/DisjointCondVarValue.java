@@ -55,7 +55,6 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
   @Override
   public Object clone() {
-
     DisjointCondVarValue val = new DisjointCondVarValue(Rects);
     val.stamp = stamp;
     val.previousDisjointCondVarValue = previousDisjointCondVarValue;

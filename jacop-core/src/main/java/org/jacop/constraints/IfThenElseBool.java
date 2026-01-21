@@ -176,10 +176,8 @@ public class IfThenElseBool extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
-    result.append(" : IfThenElseBool(").append(condVar).append(", ");
-    result.append(thenVar).append(", ").append(elseVar).append(" )");
+    String result = id() + " : IfThenElseBool(" + condVar + ", " + thenVar + ", " + elseVar + " )";
 
-    return result.toString();
+    return result;
   }
 }

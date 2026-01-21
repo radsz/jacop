@@ -253,9 +253,7 @@ public class Circuit extends Alldiff implements Stateful {
 
   void sccs(Store store) {
 
-    for (int i = 0; i < val.length; i++) {
-      val[i] = 0;
-    }
+    Arrays.fill(val, 0);
     idd = 0;
 
     sccLength = 0;

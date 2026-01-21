@@ -100,7 +100,6 @@ public class BNode extends BinaryNode {
     } else { // no change in the domain but it was called since the children have been changed;
       // do prune and do not contine to propagate
 
-      return;
     }
   }
 
@@ -158,8 +157,6 @@ public class BNode extends BinaryNode {
       // do prune and do not contine to propagate
 
       prune(node_min, node_max);
-
-      return;
     }
   }
 

@@ -364,8 +364,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
         }
       }
 
-      return;
-
     } else {
 
       assert stamp < storeLevel;
@@ -409,7 +407,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
-        return;
       } else {
 
         if (eventGLB == SetDomain.GLB && eventLUB == SetDomain.LUB) {
@@ -419,7 +416,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
         } else if (eventLUB != Domain.NONE) {
           var.domainHasChanged(SetDomain.LUB);
         }
-        return;
       }
     }
   }
@@ -988,7 +984,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       event = lub.intersectAdapt(intersect);
 
       if (event == Domain.NONE) {
-        return;
       } else {
 
         cardinality.intersectAdapt(glb.getSize(), lub.getSize());
@@ -1121,7 +1116,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       int event = glb.unionAdapt(intersect);
 
       if (event == Domain.NONE) {
-        return;
       } else {
 
         cardinality.intersectAdapt(glb.getSize(), lub.getSize());

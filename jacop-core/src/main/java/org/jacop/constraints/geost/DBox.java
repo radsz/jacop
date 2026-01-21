@@ -660,11 +660,9 @@ public class DBox {
 
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
-    result.append("DBox(").append(Arrays.toString(origin)).append(" ; ");
-    result.append(Arrays.toString(length)).append(")");
+    String result = "DBox(" + Arrays.toString(origin) + " ; " + Arrays.toString(length) + ")";
 
-    return result.toString();
+    return result;
   }
 
   @Override

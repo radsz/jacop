@@ -166,11 +166,7 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
             }
           }
         }
-        if (minLeft < minRight) {
-          c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minLeft);
-        } else {
-          c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, minRight);
-        }
+        c.domain.inCardinality(store.level, c, Integer.MIN_VALUE, Math.min(minLeft, minRight));
 
         int sizeOf_4_5 = a.domain.glb().subtract(b.domain.glb()).getSize();
         minLeft = b.domain.glb().getSize() + Math.max(0, sizeOf_4_5 - c.domain.card().max());
@@ -223,13 +219,10 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
 
     if (variable == a) {
       aHasChanged = true;
-      return;
     } else if (variable == b) {
       bHasChanged = true;
-      return;
     } else if (variable == c) {
       cHasChanged = true;
-      return;
     }
   }
 }

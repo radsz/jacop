@@ -93,7 +93,6 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
       if (imposed) {
         this.removeConstraint();
         store.impose(new Not(condC));
-        return;
       } else {
         condC.notConsistency(store);
       }
@@ -303,11 +302,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : IfThen(").append(condC).append(", ").append(thenC).append(" )\n");
-
-    return result.toString();
+    return id() + " : IfThen(" + condC + ", " + thenC + " )\n";
   }
 
   @Override

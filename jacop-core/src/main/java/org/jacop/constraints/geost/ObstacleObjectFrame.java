@@ -353,7 +353,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
             int end = piece.origin[i] + piece.length[i];
             int endMod = end % 4;
 
-            if (originMod >= 3) {
+            if (originMod == 3) {
               piece.origin[i] = (int) Math.ceil(piece.origin[i] / 4.0);
             } else {
               piece.origin[i] = (int) Math.floor(piece.origin[i] / 4.0);
@@ -704,13 +704,15 @@ public class ObstacleObjectFrame extends InternalConstraint {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
+    String result =
+        "ObstacleObject(o"
+            + obstacle.no
+            + ", "
+            + Arrays.toString(selectedDimensions)
+            + ", "
+            + frame.toString();
 
-    result.append("ObstacleObject(o").append(obstacle.no).append(", ");
-    result.append(Arrays.toString(selectedDimensions)).append(", ");
-    result.append(frame.toString());
-
-    return result.toString();
+    return result;
   }
 
   @Override

@@ -216,8 +216,8 @@ class CumulativePrimary extends Constraint {
       if (min < max) {
         es[j++] = new Event(profile, k, min, res[k]);
         es[j++] = new Event(profile, k, max, -res[k]);
-        minProfile = min < minProfile ? min : minProfile;
-        maxProfile = max > maxProfile ? max : maxProfile;
+        minProfile = Math.min(min, minProfile);
+        maxProfile = Math.max(max, maxProfile);
       }
     }
     if (j == 0) { // no mandatory parts
@@ -382,8 +382,8 @@ class CumulativePrimary extends Constraint {
       if (!start[k].singleton()) {
         int min = start[k].min();
         int max = start[k].max() + dur[k];
-        minPrune = min < minPrune ? min : minPrune;
-        maxPrune = max > maxPrune ? max : maxPrune;
+        minPrune = Math.min(min, minPrune);
+        maxPrune = Math.max(max, maxPrune);
       }
     }
 

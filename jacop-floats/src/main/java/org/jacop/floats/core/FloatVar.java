@@ -434,9 +434,7 @@ public class FloatVar extends Var {
    */
   public String toStringFull() {
 
-    StringBuilder result = new StringBuilder(id);
-    result.append(domain.toStringFull());
-    return result.toString();
+    return id + domain.toStringFull();
   }
 
   public void remove(int removedLevel) {

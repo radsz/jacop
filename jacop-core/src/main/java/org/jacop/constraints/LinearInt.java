@@ -656,15 +656,15 @@ public class LinearInt extends PrimitiveConstraint {
     long sMax = 0;
     int i = 0;
     for (; i < pos; i++) {
-      long n1 = Math.multiplyExact((long) x[i].min(), a[i]);
-      long n2 = Math.multiplyExact((long) x[i].max(), a[i]);
+      long n1 = Math.multiplyExact(x[i].min(), a[i]);
+      long n2 = Math.multiplyExact(x[i].max(), a[i]);
 
       sMin = Math.addExact(sMin, n1);
       sMax = Math.addExact(sMax, n2);
     }
     for (; i < l; i++) {
-      long n1 = Math.multiplyExact((long) x[i].max(), a[i]);
-      long n2 = Math.multiplyExact((long) x[i].min(), a[i]);
+      long n1 = Math.multiplyExact(x[i].max(), a[i]);
+      long n2 = Math.multiplyExact(x[i].min(), a[i]);
 
       sMin = Math.addExact(sMin, n1);
       sMax = Math.addExact(sMax, n2);

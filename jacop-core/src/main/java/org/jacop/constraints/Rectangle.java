@@ -189,8 +189,7 @@ public class Rectangle {
 
   public static Stream<Var> getStream(Rectangle[] scope) {
     return Arrays.stream(scope)
-        .map(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)))
-        .flatMap(i -> i);
+        .flatMap(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)));
   }
 
   int dim() {

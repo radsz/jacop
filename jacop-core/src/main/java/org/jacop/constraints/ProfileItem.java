@@ -130,7 +130,7 @@ public class ProfileItem {
               type == Profile.cumul
                   ? v = a.value + value // cumulative
                   // is sum
-                  : (a.value > value ? a.value : value); // diff2
+                  : (Math.max(a.value, value)); // diff2
           // is
           // max
           overlap.set(min, a.max, v);
@@ -142,7 +142,7 @@ public class ProfileItem {
             type == Profile.cumul
                 ? v = a.value + value // cumulative is
                 // sum
-                : (a.value > value ? a.value : value); // diff2 is
+                : (Math.max(a.value, value)); // diff2 is
         // max
         overlap.set(min, max, v);
         if (max != a.max) {
@@ -157,7 +157,7 @@ public class ProfileItem {
               type == Profile.cumul
                   ? v = a.value + value // cumulative
                   // is sum
-                  : (a.value > value ? a.value : value); // diff2
+                  : (Math.max(a.value, value)); // diff2
           // is
           // max
           overlap.set(min, max, v);
@@ -170,7 +170,7 @@ public class ProfileItem {
                       ? v = a.value + value // cumulative
                       // is
                       // sum
-                      : (a.value > value ? a.value : value); // diff2
+                      : (Math.max(a.value, value)); // diff2
               // is
               // max
               overlap.set(min, a.max, v);
@@ -183,7 +183,7 @@ public class ProfileItem {
                     ? v = a.value + value // cumulative
                     // is
                     // sum
-                    : (a.value > value ? a.value : value); // diff2
+                    : (Math.max(a.value, value)); // diff2
             // is
             // max
             overlap.set(min, max, v);
@@ -200,7 +200,7 @@ public class ProfileItem {
               type == Profile.cumul
                   ? v = a.value + value // cumulative
                   // is sum
-                  : (a.value > value ? a.value : value); // diff2
+                  : (Math.max(a.value, value)); // diff2
           // is
           // max
           overlap.set(a.min, a.max, v);
@@ -212,7 +212,7 @@ public class ProfileItem {
                     ? v = a.value + value // cumulative
                     // is
                     // sum
-                    : (a.value > value ? a.value : value); // diff2
+                    : (Math.max(a.value, value)); // diff2
             // is
             // max
             overlap.set(a.min, a.max, v);
@@ -224,7 +224,7 @@ public class ProfileItem {
                     ? v = a.value + value // cumulative
                     // is
                     // sum
-                    : (a.value > value ? a.value : value); // diff2
+                    : (Math.max(a.value, value)); // diff2
             // is
             // max
             overlap.set(a.min, max, v);

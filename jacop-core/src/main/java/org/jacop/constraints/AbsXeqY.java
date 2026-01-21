@@ -370,10 +370,6 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : absXeqY(").append(x).append(", ").append(y).append(" )");
-
-    return result.toString();
+    return id() + " : absXeqY(" + x + ", " + y + " )";
   }
 }

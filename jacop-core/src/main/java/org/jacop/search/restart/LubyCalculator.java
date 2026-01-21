@@ -43,7 +43,7 @@ public class LubyCalculator extends Calculator {
 
   public LubyCalculator(int scale) {
     n = 1;
-    this.scale = (long) scale;
+    this.scale = scale;
     failLimit = this.scale * getLuby(n);
   }
 

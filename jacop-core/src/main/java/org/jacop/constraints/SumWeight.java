@@ -302,7 +302,7 @@ public class SumWeight extends Constraint
           return;
         }
 
-        long value = (long) var.min();
+        long value = var.min();
 
         long sumJustGrounded = 0;
 

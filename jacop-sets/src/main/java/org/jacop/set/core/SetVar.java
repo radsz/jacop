@@ -220,7 +220,7 @@ public class SetVar extends Var {
    * @return the size of the variables domain.
    */
   public double getSizeFloat() {
-    return (double) getSize();
+    return getSize();
   }
 
   /**
@@ -391,9 +391,7 @@ public class SetVar extends Var {
    */
   public String toStringFull() {
 
-    StringBuilder result = new StringBuilder(id);
-    result.append(domain.toStringFull());
-    return result.toString();
+    return id + domain.toStringFull();
   }
 
   public void remove(int removedLevel) {

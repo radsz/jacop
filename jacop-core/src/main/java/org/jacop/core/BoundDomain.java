@@ -305,8 +305,6 @@ class BoundDomain extends IntDomain implements Cloneable {
         var.domainHasChanged(BOUND);
       }
 
-      return;
-
     } else {
 
       assert stamp < storeLevel;
@@ -334,10 +332,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(GROUND);
-        return;
       } else {
         var.domainHasChanged(BOUND);
-        return;
       }
     }
   }
@@ -409,8 +405,6 @@ class BoundDomain extends IntDomain implements Cloneable {
         var.domainHasChanged(BOUND);
       }
 
-      return;
-
     } else {
 
       assert stamp < storeLevel;
@@ -433,10 +427,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(GROUND);
-        return;
       } else {
         var.domainHasChanged(BOUND);
-        return;
       }
     }
   }
@@ -476,8 +468,6 @@ class BoundDomain extends IntDomain implements Cloneable {
         var.domainHasChanged(BOUND);
       }
 
-      return;
-
     } else {
 
       assert stamp < storeLevel;
@@ -500,10 +490,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(GROUND);
-        return;
       } else {
         var.domainHasChanged(BOUND);
-        return;
       }
     }
   }
@@ -530,8 +518,6 @@ class BoundDomain extends IntDomain implements Cloneable {
         var.domainHasChanged(BOUND);
       }
 
-      return;
-
     } else {
 
       assert stamp < storeLevel;
@@ -548,10 +534,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(GROUND);
-        return;
       } else {
         var.domainHasChanged(BOUND);
-        return;
       }
     }
   }
@@ -577,8 +561,6 @@ class BoundDomain extends IntDomain implements Cloneable {
         var.domainHasChanged(BOUND);
       }
 
-      return;
-
     } else {
 
       assert stamp < storeLevel;
@@ -595,10 +577,8 @@ class BoundDomain extends IntDomain implements Cloneable {
 
       if (result.singleton()) {
         var.domainHasChanged(GROUND);
-        return;
       } else {
         var.domainHasChanged(BOUND);
-        return;
       }
     }
   }
@@ -908,7 +888,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringConstraints() {
 
-    StringBuilder s = new StringBuilder("");
+    StringBuilder s = new StringBuilder();
 
     for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
       s.append(e.next().id());
@@ -923,7 +903,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringFull() {
 
-    StringBuilder result = new StringBuilder("");
+    StringBuilder result = new StringBuilder();
 
     IntDomain domain = this;
 

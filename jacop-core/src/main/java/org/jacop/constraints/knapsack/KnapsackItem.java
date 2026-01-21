@@ -149,16 +149,17 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
+    String result =
+        "item[ fdv: "
+            + quantity.toString()
+            + ", weight: "
+            + weight
+            + ", profit: "
+            + profit
+            + ", efficiency: "
+            + efficiency
+            + " ]";
 
-    result.append("item[ fdv: ").append(quantity.toString()).append(", weight: ").append(weight);
-    result
-        .append(", profit: ")
-        .append(profit)
-        .append(", efficiency: ")
-        .append(efficiency)
-        .append(" ]");
-
-    return result.toString();
+    return result;
   }
 }

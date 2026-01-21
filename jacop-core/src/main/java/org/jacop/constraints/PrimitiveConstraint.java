@@ -118,7 +118,7 @@ public abstract class PrimitiveConstraint extends Constraint
                 .filter(i -> i.arguments().contains(var))
                 .mapToInt(i -> i.getNestedPruningEvent(var, true))
                 .max()
-                .orElseGet(() -> Integer.MIN_VALUE);
+                .orElse(Integer.MIN_VALUE);
 
         if (eventAcross != Integer.MIN_VALUE) {
           return eventAcross;

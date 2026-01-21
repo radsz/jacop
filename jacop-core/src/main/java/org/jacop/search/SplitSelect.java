@@ -121,8 +121,7 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
   }
 
   public String toString() {
-    return ""
-        + Arrays.asList((Var[]) searchVariables)
+    return Arrays.asList((Var[]) searchVariables)
         + ", SplitSelect("
         + variableOrdering
         + ", "

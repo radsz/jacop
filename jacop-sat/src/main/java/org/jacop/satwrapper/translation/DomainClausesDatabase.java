@@ -263,10 +263,8 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
   @Override
   public String toString(String prefix) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("constraint clause database (");
-    sb.append(wrapper.registeredVars.size()).append(" CP variables)");
-    return sb.toString();
+    String sb = "constraint clause database (" + wrapper.registeredVars.size() + " CP variables)";
+    return sb;
   }
 
   public void initialize(SatWrapper wrapper) {

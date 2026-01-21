@@ -111,7 +111,6 @@ public class ConferenceTalkPlacement {
 
     if (example.searchMaxRegretForMatrixOptimal(timeOutSeconds)) {
       IO.println("Solution(s) found");
-      return;
     }
 
     // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).

@@ -132,8 +132,8 @@ public class Min extends Constraint implements SatisfiedPresent {
           var.domain.inMin(store.level, var, minMin);
         }
 
-        minValue = minValue < varMin ? minValue : varMin;
-        maxValue = maxValue < varMax ? maxValue : varMax;
+        minValue = Math.min(minValue, varMin);
+        maxValue = Math.min(maxValue, varMax);
       }
 
       min.domain.in(store.level, min, minValue, maxValue);

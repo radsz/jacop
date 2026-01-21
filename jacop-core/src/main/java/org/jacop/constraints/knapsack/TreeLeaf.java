@@ -185,13 +185,22 @@ public final class TreeLeaf extends TreeNode {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
+    String result =
+        "{wmax: "
+            + getWMax()
+            + ", eff: "
+            + efficiency
+            + ", var: "
+            + quantity
+            + "(, slice: "
+            + slice
+            + ")["
+            + min()
+            + ".."
+            + max()
+            + "]}";
 
-    result.append("{wmax: ").append(getWMax()).append(", eff: ").append(efficiency);
-    result.append(", var: ").append(quantity).append("(, slice: ").append(slice);
-    result.append(")[").append(min()).append("..").append(max()).append("]}");
-
-    return result.toString();
+    return result;
   }
 
   @Override

@@ -333,11 +333,7 @@ public class CosPeqR extends Constraint
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : CosPeqR(").append(p).append(", ").append(q).append(" )");
-
-    return result.toString();
+    return id() + " : CosPeqR(" + p + ", " + q + " )";
   }
 
   public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {

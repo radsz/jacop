@@ -406,6 +406,6 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
   }
 
   public String toString() {
-    return "" + searchVariables + "\n";
+    return searchVariables + "\n";
   }
 }

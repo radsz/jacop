@@ -135,15 +135,8 @@ public class OrBoolSimple extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuilder resultString = new StringBuilder(id());
-
-    resultString.append(" : orBoolSimple([ ");
-    resultString.append(a).append(", ").append(b);
-
-    resultString.append("], ");
-    resultString.append(result);
-    resultString.append(")");
-    return resultString.toString();
+    String resultString = id() + " : orBoolSimple([ " + a + ", " + b + "], " + result + ")";
+    return resultString;
   }
 
   /**

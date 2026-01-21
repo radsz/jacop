@@ -149,7 +149,6 @@ public class NoGoodsCollector<T extends IntVar>
         exitChildListener.rightChild(choice, status);
       }
     }
-    return;
   }
 
   public void executedAtExit(Store store, int solutionsNo) {
@@ -201,9 +200,7 @@ public class NoGoodsCollector<T extends IntVar>
   public String toString() {
 
     if (noGoodsVariables != null) {
-      StringBuilder sb = new StringBuilder(noGoodsVariables.toString());
-      sb.append(noGoodsValues.toString());
-      return sb.toString();
+      return noGoodsVariables.toString() + noGoodsValues.toString();
     } else {
       return "[]";
     }

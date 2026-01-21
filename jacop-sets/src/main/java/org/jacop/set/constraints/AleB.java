@@ -223,10 +223,7 @@ public class AleB extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder();
-    result.append(id()).append(" : AleB(");
-    result.append(a).append(", ").append(b);
-    result.append(")");
-    return result.toString();
+    String result = id() + " : AleB(" + a + ", " + b + ")";
+    return result;
   }
 }

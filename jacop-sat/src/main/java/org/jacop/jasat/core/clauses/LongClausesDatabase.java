@@ -147,7 +147,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
           addWatch(cache[no], clauseIndex);
           cache[myWatchPos] = cache[no];
           cache[no] = myWatch;
-          continue;
         }
       }
 
@@ -220,7 +219,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
           addWatch(cache[no], clauseIndex);
           cache[myWatchPos] = cache[no];
           cache[no] = myWatch;
-          continue;
         }
       }
 

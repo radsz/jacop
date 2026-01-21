@@ -109,7 +109,7 @@ class ElementConstraints implements ParserTreeConstants {
     p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
     int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = p2.length < newP2Length ? p2.length : newP2Length;
+    int listLength = Math.min(p2.length, newP2Length);
     int[] newP2 = new int[listLength];
     for (int i = 0; i < listLength; i++) {
       newP2[i] = p2[p1.min() - 1 + i];
@@ -139,7 +139,7 @@ class ElementConstraints implements ParserTreeConstants {
     p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
     int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = p2.length < newP2Length ? p2.length : newP2Length;
+    int listLength = Math.min(p2.length, newP2Length);
     int[] newP2 = new int[listLength];
     for (int i = 0; i < listLength; i++) {
       newP2[i] = p2[p1.min() - 1 + i];
@@ -175,7 +175,7 @@ class ElementConstraints implements ParserTreeConstants {
       p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
       int newP2Length = p1.max() - p1.min() + 1;
-      int listLength = p2var.length < newP2Length ? p2var.length : newP2Length;
+      int listLength = Math.min(p2var.length, newP2Length);
       IntVar[] newP2 = new IntVar[listLength];
       for (int i = 0; i < listLength; i++) {
         newP2[i] = p2var[p1.min() - 1 + i];
@@ -261,7 +261,7 @@ class ElementConstraints implements ParserTreeConstants {
     p1.domain.in(store.level, p1, 1, IntDomain.MaxInt);
 
     int newP2Length = p1.max() - p1.min() + 1;
-    int listLength = p2.length < newP2Length ? p2.length : newP2Length;
+    int listLength = Math.min(p2.length, newP2Length);
     double[] newP2 = new double[listLength];
     for (int i = 0; i < listLength; i++) {
       newP2[i] = p2[p1.min() - 1 + i];

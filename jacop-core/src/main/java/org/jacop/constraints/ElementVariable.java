@@ -212,8 +212,8 @@ public class ElementVariable extends Constraint
         // valDomain.addDom(list[position].domain);
         int min = list[position].domain.min();
         int max = list[position].domain.max();
-        valMin = valMin > min ? min : valMin;
-        valMax = valMax < max ? max : valMax;
+        valMin = Math.min(valMin, min);
+        valMax = Math.max(valMax, max);
       }
       value.domain.in(store.level, value, valMin, valMax);
       // value.domain.in(store.level, value, valDomain);

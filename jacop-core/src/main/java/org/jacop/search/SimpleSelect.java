@@ -300,8 +300,7 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
   }
 
   public String toString() {
-    return ""
-        + Arrays.asList(searchVariables)
+    return Arrays.asList(searchVariables)
         + ", SimpleSelect("
         + variableOrdering
         + ", "

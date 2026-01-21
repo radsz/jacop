@@ -375,11 +375,9 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-    result.append(" : IfThenElse(").append(condC).append(", ");
-    result.append(thenC).append(", ").append(elseC).append(" )");
+    String result = id() + " : IfThenElse(" + condC + ", " + thenC + ", " + elseC + " )";
 
-    return result.toString();
+    return result;
   }
 
   @Override

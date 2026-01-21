@@ -405,8 +405,8 @@ public class Binpacking extends Constraint
     for (BinItem anItem : item) {
       IntVar bin = anItem.bin();
       int bmin = bin.min(), bmax = bin.max();
-      max = max > bmax ? max : bmax;
-      min = min < bmin ? min : bmin;
+      max = Math.max(max, bmax);
+      min = Math.min(min, bmin);
     }
     return max - min + 1;
   }

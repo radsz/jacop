@@ -37,7 +37,7 @@ public class ASTIntTiExprTail extends SimpleNode {
   }
 
   public String toString() {
-    String limits = type == 1 ? "" + low + ".." + high : "";
+    String limits = type == 1 ? low + ".." + high : "";
     String typeS =
         switch (type) {
           case 0 -> "(int): ";

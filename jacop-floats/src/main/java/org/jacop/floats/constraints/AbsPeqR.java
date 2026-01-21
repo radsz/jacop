@@ -145,10 +145,6 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : absPeqR(").append(p).append(", ").append(q).append(" )");
-
-    return result.toString();
+    return id() + " : absPeqR(" + p + ", " + q + " )";
   }
 }

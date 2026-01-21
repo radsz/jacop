@@ -55,10 +55,6 @@ public class AtanPeqR extends TanPeqR {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : AtanPeqR(").append(p).append(", ").append(q).append(" )");
-
-    return result.toString();
+    return id() + " : AtanPeqR(" + p + ", " + q + " )";
   }
 }

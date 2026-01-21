@@ -243,13 +243,13 @@ public class Cumulative extends CumulativeBasic {
     }
 
     // ========== Detect Order ============
-    int[] prec = detectOrder(tree, lctList, auxOrderListInv, (long) limit.max());
+    int[] prec = detectOrder(tree, lctList, auxOrderListInv, limit.max());
     // System.out.println("*** prec = " + intArrayToString(prec));
     // write ThetaLambdaTree as dot file for visualization
     // tree.printTree("tree_init");
 
     // ========== Adjust Bounds ============
-    adjustBounds(store, tree, lctList, prec, (long) limit.max());
+    adjustBounds(store, tree, lctList, prec, limit.max());
   }
 
   private int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long C) {
@@ -320,10 +320,10 @@ public class Cumulative extends CumulativeBasic {
 
       for (int l = n - 1; l >= 0; l--) { // by non-decreasing of lct
 
-        tree.enableNode(t[l].treeIndex, (long) ci);
+        tree.enableNode(t[l].treeIndex, ci);
         // tree.printTree("tree_task_"+t[l].index);
 
-        long envlc = tree.calcEnvlc((long) t[l].lct(), (long) ci);
+        long envlc = tree.calcEnvlc(t[l].lct(), ci);
         int diff = Integer.MIN_VALUE;
         if (envlc != Long.MIN_VALUE) {
           long tmp = envlc - (cap - (long) ci) * (long) t[l].lct();
@@ -361,12 +361,12 @@ public class Cumulative extends CumulativeBasic {
         while (nj < n && t[nj].lct() == precI) {
           if (t[nj].lct() < taskI.lct()) {
             taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);
-            break inner;
+            break;
           }
           nj++;
         }
       } else {
-        break outer;
+        break;
       }
     }
   }
@@ -379,7 +379,7 @@ public class Cumulative extends CumulativeBasic {
 
   private void edgeFindQuad(Store store, TaskView[] tn) {
 
-    long C = (long) limit.max();
+    long C = limit.max();
     TaskView[] ts = filterZeroTasks(tn);
     if (ts == null) {
       return;
@@ -494,11 +494,6 @@ public class Cumulative extends CumulativeBasic {
     } else {
       return ts;
     }
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

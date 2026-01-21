@@ -30,6 +30,7 @@
 
 package org.jacop.examples.floats;
 
+import java.util.Arrays;
 import org.jacop.core.Store;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.PmulQeqR;
@@ -122,9 +123,7 @@ public class CurveFitting {
     store.impose(new LinearFloat(div, ones1, "==", 0.0));
 
     double[] ones = new double[n];
-    for (int i = 0; i < n; i++) {
-      ones[i] = 1.0;
-    }
+    Arrays.fill(ones, 1.0);
     store.impose(new LinearFloat(Ex, ones, "==", 0.0));
     store.impose(new LinearFloat(Ey, ones, "==", 0.0));
 

@@ -224,10 +224,6 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-
-    result.append(" : Implies(").append(b).append(", ").append(c).append(" )");
-
-    return result.toString();
+    return id() + " : Implies(" + b + ", " + c + " )";
   }
 }

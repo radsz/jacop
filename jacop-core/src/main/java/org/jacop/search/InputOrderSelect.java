@@ -143,6 +143,6 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
   }
 
   public String toString() {
-    return "" + Arrays.asList(searchVariables) + ", InputOrder, (" + valueOrdering + ")";
+    return Arrays.asList(searchVariables) + ", InputOrder, (" + valueOrdering + ")";
   }
 }

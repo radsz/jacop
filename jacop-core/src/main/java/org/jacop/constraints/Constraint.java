@@ -173,7 +173,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   protected void setScope(Var[]... variables) {
-    setScope(Arrays.stream(variables).map(Arrays::stream).flatMap(i -> i));
+    setScope(Arrays.stream(variables).flatMap(Arrays::stream));
   }
 
   protected void setScope(Stream<Var> scope) {
@@ -224,7 +224,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
               .filter(i -> i.arguments().contains(var))
               .mapToInt(i -> i.getNestedPruningEvent(var, true))
               .max()
-              .orElseGet(() -> Integer.MIN_VALUE);
+              .orElse(Integer.MIN_VALUE);
 
       if (eventAcross != Integer.MIN_VALUE) {
         return eventAcross;

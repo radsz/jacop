@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -245,9 +246,7 @@ public class CrossWord extends ExampleFD {
       int wordCount = 0;
 
       IntVar[] list = new IntVar[wordSize];
-      for (int i = 0; i < wordSize; i++) {
-        list[i] = blank;
-      }
+      Arrays.fill(list, blank);
 
       int[] tupleForGivenWord = new int[wordSize];
       MDD resultForWordSize = new MDD(list);

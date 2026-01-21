@@ -68,7 +68,6 @@ public class RunExample {
 
       Fz2jacop fz2jacop = new Fz2jacop();
       fz2jacop.callMain(args);
-      return;
 
     } else {
       try {
@@ -97,7 +96,7 @@ public class RunExample {
 
         // call the target class main method
         Object[] actualArgs = new Object[1];
-        actualArgs[0] = (Object) processedArgs;
+        actualArgs[0] = processedArgs;
         mainMethod.invoke(null, actualArgs);
       } catch (ClassNotFoundException e) {
         System.err.println(

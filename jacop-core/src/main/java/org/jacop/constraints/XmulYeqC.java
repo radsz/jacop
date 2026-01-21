@@ -95,7 +95,7 @@ public class XmulYeqC extends PrimitiveConstraint {
           throw Store.failException;
         }
 
-        double sqrtOfC = Math.sqrt((double) c);
+        double sqrtOfC = Math.sqrt(c);
 
         if (Math.ceil(sqrtOfC) != Math.floor(sqrtOfC)) {
           throw Store.failException;

@@ -214,28 +214,28 @@ public class DefaultSearchVars {
 
   public String toString() {
 
-    StringBuilder buf = new StringBuilder();
+    String buf =
+        "%% default int search variables = array1d(1.."
+            + int_search_variables.length
+            + ", "
+            + Arrays.asList(int_search_variables)
+            + ")\n"
+            + "%% default boolean search variables = array1d(1.."
+            + bool_search_variables.length
+            + ", "
+            + Arrays.asList(bool_search_variables)
+            + ")\n"
+            + "%% default set search variables = array1d(1.."
+            + set_search_variables.length
+            + ", "
+            + Arrays.asList(set_search_variables)
+            + ")\n"
+            + "%% default float search variables = array1d(1.."
+            + float_search_variables.length
+            + ", "
+            + Arrays.asList(float_search_variables)
+            + ")\n";
 
-    buf.append("%% default int search variables = array1d(1..");
-    buf.append(int_search_variables.length).append(", ");
-    buf.append(Arrays.asList(int_search_variables));
-    buf.append(")\n");
-
-    buf.append("%% default boolean search variables = array1d(1..");
-    buf.append(bool_search_variables.length).append(", ");
-    buf.append(Arrays.asList(bool_search_variables));
-    buf.append(")\n");
-
-    buf.append("%% default set search variables = array1d(1..");
-    buf.append(set_search_variables.length).append(", ");
-    buf.append(Arrays.asList(set_search_variables));
-    buf.append(")\n");
-
-    buf.append("%% default float search variables = array1d(1..");
-    buf.append(float_search_variables.length).append(", ");
-    buf.append(Arrays.asList(float_search_variables));
-    buf.append(")\n");
-
-    return buf.toString();
+    return buf;
   }
 }

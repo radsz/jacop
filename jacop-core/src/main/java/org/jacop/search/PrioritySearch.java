@@ -240,17 +240,28 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         IO.println("No solution found.");
 
-        StringBuilder buf = new StringBuilder();
+        String buf =
+            "Depth First Search "
+                + id
+                + "\n"
+                + "\n"
+                + "Nodes : "
+                + nodes
+                + "\n"
+                + "Decisions : "
+                + decisions
+                + "\n"
+                + "Wrong Decisions : "
+                + wrongDecisions
+                + "\n"
+                + "Backtracks : "
+                + numberBacktracks
+                + "\n"
+                + "Max Depth : "
+                + maxDepthExcludePaths
+                + "\n";
 
-        buf.append("Depth First Search ").append(id).append("\n");
-        buf.append("\n");
-        buf.append("Nodes : ").append(nodes).append("\n");
-        buf.append("Decisions : ").append(decisions).append("\n");
-        buf.append("Wrong Decisions : ").append(wrongDecisions).append("\n");
-        buf.append("Backtracks : ").append(numberBacktracks).append("\n");
-        buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
-
-        IO.println(buf.toString());
+        IO.println(buf);
       }
 
       return false;
@@ -602,16 +613,27 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   String statistics() {
 
-    StringBuilder buf = new StringBuilder();
+    String buf =
+        "No solutions : "
+            + noSolutions
+            + "\n"
+            + "Nodes : "
+            + nodes
+            + "\n"
+            + "Decisions : "
+            + decisions
+            + "\n"
+            + "Wrong Decisions : "
+            + wrongDecisions
+            + "\n"
+            + "Backtracks : "
+            + numberBacktracks
+            + "\n"
+            + "Max Depth : "
+            + maxDepthExcludePaths
+            + "\n";
 
-    buf.append("No solutions : ").append(noSolutions).append("\n");
-    buf.append("Nodes : ").append(nodes).append("\n");
-    buf.append("Decisions : ").append(decisions).append("\n");
-    buf.append("Wrong Decisions : ").append(wrongDecisions).append("\n");
-    buf.append("Backtracks : ").append(numberBacktracks).append("\n");
-    buf.append("Max Depth : ").append(maxDepthExcludePaths).append("\n");
-
-    return buf.toString();
+    return buf;
   }
 
   public void setCostVariable(Var cost) {

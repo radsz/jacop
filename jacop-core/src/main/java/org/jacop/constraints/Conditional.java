@@ -67,7 +67,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
    */
   public Conditional(IntVar[] b, PrimitiveConstraint[] c) {
 
-    checkInputForNullness(new String[] {"b", "c"}, new Object[][] {b, c});
+    checkInputForNullness(new String[] {"b", "c"}, b, c);
     assert (b.length == c.length)
         : "The length of the two lists in Conditional constraints must be equal";
     for (IntVar be : b) {
@@ -122,7 +122,7 @@ public class Conditional extends Constraint implements SatisfiedPresent {
         if (b[i].max() == 0) {
           i++;
         } else {
-          break LOOP;
+          break;
         }
       }
       prune = false;
@@ -152,9 +152,8 @@ public class Conditional extends Constraint implements SatisfiedPresent {
     while (i < b.length) {
       if (b[i].max() == 0) {
         i++;
-        continue;
       } else {
-        break LOOP;
+        break;
       }
     }
     return b[i].min() == 1 && c[i].satisfied();

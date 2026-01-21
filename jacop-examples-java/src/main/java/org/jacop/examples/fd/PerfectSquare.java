@@ -1899,11 +1899,11 @@ public class PerfectSquare extends ExampleFD {
     float picxsize, picysize;
 
     for (int i = 0; i < xl.length; i++) {
-      xlen = xlen < varsX[i].value() + xl[i].value() ? varsX[i].value() + xl[i].value() : xlen;
+      xlen = Math.max(xlen, varsX[i].value() + xl[i].value());
     }
 
     for (int i = 0; i < yl.length; i++) {
-      ylen = ylen < varsY[i].value() + yl[i].value() ? varsY[i].value() + yl[i].value() : ylen;
+      ylen = Math.max(ylen, varsY[i].value() + yl[i].value());
     }
 
     float scalefac = 300 / (float) xlen;

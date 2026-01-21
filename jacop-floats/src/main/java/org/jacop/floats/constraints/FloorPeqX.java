@@ -84,11 +84,7 @@ public class FloorPeqX extends Constraint implements SatisfiedPresent {
     // floor(p) = x, x <= p < x+1
 
     do {
-      p.domain.in(
-          store.level,
-          p,
-          (double) x.min(),
-          FloatDomain.previous((double) (x.max() + 1))); // p <= x+1, x <= p
+      p.domain.in(store.level, p, x.min(), FloatDomain.previous(x.max() + 1)); // p <= x+1, x <= p
 
       store.propagationHasOccurred = false;
 

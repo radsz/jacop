@@ -218,6 +218,7 @@ public class SimpleHashSet<E> {
   @Override
   @SuppressWarnings("unchecked")
   public Object clone() {
+
     SimpleHashSet<E> result = new SimpleHashSet<>();
 
     result.table = new Entry[table.length];

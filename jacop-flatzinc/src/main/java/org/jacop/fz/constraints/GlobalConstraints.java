@@ -208,7 +208,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     if (s.length == 0) {
-      return;
     } else if (s.length == 1) {
       support.pose(new XlteqY(r[0], b));
     } else if (b.max() == 1) { // cumulative unary
@@ -250,8 +249,8 @@ class GlobalConstraints implements ParserTreeConstants {
         for (IntVar e : r) {
           diff.add(e.min());
         }
-        double n = (double) r.length;
-        double k = (double) diff.size();
+        double n = r.length;
+        double k = diff.size();
         // KKU, 2018-10-03, use quadratic edge-finding when n*n < n*k*log(n),
 
         Cumulative cumul = new Cumulative(s, d, r, b);
@@ -750,7 +749,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
-      return;
     } else if (c.singleton()) {
       support.pose(new CountBounds(xs, y, c.value(), c.value()));
     } else {
@@ -857,7 +855,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
-      return;
     } else if (y.singleton()) {
       support.pose(new Count(xs, c, y.value()));
     } else {
@@ -1818,13 +1815,10 @@ class GlobalConstraints implements ParserTreeConstants {
           && x[1].max() <= 1
           && y.singleton(1)) {
         support.sat.generate_if_then_else_bool(b[0], x[0], x[1]);
-        return;
       } else if (b[0].singleton(1)) {
         support.pose(new XeqY(x[0], y));
-        return;
       } else if (b[0].singleton(0) && b[1].singleton(1)) {
         support.pose(new XeqY(x[1], y));
-        return;
       } else if (y.min() == 1) {
         if (x[1].min() == 1) {
           support.pose(support.fzIfThenBool(b[0], x[0]));
@@ -1888,7 +1882,6 @@ class GlobalConstraints implements ParserTreeConstants {
     if (n == 2) {
       if (cs[1].satisfied()) {
         if (cs[0].satisfied()) {
-          return;
         } else {
           support.pose(new IfThen(new XeqC(b[0], 1), cs[0]));
         }
@@ -2008,9 +2001,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar one = support.dictionary.getConstant(1);
     IntVar[] ones = new IntVar[str.length];
-    for (int i = 0; i < ones.length; i++) {
-      ones[i] = one;
-    }
+    Arrays.fill(ones, one);
 
     support.pose(new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true));
   }
@@ -2022,9 +2013,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar one = support.dictionary.getConstant(1);
     IntVar[] ones = new IntVar[str.length];
-    for (int i = 0; i < ones.length; i++) {
-      ones[i] = one;
-    }
+    Arrays.fill(ones, one);
 
     support.pose(new Diffn(str, ones, dur, opt, true));
   }

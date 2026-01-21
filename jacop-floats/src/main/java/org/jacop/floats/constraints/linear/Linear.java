@@ -501,19 +501,13 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   public byte relation(String r) {
     switch (r) {
-      case "==" -> {
-        return eq;
-      }
-      case "=" -> {
+      case "==", "=" -> {
         return eq;
       }
       case "<" -> {
         return lt;
       }
-      case "<=" -> {
-        return le;
-      }
-      case "=<" -> {
+      case "<=", "=<" -> {
         return le;
       }
       case "!=" -> {
@@ -522,10 +516,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       case ">" -> {
         return gt;
       }
-      case ">=" -> {
-        return ge;
-      }
-      case "=>" -> {
+      case ">=", "=>" -> {
         return ge;
       }
       default -> {
