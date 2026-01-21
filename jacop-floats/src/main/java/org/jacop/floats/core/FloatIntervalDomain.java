@@ -1281,16 +1281,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     if (intervalDomain.size == 0) {
 
-      FloatIntervalDomain result = cloneLight();
-
-      return result;
+      return cloneLight();
     }
 
     if (size == 0) {
 
-      FloatDomain result = intervalDomain.cloneLight();
-
-      return result;
+      return intervalDomain.cloneLight();
     }
 
     FloatIntervalDomain result = new FloatIntervalDomain(size + intervalDomain.size);
@@ -2223,7 +2219,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
 
@@ -2253,8 +2248,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         }
+        return;
       }
 
       if (intervals[counter].max() == complement) {
@@ -2346,7 +2341,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
           System.arraycopy(intervals, 0, result.intervals, 0, counter);
@@ -2367,8 +2361,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         }
+        return;
       }
 
       if (intervals[counter].max() == complement) {
@@ -2998,7 +2992,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
       if (searchConstraints.size() == searchConstraintsToEvaluate) {
         searchConstraints.add(C);
-        searchConstraintsToEvaluate++;
       } else {
         // Exchange the first satisfied constraint with just added
         // constraint
@@ -3014,8 +3007,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           searchConstraintsCloned = true;
           searchConstraints.add(C);
         }
-        searchConstraintsToEvaluate++;
       }
+      searchConstraintsToEvaluate++;
     }
   }
 
@@ -3302,7 +3295,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
         size = i;
       }
-      return;
     } else {
 
       // minValue > intervals[current].min
@@ -3356,8 +3348,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
         size = i;
       }
-      return;
     }
+    return;
   }
 
   @Override

@@ -66,16 +66,15 @@ public class DOT extends Filter {
 
     name = "DOT";
 
-    int[][] dependencies = {
-      {0, 6}, {1, 6}, {2, 7}, {3, 7}, {4, 8}, {5, 8}, {6, 9}, {7, 9}, {9, 10}, {8, 10}
-    };
-    this.dependencies = dependencies;
+    this.dependencies =
+        new int[][] {
+          {0, 6}, {1, 6}, {2, 7}, {3, 7}, {4, 8}, {5, 8}, {6, 9}, {7, 9}, {9, 10}, {8, 10}
+        };
 
-    int[] ids = {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
-    this.ids = ids;
+    this.ids =
+        new int[] {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
 
-    int[] last = {10};
-    this.last = last;
+    this.last = new int[] {10};
   }
 
   @Override

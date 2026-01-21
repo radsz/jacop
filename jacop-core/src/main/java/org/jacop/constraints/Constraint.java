@@ -331,11 +331,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   public boolean watchedVariableGrounded() {
-    if (watchedVariableGrounded == null || watchedVariableGrounded.singleton()) {
-      return true;
-    } else {
-      return false;
-    }
+    return watchedVariableGrounded == null || watchedVariableGrounded.singleton();
   }
 
   /**
@@ -404,14 +400,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   public int getGuideValue() {
     return Integer.MAX_VALUE;
   }
-
-  /**
-   * This function allows to provide a guide feedback. If constraint does not propose sufficiently
-   * good enhancing constraints it will be informed so it has a chance to reexamine its efforts.
-   *
-   * @param feedback true if the guide was useful, false otherwise.
-   */
-  public void supplyGuideFeedback(boolean feedback) {}
 
   /** It increases the weight of the variables in the constraint scope. */
   public void increaseWeight() {

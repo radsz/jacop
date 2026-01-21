@@ -65,25 +65,22 @@ public class AR extends Filter {
     this.mulDel = mulDel;
     name = "AR";
 
-    int[][] dependencies = {
-      {0, 8}, {1, 8}, {2, 9}, {3, 9}, {4, 10}, {5, 10}, {6, 11}, {7, 11}, {8, 26}, {9, 27},
-      {10, 12}, {11, 13}, {12, 15}, {12, 16}, {13, 14}, {13, 17}, {14, 18}, {15, 18}, {16, 19},
-      {17, 19}, {18, 21}, {18, 22}, {19, 20}, {19, 23}, {20, 24}, {21, 24}, {22, 25}, {23, 25},
-      {24, 26}, {25, 27}
-    };
+    this.dependencies =
+        new int[][] {
+          {0, 8}, {1, 8}, {2, 9}, {3, 9}, {4, 10}, {5, 10}, {6, 11}, {7, 11}, {8, 26}, {9, 27},
+          {10, 12}, {11, 13}, {12, 15}, {12, 16}, {13, 14}, {13, 17}, {14, 18}, {15, 18}, {16, 19},
+          {17, 19}, {18, 21}, {18, 22}, {19, 20}, {19, 23}, {20, 24}, {21, 24}, {22, 25}, {23, 25},
+          {24, 26}, {25, 27}
+        };
 
-    this.dependencies = dependencies;
+    this.ids =
+        new int[] {
+          mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId,
+          addId, mulId, mulId, mulId, mulId, addId, addId, mulId, mulId, mulId, mulId, addId, addId,
+          addId, addId
+        };
 
-    int[] ids = {
-      mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId,
-      addId, mulId, mulId, mulId, mulId, addId, addId, mulId, mulId, mulId, mulId, addId, addId,
-      addId, addId
-    };
-
-    this.ids = ids;
-
-    int[] last = {12, 13, 26, 27};
-    this.last = last;
+    this.last = new int[] {12, 13, 26, 27};
   }
 
   @Override

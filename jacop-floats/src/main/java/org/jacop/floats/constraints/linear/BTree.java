@@ -47,8 +47,7 @@ public class BTree {
 
   public String toString() {
 
-    String output = printNode(root);
-    return output;
+    return printNode(root);
   }
 
   String printNode(BinaryNode node) {

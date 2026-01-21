@@ -64,14 +64,12 @@ public class FFT extends Filter {
 
     name = "FFT";
 
-    int[][] dependencies = {{0, 4}, {1, 4}, {2, 5}, {3, 5}, {4, 6}, {4, 7}, {5, 8}, {5, 9}};
-    this.dependencies = dependencies;
+    this.dependencies =
+        new int[][] {{0, 4}, {1, 4}, {2, 5}, {3, 5}, {4, 6}, {4, 7}, {5, 8}, {5, 9}};
 
-    int[] ids = {mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId};
-    this.ids = ids;
+    this.ids = new int[] {mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId};
 
-    int[] last = {6, 7, 8, 9};
-    this.last = last;
+    this.last = new int[] {6, 7, 8, 9};
   }
 
   @Override

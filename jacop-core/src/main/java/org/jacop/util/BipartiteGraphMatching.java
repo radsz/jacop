@@ -182,7 +182,7 @@ public class BipartiteGraphMatching {
             // true
             && // If dfs for pair of v also returns
             // true
-            dfs(pairV[v]) == true) {
+            dfs(pairV[v])) {
           pairV[v] = u;
           pairU[u] = v;
           return true;

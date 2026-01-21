@@ -123,8 +123,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     this.listOfY = Arrays.copyOf(listOfY, listOfY.length);
     this.n = n;
 
-    setScope(
-        Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
+    setScope(Stream.concat(Stream.concat(Arrays.stream(listOfX), Arrays.stream(listOfY)), Stream.of(n)));
   }
 
   /**
@@ -642,12 +641,11 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 }
 
                 if (last != lastIndex) {
-                  int yInt = last;
                   IntVar tmp = listOfY[lastIndex];
                   listOfY[lastIndex] = y_last;
-                  listOfY[yInt] = tmp;
+                  listOfY[last] = tmp;
                   yIndex.put(y_last, lastIndex);
-                  yIndex.put(tmp, yInt);
+                  yIndex.put(tmp, last);
                 }
                 lastIndex++;
                 y_last.domain.inValue(store.level, y_last, v); // , v);
@@ -967,14 +965,12 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                   mustBeCoveredNow =
                       (IntervalDomain) mustBeCoveredNow.union(y_last.domain.subtract(v, v));
 
-                  int yInt = last;
-
                   if (last != lastIndex) {
                     IntVar tmp = listOfY[lastIndex];
                     listOfY[lastIndex] = y_last;
-                    listOfY[yInt] = tmp;
+                    listOfY[last] = tmp;
                     yIndex.put(y_last, lastIndex);
-                    yIndex.put(tmp, yInt);
+                    yIndex.put(tmp, last);
                   }
                   lastIndex++;
 
@@ -1014,13 +1010,12 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
                     if (i != lastIndex) {
                       variableQueueY.remove(i);
-                      int yInt = i;
                       IntVar tmp = listOfY[lastIndex];
                       listOfY[lastIndex] = y;
-                      listOfY[yInt] = tmp;
+                      listOfY[i] = tmp;
                       yIndex.put(y, lastIndex);
                       variableQueueY.add(lastIndex);
-                      yIndex.put(tmp, yInt);
+                      yIndex.put(tmp, i);
                     }
                     lastIndex++;
                   }

@@ -62,15 +62,13 @@ public class DFQ extends Filter {
 
     name = "DFQ";
 
-    int[][] dependencies = {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
+    this.dependencies =
+        new int[][] {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};
 
-    this.dependencies = dependencies;
+    this.ids =
+        new int[] {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
 
-    int[] ids = {mulId, mulId, mulId, mulId, addId, mulId, mulId, addId, addId, addId, addId};
-    this.ids = ids;
-
-    int[] last = {7, 8, 10};
-    this.last = last;
+    this.last = new int[] {7, 8, 10};
   }
 
   @Override

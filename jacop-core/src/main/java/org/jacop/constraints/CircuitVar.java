@@ -50,8 +50,7 @@ class CircuitVar implements MutableVar {
   CircuitVarValue value;
 
   CircuitVar(Store store) {
-    CircuitVarValue val = new CircuitVarValue();
-    value = val;
+    value = new CircuitVarValue();
     index = store.putMutableVar(this);
     this.store = store;
   }

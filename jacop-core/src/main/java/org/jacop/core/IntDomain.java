@@ -1203,7 +1203,6 @@ public abstract class IntDomain extends Domain {
 
       if (searchConstraints.size() == searchConstraintsToEvaluate) {
         searchConstraints.add(c);
-        searchConstraintsToEvaluate++;
       } else {
         // Exchange the first satisfied constraint with just added
         // constraint
@@ -1219,8 +1218,8 @@ public abstract class IntDomain extends Domain {
           searchConstraintsCloned = true;
           searchConstraints.add(c);
         }
-        searchConstraintsToEvaluate++;
       }
+      searchConstraintsToEvaluate++;
     }
   }
 

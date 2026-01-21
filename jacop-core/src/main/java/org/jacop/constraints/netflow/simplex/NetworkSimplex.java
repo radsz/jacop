@@ -51,7 +51,10 @@ import org.jacop.constraints.netflow.Pruning;
 public class NetworkSimplex {
 
   public static final boolean DEBUG = false; // true;
+
+  @SuppressWarnings("PointlessBooleanExpression")
   public static final boolean DEBUG_ALL = true & DEBUG;
+
   public static final int LARGE_COST = 100000; // 1 << 29; // or 28 ?
 
   public static final int TREE_ARC = -1;
@@ -431,19 +434,17 @@ public class NetworkSimplex {
     }
 
     // entering arc (k,l)
-    Node k = to;
-    Node l = from;
-    Node apex = k.lca(l);
+    Node apex = to.lca(from);
 
     // find leaving arc
-    for (Node i = l; i != apex; i = i.parent) {
+    for (Node i = from; i != apex; i = i.parent) {
       int arcCapacity = i.toParent.capacity;
       if (delta >= arcCapacity) {
         delta = arcCapacity;
         blocking = i.toParent;
       }
     }
-    for (Node i = k; i != apex; i = i.parent) {
+    for (Node i = to; i != apex; i = i.parent) {
       int arcCapacity = i.toParent.sister.capacity;
       if (delta > arcCapacity) {
         delta = arcCapacity;
@@ -452,10 +453,10 @@ public class NetworkSimplex {
     }
 
     // augment flow
-    for (Node j = k; j != apex; j = j.parent) {
+    for (Node j = to; j != apex; j = j.parent) {
       j.toParent.addFlow(-delta);
     }
-    for (Node i = l; i != apex; i = i.parent) {
+    for (Node i = from; i != apex; i = i.parent) {
       i.toParent.addFlow(delta);
     }
 

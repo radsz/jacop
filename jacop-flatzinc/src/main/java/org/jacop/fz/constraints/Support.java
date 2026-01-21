@@ -360,8 +360,7 @@ public class Support implements ParserTreeConstants {
     } else if (node.getId() == JJTSCALARFLATEXPR) {
       if (((ASTScalarFlatExpr) node).getType() == 2) { // ident
         // array of var
-        FloatVar[] v = dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
-        return v;
+        return dictionary.getVariableFloatArray(((ASTScalarFlatExpr) node).getIdent());
       } else {
         throw new IllegalArgumentException("Wrong type of Variable array; compilation aborted.");
       }
@@ -546,9 +545,8 @@ public class Support implements ParserTreeConstants {
       } else if ("priority".equals(ann.getAnnId())) {
         SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
         ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
-        int val = getAnnInt(expr);
 
-        constraintPriority = val;
+        constraintPriority = getAnnInt(expr);
       }
     }
     // System.out.println("defines " + definedVar);
@@ -583,7 +581,7 @@ public class Support implements ParserTreeConstants {
     for (Constraint c : delayedConstraints) {
       store.impose(c);
       if (options.debug()) {
-        String s = "% " + c.toString();
+        String s = "% " + c;
         IO.println(s.replaceAll("\n", "\n% "));
       }
     }
@@ -600,7 +598,7 @@ public class Support implements ParserTreeConstants {
       Alldistinct ad = new Alldistinct(v);
       store.impose(ad);
       if (options.debug()) {
-        String s = "% " + ad.toString();
+        String s = "% " + ad;
         IO.println(s.replaceAll("\n", "\n% "));
       }
     }
@@ -627,7 +625,7 @@ public class Support implements ParserTreeConstants {
 
     store.imposeDecompositionWithConsistency(c);
     if (options.debug()) {
-      String s = "% " + c.toString();
+      String s = "% " + c;
       IO.println(s.replaceAll("\n", "\n% "));
     }
   }
@@ -641,7 +639,7 @@ public class Support implements ParserTreeConstants {
     }
 
     if (options.debug()) {
-      String s = "% " + c.toString();
+      String s = "% " + c;
       IO.println(s.replaceAll("\n", "\n% "));
     }
   }
@@ -666,7 +664,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n1.incrementAndGet();
+      final int numberId = n1.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -704,7 +702,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n2.incrementAndGet();
+      final int numberId = n2.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -741,7 +739,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n3.incrementAndGet();
+      final int numberId = n3.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -780,7 +778,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, b}) {
 
-      int numberId = n4.incrementAndGet();
+      final int numberId = n4.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -816,7 +814,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, y, b}) {
 
-      int numberId = n5.incrementAndGet();
+      final int numberId = n5.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -869,7 +867,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {x, y, b}) {
 
-      int numberId = n6.incrementAndGet();
+      final int numberId = n6.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {
@@ -915,7 +913,7 @@ public class Support implements ParserTreeConstants {
 
     return new Constraint(new IntVar[] {b, x}) {
 
-      int numberId = n7.incrementAndGet();
+      final int numberId = n7.incrementAndGet();
 
       @Override
       public void consistency(final Store store) {

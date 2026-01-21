@@ -168,9 +168,8 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
   public void toCNF(BufferedWriter output) throws IOException {
 
     for (int i = 0; i < currentIndex; i++) {
-      int offset = i;
-      if (clauses[offset] != 0) {
-        output.write(Integer.toString(clauses[offset]));
+      if (clauses[i] != 0) {
+        output.write(Integer.toString(clauses[i]));
         output.write(" 0\n");
       }
     }

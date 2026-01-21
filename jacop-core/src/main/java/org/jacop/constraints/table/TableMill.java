@@ -102,7 +102,6 @@ public class TableMill {
       }
     }
 
-    int[][] t = support.toArray(new int[support.size()][2]);
-    return t;
+    return support.toArray(new int[support.size()][2]);
   }
 }

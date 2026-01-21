@@ -69,8 +69,7 @@ public final class RunSolver {
         @Override
         public Config handle(OptParse<Config> parser, Config e, String arg) {
           try {
-            int i = Integer.parseInt(arg);
-            e.verbosity = i;
+            e.verbosity = Integer.parseInt(arg);
           } catch (Exception _) {
             e.verbosity = 1;
             return e;

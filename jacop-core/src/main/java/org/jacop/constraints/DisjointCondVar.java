@@ -51,8 +51,7 @@ class DisjointCondVar implements MutableVar {
   DisjointCondVarValue value;
 
   DisjointCondVar(Store S) {
-    DisjointCondVarValue val = new DisjointCondVarValue();
-    value = val;
+    value = new DisjointCondVarValue();
     index = S.putMutableVar(this);
     store = S;
   }

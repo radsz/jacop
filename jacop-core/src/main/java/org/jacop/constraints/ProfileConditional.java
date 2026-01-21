@@ -174,7 +174,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 // !!!
                 // previous.setMax(new1.Max);
                 add(i, new1);
-                i++;
               } else {
                 if (trace) {
                   IO.println("4b. Adding " + new1);
@@ -185,8 +184,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 if (MaxProfile < new1.value) {
                   MaxProfile = new1.value;
                 }
-                i++;
               }
+              i++;
             }
             // middle
             if (new2.min != -1) {
@@ -213,7 +212,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 // !!!
                 // previous.setMax(new2.Max);
                 add(i, new2);
-                i++;
               } else {
                 if (trace) {
                   IO.println("5b. Adding " + new2);
@@ -223,8 +221,8 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                 if (MaxProfile < new2.value) {
                   MaxProfile = new2.value;
                 }
-                i++;
               }
+              i++;
             }
             // right
             if (new3.min != -1 && new3.min != new3.max) {

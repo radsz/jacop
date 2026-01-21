@@ -418,7 +418,6 @@ public abstract class SetDomain extends Domain {
 
       if (searchConstraints.size() == searchConstraintsToEvaluate) {
         searchConstraints.add(C);
-        searchConstraintsToEvaluate++;
       } else {
         // Exchange the first satisfied constraint with just added
         // constraint
@@ -434,8 +433,8 @@ public abstract class SetDomain extends Domain {
           searchConstraintsCloned = true;
           searchConstraints.add(C);
         }
-        searchConstraintsToEvaluate++;
       }
+      searchConstraintsToEvaluate++;
     }
   }
 

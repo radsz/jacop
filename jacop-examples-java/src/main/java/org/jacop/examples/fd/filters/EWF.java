@@ -64,25 +64,23 @@ public class EWF extends Filter {
 
     name = "EWF";
 
-    int[][] dependencies = {
-      {0, 2}, {0, 15}, {0, 17}, {1, 4}, {1, 8}, {1, 11}, {2, 3}, {2, 7}, {2, 9}, {3, 4}, {4, 5},
-      {4, 6}, {4, 10}, {5, 7}, {6, 8}, {7, 9}, {7, 10}, {8, 11}, {8, 13}, {8, 19}, {9, 12},
-      {10, 13}, {11, 14}, {12, 15}, {14, 16}, {15, 17}, {15, 18}, {15, 29}, {16, 20}, {16, 28},
-      {16, 19}, {17, 21}, {18, 22}, {19, 23}, {20, 24}, {21, 27}, {22, 25}, {22, 32}, {23, 26},
-      {23, 33}, {16, 28}, {24, 28}, {25, 30}, {26, 31}, {27, 29}, {30, 32}, {31, 33}
-    };
+    this.dependencies =
+        new int[][] {
+          {0, 2}, {0, 15}, {0, 17}, {1, 4}, {1, 8}, {1, 11}, {2, 3}, {2, 7}, {2, 9}, {3, 4}, {4, 5},
+          {4, 6}, {4, 10}, {5, 7}, {6, 8}, {7, 9}, {7, 10}, {8, 11}, {8, 13}, {8, 19}, {9, 12},
+          {10, 13}, {11, 14}, {12, 15}, {14, 16}, {15, 17}, {15, 18}, {15, 29}, {16, 20}, {16, 28},
+          {16, 19}, {17, 21}, {18, 22}, {19, 23}, {20, 24}, {21, 27}, {22, 25}, {22, 32}, {23, 26},
+          {23, 33}, {16, 28}, {24, 28}, {25, 30}, {26, 31}, {27, 29}, {30, 32}, {31, 33}
+        };
 
-    this.dependencies = dependencies;
+    this.ids =
+        new int[] {
+          addId, addId, addId, addId, addId, mulId, mulId, addId, addId, addId, addId, addId, mulId,
+          addId, mulId, addId, addId, addId, addId, addId, addId, mulId, addId, addId, mulId, mulId,
+          mulId, addId, addId, addId, addId, addId, addId, addId
+        };
 
-    int[] ids = {
-      addId, addId, addId, addId, addId, mulId, mulId, addId, addId, addId, addId, addId, mulId,
-      addId, mulId, addId, addId, addId, addId, addId, addId, mulId, addId, addId, mulId, mulId,
-      mulId, addId, addId, addId, addId, addId, addId, addId
-    };
-    this.ids = ids;
-
-    int[] last = {13, 24, 28, 29, 30, 31, 32, 33};
-    this.last = last;
+    this.last = new int[] {13, 24, 28, 29, 30, 31, 32, 33};
   }
 
   @Override

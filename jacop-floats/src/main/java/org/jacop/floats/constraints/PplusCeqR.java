@@ -157,14 +157,12 @@ public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableCons
     if (f.equals(r)) {
       // f = p + c
       // f' = d(p)
-      FloatVar v = Derivative.getDerivative(store, p, vars, x);
-      return v;
+      return Derivative.getDerivative(store, p, vars, x);
 
     } else if (f.equals(p)) {
       // f = r - c
       // f' = d(r)
-      FloatVar v = Derivative.getDerivative(store, r, vars, x);
-      return v;
+      return Derivative.getDerivative(store, r, vars, x);
     }
 
     return null;

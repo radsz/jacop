@@ -61,16 +61,13 @@ public class VarWeightNode extends VariableNode {
     double min = mul.min();
     double max = mul.max();
 
-    double lb = min;
-    double ub = max;
-
     double node_min = min();
     double node_max = max();
 
     if (min > node_min) {
       if (max < node_max) {
 
-        updateBounds(min, max, lb, ub);
+        updateBounds(min, max, min, max);
 
         parent.propagate();
 
@@ -80,7 +77,7 @@ public class VarWeightNode extends VariableNode {
           throw Store.failException;
         }
 
-        updateBounds(min, node_max, lb, ub);
+        updateBounds(min, node_max, min, max);
 
         parent.propagate();
       }
@@ -90,7 +87,7 @@ public class VarWeightNode extends VariableNode {
         throw Store.failException;
       }
 
-      updateBounds(node_min, max, lb, ub);
+      updateBounds(node_min, max, min, max);
 
       parent.propagate();
     }
@@ -102,16 +99,13 @@ public class VarWeightNode extends VariableNode {
     double min = mul.min();
     double max = mul.max();
 
-    double lb = min;
-    double ub = max;
-
     double node_min = min();
     double node_max = max();
 
     if (min > node_min) {
       if (max < node_max) {
 
-        updateBounds(min, max, lb, ub);
+        updateBounds(min, max, min, max);
 
         parent.propagateAndPrune();
 
@@ -120,7 +114,7 @@ public class VarWeightNode extends VariableNode {
           throw Store.failException;
         }
 
-        updateBounds(min, node_max, lb, ub);
+        updateBounds(min, node_max, min, max);
 
         parent.propagateAndPrune();
       }
@@ -130,7 +124,7 @@ public class VarWeightNode extends VariableNode {
         throw Store.failException;
       }
 
-      updateBounds(node_min, max, lb, ub);
+      updateBounds(node_min, max, min, max);
 
       parent.propagateAndPrune();
     }

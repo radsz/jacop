@@ -74,7 +74,6 @@ public class SimpleHashSet<E> {
   int threshold;
 
   /** The set, resized as necessary. Length MUST Always be a power of two. */
-  @SuppressWarnings("unchecked")
   private transient Entry[] table;
 
   /**
@@ -310,7 +309,6 @@ public class SimpleHashSet<E> {
    * @param newCapacity the new capacity, MUST be a power of two; must be greater than current
    *     capacity unless current capacity is MAXIMUM_CAPACITY (in which case value is irrelevant).
    */
-  @SuppressWarnings("unchecked")
   void resize(int newCapacity) {
 
     Entry[] oldTable = table;
@@ -384,15 +382,12 @@ public class SimpleHashSet<E> {
     }
   }
 
-  @SuppressWarnings("hiding")
   class Entry<E> {
 
     public final E element;
 
-    @SuppressWarnings("unchecked")
     public Entry chain;
 
-    @SuppressWarnings("unchecked")
     public Entry next;
 
     /** Create new entry. */

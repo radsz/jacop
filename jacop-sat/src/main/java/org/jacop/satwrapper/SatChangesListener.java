@@ -141,7 +141,6 @@ public final class SatChangesListener
 
     if (BooleanVar.class.isInstance(cpVar)) {
       // boolean variable, only remember something happened
-      @SuppressWarnings("unchecked")
       BooleanVar cpBoolVar = (BooleanVar) cpVar;
       booleanVarsToUpdate.add(cpBoolVar);
     } else {

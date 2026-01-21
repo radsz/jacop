@@ -85,7 +85,7 @@ public final class MapClause implements Iterable<Integer> {
 
     // key, value
     int var = Math.abs(literal);
-    boolean sign = var == literal ? true : false;
+    boolean sign = var == literal;
 
     // old value for this key, if any
     Boolean oldSign = literals.put(var, sign);
@@ -333,8 +333,7 @@ public final class MapClause implements Iterable<Integer> {
     public Integer next() {
       int e = it.next();
       boolean value = literals.get(e);
-      int curLiteral = value ? e : -e;
-      return curLiteral;
+      return value ? e : -e;
     }
 
     public void remove() {

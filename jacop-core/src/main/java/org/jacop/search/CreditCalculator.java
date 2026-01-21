@@ -214,7 +214,7 @@ public class CreditCalculator<T extends Var>
         leftChild = true;
       }
 
-      return code && true;
+      return code;
     }
 
     if (consistent) {

@@ -59,7 +59,7 @@ class CumulativePrimary extends Constraint {
   private static final int profile = 0;
   private static final int pruneStart = 1;
   private static final int pruneEnd = 2;
-  private static AtomicInteger idNumber = new AtomicInteger(0);
+  private static final AtomicInteger idNumber = new AtomicInteger(0);
   /*
    * It specifies the limit of the profile of cumulative use of resources.
    */
@@ -73,13 +73,13 @@ class CumulativePrimary extends Constraint {
    */
   private final int[] dur;
   private final int[] res;
-  private Comparator<Event> eventComparator =
+  private final Comparator<Event> eventComparator =
       (o1, o2) -> {
         int dateDiff = o1.date() - o2.date();
         return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
       };
-  private int[] activeMap;
-  private TimeStamp<Integer> activePnt;
+  private final int[] activeMap;
+  private final TimeStamp<Integer> activePnt;
 
   /*
    * It creates a cumulative constraint.

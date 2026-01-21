@@ -50,8 +50,7 @@ class Diff2Var implements MutableVar {
   Diff2VarValue value;
 
   Diff2Var(Store store) {
-    Diff2VarValue val = new Diff2VarValue();
-    value = val;
+    value = new Diff2VarValue();
     index = store.putMutableVar(this);
     this.store = store;
   }

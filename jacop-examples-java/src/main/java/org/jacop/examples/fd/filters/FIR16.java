@@ -63,23 +63,22 @@ public class FIR16 extends Filter {
 
     name = "FIR16";
 
-    int[][] dependencies = {
-      {0, 17}, {1, 17}, {2, 18}, {3, 19}, {4, 20}, {5, 21}, {6, 22}, {7, 23}, {8, 24}, {9, 25},
-      {10, 26}, {11, 27}, {12, 28}, {13, 29}, {14, 30}, {15, 31}, {16, 32}, {17, 18}, {18, 19},
-      {19, 20}, {20, 21}, {21, 22}, {22, 23}, {23, 24}, {24, 25}, {25, 26}, {26, 27}, {27, 28},
-      {28, 29}, {29, 30}, {30, 31}, {31, 32}
-    };
-    this.dependencies = dependencies;
+    this.dependencies =
+        new int[][] {
+          {0, 17}, {1, 17}, {2, 18}, {3, 19}, {4, 20}, {5, 21}, {6, 22}, {7, 23}, {8, 24}, {9, 25},
+          {10, 26}, {11, 27}, {12, 28}, {13, 29}, {14, 30}, {15, 31}, {16, 32}, {17, 18}, {18, 19},
+          {19, 20}, {20, 21}, {21, 22}, {22, 23}, {23, 24}, {24, 25}, {25, 26}, {26, 27}, {27, 28},
+          {28, 29}, {29, 30}, {30, 31}, {31, 32}
+        };
 
-    int[] ids = {
-      mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
-      mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
-      addId, addId, addId, addId, addId, addId, addId
-    };
-    this.ids = ids;
+    this.ids =
+        new int[] {
+          mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
+          mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
+          addId, addId, addId, addId, addId, addId, addId
+        };
 
-    int[] last = {32};
-    this.last = last;
+    this.last = new int[] {32};
   }
 
   @Override

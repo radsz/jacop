@@ -413,8 +413,7 @@ public class Alldistinct extends Constraint
         for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
             enumer.hasMoreElements(); ) {
 
-          int value = enumer.nextElement();
-          Integer integerValue = value;
+          Integer integerValue = enumer.nextElement();
 
           currentSimpleArrayList = valueMapVariable.get(integerValue);
 

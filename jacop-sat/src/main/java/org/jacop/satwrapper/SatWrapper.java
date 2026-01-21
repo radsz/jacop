@@ -488,7 +488,6 @@ public final class SatWrapper extends Constraint
 
     // this must be a SatVar
     assert IntVar.class.isInstance(var);
-    @SuppressWarnings("unchecked")
     IntVar v = (IntVar) var; // cast it in an IntVar
 
     if (v.singleton()) {
@@ -547,8 +546,7 @@ public final class SatWrapper extends Constraint
    * @return a literal corresponding to some possible (variable,value)
    */
   public int getMostActiveLiteral() {
-    int lit = assertionModule.findNextVar();
-    return lit;
+    return assertionModule.findNextVar();
   }
 
   /**
@@ -712,8 +710,7 @@ public final class SatWrapper extends Constraint
    */
   public SatCPBridge boolVarToDomain(int literal) {
     int var = Math.abs(literal);
-    SatCPBridge range = boolVarToDomains[var];
-    return range;
+    return boolVarToDomains[var];
   }
 
   /**

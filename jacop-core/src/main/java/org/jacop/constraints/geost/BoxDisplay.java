@@ -43,7 +43,6 @@ import org.jacop.core.IntVar;
  *     during development phase but it may be still useful if user is interested in visualizing
  *     Geost constraint.
  */
-@SuppressWarnings("serial")
 public class BoxDisplay extends JFrame {
 
   /** It specifies the serial UID. */

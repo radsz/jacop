@@ -130,7 +130,6 @@ public class RootBNode extends BNode {
 
         bound.update(min, max, lb, ub);
 
-        return true;
       } else {
 
         if (min > current_max) {
@@ -138,9 +137,8 @@ public class RootBNode extends BNode {
         }
 
         bound.update(min, current_max, lb, ub);
-
-        return true;
       }
+      return true;
     } else if (max < current_max) {
 
       if (current_min > max) {

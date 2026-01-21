@@ -90,6 +90,7 @@ import org.jacop.util.SimpleHashSet;
  *     <p>5. If objects have the same shape, and they are indistingushable then symmetry breaking
  *     can be employed.
  */
+@SuppressWarnings("PointlessBooleanExpression")
 public class Geost extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
   /**

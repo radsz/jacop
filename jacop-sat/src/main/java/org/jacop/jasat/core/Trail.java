@@ -209,8 +209,7 @@ public final class Trail implements SolverComponent {
     assert var < values.length;
     assert isSet(var);
 
-    int level = levels[var] & LEVEL_MASK;
-    return level;
+    return levels[var] & LEVEL_MASK;
   }
 
   /**

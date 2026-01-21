@@ -503,10 +503,9 @@ public class DBox {
         if (hole.origin[i] > lowerbound[i]) {
           // else, we need to add the slice before, and update the lower bound
           DBox newBox = newBox(dimension);
-          int[] sliceOrigin = newBox.origin;
           int[] sliceLength = newBox.length;
           // origin is same as lower bound
-          System.arraycopy(lowerbound, 0, sliceOrigin, 0, dimension);
+          System.arraycopy(lowerbound, 0, newBox.origin, 0, dimension);
           // slice upper bound is same as upper bound, except in the current dimension
           for (int j = dimension - 1; j >= 0; j--) { // reverse loop
             sliceLength[j] = upperbound[j] - lowerbound[j];
@@ -528,13 +527,12 @@ public class DBox {
           // else, we need to add the slice after, and update the upper bound
           DBox newBox = newBox(dimension);
           int[] sliceOrigin = newBox.origin;
-          int[] sliceLength = newBox.length;
           // origin is same as lower bound, except in the current dimension
           System.arraycopy(lowerbound, 0, sliceOrigin, 0, dimension);
           sliceOrigin[i] = hole.origin[i] + hole.length[i];
           // slice upper bound is same as upper bound
           for (int j = dimension - 1; j >= 0; j--) { // reverse loop
-            sliceLength[j] = upperbound[j] - sliceOrigin[j];
+            newBox.length[j] = upperbound[j] - sliceOrigin[j];
           }
 
           assert (newBox.checkInvariants() == null) : newBox.checkInvariants();

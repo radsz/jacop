@@ -174,11 +174,8 @@ public class ConferenceTalkPlacement {
     Integer[] sortedArray = costsList.toArray(new Integer[0]);
     Arrays.sort(sortedArray);
 
-    int noOfTalksInOneTimeSlot = noOfParallelTracks;
     int lowerBound = 0;
-    for (int i = 0;
-        i < noOfTimeSlots * (noOfTalksInOneTimeSlot * (noOfTalksInOneTimeSlot - 1) / 2);
-        i++) {
+    for (int i = 0; i < noOfTimeSlots * (noOfParallelTracks * (noOfParallelTracks - 1) / 2); i++) {
       lowerBound += sortedArray[i];
     }
 

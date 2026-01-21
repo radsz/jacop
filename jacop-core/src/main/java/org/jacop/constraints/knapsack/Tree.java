@@ -515,16 +515,11 @@ public class Tree {
           currentWeight += currentNode.right.getWSum();
           currentProfit += currentNode.right.getPSum();
 
-          continue;
-
         } else {
           break;
         }
-      }
-
-      // currentNode is the right child.
-      if (rightChild) {
-
+      } else {
+        // currentNode is the right child.
         if (currentNode.rightNeighbor == null) {
           exhaustedRightItems = true;
           break;
@@ -540,8 +535,6 @@ public class Tree {
           currentNode = currentNode.rightNeighbor;
           currentWeight += currentNode.getWSum();
           currentProfit += currentNode.getPSum();
-
-          continue;
 
         } else {
           break;
@@ -612,12 +605,11 @@ public class Tree {
       lastWeight /= efficiencyLoss;
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
-      int result = currentWeight + (int) Math.ceil(lastWeight);
       // Playing safe, we decrease replacable weight to floor for the next iteration so we do not
       // miss mandatory item.
       // @TODO commented out below
       // currentWeight += (int) Math.floor( lastWeight );
-      return result;
+      return currentWeight + (int) Math.ceil(lastWeight);
 
     } else {
 
@@ -625,12 +617,11 @@ public class Tree {
       lastWeight /= efficiencyLoss;
 
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
-      int result = currentWeight + (int) Math.ceil(lastWeight);
       // Playing safe, we decrease replacable weight to floor for the next iteration so we do not
       // miss mandatory item.
       // @TODO commented out below
       // currentWeight += (int) Math.floor( lastWeight );
-      return result;
+      return currentWeight + (int) Math.ceil(lastWeight);
     }
   }
 
@@ -774,12 +765,8 @@ public class Tree {
           currentProfit += currentNode.left.getPSum();
         }
 
-        continue;
-      }
-
-      // currentNode is the left child.
-      if (!rightChild) {
-
+      } else {
+        // currentNode is the left child.
         if (currentNode.leftNeighbor == null) {
           exhaustedLeftItems = true;
           break;

@@ -134,11 +134,11 @@ public class RegularExpressionParser {
           } // if
 
           Expression c3 = parse(true);
-          c = new Concatination(c, c3);
+          c = new Concatenation(c, c3);
           while (token == LexicalAnalyzer.DOT) {
             lexer.nextToken();
             c3 = parse(true);
-            c = new Concatination(c, c3);
+            c = new Concatenation(c, c3);
           }
 
           if (token != LexicalAnalyzer.EOF) {
@@ -180,7 +180,7 @@ public class RegularExpressionParser {
           break;
       }
 
-      if (parseOneNext == true && !(token == LexicalAnalyzer.STAR)) {
+      if (parseOneNext && !(token == LexicalAnalyzer.STAR)) {
         contin = false;
       }
     }
@@ -264,12 +264,12 @@ public class RegularExpressionParser {
     public abstract FSM parseToFSM();
   }
 
-  class Concatination extends Expression {
+  class Concatenation extends Expression {
 
     public final Expression a;
     public final Expression b;
 
-    public Concatination(Expression a, Expression b) {
+    public Concatenation(Expression a, Expression b) {
       super();
       this.a = a;
       this.b = b;

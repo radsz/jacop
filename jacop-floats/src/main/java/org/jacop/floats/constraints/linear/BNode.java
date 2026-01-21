@@ -211,7 +211,6 @@ public class BNode extends BinaryNode {
 
         node.updateBounds(new_node_min, new_node_max, lb, ub);
 
-        return true;
       } else {
 
         if (new_node_min > node_max) {
@@ -219,9 +218,8 @@ public class BNode extends BinaryNode {
         }
 
         node.updateBounds(new_node_min, node_max, lb, ub);
-
-        return true;
       }
+      return true;
     } else if (new_node_max < node_max) {
 
       if (node_min > new_node_max) {

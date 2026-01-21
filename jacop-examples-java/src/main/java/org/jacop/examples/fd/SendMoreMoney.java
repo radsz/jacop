@@ -249,9 +249,7 @@ public class SendMoreMoney extends ExampleFD {
 
     search = new DepthFirstSearch<>();
 
-    boolean result = search.labeling(store, select);
-
-    return result;
+    return search.labeling(store, select);
   }
 
   /**

@@ -279,13 +279,12 @@ class BoolConstraints implements ParserTreeConstants {
     for (IntVar v1 : a1) {
       for (IntVar v2 : a2) {
         if (v1.equals(v2)) {
+          // already satisfied since a variable is both negated and not negated
           if (reified) {
             IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
             r.domain.inValue(store.level, r, 1);
-            return;
-          } else {
-            return; // already satisfied since a variable is both negated and not negated
-          } // already satisfied since a variable is both negated and not negated
+          }
+          return;
         } // already satisfied since a variable is both negated and not negated
       } // already satisfied since a variable is both negated and not negated
     }
@@ -293,10 +292,8 @@ class BoolConstraints implements ParserTreeConstants {
       if (reified || implied) {
         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
         r.domain.inValue(store.level, r, 1);
-        return;
-      } else {
-        return;
       }
+      return;
     }
 
     if (support.options.useSat() && !implied) {
@@ -313,10 +310,8 @@ class BoolConstraints implements ParserTreeConstants {
           if (reified || implied) {
             IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
             r.domain.inValue(store.level, r, 1);
-            return;
-          } else {
-            return;
-          } // already satisfied since a variable is both negated and not negated
+          }
+          return;
         } else if (var.max() != 0) {
           a1reduced.add(var);
         }
@@ -328,10 +323,8 @@ class BoolConstraints implements ParserTreeConstants {
           if (reified || implied) {
             IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
             r.domain.inValue(store.level, r, 1);
-            return;
-          } else {
-            return;
-          } // already satisfied since a variable is both negated and not negated
+          }
+          return;
         } else if (intVar.min() != 1) {
           a2reduced.add(intVar);
         }

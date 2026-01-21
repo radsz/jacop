@@ -49,8 +49,7 @@ class BoundsVar implements MutableVar {
   BoundsVarValue value;
 
   BoundsVar(Store store) {
-    BoundsVarValue val = new BoundsVarValue();
-    value = val;
+    value = new BoundsVarValue();
     index = store.putMutableVar(this);
     this.store = store;
   }

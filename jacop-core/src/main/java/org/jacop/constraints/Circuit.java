@@ -294,8 +294,8 @@ public class Circuit extends Alldiff implements Stateful {
     int vMin = v.min();
 
     graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i].value()).previous));
-    int j = vMin;
-    graph[j - 1].update(new CircuitVarValue(((CircuitVarValue) graph[j - 1].value()).next, i + 1));
+    graph[vMin - 1].update(
+        new CircuitVarValue(((CircuitVarValue) graph[vMin - 1].value()).next, i + 1));
   }
 
   int visit(int k) {

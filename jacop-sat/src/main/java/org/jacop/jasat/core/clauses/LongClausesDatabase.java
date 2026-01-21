@@ -82,8 +82,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     addWatch(clause[1], newIndex);
 
     // compute unique ID for the clause
-    int clauseId = indexToUniqueId(newIndex);
-    return clauseId;
+    return indexToUniqueId(newIndex);
   }
 
   public void assertLiteral(int literal) {

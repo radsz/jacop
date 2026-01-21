@@ -1070,9 +1070,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
-      IntDomain result = this.intersect(input.toIntervalDomain());
-
-      return result;
+      return this.intersect(input.toIntervalDomain());
     }
 
     if (domain.isSparseRepresentation()) {
@@ -1682,22 +1680,16 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
           if (currentDomain1.max() <= max) {
             // Skip current interval of i1 completely
-            i1++;
-            if (i1 == size) {
-              break;
-            }
-            currentDomain1 = intervals[i1];
           } else {
 
             // interval (min, max) ends before interval of dom1 ends
             result.unionAdapt(new Interval(max + 1, currentDomain1.max()));
-
-            i1++;
-            if (i1 == size) {
-              break;
-            }
-            currentDomain1 = intervals[i1];
           }
+          i1++;
+          if (i1 == size) {
+            break;
+          }
+          currentDomain1 = intervals[i1];
 
         } else { // currentDomain1.min < min)
 
@@ -2014,16 +2006,12 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       if (intervalDomain.size == 0) {
 
-        IntervalDomain result = cloneLight();
-
-        return result;
+        return cloneLight();
       }
 
       if (size == 0) {
 
-        IntDomain result = intervalDomain.cloneLight();
-
-        return result;
+        return intervalDomain.cloneLight();
       }
 
       IntervalDomain result = new IntervalDomain(size + intervalDomain.size);
@@ -3744,7 +3732,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
 
@@ -3774,8 +3761,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         }
+        return;
       }
 
       if (intervals[counter].max() == complement) {
@@ -3864,7 +3851,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         } else {
           // if domain like this 1..3, 5, 7..10, and 5 being removed.
           System.arraycopy(intervals, 0, result.intervals, 0, counter);
@@ -3885,8 +3871,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           } else {
             var.domainHasChanged(IntDomain.ANY);
           }
-          return;
         }
+        return;
       }
 
       if (intervals[counter].max() == complement) {
@@ -5478,13 +5464,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         }
 
         int min = current;
-        bits = bits << 1;
-        current++;
 
-        while (bits < 0 && current <= intervals[position].max()) {
+        do {
           bits = bits << 1;
           current++;
-        }
+        } while (bits < 0 && current <= intervals[position].max());
 
         result.unionAdapt(min, current - 1);
       }

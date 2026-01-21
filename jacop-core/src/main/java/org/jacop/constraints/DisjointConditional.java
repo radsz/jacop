@@ -361,7 +361,7 @@ public class DisjointConditional extends Diff {
   }
 
   boolean checkRect(RectangleWithCondition r) {
-    return r.condition() == null ? true : (r.condition().min() == 1 ? true : false);
+    return r.condition() == null || (r.condition().min() == 1);
   }
 
   boolean conditionChanged(Set<IntVar> fdvQueue, int j) {

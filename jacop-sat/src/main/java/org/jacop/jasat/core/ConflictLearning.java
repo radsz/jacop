@@ -79,9 +79,8 @@ public final class ConflictLearning implements SolverComponent {
           explanationClause.assertedLiteral = -trail.values[var];
           firstOne = false;
         } else {
-          int level = trail.getLevel(var);
           // core.logc(3, "at level "+level+ " var is unit "+literal);
-          return level;
+          return trail.getLevel(var);
         }
       }
     }

@@ -302,9 +302,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
         vars[i].dom().in(store.level, vars[i], solutions[number][i]);
       }
 
-      boolean result = store.consistency();
-
-      return result;
+      return store.consistency();
     } else {
       return false;
     }

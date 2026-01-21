@@ -65,29 +65,26 @@ public class DCT extends Filter {
 
     name = "DCT";
 
-    int[][] dependencies = {
-      {0, 8}, {0, 16}, {0, 17}, {1, 8}, {1, 19}, {1, 20}, {2, 9}, {2, 22}, {2, 23}, {3, 9}, {3, 25},
-      {3, 26}, {4, 10}, {4, 11}, {5, 10}, {5, 11}, {6, 12}, {6, 13}, {7, 12}, {7, 13}, {8, 14},
-      {8, 18}, {9, 14}, {9, 24}, {10, 27}, {11, 15}, {11, 29}, {12, 28}, {13, 15}, {13, 31},
-      {14, 21}, {15, 30}, {16, 32}, {17, 38}, {18, 32}, {18, 34}, {19, 34}, {20, 36}, {21, 33},
-      {21, 35}, {21, 36}, {21, 38}, {22, 35}, {23, 37}, {24, 37}, {24, 39}, {25, 33}, {26, 39},
-      {27, 44}, {27, 45}, {28, 44}, {28, 45}, {29, 46}, {30, 46}, {30, 47}, {31, 47}, {32, 40},
-      {33, 40}, {34, 41}, {35, 41}, {36, 42}, {37, 42}, {38, 43}, {39, 43}
-    };
+    this.dependencies =
+        new int[][] {
+          {0, 8}, {0, 16}, {0, 17}, {1, 8}, {1, 19}, {1, 20}, {2, 9}, {2, 22}, {2, 23}, {3, 9},
+          {3, 25}, {3, 26}, {4, 10}, {4, 11}, {5, 10}, {5, 11}, {6, 12}, {6, 13}, {7, 12}, {7, 13},
+          {8, 14}, {8, 18}, {9, 14}, {9, 24}, {10, 27}, {11, 15}, {11, 29}, {12, 28}, {13, 15},
+          {13, 31}, {14, 21}, {15, 30}, {16, 32}, {17, 38}, {18, 32}, {18, 34}, {19, 34}, {20, 36},
+          {21, 33}, {21, 35}, {21, 36}, {21, 38}, {22, 35}, {23, 37}, {24, 37}, {24, 39}, {25, 33},
+          {26, 39}, {27, 44}, {27, 45}, {28, 44}, {28, 45}, {29, 46}, {30, 46}, {30, 47}, {31, 47},
+          {32, 40}, {33, 40}, {34, 41}, {35, 41}, {36, 42}, {37, 42}, {38, 43}, {39, 43}
+        };
 
-    this.dependencies = dependencies;
+    this.ids =
+        new int[] {
+          addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
+          addId, addId, addId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
+          mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId,
+          addId, addId, addId, addId, addId, addId, addId, addId, addId
+        };
 
-    int[] ids = {
-      addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId, addId,
-      addId, addId, addId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId, mulId,
-      mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId, addId, addId,
-      addId, addId, addId, addId, addId, addId, addId, addId, addId
-    };
-
-    this.ids = ids;
-
-    int[] last = {40, 41, 42, 43, 44, 45, 46, 47};
-    this.last = last;
+    this.last = new int[] {40, 41, 42, 43, 44, 45, 46, 47};
   }
 
   @Override

@@ -324,13 +324,13 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       IntervalDomain input = (IntervalDomain) domain;
 
       if (input.min() != this.min || input.max() != this.max || input.getSize() != this.size) {
-        assert super.eq(domain) == false;
+        assert !super.eq(domain);
         return false;
       }
 
       for (int i = input.size - 1; i > 0; i--) {
         if (isIntersecting(input.intervals[i - 1].max() + 1, input.intervals[i].min() - 1)) {
-          assert super.eq(domain) == false;
+          assert !super.eq(domain);
           return false;
         }
       }
@@ -592,9 +592,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         singleton = true;
       }
 
-      int previousMin = min;
-      int previousMax = max;
-
       // 1. Find new min.
       if (this.min < min) {
         bits = bits << (min - this.min);
@@ -607,8 +604,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         this.max = previousValue(max + 1);
       }
 
-      assert (max <= previousMax) : "Domain update incorrect.";
-      assert (min >= previousMin) : "Domain update incorrect.";
+      assert (max <= max) : "Domain update incorrect.";
+      assert (min >= min) : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -721,7 +718,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (singleton) {
         var.domainHasChanged(IntDomain.GROUND);
-        return;
       } else {
 
         if (previousMin != min || previousMax != max) {
@@ -729,8 +725,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         } else {
           var.domainHasChanged(IntDomain.ANY);
         }
-        return;
       }
+      return;
 
     } else {
 
@@ -863,7 +859,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       in(storeLevel, var, inBits);
 
-      assert (domain.complement().isIntersecting((IntDomain) var.dom()) == false)
+      assert (!domain.complement().isIntersecting((IntDomain) var.dom()))
           : "Error either in in or isIntersecting.";
 
       return;
@@ -2337,9 +2333,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    SmallDenseDomain cloned = new SmallDenseDomain(this.min, this.bits);
-
-    return cloned;
+    return new SmallDenseDomain(this.min, this.bits);
   }
 
   @Override

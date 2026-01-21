@@ -748,7 +748,7 @@ class GlobalConstraints implements ParserTreeConstants {
         xs.add(v);
       }
     }
-    if (xs.size() == 0) {
+    if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
       return;
     } else if (c.singleton()) {
@@ -855,7 +855,7 @@ class GlobalConstraints implements ParserTreeConstants {
         xs.add(v);
       }
     }
-    if (xs.size() == 0) {
+    if (xs.isEmpty()) {
       c.domain.inValue(store.level, c, 0);
       return;
     } else if (y.singleton()) {
@@ -1184,9 +1184,7 @@ class GlobalConstraints implements ParserTreeConstants {
       }
     }
 
-    int[][] ca = c.toArray(new int[c.size()][2]);
-
-    return ca;
+    return c.toArray(new int[c.size()][2]);
   }
 
   int[][] product(IntVar[] v, int[][] t) {

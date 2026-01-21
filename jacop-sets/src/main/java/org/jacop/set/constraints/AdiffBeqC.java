@@ -152,8 +152,7 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
 
         int sizeOf6 = a.domain.glb().intersect(b.domain.glb()).getSize();
         int minLeft = a.domain.card().max() - sizeOf6;
-        int sizeOf1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
-        int minRight = sizeOf1_2_4_5;
+        int minRight = a.domain.lub().subtract(b.domain.glb()).getSize();
         int max = b.domain.card().min();
         if (max > 0) {
           int sizeOf6_7_8 = b.domain.glb().getSize();

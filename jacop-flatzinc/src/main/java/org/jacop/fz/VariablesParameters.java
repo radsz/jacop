@@ -1326,9 +1326,9 @@ public class VariablesParameters implements ParserTreeConstants {
           return dictionary.getConstant(val); // new IntVar(store, val, val);
         case 1: // bool
           val = ((ASTScalarFlatExpr) child).getInt();
-          BooleanVar bb = dictionary.getConstantBoolean(val); // new BooleanVar(store, val, val);
+          // new BooleanVar(store, val, val);
           // numberBooleanVariables++; // not really a variable; constant
-          return bb;
+          return dictionary.getConstantBoolean(val);
         case 2: // ident
           IntVar var = dictionary.getVariable(((ASTScalarFlatExpr) child).getIdent());
           if (var != null) {
@@ -1489,8 +1489,7 @@ public class VariablesParameters implements ParserTreeConstants {
       }
     } else if (child.getId() == JJTSETLITERAL) {
       IntDomain s = getSetLiteral(node, i);
-      SetVar setVar = new SetVar(store, new BoundSetDomain(s, s));
-      return setVar;
+      return new SetVar(store, new BoundSetDomain(s, s));
     }
     throw new IllegalArgumentException(
         "Not supported parameter assignment "

@@ -36,6 +36,7 @@ package org.jacop.core;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@SuppressWarnings("PointlessBooleanExpression")
 public final class SwitchesPruningLogging {
 
   /** It is a general switch which can be turned off to switch off all printouts. */

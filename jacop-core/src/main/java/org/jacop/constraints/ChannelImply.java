@@ -240,7 +240,7 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
       return false;
     }
 
-    return one == Integer.MIN_VALUE ? false : x.value() == item[one].value;
+    return one != Integer.MIN_VALUE && x.value() == item[one].value;
   }
 
   @Override

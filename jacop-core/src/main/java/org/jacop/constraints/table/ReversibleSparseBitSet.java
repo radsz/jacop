@@ -49,7 +49,6 @@ public class ReversibleSparseBitSet {
 
   public ReversibleSparseBitSet() {}
 
-  @SuppressWarnings("unchecked")
   public ReversibleSparseBitSet(Store store, IntVar[] x, int[][] tuple) {
 
     int n = tuple.length;

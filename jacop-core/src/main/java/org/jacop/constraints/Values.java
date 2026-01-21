@@ -96,7 +96,6 @@ public class Values extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public void consistency(Store store) {
 
     do {

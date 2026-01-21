@@ -169,11 +169,7 @@ public class AlldifferentExcept extends Alldifferent
     BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, vs.length, valueMap.size());
     int maxNumberDifferent = matcher.hopcroftKarp();
 
-    if (maxNumberDifferent < vs.length) {
-      return true; // not satisfied
-    } else {
-      return false;
-    }
+    return maxNumberDifferent < vs.length; // not satisfied
   }
 
   @Override

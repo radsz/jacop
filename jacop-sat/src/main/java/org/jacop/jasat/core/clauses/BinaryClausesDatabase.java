@@ -85,8 +85,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     // is clause unit, satisfied, satisfiable or conflict ?
     notifyClause(newIndex);
 
-    int uniqueClauseIndex = indexToUniqueId(newIndex);
-    return uniqueClauseIndex;
+    return indexToUniqueId(newIndex);
   }
 
   public void assertLiteral(int literal) {

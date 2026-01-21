@@ -103,9 +103,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
     // add the clause to winner DB
     AbstractClausesDatabase db = databases[winnerDatabaseIndex];
-    int clauseId = db.addClause(clause, isModelClause);
 
-    return clauseId;
+    return db.addClause(clause, isModelClause);
   }
 
   public boolean canRemove(int clauseId) {

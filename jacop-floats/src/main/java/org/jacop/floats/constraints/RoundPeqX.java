@@ -103,8 +103,7 @@ public class RoundPeqX extends Constraint implements SatisfiedPresent {
 
   double fractionalPart(double p) {
     long iPart = (long) p;
-    double fPart = p - iPart;
-    return fPart;
+    return p - iPart;
   }
 
   int round(double p) {
