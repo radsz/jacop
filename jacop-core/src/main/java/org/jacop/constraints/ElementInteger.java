@@ -248,7 +248,7 @@ public class ElementInteger extends Constraint
 
       indexHasChanged = false;
       IntDomain indexDom = index.dom().cloneLight();
-      IntDomain domValue = new IntervalDomain(5);
+      IntervalDomain domValue = new IntervalDomain(5);
 
       if (checkDuplicates) {
         // if (indexDom.getSize() < limitForDomainPruning)
@@ -257,7 +257,7 @@ public class ElementInteger extends Constraint
             if (domValue.isEmpty()) {
               domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
             } else {
-              ((IntervalDomain) domValue).addLastElement(list[duplicate.min() - 1 - indexOffset]);
+              domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
             }
           }
         }

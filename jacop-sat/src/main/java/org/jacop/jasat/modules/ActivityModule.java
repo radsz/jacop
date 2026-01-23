@@ -55,11 +55,11 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
   // number of conflicts needed to increase bump rate (ie, it is increased
   // every 20 learnt clauses)
-  private final int LEARNT_COUNT_TO_INCREASE = 20;
+  private static final int LEARNT_COUNT_TO_INCREASE = 20;
   // how often do we sort again the priority queue
-  private final int CONFLICT_COUNT_TO_SORT = 100;
+  private static final int CONFLICT_COUNT_TO_SORT = 100;
   // number by which activity bump rate is multiplied
-  private final int BUMP_INCREASE_FACTOR = 2;
+  private static final int BUMP_INCREASE_FACTOR = 2;
   // set of literals that are in priorities
   private final BitSet prioritizedVars = new BitSet();
   // solver instance

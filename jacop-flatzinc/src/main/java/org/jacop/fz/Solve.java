@@ -1845,7 +1845,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // ComparatorVariable<IntVar> comparator = si.getVarSelect();
     // ComparatorVariable<IntVar> tieBreak = (ComparatorVariable<IntVar>)si.tieBreaking;
-    SearchItem.ComparatorsVar<IntVar> vs = (SearchItem.ComparatorsVar<IntVar>) si.getVarSelect();
+    SearchItem.ComparatorsVar<IntVar> vs = si.getVarSelect();
     ComparatorVariable<IntVar> comparator = vs.v1;
     ComparatorVariable<IntVar> tieBreak = vs.v2;
 

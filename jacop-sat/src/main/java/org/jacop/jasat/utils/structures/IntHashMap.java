@@ -210,7 +210,7 @@ public final class IntHashMap<E> {
   }
 
   public boolean containsKey(Object arg0) {
-    if (Integer.class.isInstance(arg0)) {
+    if (arg0 instanceof Integer) {
       return containsKey(arg0);
     }
     return false;
@@ -324,7 +324,7 @@ public final class IntHashMap<E> {
       }
 
       public boolean remove(Object arg0) {
-        if (Integer.class.isInstance(arg0)) {
+        if (arg0 instanceof Integer) {
           int i = (Integer) arg0;
           return IntHashMap.this.remove(i);
         }

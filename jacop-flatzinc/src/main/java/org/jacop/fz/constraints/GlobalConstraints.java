@@ -1126,8 +1126,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void generateTableConstraints(IntVar[] v, int[][] t) {
 
-    int size =
-        Arrays.asList(v).stream().mapToInt(x -> x.dom().getSize()).reduce(1, (a, b) -> a * b);
+    int size = Arrays.stream(v).mapToInt(x -> x.dom().getSize()).reduce(1, (a, b) -> a * b);
 
     if (v.length > 3 || size > 70) {
       support.pose(new SimpleTable(v, t, true));

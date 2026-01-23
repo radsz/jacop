@@ -30,6 +30,7 @@
 
 package org.jacop.util.fsm;
 
+import java.io.Serial;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -224,7 +225,7 @@ public class RegularExpressionParser {
   public static class SyntaxException extends Exception {
 
     /** */
-    private static final long serialVersionUID = 5532774111743285222L;
+    @Serial private static final long serialVersionUID = 5532774111743285222L;
 
     /** The constructor to create an syntax exception without the message. */
     public SyntaxException() {}
@@ -316,7 +317,7 @@ public class RegularExpressionParser {
     }
   }
 
-  class Sum extends Expression {
+  static class Sum extends Expression {
 
     public final List<Expression> disj;
 

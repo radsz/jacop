@@ -313,8 +313,8 @@ public class VariablesParameters implements ParserTreeConstants {
             AeqS c = new AeqS(varSet, setValue);
             pose(store, c);
           } else {
-            Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, (SetVar) initSetVar);
+            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+            AeqB c = new AeqB(varSet, initSetVar);
             pose(store, c);
           }
         }
@@ -348,8 +348,8 @@ public class VariablesParameters implements ParserTreeConstants {
             AeqS c = new AeqS(varSet, setValue);
             pose(store, c);
           } else {
-            Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, (SetVar) initSetVar);
+            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+            AeqB c = new AeqB(varSet, initSetVar);
             pose(store, c);
           }
         }
@@ -376,8 +376,8 @@ public class VariablesParameters implements ParserTreeConstants {
             AeqS c = new AeqS(varSet, setValue);
             pose(store, c);
           } else {
-            Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, (SetVar) initSetVar);
+            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+            AeqB c = new AeqB(varSet, initSetVar);
             pose(store, c);
           }
         }
@@ -403,8 +403,8 @@ public class VariablesParameters implements ParserTreeConstants {
             AeqS c = new AeqS(varSet, setValue);
             pose(store, c);
           } else {
-            Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, (SetVar) initSetVar);
+            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+            AeqB c = new AeqB(varSet, initSetVar);
             pose(store, c);
           }
         }
@@ -428,8 +428,8 @@ public class VariablesParameters implements ParserTreeConstants {
             AeqS c = new AeqS(varSet, setValue);
             pose(store, c);
           } else {
-            Var initSetVar = getSetFlatExpr_var(store, node, initChild);
-            AeqB c = new AeqB(varSet, (SetVar) initSetVar);
+            SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
+            AeqB c = new AeqB(varSet, initSetVar);
             pose(store, c);
           }
         }

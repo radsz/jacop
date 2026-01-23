@@ -426,7 +426,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   //     }
   // }
 
-  @SuppressWarnings("unchecked")
   SelectChoicePoint<IntVar> getWarmStartSelect() {
 
     Indomain<IntVar> indom =
@@ -453,7 +452,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     return new SimpleSelect<>(searchVars, var_sel, indom);
   }
 
-  @SuppressWarnings("unchecked")
   SelectChoicePoint<IntVar> getIntSelect() {
 
     if ("random".equals(var_selection_heuristic)) {
@@ -499,9 +497,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       }
     } else if ("outdomain_max".equals(indomain)) {
       if (tieBreaking == null) {
-        return new SplitSelect<IntVar>(searchVars, var_sel, new IndomainMax<IntVar>());
+        return new SplitSelect<>(searchVars, var_sel, new IndomainMax<>());
       } else {
-        return new SplitSelect<IntVar>(searchVars, var_sel, tieBreaking, new IndomainMax<IntVar>());
+        return new SplitSelect<>(searchVars, var_sel, tieBreaking, new IndomainMax<>());
       }
     } else if ("outdomain_min".equals(indomain)) {
       if (tieBreaking == null) {
@@ -527,7 +525,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  @SuppressWarnings("unchecked")
   SelectChoicePoint<FloatVar> getFloatSelect() {
 
     ComparatorsVar<FloatVar> vs = getFloatVarSelect();
@@ -572,7 +569,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  @SuppressWarnings("unchecked")
   SelectChoicePoint<SetVar> getSetSelect() {
 
     ComparatorsVar<SetVar> vs = getSetVarSelect();
@@ -1020,7 +1016,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
       if (Objects.equals(((ASTAnnotation) expr.jjtGetChild(0)).getAnnId(), "$vector")) {
 
-        int count = ((ASTAnnotation) expr.jjtGetChild(0)).jjtGetNumChildren();
+        int count = expr.jjtGetChild(0).jjtGetNumChildren();
         if (count >= 2) {
           String varSel1 =
               ((ASTScalarFlatExpr) expr.jjtGetChild(0).jjtGetChild(0).jjtGetChild(0).jjtGetChild(0))

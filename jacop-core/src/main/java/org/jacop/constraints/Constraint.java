@@ -256,14 +256,14 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public void impose(Store store) {
 
-    arguments().stream().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
+    arguments().forEach(i -> i.putModelConstraint(this, getConsistencyPruningEvent(i)));
     store.addChanged(this);
     store.countConstraint();
     if (constraintScope != null) {
-      constraintScope.stream().forEach(i -> i.include(store));
+      constraintScope.forEach(i -> i.include(store));
     }
     if (this instanceof UsesQueueVariable) {
-      arguments().stream().forEach(i -> queueVariable(store.level, i));
+      arguments().forEach(i -> queueVariable(store.level, i));
     }
 
     if (constraintScope != null) {

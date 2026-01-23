@@ -139,7 +139,7 @@ public final class SatChangesListener
     IntVar cpVar = wrapper.boolVarToCpVar(literal);
     SatCPBridge range = wrapper.boolVarToDomain(literal);
 
-    if (BooleanVar.class.isInstance(cpVar)) {
+    if (cpVar instanceof BooleanVar) {
       // boolean variable, only remember something happened
       BooleanVar cpBoolVar = (BooleanVar) cpVar;
       booleanVarsToUpdate.add(cpBoolVar);

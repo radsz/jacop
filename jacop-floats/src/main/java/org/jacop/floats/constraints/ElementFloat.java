@@ -198,15 +198,14 @@ public class ElementFloat extends Constraint
 
       indexHasChanged = false;
       IntDomain indexDom = index.dom().cloneLight();
-      FloatDomain domValue = new FloatIntervalDomain(5);
+      FloatIntervalDomain domValue = new FloatIntervalDomain(5);
 
       for (IntDomain duplicate : duplicates) {
         if (indexDom.isIntersecting(duplicate)) {
           if (domValue.isEmpty()) {
             domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
           } else {
-            ((FloatIntervalDomain) domValue)
-                .addLastElement(list[duplicate.min() - 1 - indexOffset]);
+            domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
           }
         }
       }

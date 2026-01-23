@@ -487,7 +487,7 @@ public final class SatWrapper extends Constraint
     assert log(this, "queue variable " + var + " at CP level " + level);
 
     // this must be a SatVar
-    assert IntVar.class.isInstance(var);
+    assert var instanceof IntVar;
     IntVar v = (IntVar) var; // cast it in an IntVar
 
     if (v.singleton()) {
