@@ -678,16 +678,6 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           handlerList.add(new DomainStructure(var, domains, arcs));
         }
 
-        /*
-              for (int i = 0; i < n; i++) {
-                List<Arc> arcs = new ArrayList<Arc>();
-                arcs.add( addArc(s, xNodes[i], 0, 0, 1) );
-                List<Domain> domains = new ArrayList<Domain>();
-                domains.add(all);
-        //       varList.add(new DomainStructure(xVars[i], domains, arcs));
-              }
-              */
-
         for (int i = 0; i < doms.length; i++) {
 
           // shortage flow.

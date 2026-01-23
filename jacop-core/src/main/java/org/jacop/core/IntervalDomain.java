@@ -1622,10 +1622,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
               }
             } else {
 
-              // i1++;
-              // if (i1 == size)
-              // break;
-
               result.unionAdapt(new Interval(oldMax + 1, currentDomain2.min() - 1));
             }
           }
@@ -1685,11 +1681,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             // interval (min, max) ends before interval of dom1 ends
             result.unionAdapt(new Interval(max + 1, currentDomain1.max()));
           }
-          i1++;
-          if (i1 == size) {
-            break;
-          }
-          currentDomain1 = intervals[i1];
 
         } else { // currentDomain1.min < min)
 
@@ -1699,13 +1690,12 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
             result.unionAdapt(new Interval(max + 1, currentDomain1.max()));
           }
-
-          i1++;
-          if (i1 == size) {
-            break;
-          }
-          currentDomain1 = intervals[i1];
         }
+        i1++;
+        if (i1 == size) {
+          break;
+        }
+        currentDomain1 = intervals[i1];
       }
 
       while (i1 < size) {
@@ -1872,10 +1862,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
                 break;
               }
             } else {
-
-              // i1++;
-              // if (i1 == size)
-              // break;
 
               result.unionAdapt(new Interval(oldMax + 1, currentDomain2.min() - 1));
             }
@@ -4180,10 +4166,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           }
 
           result.size -= noRemoved;
-
-          //          if (counter < size && intervals[counter].min <= max)
-          //                  result.intervals[counter] = new Interval(max + 1,
-          //                                  intervals[counter].max);
 
           if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max) {
             result.intervals[counter] = new Interval(max + 1, intervals[counter + noRemoved].max());

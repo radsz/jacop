@@ -115,19 +115,6 @@ public class QCP extends ExampleFD {
       IO.print(" Solution(s) found ");
     }
 
-    /*
-    // TODO, Why it is no longer efficient? It takes too long now.
-    example = new QCP();
-
-    if (args.length > 0)
-      example.filename = args[0];
-
-    example.model();
-
-    if (example.searchAllTransform())
-      System.out.print(" Solution(s) found ");
-    */
-
     example = new QCP();
 
     if (args.length > 0) {

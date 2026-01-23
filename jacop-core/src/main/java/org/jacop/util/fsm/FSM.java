@@ -250,8 +250,6 @@ public class FSM {
       //       result.append( s.id ).append("\n");
 
       for (FSMTransition t : s.transitions) {
-        //         result.append( "-" ).append( t.domain ).append( "> " ).append(t.successor.id
-        // ).append("\n");
         result
             .append(s.id)
             .append(" -> ")
@@ -346,10 +344,6 @@ public class FSM {
               tmp.add(t.successor);
             }
           }
-
-          //         if (dom.getSize() > 0 && !tmp.contains(t.succesor))
-          //           if (level < levels -1) tmp.push(t.succesor);
-          //           else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
       }
       // copy the tmp set of states into reachable region
@@ -512,10 +506,6 @@ public class FSM {
               tmp.add(t.successor);
             }
           }
-
-          // if (dom.getSize() > 0 && !tmp.contains(t.succesor))
-          // if (level < levels -1) tmp.push(t.succesor);
-          // else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
       }
 
@@ -685,10 +675,6 @@ public class FSM {
               tmp.add(t.successor);
             }
           }
-
-          // if (dom.getSize() > 0 && !tmp.contains(t.succesor))
-          // if (level < levels -1) tmp.push(t.succesor);
-          // else if (this.finalStates.contains(t.succesor)) tmp.push(t.succesor);
         }
       }
 
@@ -760,11 +746,6 @@ public class FSM {
                 if (l + 1 < vars.length) {
                   result.freePosition += result.domainLimits[l + 1];
                 }
-                // else {
-                // result.ensureSize(result.freePosition + 1);
-                // result.diagram[result.freePosition] = MDD.TERMINAL;
-                // result.freePosition += 1;
-                // }
               }
 
               if (l + 1 < vars.length) {

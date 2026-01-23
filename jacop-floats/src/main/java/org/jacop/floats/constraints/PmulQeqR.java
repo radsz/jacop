@@ -107,8 +107,6 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
         store.propagationHasOccurred = false;
 
         // Bounds for R
-        // FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), p.min(), p.max());
-        // r.domain.in(store.level, r, rBounds);
 
         double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
         double p2 = Math.max(p.min() * p.min(), p.max() * p.max());

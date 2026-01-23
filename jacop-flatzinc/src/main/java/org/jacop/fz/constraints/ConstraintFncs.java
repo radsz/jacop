@@ -965,9 +965,4 @@ public final class ConstraintFncs {
   public void jacop_graph_isomorphism(SimpleNode n) {
     graph.gen_jacop_graph_isomorphism(n);
   }
-
-  // public void float_cosh(SimpleNode n) {foc.gen_float_cosh(n);}
-  // public void float_sinh(SimpleNode n) {foc.gen_float_sinh(n);}
-  // public void float_tanh(SimpleNode n) {foc.gen_float_tanh(n);}
-
 }

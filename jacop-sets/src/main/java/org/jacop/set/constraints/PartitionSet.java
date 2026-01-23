@@ -128,10 +128,10 @@ public class PartitionSet extends Constraint {
       s[i].dom().inGLB(store.level, s[i], ub);
 
       if (cardMax < cardMin || cardMax < 0) {
-        throw store.failException;
+        throw Store.failException;
       }
       if (s[i].dom().card().max() < cardMin || s[i].dom().card().min() > cardMax) {
-        throw store.failException;
+        throw Store.failException;
       }
       if (cardMin > s[i].dom().card().min()) {
         s[i].domain.inCardinality(store.level, s[i], cardMin, Integer.MAX_VALUE);

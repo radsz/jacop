@@ -104,9 +104,6 @@ class FloatOperationConstraints implements ParserTreeConstants {
     support.pose(new CosPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
   }
 
-  // void gen_float_cosh(SimpleNode node) {
-  // }
-
   void gen_float_exp(SimpleNode node) {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
@@ -153,18 +150,12 @@ class FloatOperationConstraints implements ParserTreeConstants {
     support.pose(new SinPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
   }
 
-  // void gen_float_sinh(SimpleNode node) {
-  // }
-
   void gen_float_tan(SimpleNode node) {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
     support.pose(new TanPeqR(support.getFloatVariable(p1), support.getFloatVariable(p2)));
   }
-
-  // void gen_float_tanh(SimpleNode node) {
-  // }
 
   void gen_float_max(SimpleNode node) {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);

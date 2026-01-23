@@ -76,9 +76,6 @@ public class SixHumpCamelFunction {
     FloatVar x1 = new FloatVar(store, "x1", -2.5, 2.5);
     FloatVar x2 = new FloatVar(store, "x2", -2.5, 2.5);
 
-    // f = 4.0*(x1*x1) - 2.1*(x1*x1*x1*x1) + (1.0/3.0)*(x1*x1*x1*x1*x1*x1) + x1*x2 -
-    //     4.0*(x2*x2) + 4.0*(x2*x2*x2*x2);
-
     FloatVar x1x1 = new FloatVar(store, "x1x1", MIN_FLOAT, MAX_FLOAT);
     Constraint c0 = new PmulQeqR(x1, x1, x1x1);
     store.impose(c0);
@@ -115,10 +112,6 @@ public class SixHumpCamelFunction {
     vars.add(x1);
     vars.add(x2);
     Derivative.init(store);
-    // Derivative.defineConstraint(x1x1, c0);
-    // Derivative.defineConstraint(x2x2, c1);
-    // Derivative.defineConstraint(x1x1x1x1, c2);
-    // Derivative.defineConstraint(x2x2x2x2, c3);
 
     IO.println("================== fx1 =================");
     FloatVar fx1 = Derivative.getDerivative(store, f, vars, x1);

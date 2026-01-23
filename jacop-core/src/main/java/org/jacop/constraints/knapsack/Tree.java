@@ -473,8 +473,6 @@ public class Tree {
 
       // Playing safe, we return higher value (ceil) to avoid making items mandatory due to rounding
       // errors).
-      // return (int) Math.ceil( profitSlack * criticalLeaf.weightOfOne / (double)
-      // criticalLeaf.profitOfOne );
 
       return (int)
           Math.ceil(
@@ -609,7 +607,6 @@ public class Tree {
       // miss mandatory item.
       // @TODO commented out below
       // currentWeight += (int) Math.floor( lastWeight );
-      return currentWeight + (int) Math.ceil(lastWeight);
 
     } else {
 
@@ -621,8 +618,8 @@ public class Tree {
       // miss mandatory item.
       // @TODO commented out below
       // currentWeight += (int) Math.floor( lastWeight );
-      return currentWeight + (int) Math.ceil(lastWeight);
     }
+    return currentWeight + (int) Math.ceil(lastWeight);
   }
 
   /**

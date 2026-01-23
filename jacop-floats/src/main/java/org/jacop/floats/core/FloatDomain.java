@@ -243,10 +243,6 @@ public abstract class FloatDomain extends Domain {
 
     // Changing constants to smallest encapsulating intervals to
     // limit rounding effects problem
-    // if (c == d) {
-    //     c = down(c);
-    //     d = up(d);
-    // }
     double min = down(a + c);
     double max = up(b + d);
 
@@ -274,10 +270,6 @@ public abstract class FloatDomain extends Domain {
 
     // Changing constants to smallest encapsulating intervals to
     // limit rounding effects problem
-    // if (c == d) {
-    //     c = down(c);
-    //     d = up(d);
-    // }
     double min = down(a - d);
     double max = up(b - c);
 
@@ -673,10 +665,6 @@ public abstract class FloatDomain extends Domain {
         */
     return true;
   }
-
-  // public abstract int nextValue(int value);
-
-  // public abstract int previousValue(int value);
 
   /**
    * It checks if an interval min..max belongs to the domain.
@@ -1147,21 +1135,6 @@ public abstract class FloatDomain extends Domain {
    *
    * @return the number of elements which are smaller than the provided element el.
    */
-  // public int elementsSmallerThan(int el){
-
-  //  int counter = -1;
-
-  //  int value = el - 1;
-
-  //  while(value != el){
-  //      value = el;
-  //      el = previousValue(el);
-  //      counter++;
-  //  }
-
-  //  return counter;
-  // }
-
   public int noConstraints() {
     return searchConstraintsToEvaluate
         + modelConstraintsToEvaluate[GROUND]
@@ -1483,9 +1456,6 @@ public abstract class FloatDomain extends Domain {
           break;
         }
       }
-
-      // int pruningConstraintsToEvaluate =
-      // modelConstraintsToEvaluate[pruningEvent];
 
       if (isImposed) {
 

@@ -127,17 +127,10 @@ public class SinPeqR extends Constraint
         FloatInterval normP = normalize(p);
         min = normP.min();
         max = normP.max();
-
-        // System.out.println ("Not-normalized " + p);
-        // System.out.println ("Normalized interval within -2*PI..2*PI interval = " + min + ".." +
-        // max);
       }
 
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
-
-      // System.out.println ("min in interval " + intervalForMin + ", max in interval " +
-      // intervalForMax);
 
       double qMin, qMax;
       switch (intervalForMin) {
@@ -278,9 +271,6 @@ public class SinPeqR extends Constraint
       high = FloatDomain.up(pMax + 2 * k * FloatDomain.PI);
       FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
 
-      // System.out.println ("2. " + p + " in " + pDom  + " low..high = " + low+".."+high + ", k = "
-      // + k);
-
       p.domain.in(store.level, p, pDom); // .min(), pDom.max());
 
       // System.out.println ("p after in " + p);
@@ -309,18 +299,6 @@ public class SinPeqR extends Constraint
 
     return new FloatInterval(normMin, normMax);
   }
-
-  // double rest(double d, boolean min) {
-
-  //   double rest = d % (2*FloatDomain.PI);
-
-  //   if (min)
-  //       rest = FloatDomain.down(rest);
-  //   else
-  //       rest = FloatDomain.up(rest);
-
-  //   return rest;
-  // }
 
   int intervalNo(double d) {
     if (d >= -2.0 * FloatDomain.PI && d <= -1.5 * FloatDomain.PI) {

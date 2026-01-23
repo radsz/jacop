@@ -202,21 +202,6 @@ public class Sum extends Constraint implements SatisfiedPresent {
     super.impose(store);
   }
 
-  // void checkForOverflow() {
-
-  //     int sumMin = 0, sumMax = 0;
-  //     for (int i = 0; i < list.length; i++) {
-  //         int n1 = list[i].min();
-  //         int n2 = list[i].max();
-
-  //         sumMin = Math.addExact(sumMin, n1);
-  //         sumMax = Math.addExact(sumMax, n2);
-  //     }
-
-  //     Math.subtractExact(sumMin, sum.max());
-  //     Math.subtractExact(sumMax, sum.min());
-  // }
-
   @Override
   public boolean satisfied() {
 

@@ -483,8 +483,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       int start, int i, Rectangle r, List<IntRectangle> ConsideredRect) {
 
     if (notFit(i, r, ConsideredRect, start)) {
-      // System.out.println("New start = " + start + ".." + (int)(start +
-      // minPosition));
       return new Pair(start, start + minPosition);
     } else {
       return new Pair(-1, -1);
@@ -681,8 +679,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       !(settled && maxLevel < currentStore.level)) {
         // and are not fixed already
 
-        // System.out.println(r+", "+ containsChangedVariable(r,
-        // fdvQueue));
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
         UsedRect.clear();
@@ -714,16 +710,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         int durJ = rLengthJdom.min();
 
         int currentJposition = minJ;
-        // System.out.println("max position for r=" + maxJ+
-        // ", min duration of r=" + durJ+", start position=" +
-        // currentJposition);
         barrier.clear();
         for (IntRectangle hinder : ConsideredRect) {
-          // System.out.println("["+ hinder.origin[j] + ".."
-          // + (int)(hinder.origin[j]
-          // + hinder.length[j]) +"), "
-          // + (int)(hinder.origin[i] + hinder.length[i] -
-          // barierPosition));
           int hinderJ = hinder.origin[j];
           int hinderValue = hinder.origin[i] + hinder.length[i] - barierPosition;
           if (hinderValue > 0) {
@@ -745,9 +733,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           }
           currentJposition = hinderStop;
           k++;
-          // System.out.println("Hinder = " + hinderStart + ".." +
-          // hinderStop);
-          // System.out.println("*** Excluded = " + excludedState);
         }
         if (excludedState && maxJ - currentJposition >= durJ) {
           excludedState = false;
@@ -777,8 +762,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             // System.out.println("\n*** adding " + v);
             barrier.addToProfile(v.min(), v.max(), minimalAfter);
           }
-          // for (ProfileItem p : barrier) System.out.print(p + " ");
-          // System.out.println("minimalAfter = " + minimalAfter);
 
           int minSizeAfterBarier = IntDomain.MaxInt;
           for (ProfileItem p : barrier) {
@@ -793,18 +776,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             }
           }
           minPosition = minSizeAfterBarier;
-
-          // System.out.print("==> [");
-          // for (ProfileItem p : barrier) System.out.print(p + " ");
-          // System.out.println("], minSizeAfterBarrier = " +
-          // minSizeAfterBarier);
         }
       }
       j++;
     }
 
-    // System.out.println("2. " + excludedState + ", minPosition = " +
-    // minPosition);
     return excludedState;
   }
 

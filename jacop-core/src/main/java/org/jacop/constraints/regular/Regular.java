@@ -621,8 +621,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
         // We are removing a damaged state, thus, all its arcs are removed and
         // we must remember maximal degree of it
-        //              if (s.outDegree > maxDegreePrunned)
-        //                      maxDegreePrunned = s.outDegree;
 
         for (int i = s.outDegree - 1; i >= 0; i--) {
 
@@ -662,10 +660,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       currentLimit = activeLevels[level + 1].value();
       level++;
     }
-
-    //      if (maxDegreePrunned > arcsPrunned.value())
-    //              arcsPrunned.update(maxDegreePrunned);
-
   }
 
   /**
@@ -1030,22 +1024,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
             state.setSupports(supports[level], i);
           }
         }
-
-        /*
-        ValueEnumeration enumer = vars[level].domain.valueEnumeration();
-
-        for (int v; enumer.hasMoreElements();) {
-
-                v = enumer.nextElement();
-                // function check - checks if there is a support, starting from the
-                // current one.
-                if (supports[level].get(v) == null) {
-                        this.vars[level].domain.inComplement(store.level, vars[level], v);
-                        enumer.domainHasChanged();
-                }
-        }
-        */
-
       }
     }
 

@@ -114,12 +114,6 @@ public class ConferenceTalkPlacement {
     }
 
     // Everytime you find a solution reduce the maximum cost by a bit (e.g. 5%).
-    /*
-            int maximumCost = 1700;
-            if ( example.search(maximumCost, timeOutSeconds)) {
-                System.out.println("Solution found with cost " + example.cost);
-            }
-    */
 
     // example.store.print(); // Useful for small examples.
   }

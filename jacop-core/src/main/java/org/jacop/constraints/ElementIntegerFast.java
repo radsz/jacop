@@ -76,8 +76,6 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   protected final int indexOffset;
 
   private final short detect = 0;
-  private final short ascending = 1;
-  private final short descending = 2; // , none = 3;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   /*
@@ -160,6 +158,9 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
 
       short sort = order.value();
 
+      // , none = 3;
+      short descending = 2;
+      short ascending = 1;
       if (sort == ascending || sort == descending) {
         int minIndex = index.min();
         int maxIndex = index.max();

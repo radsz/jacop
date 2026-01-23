@@ -534,8 +534,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       if (invalidPosition == -1) {
         return t;
       }
-      // setNextValidPart
-      // t = setNextValid(varPosition, value, t, invalidPosition);
       for (int i = invalidPosition + 1; i < list.length; i++) {
         if (i != varPosition) {
           t[i] = list[i].min();

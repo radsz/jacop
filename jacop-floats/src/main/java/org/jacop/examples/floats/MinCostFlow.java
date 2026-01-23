@@ -140,16 +140,6 @@ public class MinCostFlow {
 
     label.labeling(store, s, cost);
 
-    /*
-     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, X, new SmallestDomainFloat<FloatVar>());
-    // s.roundRobin = false;
-    // s.leftFirst = false;
-
-    Optimize opt = new Optimize(store, label, s, cost);
-    opt.minimize();
-    */
-
     IO.println(cost);
     // System.out.printf ("cost = %.2f\n", cost.value());
 

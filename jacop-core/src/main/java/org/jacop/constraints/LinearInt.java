@@ -266,10 +266,6 @@ public class LinearInt extends PrimitiveConstraint {
           pruneLtEq(b);
           pruneGtEq(b);
 
-          // if (!reified)
-          //     if (sumMax <= b && sumMin >= b)
-          //  removeConstraint();
-
           break;
 
         case le:

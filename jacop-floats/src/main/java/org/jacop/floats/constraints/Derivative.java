@@ -62,16 +62,10 @@ public class Derivative {
 
   static Store store;
 
-  // static FloatVar zero;
-  // static FloatVar one;
-
   private Derivative() {}
 
   public static void init(Store s) {
     store = s;
-
-    // zero = new FloatVar(store, 0.0, 0.0);
-    // one  = new FloatVar(store, 1.0, 1.0);
 
     derivateConstraints = new HashSet<>();
     eval = new Stack<>();

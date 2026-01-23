@@ -224,21 +224,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     IntDomain intervalBasedRepresentation = this.toIntervalDomain();
 
     return intervalBasedRepresentation.complement();
-
-    /*
-
-    // it should not assume that complement is restricted to the range given by small dense domain.
-
-    long result = -1;
-
-    result = result ^ bits;
-
-    if (result == 0)
-    return emptyIntDomain;
-    else
-    return new SmallDenseDomain(min, result);
-    */
-
   }
 
   public IntDomain getPreviousDomain() {
@@ -571,11 +556,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       throw failException;
     }
 
-    //              assert (newSize <= size) : "Incorrect in operation";
-
-    //              if (newSize == size)
-    //                      return;
-
     assert (newSize < size) : "Incorrect in operation";
 
     // Pruning has occurred.
@@ -838,13 +818,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       inBits = inBits << (this.min + 63 - this.max);
-
-      // if (inBits == 0)
-      //  System.out.println(this + "domain " + domain + " shift " + shift);
-
-      // temp = new SmallDenseDomain(this.min, inBits);
-      // inBits = inBits << (this.min + 63 - this.max - Math.max(first.min + shift - this.min, 0));
-      // System.out.println(this + "domain " + domain + " shift " + shift + " transformed " + temp);
 
       in(storeLevel, var, inBits);
 
@@ -1219,13 +1192,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       inBits = inBits << (this.min + 63 - this.max);
 
-      // if (inBits == 0)
-      //  System.out.println(this + "domain " + domain + " shift " + shift);
-
-      // temp = new SmallDenseDomain(this.min, inBits);
-      // inBits = inBits << (this.min + 63 - this.max - Math.max(first.min + shift - this.min, 0));
-      // System.out.println(this + "domain " + domain + " shift " + shift + " transformed " + temp);
-
       in(storeLevel, var, inBits);
       return;
     }
@@ -1297,12 +1263,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     inBits = inBits << (this.min + 63 - this.max);
 
     inBits = inBits & bits;
-    // if (inBits == 0)
-    //      System.out.println(this + "domain " + domain + " shift " + shift);
-
-    // temp = new SmallDenseDomain(this.min, inBits);
-    // inBits = inBits << (this.min + 63 - this.max - Math.max(first.min + shift - this.min, 0));
-    // System.out.println(this + "domain " + domain + " shift " + shift + " transformed " + temp);
 
     return new SmallDenseDomain(this.min, inBits);
   }
@@ -2353,36 +2313,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
   @Override
   public String toString() {
-
-    /*
-      StringBuilder sb = new StringBuilder(66);
-
-      sb.append('{').append(min).append(", ");
-
-      for (int j = 63; j >= 0; j--)
-      if (((bits & (TWO_N_ARRAY[j])) != 0))
-      sb.append("1");
-      else
-      sb.append("0");
-
-      sb.append(", ").append(max).append('}');
-
-      return sb.toString();
-    */
-
-    /*
-      StringBuilder sb = new StringBuilder(66);
-
-      sb.append("{ ");
-
-      for (int j = 63; j >= 0; j--)
-      if (((bits & (TWO_N_ARRAY[j])) != 0))
-      sb.append(String.valueOf( min + 63 - j)).append(" ");
-
-      sb.append('}');
-
-      return sb.toString();
-    */
 
     return this.toIntervalDomain().toString();
   }

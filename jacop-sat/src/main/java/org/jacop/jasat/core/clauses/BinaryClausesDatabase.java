@@ -140,18 +140,6 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     clause.partialResolveWith(clauses[offset]);
     clause.partialResolveWith(clauses[offset + 1]);
 
-    /*
-      for (int i = offset; i <= offset + 1; ++i) {
-      int literal = clauses[i];
-
-      // try to remove -literal. If it fails, add literal
-      //if (! clause.removeLiteral(-literal))
-      // clause.addLiteral(literal);
-      clause.partialResolveWith(literal);
-
-    }
-    */
-
     return clause;
   }
 

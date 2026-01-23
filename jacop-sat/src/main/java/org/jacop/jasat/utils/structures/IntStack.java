@@ -92,8 +92,6 @@ public final class IntStack {
   public int pop() {
 
     assert currentIndex != 0;
-    // if (currentIndex == 0)
-    // throw new EmptyStackException();
 
     return array[--currentIndex];
   }
@@ -106,8 +104,6 @@ public final class IntStack {
   public int peek() {
 
     assert currentIndex != 0;
-    // if (currentIndex == 0)
-    // throw new EmptyStackException();
 
     return array[currentIndex - 1];
   }

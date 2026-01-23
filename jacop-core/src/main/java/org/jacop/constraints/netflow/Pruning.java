@@ -66,19 +66,6 @@ public class Pruning extends Network {
   // Decrease in score upon successful pruning
   private static final int FAIL_SCORE = 2;
   private final Statistics statistics;
-  // int z;
-  // private void checkCount() {
-  // z++;
-  // int count = 0;
-  // for (ArcCompanion c : queue) {
-  // if (c.arc.index != DELETED_ARC)
-  // count++;
-  // else
-  // assert (c.xVar.singleton()) : c.xVar;
-  // }
-  // assert (count == numActiveArcs) : count + " != " + numActiveArcs
-  // + "  (" + z + ")";
-  // }
   private final PriorityQueue<ArcCompanion> queue;
   private final PruningStrategy strategy;
   public int numActiveArcs;
@@ -479,8 +466,6 @@ public class Pruning extends Network {
      */
 
     arc.addFlow(flow);
-    // if (SHOW_ANALYSIS && getStoreLevel() >= 5)
-    // System.out.println("New flow " + arc);
 
     return flow;
   }
@@ -494,9 +479,6 @@ public class Pruning extends Network {
       if (companion.xVar != null) {
         int maxFlow = companion.flowOffset + residual;
 
-        // System.out.println(level + ": " + companion.xVar
-        // + " prune max to " + maxFlow);
-        // companion.xVar.domain.inMax(level, companion.xVar, maxFlow);
         xVarInMax(companion, maxFlow);
         companion.changeMaxCapacity(maxFlow);
         modified(companion);
@@ -515,9 +497,6 @@ public class Pruning extends Network {
       if (companion.xVar != null) {
         int minFlow = companion.flowOffset + capacity;
 
-        // System.out.println(level + ": " + companion.xVar
-        // + " prune min to " + minFlow);
-        // companion.xVar.domain.inMin(level, companion.xVar, minFlow);
         xVarInMin(companion, minFlow);
         companion.changeMinCapacity(minFlow);
         modified(companion);

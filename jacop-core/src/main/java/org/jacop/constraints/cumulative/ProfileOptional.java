@@ -41,9 +41,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
-// import java.util.concurrent.atomic.AtomicInteger;
-// import java.util.stream.Stream;
-
 /*
  * ProfileOptional implements the cumulative profile and propagation
  * for optional tasks.

@@ -77,9 +77,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public TimeStamp<Integer> modifiedSize;
 
   // Data structure for pruning
-  // private final Pruning pruning;
 
-  // public final boolean isMinimizing;
   /** The store */
   public Store store;
 
@@ -145,8 +143,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     if (SHOW_CHANGES) {
       // print();
       IO.println("Before removing arc: " + arc);
-      // System.out.println("  tail: " + arc.tail());
-      // System.out.println("  head: " + arc.head);
     }
 
     // Remove arc from tree, if it is a tree arc
@@ -196,11 +192,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       //     ((Pruning)this).numActiveArcs--;
     }
 
-    if (SHOW_CHANGES) {
-      // System.out.println("After removing arc: " + arc);
-      // System.out.println("  tail: " + arc.tail());
-      // System.out.println("  head: " + arc.head);
-    }
+    if (SHOW_CHANGES) {}
   }
 
   public void modified(ArcCompanion companion) {
@@ -235,9 +227,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     // multiple times on the same level if the consistency
     // function is executed multiple times at that level.
     // (Geost has the same problem)
-    // modifiedArcs.addAll(lastModifiedArcs);
-    // modifiedSize.update(modifiedArcs.size());
-    // lastModifiedArcs.clear();
   }
 
   public void backtrack() {
@@ -245,8 +234,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     // restore deleted arcs
     int size = deletedSize.value();
     for (int i = deletedArcs.size() - 1; i >= size; i--) {
-      // System.out.println("Backtrack i=" + i + ", size=" + size +
-      // ", ds=" + deletedSize.value() + ", da=" + deletedArcs.size());
       add(deletedArcs.remove(i));
     }
 

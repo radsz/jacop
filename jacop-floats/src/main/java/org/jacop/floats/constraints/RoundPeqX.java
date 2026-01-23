@@ -89,12 +89,8 @@ public class RoundPeqX extends Constraint implements SatisfiedPresent {
 
       store.propagationHasOccurred = false;
 
-      double pMin =
-          x.min() < 0 ? Math.nextUp((double) x.min() - 0.5) : Math.nextUp((double) x.min() - 0.5);
-      double pMax =
-          x.max() < 0
-              ? Math.nextDown((double) x.max() + 0.5)
-              : Math.nextDown((double) x.max() + 0.5);
+      double pMin = Math.nextUp((double) x.min() - 0.5);
+      double pMax = Math.nextDown((double) x.max() + 0.5);
 
       p.domain.in(store.level, p, pMin, pMax);
 

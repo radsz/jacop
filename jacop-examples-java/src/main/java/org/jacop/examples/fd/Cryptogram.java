@@ -136,21 +136,6 @@ public class Cryptogram extends ExampleFD {
 
       if (lines != null) {
         // Standard use case if no file is supplied
-        // lines[0] = "SEND+MORE=MONEY";
-        // lines[0] = "BASIC+LOGIC=PASCAL";
-        // lines[0] = "CRACK+HACK=ERROR";
-        // lines[0] = "PEAR+APPLE=GRAPE";
-        // lines[0] = "CRACKS+TRACKS=RACKET";
-        // lines[0] = "TRIED+RIDE=STEER";
-        // lines[0] = "DEEMED+SENSE=SYSTEM";
-        // lines[0] = "DOWN+WWW=ERROR";
-        // lines[0] = "BARREL+BROOMS=SHOVELS";
-        // lines[0] = "LYNNE+LOOKS=SLEEPY";
-        // lines[0] = "STARS+RATE=TREAT";
-        // lines[0] = "DAYS+TOO=SHORT";
-        // lines[0] = "BASE+BALL=GAMES";
-        // lines[0] = "MEMO+FROM=HOMER";
-        // lines[0] =  "IS+THIS=HERE";
         lines[0] = "HERE+SHE=COMES";
         noLines = 1;
       }
@@ -240,9 +225,6 @@ public class Cryptogram extends ExampleFD {
                 createWeights(currentWord.length(), base),
                 "==",
                 fdv4words[j]));
-        // store.impose(new SumWeight(lettersWithinCurrentWord,
-        //     createWeights(currentWord.length(), base),
-        //      fdv4words[j]));
 
         store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
       }

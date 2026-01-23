@@ -125,18 +125,10 @@ public class CosPeqR extends Constraint
         FloatInterval normP = normalize(p);
         min = normP.min();
         max = normP.max();
-
-        // System.out.println ("Not-normalized " + p);
-        // System.out.println ("Normalized interval within -2*PI..2*PI interval = " + min + ".." +
-        // max);
-        // System.out.println ("period = " + N);
       }
 
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
-
-      // System.out.println ("min in interval " + intervalForMin);
-      // System.out.println ("max in interval " + intervalForMax);
 
       double qMin, qMax;
       switch (intervalForMin) {
@@ -254,9 +246,6 @@ public class CosPeqR extends Constraint
       k = Math.ceil(p.max() / (2 * FloatDomain.PI));
       high = FloatDomain.up(pMax + 2 * k * FloatDomain.PI);
       FloatIntervalDomain pDom = new FloatIntervalDomain(low, high);
-
-      // System.out.println ("2. " + p + " in " + pDom  + " p.min() - pMin = " + (double)(p.min() -
-      // pMin));
 
       p.domain.in(store.level, p, pDom);
 

@@ -424,9 +424,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     this.numberId = idNumber.incrementAndGet();
     this.variableQueue = new LinkedHashSet<>();
 
-    // objectQueue = new LinkedHashSet<GeostObject>( objects.size() );
-    // objectQueue.addAll(objects);
-
     objectQueue = new SimpleHashSet<>(objects.length);
     for (GeostObject o : objects) {
       objectQueue.add(o);
@@ -752,9 +749,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     boolean feasiblePointFound = true;
 
-    // if(USE_DISPLAY)
-    // display.eraseAll();
-
     if (DEBUG_MAIN) {
       IO.println("pruneMin");
     }
@@ -823,12 +817,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         return limit;
       }
 
-      // if(USE_DISPLAY) {
-      //   display.display2DBox(f, Color.red);
-      //   display.display2DPoint(c, Color.green);
-      //   display.display2DPoint(n, Color.blue);
-      // }
-
       if (DEBUG_MAIN) {
         IO.println("outbox found, c and n:");
         IO.println("c:" + Arrays.toString(c));
@@ -871,9 +859,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       int limit) {
 
     boolean feasiblePointFound = true;
-
-    // if(USE_DISPLAY)
-    //   display.eraseAll();
 
     if (DEBUG_MAIN) {
       IO.println("pruneMax");
@@ -935,13 +920,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           assert feasiblePointFound == false;
           c[lexI] = domainMax;
         }
-
-        //       if(USE_DISPLAY){
-        //         display.display2DBox(f, Color.red);
-        //         display.display2DPoint(c, Color.green);
-        //         display.display2DPoint(n, Color.blue);
-        //       }
-
       }
       if (c[d] <= limit) {
         // we were asked to stop searching here

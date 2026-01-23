@@ -83,15 +83,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   public void assertLiteral(int assertedLiteral) {
 
     /*
-      if (ignoreCache.get(Math.abs(assertedLiteral))) {
-      // ignore some literals
-      //wrapper.log(this, "  (ignored) called on literal "+assertedLiteral
-      //   +" meaning "+wrapper.showLiteralMeaning(assertedLiteral));
-      return;
-    }
-    */
-
-    /*
      * only do something for literals representing a variable, which have
      * not yet been examined
      */
@@ -99,8 +90,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       // wrapper.log(this,"  (ignored) called on literal "+assertedLiteral+" meaning nothing");
       return;
     } else {
-      // wrapper.log(this, "  called on literal "+assertedLiteral+" meaning "+
-      // wrapper.showLiteralMeaning(assertedLiteral));
     }
 
     // get the value this literal corresponds to
@@ -153,14 +142,8 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
       } else {
         // nothing to do, literal is already set to the right value
-        // wrapper.log(this, "  does not propagate literal "+literal
-        //   +" meaning "+wrapper.showLiteralMeaning(literal));
       }
     } else {
-
-      // wrapper.log(this, "  propagate literal "+literal+" meaning "+
-      //   wrapper.showLiteralMeaning(literal)
-      //   +" at fake index "+clauseIndex);
 
       /*
        * trigger propagate event in the solver. All those propagated
@@ -219,11 +202,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
         || (!clause.containsLiteral(-propagatedLiteral));
 
     // resolve clause with [-assertedLiteral, propagatedLiteral]
-    // if (! clause.removeLiteral(assertedLiteral))
-    //   clause.addLiteral(- assertedLiteral);
     clause.partialResolveWith(-assertedLiteral);
-    // if (! clause.removeLiteral(- propagatedLiteral))
-    //   clause.addLiteral(propagatedLiteral);
     clause.partialResolveWith(propagatedLiteral);
 
     return clause;

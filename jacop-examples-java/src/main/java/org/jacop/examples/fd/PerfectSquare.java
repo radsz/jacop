@@ -1763,53 +1763,6 @@ public class PerfectSquare extends ExampleFD {
     // the main pruning component still.
     store.impose(new Diffn(rectangles, false));
 
-    /*
-      // starts, durations, resources, limit
-    // Not really useful implied constraints
-    // Variable limit = new Variable(store, "limit", masterSize, masterSize);
-    // store.impose(new Cumulative(varsX, size, size, limit));
-    // store.impose(new Cumulative(varsY, size, size, limit));
-
-    // {above, below, left, right}
-    int [][] relation = { {1, 0, 1, 0}, {0, 1, 1, 0}, {0, 0, 1, 0},
-              {1, 0, 0, 1}, {0, 1, 0, 1}, {0, 0, 0, 1},
-              {1, 0, 0, 0}, {0, 1, 0, 0}};
-
-    vars = new ArrayList<Var>();
-
-    for (int i = noRectangles - 1; i > 0; i--)
-      for (int j = i - 1; j >= 0; j--) {
-
-      IntVar above = new IntVar(store, i+"-th-above-"+(j)+"-th", 0, 1);
-      store.impose(new Reified(new XplusClteqZ(varsY[j], size[j].value(), varsY[i]), above));
-
-      IntVar below = new IntVar(store, i+"-th-below-"+(j)+"-th", 0, 1);
-      store.impose(new Reified(new XplusClteqZ(varsY[i], size[i].value(), varsY[j]), below));
-
-      IntVar right = new IntVar(store, i+"-th-right-"+(j)+"-th", 0, 1);
-      store.impose(new Reified(new XplusClteqZ(varsX[j], size[j].value(), varsX[i]), right));
-
-      IntVar left = new IntVar(store, i+"-th-left-"+(j)+"-th", 0, 1);
-      store.impose(new Reified(new XplusClteqZ(varsX[i], size[i].value(), varsX[j]), above));
-
-      IntVar [] positions = {above, below, right, left};
-      store.impose(new ExtensionalSupportSTR(positions, relation));
-
-
-      //vars.add(above);
-      //vars.add(below);
-      //vars.add(right);
-      //vars.add(left);
-
-    }
-
-    for (int i = noRectangles - 1; i >= 0; i--) {
-      vars.add(varsX[i]);
-      vars.add(varsY[i]);
-    }
-
-    */
-
     IO.println("Number of variables: " + store.size());
     IO.println("Number of constraints: " + store.numberConstraints());
   }

@@ -124,8 +124,6 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
     }
 
     assert (index >= 0);
-    // assert (index < searchVar.length);
-    // assert (searchVar[index].dom() != null);
 
     double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
 

@@ -155,15 +155,6 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
     return id() + " : XdivYeqZ(" + x + ", " + y + ", " + z + " )";
   }
 
-  // private void checkForOverflow() {
-
-  //     Math.multiplyExact(z.min(), y.min());
-  //     Math.multiplyExact(z.min(), y.max());
-  //     Math.multiplyExact(z.max(), y.min());
-  //     Math.multiplyExact(z.max(), y.max());
-
-  // }
-
   int div(int a, int b) {
     return (int) Math.floor((float) a / (float) b);
   }

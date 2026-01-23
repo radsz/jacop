@@ -74,8 +74,6 @@ public final class ConflictLearning implements SolverComponent {
         // return the level of the second clause literal of the trail
         if (firstOne) {
           // ok, we met the first, the next one is the good one
-          // core.logc(3,
-          // "ignore at level "+core.currentLevel+" var "+literal);
           explanationClause.assertedLiteral = -trail.values[var];
           firstOne = false;
         } else {

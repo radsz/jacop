@@ -211,8 +211,6 @@ public class SocialGolfer extends ExampleSet {
         t = r;
       }
 
-      // store.impose(new AinB(new SetVar(store, new BoundSetDomain(new IntervalDomain(1,N), new
-      // IntervalDomain(1,N))), t));
       store.impose(new AeqS(t, new IntervalDomain(1, N)));
     }
 

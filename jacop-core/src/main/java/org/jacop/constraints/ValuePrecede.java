@@ -175,9 +175,6 @@ public class ValuePrecede extends Constraint
 
     } while (store.propagationHasOccurred);
 
-    // if (satisfied())
-    //     removeConstraint();
-
     alpha.update(alphaValue);
     beta.update(betaValue);
     gamma.update(gammaValue);

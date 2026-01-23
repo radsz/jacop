@@ -165,12 +165,6 @@ public class MultivariateIntervalNewton {
       b[i] = -value(f[i]);
     }
 
-    // if (debug) {
-    //     for (int i = 0; i < b.length; i++)
-    //   System.out.print (b[i] + ", ");
-    //     System.out.println ();
-    // }
-
     return b;
   }
 
@@ -179,8 +173,6 @@ public class MultivariateIntervalNewton {
     if (map.get(f) != null) {
       return map.get(f);
     }
-    // else if (f.singleton())
-    //     return f.value();
 
     Constraint c = constraint(f);
     if (c != null) {
@@ -188,9 +180,6 @@ public class MultivariateIntervalNewton {
     } else if (f.singleton()) {
       return f.value();
     }
-
-    // if (debug)
-    //      System.out.println ("current constraint for variable " + f + " is " + c);
 
     double result;
 
@@ -302,9 +291,6 @@ public class MultivariateIntervalNewton {
 
     eval.pop();
 
-    // if (debug)
-    //     System.out.println ("returns " + result);
-
     return result;
   }
 
@@ -332,9 +318,6 @@ public class MultivariateIntervalNewton {
         }
       }
     }
-
-    // if (debug)
-    //     System.out.println ("Possible constraints for variable " + v + " are " + list);
 
     Constraint c;
     if (list.size() == 1) {
@@ -373,8 +356,6 @@ public class MultivariateIntervalNewton {
             .append("\n");
       }
     }
-    // for (int i = 0; i < xInit.length; i++)
-    //     s.append(xInit[i] + ", ");
     s.append("\n");
 
     return s.toString();

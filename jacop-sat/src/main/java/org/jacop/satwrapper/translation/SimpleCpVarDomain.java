@@ -48,8 +48,6 @@ public class SimpleCpVarDomain extends SatCPBridge {
   public boolean isTranslated = true;
   // first boolean variable representing this
   private int firstVar;
-  // width of the domain (number of different values)
-  private int width;
   // the special clauses database of the wrapper
   private DomainClausesDatabase clauseDatabase;
 
@@ -116,7 +114,8 @@ public class SimpleCpVarDomain extends SatCPBridge {
     super.setDomain(minValue, maxValue);
 
     // get as many fresh variables as needed
-    width = 2 * (maxValue - minValue + 1);
+    // width of the domain (number of different values)
+    int width = 2 * (maxValue - minValue + 1);
     firstVar = wrapper.core.getManyFreshVariables(width);
 
     // remember association literal -> range

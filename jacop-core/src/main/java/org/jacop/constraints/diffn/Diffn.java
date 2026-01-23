@@ -420,9 +420,6 @@ public class Diffn extends Nooverlap {
                     update.unionAdapt(e.date(), IntDomain.MaxInt);
                     r.origin(dim).domain.in(store.level, r.origin(dim), update);
 
-                    // r.origin(dim).domain.inComplement(store.level, r.origin(dim), startExcluded,
-                    // e.date() - 1);
-
                     if (debugNarr) {
                       IO.println(" => " + r.origin(dim));
                     }
@@ -507,8 +504,6 @@ public class Diffn extends Nooverlap {
                 }
 
                 rr.origin(dim).domain.inMax(store.level, rr.origin(dim), startExcluded - 1);
-                // rr.origin(dim).domain.inComplement(store.level, rr.origin(dim), startExcluded,
-                // e.date());
 
                 if (debugNarr) {
                   IO.println(" => " + rr.origin(dim));

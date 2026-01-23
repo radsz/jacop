@@ -438,14 +438,7 @@ public class TraceGenerator<T extends Var>
     if (!status && returnCode) {
 
       currentSearchNode = new SearchNode();
-      // currentSearchNode.v = var;
 
-      //     if (previousSearchNode.dom instanceof JaCoP.core.IntDomain)
-      //       currentSearchNode.dom = ((IntDomain)previousSearchNode.dom).subtract( value );
-      //     else if (previousSearchNode.dom instanceof JaCoP.set.core.SetDomain)
-      //       currentSearchNode.dom = ((SetDomain)previousSearchNode.dom).subtract( value, value );
-
-      // currentSearchNode.val = value;
       currentSearchNode.id = searchNodeId++;
       currentSearchNode.equal = false;
       currentSearchNode.c = choice;

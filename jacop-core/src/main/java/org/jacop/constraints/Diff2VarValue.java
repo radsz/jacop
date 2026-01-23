@@ -59,12 +59,6 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
   @Override
   public Object clone() {
 
-    // Diff2VarValue Val = new Diff2VarValue();
-    // Val.Rects = new Rectangle[Rects.length];
-    // for (int i = 0; i < Rects.length; i++) {
-    // Val.Rects[i] = Rects[i];
-    // }
-
     Diff2VarValue Val = new Diff2VarValue(Rects);
     Val.stamp = stamp;
     Val.previousDiff2VarValue = previousDiff2VarValue;

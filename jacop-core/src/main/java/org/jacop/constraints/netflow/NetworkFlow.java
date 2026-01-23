@@ -140,12 +140,6 @@ public class NetworkFlow extends Constraint
     this.numberId = idNumber.incrementAndGet();
 
     setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
-
-    // for (VarHandler vh : flowVariables)
-    //     System.out.println("{flow/cost | structure} var = " + vh.listVariables());
-    // for (Arc arc : arcs)
-    //     System.out.println(arc);
-
   }
 
   public NetworkFlow(NetworkBuilder builder) {

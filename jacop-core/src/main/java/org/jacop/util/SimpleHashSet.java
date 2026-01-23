@@ -202,10 +202,6 @@ public class SimpleHashSet<E> {
   /** Removes all elements from this set. */
   public void clear() {
 
-    //      Entry<E>[] tab = table;
-    //      for (int i = tab.length - 1; i >= 0; i--)
-    //              tab[i] = null;
-
     Arrays.fill(table, null);
 
     firstEntry = null;

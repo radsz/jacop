@@ -74,24 +74,6 @@ public class Knapsack extends Constraint
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
-   * It specifies how many removeLevel functions must be executed before the information about the
-   * constraint is being printed out.
-   */
-  private final int REMOVE_INFO_FROM = 0;
-
-  /**
-   * It specifies how many queueVariable functions must be executed before the information about the
-   * constraint is being printed out.
-   */
-  private final int QUEUE_INFO_FROM = 0;
-
-  /**
-   * It specifies how many consistency functions must be executed before the information about the
-   * constraint is being printed out.
-   */
-  private final int CONSISTENCY_INFO_FROM = 0;
-
-  /**
    * It specifies the current level of the constraint store at which the consistency function of
    * this constraint is being executed.
    */
@@ -277,6 +259,11 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
 
+      /**
+       * It specifies how many removeLevel functions must be executed before the information about
+       * the constraint is being printed out.
+       */
+      int REMOVE_INFO_FROM = 0;
       if (countRemoveLevel >= REMOVE_INFO_FROM) {
 
         IO.println("Removelevel for " + level + " is called.");
@@ -471,6 +458,11 @@ public class Knapsack extends Constraint
 
     blockUpdate();
 
+    /**
+     * It specifies how many consistency functions must be executed before the information about the
+     * constraint is being printed out.
+     */
+    int CONSISTENCY_INFO_FROM = 0;
     if (debugAll) {
       if (countConsistency >= CONSISTENCY_INFO_FROM) {
         IO.println(displayQuantitiesInEfficiencyOrder());
@@ -733,6 +725,11 @@ public class Knapsack extends Constraint
     countQueueVariable++;
 
     if (debugAll) {
+      /**
+       * It specifies how many queueVariable functions must be executed before the information about
+       * the constraint is being printed out.
+       */
+      int QUEUE_INFO_FROM = 0;
       if (countQueueVariable >= QUEUE_INFO_FROM) {
 
         IO.println("queueVariable is executed for the " + countQueueVariable + "-th time");

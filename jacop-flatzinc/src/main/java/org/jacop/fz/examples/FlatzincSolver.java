@@ -68,12 +68,6 @@ public class FlatzincSolver {
 
     Store store = fl.getStore();
 
-    // System.out.println (store);
-
-    // System.out.println("============================================");
-    // System.out.println(fl.getTables());
-    // System.out.println("============================================");
-
     IO.println(
         "\nIntVar store size: "
             + store.size()
@@ -96,12 +90,6 @@ public class FlatzincSolver {
     }
 
     fl.getSolve().statistics(result);
-
-    // System.out.println(fl.getTables());
-
-    // System.out.println(fl.getSearch());
-
-    // System.out.println("cost: " + fl.getCost());
 
     if (result) {
       IO.println("*** Yes");

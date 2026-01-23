@@ -124,7 +124,7 @@ public class AlldifferentExceptZero extends Alldifferent
     // variables with domains of size at least two (they are not
     // ground) are always satisfied.
     if (vars.size() > 2 && notSatisfied(vars.toArray(new IntVar[0]))) {
-      throw store.failException;
+      throw Store.failException;
     }
   }
 

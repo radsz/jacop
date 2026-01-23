@@ -239,8 +239,6 @@ class GlobalConstraints implements ParserTreeConstants {
           support.delayedConstraints.add(new CumulativeUnary(s, d, r, b, true));
         }
         // these constraints are not needed if we run with profile-based propagator
-        // for (int i = 0; i < r.length; i++)
-        //   support.pose(new XlteqY(r[i], b));
       } else if (allVarGround(d) && allVarGround(r)) {
         HashSet<Integer> diff = new HashSet<>();
         for (IntVar e : r) {
@@ -705,8 +703,6 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    // support.pose(new Disjoint(x, y, lx, ly));
-    // support.poseDC(new Diffn(x, y, lx, ly, true));
     support.pose(new Diffn(x, y, lx, ly, true));
   }
 
@@ -716,8 +712,6 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    // support.pose(new Diff2(x, y, lx, ly));
-    // support.poseDC(new Diffn(x, y, lx, ly, false));
     support.pose(new Diffn(x, y, lx, ly, false));
   }
 
@@ -1594,18 +1588,6 @@ class GlobalConstraints implements ParserTreeConstants {
     // are duplicated.
     IntVar[] xx = removeDuplicates(x);
 
-    // System.out.println("dim = " + dim);
-    // System.out.print("rect_size = [");
-    // for (int i = 0; i < rect_size.length; i++)
-    //      System.out.print(" " + rect_size[i]);
-    // System.out.print("]\nrect_offset = [");
-    // for (int i = 0; i < rect_offset.length; i++)
-    //      System.out.print(" " + rect_offset[i]);
-    // System.out.println("]\nshape = " + java.util.Arrays.asList(shape));
-    // System.out.println("x = " + java.util.Arrays.asList(x));
-    // System.out.println("kind = " + java.util.Arrays.asList(kind));
-    // System.out.println("===================");
-
     ArrayList<Shape> shapes = new ArrayList<>();
 
     // dummy shape to have right indexes for kind (starting from 1)
@@ -1638,9 +1620,6 @@ class GlobalConstraints implements ParserTreeConstants {
       shapes.add(new Shape((i + 1), shape_i));
     }
 
-    // for (int i = 0; i < shapes.size(); i++)
-    //      System.out.println("*** " + shapes.get(i));
-
     ArrayList<GeostObject> objects = new ArrayList<>();
 
     for (int i = 0; i < kind.length; i++) {
@@ -1657,11 +1636,6 @@ class GlobalConstraints implements ParserTreeConstants {
       GeostObject obj = new GeostObject(i, coords, kind[i], start, duration, end);
       objects.add(obj);
     }
-
-    // System.out.println("===========");
-    // for (int i = 0; i < objects.size(); i++)
-    //      System.out.println(objects.get(i));
-    // System.out.println("===========");
 
     ArrayList<ExternalConstraint> constraints = new ArrayList<>();
     int[] dimensions = new int[dim + 1];
@@ -1687,18 +1661,6 @@ class GlobalConstraints implements ParserTreeConstants {
     // geost must not have duplicated variables
     IntVar[] xx = removeDuplicates(x);
 
-    // System.out.println("dim = " + dim);
-    // System.out.print("rect_size = [");
-    // for (int i = 0; i < rect_size.length; i++)
-    //      System.out.print(" " + rect_size[i]);
-    // System.out.print("]\nrect_offset = [");
-    // for (int i = 0; i < rect_offset.length; i++)
-    //      System.out.print(" " + rect_offset[i]);
-    // System.out.println("]\nshape = " + java.util.Arrays.asList(shape));
-    // System.out.println("x = " + java.util.Arrays.asList(x));
-    // System.out.println("kind = " + java.util.Arrays.asList(kind));
-    // System.out.println("===================");
-
     ArrayList<Shape> shapes = new ArrayList<>();
 
     // dummy shape to have right indexes for kind (starting from 1)
@@ -1731,9 +1693,6 @@ class GlobalConstraints implements ParserTreeConstants {
       shapes.add(new Shape((i + 1), shape_i));
     }
 
-    // for (int i = 0; i < shapes.size(); i++)
-    //      System.out.println("*** " + shapes.get(i));
-
     ArrayList<GeostObject> objects = new ArrayList<>();
 
     for (int i = 0; i < kind.length; i++) {
@@ -1751,11 +1710,6 @@ class GlobalConstraints implements ParserTreeConstants {
       objects.add(obj);
     }
 
-    // System.out.println("===========");
-    // for (int i = 0; i < objects.size(); i++)
-    //      System.out.println(objects.get(i));
-    // System.out.println("===========");
-
     ArrayList<ExternalConstraint> constraints = new ArrayList<>();
     int[] dimensions = new int[dim + 1];
     for (int i = 0; i < dim + 1; i++) {
@@ -1768,14 +1722,6 @@ class GlobalConstraints implements ParserTreeConstants {
     { // part for geost_bb
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
-
-      // System.out.print("[");
-      // for (int i = 0; i < lb.length; i++)
-      //  System.out.print(" " + lb[i]);
-      // System.out.print("]\n[");
-      // for (int i = 0; i < ub.length; i++)
-      //  System.out.print(" " + ub[i]);
-      // System.out.println("]");
 
       InArea constraint2 = new InArea(new DBox(lb, ub), null);
       constraints.add(constraint2);
@@ -1944,13 +1890,7 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(new ChannelReif(x, bs, vs));
 
     // Decomposition
-    // int[] values = new int[vs.getSize()];
-    // int i = 0;
-    // for (ValueEnumeration e = vs.valueEnumeration(); e.hasMoreElements(); )
-    //     values[i++] = e.nextElement();
 
-    // for (int j = 0; j < bs.length; j++)
-    //     support.pose(new Reified(new XeqC(x, values[j]), bs[j]));
   }
 
   void gen_jacop_all_equal_int_reif(SimpleNode node) {

@@ -128,11 +128,6 @@ public class Cyclohexane {
     FloatVar t12 = new FloatVar(store, "t12", MIN_FLOAT, MAX_FLOAT);
     store.impose(new PmulQeqR(y, t9, t12));
 
-    // FloatVar t = new FloatVar(store, -13.0, -13.0);
-    // store.impose(new PplusQeqR(t4, t10, t));
-    // store.impose(new PplusQeqR(t5, t11, t));
-    // store.impose(new PplusQeqR(t6, t12, t));
-
     store.impose(new LinearFloat(new FloatVar[] {t4, t10}, new double[] {1.0, 1.0}, "==", -13.0));
     store.impose(new LinearFloat(new FloatVar[] {t5, t11}, new double[] {1.0, 1.0}, "==", -13.0));
     store.impose(new LinearFloat(new FloatVar[] {t6, t12}, new double[] {1.0, 1.0}, "==", -13.0));

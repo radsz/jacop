@@ -310,21 +310,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     assert false : "Fix it. Uncomment below.";
 
     return null;
-
-    /*
-       IdentityHashMap<T, Integer> position = heuristic.getVariablesMapping();
-
-      vars = new Var[position.size()];
-
-      for (Iterator<? extends Var> itr = position.keySet().iterator(); itr
-      .hasNext();) {
-      Var current = itr.next();
-      vars[position.get(current)] = current;
-      }
-
-      return vars;
-
-    */
   }
 
   public SolutionListener<T> getSolutionListener() {
@@ -816,19 +801,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     depth = store.level;
     cost = null;
-    //     timeOutOccured = false;
-    //     timeOut = System.currentTimeMillis() + tOut * 1000;
 
     if (costVariable == null) {
       optimize = false;
     }
-
-    //     decisions = 0;
-    //     numberBacktracks = 0;
-    //     nodes = 0;
-    //     wrongDecisions = 0;
-    //     depthExcludePaths = 0;
-    //     maxDepthExcludePaths = 0;
 
     if (initializeListener != null) {
       initializeListener.executedAtInitialize(store);
@@ -958,19 +934,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     heuristic = select;
     depth = store.level;
-    //     timeOutOccured = false;
-    //     timeOut = System.currentTimeMillis() + tOut * 1000;
 
     if (costVariable == null) {
       optimize = false;
     }
-
-    //     decisions = 0;
-    //     numberBacktracks = 0;
-    //     nodes = 0;
-    //     wrongDecisions = 0;
-    //     depthExcludePaths = 0;
-    //     maxDepthExcludePaths = 0;
 
     if (initializeListener != null) {
       initializeListener.executedAtInitialize(store);
@@ -1085,16 +1052,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     costVariable = costVar;
     optimize = true;
     cost = null;
-
-    //     timeOutOccured = false;
-    //     timeOut = System.currentTimeMillis() + tOut * 1000;
-
-    //     decisions = 0;
-    //     numberBacktracks = 0;
-    //     nodes = 0;
-    //     wrongDecisions = 0;
-    //     depthExcludePaths = 0;
-    //     maxDepthExcludePaths = 0;
 
     if (initializeListener != null) {
       initializeListener.executedAtInitialize(store);

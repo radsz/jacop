@@ -193,8 +193,6 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     // Changed KK, 2015-10-17;
     // Not needed, in method will fail in such case
-    // if (Math.max(n.min(), currentLB) > Math.min(n.max(), currentUB))
-    //   throw Store.failException;
     if (currentLB > currentUB) {
       throw Store.failException;
     }

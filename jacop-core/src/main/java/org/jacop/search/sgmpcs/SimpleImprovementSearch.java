@@ -91,8 +91,6 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars, new SmallestMin<>(), new IndomainMin<>());
-    // SelectChoicePoint<IntVar> select = new RandomSelect<IntVar>(vars, new
-    // IndomainRandom<IntVar>());
     label.setAssignSolution(false);
     label.setSolutionListener(new CostListener<>());
     label.getSolutionListener().recordSolutions(true);
@@ -122,8 +120,6 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     }
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
-    // SelectChoicePoint<IntVar> select = new SimpleSelect<IntVar>(vars, new SmallestMax<IntVar>(),
-    //                  new IndomainDefaultValue<IntVar>(mapping, new IndomainRandom<IntVar>()));
     SelectChoicePoint<IntVar> select =
         new RandomSelect<>(vars, new IndomainDefaultValue<>(mapping, new IndomainMin<>()));
     label.setAssignSolution(false);

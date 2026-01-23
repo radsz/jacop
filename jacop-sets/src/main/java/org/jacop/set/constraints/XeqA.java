@@ -86,10 +86,6 @@ public class XeqA extends PrimitiveConstraint {
     a.domain.inLUB(store.level, a, x.domain);
 
     a.domain.inCardinality(store.level, a, 1, 1);
-
-    // aHasChanged = false;
-    // xHasChanged = false;
-
   }
 
   @Override

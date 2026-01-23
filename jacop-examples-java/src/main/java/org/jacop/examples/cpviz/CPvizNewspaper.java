@@ -77,10 +77,6 @@ public class CPvizNewspaper {
     CPvizNewspaper example = new CPvizNewspaper();
 
     example.model();
-
-    //     if ( label() )
-    //         System.out.println("Solution(s) found");
-
   }
 
   public void model() {

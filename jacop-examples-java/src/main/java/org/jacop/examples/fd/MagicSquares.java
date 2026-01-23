@@ -332,11 +332,6 @@ public class MagicSquares extends ExampleFD {
     }
     store.impose(new SumInt(diagonal, "==", k));
 
-    // // symmetry breaking
-    // store.impose(new XltY(squares[0], squares[number-1]));
-    // store.impose(new XltY(squares[0], squares[number*number - 1]));
-    // store.impose(new XltY(squares[0], squares[number*number - number]));
-
     IntVar[] d = new IntVar[number * number];
 
     for (int i = 0; i < number * number; i++) {

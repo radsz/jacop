@@ -125,8 +125,6 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
     int literal = clauses[clauseIndex];
     // try to remove -literal. If it fails, add literal
-    // if (! clause.removeLiteral(-literal))
-    // clause.addLiteral(literal);
     clause.partialResolveWith(literal);
 
     return clause;

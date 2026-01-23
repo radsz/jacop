@@ -176,10 +176,6 @@ public class Zebra extends ExampleFD {
     // S14
 
     store.impose(new XneqY(pet[ihorse], profession[idiplomat]));
-    // store.impose(new Or(new XplusCeqZ(pet[ihorse], 1,
-    // profession[idiplomat]),
-    // new XplusCeqZ(profession[idiplomat], 1,
-    // pet[ihorse])));
 
     IntVar distance3 = new IntVar(store, "distance3", -1, 1);
     store.impose(new XplusYeqZ(distance3, pet[ihorse], profession[idiplomat]));

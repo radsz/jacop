@@ -191,8 +191,6 @@ public class Golomb extends ExampleFD {
     int index = 0;
     for (int i = 1; i < noMarks; i++) {
       for (int j = 0; j < i; j++) {
-        //       store.imposePropagators(new XplusClteqZ(subs.get(index++), (noMarks - 1 - i + j)
-        //           * (noMarks - i + j) / 2, numbers[noMarks - 1]));
         store.impose(
             new XplusClteqZ(
                 subs.get(index++),

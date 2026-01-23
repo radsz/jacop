@@ -110,10 +110,6 @@ public class VariablesParameters implements ParserTreeConstants {
 
     int initChild = getAnnotations(node, 1);
 
-    // node.dump("");
-    // System.out.println("*** Type = " + type + " init index = " + initChild);
-    // System.out.println("*** Annotations: " + annotations);
-
     String ident;
     int val;
     IntDomain setValue;
@@ -158,8 +154,6 @@ public class VariablesParameters implements ParserTreeConstants {
     int type = getType(node);
 
     int initChild = getAnnotations(node, 1);
-    // System.out.println("*** Type = " + type + " init index = " + initChild);
-    // System.out.println("*** Annotations: " + annotations);
 
     if (annotations.contains("var_is_introduced")) {}
     if (annotations.contains("output_var")) {
@@ -524,23 +518,12 @@ public class VariablesParameters implements ParserTreeConstants {
 
     dictionary = table;
     annotations = new HashSet<>();
-    //      boolean output_array = false;
-    //      OutputArrayAnnotation outArrayAnn=null;
 
     int type = getType(node);
 
     int initChild = getAnnotations(node, 1);
 
-    // node.dump("");
-    // System.out.println("*** Type = " + type + " init index = " + initChild);
-    // System.out.println("*** Annotations: " + annotations);
-
     String ident = ((ASTVarDeclItem) node).getIdent();
-
-    //      if (annotations.contains("output_array")) {
-    //          output_array = true;
-    //          outArrayAnn = new OutputArrayAnnotation(ident, indexBounds);
-    //      }
 
     int size;
     int[] val;
@@ -584,10 +567,6 @@ public class VariablesParameters implements ParserTreeConstants {
     boolean output_array = false;
     OutputArrayAnnotation outArrayAnn = null;
 
-    // node.dump("a  ");
-    //      System.out.println("*** Type = " + type + " init index = " + initChild);
-    //      System.out.println("*** Annotations: " + annotations + "  " + indexBounds);
-
     int type = getType(node);
 
     int initChild = getArrayAnnotations(node, 1);
@@ -610,8 +589,6 @@ public class VariablesParameters implements ParserTreeConstants {
         size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
         if (initChild < node.jjtGetNumChildren()) {
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchArray(varArrayInt);
         } else { // no init values
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
@@ -635,8 +612,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchArray(varArrayInt);
         } else { // no init values
           varArrayInt = new IntVar[size];
 
@@ -663,8 +638,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchArray(varArrayInt);
         } else { // no init values
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
@@ -686,8 +659,6 @@ public class VariablesParameters implements ParserTreeConstants {
         size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
         if (initChild < node.jjtGetNumChildren()) {
           varArrayInt = getScalarFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchArray(varArrayInt);
         } else { // no init values
           varArrayInt = new IntVar[size];
           for (int i = 0; i < size; i++) {
@@ -707,8 +678,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
@@ -729,8 +698,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
@@ -759,8 +726,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
@@ -786,8 +751,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
@@ -807,8 +770,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArraySet = getSetFlatExpr_ArrayVar(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchSetArray(varArraySet);
         } else { // no init values
           varArraySet = new SetVar[size];
           for (int i = 0; i < size; i++) {
@@ -831,8 +792,6 @@ public class VariablesParameters implements ParserTreeConstants {
         size = ((ASTVarDeclItem) node).getHighIndex() - ((ASTVarDeclItem) node).getLowIndex() + 1;
         if (initChild < node.jjtGetNumChildren()) {
           varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchFloatArray(varArrayFloat);
         } else { // no init values
           varArrayFloat = new FloatVar[size];
           for (int i = 0; i < size; i++) {
@@ -874,8 +833,6 @@ public class VariablesParameters implements ParserTreeConstants {
         if (initChild < node.jjtGetNumChildren()) {
           // array initialization
           varArrayFloat = getScalarFlatExpr_ArrayVarFloat(store, node, initChild);
-          // if (output_array)
-          //  table.addSearchFloatArray(varArrayFloat);
         } else { // no init values
           varArrayFloat = new FloatVar[size];
 
@@ -1175,9 +1132,6 @@ public class VariablesParameters implements ParserTreeConstants {
     if (child.getId() == JJTSCALARFLATEXPR) {
       // string & float;
       return switch (((ASTScalarFlatExpr) child).getType()) {
-        // case 0: // int
-        // case 1: // bool
-        //      return true;
         case 2 -> {
           Double n = dictionary.checkFloat(((ASTScalarFlatExpr) child).getIdent());
           yield n != null;
@@ -1317,8 +1271,6 @@ public class VariablesParameters implements ParserTreeConstants {
           return dictionary.getConstant(val); // new IntVar(store, val, val);
         case 1: // bool
           val = ((ASTScalarFlatExpr) child).getInt();
-          // new BooleanVar(store, val, val);
-          // numberBooleanVariables++; // not really a variable; constant
           return dictionary.getConstantBoolean(val);
         case 2: // ident
           IntVar var = dictionary.getVariable(((ASTScalarFlatExpr) child).getIdent());
@@ -1365,15 +1317,6 @@ public class VariablesParameters implements ParserTreeConstants {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSCALARFLATEXPR) {
       switch (((ASTScalarFlatExpr) child).getType()) {
-        // case 0: // int
-        //      return new IntVar(store, ((ASTScalarFlatExpr)child).getInt(),
-        // ((ASTScalarFlatExpr)child).getInt());
-        // case 1: // bool
-        //      BoundDomain d = new BoundDomain(((ASTScalarFlatExpr)child).getInt(),
-        // ((ASTScalarFlatExpr)child).getInt());
-        //      BooleanVar bb = new BooleanVar(store,"",d);
-        //      //numberBooleanVariables++; // not really a variable; constant
-        //      return bb;
         case 2: // ident
           FloatVar var = dictionary.getFloatVariable(((ASTScalarFlatExpr) child).getIdent());
           if (var != null) {

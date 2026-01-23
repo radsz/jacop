@@ -173,8 +173,6 @@ public class NetworkSimplex {
     }
     // update adjacency list
     if (node.degree < 2) {
-      //     System.out.println( node + "\n" + node.degree + ": " +
-      // Arrays.toString(node.adjacencyList) );
 
       Arc arc = node.adjacencyList[0];
       if (arc != null && arc.index == DELETED_ARC) {
@@ -360,8 +358,6 @@ public class NetworkSimplex {
     }
 
     root.computePotentials();
-    // if (!failure && pivots >= 0)
-    // Assert.assertSame(null, rule.next());
 
     assert (checkFlow(this));
     assert (checkStructure(this));
@@ -517,12 +513,6 @@ public class NetworkSimplex {
     if (leaving.capacity == 0) {
       lower[index] = leaving.sister;
     } else {
-      // here: leaving.sister.capacity == 0;
-
-      //     System.out.println("Leaving  : " + leaving);
-      //     System.out.println("Entering : " + entering);
-      //     System.out.println(leaving == entering);
-      //     assert (leaving.sister.capacity == 0);
 
       lower[index] = leaving;
     }
@@ -658,9 +648,6 @@ public class NetworkSimplex {
     if (entering == null) {
       return false; // infeasible
     } else {
-      //     System.out.println(".Leaving  : " + leaving);
-      //     System.out.println(".Entering : " + entering);
-      //     System.out.println(leaving.sister == entering);
 
       updateTree(leaving.sister, entering);
       return true;

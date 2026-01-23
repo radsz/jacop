@@ -238,11 +238,6 @@ public class SendMoreMoney extends ExampleFD {
   @Override
   public boolean search() {
 
-    /*
-      store.consistency();
-      store.print();
-    */
-
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());

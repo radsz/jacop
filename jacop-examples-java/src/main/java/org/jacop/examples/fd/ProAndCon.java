@@ -187,17 +187,9 @@ public class ProAndCon extends ExampleFD {
     }
 
     store.impose(new LinearInt(vote[iAkerman], weights, "==", weightedVotes[iAkerman]));
-    // store.impose(new SumWeight(vote[iAkerman], weights,
-    //     weightedVotes[iAkerman]));
     store.impose(new LinearInt(vote[iBaird], weights, "==", weightedVotes[iBaird]));
-    // store.impose(new SumWeight(vote[iBaird], weights,
-    //         weightedVotes[iBaird]));
     store.impose(new LinearInt(vote[iChatham], weights, "==", weightedVotes[iChatham]));
-    // store.impose(new SumWeight(vote[iChatham], weights,
-    //     weightedVotes[iChatham]));
     store.impose(new LinearInt(vote[iDuval], weights, "==", weightedVotes[iDuval]));
-    // store.impose(new SumWeight(vote[iDuval], weights,
-    //         weightedVotes[iDuval]));
     store.impose(new LinearInt(vote[iEtting], weights, "==", weightedVotes[iEtting]));
     // store.impose(new SumWeight(vote[iEtting], weights,
     //     weightedVotes[iEtting]));

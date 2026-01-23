@@ -156,9 +156,6 @@ public class SumInt extends PrimitiveConstraint {
           pruneLtEq(0L);
           pruneGtEq(0L);
 
-          // if (sumXmax == sumXmin && sum.singleton() && sum.value() == sumXmin)
-          //     removeConstraint();
-
           break;
 
         case le:
@@ -457,15 +454,6 @@ public class SumInt extends PrimitiveConstraint {
       }
     }
   }
-
-  // void checkForOverflow() {
-
-  //     long sMin = -(long)sum.max(), sMax = -(long)sum.min();
-  //     for (int i = 0; i < x.length; i++) {
-  //         sMin = Math.addExact(sMin, (long)x[i].min());
-  //         sMax = Math.addExact(sMax, (long)x[i].max());
-  //     }
-  // }
 
   public String rel2String() {
     return switch (relationType) {

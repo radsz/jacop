@@ -551,9 +551,6 @@ public abstract class SetDomain extends Domain {
         }
       }
 
-      // int pruningConstraintsToEvaluate =
-      // modelConstraintsToEvaluate[pruningEvent];
-
       if (isImposed) {
 
         if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
@@ -639,9 +636,6 @@ public abstract class SetDomain extends Domain {
           break;
         }
       }
-
-      // int pruningConstraintsToEvaluate =
-      // modelConstraintsToEvaluate[pruningEvent];
 
       if (isImposed) {
 
@@ -773,45 +767,6 @@ public abstract class SetDomain extends Domain {
   @Override
   public String toStringFull() {
     throw new RuntimeException("This function is not used for setDomain.");
-    /*
-      StringBuffer S = new StringBuffer("");
-
-    Domain domain = this;
-
-    do {
-      if (!domain.singleton()) {
-        S.append(toString()).append("(").append(domain.stamp()).append(") ");
-      } else
-        S.append(min).append("(").append(
-            String.valueOf(domain.stamp())).append(") ");
-
-      S.append("constraints: ");
-
-      for (Iterator<Constraint> e = domain.searchConstraints.iterator(); e
-          .hasNext();)
-        S.append(e.next());
-
-      if (domain.domainID() == IntervalDomainID) {
-
-        IntervalDomain dom = (IntervalDomain) domain;
-        domain = dom.previousDomain;
-
-      }
-      else if (domain.domainID() == BoundDomainID) {
-
-        BoundDomain dom = (BoundDomain) domain;
-        domain = dom.previousDomain;
-
-        }
-      else {
-
-        // Other type.
-      }
-
-    } while (domain != null);
-
-    return S.toString();
-     */
   }
 
   /**

@@ -130,10 +130,6 @@ public class CurveFitting {
     for (int i = 0; i < n; i++) {
       store.impose(new PplusQeqR(X, Ex[i], new FloatVar(store, Sx[i], Sx[i])));
       store.impose(new PplusQeqR(Y, Ey[i], new FloatVar(store, Sy[i], Sy[i])));
-      // store.impose(new LinearFloat(new FloatVar[] {X, Ex[i]}, new double[] {1.0, 1.0}, "==",
-      // Sx[i]));
-      // store.impose(new LinearFloat(new FloatVar[] {Y, Ey[i]}, new double[] {1.0, 1.0}, "==",
-      // Sy[i]));
     }
 
     FloatVar[] vars = new FloatVar[2 * n + 1];

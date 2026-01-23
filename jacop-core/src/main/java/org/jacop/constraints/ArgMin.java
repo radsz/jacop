@@ -211,9 +211,6 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         }
       }
     } while (store.propagationHasOccurred);
-
-    // if (maxIndex.singleton() && list[maxIndex.value() - 1 - indexOffset].singleton())
-    //     removeConstraint();
   }
 
   @Override

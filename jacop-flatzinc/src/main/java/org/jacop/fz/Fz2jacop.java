@@ -58,31 +58,12 @@ public class Fz2jacop {
    */
   void main(String[] args) {
 
-    // org.jacop.core.SwitchesPruningLogging.traceVar =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceConstraint =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceConsistencyCheck =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceQueueingConstraint =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceAlreadyQueuedConstraint =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceConstraintImposition =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceFailedConstraint =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceLevelRemoval =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceConstraintFailure =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceStoreRemoveLevel =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceVariableCreation =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceOperationsOnLevel =  false;
-    // org.jacop.core.SwitchesPruningLogging.traceSearchTree =  false;
-
     Options opt = new Options(args);
 
     // if (opt.getVerbose())
     if (opt.debug()) {
       IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
     }
-
-    // Thread tread = java.lang.Thread.currentThread();
-    // java.lang.management.ThreadMXBean b =
-    // java.lang.management.ManagementFactory.getThreadMXBean();
-    // long startCPU = b.getThreadCpuTime(tread.getId());
 
     Parser parser = new Parser(opt.getFile());
     parser.setOptions(opt);

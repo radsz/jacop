@@ -233,9 +233,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ASTSolveKind kind;
     int count = node.jjtGetNumChildren();
 
-    //      System.out.println("Number constraints = "+store.numberConstraints());
-    //      System.out.println("Number  of variables = "+store.size());
-
     if (count == 1) { // only solve kind => default search
 
       kind = (ASTSolveKind) node.jjtGetChild(0);
@@ -663,11 +660,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             flatzincCost = cost;
             return;
           }
-
-          // last_search.setSolutionListener(new ResultListener(si.vars()));
-          // org.jacop.floats.search.Optimize opt = new org.jacop.floats.search.Optimize(store,
-          // label, variable_selection, (FloatVar)cost);
-          // result = opt.minimize();
 
           break;
         case 2: // maximize
@@ -1157,12 +1149,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     // add restart search for free search (option -f)
-    // if (options.freeSearch()) {
-    //     int scale = int_search_variables.length + set_search_variables.length +
-    //         bool_search_variables.length + float_search_variables.length;
-    //     restartCalculator = new LubyCalculator(scale); // GeometricCalculator(10, 2);
-    // }
-    // System.out.println("% !!! " + java.util.Arrays.asList(intAndSetSearch));
 
     return intAndSetSearch;
   }
@@ -1712,9 +1698,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label = ls[3];
         }
       }
-
-        // throw new IllegalArgumentException("!!! Not recognized or supported search type \"" +
-        // si.type() + "\"; compilation aborted");
     }
 
     return label;
@@ -1843,8 +1826,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
 
-    // ComparatorVariable<IntVar> comparator = si.getVarSelect();
-    // ComparatorVariable<IntVar> tieBreak = (ComparatorVariable<IntVar>)si.tieBreaking;
     SearchItem.ComparatorsVar<IntVar> vs = si.getVarSelect();
     ComparatorVariable<IntVar> comparator = vs.v1;
     ComparatorVariable<IntVar> tieBreak = vs.v2;
@@ -1985,8 +1966,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (options.getAll()) {
       IO.print(printBuffer.toString());
-      // String s = "% " + store.toString();
-      // System.out.println(s.replaceAll("\n", "\n% "));
     } else { // store the print-out
 
       lastSolution = printBuffer;
@@ -2043,40 +2022,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       throw new IllegalArgumentException("Wrong cost function specification " + node);
     }
   }
-
-  /*
-  boolean restart_search(Search<Var> masterLabel, SelectChoicePoint<Var> masterSelect,
-                         IntVar cost, boolean minimize) {
-      costVariable = cost;
-      Search<Var> final_search = list_seq_searches.get(list_seq_searches.size()-1);
-
-      for (Search s : list_seq_searches)
-          s.setAssignSolution(false);
-      store.setLevel(store.level+1);
-      boolean result = true, optimalResult = false;
-      while (result) {
-          result = masterLabel.labeling(store, masterSelect);
-          if (minimize) //minimize
-              pose(new XltC(cost, costValue));
-          else // maximize
-              pose(new XgtC(cost, costValue));
-
-          optimalResult = optimalResult || result;
-
-          if (options.getNumberSolutions() == final_search.getSolutionListener().solutionsNo())
-              break;
-      }
-      store.removeLevel(store.level);
-      store.setLevel(store.level-1);
-
-      result = optimalResult;
-      if (result)
-          for (Search s : list_seq_searches)
-              s.assignSolution();
-
-      return result;
-  }
-  */
 
   FloatVar getCostFloat(ASTSolveExpr node) {
     if (node.getType() == 0) { // ident
@@ -2177,27 +2122,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  // public class ResultListener<T extends Var> extends SimpleSolutionListener<T> {
-
-  //  Var[] var;
-
-  //  public ResultListener(Var[] v) {
-  //      var = v;
-  //  }
-
-  //  public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
-
-  //      boolean returnCode = super.executeAfterSolution(search, select);
-
-  //      finalNumberSolutions++;
-
-  //      printSolution();
-  //      System.out.println("----------");
-
-  //      return returnCode;
-  //  }
-  // }
-
   void startTimer() {
 
     if ("true".equals(p)) {
@@ -2241,21 +2165,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);
-
-      /* // === used to print number of search nodes for each solution
-      int nodes=0;
-      for (Search<Var> label : list_seq_searches)
-          nodes += label.getNodes();
-      System.out.println("%% Search nodes : "+ nodes );
-      */
-
-      /* // ==> used for restart search
-      if (costVariable != null)
-          if (costVariable instanceof IntVar)
-              costValue = ((IntVar) costVariable).value();
-          else
-              floatCostValue = ((FloatVar) costVariable).value();
-      */
 
       finalNumberSolutions++;
 

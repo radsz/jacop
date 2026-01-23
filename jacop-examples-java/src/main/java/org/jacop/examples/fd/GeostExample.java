@@ -183,15 +183,6 @@ public class GeostExample extends ExampleFD {
 
     boolean result = store.consistency();
 
-    //      System.out.println(shapes+"\n"+objects);
-
-    //      Search label = new DepthFirstSearch();
-
-    //      Variable[] vars = {X_o1, Y_o1, X_o2, Y_o2, X_o3, Y_o3, X_o4, Y_o4};
-    //      SelectChoicePoint select = new SimpleSelect(vars, null,
-    //                  new IndomainMin());
-    //      Result = label.labeling(store, select);
-
     if (result) {
       IO.println("*** Yes");
       IO.println(store);

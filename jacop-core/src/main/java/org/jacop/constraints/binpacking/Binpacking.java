@@ -517,8 +517,6 @@ public class Binpacking extends Constraint
         }
       }
     }
-    //   System.out.println("k = "+k+" k' = "+kPrime);
-    //   System.out.println("sum_a = "+sum_a+" sum_b = "+sum_b+" sum_c = "+sum_c) ;
 
     alphaP = sum_a + sum_c;
     betaP = sum_b;

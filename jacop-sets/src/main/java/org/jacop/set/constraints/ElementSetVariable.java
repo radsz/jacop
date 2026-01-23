@@ -217,9 +217,6 @@ public class ElementSetVariable extends Constraint implements Stateful {
           store.level, lp, value.domain.card().min(), value.domain.card().max());
       value.domain.inCardinality(
           store.level, value, lp.domain.card().min(), lp.domain.card().max());
-
-      // if (value.singleton())
-      //   removeConstraint();
     }
   }
 

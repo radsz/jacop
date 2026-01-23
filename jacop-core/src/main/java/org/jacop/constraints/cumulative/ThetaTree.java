@@ -57,21 +57,6 @@ class ThetaTree extends Tree {
 
   public ThetaTree() {}
 
-  // public void buildEmptyTree(TaskView[] task) {
-  //   int n = task.length;
-  //   treeSize = (int)Math.pow(2 , Math.round(Math.ceil(Math.log(n) / Math.log(2)))) + n - 1;
-  //   tree = new ThetaNode[treeSize];
-
-  //   orderedTasks = task;
-
-  //   // clear leaves
-  //   for (int i = treeSize-1; i >= treeSize - n; i--)
-  //     clearNode(i);
-  //   // clear intermediate nodes
-  //   for (int i = treeSize - n - 1; i >= 0; i--)
-  //     clearNode(i);
-  // }
-
   public void buildTree(TaskView[] task) {
     n = task.length;
     treeSize = (int) Math.pow(2, Math.round(Math.ceil(Math.log(n) / Math.log(2)))) + n - 1;
@@ -215,8 +200,6 @@ class ThetaTree extends Tree {
   void enableNode(int i) {
     tree[i].assignValues();
     // node keeps the original values; assigned in method addLeave
-    // node.p = tree[i].task.dur().min();
-    // node.ect = tree[i].task.ect();
 
     updateTree(parent(i));
   }

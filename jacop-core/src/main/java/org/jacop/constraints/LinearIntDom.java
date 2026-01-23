@@ -189,8 +189,6 @@ public class LinearIntDom extends LinearInt {
 
     findSupport(0, 0L);
 
-    // System.out.println("Variables: "+java.util.Arrays.asList(x)+" have valid assignments: " +
-    // java.util.Arrays.asList(support));
     for (int i = 0; i < l; i++) {
       if (support[i] == null) {
         throw Store.failException;

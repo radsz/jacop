@@ -106,7 +106,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private final PriorityQueue<XDomain> pSecond;
   private final PriorityQueue<Integer> pCount;
   private final Map<IntVar, Integer> xNodesHash;
-  private final Set<IntVar> xVariableToChange;
   private final Comparator<XDomain> compareLowerBound =
       (o1, o2) -> {
         if (o1.min() < o2.min()) {
@@ -116,17 +115,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         }
         return 0;
       };
-  private final Comparator<XDomain> sortPriorityMinOrder =
-      (o1, o2) -> {
-        if (o1.max() < o2.max()) {
-          return -1;
-        } else if (o1.max() > o2.max()) {
-          return 1;
-        }
-
-        return 0;
-      };
-  private final Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
 
   /**
    * TODO An improvement to increase the incrementality even further.
@@ -202,12 +190,23 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     S1 = new ArrayDeque<>();
     S2 = new ArrayDeque<>();
+    Comparator<XDomain> sortPriorityMinOrder =
+        (o1, o2) -> {
+          if (o1.max() < o2.max()) {
+            return -1;
+          } else if (o1.max() > o2.max()) {
+            return 1;
+          }
+
+          return 0;
+        };
     pFirst = new PriorityQueue<>(10, sortPriorityMinOrder);
     pSecond = new PriorityQueue<>(10, sortPriorityMinOrder);
+    Comparator<Integer> sortPriorityMaxOrder = (e1, e2) -> -e1.compareTo(e2);
     pCount = new PriorityQueue<>(10, sortPriorityMaxOrder);
 
     xNodesHash = Var.createEmptyPositioning();
-    xVariableToChange = new HashSet<>();
+    Set<IntVar> xVariableToChange = new HashSet<>();
 
     setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
   }

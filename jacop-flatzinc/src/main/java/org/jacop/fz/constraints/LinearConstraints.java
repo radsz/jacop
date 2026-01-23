@@ -345,11 +345,6 @@ class LinearConstraints implements ParserTreeConstants {
         support.pose(new Reified(new LinearInt(p2, p1, "<", p3), p4));
         break;
       // gt not present in the newest flatzinc version
-      // case support.gt :
-      //  t = new IntVar(store, IntDomain.MinInt, IntDomain.MaxInt);
-      //  support.pose(new SumWeight(p2, p1, t));
-      //  support.pose(new Reified(new XgtC(t, p3), p4));
-      //  break;
       case Support.le:
         if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           if (p3 == 0) {
@@ -738,14 +733,6 @@ class LinearConstraints implements ParserTreeConstants {
           // the cases are covered by four cases above.
 
           // possible use of Table constraint
-          // int[][] tbl = org.jacop.constraints.table.TableMill.linear(p2, p1, p3);
-          // if (tbl != null)
-          //  if (tbl.length <= 64)
-          //      support.pose(new org.jacop.constraints.table.SimpleTable(p2, tbl, true));
-          //  else
-          //      support.pose(new org.jacop.constraints.table.Table(p2, tbl, true));
-          // else
-          //  support.pose(new LinearIntDom(p2, p1, "==", p3));
 
           int pos = sumPossible(p1);
           if (pos > -1) {

@@ -1380,8 +1380,6 @@ public class Alldistinct extends Constraint
   public boolean satisfied() {
 
     // Possible to use this check, fast but not accurate
-    // if (stampNotGroundedVariables.value() != -1)
-    // return false;
 
     boolean sat = true;
     int i = 0;

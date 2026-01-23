@@ -329,8 +329,6 @@ public class LexOrder extends Constraint
 
     if (a == n) {
       if (!lexLT) {
-        // alpha.update(a);
-        // beta.update(n + 1);
         satisfied = true;
         removeConstraint();
         return; // satisfied already for le

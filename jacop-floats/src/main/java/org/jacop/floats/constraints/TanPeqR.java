@@ -107,9 +107,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
         FloatInterval normP = normalize(p);
         min = normP.min();
         max = normP.max();
-
-        // System.out.println ("Not-normalized " + p);
-        // System.out.println ("Normalized interval within -PI..PI interval = " + min + ".." + max);
       }
 
       // System.out.println ("Normalized min/max = " + min+".."+max);
@@ -124,9 +121,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
-
-      // System.out.println ("min in interval " + intervalForMin + ", max in interval " +
-      // intervalForMax);
 
       double qMin, qMax;
       switch (intervalForMin) {

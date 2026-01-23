@@ -127,12 +127,6 @@ public class Circuit extends Alldiff implements Stateful {
     } while (store.propagationHasOccurred);
 
     sccs(store); // strongly connected components
-
-    // dominanceFilter(); // filter based on dominance of nodes
-
-    // if (store.propagationHasOccurred)
-    //     store.addChanged(this);
-
   }
 
   void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {

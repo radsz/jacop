@@ -523,8 +523,6 @@ public class Support implements ParserTreeConstants {
     for (int i = 1; i < constraintWithAnnotations.jjtGetNumChildren(); i++) {
       ASTAnnotation ann = (ASTAnnotation) constraintWithAnnotations.jjtGetChild(i);
 
-      // ann.dump("");
-      // System.out.println ("ann["+i+"] = "+ ann.getAnnId());
       constraintPriority = -1;
 
       if ("$expr".equals(ann.getAnnId())) {

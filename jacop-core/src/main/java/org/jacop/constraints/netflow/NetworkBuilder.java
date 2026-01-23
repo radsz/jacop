@@ -266,8 +266,6 @@ public class NetworkBuilder {
           }
           arc.getCompanion().xVar = var;
         }
-        // if (arc.head == node) in.add(arc.getCompanion().xVar);
-        // if (arc.tail() == node) out.add(arc.getCompanion().xVar);
       }
 
       if (node.balance != 0) {

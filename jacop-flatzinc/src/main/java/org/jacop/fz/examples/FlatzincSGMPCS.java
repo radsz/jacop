@@ -67,12 +67,6 @@ public class FlatzincSGMPCS {
 
     Store store = fl.getStore();
 
-    // System.out.println (store);
-
-    // System.out.println("============================================");
-    // System.out.println(fl.getTables());
-    // System.out.println("============================================");
-
     IO.println(
         "\nIntVar store size: "
             + store.size()

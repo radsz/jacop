@@ -180,9 +180,6 @@ public class FloatVar extends Var {
 
     assert singleton() : "Request for a value of not grounded variable " + this;
 
-    // if (!singleton())
-    // Thread.dumpStack();
-
     return domain.min();
   }
 

@@ -262,11 +262,6 @@ public class Queens extends ExampleFD {
       vars.add(queens[i]);
     }
     // symmetry breaking - not usefull in this problem
-    // FDV one = new FDV(store, "one", 1, 1);
-    // FDV firstRowPosition = new FDV(store, "firstRowPosition", 0,
-    // numberQ);
-    // store.impose(new Element(firstRowPosition, queens, one));
-    // store.impose(new XltY(queens[0], firstRowPosition));
 
     store.impose(new Alldiff(queens));
 

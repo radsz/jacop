@@ -122,8 +122,6 @@ public class Markov {
     label.setAssignSolution(true);
     // label.setSolutionListener(new PrintOutListener<FloatVar>());
     label.getSolutionListener().recordSolutions(true);
-    // label.getSolutionListener().searchAll(true);
-    // s.leftFirst = false;
 
     boolean result = label.labeling(store, s, tot_cost);
 

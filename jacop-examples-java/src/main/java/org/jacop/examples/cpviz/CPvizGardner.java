@@ -70,8 +70,6 @@ public class CPvizGardner {
   }
 
   void ex1() {
-    //       long T1, T2, T;
-    //       T1 = System.currentTimeMillis();
 
     Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
@@ -147,19 +145,11 @@ public class CPvizGardner {
       IO.println("*** No");
     }
 
-    //       T2 = System.currentTimeMillis();
-    //       T = T2 - T1;
-    //       System.out.println("\n\t*** Execution time = "+ T + " ms");
-
     IO.println(
         "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
     IO.println(
         "ThreadUserTime = "
             + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6
             + "ms");
-
-    //   System.out.printf("CPU time = %5.3fs%n", (float)(((float)b.getThreadCpuTime(tread.getId())
-    // -
-    // startCPU)/1e+9));
   }
 }

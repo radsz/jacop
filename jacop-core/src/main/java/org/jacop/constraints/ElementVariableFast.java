@@ -213,9 +213,6 @@ public class ElementVariableFast extends Constraint implements Stateful, Satisfi
       IntVar lp = list[index.value() - 1 - indexOffset];
       value.domain.in(store.level, value, lp.domain);
       lp.domain.in(store.level, lp, value.domain);
-
-      // if (value.singleton())
-      //  removeConstraint();
     }
   }
 

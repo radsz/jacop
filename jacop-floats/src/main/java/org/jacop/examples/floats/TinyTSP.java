@@ -107,16 +107,10 @@ public class TinyTSP {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    // DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    // SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, var, new
-    // MaxRegretFloat<FloatVar>());
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> s =
         new SimpleSelect<>(visit, new SmallestDomain<>(), new IndomainMin<>());
     label.setAssignSolution(true);
-    // s.leftFirst = false;
-
-    // label.setSolutionListener(new PrintOutListener<IntVar>());
 
     label.labeling(store, s, route);
 

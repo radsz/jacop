@@ -226,8 +226,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
           int deltaCost = newCost - arc.cost;
           int flow = flowOffset + arc.sister.capacity;
           network.changeCostOffset((long) flow * (long) deltaCost);
-          //         System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
-          //         throw new RuntimeException();
         } /*else if (flowOffset != 0) {
                 int deltaCost = newCost - arc.cost;
             int flow = flowOffset;
@@ -257,8 +255,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
         int deltaCost = newCost - arc.cost;
         int flow = flowOffset + arc.sister.capacity;
         network.changeCostOffset((long) flow * (long) deltaCost);
-        //       System.out.println(arc.name() + " : " + ((long) flow * (long) deltaCost));
-        //       throw new RuntimeException();
       } /*else if (flowOffset != 0) {
              int deltaCost = newCost - arc.cost;
           int flow = flowOffset;

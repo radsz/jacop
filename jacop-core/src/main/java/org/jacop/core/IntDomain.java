@@ -1146,9 +1146,6 @@ public abstract class IntDomain extends Domain {
         }
       }
 
-      // int pruningConstraintsToEvaluate =
-      // modelConstraintsToEvaluate[pruningEvent];
-
       if (isImposed) {
 
         if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {

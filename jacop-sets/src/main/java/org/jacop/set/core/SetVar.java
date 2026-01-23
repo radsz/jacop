@@ -68,9 +68,6 @@ public class SetVar extends Var {
     dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[SetDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[SetDomain.eventsInclusion.length];
-    //   dom.modelConstraintsToEvaluate[0] = 0;
-    //   dom.modelConstraintsToEvaluate[1] = 0;
-    //   dom.modelConstraintsToEvaluate[2] = 0;
 
     assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
 

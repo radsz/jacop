@@ -103,20 +103,6 @@ class GraphConstraints implements ParserTreeConstants {
     int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     String cName = "GraphMatch";
 
-    /*
-    GraphMatch c = new GraphMatch(store, t, p, target_type, pattern_type, index_min, match, true);
-    support.pose(c);
-
-    IntVar[] matchVars = c.variables();
-
-    if (index_min == 0)
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XeqY(matchVars[i], match[i]));
-    else
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-    */
-
     try {
       IntVar[] matchVars = null;
       if (index_min == 0) {
@@ -164,22 +150,6 @@ class GraphConstraints implements ParserTreeConstants {
     IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
     int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     String cName = "GraphMatch";
-
-    /*
-    Graph target = buildDiGraph(t, target_type, index_min);
-    Graph pattern = buildDiGraph(p, pattern_type, index_min);
-
-    GraphMatch c = new GraphMatch(store, target, pattern);
-    support.pose(c);
-    IntVar[] matchVars = c.variables();
-
-    if (index_min == 0)
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XeqY(matchVars[i], match[i]));
-    else
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-    */
 
     try {
       IntVar[] matchVars = null;
@@ -229,25 +199,6 @@ class GraphConstraints implements ParserTreeConstants {
     int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     String cName = "SubGraphMatch";
 
-    /*
-    Graph target = buildGraph(t, target_type, index_min);
-    Graph pattern = buildGraph(p, pattern_type, index_min);
-
-    SubGraphMatch c = new SubGraphMatch(store, target, pattern);
-    support.pose(c);
-    IntVar[] matchVars = c.variables();
-
-    if (matchVars.length != match.length)
-        throw new IllegalArgumentException("%% ERROR: sub_graph_match must have pattern size the same as pattern graph");
-
-    if (index_min == 0)
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XeqY(matchVars[i], match[i]));
-    else
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-    */
-
     try {
       IntVar[] matchVars = null;
       if (index_min == 0) {
@@ -295,27 +246,6 @@ class GraphConstraints implements ParserTreeConstants {
     IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
     int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     String cName = "SubGraphMatch";
-
-    /*
-    Graph target = buildDiGraph(t, target_type, index_min);
-    Graph pattern = buildDiGraph(p, pattern_type, index_min);
-
-    // GraphMatchDecomposed c = new GraphMatchDecomposed(store, target, pattern);
-    // support.poseDC(c);
-    SubGraphMatch c = new SubGraphMatch(store, target, pattern);
-    support.pose(c);
-    IntVar[] matchVars = c.variables();
-
-    if (matchVars.length != match.length)
-        throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size the same as pattern graph");
-
-    if (index_min == 0)
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XeqY(matchVars[i], match[i]));
-    else
-        for (int i = 0; i < match.length; i++)
-            support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-    */
 
     try {
       IntVar[] matchVars = null;
@@ -378,9 +308,6 @@ class GraphConstraints implements ParserTreeConstants {
     // if (vars.length != c.length)
     //     throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size
     // the same as pattern graph");
-
-    // for (int i = 0; i < c.length; i++)
-    //     support.pose(new XeqY(vars[i], c[i]));
 
     try {
       Class<?> cls = Class.forName("org.jacop.graph." + cName);

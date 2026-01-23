@@ -98,8 +98,6 @@ class Diff2Var implements MutableVar {
       value.setValue(((Diff2VarValue) val).Rects);
       // System.out.println(", OUT "+ VarValue);
     } else if (value.stamp < store.level) {
-      // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
-      // + val);
 
       val.setStamp(store.level);
       val.setPrevious(value);

@@ -881,44 +881,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return intervals[0].min();
   }
 
-  /*
-    public FloatDomain multiply(double mul) {
-
-    assert mul != 0;
-
-    FloatIntervalDomain temp = new FloatIntervalDomain();
-
-    if (mul > 0) {
-
-    for (int m = 0; m < size; m++) {
-    FloatInterval I1 = intervals[m];
-    for (int i = I1.min; i <= I1.max; i++) {
-    double value = i * mul;
-    temp.unionAdapt(new FloatInterval(value, value));
-    }
-    }
-
-    assert temp.checkInvariants() == null : temp.checkInvariants() ;
-    return temp;
-
-    } else {
-
-    for (int m = size - 1; m >= 0; m--) {
-    Interval I1 = intervals[m];
-    for (int i = I1.max; i >= I1.min; i--) {
-    double value = i * mul;
-    temp.unionAdapt(new FloatInterval(value, value));
-    }
-    }
-
-    assert temp.checkInvariants() == null : temp.checkInvariants() ;
-    return temp;
-
-    }
-
-    }
-  */
-
   /**
    * It removes the counter-th interval from the domain.
    *
@@ -1132,10 +1094,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
               break;
             }
           } else {
-
-            // i1++;
-            // if (i1 == size)
-            // break;
 
             result.unionAdapt(new FloatInterval(next(oldMax), previous(currentDomain2.min())));
           }
@@ -2633,10 +2591,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
           result.size -= noRemoved;
 
-          //          if (counter < size && intervals[counter].min <= max)
-          //                  result.intervals[counter] = new Interval(max + 1,
-          //                                  intervals[counter].max);
-
           if (counter + noRemoved < size && intervals[counter + noRemoved].min() <= max) {
             result.intervals[counter] =
                 new FloatInterval(next(max), intervals[counter + noRemoved].max());
@@ -2854,11 +2808,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     var.domainHasChanged(returnedEvent);
   }
-
-  // @Override
-  // public int domainID() {
-  //  return FloatIntervalDomainID;
-  // }
 
   /** It specifies if the domain type is more suited to representing sparse domain. */
   @Override

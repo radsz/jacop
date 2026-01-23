@@ -139,8 +139,6 @@ public class KnapsackExample extends ExampleFD {
     IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
     //  Redundant constraints.
-    // store.impose(new SumWeight(quantity, weights, weight));
-    // store.impose(new SumWeight(quantity, profits, profit));
 
     store.impose(new Knapsack(profits, weights, quantity, weight, profit));
 

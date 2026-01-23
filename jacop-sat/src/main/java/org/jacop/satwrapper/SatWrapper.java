@@ -453,10 +453,6 @@ public final class SatWrapper extends Constraint
 
         mustBacktrack = clauseToLearn.isUnsatisfiableIn(trail);
       }
-      //     else {
-      //       core.triggerIdleEvent();
-      //     }
-
     }
   }
 

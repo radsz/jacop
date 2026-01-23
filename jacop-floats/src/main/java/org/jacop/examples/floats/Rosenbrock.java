@@ -94,16 +94,6 @@ public class Rosenbrock {
             + store.size()
             + "\nNumber of constraints: "
             + store.numberConstraints());
-    /*
-     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<FloatVar>();
-    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<FloatVar>(store, new FloatVar[] {x1, x2, z}, new SmallestDomainFloat<FloatVar>());
-    label.setAssignSolution(true);
-    // s.leftFirst = false;
-
-    // label.setSolutionListener(new PrintOutListener<FloatVar>());
-
-    label.labeling(store, s, z);
-    */
 
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
     SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, new FloatVar[] {x1, x2}, null);

@@ -265,49 +265,6 @@ public class CarSequencing extends ExampleFD {
     return result;
   }
 
-  /*
-   public void modelNestedDecomposed() {
-
-    store = new FDstore();
-    vars = new ArrayList<Variable>();
-
-    Variable[] cars = new Variable[noCar];
-
-    for (int i = 0; i < noCar; i++) {
-      cars[i] = new Variable(store, "car" + (i+1), 0, noClass);
-      vars.add(cars[i]);
-    }
-
-    for (int i = 0; i < noOption; i++) {
-
-      IntervalDomain classesWithGivenOption = new IntervalDomain();
-      for (int j = 0; j < noClass; j++)
-        if (required[j][i])
-          classesWithGivenOption.addDom(j, j);
-
-      DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
-      ArrayList<Constraint> decomposition = c.decompose(store);
-
-      for (Constraint regular : decomposition)
-        store.imposeDecomposition(regular);
-    }
-
-    for (int i = 0; i < noClass; i++) {
-
-      Variable counter = new Variable(store, "counter" + i, noOfCarsPerClass[i], noOfCarsPerClass[i]);
-      store.impose(new Count(i, cars, counter));
-
-        // Possible replacement for Count constraint.
-      //IntervalDomain dom = new IntervalDomain(i, i);
-      //store.impose(new Among(cars, dom, counter));
-      ///
-
-    }
-
-  }
-
-   */
-
   /* @TODO Add functionality to FSM to be able to do intersections and use the model below.
    public void modelIntersection() {
 
@@ -536,8 +493,6 @@ public class CarSequencing extends ExampleFD {
       store.impose(new Count(cars, counter, i));
 
       // Possible replacement for Count constraint.
-      // IntervalDomain dom = new IntervalDomain(i, i);
-      // store.impose(new Among(cars, dom, counter));
 
     }
   }

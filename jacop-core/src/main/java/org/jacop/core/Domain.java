@@ -332,12 +332,6 @@ public abstract class Domain {
    */
   public abstract void in(int level, Var var, Domain domain);
 
-  // public abstract void inValue(int level, Var var, Domain singleton);
-
-  // public abstract boolean eq(Domain domain);
-
-  // public abstract void addDom(Domain domain);
-
   /**
    * It checks if the domain has correct state.
    *

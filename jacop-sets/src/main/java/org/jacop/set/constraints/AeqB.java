@@ -52,9 +52,6 @@ public class AeqB extends PrimitiveConstraint {
   /** It specifies set variable b, which must be equal to set variable a. */
   public final SetVar b;
 
-  // private boolean aHasChanged = true;
-  // private boolean bHasChanged = true;
-
   /**
    * It constructs an AeqB constraint to restrict the domain of the variables.
    *
@@ -83,10 +80,6 @@ public class AeqB extends PrimitiveConstraint {
 
     a.domain.inCardinality(store.level, a, b.domain.card().min(), b.domain.card().max());
     b.domain.inCardinality(store.level, b, a.domain.card().min(), a.domain.card().max());
-
-    // aHasChanged = false;
-    // bHasChanged = false;
-
   }
 
   @Override

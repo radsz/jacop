@@ -571,15 +571,6 @@ public class DisjointConditional extends Diff {
       if (availArea < area) {
         // System.out.println("Fail area: "+ availArea+" < "+area+" at
         // level "+currentStore.level);
-        // System.out.println(r);
-        // for (int ind=0; ind<OverlappingRects.size(); ind++)
-        // if (((Rectangle)OverlappingRects.get(ind)).length[0].min() >
-        // 0 &&
-        // ((Rectangle)OverlappingRects.get(ind)).length[1].min() > 0)
-        // if (!
-        // onExList(((RectangleWithCondition)OverlappingRects.get(ind)).index)
-        // )
-        // System.out.println(OverlappingRects.get(ind));
         throw Store.failException;
       } else
       // check whether there is enough room for
@@ -710,10 +701,6 @@ public class DisjointConditional extends Diff {
               exclude = minForbiddenInterval(s, i, r, ConsideredRect, minI);
 
               if (exclude.max() != -1) {
-                // Domain Update = Domainset.complement(new
-                // FD(exclude.Min-
-                // r.length[i].min()+1,
-                // exclude.Max-1));
                 int min = exclude.min() - r.length[i].min();
                 if (min + 1 < exclude.max()) {
                   IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, min);
@@ -764,13 +751,6 @@ public class DisjointConditional extends Diff {
         rects = ConsideredRectDur.toArray(rects);
         Arrays.sort(rects, dimIthMinComparator.apply(i));
 
-        // Object[] rects = ConsideredRectDur.toArray();
-        // Comparator<Object> c = new DimIMinComparator<Object>(i);
-        // Arrays.sort(rects, c);
-
-        // System.out.println("Considered rectangles : " +
-        // ConsideredRectDur);
-
         Profile barrier = new Profile();
         boolean lengthOK = true;
         int newMaxLength = 0;
@@ -788,8 +768,6 @@ public class DisjointConditional extends Diff {
           }
           n++;
         }
-        // System.out.println(barrier+ "-->> "+lengthOK
-        // + ", new max length = " + newMaxLength);
         if (!lengthOK) {
           // update length in dimension j
           int maxLength = findMaxLength(i, newMaxLength, r);
@@ -889,9 +867,6 @@ public class DisjointConditional extends Diff {
 
         barrier.clear();
         for (IntRectangle hinder : ConsideredRect) {
-          // System.out.println(hinder.origin[j] + ".."
-          // + (int)(hinder.origin[j]
-          // + hinder.length[j]));
           int hinderJ = hinder.origin[j];
           barrier.addToProfile(hinderJ, hinderJ + hinder.length[j], 1);
         }

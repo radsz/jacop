@@ -415,17 +415,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     search_type = "seq_search";
   }
 
-  // SelectChoicePoint getSelect() {
-  //     if (search_type.equals("int_search") || search_type.equals("bool_search"))
-  //         return getIntSelect();
-  //     else if (search_type.equals("set_search"))
-  //         return getSetSelect();
-  //     else {
-  //         throw new IllegalArgumentException("Error: not recognized search type \"" + search_type
-  // + "\";");
-  //     }
-  // }
-
   SelectChoicePoint<IntVar> getWarmStartSelect() {
 
     Indomain<IntVar> indom =
@@ -784,8 +773,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         case "most_constrained" ->
             new ComparatorsVar<>(new MinGlbCard<>(), new MostConstrainedStatic<>());
         case "largest" -> new ComparatorsVar<>(new MaxLubCard<>());
-        //  case"max_regret":
-        //      return new ComparatorsVar<SetVar>(new MaxRegret());
         case "random" -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(

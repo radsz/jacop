@@ -97,9 +97,6 @@ public class Matrix {
 
   public double determinant(double[][] M) {
 
-    // System.out.println ("========");
-    // print (M);
-
     if (!isSquare(M)) {
       throw new ArithmeticException("Trying to compute determinat on non-square matrix; aborted");
     }

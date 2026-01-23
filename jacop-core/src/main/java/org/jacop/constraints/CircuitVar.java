@@ -94,19 +94,12 @@ class CircuitVar implements MutableVar {
 
   public void update(MutableVarValue val) {
 
-    // if ( value.stamp > store.level ) {
-    // System.out.println("Warning old stamps not removed");
-    // System.exit(-1);
-    // }
-
     if (value.stamp == store.level) {
       // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
       // New " + val);
       value.setValue(((CircuitVarValue) val).next, ((CircuitVarValue) val).previous);
       // System.out.println(", OUT "+ VarValue);
     } else if (value.stamp < store.level) {
-      // System.out.print("2. Level: "+store.level()+", IN "+this+", New "
-      // + val);
 
       val.setStamp(store.level);
       val.setPrevious(value);

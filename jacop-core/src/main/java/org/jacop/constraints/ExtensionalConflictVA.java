@@ -192,8 +192,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
           return null;
         }
       } else {
-        // setNextValidPart
-        // t = setNextValid(varPosition, value, t, invalidPosition);
         for (int i = invalidPosition + 1; i < list.length; i++) {
           if (i != varPosition) {
             t[i] = list[i].min();
@@ -474,12 +472,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       }
 
       for (int val : t) {
-
-        // if (debugAll) {
-        // System.out.print("Checking " + x[j]);
-        // System.out.print(" " + val);
-        // System.out.println(Domain.domain.contains(x[j].dom(), val));
-        // }
 
         if (!list[j].dom().contains(val)) {
           // if (!Domain.domain.contains(x[j].dom(), val)) {

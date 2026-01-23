@@ -71,7 +71,7 @@ public class Cumulative extends CumulativeBasic {
   protected final Comparator<TaskView> taskDecLctComparator =
       (o1, o2) -> o2.lct() == o1.lct() ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
   final TaskView[] taskReversed;
-  boolean doEdgeFind;
+  final boolean doEdgeFind;
   boolean doQuadraticEdgeFind;
   private Set<Integer> preComputedCapacities;
   private int[] preComputedCapMap;
@@ -172,45 +172,6 @@ public class Cumulative extends CumulativeBasic {
 
     } while (store.propagationHasOccurred);
   }
-
-  /*
-  void overloadCheck() {
-
-      TaskView[] estList = new TaskNormalView[taskNormal.length];
-      System.arraycopy(taskNormal, 0, estList, 0, estList.length);
-      Arrays.sort(estList, (o1, o2) -> {
-          return o1.est() - o2.est();
-      }); // task est incremental comparator
-      // System.out.println(java.util.Arrays.asList(estList));
-
-      ThetaLambdaTree tree = new ThetaLambdaTree(limit);
-      tree.buildTree(estList);
-      tree.clearTree();
-
-      TaskView[] lctList = new TaskNormalView[taskNormal.length];
-      System.arraycopy(taskNormal, 0, lctList, 0, lctList.length);
-      Arrays.sort(lctList, (o1, o2) -> {
-          return o1.lct() - o2.lct();
-      });// task lct incremental comparator
-      //System.out.println(java.util.Arrays.asList(lctList));
-
-
-      long C = (long)limit.max();
-      for (int j = 0; j < lctList.length; j++) {
-          tree.enableNode(lctList[j].treeIndex, lctList[j].res.min());
-
-          // System.out.println("j = " + j +", lctList[j].treeIndex = "+lctList[j].treeIndex+",
-          // tree.rootNode().env "+ tree.rootNode().env +", lctList[j].lct() = " +
-          // lctList[j].lct() + ", C = "+ C);
-
-          if (tree.rootNode().env > C * (long)lctList[j].lct()) {
-              // System.out.println("FAIL");
-
-              throw Store.failException;
-          }
-      }
-  }
-  */
 
   void edgeFind(Store store) {
 

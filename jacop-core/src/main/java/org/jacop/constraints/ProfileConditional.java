@@ -170,8 +170,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                           + " at position "
                           + i);
                 }
-                // !!!
-                // previous.setMax(new1.Max);
                 add(i, new1);
               } else {
                 if (trace) {
@@ -208,8 +206,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
                           + " at position "
                           + i);
                 }
-                // !!!
-                // previous.setMax(new2.Max);
                 add(i, new2);
               } else {
                 if (trace) {

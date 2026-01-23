@@ -57,10 +57,6 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
   /** A set variable a whose elements contribute with their weight to the sum. */
   public final SetVar a;
 
-  // public int[] elements;
-
-  // public int[] weights;
-
   /** Integer variable containing the total weight of all elements within a set variable a. */
   public final IntVar totalWeight;
 
@@ -92,8 +88,6 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
     this.totalWeight = totalWeight;
     this.a = a;
-    // this.weights = Arrays.copyOf(weights, weights.length);
-    // this.elements = Arrays.copyOf(elements, elements.length);
 
     this.increasingCosts = true;
     for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++) {

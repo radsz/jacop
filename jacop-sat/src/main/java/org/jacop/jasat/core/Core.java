@@ -439,9 +439,6 @@ public final class Core implements SolverComponent {
 
     assert explanationClause.isEmpty() || !explanationClause.isUnsatisfiableIn(trail);
 
-    //   assert explanationClause.isEmpty() ||
-    // explanationClause.isUnitIn(explanationClause.assertedLiteral, trail);
-
     currentState = SolverState.UNKNOWN;
 
     // if literals to propagate remain, they are obsolete
