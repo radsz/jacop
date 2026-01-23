@@ -627,8 +627,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
     // intermediate check: use bounding boxes to skip test quickly
     DBox otherBB = geost.getShape(currentShape).boundingBox;
 
-    int outDimOrigin = 0;
-    int outDimLength = 0;
+    int outDimOrigin;
+    int outDimLength;
     int selectedDimIndex = 0;
 
     for (int i = 0; i < obstacle.dimension; i++) {
@@ -704,15 +704,12 @@ public class ObstacleObjectFrame extends InternalConstraint {
   @Override
   public String toString() {
 
-    String result =
-        "ObstacleObject(o"
-            + obstacle.no
-            + ", "
-            + Arrays.toString(selectedDimensions)
-            + ", "
-            + frame.toString();
-
-    return result;
+    return "ObstacleObject(o"
+        + obstacle.no
+        + ", "
+        + Arrays.toString(selectedDimensions)
+        + ", "
+        + frame.toString();
   }
 
   @Override

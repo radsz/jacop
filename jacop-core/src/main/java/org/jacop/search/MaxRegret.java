@@ -51,7 +51,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     ValueEnumeration rEnum = var.domain.valueEnumeration();
 
     int rmin = rEnum.nextElement();
-    int rminNext = 0;
+    int rminNext;
     if (rEnum.hasMoreElements()) {
       rminNext = rEnum.nextElement();
     } else {
@@ -74,7 +74,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     ValueEnumeration lEnum = left.domain.valueEnumeration();
 
     int lmin = lEnum.nextElement();
-    int lminNext = 0;
+    int lminNext;
     if (lEnum.hasMoreElements()) {
       lminNext = lEnum.nextElement();
     } else {
@@ -86,7 +86,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     ValueEnumeration rEnum = right.domain.valueEnumeration();
 
     int rmin = rEnum.nextElement();
-    int rminNext = 0;
+    int rminNext;
     if (rEnum.hasMoreElements()) {
       rminNext = rEnum.nextElement();
     } else {
@@ -103,7 +103,7 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     ValueEnumeration oEnum = o.domain.valueEnumeration();
 
     int omin = oEnum.nextElement();
-    int ominNext = 0;
+    int ominNext;
     if (oEnum.hasMoreElements()) {
       ominNext = oEnum.nextElement();
     } else {

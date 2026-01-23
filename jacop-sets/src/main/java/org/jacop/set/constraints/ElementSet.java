@@ -75,7 +75,7 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
    * It allows to offset the indexing. By default the indexing starts from 1, if index variable
    * starts from 0, and 0 denotes the first element then indexOffset should be set to -1.
    */
-  public int indexOffset;
+  public final int indexOffset;
 
   /**
    * It constructs a constraint to restrict the domains of the variables index and value.
@@ -125,7 +125,7 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     IntDomain newValueLUB = new IntervalDomain();
 
     ValueEnumeration enumer = indexDom.valueEnumeration();
-    int el = 0;
+    int el;
 
     while (enumer.hasMoreElements()) {
       el = enumer.nextElement() - 1 - indexOffset;

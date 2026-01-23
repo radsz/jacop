@@ -325,8 +325,8 @@ public abstract class FloatDomain extends Domain {
     boolean N0_2 = c < 0 && d == 0;
     boolean N1_2 = c < 0 && d < 0;
 
-    double min = 0;
-    double max = 0;
+    double min;
+    double max;
 
     if (P1_1) {
       if (P1_2) { // P1 /\ P1
@@ -456,8 +456,8 @@ public abstract class FloatDomain extends Domain {
     boolean N0_2 = c < 0 && d == 0;
     boolean N1_2 = c < 0 && d < 0;
 
-    double min = 0;
-    double max = 0;
+    double min;
+    double max;
 
     // FloatIntervalDomain result = null;
 
@@ -626,7 +626,6 @@ public abstract class FloatDomain extends Domain {
    */
   public boolean isIntersecting(FloatDomain domain) {
 
-    // if (!domain.isSparseRepresentation()) {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
@@ -634,16 +633,6 @@ public abstract class FloatDomain extends Domain {
         return true;
       }
     }
-    /*
-    }
-    else {
-
-        ValueEnumeration enumer = domain.valueEnumeration();
-        while (enumer.hasMoreElements())
-            if (contains(enumer.nextElement()))
-                return true;
-    }
-    */
     return false;
   }
 

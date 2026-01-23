@@ -49,7 +49,7 @@ public class BoxDisplay extends JFrame {
   @Serial private static final long serialVersionUID = -1620053778620352318L;
 
   /** It specifies the number of pixels per unit of length. */
-  public int pixelsPerUnit = 5;
+  public int pixelsPerUnit;
 
   /** It defines the shift in x dimension for drawing. */
   public int xCellsShift;
@@ -144,7 +144,7 @@ public class BoxDisplay extends JFrame {
    */
   public void displayState(int domainWidth, boolean groundedOnly, boolean withFrames, Geost geost) {
 
-    Color color = Color.black;
+    Color color;
 
     if (withFrames) {
       for (InternalConstraint c : geost.internalConstraints) {

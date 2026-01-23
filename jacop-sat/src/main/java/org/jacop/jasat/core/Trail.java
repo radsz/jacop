@@ -45,8 +45,8 @@ import org.jacop.jasat.utils.structures.IntStack;
  */
 public final class Trail implements SolverComponent {
 
-  private final int ASSERTED_MASK = Integer.MIN_VALUE; // 100000....000
-  private final int LEVEL_MASK = Integer.MAX_VALUE >>> 1; // 011111....111
+  private static final int ASSERTED_MASK = Integer.MIN_VALUE; // 100000....000
+  private static final int LEVEL_MASK = Integer.MAX_VALUE >>> 1; // 011111....111
   // pool for fast int[] allocation
   public MemoryPool pool;
   // the values of variables

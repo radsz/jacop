@@ -100,7 +100,8 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
       return null;
     }
 
-    int value = var.min();
+    var.min();
+    int value;
     if (var.domain.getSize() == 2 && var.dom().domainID() == IntDomain.BoundDomainID) {
       value = var.min();
     } else {

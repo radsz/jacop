@@ -131,7 +131,7 @@ public class CPvizNetworkFlow {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    boolean Result = true;
+    boolean Result;
     Search<IntVar> label = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> varSelect = new SimpleSelect<>(x, null, new IndomainMin<>());
     // Trace --->

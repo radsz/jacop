@@ -51,6 +51,7 @@ import org.jacop.core.Store;
  *     such a way that all rows, all columns, and main diagonals are equal to the same number K. K
  *     can be computed to be equal to (n * (n^2 + 1)) / 2.
  */
+@SuppressWarnings("ManualArrayCopy")
 public class MagicSquares extends ExampleFD {
 
   /** It specifies the number */

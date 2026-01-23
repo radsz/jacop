@@ -297,18 +297,15 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    String result =
-        id()
-            + " : CountValuesBounds("
-            + Arrays.asList(list)
-            + ", "
-            + Arrays.toString(lb)
-            + ", "
-            + Arrays.toString(ub)
-            + ", "
-            + Arrays.toString(values);
-
-    return result;
+    return id()
+        + " : CountValuesBounds("
+        + Arrays.asList(list)
+        + ", "
+        + Arrays.toString(lb)
+        + ", "
+        + Arrays.toString(ub)
+        + ", "
+        + Arrays.toString(values);
   }
 
   private static class Bounds {
@@ -350,8 +347,7 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
     @Override
     public String toString() {
 
-      String result = min + "(" + lb + ").." + max + "(" + ub + ")";
-      return result;
+      return min + "(" + lb + ").." + max + "(" + ub + ")";
     }
   }
 }

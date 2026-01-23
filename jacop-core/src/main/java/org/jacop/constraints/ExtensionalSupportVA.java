@@ -524,7 +524,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     }
 
     int[] t = setFirstValid(varPosition, value);
-    int invalidPosition = -1;
+    int invalidPosition;
     while (true) {
       t = findFirstAllowed(varPosition, value, t);
       if (t == null) {

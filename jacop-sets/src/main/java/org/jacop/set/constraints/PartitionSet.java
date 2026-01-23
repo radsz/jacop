@@ -55,11 +55,11 @@ import org.jacop.set.core.SetVar;
  */
 public class PartitionSet extends Constraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  SetVar[] s;
-  int n;
-  IntDomain u;
+  final SetVar[] s;
+  final int n;
+  final IntDomain u;
 
   AunionBeqC[] union;
   List<Constraint> constraints;
@@ -67,7 +67,7 @@ public class PartitionSet extends Constraint {
   boolean firstConsistencyCheck = true;
 
   LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
-  HashMap<SetVar, Integer> varMap = new HashMap<>();
+  final HashMap<SetVar, Integer> varMap = new HashMap<>();
 
   Store store;
 
@@ -203,7 +203,7 @@ public class PartitionSet extends Constraint {
     List<AdisjointB> intersect = disjointConstraints();
 
     constraints =
-        new ArrayList<Constraint>() {
+        new ArrayList<>() {
           {
             addAll(Arrays.asList(union));
             addAll(intersect);
@@ -228,7 +228,6 @@ public class PartitionSet extends Constraint {
   @Override
   public String toString() {
 
-    String result = id() + " : PartitionSet(" + Arrays.asList(s) + ", " + u + ")";
-    return result;
+    return id() + " : PartitionSet(" + Arrays.asList(s) + ", " + u + ")";
   }
 }

@@ -157,7 +157,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     IntVar x, tmpX;
 
-    boolean inLb = false;
+    boolean inLb;
 
     for (int i = lb0; i < ub0; i++) {
       x = listOfX[i];
@@ -334,7 +334,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     IntDomain lbSDom = (IntDomain) ((MutableDomainValue) lbS.value()).domain;
     IntDomain futureDomain = (IntDomain) ((MutableDomainValue) futureLbS.value()).domain;
-    IntDomain U = null;
+    IntDomain U;
 
     if (lbSDom.getSize() > 0) {
       if (futureDomain.getSize() > 0) {
@@ -389,7 +389,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
     }
 
-    IntDomain intersectK = new IntervalDomain();
+    new IntervalDomain();
+    IntDomain intersectK;
     IntDomain disjoint = new IntervalDomain();
     for (int i = yGr; i < listOfY.length; i++) {
       y = listOfY[i];
@@ -506,7 +507,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
     // Ubs domain must be recalculated on the each level because the
     // shrinking of the Y domain will cause ubs's decrease
-    IntDomain ubSDom = null;
+    IntDomain ubSDom;
     if (lbSDom.getSize() > 0) {
       ubSDom = lbSDom.clone();
     } else {
@@ -604,7 +605,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           if (debugAll) {
             IO.println("It appears that we must cover such values : " + mustBeCoveredNow);
           }
-          int cardinalityV = 0;
+          int cardinalityV;
           int last;
           IntVar y_last;
           // Go though all the intervals of the domain
@@ -799,9 +800,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
 
       */
-      int lbTmp = 0;
-      int ubTmp = 0;
-      int weight = 0;
+      int lbTmp;
+      int ubTmp;
+      int weight;
 
       if (firstTimeWhileLoop) {
         lbVubV = new IntervalDomain(lb0, glb0);
@@ -877,8 +878,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             if (firstTimeWhileLoop) {
               if (weight != 0) {
                 if (!lbVubV.contains(n.domain)) {
-                  int max = 0;
-                  int min = 0;
+                  int max;
+                  int min;
                   lbTmp = lbTmp - lb0;
 
                   if (lbVubV.getSize() > 0) {
@@ -944,7 +945,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
               int cardinalityV = 0;
               int last = -1;
-              IntVar y_last = null;
+              IntVar y_last;
               for (int i = this.yGrounded.value(); i < this.listOfY.length; i++) {
                 y = this.listOfY[i];
 
@@ -1035,7 +1036,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       skipInitialLB0UB0calculation = false;
       if (recalculateLB0 || recalculateUB0) {
         skipInitialLB0UB0calculation = true;
-        boolean inLb = false;
+        boolean inLb;
         for (int i = lb0; i < ub0; i++) {
           x = listOfX[i];
           inLb = false;

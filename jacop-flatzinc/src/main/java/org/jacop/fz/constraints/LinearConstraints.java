@@ -71,9 +71,9 @@ import org.jacop.satwrapper.SatTranslation;
  */
 class LinearConstraints implements ParserTreeConstants {
 
-  Store store;
-  Support support;
-  SatTranslation sat;
+  final Store store;
+  final Support support;
+  final SatTranslation sat;
 
   public LinearConstraints(Support support) {
     this.store = support.store;
@@ -1103,8 +1103,8 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   boolean allWeightsOne(int[] w) {
-    for (int i = 0; i < w.length; i++) {
-      if (w[i] != 1) {
+    for (int j : w) {
+      if (j != 1) {
         return false;
       }
     }
@@ -1112,8 +1112,8 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   boolean allWeightsMinusOne(int[] w) {
-    for (int i = 0; i < w.length; i++) {
-      if (w[i] != -1) {
+    for (int j : w) {
+      if (j != -1) {
         return false;
       }
     }

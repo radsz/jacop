@@ -317,7 +317,7 @@ public class LexOrder extends Constraint
 
     satisfied = false;
     int a = 0;
-    int b = 0;
+    int b;
 
     while (a < n && eqSingletons(x[a], y[a])) {
       a++;

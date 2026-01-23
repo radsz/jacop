@@ -61,9 +61,9 @@ import org.jacop.satwrapper.SatTranslation;
  */
 class ComparisonConstraints implements ParserTreeConstants {
 
-  Support support;
-  Store store;
-  SatTranslation sat;
+  final Support support;
+  final Store store;
+  final SatTranslation sat;
 
   public ComparisonConstraints(Support support) {
     this.support = support;
@@ -439,7 +439,7 @@ class ComparisonConstraints implements ParserTreeConstants {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-    PrimitiveConstraint c = null;
+    PrimitiveConstraint c;
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
     IntVar v3 = support.getVariable(p3);
 
@@ -747,7 +747,7 @@ class ComparisonConstraints implements ParserTreeConstants {
     ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
-    PrimitiveConstraint c = null;
+    PrimitiveConstraint c;
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
     IntVar v3 = support.getVariable(p3);
 

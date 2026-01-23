@@ -91,7 +91,7 @@ public class CrossWord extends ExampleFD {
    */
   static void main(String[] args) {
 
-    String filename = "";
+    String filename;
     if (args.length == 1) {
       filename = args[0];
       IO.println("Using file " + filename);

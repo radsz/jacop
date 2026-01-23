@@ -91,8 +91,7 @@ public class MutableDomain implements MutableVar {
   @Override
   public String toString() {
 
-    String buffer = "MutableVar[" + (index + 1) + "] = " + value;
-    return buffer;
+    return "MutableVar[" + (index + 1) + "] = " + value;
   }
 
   public void update(MutableVarValue val) {

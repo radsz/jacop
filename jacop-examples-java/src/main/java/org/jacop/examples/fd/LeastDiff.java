@@ -46,8 +46,8 @@ import org.jacop.core.Store;
  *
  * <p>The solution is: 50123 - 49876 = 247
  *
- * <p>JaCoP Model by Hakan Kjellerstrand (hakank@bonetmail.com) Also see
- * http://www.hakank.org/JaCoP/
+ * <p>JaCoP Model by Hakan Kjellerstrand (hakank@bonetmail.com) Also see <a
+ * href="http://www.hakank.org/JaCoP/">...</a>
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.10

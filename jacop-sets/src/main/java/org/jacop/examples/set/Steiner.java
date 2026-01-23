@@ -128,7 +128,8 @@ public class Steiner extends ExampleSet {
 
     if (r == 1 || r == 3) {
 
-      boolean result = store.consistency();
+      store.consistency();
+      boolean result;
 
       Search<SetVar> label = new DepthFirstSearch<>();
 

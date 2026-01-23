@@ -277,7 +277,7 @@ public class CountValues extends Constraint implements SatisfiedPresent {
       int v = values[i];
       int c;
       if (counter[i].singleton()) {
-        c = counter[i].value();
+        counter[i].value();
       } else {
         return false;
       }
@@ -299,15 +299,12 @@ public class CountValues extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    String result =
-        id()
-            + " : CountValues("
-            + Arrays.asList(list)
-            + ", "
-            + Arrays.asList(counter)
-            + ", "
-            + Arrays.toString(values);
-
-    return result;
+    return id()
+        + " : CountValues("
+        + Arrays.asList(list)
+        + ", "
+        + Arrays.asList(counter)
+        + ", "
+        + Arrays.toString(values);
   }
 }

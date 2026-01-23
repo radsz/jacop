@@ -71,7 +71,7 @@ public class Cumulative extends CumulativeBasic {
   protected final Comparator<TaskView> taskDecLctComparator =
       (o1, o2) -> o2.lct() == o1.lct() ? (o2.est() - o1.est()) : (o2.lct() - o1.lct());
   final TaskView[] taskReversed;
-  boolean doEdgeFind = true;
+  boolean doEdgeFind;
   boolean doQuadraticEdgeFind;
   private Set<Integer> preComputedCapacities;
   private int[] preComputedCapMap;
@@ -342,7 +342,6 @@ public class Cumulative extends CumulativeBasic {
     Arrays.sort(precTaskOrder, (Integer o1, Integer o2) -> prec[o2] - prec[o1]);
 
     int j = 0;
-    outer:
     for (int i = 0; i < n; i++) {
 
       TaskView taskI = t[precTaskOrder[i]];
@@ -357,7 +356,6 @@ public class Cumulative extends CumulativeBasic {
 
         // update est[i] if possible
         int nj = j;
-        inner:
         while (nj < n && t[nj].lct() == precI) {
           if (t[nj].lct() < taskI.lct()) {
             taskI.updateEdgeFind(store.level, update[capMap[taskI.index]][nj]);

@@ -117,7 +117,8 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
   @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
-    T var = super.getChoiceVariable(index);
+    super.getChoiceVariable(index);
+    T var;
 
     if (variableOrdering == null && roundRobin) {
       var = roundRobinVarSelection(index);
@@ -160,7 +161,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     int n = 0;
     int i = currentIndex.value();
-    int ii = i;
+    int ii;
     do {
 
       if (!searchVariables[i].singleton()) {

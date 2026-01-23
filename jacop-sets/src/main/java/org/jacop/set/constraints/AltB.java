@@ -125,7 +125,7 @@ public class AltB extends PrimitiveConstraint {
       ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
       ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
       int be = bGlbEnum.nextElement();
-      int ae = Integer.MIN_VALUE;
+      int ae;
       do {
         if (aLubEnum.hasMoreElements()) {
           ae = aLubEnum.nextElement();
@@ -234,7 +234,6 @@ public class AltB extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    String result = id() + " : AltB(" + a + ", " + b + ")";
-    return result;
+    return id() + " : AltB(" + a + ", " + b + ")";
   }
 }

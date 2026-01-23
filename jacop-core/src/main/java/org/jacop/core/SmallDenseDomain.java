@@ -178,10 +178,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     } else {
 
-      bits = 0;
       size = 0;
       singleton = false;
-      min = Integer.MAX_VALUE;
       max = Integer.MIN_VALUE;
     }
   }
@@ -211,8 +209,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       bits = 0;
       size = 0;
       singleton = false;
-      min = Integer.MAX_VALUE;
-      max = Integer.MIN_VALUE;
     }
   }
 
@@ -950,7 +946,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       if (this.max == complement) {
-        boundEvent = true;
         result.max = result.previousValue(max);
         boundEvent = true;
       }
@@ -1082,7 +1077,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       if (this.max == maxComplement) {
-        boundEvent = true;
         result.max = result.previousValue(max);
         boundEvent = true;
       }
@@ -2000,8 +1994,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       // it became empty.
       size = 0;
       singleton = false;
-      min = Integer.MAX_VALUE;
-      max = Integer.MIN_VALUE;
       return;
     }
 

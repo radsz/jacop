@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  */
 public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
 
-  PrimitiveConstraint c;
+  final PrimitiveConstraint c;
 
   /**
    * It constructs and constraint on variables.

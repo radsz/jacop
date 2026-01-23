@@ -133,7 +133,7 @@ public class Stretch extends DecomposedConstraint<Constraint> {
       }
     }
 
-    FSMState prev = null;
+    FSMState prev;
 
     for (int vk = 0; vk < this.values.length; vk++) {
       prev = oneStep[vk];

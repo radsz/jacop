@@ -624,7 +624,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
             store.removeLevel(depth);
             store.setLevel(--depth);
-            fdv = null;
 
             if (!respectSolutionListenerAdvice && optimize) {
 
@@ -694,13 +693,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           store.removeLevel(depth);
           store.setLevel(--depth);
           depthExcludePaths--;
-          fdv = null;
           return false;
         }
       }
 
       if (consistent) {
-        fdv = null;
         store.removeLevel(depth);
         store.setLevel(--depth);
         depthExcludePaths--;
@@ -780,7 +777,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           store.removeLevel(depth);
 
         } else {
-          fdv = null;
           consistent = false;
         }
 
@@ -1287,9 +1283,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   @Override
   public String toString() {
 
-    String buf = id + ": DFS(" + heuristic + ")";
-
-    return buf;
+    return id + ": DFS(" + heuristic + ")";
   }
 
   public String toStringFull() {

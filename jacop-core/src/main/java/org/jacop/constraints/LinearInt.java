@@ -76,7 +76,7 @@ public class LinearInt extends PrimitiveConstraint {
     le, // gt=4,
     lt // ge=5;
   };
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
   public byte relationType;
   Store store;
 
@@ -179,7 +179,7 @@ public class LinearInt extends PrimitiveConstraint {
     this.store = store;
     this.b = sum;
 
-    LinkedHashMap<IntVar, Long> parameters = new LinkedHashMap<IntVar, Long>();
+    LinkedHashMap<IntVar, Long> parameters = new LinkedHashMap<>();
 
     for (int i = 0; i < list.length; i++) {
       if (weights[i] != 0) {
@@ -614,27 +614,29 @@ public class LinearInt extends PrimitiveConstraint {
   }
 
   public byte relation(String r) {
-    if ("==".equals(r)) {
-      return eq;
-    } else if ("=".equals(r)) {
-      return eq;
-    } else if ("<".equals(r)) {
-      return lt;
-    } else if ("<=".equals(r)) {
-      return le;
-    } else if ("=<".equals(r)) {
-      return le;
-    } else if ("!=".equals(r)) {
-      return ne;
-    } else if (">".equals(r)) {
-      return gt;
-    } else if (">=".equals(r)) {
-      return ge;
-    } else if ("=>".equals(r)) {
-      return ge;
-    } else {
-      System.err.println("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
-      return eq;
+    switch (r) {
+      case "==", "=" -> {
+        return eq;
+      }
+      case "<" -> {
+        return lt;
+      }
+      case "<=", "=<" -> {
+        return le;
+      }
+      case "!=" -> {
+        return ne;
+      }
+      case ">" -> {
+        return gt;
+      }
+      case ">=", "=>" -> {
+        return ge;
+      }
+      case null, default -> {
+        System.err.println("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
+        return eq;
+      }
     }
   }
 
@@ -674,7 +676,7 @@ public class LinearInt extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    StringBuffer result = new StringBuffer(id());
+    StringBuilder result = new StringBuilder(id());
     result.append(" : LinearInt( [ ");
 
     for (int i = 0; i < x.length; i++) {

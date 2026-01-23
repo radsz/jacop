@@ -101,8 +101,6 @@ public class And extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public void consistency(Store store) {
 
-    propagation = true;
-
     do {
 
       // Variable propagation can be set to true again if queueVariable function is being called.

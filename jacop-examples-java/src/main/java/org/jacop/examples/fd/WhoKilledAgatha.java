@@ -49,27 +49,27 @@ import org.jacop.search.SmallestDomain;
 /**
  * Who killed agatha? (The Dreadsbury Mansion Murder Mystery).
  *
- * <p>This is a standard benchmark for theorem proving.
- * http://www.lsv.ens-cachan.fr/~goubault/H1.dist/H1.1/Doc/h1003.html """ Someone in Dreadsbury
- * Mansion killed Aunt Agatha. Agatha, the butler, and Charles live in Dreadsbury Mansion, and are
- * the only ones to live there. A killer always hates, and is no richer than his victim. Charles
- * hates noone that Agatha hates. Agatha hates everybody except the butler. The butler hates
- * everyone not richer than Aunt Agatha. The butler hates everyone whom Agatha hates. Noone hates
- * everyone. Who killed Agatha? """
+ * <p>This is a standard benchmark for theorem proving. <a
+ * href="http://www.lsv.ens-cachan.fr/~goubault/H1.dist/H1.1/Doc/h1003.html">...</a> """ Someone in
+ * Dreadsbury Mansion killed Aunt Agatha. Agatha, the butler, and Charles live in Dreadsbury
+ * Mansion, and are the only ones to live there. A killer always hates, and is no richer than his
+ * victim. Charles hates noone that Agatha hates. Agatha hates everybody except the butler. The
+ * butler hates everyone not richer than Aunt Agatha. The butler hates everyone whom Agatha hates.
+ * Noone hates everyone. Who killed Agatha? """
  *
  * <p>Originally from F. J. Pelletier: Seventy-five problems for testing automatic theorem provers.
  * Journal of Automated Reasoning, 2: 191â€“216, 1986.
  *
- * <p>Compare with the following models: - MiniZinc:
- * http://www.hakank.org/minizinc/who_killed_agatha.mzn - Comet:
- * http://www.hakank.org/comet/who_killed_agatha.mzn - Gecode:
- * http://www.hakank.org/gecode/who_killed_agatha.cpp
+ * <p>Compare with the following models: - MiniZinc: <a
+ * href="http://www.hakank.org/minizinc/who_killed_agatha.mzn">...</a> - Comet: <a
+ * href="http://www.hakank.org/comet/who_killed_agatha.mzn">...</a> - Gecode: <a
+ * href="http://www.hakank.org/gecode/who_killed_agatha.cpp">...</a>
  *
  * <p>This Choco model was created by Hakan Kjellerstrand (hakank@bonetmail.com) Also, see my Choco
- * page: http://www.hakank.org/choco/
+ * page: <a href="http://www.hakank.org/choco/">...</a>
  *
- * <p>This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com)
- * http://www.hakank.org/JaCoP/ .
+ * <p>This JaCoP model was created by Hakan Kjellerstrand (hakank@bonetmail.com) <a
+ * href="http://www.hakank.org/JaCoP/">...</a> .
  *
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.10

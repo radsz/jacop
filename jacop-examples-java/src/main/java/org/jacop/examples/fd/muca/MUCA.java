@@ -1128,19 +1128,16 @@ public class MUCA extends ExampleFD {
   public void readAuction(String filename) {
 
     noGoods = 0;
-    BufferedReader br = null;
 
-    try {
-
-      br =
-          new BufferedReader(
-              new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8));
+    try (BufferedReader br =
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
 
       // the first line represents the input goods
       String line = br.readLine();
       StringTokenizer tk = new StringTokenizer(line, "(),: ");
 
-      initialQuantity = new ArrayList<Integer>();
+      initialQuantity = new ArrayList<>();
 
       while (tk.hasMoreTokens()) {
         noGoods++;
@@ -1152,7 +1149,7 @@ public class MUCA extends ExampleFD {
       line = br.readLine();
       tk = new StringTokenizer(line, "(),: ");
 
-      finalQuantity = new ArrayList<Integer>();
+      finalQuantity = new ArrayList<>();
 
       while (tk.hasMoreTokens()) {
         tk.nextToken();
@@ -1167,17 +1164,17 @@ public class MUCA extends ExampleFD {
       int bidCounter = 1;
       int bid_xorCounter = 1;
       int transformationCounter = 0;
-      int goodsCounter = 0;
+      int goodsCounter;
       int Id, in, out;
 
       int[] input;
       int[] output;
 
-      bids = new ArrayList<List<List<Transformation>>>();
+      bids = new ArrayList<>();
 
-      bids.add(new ArrayList<List<Transformation>>());
+      bids.add(new ArrayList<>());
 
-      bids.getFirst().add(new ArrayList<Transformation>());
+      bids.getFirst().add(new ArrayList<>());
 
       while (!"price".equals(line)) {
         tk = new StringTokenizer(line, "():, ");
@@ -1188,24 +1185,24 @@ public class MUCA extends ExampleFD {
           bid_xorCounter = 1;
           transformationCounter = 1;
 
-          bids.add(new ArrayList<List<Transformation>>());
-          bids.get(bidCounter - 1).add(new ArrayList<Transformation>());
+          bids.add(new ArrayList<>());
+          bids.get(bidCounter - 1).add(new ArrayList<>());
         }
         // System.out.println(bidCounter + " " + bid_xorCounter);
         if (Integer.parseInt(tk.nextToken()) > bid_xorCounter) {
           bid_xorCounter++;
           transformationCounter = 1;
 
-          bids.get(bidCounter - 1).add(new ArrayList<Transformation>());
+          bids.get(bidCounter - 1).add(new ArrayList<>());
         }
         // this token contains the number of the transformation
         tk.nextToken();
         bids.get(bidCounter - 1).get(bid_xorCounter - 1).add(new Transformation());
 
         bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).goodsIds =
-            new ArrayList<Integer>();
+            new ArrayList<>();
         bids.get(bidCounter - 1).get(bid_xorCounter - 1).get(transformationCounter - 1).delta =
-            new ArrayList<Delta>();
+            new ArrayList<>();
 
         input = new int[noGoods];
         output = new int[noGoods];
@@ -1256,9 +1253,9 @@ public class MUCA extends ExampleFD {
 
       // now read in the price for each xor bid
 
-      costs = new ArrayList<List<Integer>>();
+      costs = new ArrayList<>();
 
-      costs.add(new ArrayList<Integer>());
+      costs.add(new ArrayList<>());
 
       bidCounter = 1;
 
@@ -1269,7 +1266,7 @@ public class MUCA extends ExampleFD {
 
         if (Integer.parseInt(tk.nextToken()) > bidCounter) {
           bidCounter++;
-          costs.add(new ArrayList<Integer>());
+          costs.add(new ArrayList<>());
         }
 
         // this token contains the xor_bid id.
@@ -1288,14 +1285,6 @@ public class MUCA extends ExampleFD {
               + filename);
     } catch (IOException ex) {
       log.error("Exception occurred", ex);
-    } finally {
-      if (br != null) {
-        try {
-          br.close();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
     }
 
     IO.println(this.maxCost);
@@ -1318,9 +1307,7 @@ public class MUCA extends ExampleFD {
 
     // negative means consumption, positive means production.
     public Delta(int delta) {
-
       if (delta > 0) {
-
         input = 0;
         output = delta;
       } else {

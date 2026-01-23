@@ -43,16 +43,16 @@ import org.jacop.core.Store;
  */
 public class IfThenElseBool extends PrimitiveConstraint {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies constraint condVar in the IfThenElseBool constraint. */
-  public BooleanVar condVar;
+  public final BooleanVar condVar;
 
   /** It specifies constraint thenVar in the IfThenElseBool constraint. */
-  public BooleanVar thenVar;
+  public final BooleanVar thenVar;
 
   /** It specifies constraint elseVar in the IfThenElseBool constraint. */
-  public BooleanVar elseVar;
+  public final BooleanVar elseVar;
 
   // imposed variable to manifest that constraint has been imposed (top-level)
   // constraint
@@ -176,8 +176,6 @@ public class IfThenElseBool extends PrimitiveConstraint {
   @Override
   public String toString() {
 
-    String result = id() + " : IfThenElseBool(" + condVar + ", " + thenVar + ", " + elseVar + " )";
-
-    return result;
+    return id() + " : IfThenElseBool(" + condVar + ", " + thenVar + ", " + elseVar + " )";
   }
 }

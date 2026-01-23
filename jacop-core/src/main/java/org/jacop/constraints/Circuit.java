@@ -298,7 +298,7 @@ public class Circuit extends Alldiff implements Stateful {
 
   int visit(int k) {
 
-    int m, min = 0, t;
+    int m, min, t;
     idd++;
     val[k] = idd;
     min = idd;

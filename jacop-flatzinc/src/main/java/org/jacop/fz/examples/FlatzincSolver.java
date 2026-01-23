@@ -84,7 +84,7 @@ public class FlatzincSolver {
     SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
     Var cost = fl.getCost();
 
-    boolean result = false;
+    boolean result;
     if (cost != null) {
       result = label.labeling(fl.getStore(), select, cost);
     } else {

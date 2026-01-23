@@ -188,7 +188,7 @@ public class FSM {
     set.add(result.initState);
 
     int length = 1;
-    FSMState s = null;
+    FSMState s;
 
     for (int i = 0; i < length; i++) {
       s = set.get(i);

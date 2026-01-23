@@ -718,18 +718,16 @@ public final class Core implements SolverComponent {
 
   @Override
   public String toString() {
-    String answer =
-        "solver ["
-            + "dbs="
-            + dbStore.currentIndex
-            + ","
-            + "vars="
-            + maxVariable
-            + ","
-            + "state="
-            + currentState
-            + "]";
-    return answer;
+    return "solver ["
+        + "dbs="
+        + dbStore.currentIndex
+        + ","
+        + "vars="
+        + maxVariable
+        + ","
+        + "state="
+        + currentState
+        + "]";
   }
 
   public void initialize(Core core) {

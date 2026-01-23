@@ -108,7 +108,7 @@ class FloatComparisonConstraints implements ParserTreeConstants {
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
 
     if (reified) { // reified constraint
-      PrimitiveConstraint c = null;
+      PrimitiveConstraint c;
       ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
       IntVar v3 = support.getVariable(p3);
 

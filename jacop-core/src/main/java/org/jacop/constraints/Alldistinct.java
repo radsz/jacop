@@ -195,8 +195,8 @@ public class Alldistinct extends Constraint
     // Each value in any variable domain will appear in a value graph
     // Therefore it is enough that one variable has a domain 0..1000000 to
     // create huge value graph making this constraint very ineffective
-    int value = 0;
-    SimpleArrayList<IntVar> currentSimpleArrayList = null;
+    int value;
+    SimpleArrayList<IntVar> currentSimpleArrayList;
 
     potentialFreeValues = new Integer[sum.getSize()];
 
@@ -290,10 +290,10 @@ public class Alldistinct extends Constraint
       IO.println("Changed Variables " + variableQueue);
     }
 
-    IntDomain Qdom = null;
+    IntDomain Qdom;
     Integer zero = 0;
-    SimpleArrayList<IntVar> currentSimpleArrayList = null;
-    TimeStamp<Integer> stamp = null;
+    SimpleArrayList<IntVar> currentSimpleArrayList;
+    TimeStamp<Integer> stamp;
 
     SimpleHashSet<IntVar> singletons = new SimpleHashSet<>();
 
@@ -556,7 +556,7 @@ public class Alldistinct extends Constraint
 
       int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
-      IntVar variable = null;
+      IntVar variable;
       Integer matchedValue;
       int positionMatched;
 
@@ -702,7 +702,7 @@ public class Alldistinct extends Constraint
               + " edge from matched variable to a different");
     }
 
-    IntVar variable = null;
+    IntVar variable;
     Integer matched;
     int variableComponentId;
     int lastPosition;
@@ -856,7 +856,7 @@ public class Alldistinct extends Constraint
 
     Integer matched;
 
-    IntVar variable = null;
+    IntVar variable;
 
     int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
@@ -1093,15 +1093,12 @@ public class Alldistinct extends Constraint
       }
 
       // Use all paths to create better matching
-
-      int allPathsSize = allpaths.size();
-
-      for (LinkedList<Object> freepath : allpaths) {
-        int freePathSize = freepath.size();
+      for (LinkedList<Object> freePath : allpaths) {
+        int freePathSize = freePath.size();
 
         for (int pos = 0; pos < freePathSize; pos = pos + 2) {
-          Integer matchedValue = (Integer) freepath.get(pos);
-          IntVar matchedVariable = (IntVar) freepath.get(pos + 1);
+          Integer matchedValue = (Integer) freePath.get(pos);
+          IntVar matchedVariable = (IntVar) freePath.get(pos + 1);
 
           if (!freeVariables.remove(matchedVariable)) {
             nonFreeValues.remove(matching.get(matchedVariable).value());
@@ -1652,8 +1649,6 @@ public class Alldistinct extends Constraint
             }
           }
         }
-        firstValue = null;
-        secondValue = null;
       }
     }
 
@@ -1671,7 +1666,7 @@ public class Alldistinct extends Constraint
       TimeStamp<Integer> stamp;
       int stampValue;
 
-      SimpleArrayList<IntVar> currentSimpleArrayList = null;
+      SimpleArrayList<IntVar> currentSimpleArrayList;
 
       while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
@@ -1792,10 +1787,6 @@ public class Alldistinct extends Constraint
           }
         }
       }
-
-      value = null;
-      stamp = null;
-      currentSimpleArrayList = null;
     }
 
     // TODO, fix it, si does not return singleton variables.
@@ -1809,8 +1800,8 @@ public class Alldistinct extends Constraint
 
     int pruning = estimatePruningRecursive(x, v, exploredX, exploredV);
 
-    SimpleArrayList<IntVar> currentSimpleArrayList = null;
-    Integer value = null;
+    SimpleArrayList<IntVar> currentSimpleArrayList;
+    Integer value;
 
     for (Integer integer : exploredV) {
 
@@ -1827,14 +1818,7 @@ public class Alldistinct extends Constraint
           pruning++;
         }
       }
-
-      stamp = null;
     }
-
-    currentSimpleArrayList = null;
-    value = null;
-    exploredX = null;
-    exploredV = null;
 
     return pruning;
   }
@@ -1849,13 +1833,13 @@ public class Alldistinct extends Constraint
     exploredX.add(xVar);
     exploredV.add(v);
 
-    int pruning = 0;
+    int pruning;
 
     IntDomain xDom = xVar.dom();
     pruning = xDom.getSize() - 1;
 
-    TimeStamp<Integer> stamp = null;
-    SimpleArrayList<IntVar> currentSimpleArrayList = null;
+    TimeStamp<Integer> stamp;
+    SimpleArrayList<IntVar> currentSimpleArrayList;
     ValueEnumeration enumer = xDom.valueEnumeration();
 
     // Permutation only
@@ -1893,7 +1877,7 @@ public class Alldistinct extends Constraint
               IO.println("Not grounded Var " + stampNotGroundedVariables.value());
 
               int lastNotGroundedVariable = stampNotGroundedVariables.value();
-              Var variable = null;
+              Var variable;
 
               for (int l = 0; l <= lastNotGroundedVariable; l++) {
                 variable = list[l];
@@ -1905,15 +1889,11 @@ public class Alldistinct extends Constraint
             if (single && singleVar != null) {
               pruning += estimatePruningRecursive(singleVar, iInteger, exploredX, exploredV);
             }
-
-            singleVar = null;
           }
-          iInteger = null;
         }
       }
     }
 
-    enumer = null;
     stamp = stamps.get(v);
     currentSimpleArrayList = valueMapVariable.get(v);
 
@@ -1947,7 +1927,6 @@ public class Alldistinct extends Constraint
       }
     }
 
-    stamp = null;
     return pruning;
   }
 }

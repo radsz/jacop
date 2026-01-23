@@ -48,13 +48,13 @@ import org.jacop.set.core.SetVar;
  */
 public class CardAeqX extends Constraint implements SatisfiedPresent {
 
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies set variable a which is being restricted. */
-  public SetVar a;
+  public final SetVar a;
 
   /** It specifies integer variable c specifying the possible cardinality of set variable a. */
-  public IntVar cardinality;
+  public final IntVar cardinality;
 
   /**
    * It constructs a cardinality constraint to restrict the number of elements in the set assigned
@@ -75,22 +75,22 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
     setScope(a, cardinality);
   }
 
+  /**
+   * It computes the consistency of the constraint.
+   *
+   * <p>#A = B
+   *
+   * <p>Cardinality of set variable A is equal to int variable B.
+   *
+   * <p>B.in(#glbA, #lubA).
+   *
+   * <p>If #glbA is already equal to maximum allowed cardinality then set is specified by glbA. if
+   * (#glbA == B.max()) then A = glbA If #lubA is already equal to minimum allowed cardinality then
+   * set is specified by lubA. if (#lubA == B.min()) then A = lubA
+   */
   @Override
   public void consistency(Store store) {
 
-    /**
-     * It computes the consistency of the constraint.
-     *
-     * <p>#A = B
-     *
-     * <p>Cardinality of set variable A is equal to int variable B.
-     *
-     * <p>B.in(#glbA, #lubA).
-     *
-     * <p>If #glbA is already equal to maximum allowed cardinality then set is specified by glbA. if
-     * (#glbA == B.max()) then A = glbA If #lubA is already equal to minimum allowed cardinality
-     * then set is specified by lubA. if (#lubA == B.min()) then A = lubA
-     */
     SetDomain aDom = a.domain;
     IntDomain card = cardinality.domain;
 

@@ -88,8 +88,7 @@ class Diff2Var implements MutableVar {
   @Override
   public String toString() {
 
-    String result = "Diff2Var[" + index + "] = [" + value + "]";
-    return result;
+    return "Diff2Var[" + index + "] = [" + value + "]";
   }
 
   public void update(MutableVarValue val) {

@@ -269,7 +269,7 @@ public class PrintSchedule {
       int j = 0;
       // int k = 1;
       int start = ((IntVar) TaskArr[j].get(1)).min();
-      int dur = (Integer) TaskArr[j].get(2);
+      int dur;
 
       List<List<Integer>> Line = new ArrayList<>(resSize);
 

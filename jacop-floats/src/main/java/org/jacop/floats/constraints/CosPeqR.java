@@ -138,7 +138,7 @@ public class CosPeqR extends Constraint
       // System.out.println ("min in interval " + intervalForMin);
       // System.out.println ("max in interval " + intervalForMax);
 
-      double qMin = -1.0, qMax = 1.0;
+      double qMin, qMax;
       switch (intervalForMin) {
         case 1:
           switch (intervalForMax) {

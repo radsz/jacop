@@ -35,8 +35,8 @@ import java.util.Set;
 
 /**
  * A class that implements, (hopefully) efficiently, a Trie on integers. It is parametrized by the
- * type of the nodes to carry useful data. implementation based on Trie (or Radix Tree, see
- * http://en.wikipedia.org/wiki/Radix_tree).
+ * type of the nodes to carry useful data. implementation based on Trie (or Radix Tree, see <a
+ * href="http://en.wikipedia.org/wiki/Radix_tree">...</a>).
  *
  * <p>It can be used directly as a (simple) set.
  *

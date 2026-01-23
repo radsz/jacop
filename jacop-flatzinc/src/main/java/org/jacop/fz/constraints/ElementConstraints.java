@@ -59,8 +59,8 @@ import org.jacop.set.core.SetVar;
  */
 class ElementConstraints implements ParserTreeConstants {
 
-  Support support;
-  Store store;
+  final Support support;
+  final Store store;
 
   public ElementConstraints(Support support) {
     this.support = support;
@@ -196,8 +196,8 @@ class ElementConstraints implements ParserTreeConstants {
     IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
     SetVar p3 = support.getSetVariable(node, 2);
 
-    for (int i = 0; i < p2.length; i++) {
-      if (p2[i] == null) {
+    for (IntDomain intDomain : p2) {
+      if (intDomain == null) {
         throw new IllegalArgumentException(
             "%% var_set_element with list of set variables is not avaible in org.jacop.set");
       }
@@ -214,8 +214,8 @@ class ElementConstraints implements ParserTreeConstants {
     IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
     if (p2 != null) {
 
-      for (int i = 0; i < p2.length; i++) {
-        if (p2[i] == null) {
+      for (IntDomain intDomain : p2) {
+        if (intDomain == null) {
           throw new IllegalArgumentException(
               "%% var_set_element with list of set variables is not available in org.jacop.set");
         }

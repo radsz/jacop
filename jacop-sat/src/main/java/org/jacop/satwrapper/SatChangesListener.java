@@ -288,7 +288,7 @@ public final class SatChangesListener
   @Override
   public String toString() {
     // number of int vars to update
-    int countPos = 0;
+    int countPos;
     countPos = intVarsToUpdate.cardinality();
 
     return String.format(

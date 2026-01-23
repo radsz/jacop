@@ -253,7 +253,7 @@ public class XmodYeqZ extends Constraint implements SatisfiedPresent {
   }
 
   private String checkSolution(int resultMin, int resultMax) {
-    String result = null;
+    String result;
 
     if (z.singleton() && y.singleton() && x.singleton()) {
       result =

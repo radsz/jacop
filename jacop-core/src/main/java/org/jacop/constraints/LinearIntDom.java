@@ -252,7 +252,7 @@ public class LinearIntDom extends LinearInt {
     }
 
     IntDomain currentDom = x[index].dom();
-    long newPartialSum = partialSum;
+    long newPartialSum;
     long w = a[index];
 
     long lb = b - sumMax + currentDom.max() * w;
@@ -340,7 +340,7 @@ public class LinearIntDom extends LinearInt {
     }
 
     IntDomain currentDom = x[index].dom();
-    long newPartialSum = partialSum;
+    long newPartialSum;
     long w = a[index];
 
     long lb = b - sumMax + currentDom.min() * w;

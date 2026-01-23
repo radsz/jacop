@@ -297,21 +297,6 @@ public class BooleanVar extends IntVar {
     return (BoundDomain) domain.recentDomainPruning(store.level);
   }
 
-  /**
-   * It informs the variable that its variable has changed according to the specified event.
-   *
-   * @param event the type of the change (GROUND, BOUND, ANY).
-   */
-  public void domainHasChanged(int event) {
-
-    assert ((event == IntDomain.ANY && !singleton())
-            || (event == IntDomain.BOUND && !singleton())
-            || (event == IntDomain.GROUND && singleton()))
-        : "Wrong event generated";
-
-    store.addChanged(this, event, Integer.MIN_VALUE);
-  }
-
   public void putConstraint(Constraint c) {
     putModelConstraint(c, IntDomain.ANY);
   }

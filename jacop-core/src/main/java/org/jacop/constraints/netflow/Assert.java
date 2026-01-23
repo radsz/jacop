@@ -217,8 +217,6 @@ public class Assert {
           boolean b1 = arc.sister == g.lower[arc.index];
           boolean b2 = arc == g.lower[arc.index];
           assert (b1 ^ b2);
-          b1 = arc.head == g.root;
-          b2 = arc.sister.head == g.root;
           // assertTrue(s, b1 ^ b2);
         }
       }

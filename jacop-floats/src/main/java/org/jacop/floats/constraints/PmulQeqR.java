@@ -61,7 +61,7 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
   /** It specifies variable r in constraint p * q = r. */
   public final FloatVar r;
 
-  boolean xSquare;
+  final boolean xSquare;
 
   /**
    * It constructs a constraint P * Q = R.

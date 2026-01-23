@@ -200,7 +200,7 @@ public class NoGoodsCollector<T extends IntVar>
   public String toString() {
 
     if (noGoodsVariables != null) {
-      return noGoodsVariables.toString() + noGoodsValues.toString();
+      return noGoodsVariables + noGoodsValues.toString();
     } else {
       return "[]";
     }

@@ -95,7 +95,7 @@ public class DomainStructure implements VarHandler {
 
       ArcCompanion companion = arcs[id].companion;
       if (companion == null) {
-        arcs[id].companion = companion = new ArcCompanion(arcs[id], 0);
+        arcs[id].companion = new ArcCompanion(arcs[id], 0);
       }
       arcs[id].companion.structure = this;
       arcs[id].companion.arcID = id;

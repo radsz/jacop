@@ -224,17 +224,15 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    String result =
-        id()
-            + " : ChannelIntSet("
-            + Arrays.asList(x)
-            + ", "
-            + Arrays.asList(s)
-            + ", "
-            + offsetInt
-            + ", "
-            + offsetSet
-            + ")";
-    return result;
+    return id()
+        + " : ChannelIntSet("
+        + Arrays.asList(x)
+        + ", "
+        + Arrays.asList(s)
+        + ", "
+        + offsetInt
+        + ", "
+        + offsetSet
+        + ")";
   }
 }

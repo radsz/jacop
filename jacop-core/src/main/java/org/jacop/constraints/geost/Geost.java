@@ -782,7 +782,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       IO.println("n:" + Arrays.toString(n));
     }
 
-    DBox f = null;
+    DBox f;
 
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
@@ -901,7 +901,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       IO.println("n:" + Arrays.toString(n));
     }
 
-    DBox f = null;
+    DBox f;
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
 

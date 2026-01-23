@@ -184,7 +184,6 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   @Override
   public String toString() {
 
-    String result = id() + " : ChannelBoolSet(" + Arrays.asList(b) + ", " + s + ", " + offset + ")";
-    return result;
+    return id() + " : ChannelBoolSet(" + Arrays.asList(b) + ", " + s + ", " + offset + ")";
   }
 }

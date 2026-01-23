@@ -340,7 +340,7 @@ public abstract class ExampleSet {
 
     long T1 = System.currentTimeMillis();
 
-    boolean result = false;
+    boolean result;
 
     Search<SetVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<SetVar> selectSlave =

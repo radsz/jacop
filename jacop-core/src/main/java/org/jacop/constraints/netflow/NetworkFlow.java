@@ -66,7 +66,7 @@ public class NetworkFlow extends Constraint
   private static final boolean SHOW_LEVEL = false;
 
   /** Instance counter */
-  static AtomicInteger idNumber = new AtomicInteger(0);
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   static {
     // fails if asserts are disabled
@@ -90,10 +90,9 @@ public class NetworkFlow extends Constraint
   public boolean disableQueueVariable;
 
   public int previousLevel = -1;
-  Statistics statistics = new Statistics();
+  final Statistics statistics = new Statistics();
 
-  /********************/
-  /** Initialization */
+  /* Initialization */
 
   // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
   private NetworkFlow(
@@ -101,7 +100,7 @@ public class NetworkFlow extends Constraint
 
     this.network = new Pruning(nodes, arcs, statistics);
     this.map = Var.createEmptyPositioning();
-    this.queue = new HashSet<IntVar>();
+    this.queue = new HashSet<>();
     this.costVariable = costVariable;
 
     for (VarHandler ds : flowVariables) {
@@ -180,8 +179,7 @@ public class NetworkFlow extends Constraint
     super.impose(store);
   }
 
-  /***************************/
-  /** Search {@literal &} Backtracking */
+  /* Search {@literal &} Backtracking */
   @Override
   public void queueVariable(int level, Var variable) {
     // DomainStructure structure = map.get(variable);
@@ -321,8 +319,7 @@ public class NetworkFlow extends Constraint
     network.backtrack();
   }
 
-  /*****************/
-  /** Identifiers */
+  /* Identifiers */
   @Override
   public String toString() {
 

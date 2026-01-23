@@ -62,7 +62,7 @@ public class CumulativeUnary extends Cumulative {
   private final Comparator<TaskView> taskIncEctComparator =
       (o1, o2) -> o1.ect() == o2.ect() ? (o1.est() - o2.est()) : (o1.ect() - o2.ect());
   boolean doProfile;
-  boolean doEdgeFind = true;
+  boolean doEdgeFind;
 
   /**
    * It creates a cumulative constraint.

@@ -309,7 +309,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     this.activeLevelsTemp = new int[this.list.length + 1];
 
     // ---- copy the resulting graph into final array ----
-    int index = 0;
+    int index;
     int nextLevelIndex = 0;
 
     for (level = 0; level < levels; level++) {
@@ -430,10 +430,10 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    */
   public void pruneArc(int varIndex) {
 
-    int state = 0;
+    int state;
     int preThisLevelStateNb = this.activeLevels[varIndex].value();
-    RegState s = null;
-    RegState suc = null;
+    RegState s;
+    RegState suc;
     int nextVar = varIndex + 1;
     int preNextLevelStateNb = this.activeLevels[nextVar].value();
 
@@ -547,7 +547,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    */
   public int unreachBackwardLoop(int sucPrevLimit, int level) {
 
-    RegState s = null;
+    RegState s;
 
     boolean cont = sucPrevLimit != this.activeLevels[level + 1].value();
 
@@ -598,9 +598,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    */
   public void unreachForwardLoop(int end, int level) {
 
-    int state = 0;
-    RegState s = null;
-    RegState suc = null;
+    int state;
+    RegState s;
+    RegState suc;
 
     int preNextLevelStateNb;
 
@@ -740,7 +740,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       }
     }
 
-    int stateNb = 0;
+    int stateNb;
 
     // for every level which has been recorded be in between the levels which have changed
     for (int l = leftPosition; l <= rightPosition; l++) {

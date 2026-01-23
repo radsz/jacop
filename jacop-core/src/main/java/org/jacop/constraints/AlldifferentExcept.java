@@ -87,7 +87,7 @@ public class AlldifferentExcept extends Alldifferent
       store.propagationHasOccurred = false;
 
       LinkedHashSet<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<IntVar>();
+      variableQueue = new LinkedHashSet<>();
 
       for (IntVar Q : fdvs) {
         if (Q.singleton()) {

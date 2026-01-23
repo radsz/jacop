@@ -99,7 +99,6 @@ public class Profile extends ArrayList<ProfileItem> {
                 if (a == previousP.max && previousP.value == val) {
                   p.min = previousP.min;
                   remove(i - 1);
-                  notFound = false;
                   i--;
                 }
               }

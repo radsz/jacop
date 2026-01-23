@@ -92,7 +92,7 @@ public class DisjointConditional extends Diff {
 
     setScope(
         Stream.concat(
-            Rectangle.getStream(this.rectangles), exclusionList.stream().map(i -> i.cond())));
+            Rectangle.getStream(this.rectangles), exclusionList.stream().map(ExclusiveItem::cond)));
   }
 
   /**

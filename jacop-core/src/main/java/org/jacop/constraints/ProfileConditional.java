@@ -84,7 +84,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
             } else {
               // b < p.Min
               if (i > 0) {
-                p = get(i - 1);
                 int[] r = {index, val}; // OK
                 add(i, new ProfileItemCondition(a, b, val, r));
               } else {

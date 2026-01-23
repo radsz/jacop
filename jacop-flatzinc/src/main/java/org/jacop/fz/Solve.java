@@ -535,7 +535,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
     }
-    last_search = list_seq_searches.getLast();
+    list_seq_searches.getLast();
 
     // LDS & Credit heuristic search
     if ("lds".equals(si.exploration())) {
@@ -1237,8 +1237,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     result = false;
-    Var cost = null;
-    Var max_cost = null;
+    Var cost;
+    Var max_cost;
     optimization = false;
 
     final_search_seq = list_seq_searches.getLast();
@@ -1471,7 +1471,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> getLastSearch(DepthFirstSearch<T> s) {
     DepthFirstSearch<T> ns = s;
-    DepthFirstSearch<T> lastNotNullSearch = ns;
+    DepthFirstSearch<T> lastNotNullSearch;
 
     do {
 
@@ -1794,7 +1794,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int i = 0;
     for (SearchItem<T> s : dfs_s) {
 
-      DepthFirstSearch<T> subSearch = null;
+      DepthFirstSearch<T> subSearch;
       switch (s.search_type) {
         case "int_search", "bool_search" -> {
           subSearch = int_search(s);

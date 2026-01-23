@@ -125,7 +125,7 @@ class CumulativePrimary extends Constraint {
 
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
-    activePnt = new TimeStamp<Integer>(starts[0].getStore(), 0);
+    activePnt = new TimeStamp<>(starts[0].getStore(), 0);
   }
 
   /*
@@ -409,10 +409,10 @@ class CumulativePrimary extends Constraint {
   }
 
   private static class Event {
-    int type;
-    int index;
-    int date;
-    int value;
+    final int type;
+    final int index;
+    final int date;
+    final int value;
 
     Event(int type, int t, int date, int value) {
       this.type = type;

@@ -42,7 +42,7 @@ import org.jacop.core.Store;
 /**
  * It specifies a simple diet problem.
  *
- * <p>Problem from http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf
+ * <p>Problem from <a href="http://www.mcs.vuw.ac.nz/courses/OPRE251/2006T1/Labs/lab09.pdf">...</a>
  *
  * <p>My diet requires that all the food I eat come from one of the four .basic food groups.
  * (chocolate cake, ice cream, soft drink, and cheesecake). Each (large) slice of chocolate cake
@@ -63,7 +63,7 @@ import org.jacop.core.Store;
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *     <p>Compare with my MiniZinc model: http://www.hakank.org/minizinc/diet1.mzn
+ *     <p>Compare with my MiniZinc model: <a href="http://www.hakank.org/minizinc/diet1.mzn">...</a>
  */
 public class Diet extends ExampleFD {
 

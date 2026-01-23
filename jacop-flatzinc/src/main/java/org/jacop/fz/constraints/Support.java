@@ -85,16 +85,16 @@ public class Support implements ParserTreeConstants {
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar;
-  Store store;
-  Tables dictionary;
+  final Store store;
+  final Tables dictionary;
   // ============ SAT solver interface ==============
-  SatTranslation sat;
+  final SatTranslation sat;
   boolean intPresent = true;
   boolean floatPresent = true;
-  ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<IntVar[]>();
-  ArrayList<Constraint> delayedConstraints = new ArrayList<Constraint>();
-  ReificationConstraints reif = new ReificationConstraints(this);
-  ImplicationConstraints imply = new ImplicationConstraints(this);
+  final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final ReificationConstraints reif = new ReificationConstraints(this);
+  final ImplicationConstraints imply = new ImplicationConstraints(this);
 
   public Support(Store store, Tables d, SatTranslation sat) {
     this.store = store;
@@ -128,21 +128,22 @@ public class Support implements ParserTreeConstants {
   int getScalarFlatExpr(SimpleNode node, int i) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSCALARFLATEXPR) {
-      switch (((ASTScalarFlatExpr) child).getType()) {
-        case 0: // int
-          return ((ASTScalarFlatExpr) child).getInt();
-        case 1: // bool
-          return ((ASTScalarFlatExpr) child).getInt();
-        case 2: // ident
-          return dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
-        case 3: // array acces
-          return dictionary
-              .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
-              ((ASTScalarFlatExpr) child).getInt()];
-        default: // string & float;
-          throw new IllegalArgumentException(
-              "Not supported scalar in parameter; compilation aborted.");
-      }
+      // string & float;
+      return switch (((ASTScalarFlatExpr) child).getType()) {
+        case 0 -> // int
+            ((ASTScalarFlatExpr) child).getInt();
+        case 1 -> // bool
+            ((ASTScalarFlatExpr) child).getInt();
+        case 2 -> // ident
+            dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
+        case 3 -> // array acces
+            dictionary
+                .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
+                ((ASTScalarFlatExpr) child).getInt()];
+        default ->
+            throw new IllegalArgumentException(
+                "Not supported scalar in parameter; compilation aborted.");
+      };
     } else {
       throw new IllegalArgumentException(
           "Not supported parameter assignment; compilation aborted.");
@@ -385,8 +386,8 @@ public class Support implements ParserTreeConstants {
         if (s == null) { // there is still a chance that the var_array has constant sets ;)
           SetVar[] sVar = dictionary.getSetVariableArray(((ASTScalarFlatExpr) node).getIdent());
           int numberSingleton = 0;
-          for (int i = 0; i < sVar.length; i++) {
-            if (sVar[i].singleton()) {
+          for (SetVar setVar : sVar) {
+            if (setVar.singleton()) {
               numberSingleton++;
             }
           }
@@ -406,7 +407,7 @@ public class Support implements ParserTreeConstants {
   }
 
   SetVar[] getSetVarArray(SimpleNode node) {
-    SetVar[] s = null;
+    SetVar[] s;
     // int arrayIndex = 0;
 
     if (node.getId() == JJTARRAYLITERAL) {
@@ -453,7 +454,7 @@ public class Support implements ParserTreeConstants {
           break;
         case 1: // list
           IntDomain s = new IntervalDomain();
-          int el = -1111;
+          int el;
           int count = child.jjtGetNumChildren();
           for (int i = 0; i < count; i++) {
             el = getScalarFlatExpr(child, i);
@@ -482,30 +483,29 @@ public class Support implements ParserTreeConstants {
           throw new IllegalArgumentException("Set type not supported; compilation aborted.");
       }
     } else if (child.getId() == JJTSCALARFLATEXPR) {
-      switch (((ASTScalarFlatExpr) child).getType()) {
-        case 0: // int
-        case 1: // bool
-          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-        case 2: // ident
-          return dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
-        case 3: // array access
-          return dictionary
-              .getSetArray(((ASTScalarFlatExpr) child).getIdent())[
-              ((ASTScalarFlatExpr) child).getInt()];
-        case 4: // string
-        case 5: // float
-          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-        default:
-          throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
-      }
+      // bool
+      // float
+      return switch (((ASTScalarFlatExpr) child).getType()) { // int
+        case 0, 1 ->
+            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+        case 2 -> // ident
+            dictionary.getSet(((ASTScalarFlatExpr) child).getIdent());
+        case 3 -> // array access
+            dictionary
+                .getSetArray(((ASTScalarFlatExpr) child).getIdent())[
+                ((ASTScalarFlatExpr) child).getInt()]; // string
+        case 4, 5 ->
+            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+        default ->
+            throw new IllegalArgumentException("Set initialization fault; compilation aborted.");
+      };
     }
     return new IntervalDomain();
   }
 
   IntVar[] unique(IntVar[] vs) {
 
-    LinkedHashSet<IntVar> varSet = new LinkedHashSet<IntVar>();
-    varSet.addAll(Arrays.asList(vs));
+    LinkedHashSet<IntVar> varSet = new LinkedHashSet<>(Arrays.asList(vs));
 
     int l = varSet.size();
     IntVar[] rs = new IntVar[l];

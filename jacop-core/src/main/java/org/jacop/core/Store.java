@@ -417,7 +417,7 @@ public class Store {
 
     Domain vDom = var.dom();
 
-    Constraint[] addedConstraints = null;
+    Constraint[] addedConstraints;
     Constraint c;
 
     // FIXME, BUG. it should not assume that events are from IntDomain.

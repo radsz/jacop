@@ -148,9 +148,9 @@ public class Binpacking extends Constraint
 
     itemMap =
         Var.positionMapping(
-            Arrays.stream(item).map(i -> i.bin()).toArray(IntVar[]::new), false, this.getClass());
+            Arrays.stream(item).map(BinItem::bin).toArray(IntVar[]::new), false, this.getClass());
 
-    setScope(Stream.concat(Arrays.stream(item).map(i -> i.bin()), Arrays.stream(load)));
+    setScope(Stream.concat(Arrays.stream(item).map(BinItem::bin), Arrays.stream(load)));
   }
 
   /**
@@ -211,7 +211,7 @@ public class Binpacking extends Constraint
     if (firstConsistencyCheck) {
 
       Arrays.stream(item)
-          .map(i -> i.bin())
+          .map(BinItem::bin)
           .forEach(i -> i.domain.in(store.level, i, minBinNumber, load.length - 1 + minBinNumber));
 
       firstConsistencyCheck = false;

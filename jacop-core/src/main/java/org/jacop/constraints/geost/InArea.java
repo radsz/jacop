@@ -32,6 +32,7 @@ package org.jacop.constraints.geost;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import org.jacop.util.SimpleHashSet;
 
@@ -66,12 +67,7 @@ public class InArea implements ExternalConstraint {
   public InArea(DBox area, Collection<DBox> holes) {
 
     this.allowedArea = area;
-
-    if (holes != null) {
-      this.holes = holes;
-    } else {
-      this.holes = new ArrayList<>(0);
-    }
+    this.holes = Objects.requireNonNullElseGet(holes, () -> new ArrayList<>(0));
 
     assert checkInvariants() == null : checkInvariants();
   }

@@ -660,9 +660,7 @@ public class DBox {
 
   public String toString() {
 
-    String result = "DBox(" + Arrays.toString(origin) + " ; " + Arrays.toString(length) + ")";
-
-    return result;
+    return "DBox(" + Arrays.toString(origin) + " ; " + Arrays.toString(length) + ")";
   }
 
   @Override

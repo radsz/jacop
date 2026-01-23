@@ -75,10 +75,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   public IntVar[] resources;
 
   /** It specifies if the edge finding algorithm should be used. */
-  protected boolean doEdgeFinding = true;
+  protected boolean doEdgeFinding;
 
   /** It specifies if the profiles should be computed to propagate onto limit variable. */
-  protected boolean doProfile = true;
+  protected boolean doProfile;
 
   /** It specifies if the data from profiles should be used to propagate onto limit variable. */
   protected boolean setLimit = true;
@@ -342,7 +342,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   boolean between(Task l, List<Task> S) {
     int completionS = IntDomain.MinInt, startS = IntDomain.MaxInt;
-    long a = 0, larea = 0;
+    long a = 0, larea;
     boolean betweenS = true;
 
     if (!S.isEmpty()) {
@@ -488,10 +488,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and after S
 
-        boolean after = true, between = true;
+        boolean after, between;
 
         int startOfS = IntDomain.MaxInt, completionOfS = IntDomain.MinInt;
-        long area1 = 0, area2 = 0, larea = 0;
+        long area1 = 0, area2 = 0, larea;
         if (debug) {
           IO.println("Checking if " + l + " can be after " + S);
         }
@@ -515,8 +515,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         } else {
           if (between && !after) {
             // update upper bound of l
-            long slack, a = 0;
-            int newCompl = IntDomain.MaxInt, startS, newStartl = IntDomain.MinInt;
+            long slack, a;
+            int newCompl, startS, newStartl;
             int maxuse = limitMax - l.res().min();
 
             int compl = l_LCT;
@@ -677,10 +677,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and before S
 
-        boolean before = true, between = true;
+        boolean before, between;
 
         int completionOfS = IntDomain.MinInt, startOfS = IntDomain.MaxInt;
-        long area1 = 0, area2 = 0, larea = 0;
+        long area1 = 0, area2 = 0, larea;
         if (debug) {
           IO.println("Checking if " + l + " can be before or between tasks in " + S);
         }
@@ -727,7 +727,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           if (between && !before) {
             // update lower bound of l
 
-            long slack, a = 0;
+            long slack, a;
             int completionS, newStartl = IntDomain.MinInt;
             int maxuse = limitMax - l.res().min();
 
@@ -942,7 +942,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private long minOverlap(Task t, int est, int lct) {
 
-    int tDur_min = 0;
+    int tDur_min;
     int tdur = t.dur().min();
     int tect = t.ect();
     int tlst = t.lst();
@@ -1067,7 +1067,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int sLCT = s.lct();
     int compl = sLCT;
 
-    int startS = IntDomain.MaxInt, newCompl = IntDomain.MaxInt, newStartl = IntDomain.MinInt;
+    int startS = IntDomain.MaxInt, newCompl, newStartl;
     long a = 0, slack, maxuse = limit.max() - s.res().min();
 
     if (S.size() > 1) {

@@ -1825,7 +1825,8 @@ public class PerfectSquare extends ExampleFD {
     long T1, T2, T;
     T1 = System.currentTimeMillis();
 
-    boolean result = store.consistency();
+    store.consistency();
+    boolean result;
 
     Search<IntVar> labelSlave1 = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectSlave1 =

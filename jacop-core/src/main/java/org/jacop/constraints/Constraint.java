@@ -74,7 +74,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It specifies if upon the failure of the constraint, all variables in the constraint scope
    * should have their weight increased.
    */
-  public boolean increaseWeight = true;
+  public final boolean increaseWeight = true;
 
   /** It specifies the event which must occur in order for the consistency function to be called. */
   public Hashtable<Var, Integer> consistencyPruningEvents;
@@ -122,7 +122,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   public static String intArrayToString(int[] array) {
-    return Arrays.stream(array).mapToObj(i -> Integer.toString(i)).collect(joining(", ", "[", "]"));
+    return Arrays.stream(array).mapToObj(Integer::toString).collect(joining(", ", "[", "]"));
   }
 
   static int toInt(final float f) {
@@ -368,7 +368,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It produces a string representation of a constraint state. */
   @Override
   public String toString() {
-    return arguments().stream().map(i -> i.toString()).collect(joining(", ", id() + "(", ")"));
+    return arguments().stream().map(Object::toString).collect(joining(", ", id() + "(", ")"));
   }
 
   /**
@@ -431,16 +431,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public int numberArgs() {
     return scope.size();
-  }
-
-  /**
-   * It specifies if the constraint allows domains of variables in its scope only to shrink its
-   * domain with the progress of search downwards.
-   *
-   * @return true, by default by all constraints.
-   */
-  public boolean requiresMonotonicity() {
-    return true;
   }
 
   /**

@@ -161,7 +161,6 @@ public class Count extends PrimitiveConstraint {
       }
 
       numberEq += numberMayBe;
-      numberMayBe = 0;
 
       counter.domain.inValue(store.level, counter, numberEq);
       removeConstraint();
@@ -172,8 +171,6 @@ public class Count extends PrimitiveConstraint {
         IntVar v = list[i];
         v.domain.inComplement(store.level, v, value);
       }
-
-      numberMayBe = 0;
 
       counter.domain.inValue(store.level, counter, numberEq);
       removeConstraint();

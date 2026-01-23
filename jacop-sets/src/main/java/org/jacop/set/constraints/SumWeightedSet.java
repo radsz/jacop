@@ -152,7 +152,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     while (true) {
 
       int glbSum = 0;
-      int lubSum = 0;
+      int lubSum;
 
       IntDomain glbA = a.domain.glb();
       IntDomain lubA = a.domain.lub();

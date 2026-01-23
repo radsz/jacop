@@ -200,7 +200,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
           // Unit propagation.
 
-          /**
+          /*
            * TODO: Radek, can we trigger propagation right away or should we wait until all watches
            * are checked.
            */

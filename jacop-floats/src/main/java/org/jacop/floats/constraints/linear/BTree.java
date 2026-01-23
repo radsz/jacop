@@ -39,7 +39,7 @@ package org.jacop.floats.constraints.linear;
 public class BTree {
 
   // tree structure
-  RootBNode root;
+  final RootBNode root;
 
   public BTree(RootBNode root) {
     this.root = root;

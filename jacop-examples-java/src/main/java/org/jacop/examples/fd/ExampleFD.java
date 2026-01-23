@@ -533,9 +533,7 @@ public abstract class ExampleFD {
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(true);
 
-    boolean result = search.labeling(store, select);
-
-    return result;
+    return search.labeling(store, select);
   }
 
   /**
@@ -548,7 +546,7 @@ public abstract class ExampleFD {
 
     search = new DepthFirstSearch<>();
 
-    boolean result = false;
+    boolean result;
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -616,7 +614,7 @@ public abstract class ExampleFD {
 
     long begin = System.currentTimeMillis();
 
-    boolean result = false;
+    boolean result;
 
     search = new DepthFirstSearch<>();
 
@@ -642,7 +640,7 @@ public abstract class ExampleFD {
 
     long begin = System.currentTimeMillis();
 
-    boolean result = false;
+    boolean result;
 
     search = new DepthFirstSearch<>();
 
@@ -700,7 +698,7 @@ public abstract class ExampleFD {
 
     long T1 = System.currentTimeMillis();
 
-    boolean result = false;
+    boolean result;
 
     Search<IntVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectSlave =

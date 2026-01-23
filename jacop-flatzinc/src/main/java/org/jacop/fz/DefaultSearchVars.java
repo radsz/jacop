@@ -214,28 +214,25 @@ public class DefaultSearchVars {
 
   public String toString() {
 
-    String buf =
-        "%% default int search variables = array1d(1.."
-            + int_search_variables.length
-            + ", "
-            + Arrays.asList(int_search_variables)
-            + ")\n"
-            + "%% default boolean search variables = array1d(1.."
-            + bool_search_variables.length
-            + ", "
-            + Arrays.asList(bool_search_variables)
-            + ")\n"
-            + "%% default set search variables = array1d(1.."
-            + set_search_variables.length
-            + ", "
-            + Arrays.asList(set_search_variables)
-            + ")\n"
-            + "%% default float search variables = array1d(1.."
-            + float_search_variables.length
-            + ", "
-            + Arrays.asList(float_search_variables)
-            + ")\n";
-
-    return buf;
+    return "%% default int search variables = array1d(1.."
+        + int_search_variables.length
+        + ", "
+        + Arrays.asList(int_search_variables)
+        + ")\n"
+        + "%% default boolean search variables = array1d(1.."
+        + bool_search_variables.length
+        + ", "
+        + Arrays.asList(bool_search_variables)
+        + ")\n"
+        + "%% default set search variables = array1d(1.."
+        + set_search_variables.length
+        + ", "
+        + Arrays.asList(set_search_variables)
+        + ")\n"
+        + "%% default float search variables = array1d(1.."
+        + float_search_variables.length
+        + ", "
+        + Arrays.asList(float_search_variables)
+        + ")\n";
   }
 }

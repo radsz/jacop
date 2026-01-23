@@ -153,7 +153,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     assert (t != null) : " First valid tuple can not be null ";
 
-    int invalidPosition = -1;
+    int invalidPosition;
 
     int[][] tuplesVarValue = tuples[varPosition][pos];
     int[] lastofsequenceVarValue = lastofsequence[varPosition][pos];

@@ -468,22 +468,15 @@ public class SumInt extends PrimitiveConstraint {
   // }
 
   public String rel2String() {
-    switch (relationType) {
-      case eq:
-        return "==";
-      case lt:
-        return "<";
-      case le:
-        return "<=";
-      case ne:
-        return "!=";
-      case gt:
-        return ">";
-      case ge:
-        return ">=";
-    }
-
-    return "?";
+    return switch (relationType) {
+      case eq -> "==";
+      case lt -> "<";
+      case le -> "<=";
+      case ne -> "!=";
+      case gt -> ">";
+      case ge -> ">=";
+      default -> "?";
+    };
   }
 
   @Override

@@ -158,9 +158,9 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
     double optimalMetric = variableOrdering.metric(currentVariable);
     int optimalPosition = index;
 
-    int comparison = 0;
+    int comparison;
 
-    T v = null;
+    T v;
     for (int currentPosition = index + 1; currentPosition < finalIndex; currentPosition++) {
 
       v = searchVariables[currentPosition];

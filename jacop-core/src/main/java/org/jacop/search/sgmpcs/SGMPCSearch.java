@@ -320,7 +320,7 @@ public class SGMPCSearch {
 
   boolean terminationCriteria() {
 
-    boolean termination = false;
+    boolean termination;
 
     long currentTime = System.currentTimeMillis();
 

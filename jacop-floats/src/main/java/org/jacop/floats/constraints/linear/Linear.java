@@ -569,7 +569,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     VarWeightComparator() {}
 
     public int compare(T o1, T o2) {
-      double diff_o1 = 0, diff_o2 = 0;
+      double diff_o1, diff_o2;
 
       if (o1 instanceof VarNode) {
         diff_o1 = o1.max() - o1.min();

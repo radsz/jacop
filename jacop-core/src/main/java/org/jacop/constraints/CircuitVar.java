@@ -89,9 +89,7 @@ class CircuitVar implements MutableVar {
   @Override
   public String toString() {
 
-    String result = "CircuitVar[" + (index + 1) + "] = " + value;
-
-    return result;
+    return "CircuitVar[" + (index + 1) + "] = " + value;
   }
 
   public void update(MutableVarValue val) {

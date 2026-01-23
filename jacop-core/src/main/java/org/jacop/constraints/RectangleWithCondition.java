@@ -43,7 +43,7 @@ class RectangleWithCondition extends Rectangle {
 
   final IntVar c;
 
-  int index;
+  final int index;
 
   public RectangleWithCondition(int i, List<? extends IntVar> R, IntVar cond) {
     super(R);

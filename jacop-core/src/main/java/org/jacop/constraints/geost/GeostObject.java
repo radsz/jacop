@@ -171,20 +171,17 @@ public class GeostObject {
 
   public String toString() {
 
-    String builder =
-        "Object("
-            + shapeID
-            + ", "
-            + Arrays.toString(coords)
-            + ", "
-            + start
-            + ", "
-            + duration
-            + ", "
-            + end
-            + ")";
-
-    return builder;
+    return "Object("
+        + shapeID
+        + ", "
+        + Arrays.toString(coords)
+        + ", "
+        + start
+        + ", "
+        + duration
+        + ", "
+        + end
+        + ")";
   }
 
   /**
@@ -257,9 +254,7 @@ public class GeostObject {
     @Override
     public String toString() {
 
-      String result = "TimeBoundConstraint( " + start + " + " + duration + " = " + end + " )";
-
-      return result;
+      return "TimeBoundConstraint( " + start + " + " + duration + " = " + end + " )";
     }
 
     /**

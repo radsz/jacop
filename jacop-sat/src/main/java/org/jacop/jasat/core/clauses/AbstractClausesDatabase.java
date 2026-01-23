@@ -274,8 +274,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   /** print the content of the Database in a nice way */
   @Override
   public final String toString() {
-    String sb = getClass().getSimpleName() + " (with " + size() + ')';
-    return sb;
+    return getClass().getSimpleName() + " (with " + size() + ')';
   }
 
   public final void initialize(Core core) {

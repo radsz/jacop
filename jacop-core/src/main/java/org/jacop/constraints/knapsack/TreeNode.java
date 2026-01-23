@@ -146,20 +146,17 @@ public class TreeNode {
   @Override
   public String toString() {
 
-    String result =
-        "[wmax: "
-            + wMax
-            + ", wsum: "
-            + wSum
-            + ", psum: "
-            + pSum
-            + ";"
-            + left.toString()
-            + "^"
-            + right.toString()
-            + "]";
-
-    return result;
+    return "[wmax: "
+        + wMax
+        + ", wsum: "
+        + wSum
+        + ", psum: "
+        + pSum
+        + ";"
+        + left.toString()
+        + "^"
+        + right.toString()
+        + "]";
   }
 
   /**
@@ -205,8 +202,6 @@ public class TreeNode {
    */
   public String nodeToString() {
 
-    String result = "[wmax: " + wMax + ", wsum: " + wSum + ", psum: " + pSum + ";" + "]";
-
-    return result;
+    return "[wmax: " + wMax + ", wsum: " + wSum + ", psum: " + pSum + ";" + "]";
   }
 }

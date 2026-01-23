@@ -264,7 +264,7 @@ public class RegularExpressionParser {
     public abstract FSM parseToFSM();
   }
 
-  class Concatenation extends Expression {
+  static class Concatenation extends Expression {
 
     public final Expression a;
     public final Expression b;
@@ -291,7 +291,7 @@ public class RegularExpressionParser {
     }
   }
 
-  class Star extends Expression {
+  static class Star extends Expression {
 
     public final Expression inStar;
 
@@ -403,7 +403,7 @@ public class RegularExpressionParser {
   }
 
   /** It specifies a simple literal. */
-  public class Literal extends Expression {
+  public static class Literal extends Expression {
 
     /** String denoting the literal. */
     public final String lit;

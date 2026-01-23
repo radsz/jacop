@@ -138,7 +138,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   DepthFirstSearch<T> lastSearch(DepthFirstSearch<T> dfs) {
     DepthFirstSearch<T> ns = dfs;
-    DepthFirstSearch<T> lastNotNullSearch = ns;
+    DepthFirstSearch<T> lastNotNullSearch;
 
     do {
       lastNotNullSearch = ns;
@@ -194,7 +194,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (result) {
 
       try {
-        result = search[2 * subSearch].labeling();
+        search[2 * subSearch].labeling();
       } catch (SolutionsLimitReached _) {
         solutionsReached = true;
         if (printInfo) {
@@ -321,7 +321,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
     if (result) {
       try {
-        result = search[2 * subSearch].labeling();
+        search[2 * subSearch].labeling();
       } catch (SolutionsLimitReached _) {
         getStatistics();
 
@@ -613,27 +613,24 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   String statistics() {
 
-    String buf =
-        "No solutions : "
-            + noSolutions
-            + "\n"
-            + "Nodes : "
-            + nodes
-            + "\n"
-            + "Decisions : "
-            + decisions
-            + "\n"
-            + "Wrong Decisions : "
-            + wrongDecisions
-            + "\n"
-            + "Backtracks : "
-            + numberBacktracks
-            + "\n"
-            + "Max Depth : "
-            + maxDepthExcludePaths
-            + "\n";
-
-    return buf;
+    return "No solutions : "
+        + noSolutions
+        + "\n"
+        + "Nodes : "
+        + nodes
+        + "\n"
+        + "Decisions : "
+        + decisions
+        + "\n"
+        + "Wrong Decisions : "
+        + wrongDecisions
+        + "\n"
+        + "Backtracks : "
+        + numberBacktracks
+        + "\n"
+        + "Max Depth : "
+        + maxDepthExcludePaths
+        + "\n";
   }
 
   public void setCostVariable(Var cost) {
@@ -703,7 +700,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   public void addRestartCalculator(DepthFirstSearch<T> s, Calculator calc) {
 
-    DepthFirstSearch<T>[] ns = null;
+    DepthFirstSearch<T>[] ns;
     if (s instanceof PrioritySearch prioritySearch) {
       ns = prioritySearch.getSearchSeq();
     } else {

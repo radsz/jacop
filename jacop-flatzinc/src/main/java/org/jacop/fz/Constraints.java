@@ -29,7 +29,6 @@
  */
 package org.jacop.fz;
 
-import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.constraints.ConstraintFncs;
@@ -159,20 +158,7 @@ public class Constraints implements ParserTreeConstants {
         IO.println(e);
       } catch (java.lang.reflect.InvocationTargetException e) {
         IO.println("%% problem detected for " + p);
-
-        try {
-          throw e.getCause();
-        } catch (FailException
-            | TrivialSolution
-            | StackOverflowError
-            | OutOfMemoryError
-            | ArrayIndexOutOfBoundsException
-            | TokenMgrError
-            | ParseException
-            | IllegalArgumentException
-            | ArithmeticException fe) {
-          throw fe;
-        }
+        throw e.getCause();
       }
     }
   }

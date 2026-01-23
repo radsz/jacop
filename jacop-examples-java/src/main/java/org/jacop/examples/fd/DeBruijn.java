@@ -44,16 +44,18 @@ import org.jacop.core.Store;
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
  *     <p>It finds both "normal" and "arbitrary" de Bruijn sequences.
- *     <p>This is a port from my MiniZinc model http://www.hakank.org/minizinc/debruijn_binary.mzn
+ *     <p>This is a port from my MiniZinc model <a
+ *     href="http://www.hakank.org/minizinc/debruijn_binary.mzn">...</a>
  *     <p>and is explained somewhat in the swedish blog post "Constraint Programming: Minizinc,
- *     Gecode/flatzinc och ECLiPSe/minizinc" http://www.hakank.org/webblogg/archives/001209.html
+ *     Gecode/flatzinc och ECLiPSe/minizinc" <a
+ *     href="http://www.hakank.org/webblogg/archives/001209.html">...</a>
  *     <p>Related programs: - "Normal" de Bruijn sequences CGI program for calculating the sequences
- *     http://www.hakank.org/comb/debruijn.cgi http://www.hakank.org/comb/deBruijnApplet.html (as
- *     Java applet)
- *     <p>- "Arbitrary" de Bruijn sequences Program "de Bruijn arbitrary sequences"
- *     http://www.hakank.org/comb/debruijn_arb.cgi
+ *     <a href="http://www.hakank.org/comb/debruijn.cgi">...</a> <a
+ *     href="http://www.hakank.org/comb/deBruijnApplet.html">...</a> (as Java applet)
+ *     <p>- "Arbitrary" de Bruijn sequences Program "de Bruijn arbitrary sequences" <a
+ *     href="http://www.hakank.org/comb/debruijn_arb.cgi">...</a>
  *     <p>This (swedish) blog post explains the program: "de Bruijn-sekvenser av godtycklig längd"
- *     http://www.hakank.org/webblogg/archives/001114.html
+ *     <a href="http://www.hakank.org/webblogg/archives/001114.html">...</a>
  */
 public class DeBruijn extends ExampleFD {
 
