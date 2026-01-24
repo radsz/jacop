@@ -6,7 +6,7 @@
 
     <groupId>org.jacop</groupId>
     <artifactId>jacop-parent</artifactId>
-    <version>5.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -71,6 +71,7 @@
     </distributionManagement>
 
     <properties>
+        <revision>5.0-SNAPSHOT</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
@@ -295,7 +296,7 @@ setup to run configuration. -->
                     </dependencies>
                     <configuration>
                         <configLocation>doc/checkstyle.xml</configLocation>
-                        <suppressionsLocation>doc/suppression.xml</suppressionsLocation>
+                        <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml</suppressionsLocation>
                     </configuration>
                 </plugin>
 
@@ -479,6 +480,31 @@ setup to run configuration. -->
                 </dependencies>
             </plugin>
 
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.7.0</version>
+                <configuration>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Java plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -658,6 +684,8 @@ setup to run configuration. -->
                     </dependency>
                 </dependencies>
                 <configuration>
+                    <configLocation>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml</suppressionsLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
@@ -743,7 +771,7 @@ setup to run configuration. -->
                 </reportSets>
                 <configuration>
                     <configLocation>doc/checkstyle.xml</configLocation>
-                    <suppressionsLocation>doc/suppression.xml</suppressionsLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml</suppressionsLocation>
                 </configuration>
             </plugin>
             <plugin>

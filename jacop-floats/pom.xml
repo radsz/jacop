@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.jacop</groupId>
         <artifactId>jacop-parent</artifactId>
-        <version>4.11.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <artifactId>jacop-floats</artifactId>
