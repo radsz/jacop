@@ -42,6 +42,7 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 import org.jacop.util.IndexDomainView;
+import org.jacop.util.TupleUtils;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the relation.
@@ -580,15 +581,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   }
 
   boolean smaller(int[] tuple1, int[] tuple2) {
-
-    int arity = tuple1.length;
-    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
-      if (tuple1[i] < tuple2[i]) {
-        return true;
-      }
-    }
-
-    return false;
+    return TupleUtils.tuplesSmaller(tuple1, tuple2);
   }
 
   @Override

@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.lang.reflect.Array;
+import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
@@ -98,6 +99,13 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
   public void setVariables(T[] vs) {
     vars = vs;
+    solutions = new Domain[1][vars.length];
+    parentSolutionNo = new int[1];
+  }
+
+  @SuppressWarnings("unchecked")
+  public void setVariables(List<T> vs) {
+    vars = (T[]) vs.toArray(new Var[0]);
     solutions = new Domain[1][vars.length];
     parentSolutionNo = new int[1];
   }

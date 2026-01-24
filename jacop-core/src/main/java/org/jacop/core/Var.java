@@ -70,7 +70,7 @@ public abstract class Var implements Backtrackable {
   }
 
   public static <T extends Var> Map<T, Integer> positionMapping(
-      T[] list, boolean skipSingletons, Class clazz) {
+      T[] list, boolean skipSingletons, Class<?> clazz) {
 
     Map<T, Integer> position = new HashMap<>();
     addPositionMapping(position, list, skipSingletons, clazz);
@@ -78,7 +78,7 @@ public abstract class Var implements Backtrackable {
   }
 
   public static <T extends Var> void addPositionMapping(
-      Map<T, Integer> position, T[] list, boolean skipSingletons, Class clazz) {
+      Map<T, Integer> position, T[] list, boolean skipSingletons, Class<?> clazz) {
 
     for (int i = 0; i < list.length; i++) {
       if (position.get(list[i]) != null) {
@@ -95,7 +95,7 @@ public abstract class Var implements Backtrackable {
   }
 
   public static <T extends Var, R> Map<T, R> positionMapping(
-      T[] list, Function<T, R> function, boolean skipSingletons, Class clazz) {
+      T[] list, Function<T, R> function, boolean skipSingletons, Class<?> clazz) {
 
     Map<T, R> position = new HashMap<>();
     addPositionMapping(position, list, function, skipSingletons, clazz);
@@ -103,7 +103,11 @@ public abstract class Var implements Backtrackable {
   }
 
   public static <T extends Var, R> void addPositionMapping(
-      Map<T, R> position, T[] list, Function<T, R> function, boolean skipSingletons, Class clazz) {
+      Map<T, R> position,
+      T[] list,
+      Function<T, R> function,
+      boolean skipSingletons,
+      Class<?> clazz) {
 
     for (T aList : list) {
       if (position.get(aList) != null) {

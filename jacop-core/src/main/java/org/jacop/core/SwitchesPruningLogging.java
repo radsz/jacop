@@ -91,10 +91,10 @@ public final class SwitchesPruningLogging {
 
   private SwitchesPruningLogging() {}
 
-  public static void log(boolean isEnabled, Class fromClass, String pattern, Object[] args) {}
+  public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object[] args) {}
 
-  public static void log(boolean isEnabled, Class fromClass, String pattern, Object arg1) {}
+  public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object arg1) {}
 
   public static void log(
-      boolean isEnabled, Class fromClass, String pattern, Object arg1, Object arg2) {}
+      boolean isEnabled, Class<?> fromClass, String pattern, Object arg1, Object arg2) {}
 }

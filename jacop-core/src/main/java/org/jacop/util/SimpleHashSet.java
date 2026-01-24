@@ -30,7 +30,9 @@
 
 package org.jacop.util;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * This class provides very simple HashSet functionality. Designed specially for maintaining pending
@@ -59,13 +61,13 @@ public class SimpleHashSet<E> {
   final float loadFactor;
 
   /** It points to the first Entry to be removed. */
-  transient Entry<E> firstEntry;
+  transient Entry firstEntry;
 
   /** The initial capacity for the hash set. */
   int initialCapacity;
 
   /** It points to the last Entry being add. */
-  transient Entry<E> lastEntry;
+  transient Entry lastEntry;
 
   /** The number of elements contained in this set. */
   transient int size;
@@ -74,7 +76,7 @@ public class SimpleHashSet<E> {
   int threshold;
 
   /** The set, resized as necessary. Length MUST Always be a power of two. */
-  private transient Entry[] table;
+  private transient List<Entry> table;
 
   /**
    * Constructs an empty {@code HashSet} with the default initial capacity (16) and the default load
@@ -83,8 +85,8 @@ public class SimpleHashSet<E> {
   public SimpleHashSet() {
     this.loadFactor = DEFAULT_LOAD_FACTOR;
     threshold = (int) (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR);
-    table = new Entry[DEFAULT_INITIAL_CAPACITY];
-    initialCapacity = table.length;
+    table = new ArrayList<>(Collections.nCopies(DEFAULT_INITIAL_CAPACITY, null));
+    initialCapacity = table.size();
   }
 
   /**
@@ -125,8 +127,8 @@ public class SimpleHashSet<E> {
 
     this.loadFactor = loadFactor;
     this.threshold = (int) (capacity * loadFactor);
-    this.table = new Entry[capacity];
-    this.initialCapacity = table.length;
+    this.table = new ArrayList<>(Collections.nCopies(capacity, null));
+    this.initialCapacity = table.size();
   }
 
   /**
@@ -162,12 +164,11 @@ public class SimpleHashSet<E> {
    * @param element element with which the specified value is to be associated.
    * @return {@code true} if object is inserted and {@code false} if object was already in the set.
    */
-  @SuppressWarnings("unchecked")
   public boolean add(E element) {
     int hash = hash(element);
-    int i = indexFor(hash, table.length);
+    int i = indexFor(hash, table.size());
 
-    Entry<E> e = table[i];
+    Entry e = table.get(i);
 
     if (e != null) {
       boolean result = e.add(element);
@@ -175,12 +176,13 @@ public class SimpleHashSet<E> {
       if (result) {
         // checks threshold and increases size
         if (size++ >= threshold) {
-          resize(2 * table.length);
+          resize(2 * table.size());
         }
       }
       return result;
     } else {
-      e = table[i] = new Entry<>(element);
+      e = new Entry(element);
+      table.set(i, e);
 
       if (firstEntry == null) {
         firstEntry = e;
@@ -192,7 +194,7 @@ public class SimpleHashSet<E> {
 
       // checks threshold and increases size
       if (size++ >= threshold) {
-        resize(2 * table.length);
+        resize(2 * table.size());
       }
     }
 
@@ -202,7 +204,7 @@ public class SimpleHashSet<E> {
   /** Removes all elements from this set. */
   public void clear() {
 
-    Arrays.fill(table, null);
+    Collections.fill(table, null);
 
     firstEntry = null;
     lastEntry = null;
@@ -212,24 +214,23 @@ public class SimpleHashSet<E> {
 
   /** Clones this set. */
   @Override
-  @SuppressWarnings("unchecked")
   public Object clone() {
 
     SimpleHashSet<E> result = new SimpleHashSet<>();
 
-    result.table = new Entry[table.length];
+    result.table = new ArrayList<>(Collections.nCopies(table.size(), null));
     result.size = size;
-    result.initialCapacity = result.table.length;
+    result.initialCapacity = result.table.size();
 
-    for (int i = table.length - 1; i >= 0; i--) {
-      Entry<E> e = table[i];
+    for (int i = table.size() - 1; i >= 0; i--) {
+      Entry e = table.get(i);
       if (e != null) {
-        result.table[i] = new Entry<>(e.element);
+        result.table.set(i, new Entry(e.element));
         e = e.next;
       }
 
       while (e != null) {
-        result.table[i].add(e.element);
+        result.table.get(i).add(e.element);
         e = e.next;
       }
     }
@@ -244,11 +245,10 @@ public class SimpleHashSet<E> {
    * @param element the element whose existence in the hash set is to be checked.
    * @return the boolean value which specifies if given element exists in a hash set.
    */
-  @SuppressWarnings({"unchecked"})
   public boolean contains(E element) {
     int hash = hash(element);
-    int i = indexFor(hash, table.length);
-    Entry<E> e = table[i];
+    int i = indexFor(hash, table.size());
+    Entry e = table.get(i);
     if (e != null) {
       return e.contains(element);
     } else {
@@ -271,26 +271,25 @@ public class SimpleHashSet<E> {
    *
    * @return the first entry which has been removed.
    */
-  @SuppressWarnings("unchecked")
   public E removeFirst() {
 
     if (size == 0) {
       return null;
     }
 
-    Entry<E> removed = firstEntry;
+    Entry removed = firstEntry;
 
     firstEntry = firstEntry.chain;
 
     size--;
 
     int hash = hash(removed.element);
-    int i = indexFor(hash, table.length);
+    int i = indexFor(hash, table.size());
 
     if (removed.next == null) {
-      table[i] = null;
+      table.set(i, null);
     } else {
-      table[i] = removed.next;
+      table.set(i, removed.next);
     }
 
     return removed.element;
@@ -308,14 +307,14 @@ public class SimpleHashSet<E> {
    */
   void resize(int newCapacity) {
 
-    Entry[] oldTable = table;
-    int oldCapacity = oldTable.length;
+    List<Entry> oldTable = table;
+    int oldCapacity = oldTable.size();
     if (oldCapacity == MAXIMUM_CAPACITY) {
       threshold = Integer.MAX_VALUE;
       return;
     }
 
-    table = new Entry[newCapacity];
+    table = new ArrayList<>(Collections.nCopies(newCapacity, null));
     threshold = (int) (newCapacity * loadFactor);
     transfer(oldTable);
   }
@@ -331,19 +330,16 @@ public class SimpleHashSet<E> {
 
   /** Returns string representation of the hash set. */
   @Override
-  @SuppressWarnings("unchecked")
   public String toString() {
     StringBuilder s = new StringBuilder();
 
     s.append("SimpleHashSet[");
 
-    Entry[] tab = table;
-
     boolean empty = true;
 
-    for (Entry<E> entry : tab) {
+    for (Entry entry : table) {
 
-      Entry<E> e = entry;
+      Entry e = entry;
 
       if (!empty && e != null) {
         s.append(",");
@@ -365,12 +361,11 @@ public class SimpleHashSet<E> {
   }
 
   /** Transfer all entries from current table to newTable. */
-  @SuppressWarnings("unchecked")
-  void transfer(Entry[] oldTable) {
+  void transfer(List<Entry> oldTable) {
 
     size = 0;
 
-    Entry<E> temp = firstEntry;
+    Entry temp = firstEntry;
     firstEntry = null;
 
     while (temp != null) {
@@ -379,7 +374,7 @@ public class SimpleHashSet<E> {
     }
   }
 
-  class Entry<E> {
+  class Entry {
 
     public final E element;
 
@@ -394,12 +389,11 @@ public class SimpleHashSet<E> {
     }
 
     /** Create new entry. */
-    Entry(E el, Entry<E> n) {
+    Entry(E el, Entry n) {
       element = el;
       next = n;
     }
 
-    @SuppressWarnings("unchecked")
     public boolean add(E addedElement) {
       if (element == addedElement) {
         return false;
@@ -414,7 +408,6 @@ public class SimpleHashSet<E> {
       }
     }
 
-    @SuppressWarnings("unchecked")
     public boolean contains(E checkedElement) {
       if (element == checkedElement) {
         return true;

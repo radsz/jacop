@@ -131,7 +131,8 @@ public class Store {
    * imposition. It makes it possible to replace constraints into other constraints. It can be very
    * useful for efficiency or testing purposes.
    */
-  private final Map<Class<? extends Constraint>, Set<Replaceable>> replacements = new HashMap<>();
+  private final Map<Class<? extends Constraint>, Set<Replaceable<? extends Constraint>>>
+      replacements = new HashMap<>();
 
   /**
    * It stores boolean variables as soon as they change (become grounded or number of constraints
@@ -686,8 +687,9 @@ public class Store {
             l ->
                 l.forEach(
                     r -> {
-                      if (r.isReplaceable(c)) {
-                        r.replace(c).imposeDecomposition(this);
+                      Replaceable<Constraint> replacement = (Replaceable<Constraint>) r;
+                      if (replacement.isReplaceable(c)) {
+                        replacement.replace(c).imposeDecomposition(this);
                       }
                     }));
     c.impose(this);
@@ -955,7 +957,7 @@ public class Store {
       replacements.put(replacement.forClass(), new HashSet<>());
     }
 
-    Set<Replaceable> current = replacements.get(replacement.forClass());
+    Set<Replaceable<? extends Constraint>> current = replacements.get(replacement.forClass());
 
     return current.add(replacement);
   }
@@ -969,7 +971,7 @@ public class Store {
    */
   public boolean deregisterReplacement(Replaceable<? extends Constraint> replacement) {
 
-    Optional<Set<Replaceable>> forClass =
+    Optional<Set<Replaceable<? extends Constraint>>> forClass =
         Optional.ofNullable(replacements.get(replacement.forClass()));
 
     return forClass.map(replaceables -> replaceables.remove(replacement)).orElse(false);
