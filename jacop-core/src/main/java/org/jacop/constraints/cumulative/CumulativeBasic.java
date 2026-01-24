@@ -219,7 +219,7 @@ public class CumulativeBasic extends Constraint {
   private void sweepPruning(Store store) {
 
     Event[] es = new Event[4 * taskNormal.length];
-    int limitMax = limit.max();
+    final int limitMax = limit.max();
 
     int j = 0;
     int minProfile = Integer.MAX_VALUE;
@@ -265,15 +265,12 @@ public class CumulativeBasic extends Constraint {
       IO.println("===========================");
     }
 
-    BitSet tasksToPrune = new BitSet(taskNormal.length);
-    boolean[] inProfile = new boolean[taskNormal.length];
-
-    // current value of the profile for mandatory parts
-    int curProfile = 0;
+    final BitSet tasksToPrune = new BitSet(taskNormal.length);
+    final boolean[] inProfile = new boolean[taskNormal.length];
 
     // used for start variable pruning
-    int[] startExcluded = new int[taskNormal.length];
-    boolean[] startConsidered = new boolean[taskNormal.length];
+    final int[] startExcluded = new int[taskNormal.length];
+    final boolean[] startConsidered = new boolean[taskNormal.length];
 
     // used for duration variable pruning
     int[] maxDuration = new int[taskNormal.length];
@@ -286,6 +283,7 @@ public class CumulativeBasic extends Constraint {
     Arrays.fill(lastFree, Integer.MAX_VALUE);
     boolean[] barier = new boolean[taskNormal.length];
 
+    int curProfile = 0;
     for (int i = 0; i < N; i++) {
 
       Event e = es[i];

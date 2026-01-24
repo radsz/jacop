@@ -747,13 +747,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       //        Set<InternalConstraint> I,
       int limit) {
 
-    boolean feasiblePointFound = true;
-
     if (DEBUG_MAIN) {
       IO.println("pruneMin");
     }
-
-    Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMIN;
 
     order.setMostSignificantDimension(d);
 
@@ -776,6 +772,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       IO.println("n:" + Arrays.toString(n));
     }
 
+    boolean feasiblePointFound = true;
+    Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMIN;
     DBox f;
 
     while (feasiblePointFound
@@ -858,13 +856,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       //          Set<InternalConstraint> I,
       int limit) {
 
-    boolean feasiblePointFound = true;
-
     if (DEBUG_MAIN) {
       IO.println("pruneMax");
     }
 
-    Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMAX;
     order.setMostSignificantDimension(d);
 
     // c is initialized with the upper bound of the object's domain, n with the lower bound-1
@@ -886,6 +881,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       IO.println("n:" + Arrays.toString(n));
     }
 
+    boolean feasiblePointFound = true;
+    Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMAX;
     DBox f;
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {

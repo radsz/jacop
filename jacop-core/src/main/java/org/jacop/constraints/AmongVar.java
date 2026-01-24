@@ -364,14 +364,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int countCoverMin = 0;
     // Number of Y who are not playing role in covering x
     int noRoleY = 0;
-    // Number of Y who might cover x that were not yet covered
-    int potentialCover = 0;
 
     // Number of Y who already covering some x
     int alreadyCover = 0;
-
-    // Number of disjoint Y who will cover x that were not yet covered
-    int disjointCover = 0;
 
     for (int i = 0; i < ub0; i++) {
       x = this.listOfX[i];
@@ -392,6 +387,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     new IntervalDomain();
     IntDomain intersectK;
     IntDomain disjoint = new IntervalDomain();
+    // Number of Y who might cover x that were not yet covered
+    int potentialCover = 0;
+    // Number of disjoint Y who will cover x that were not yet covered
+    int disjointCover = 0;
     for (int i = yGr; i < listOfY.length; i++) {
       y = listOfY[i];
       if (y.singleton()) {
@@ -1161,7 +1160,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int i = 0;
     IntVar y;
     IntVar x;
-    int gx = (int) Arrays.stream(listOfX).filter(IntVar::singleton).count();
 
     yIndex = Var.positionMapping(listOfY, false, this.getClass());
 
@@ -1171,6 +1169,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     lb0TS = new TimeStamp<>(store, 0);
     ub0TS = new TimeStamp<>(store, listOfX.length);
 
+    final int gx = (int) Arrays.stream(listOfX).filter(IntVar::singleton).count();
     xGrounded = new TimeStamp<>(store, gx);
     yGrounded = new TimeStamp<>(store, 0);
 

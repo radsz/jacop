@@ -224,8 +224,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private IntVar[] removeZeroCounters(IntVar[] x, IntVar[] counters) {
 
-    IntVar[] result;
-
     // here I will put normalization
     IntervalDomain d = new IntervalDomain();
 
@@ -250,7 +248,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
 
     // zero counters encountered.
-    result = new IntVar[d.getSize()];
+    IntVar[] result = new IntVar[d.getSize()];
     zeroCounters = new HashSet<>();
 
     int i = 0;
@@ -1013,7 +1011,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private int SCCsWithoutS(
       int[] compReachesLeft, int[] compReachesRight, int[] yReachesLeft, int[] yReachesRight) {
 
-    Component C, C1;
+    Component C;
+    Component C1;
     int sccNb = 0;
     S1.clear();
     S2.clear();

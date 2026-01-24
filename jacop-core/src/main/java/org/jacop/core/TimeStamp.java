@@ -88,8 +88,8 @@ public class TimeStamp<T> implements Stateful {
   public void ensureCapacity(int minCapacity) {
     int oldCapacity = stamps.length;
     if (minCapacity > oldCapacity) {
-      T[] oldValues = values;
-      int[] oldStamps = stamps;
+      final T[] oldValues = values;
+      final int[] oldStamps = stamps;
 
       int newCapacity = (oldCapacity * 3) / 2 + 1;
 

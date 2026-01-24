@@ -338,7 +338,7 @@ public class Cumulative extends CumulativeBasic {
 
   private void edgeFindQuad(Store store, TaskView[] tn) {
 
-    long C = limit.max();
+    final long C = limit.max();
     TaskView[] ts = filterZeroTasks(tn);
     if (ts == null) {
       return;
@@ -356,7 +356,7 @@ public class Cumulative extends CumulativeBasic {
     }
     Arrays.fill(Dupd, Integer.MIN_VALUE);
     Arrays.fill(SLupd, Integer.MIN_VALUE);
-    long[] E = new long[n];
+    final long[] E = new long[n];
 
     Integer[] t1 = new Integer[n];
     Integer[] t2 = new Integer[n];

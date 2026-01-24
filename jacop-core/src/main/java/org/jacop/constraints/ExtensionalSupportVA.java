@@ -277,8 +277,6 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     int noSupports = 0;
 
-    int[][] supportCount = new int[list.length][];
-
     int i = 0;
 
     for (int[] t : tuplesFromConstructor) {
@@ -358,6 +356,8 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     this.tuples = new int[list.length][][][];
     this.values = new int[list.length][];
+
+    int[][] supportCount = new int[list.length][];
 
     for (i = 0; i < list.length; i++) {
 

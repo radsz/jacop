@@ -142,10 +142,10 @@ public class ProfileOptional {
       return;
     }
 
-    int optMin = minStartOpt(tn, opt);
+    final int optMin = minStartOpt(tn, opt);
 
     Event[] es = new Event[4 * ts.length];
-    int limitMax = limit.max();
+    final int limitMax = limit.max();
 
     int j = 0;
     int minProfile = Integer.MAX_VALUE;
@@ -191,15 +191,12 @@ public class ProfileOptional {
       IO.println("===========================");
     }
 
-    BitSet tasksToPrune = new BitSet(ts.length);
-    boolean[] inProfile = new boolean[ts.length];
-
-    // current value of the profile for mandatory parts
-    int curProfile = 0;
+    final BitSet tasksToPrune = new BitSet(ts.length);
+    final boolean[] inProfile = new boolean[ts.length];
 
     // used for start variable pruning
-    int[] startExcluded = new int[ts.length];
-    boolean[] startConsidered = new boolean[ts.length];
+    final int[] startExcluded = new int[ts.length];
+    final boolean[] startConsidered = new boolean[ts.length];
 
     // used for duration variable pruning
     int[] maxDuration = new int[ts.length];
@@ -217,6 +214,7 @@ public class ProfileOptional {
       // System.out.println("%=================");
       utilizationProfile.add(new Event(profile, null, optMin, 0));
     }
+    int curProfile = 0;
     for (int i = 0; i < N; i++) {
 
       Event e = es[i];

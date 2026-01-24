@@ -157,7 +157,7 @@ public class AndBoolVector extends PrimitiveConstraint {
   public void consistency(Store store) {
 
     int start = position.value();
-    int index_01 = l - 1;
+    final int index_01 = l - 1;
 
     if (result.min() == 1) {
       for (int i = start; i < l; i++) {
@@ -205,7 +205,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     int start = position.value();
 
-    int index_01 = l - 1;
+    final int index_01 = l - 1;
 
     if (result.max() == 0) {
       for (int i = start; i < l; i++) {

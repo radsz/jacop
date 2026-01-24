@@ -46,7 +46,7 @@ public class Assert {
 
   public static boolean checkFlow(NetworkSimplex g) {
 
-    List<Arc> allArcsForDebug = allArcsForDebug(g);
+    final List<Arc> allArcsForDebug = allArcsForDebug(g);
     int sum = 0;
     for (Node n : g.nodes) {
       sum += n.balance;

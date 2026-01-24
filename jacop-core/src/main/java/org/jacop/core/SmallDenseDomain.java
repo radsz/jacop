@@ -874,8 +874,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       // TODO, remove asserts which require a local variable to speedup non asserts execution.
-      int previousMin = min;
-      int previousMax = max;
+      final int previousMin = min;
+      final int previousMax = max;
 
       if (this.min == complement) {
         boundEvent = true;
@@ -908,10 +908,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       SmallDenseDomain result;
 
-      boolean boundEvent = false;
-
       result = new SmallDenseDomain(min, bitsResult);
 
+      boolean boundEvent = false;
       // 1. Find new min.
       if (this.min == complement) {
         result.adaptMin();
@@ -1005,8 +1004,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       // TODO, remove asserts which require a local variable to speedup non asserts execution.
-      int previousMin = min;
-      int previousMax = max;
+      final int previousMin = min;
+      final int previousMax = max;
 
       if (this.min == minComplement) {
         boundEvent = true;
@@ -1386,8 +1385,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       // Pruning has occurred.
 
-      int previousMin = min;
-      int previousMax = max;
+      final int previousMin = min;
+      final int previousMax = max;
 
       bits = bitsResult;
       size = newSize;
@@ -1428,8 +1427,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       assert result.checkInvariants() == null : result.checkInvariants();
 
-      int previousMin = min;
-      int previousMax = max;
+      final int previousMin = min;
+      final int previousMax = max;
 
       setDomain(result);
 
@@ -1454,8 +1453,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       // TODO, test this special case.
       BoundDomain input = (BoundDomain) domain;
 
-      int previousMin = min;
-      int previousMax = max;
+      final int previousMin = min;
+      final int previousMax = max;
 
       intersectAdapt(input.min(), input.max());
 

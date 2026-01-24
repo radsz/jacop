@@ -318,7 +318,7 @@ public class Disjoint extends Diff {
           // check if domains of r and s overlap
           IntDomain sOriginIdom = s.origin[m].dom();
           IntDomain sLengthIdom = s.length[m].dom();
-          int sLengthIMin = sLengthIdom.min();
+          final int sLengthIMin = sLengthIdom.min();
           int sOriginIMax = sOriginIdom.max();
           s_min = sOriginIdom.min();
           s_max = sOriginIMax + sLengthIdom.max();

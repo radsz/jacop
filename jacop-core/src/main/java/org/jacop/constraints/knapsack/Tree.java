@@ -487,8 +487,6 @@ public class Tree {
       currentWeight = availableWeightOfCriticalItem;
     }
 
-    int weightNoPruning = weightOfItemChecked * maxNoOfItems;
-
     while (!exhaustedRightItems) {
 
       if (currentNode.parent == null) {
@@ -577,6 +575,7 @@ public class Tree {
 
     // Found the last leaf before exceeding slack.
 
+    int weightNoPruning = weightOfItemChecked * maxNoOfItems;
     if (currentWeight > weightNoPruning) {
       // Checked item does not have anything mandatory.
       // Next item must have weightNoPruning larger than currentWeight.
@@ -726,8 +725,6 @@ public class Tree {
       currentWeight = takenWeightOfCriticalItem;
     }
 
-    int weightNoPruning = weightOfItemChecked * maxNoOfItems;
-
     // Adding items until slack is ALMOST exhausted.
     while (!exhaustedLeftItems) {
 
@@ -823,6 +820,7 @@ public class Tree {
 
     // Found the last leaf before exceeding slack.
 
+    int weightNoPruning = weightOfItemChecked * maxNoOfItems;
     if (currentWeight > weightNoPruning) {
       // Checked item does not have anything mandatory.
       // Next item must have weightNoPruning larger than currentWeight.

@@ -813,7 +813,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
     // after initialize listener.
-    int solutionNoBeforeSearch = solutionListener.solutionsNo();
+    final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
     // If constraints employ only one time execution of the part of
     // the consistency technique then the results of that part must be
@@ -946,7 +946,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
     // after initialize listener.
-    int solutionNoBeforeSearch = solutionListener.solutionsNo();
+    final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
     boolean result = store.consistency();
     store.setLevel(store.level + 1);
@@ -1060,7 +1060,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
     // after initialize listener.
-    int solutionNoBeforeSearch = solutionListener.solutionsNo();
+    final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
     boolean result = store.consistency();
     store.setLevel(store.level + 1);

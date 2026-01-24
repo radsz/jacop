@@ -159,7 +159,7 @@ public class OrBoolVector extends PrimitiveConstraint {
   public void consistency(Store store) {
 
     int start = position.value();
-    int index_01 = l - 1;
+    final int index_01 = l - 1;
 
     for (int i = start; i < l; i++) {
       if (list[i].min() == 1) {
@@ -209,7 +209,7 @@ public class OrBoolVector extends PrimitiveConstraint {
     //     store.propagationHasOccurred = false;
 
     int start = position.value();
-    int index_01 = l - 1;
+    final int index_01 = l - 1;
 
     for (int i = start; i < l; i++) {
       if (list[i].min() == 1) {

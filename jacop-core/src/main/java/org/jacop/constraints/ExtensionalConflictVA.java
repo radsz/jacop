@@ -453,8 +453,6 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     int noConflicts = 0;
 
-    int[][] supportCount = new int[list.length][];
-
     int i = 0;
 
     for (int[] t : tuplesFromConstructor) {
@@ -539,6 +537,8 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     this.values = new int[list.length][];
 
     lastofsequence = new int[list.length][][];
+
+    int[][] supportCount = new int[list.length][];
 
     for (i = 0; i < list.length; i++) {
 

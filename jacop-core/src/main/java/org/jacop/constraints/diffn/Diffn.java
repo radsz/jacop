@@ -310,7 +310,7 @@ public class Diffn extends Nooverlap {
       return;
     }
 
-    int limit = maxLimit - minLimit;
+    final int limit = maxLimit - minLimit;
 
     // overlapping rectangle for pruning
     // from start to end

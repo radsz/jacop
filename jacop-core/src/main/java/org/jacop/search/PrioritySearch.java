@@ -183,7 +183,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       initializeListener.executedAtInitialize(store);
     }
 
-    boolean result = store.consistency();
+    final boolean result = store.consistency();
     store.setLevel(store.level + 1);
     depth = store.level;
 
@@ -311,7 +311,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       initializeListener.executedAtInitialize(store);
     }
 
-    boolean result = store.consistency();
+    final boolean result = store.consistency();
     store.setLevel(store.level + 1);
     depth = store.level;
 

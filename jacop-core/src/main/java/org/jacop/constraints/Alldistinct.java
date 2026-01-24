@@ -366,8 +366,6 @@ public class Alldistinct extends Constraint
 
     // If additional pruning has occured than re-execute consistency
     // algorithm
-    boolean narrowingEvent = false;
-
     Iterator<IntVar> iter = fdvs.iterator();
 
     if (debugAll) {
@@ -377,6 +375,7 @@ public class Alldistinct extends Constraint
       IO.println("Maximum Matching " + matching);
     }
 
+    boolean narrowingEvent = false;
     while (iter.hasNext()) {
 
       IntVar V = iter.next();

@@ -292,13 +292,13 @@ public class Circuit extends Alldiff implements Stateful {
 
   int visit(int k) {
 
-    int m, min, t;
     idd++;
     val[k] = idd;
-    min = idd;
+    int min = idd;
     sccLength++;
     for (ValueEnumeration e = list[k].dom().valueEnumeration(); e.hasMoreElements(); ) {
-      t = e.nextElement() - 1;
+      int t = e.nextElement() - 1;
+      int m;
       if (val[t] == 0) {
         m = visit(t);
       } else {

@@ -49,7 +49,7 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
   @Override
   public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
-    boolean parent = super.executeAfterSolution(search, select);
+    final boolean parent = super.executeAfterSolution(search, select);
 
     StringBuilder buf = new StringBuilder("\n");
 

@@ -315,7 +315,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           // check if domains of r and s overlap
           IntDomain sOriginIdom = s.origin[m].dom();
           IntDomain sLengthIdom = s.length[m].dom();
-          int sLengthIMin = sLengthIdom.min();
+          final int sLengthIMin = sLengthIdom.min();
           int sOriginIMax = sOriginIdom.max();
           s_min = sOriginIdom.min();
           s_max = sOriginIMax + sLengthIdom.max();
@@ -491,8 +491,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
   private void narrowIth(
       int i, Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
-    int s;
-    int rLengthIMin = r.length[i].min();
+    final int rLengthIMin = r.length[i].min();
 
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MaxInt);
@@ -538,7 +537,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
       List<IntRectangle> ConsideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
-        s = ir.origin[i];
+        int s = ir.origin[i];
         // System.out.println("*** start = " + s);
 
         ConsideredRect.clear();
@@ -706,7 +705,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         IntDomain rOriginJdom = r.origin[j].dom();
         IntDomain rLengthJdom = r.length[j].dom();
         int minJ = rOriginJdom.min();
-        int maxJ = rOriginJdom.max() + rLengthJdom.min();
+        final int maxJ = rOriginJdom.max() + rLengthJdom.min();
         int durJ = rLengthJdom.min();
 
         int currentJposition = minJ;

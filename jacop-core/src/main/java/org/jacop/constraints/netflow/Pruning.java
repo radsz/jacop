@@ -291,7 +291,8 @@ public class Pruning extends Network {
 
   public void analyze(int costLimit) {
 
-    ArcCompanion companion, prev = null;
+    ArcCompanion companion;
+    ArcCompanion prev = null;
     strategy.init();
 
     companion = strategy.next();

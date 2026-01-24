@@ -207,20 +207,17 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     // The array that keep all possible states with arcs and their domains
     // If the domain is empty then the arc doesn't exist
-    IntDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
-    int[][] outdeg = new int[levels + 1][stateNumber];
+    final IntDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
+    final int[][] outdeg = new int[levels + 1][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<>();
+    final Set<FSMState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<>();
+    final Set<FSMState> tmp = new HashSet<>();
 
     // Initialization of the future state array
     // and the time-stamps with the number of active states
     this.stateLevels = new RegState[levels + 1][];
-
-    // The id's of the states are renamed to make the future graph in latex look pretty
-    int level = 0;
 
     FSMState[] array = new FSMState[stateNumber];
 
@@ -234,6 +231,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     // Start with initial state
     reachable.add(dfa.initState);
 
+    int level = 0;
     while (level < levels) {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
@@ -1330,8 +1328,8 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     this.activeLevelsTemp = new int[this.list.length + 1];
 
-    int[] currentPosition = new int[list.length];
-    int[] currentOffset = new int[list.length];
+    final int[] currentPosition = new int[list.length];
+    final int[] currentOffset = new int[list.length];
     RegState[] currentState = new RegState[list.length + 1];
 
     int currentLevel = 0;
