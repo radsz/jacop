@@ -31,16 +31,12 @@
 package org.jacop.constraints;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
-import org.jacop.util.BipartiteGraphMatching;
 
 /**
  * AlldifferentExceptZero constraint assures that all FDVs except those with zero value have
@@ -128,43 +124,8 @@ public class AlldifferentExceptZero extends Alldifferent
     }
   }
 
-  /**
-   * Check whether the constraint is not satisfied based on bipartite graph matching.
-   *
-   * @return true if constraint is not satisfied
-   */
   public boolean notSatisfied(IntVar[] vs) {
-
-    Map<Integer, Integer> valueMap = new HashMap<>();
-    int valueIndex = 0;
-
-    int[][] adj = new int[vs.length + 1][];
-    adj[0] = new int[0];
-
-    for (int i = 0; i < vs.length; i++) {
-      IntVar v = vs[i];
-
-      adj[i + 1] = new int[v.dom().getSize()];
-      int j = 0;
-      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
-        int el = e.nextElement();
-        Integer elIndex = valueMap.get(el);
-        if (elIndex == null) {
-          valueMap.put(el, valueIndex);
-          adj[i + 1][j] = valueIndex + 1;
-          valueIndex++;
-        } else {
-          adj[i + 1][j] = elIndex + 1;
-        }
-        j++;
-      }
-    }
-
-    // compute maximal value for count
-    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, vs.length, valueMap.size());
-    int maxNumberDifferent = matcher.hopcroftKarp();
-
-    return maxNumberDifferent < vs.length; // not satisfied
+    return notSatisfiedByMatching(vs);
   }
 
   @Override
@@ -173,13 +134,7 @@ public class AlldifferentExceptZero extends Alldifferent
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : AlldifferentExceptZero([");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
+    appendArrayToString(result, list);
     result.append("])");
 
     return result.toString();

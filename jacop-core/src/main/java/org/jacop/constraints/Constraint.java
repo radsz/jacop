@@ -35,18 +35,23 @@ import static java.util.stream.Collectors.joining;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.SwitchesPruningLogging;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.util.BipartiteGraphMatching;
 
 /*
  * Standard unified interface/abstract class for all constraints.
@@ -473,4 +478,47 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
   /** It is executed after the constraint has failed. It allows to clean some data structures. */
   public void cleanAfterFailure() {}
+
+  protected static void appendArrayToString(StringBuilder sb, Object[] array) {
+    for (int i = 0; i < array.length; i++) {
+      sb.append(array[i]);
+      if (i < array.length - 1) {
+        sb.append(", ");
+      }
+    }
+  }
+
+  protected static int computeMaxBipartiteMatching(IntVar[] vs) {
+    Map<Integer, Integer> valueMap = new HashMap<>();
+    int valueIndex = 0;
+
+    int[][] adj = new int[vs.length + 1][];
+    adj[0] = new int[0];
+
+    for (int i = 0; i < vs.length; i++) {
+      IntVar v = vs[i];
+
+      adj[i + 1] = new int[v.dom().getSize()];
+      int j = 0;
+      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int el = e.nextElement();
+        Integer elIndex = valueMap.get(el);
+        if (elIndex == null) {
+          valueMap.put(el, valueIndex);
+          adj[i + 1][j] = valueIndex + 1;
+          valueIndex++;
+        } else {
+          adj[i + 1][j] = elIndex + 1;
+        }
+        j++;
+      }
+    }
+
+    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, vs.length, valueMap.size());
+    return matcher.hopcroftKarp();
+  }
+
+  protected static boolean notSatisfiedByMatching(IntVar[] vs) {
+    return computeMaxBipartiteMatching(vs) < vs.length;
+  }
 }

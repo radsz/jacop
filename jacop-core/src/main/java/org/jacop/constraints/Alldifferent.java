@@ -98,35 +98,37 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
 
     int groundPos = grounded.value();
     do {
-
       store.propagationHasOccurred = false;
+      groundPos = processGroundedVariables(store, groundPos);
+    } while (store.propagationHasOccurred);
+    grounded.update(groundPos);
+  }
 
-      LinkedHashSet<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<>();
+  protected int processGroundedVariables(Store store, int groundPos) {
+    LinkedHashSet<IntVar> fdvs = variableQueue;
+    variableQueue = new LinkedHashSet<>();
 
-      for (IntVar Q : fdvs) {
-        if (Q.singleton()) {
-          int qPos = positionMapping.get(Q);
-          if (qPos > groundPos) {
-            list[qPos] = list[groundPos];
-            list[groundPos] = Q;
-            positionMapping.put(Q, groundPos);
-            positionMapping.put(list[qPos], qPos);
-            groundPos++;
-            for (int i = groundPos; i < list.length; i++) {
-              list[i].domain.inComplement(store.level, list[i], Q.min());
-            }
-          } else if (qPos == groundPos) {
-            groundPos++;
-            for (int i = groundPos; i < list.length; i++) {
-              list[i].domain.inComplement(store.level, list[i], Q.min());
-            }
+    for (IntVar Q : fdvs) {
+      if (Q.singleton()) {
+        int qPos = positionMapping.get(Q);
+        if (qPos > groundPos) {
+          list[qPos] = list[groundPos];
+          list[groundPos] = Q;
+          positionMapping.put(Q, groundPos);
+          positionMapping.put(list[qPos], qPos);
+          groundPos++;
+          for (int i = groundPos; i < list.length; i++) {
+            list[i].domain.inComplement(store.level, list[i], Q.min());
+          }
+        } else if (qPos == groundPos) {
+          groundPos++;
+          for (int i = groundPos; i < list.length; i++) {
+            list[i].domain.inComplement(store.level, list[i], Q.min());
           }
         }
       }
-
-    } while (store.propagationHasOccurred);
-    grounded.update(groundPos);
+    }
+    return groundPos;
   }
 
   @Override
@@ -258,13 +260,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : alldifferent([");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
+    appendArrayToString(result, list);
     result.append("])");
 
     return result.toString();

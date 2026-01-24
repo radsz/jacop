@@ -133,13 +133,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : variableTrace([");
-
-    for (int i = 0; i < vars.length; i++) {
-      result.append(vars[i]);
-      if (i < vars.length - 1) {
-        result.append(", ");
-      }
-    }
+    appendArrayToString(result, vars);
     result.append("])");
 
     return result.toString();

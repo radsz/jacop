@@ -241,13 +241,7 @@ public class Subcircuit extends Alldiff {
 
     StringBuilder result = new StringBuilder(id());
     result.append(" : subcircuit([");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
+    appendArrayToString(result, list);
     result.append("])");
 
     return result.toString();

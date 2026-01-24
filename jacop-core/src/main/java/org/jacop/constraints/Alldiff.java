@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
@@ -143,30 +142,7 @@ public class Alldiff extends Alldifferent {
 
       int groundPos = grounded.value();
       while (!variableQueue.isEmpty()) {
-
-        LinkedHashSet<IntVar> fdvs = variableQueue;
-        variableQueue = new LinkedHashSet<>();
-
-        for (IntVar Q : fdvs) {
-          if (Q.singleton()) {
-            int qPos = positionMapping.get(Q);
-            if (qPos > groundPos) {
-              list[qPos] = list[groundPos];
-              list[groundPos] = Q;
-              positionMapping.put(Q, groundPos);
-              positionMapping.put(list[qPos], qPos);
-              groundPos++;
-              for (int i = groundPos; i < list.length; i++) {
-                list[i].domain.inComplement(store.level, list[i], Q.min());
-              }
-            } else if (qPos == groundPos) {
-              groundPos++;
-              for (int i = groundPos; i < list.length; i++) {
-                list[i].domain.inComplement(store.level, list[i], Q.min());
-              }
-            }
-          }
-        }
+        groundPos = processGroundedVariables(store, groundPos);
       }
       grounded.update(groundPos);
 
@@ -321,14 +297,7 @@ public class Alldiff extends Alldifferent {
 
     StringBuilder result = new StringBuilder(id());
     result.append(" : Alldiff([");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
+    appendArrayToString(result, list);
     result.append("])");
 
     return result.toString();
