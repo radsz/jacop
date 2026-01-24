@@ -33,11 +33,11 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * Graph coloring problem.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * Graph coloring problem.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object GraphColoringS extends App with jacop {
   val size = 4
   val v = Array.tabulate(size)(i => new IntVar("v" + i, 1, size))

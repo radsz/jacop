@@ -33,13 +33,13 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object TinyTSP extends App with jacop {
 
   setPrecision(1e-12)
@@ -62,7 +62,7 @@ object TinyTSP extends App with jacop {
   val result = minimize(search(visit, input_order, indomain_min), distance, () => printValue())
   statistics()
 
-  def printValue() : Unit = {
+  def printValue(): Unit = {
     print(" 1 -> ")
     var index = 1
     for (i <- 1 to N) {

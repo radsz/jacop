@@ -60,6 +60,12 @@ import org.jacop.core.Var;
 
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
+  /**
+   * It specifies if upon the failure of the constraint, all variables in the constraint scope
+   * should have their weight increased.
+   */
+  public final boolean increaseWeight = true;
+
   public boolean trace = SwitchesPruningLogging.traceConstraint;
 
   /**
@@ -69,12 +75,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   public int numberId;
 
   public Set<PrimitiveConstraint> constraintScope;
-
-  /**
-   * It specifies if upon the failure of the constraint, all variables in the constraint scope
-   * should have their weight increased.
-   */
-  public final boolean increaseWeight = true;
 
   /** It specifies the event which must occur in order for the consistency function to be called. */
   public Hashtable<Var, Integer> consistencyPruningEvents;

@@ -65,15 +65,14 @@ public class Assignment extends Constraint
   /** It specifies a list of variables x. */
   public final IntVar[] x;
 
-  final Map<IntVar, Integer> ds;
-  final Map<IntVar, Integer> xs;
-
   /** It specifies a shift applied to variables d. */
   public final int shiftD;
 
   /** It specifies a shift applied to variables x. */
   public final int shiftX;
 
+  final Map<IntVar, Integer> ds;
+  final Map<IntVar, Integer> xs;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;

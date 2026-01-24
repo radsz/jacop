@@ -68,6 +68,11 @@ public class CumulativeBasic extends Constraint {
    * All tasks of the constraint
    */
   final TaskView[] taskNormal;
+  private final Comparator<Event> eventComparator =
+      (Event o1, Event o2) -> {
+        int dateDiff = o1.date() - o2.date();
+        return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
+      };
 
   /**
    * It specifies whether there possibly exist tasks that have duration or resource variable min
@@ -76,11 +81,6 @@ public class CumulativeBasic extends Constraint {
   boolean possibleZeroTasks;
 
   CumulativePrimary cumulativeForConstants;
-  private final Comparator<Event> eventComparator =
-      (Event o1, Event o2) -> {
-        int dateDiff = o1.date() - o2.date();
-        return dateDiff == 0 ? (o1.type() - o2.type()) : dateDiff;
-      };
 
   /**
    * It creates a cumulative constraint.

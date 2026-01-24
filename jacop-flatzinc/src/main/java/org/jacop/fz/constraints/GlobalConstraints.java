@@ -143,10 +143,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
   final Store store;
   final Support support;
-
-  boolean useDisjunctions;
-  boolean useCumulativeUnary;
-
   final Comparator<ArrayList<Integer>> rowComparator =
       (o1, o2) -> {
         for (int i = 0; i < o1.size(); i++) {
@@ -158,6 +154,8 @@ class GlobalConstraints implements ParserTreeConstants {
         }
         return 0; // all equal
       };
+  boolean useDisjunctions;
+  boolean useCumulativeUnary;
   ArrayList<Pair> duplicates;
 
   public GlobalConstraints(Support support) {

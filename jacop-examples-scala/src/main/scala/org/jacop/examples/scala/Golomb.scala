@@ -33,13 +33,13 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object Golomb extends App with jacop {
 
   val start = System.currentTimeMillis()
@@ -49,7 +49,7 @@ object Golomb extends App with jacop {
   val n = m * m
 
   val mark = //: Array[IntVar] =
-  //     for (i <- Array.range(0, m)) yield new IntVar("mark"+i, 0, n)
+    //     for (i <- Array.range(0, m)) yield new IntVar("mark"+i, 0, n)
     Array.tabulate(m)(i => new IntVar("mark" + i, 0, n))
 
   val differences = // : Array[IntVar] =

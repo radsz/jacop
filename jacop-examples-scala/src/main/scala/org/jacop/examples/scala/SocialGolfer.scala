@@ -33,13 +33,13 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object SocialGolfer extends jacop {
 
   // 2, 7, 4
@@ -55,12 +55,12 @@ object SocialGolfer extends jacop {
   var vars: List[SetVar] = null
 
   /**
-    *
-    * It runs a number of social golfer problems.
-    *
-    * @param args - command's arguments
-    */
-  def main(args: Array[String]) : Unit = {
+   *
+   * It runs a number of social golfer problems.
+   *
+   * @param args - command's arguments
+   */
+  def main(args: Array[String]): Unit = {
 
     setup(3, 2, 2)
     model()
@@ -134,13 +134,13 @@ object SocialGolfer extends jacop {
   }
 
   /**
-    * It sets the parameters for the model creation function.
-    *
-    * @param w - weeks
-    * @param g - groups
-    * @param p - players
-    */
-  def setup(w: Int, g: Int, p: Int) : Unit = {
+   * It sets the parameters for the model creation function.
+   *
+   * @param w - weeks
+   * @param g - groups
+   * @param p - players
+   */
+  def setup(w: Int, g: Int, p: Int): Unit = {
 
     weeks = w
     groups = g
@@ -148,7 +148,7 @@ object SocialGolfer extends jacop {
 
   }
 
-  def model() : Unit = {
+  def model(): Unit = {
 
     val N = groups * players
 
@@ -207,7 +207,7 @@ object SocialGolfer extends jacop {
 
   }
 
-  def solve() : Unit = {
+  def solve(): Unit = {
 
     val tread = java.lang.Thread.currentThread()
     val b = java.lang.management.ManagementFactory.getThreadMXBean()

@@ -29,9 +29,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class SmallDenseDomainTest {
 
-  private Method prepareMethod;
   @Mock IntVar var;
   IntDomain intervalDomain;
+  private Method prepareMethod;
 
   static Collection<String> parametricTest() {
     return Arrays.asList("prepareSmallDenseDomain", "prepareIntervalDomain");

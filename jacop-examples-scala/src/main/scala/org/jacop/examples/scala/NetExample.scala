@@ -33,13 +33,13 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object NetExample extends App with jacop {
 
   var vars: Array[IntVar] = null
@@ -52,7 +52,7 @@ object NetExample extends App with jacop {
   assignment()
 
 
-  def simpleNet() : Unit = {
+  def simpleNet(): Unit = {
     var T1: Long = 0
     var T2: Long = 0
     var T: Long = 0
@@ -124,7 +124,7 @@ object NetExample extends App with jacop {
 
   }
 
-  def transportationProblem() : Unit = {
+  def transportationProblem(): Unit = {
     var T1: Long = 0
     var T2: Long = 0
     var T: Long = 0
@@ -210,7 +210,7 @@ object NetExample extends App with jacop {
     System.out.println("\n\t*** Execution time = " + T + " ms")
   }
 
-  def assignment() : Unit = {
+  def assignment(): Unit = {
 
     var T1: Long = 0
     var T2: Long = 0

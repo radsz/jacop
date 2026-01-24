@@ -6,7 +6,8 @@ todos: []
 
 # Multi-Module Maven Migration Plan for JaCoP
 
-This plan migrates the single-module JaCoP project (`jacop/pom.xml`) to a multi-module structure as specified in `MODULE_STRUCTURE_PROPOSAL.md`.
+This plan migrates the single-module JaCoP project (`jacop/pom.xml`) to a multi-module structure as specified in
+`MODULE_STRUCTURE_PROPOSAL.md`.
 
 ## Phase 1:
 
@@ -18,12 +19,12 @@ Already done, go to phase 2.
 
 - Move current `jacop/pom.xml` to `jacop/pom.xml.old` (backup)
 - Create new parent POM at `jacop/pom.xml`:
-  - Change `<packaging>` from `jar` to `pom`
-  - Change `<artifactId>` from `jacop` to `jacop-parent`
-  - Move all `<pluginManagement>`, `<properties>`, `<profiles>`, `<build>` configuration to parent
-  - Move `<dependencies>` (JUnit, Mockito, SLF4J) to parent with appropriate scopes
-  - Add `<modules>` section listing all 9 modules
-  - Keep `<developers>`, `<licenses>`, `<scm>`, `<distributionManagement>` in parent
+    - Change `<packaging>` from `jar` to `pom`
+    - Change `<artifactId>` from `jacop` to `jacop-parent`
+    - Move all `<pluginManagement>`, `<properties>`, `<profiles>`, `<build>` configuration to parent
+    - Move `<dependencies>` (JUnit, Mockito, SLF4J) to parent with appropriate scopes
+    - Add `<modules>` section listing all 9 modules
+    - Keep `<developers>`, `<licenses>`, `<scm>`, `<distributionManagement>` in parent
 
 ### 2.2 Update properties and profiles
 
@@ -89,8 +90,10 @@ Make sure to use git rename command for every file move so git diff is minimal.
 - `src/test/java/org/jacop/SingleConstraintTest.java` → `jacop-core/src/test/java/org/jacop/SingleConstraintTest.java`
 - `src/test/java/org/jacop/QueueForwardTest.java` → `jacop-core/src/test/java/org/jacop/QueueForwardTest.java`
 - `src/test/java/org/jacop/SmallDenseDomainTest.java` → `jacop-core/src/test/java/org/jacop/SmallDenseDomainTest.java`
-- `src/test/java/org/jacop/ConstraintStatusKnownAtImposition.java` → `jacop-core/src/test/java/org/jacop/ConstraintStatusKnownAtImposition.java`
-- `src/test/java/org/jacop/TestHelper.java` → `jacop-core/src/test/java/org/jacop/TestHelper.java` (if used by core tests)
+- `src/test/java/org/jacop/ConstraintStatusKnownAtImposition.java` →
+  `jacop-core/src/test/java/org/jacop/ConstraintStatusKnownAtImposition.java`
+- `src/test/java/org/jacop/TestHelper.java` → `jacop-core/src/test/java/org/jacop/TestHelper.java` (if used by core
+  tests)
 
 ### 4.2 Move floats module files (`jacop-floats`)
 
@@ -126,7 +129,8 @@ Make sure to use git rename command for every file move so git diff is minimal.
 
 ### 4.7 Move Java examples (`jacop-examples-java`)
 
-- `src/main/java/org/jacop/examples/*.java` (excluding `examples/scala/`) → `jacop-examples-java/src/main/java/org/jacop/examples/`
+- `src/main/java/org/jacop/examples/*.java` (excluding `examples/scala/`) →
+  `jacop-examples-java/src/main/java/org/jacop/examples/`
 - `src/main/java/org/jacop/examples/fd/` → `jacop-examples-java/src/main/java/org/jacop/examples/fd/`
 - `src/main/java/org/jacop/examples/floats/` → `jacop-examples-java/src/main/java/org/jacop/examples/floats/`
 - `src/main/java/org/jacop/examples/flatzinc/` → `jacop-examples-java/src/main/java/org/jacop/examples/flatzinc/`
@@ -217,8 +221,8 @@ Make sure to use git rename command for every file move so git diff is minimal.
 ### 6.4 JaCoCo plugin
 
 - Update excludes to reference new module paths:
-  - `org/jacop/examples/scala/**/*.class` → in `jacop-examples-scala`
-  - `org/jacop/scala/**/*.class` → in `jacop-scala`
+    - `org/jacop/examples/scala/**/*.class` → in `jacop-examples-scala`
+    - `org/jacop/scala/**/*.class` → in `jacop-scala`
 
 ### 6.5 Checkstyle plugin
 
@@ -242,7 +246,8 @@ Make sure to use git rename command for every file move so git diff is minimal.
 
 ### 8.1 Preserve root files
 
-- Keep in `jacop/` root: `.gitignore`, `.travis.yml`, `CHANGELOG`, `LICENSE.md`, `README.md`, `GITWORKFLOW.md`, `change.bash`, `properties.txt`
+- Keep in `jacop/` root: `.gitignore`, `.travis.yml`, `CHANGELOG`, `LICENSE.md`, `README.md`, `GITWORKFLOW.md`,
+  `change.bash`, `properties.txt`
 - Keep `doc/` directory in root (shared documentation)
 
 ### 8.2 Update CI/CD

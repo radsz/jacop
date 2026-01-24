@@ -1,4 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
@@ -86,7 +86,8 @@
         <maven.compiler.version>3.14.1</maven.compiler.version>
         <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
         <maven.checkstyle.tool.version>13.0.0</maven.checkstyle.tool.version>
-        <checkstyle.suppressions.file>${maven.multiModuleProjectDirectory}/doc/suppression.xml</checkstyle.suppressions.file>
+        <checkstyle.suppressions.file>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+        </checkstyle.suppressions.file>
         <jacoco.version>0.8.14</jacoco.version>
         <spotless.version>3.1.0</spotless.version>
         <google.java.format.version>1.33.0</google.java.format.version>
@@ -124,9 +125,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.version}</version>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -155,9 +156,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.version}</version>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -186,9 +187,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.version}</version>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -217,9 +218,9 @@ setup to run configuration. -->
             <build>
                 <plugins>
                     <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.version}</version>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven.surefire.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -296,7 +297,8 @@ setup to run configuration. -->
                     </dependencies>
                     <configuration>
                         <configLocation>doc/checkstyle.xml</configLocation>
-                        <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml</suppressionsLocation>
+                        <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+                        </suppressionsLocation>
                     </configuration>
                 </plugin>
 
@@ -425,7 +427,9 @@ setup to run configuration. -->
                         <recipe>org.openrewrite.staticanalysis.ReplaceStringBuilderWithString</recipe>
                         <recipe>org.openrewrite.staticanalysis.ReplaceStringConcatenationWithStringValueOf</recipe>
                         <recipe>org.openrewrite.staticanalysis.ReplaceTextBlockWithString</recipe>
-                        <recipe>org.openrewrite.staticanalysis.ReplaceValidateNotNullHavingVarargsWithObjectsRequireNonNull</recipe>
+                        <recipe>
+                            org.openrewrite.staticanalysis.ReplaceValidateNotNullHavingVarargsWithObjectsRequireNonNull
+                        </recipe>
                         <recipe>org.openrewrite.staticanalysis.ReplaceWeekYearWithYear</recipe>
                         <recipe>org.openrewrite.staticanalysis.SimplifyArraysAsList</recipe>
                         <recipe>org.openrewrite.staticanalysis.SimplifyBooleanExpression</recipe>
@@ -514,7 +518,7 @@ setup to run configuration. -->
                     <compilerArgument>-Xlint:all</compilerArgument>
                     <showWarnings>false</showWarnings>
                     <!--  <showDeprecation>true</showDeprecation>  -->
-          <release>25</release>
+                    <release>25</release>
                 </configuration>
             </plugin>
 
@@ -560,7 +564,7 @@ setup to run configuration. -->
                 <version>${maven.javadoc.version}</version>
 
                 <configuration>
-                  <failOnWarnings>false</failOnWarnings>
+                    <failOnWarnings>false</failOnWarnings>
                     <!--- Possible solution to not print any warrnings
                         for Java 1.8 -->
                     <sourceFileExcludes>
@@ -578,24 +582,24 @@ setup to run configuration. -->
                 </configuration>
                 <executions>
                     <execution>
-                      <id>attach-javadocs</id>
-                      <configuration>
-                        <failOnWarnings>false</failOnWarnings>
-                        <doclint>none</doclint>
-                      </configuration>
-                      <goals>
-                        <goal>jar</goal>
-                      </goals>
+                        <id>attach-javadocs</id>
+                        <configuration>
+                            <failOnWarnings>false</failOnWarnings>
+                            <doclint>none</doclint>
+                        </configuration>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
 
             <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.version}</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.version}</version>
                 <configuration>
-                  <rerunFailingTestsCount>1</rerunFailingTestsCount>
+                    <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
@@ -680,12 +684,13 @@ setup to run configuration. -->
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                            <version>13.0.0</version>
+                        <version>13.0.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>
                     <configLocation>${maven.multiModuleProjectDirectory}/doc/checkstyle.xml</configLocation>
-                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml</suppressionsLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+                    </suppressionsLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
@@ -746,8 +751,8 @@ setup to run configuration. -->
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${maven.javadoc.version}</version>
                 <configuration>
-                  <failOnWarnings>false</failOnWarnings>
-                  <doclint>none</doclint>
+                    <failOnWarnings>false</failOnWarnings>
+                    <doclint>none</doclint>
                 </configuration>
             </plugin>
             <plugin>
@@ -771,7 +776,8 @@ setup to run configuration. -->
                 </reportSets>
                 <configuration>
                     <configLocation>doc/checkstyle.xml</configLocation>
-                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml</suppressionsLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/doc/suppression.xml
+                    </suppressionsLocation>
                 </configuration>
             </plugin>
             <plugin>

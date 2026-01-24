@@ -33,18 +33,14 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object Transistors extends App with jacop {
-
-  def ntran(b: BoolVar, x: BoolVar, y: BoolVar) = b -> (x #= y)
-
-  def ptran(b: BoolVar, x: BoolVar, y: BoolVar) = (~b) -> (x #= y)
 
   val a = new BoolVar("a")
   val b = new BoolVar("b")
@@ -56,6 +52,9 @@ object Transistors extends App with jacop {
   val q = Array.tabulate(4)(i => new BoolVar("q" + i))
   val one = true //new BoolVar("1", 1, 1)
   val zero = false //new BoolVar("0", 0, 0)
+  val result = satisfyAll(search(List(a, b, c, sum, carry), input_order, indomain_min))
+
+  def ntran(b: BoolVar, x: BoolVar, y: BoolVar) = b -> (x #= y)
 
   // sum part
   ptran(nca, t(0), one)
@@ -85,7 +84,7 @@ object Transistors extends App with jacop {
   ntran(b, q(2), zero)
   ntran(a, q(3), zero)
 
-  val result = satisfyAll(search(List(a, b, c, sum, carry), input_order, indomain_min))
+  def ptran(b: BoolVar, x: BoolVar, y: BoolVar) = (~b) -> (x #= y)
 
   println(s"$a $b   $c  $sum  $carry")
 

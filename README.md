@@ -11,6 +11,7 @@ JaCoP
 Java Constraint Programming (JaCoP) solver
 
 JaCoP solver is Java-based open source solver developed and maintained mainly by two people
+
 - Krzysztof Kuchcinski, Dept. of Computer Science, Lund University, Sweden.
 - Radoslaw Szymanek - LeShop.ch, Switzerland.
 
@@ -55,13 +56,14 @@ JaCoP is also available from maven repository. For details, please check INSTALL
 Contributions
 ======
 
-We can only accept contributions (pull/merge requests) with signed Contributions License Agreement. Please read the document CLA_JaCoP in doc directory. Please use the checkstyle provided also in doc directory.
+We can only accept contributions (pull/merge requests) with signed Contributions License Agreement. Please read the
+document CLA_JaCoP in doc directory. Please use the checkstyle provided also in doc directory.
 Please make pull/merge requests only to develop branch. We do not accept other pull requests.
 
 Installation Guide
 ====
 
-The easiest way to make jar file for JaCoP is to use maven. First, install maven on your computer and then write 
+The easiest way to make jar file for JaCoP is to use maven. First, install maven on your computer and then write
 
 mvn install -DskipTests
 
@@ -90,9 +92,9 @@ To use JaCoP with maven you can just include it as a dependency in your `pom.xml
         <version>4.7.0</version>
     </dependency>
 
-From the version 4.4.0, JaCoP is uploaded to Maven Central so the above is the only thing you need to do. 
+From the version 4.4.0, JaCoP is uploaded to Maven Central so the above is the only thing you need to do.
 
-For older versions of JaCoP (4.3 and older) you also need to add the following information 
+For older versions of JaCoP (4.3 and older) you also need to add the following information
 about CSLTH Maven repository to your `pom.xml` as well
 
     <repositories>
@@ -113,12 +115,15 @@ about CSLTH Maven repository to your `pom.xml` as well
 Getting started
 ======
 
-Probably the easiest way to start is to clone this repo. Afterwards, open the Maven project in IDE like Intelij IDEA and run examples available in directory $PATH_TO_GIT_REPO\src\main\java\org\jacop\examples.
+Probably the easiest way to start is to clone this repo. Afterwards, open the Maven project in IDE like Intelij IDEA and
+run examples available in directory $PATH_TO_GIT_REPO\src\main\java\org\jacop\examples.
 
-Afterwards, you can copy parts of the provided examples into your own project add JaCoP maven dependency and start writing your own constraint programming examples.
+Afterwards, you can copy parts of the provided examples into your own project add JaCoP maven dependency and start
+writing your own constraint programming examples.
 
 
 LICENSE
 ======
 
-It is provided in a separate file LICENSE.md. We can also provide JaCoP under different commercial license if open source license is not appropriate for your usage.
+It is provided in a separate file LICENSE.md. We can also provide JaCoP under different commercial license if open
+source license is not appropriate for your usage.

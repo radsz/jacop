@@ -34,23 +34,23 @@ import java.io.{BufferedReader, FileNotFoundException, FileReader, IOException}
 import java.util.StringTokenizer
 
 /**
-  *
-  * It solves the Mixed Multi-Unit Combinatorial Auctions.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
-  * @version 3.0
-  *
-  *
-  *          The idea originated from reading the following paper
-  *          where the first attempt to use CP was presented.
-  *
-  *          Comparing Winner Determination Algorithms for Mixed
-  *          Multi-Unit Combinatorial Auctions by Brammert Ottens
-  *          Ulle Endriss
-  *
-  */
+ *
+ * It solves the Mixed Multi-Unit Combinatorial Auctions.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 3.0
+ *
+ *
+ *          The idea originated from reading the following paper
+ *          where the first attempt to use CP was presented.
+ *
+ *          Comparing Winner Determination Algorithms for Mixed
+ *          Multi-Unit Combinatorial Auctions by Brammert Ottens
+ *          Ulle Endriss
+ *
+ */
 
 import org.jacop.scala._
 
@@ -59,106 +59,95 @@ import scala.collection.mutable.ArrayBuffer
 object MUCA extends jacop {
 
   /**
-    * ArrayBuffer of bids issued by different bidders.
-    * Each bidder issues an ArrayBuffer of xor bids.
-    * Each Xor bid is a list of transformations.
-    */
+   * It specifies the minimal value for the cost.
+   */
+  val minCost = -100000
+  /**
+   * It specifies the maximal value for the cost.
+   */
+  val maxCost = 100000
+  /**
+   * The maximal number of products.
+   */
+  val maxProducts = 100
+  /**
+   * ArrayBuffer of bids issued by different bidders.
+   * Each bidder issues an ArrayBuffer of xor bids.
+   * Each Xor bid is a list of transformations.
+   */
   var bids: ArrayBuffer[ArrayBuffer[ArrayBuffer[Transformation]]] = null
-
   /**
-    * For each bidder and each xor bid there is an
-    * integer representing a cost of the xor bid.
-    */
+   * For each bidder and each xor bid there is an
+   * integer representing a cost of the xor bid.
+   */
   var costs: ArrayBuffer[ArrayBuffer[Int]] = null
-
   /**
-    * It specifies the initial quantities of goods.
-    */
+   * It specifies the initial quantities of goods.
+   */
   var initialQuantity: List[Int] = List()
-
   /**
-    * It specifies the minimal quantities of items seeked to achieve.
-    */
+   * It specifies the minimal quantities of items seeked to achieve.
+   */
   var finalQuantity: List[Int] = List()
-
   /**
-    * It specifies number of goods which are in the focus of the auction.
-    */
+   * It specifies number of goods which are in the focus of the auction.
+   */
   var noGoods = 7
-
   /**
-    * It specifies the minimal possible delta of goods for any transformation.
-    */
+   * It specifies the minimal possible delta of goods for any transformation.
+   */
   var minDelta = -10
-
   /**
-    * It specifies the maximal possible delta of goods for any transformation.
-    */
+   * It specifies the maximal possible delta of goods for any transformation.
+   */
 
   var maxDelta = 10
-
-  /**
-    * It specifies the minimal value for the cost.
-    */
-  val minCost = -100000
-
-  /**
-    * It specifies the maximal value for the cost.
-    */
-  val maxCost = 100000
-
   var cost: IntVar = null
-
   /**
-    * The maximal number of products.
-    */
-  val maxProducts = 100
-
-  /**
-    * For each bidder it specifies variable representing
-    * the cost of the chosen xor bid.
-    */
+   * For each bidder it specifies variable representing
+   * the cost of the chosen xor bid.
+   */
   var bidCosts: List[IntVar] = null
 
   /**
-    * It specifies the sequence of transitions used by an auctioneer.
-    */
+   * It specifies the sequence of transitions used by an auctioneer.
+   */
   var transitions: Array[IntVar] = null
 
   /**
-    * It specifies the maximal number of transformations used by the auctioneer.
-    */
+   * It specifies the maximal number of transformations used by the auctioneer.
+   */
   var maxNoTransformations: Int = 0
 
   /**
-    * For each transition and each good it specifies the
-    * delta change of that good before the transition takes place.
-    */
+   * For each transition and each good it specifies the
+   * delta change of that good before the transition takes place.
+   */
   var deltasI: Array[Array[IntVar]] = null
 
   /**
-    * For each transition and each good it specifies the
-    * delta change of that good after the transition takes place.
-    */
+   * For each transition and each good it specifies the
+   * delta change of that good after the transition takes place.
+   */
   var deltasO: Array[Array[IntVar]] = null
 
   /**
-    * It specifies the number of goods after the last transition.
-    */
+   * It specifies the number of goods after the last transition.
+   */
   var summa: Array[IntVar] = null
 
   /**
-    * It reads auction problem description from the file.
-    */
+   * It reads auction problem description from the file.
+   */
   var filename: String = "./ExamplesJaCoP/testset3.auct"
 
   /**
-    * It executes the program which solve the supplied auction problem or
-    * solves three problems available within the files.
-    *
-    * @param args the first argument specifies the name of the file containing the problem description.
-    */
-  def main(args: Array[String]) : Unit = {
+   * It executes the program which solve the supplied auction problem or
+   * solves three problems available within the files.
+   *
+   * @param args the first argument specifies the name of the file containing the problem description.
+   */
+  def main(args: Array[String]): Unit = {
 
     if (args.length > 0)
       filename = args(0)
@@ -169,7 +158,7 @@ object MUCA extends jacop {
   }
 
 
-  def model() : Unit = {
+  def model(): Unit = {
 
     readAuction(filename)
 
@@ -336,14 +325,14 @@ object MUCA extends jacop {
 
 
   /**
-    * It executes special master-slave search. The master search
-    * uses costs variables and maxregret criteria to choose an
-    * interesting bids. The second search (slave) looks for the
-    * sequence of chosen transactions such as that all constraints
-    * concerning goods quantity (deltas of transitions) are respected.
-    *
-    * @return true if there is a solution, false otherwise.
-    */
+   * It executes special master-slave search. The master search
+   * uses costs variables and maxregret criteria to choose an
+   * interesting bids. The second search (slave) looks for the
+   * sequence of chosen transactions such as that all constraints
+   * concerning goods quantity (deltas of transitions) are respected.
+   *
+   * @return true if there is a solution, false otherwise.
+   */
   def searchSpecial: Boolean = {
 
     val search1 = search(bidCosts, max_regret, indomain_min)
@@ -370,67 +359,12 @@ object MUCA extends jacop {
     result
   }
 
-  class Delta(var input: Int, var output: Int) {
-
-    // Both must be positive, even if input means consuming.
-
-    // negative means consumption, positive means production.
-    def this(delta: Int) = {
-      this(if (delta > 0) 0 else -delta, if (delta > 0) delta else 0)
-    }
-  }
-
-
-  class Transformation {
-
-    var goodsIds: ArrayBuffer[Int] = new ArrayBuffer[Int]()
-    var delta: ArrayBuffer[Delta] = new ArrayBuffer[Delta]()
-    var id: Int = 0
-
-    def getDelta(goodId: Int): Int = {
-
-      for (i <- 0 until goodsIds.size)
-        if (goodsIds(i) == goodId)
-          return delta(i).output - delta(i).input
-
-      0
-    }
-
-    def getDeltaInput(goodId: Int): Int = {
-
-      for (i <- 0 until goodsIds.size)
-        if (goodsIds(i) == goodId)
-          return delta(i).input
-
-      0
-    }
-
-    def getDeltaOutput(goodId: Int): Int = {
-
-      for (i <- 0 until goodsIds.size)
-        if (goodsIds(i) == goodId)
-          return delta(i).output
-
-      0
-    }
-
-    override def toString: String = {
-
-      var st = "*** "
-      for (i <- 0 until goodsIds.size)
-        st += "id =" + goodsIds(i) + "(" + getDeltaInput(goodsIds(i)) + ", " + getDeltaOutput(goodsIds(i)) + ") "
-      st
-    }
-
-  }
-
-
   /**
-    * It reads the auction problem from the file.
-    *
-    * @param filename file describing the auction problem.
-    */
-  def readAuction(filename: String) : Unit = {
+   * It reads the auction problem from the file.
+   *
+   * @param filename file describing the auction problem.
+   */
+  def readAuction(filename: String): Unit = {
 
     noGoods = 0
 
@@ -588,6 +522,59 @@ object MUCA extends jacop {
 
     //     println ("bids = "+bids);
     //     println ("costs = "+costs);
+
+  }
+
+  class Delta(var input: Int, var output: Int) {
+
+    // Both must be positive, even if input means consuming.
+
+    // negative means consumption, positive means production.
+    def this(delta: Int) = {
+      this(if (delta > 0) 0 else -delta, if (delta > 0) delta else 0)
+    }
+  }
+
+  class Transformation {
+
+    var goodsIds: ArrayBuffer[Int] = new ArrayBuffer[Int]()
+    var delta: ArrayBuffer[Delta] = new ArrayBuffer[Delta]()
+    var id: Int = 0
+
+    def getDelta(goodId: Int): Int = {
+
+      for (i <- 0 until goodsIds.size)
+        if (goodsIds(i) == goodId)
+          return delta(i).output - delta(i).input
+
+      0
+    }
+
+    override def toString: String = {
+
+      var st = "*** "
+      for (i <- 0 until goodsIds.size)
+        st += "id =" + goodsIds(i) + "(" + getDeltaInput(goodsIds(i)) + ", " + getDeltaOutput(goodsIds(i)) + ") "
+      st
+    }
+
+    def getDeltaInput(goodId: Int): Int = {
+
+      for (i <- 0 until goodsIds.size)
+        if (goodsIds(i) == goodId)
+          return delta(i).input
+
+      0
+    }
+
+    def getDeltaOutput(goodId: Int): Int = {
+
+      for (i <- 0 until goodsIds.size)
+        if (goodsIds(i) == goodId)
+          return delta(i).output
+
+      0
+    }
 
   }
 

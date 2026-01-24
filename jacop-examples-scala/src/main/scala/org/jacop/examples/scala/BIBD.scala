@@ -33,37 +33,37 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.4
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.4
+ */
 object BIBD extends jacop {
 
   /**
-    * It specifies number of rows in the incidence matrix.
-    */
+   * It specifies number of rows in the incidence matrix.
+   */
   var v = 7
   /**
-    * It specifies number of columns in the incidence matrix.
-    */
+   * It specifies number of columns in the incidence matrix.
+   */
   var b = 7
   /**
-    * It specifies number of ones in each row.
-    */
+   * It specifies number of ones in each row.
+   */
   var r = 3
   /**
-    * It specifies number of ones in each column.
-    */
+   * It specifies number of ones in each column.
+   */
   var k = 3
   /**
-    * It specifies the value of the scalar product of any two distinct rows.
-    */
+   * It specifies the value of the scalar product of any two distinct rows.
+   */
   var lambda = 1
 
-  def main(args: Array[String]) : Unit = {
+  def main(args: Array[String]): Unit = {
 
     if (args.length > 1) {
       try {
@@ -80,7 +80,7 @@ object BIBD extends jacop {
     model()
   }
 
-  def model() : Unit = {
+  def model(): Unit = {
 
     val x = List.tabulate(v, b)((i, j) => new BoolVar("x" + i + "_" + j))
 

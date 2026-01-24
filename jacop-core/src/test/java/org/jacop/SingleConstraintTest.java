@@ -97,13 +97,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 @ExtendWith(SingleConstraintTest.TestWatcherExtension.class)
 public class SingleConstraintTest extends TestHelper {
 
-  static class TestWatcherExtension implements BeforeEachCallback {
-    @Override
-    public void beforeEach(ExtensionContext context) {
-      IO.println("Starting test: " + context.getDisplayName());
-    }
-  }
-
   @Test
   public void testAnonymousConstraint() {
 
@@ -912,5 +905,12 @@ public class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
 
     assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  static class TestWatcherExtension implements BeforeEachCallback {
+    @Override
+    public void beforeEach(ExtensionContext context) {
+      IO.println("Starting test: " + context.getDisplayName());
+    }
   }
 }

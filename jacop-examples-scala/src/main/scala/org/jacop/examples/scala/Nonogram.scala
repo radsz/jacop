@@ -37,51 +37,109 @@ import java.util.regex.Pattern
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  *
-  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Radoslaw Szymanek and  Krzysztof Kuchcinski
-  *
-  */
+ *
+ * It solves a nonogram example problem, sometimes also called Paint by Numbers.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Radoslaw Szymanek and  Krzysztof Kuchcinski
+ *
+ */
 
 object Nonogram extends jacop {
 
   /**
-    * The value that represents a black dot.
-    */
+   * The value that represents a black dot.
+   */
   val black = 1
 
   /**
-    * The value that represents a white dot.
-    */
+   * The value that represents a white dot.
+   */
   val white = 0
-
   /**
-    * A board to be painted in white/black dots.
-    */
-  var board: Array[Array[IntVar]] = null
-
-  /**
-    * It specifies if the slide based decomposition of the regular constraint
-    * should be applied. This decomposition uses ternary extensional support
-    * constraints. It achieves GAC if FSM is deterministic.
-    */
+   * It specifies if the slide based decomposition of the regular constraint
+   * should be applied. This decomposition uses ternary extensional support
+   * constraints. It achieves GAC if FSM is deterministic.
+   */
   val slideDecomposition = false
-
   /**
-    * It specifies if the regular constraint should be used.
-    */
+   * It specifies if the regular constraint should be used.
+   */
   val regularConstr = true
-
   /**
-    * It specifies if one extensional constraint based on MDD created from FSM
-    * should be used. The translation process works if FSM is deterministic.
-    */
+   * It specifies if one extensional constraint based on MDD created from FSM
+   * should be used. The translation process works if FSM is deterministic.
+   */
   val extensionalMDD = false
+  /**
+   * A board to be painted in white/black dots.
+   */
+  var board: Array[Array[IntVar]] = null
+  /**
+   * It specifies a rule for each row.
+   */
 
-  def readFromFile(filename: String) : Unit = {
+  var row_rules = Array(
+    Array(0, 0, 0, 0, 2, 2, 3),
+    Array(0, 0, 4, 1, 1, 1, 4),
+    Array(0, 0, 4, 1, 2, 1, 1),
+    Array(4, 1, 1, 1, 1, 1, 1),
+    Array(0, 2, 1, 1, 2, 3, 5),
+    Array(0, 1, 1, 1, 1, 2, 1),
+    Array(0, 0, 3, 1, 5, 1, 2),
+    Array(0, 3, 2, 2, 1, 2, 2),
+    Array(2, 1, 4, 1, 1, 1, 1),
+    Array(0, 2, 2, 1, 2, 1, 2),
+    Array(0, 1, 1, 1, 3, 2, 3),
+    Array(0, 0, 1, 1, 2, 7, 3),
+    Array(0, 0, 1, 2, 2, 1, 5),
+    Array(0, 0, 3, 2, 2, 1, 2),
+    Array(0, 0, 0, 3, 2, 1, 2),
+    Array(0, 0, 0, 0, 5, 1, 2),
+    Array(0, 0, 0, 2, 2, 1, 2),
+    Array(0, 0, 0, 4, 2, 1, 2),
+    Array(0, 0, 0, 6, 2, 3, 2),
+    Array(0, 0, 0, 7, 4, 3, 2),
+    Array(0, 0, 0, 0, 7, 4, 4),
+    Array(0, 0, 0, 0, 7, 1, 4),
+    Array(0, 0, 0, 0, 6, 1, 4),
+    Array(0, 0, 0, 0, 4, 2, 2),
+    Array(0, 0, 0, 0, 0, 2, 1)
+  )
+  /**
+   * It specifies a rule for each column.
+   */
+
+  var col_rules = Array(
+    Array(0, 0, 1, 1, 2, 2),
+    Array(0, 0, 0, 5, 5, 7),
+    Array(0, 0, 5, 2, 2, 9),
+    Array(0, 0, 3, 2, 3, 9),
+    Array(0, 1, 1, 3, 2, 7),
+    Array(0, 0, 0, 3, 1, 5),
+    Array(0, 7, 1, 1, 1, 3),
+    Array(1, 2, 1, 1, 2, 1),
+    Array(0, 0, 0, 4, 2, 4),
+    Array(0, 0, 1, 2, 2, 2),
+    Array(0, 0, 0, 4, 6, 2),
+    Array(0, 0, 1, 2, 2, 1),
+    Array(0, 0, 3, 3, 2, 1),
+    Array(0, 0, 0, 4, 1, 15),
+    Array(1, 1, 1, 3, 1, 1),
+    Array(2, 1, 1, 2, 2, 3),
+    Array(0, 0, 1, 4, 4, 1),
+    Array(0, 0, 1, 4, 3, 2),
+    Array(0, 0, 1, 1, 2, 2),
+    Array(0, 7, 2, 3, 1, 1),
+    Array(0, 2, 1, 1, 1, 5),
+    Array(0, 0, 0, 1, 2, 5),
+    Array(0, 0, 1, 1, 1, 3),
+    Array(0, 0, 0, 4, 2, 1),
+    Array(0, 0, 0, 0, 0, 3)
+  )
+
+  def readFromFile(filename: String): Unit = {
 
     var lines = new Array[String](100)
 
@@ -152,50 +210,31 @@ object Nonogram extends jacop {
     }
   }
 
-
   /**
-    * It produces and FSM given a sequence representing a rule. e.g. [2, 3]
-    * specifies that there are two black dots followed by three black dots.
-    *
-    * @param sequence - input parameter
-    * @return Finite State Machine used by Regular automaton to enforce proper sequence.
+   * It executes the program which solves this simple problem.
+   *
+   * @param args no arguments are read.
+   */
+  def main(args: Array[String]): Unit = {
+
+    model()
+    printMatrix(board)
+
+    /*
+        for (i <- 0 until 150) {
+
+          var no = ""+i
+          while (no.length() < 3)
+          no = "0" + no;
+
+          System.out.println("Problem file data" + no + ".nin");
+          readFromFile("/Users/kris/research/JaCoP-3.1/ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
+          model();
+        }
     */
-  def createAutomaton(sequence: Array[Int]): fsm = {
-
-    var result = new fsm
-
-    var currentState = new state
-    result.init(currentState)
-
-    currentState -> (white, currentState)
-
-    for (i <- 0 until sequence.length) {
-      if (sequence(i) != 0) {
-        for (j <- 0 until sequence(i)) {
-          // Black transition
-          val nextState = new state
-          result += nextState
-          currentState -> (black, nextState)
-          currentState = nextState
-        }
-        // White transitions
-        if (i + 1 != sequence.length) {
-          val nextState = new state
-          result += nextState
-          currentState -> (white, nextState)
-          currentState = nextState
-        }
-        currentState -> (white, currentState)
-      }
-    }
-
-    result.addFinalStates(Array(currentState))
-
-    result
-
   }
 
-  def model() : Unit = {
+  def model(): Unit = {
 
     import org.jacop.constraints.ExtensionalSupportMDD
     import org.jacop.constraints.regular.Regular
@@ -209,7 +248,7 @@ object Nonogram extends jacop {
     board = Array.tabulate(row_rules.length, col_rules.length)((i, j) =>
       new IntVar("board[" + i + "][" + j + "]", values))
 
-    // Zigzag based variable ordering. 
+    // Zigzag based variable ordering.
     for (m <- 0 until row_rules.length + col_rules.length - 1) {
       for (j <- 0 until m if j < col_rules.length) {
         val i = m - j
@@ -258,11 +297,53 @@ object Nonogram extends jacop {
   }
 
   /**
-    * It prints a matrix of variables. All variables must be grounded.
-    *
-    * @param matrix matrix containing the grounded variables.
-    */
-  def printMatrix(matrix: Array[Array[IntVar]]) : Unit = {
+   * It produces and FSM given a sequence representing a rule. e.g. [2, 3]
+   * specifies that there are two black dots followed by three black dots.
+   *
+   * @param sequence - input parameter
+   * @return Finite State Machine used by Regular automaton to enforce proper sequence.
+   */
+  def createAutomaton(sequence: Array[Int]): fsm = {
+
+    var result = new fsm
+
+    var currentState = new state
+    result.init(currentState)
+
+    currentState -> (white, currentState)
+
+    for (i <- 0 until sequence.length) {
+      if (sequence(i) != 0) {
+        for (j <- 0 until sequence(i)) {
+          // Black transition
+          val nextState = new state
+          result += nextState
+          currentState -> (black, nextState)
+          currentState = nextState
+        }
+        // White transitions
+        if (i + 1 != sequence.length) {
+          val nextState = new state
+          result += nextState
+          currentState -> (white, nextState)
+          currentState = nextState
+        }
+        currentState -> (white, currentState)
+      }
+    }
+
+    result.addFinalStates(Array(currentState))
+
+    result
+
+  }
+
+  /**
+   * It prints a matrix of variables. All variables must be grounded.
+   *
+   * @param matrix matrix containing the grounded variables.
+   */
+  def printMatrix(matrix: Array[Array[IntVar]]): Unit = {
 
     for (i <- 0 until matrix.length) {
       for (j <- 0 until matrix(i).length) {
@@ -274,94 +355,6 @@ object Nonogram extends jacop {
       println()
     }
   }
-
-  /**
-    * It executes the program which solves this simple problem.
-    *
-    * @param args no arguments are read.
-    */
-  def main(args: Array[String]) : Unit = {
-
-    model()
-    printMatrix(board)
-
-    /*
-        for (i <- 0 until 150) {
-
-          var no = ""+i
-          while (no.length() < 3)
-          no = "0" + no;
-
-          System.out.println("Problem file data" + no + ".nin");
-          readFromFile("/Users/kris/research/JaCoP-3.1/ExamplesJaCoP/nonogramRepository/data" + no + ".nin");
-          model();
-        }
-    */
-  }
-
-  /**
-    * It specifies a rule for each row.
-    */
-
-  var row_rules = Array(
-    Array(0, 0, 0, 0, 2, 2, 3),
-    Array(0, 0, 4, 1, 1, 1, 4),
-    Array(0, 0, 4, 1, 2, 1, 1),
-    Array(4, 1, 1, 1, 1, 1, 1),
-    Array(0, 2, 1, 1, 2, 3, 5),
-    Array(0, 1, 1, 1, 1, 2, 1),
-    Array(0, 0, 3, 1, 5, 1, 2),
-    Array(0, 3, 2, 2, 1, 2, 2),
-    Array(2, 1, 4, 1, 1, 1, 1),
-    Array(0, 2, 2, 1, 2, 1, 2),
-    Array(0, 1, 1, 1, 3, 2, 3),
-    Array(0, 0, 1, 1, 2, 7, 3),
-    Array(0, 0, 1, 2, 2, 1, 5),
-    Array(0, 0, 3, 2, 2, 1, 2),
-    Array(0, 0, 0, 3, 2, 1, 2),
-    Array(0, 0, 0, 0, 5, 1, 2),
-    Array(0, 0, 0, 2, 2, 1, 2),
-    Array(0, 0, 0, 4, 2, 1, 2),
-    Array(0, 0, 0, 6, 2, 3, 2),
-    Array(0, 0, 0, 7, 4, 3, 2),
-    Array(0, 0, 0, 0, 7, 4, 4),
-    Array(0, 0, 0, 0, 7, 1, 4),
-    Array(0, 0, 0, 0, 6, 1, 4),
-    Array(0, 0, 0, 0, 4, 2, 2),
-    Array(0, 0, 0, 0, 0, 2, 1)
-  )
-
-  /**
-    * It specifies a rule for each column.
-    */
-
-  var col_rules = Array(
-    Array(0, 0, 1, 1, 2, 2),
-    Array(0, 0, 0, 5, 5, 7),
-    Array(0, 0, 5, 2, 2, 9),
-    Array(0, 0, 3, 2, 3, 9),
-    Array(0, 1, 1, 3, 2, 7),
-    Array(0, 0, 0, 3, 1, 5),
-    Array(0, 7, 1, 1, 1, 3),
-    Array(1, 2, 1, 1, 2, 1),
-    Array(0, 0, 0, 4, 2, 4),
-    Array(0, 0, 1, 2, 2, 2),
-    Array(0, 0, 0, 4, 6, 2),
-    Array(0, 0, 1, 2, 2, 1),
-    Array(0, 0, 3, 3, 2, 1),
-    Array(0, 0, 0, 4, 1, 15),
-    Array(1, 1, 1, 3, 1, 1),
-    Array(2, 1, 1, 2, 2, 3),
-    Array(0, 0, 1, 4, 4, 1),
-    Array(0, 0, 1, 4, 3, 2),
-    Array(0, 0, 1, 1, 2, 2),
-    Array(0, 7, 2, 3, 1, 1),
-    Array(0, 2, 1, 1, 1, 5),
-    Array(0, 0, 0, 1, 2, 5),
-    Array(0, 0, 1, 1, 1, 3),
-    Array(0, 0, 0, 4, 2, 1),
-    Array(0, 0, 0, 0, 0, 3)
-  )
 
 
   /*

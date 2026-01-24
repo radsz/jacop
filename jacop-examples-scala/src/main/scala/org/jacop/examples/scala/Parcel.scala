@@ -33,13 +33,13 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object Parcel extends App with jacop {
 
   val noCities = 10
@@ -71,9 +71,8 @@ object Parcel extends App with jacop {
   // Impose cuircuit constraint which makes sure
   // that array cities is a hamiltonian circuit
   circuit(cities)
-
-  // We start our journey at first city
-  var startTown = cities(0)
+  // Computes the travel cost.
+  val cost = sum(costs)
 
   // We have to check all steps of the trip to make
   // sure we satisfy load constraints.
@@ -101,11 +100,9 @@ object Parcel extends App with jacop {
     val partialLoad = new IntVar("partialLoad[0-" + i + "]", 0, 15)
     partialLoad #= sum(tripLoads)
   }
-
-  // Computes the travel cost.
-  val cost = sum(costs)
-
   val result = minimize_seq(List(search(costs, max_regret, indomain_min), search(cities, input_order, indomain_min)), cost, printSol())
+  // We start our journey at first city
+  var startTown = cities(0)
   statistics()
 
   def printSol() = () => {

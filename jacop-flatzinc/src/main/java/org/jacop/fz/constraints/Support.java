@@ -78,6 +78,14 @@ public class Support implements ParserTreeConstants {
   static final AtomicInteger n5 = new AtomicInteger(0);
   static final AtomicInteger n6 = new AtomicInteger(0);
   static final AtomicInteger n7 = new AtomicInteger(0);
+  final Store store;
+  final Tables dictionary;
+  // ============ SAT solver interface ==============
+  final SatTranslation sat;
+  final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final ReificationConstraints reif = new ReificationConstraints(this);
+  final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
   // =========== Annotations ===========
   public boolean boundsConsistency = true;
@@ -85,16 +93,8 @@ public class Support implements ParserTreeConstants {
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar;
-  final Store store;
-  final Tables dictionary;
-  // ============ SAT solver interface ==============
-  final SatTranslation sat;
   boolean intPresent = true;
   boolean floatPresent = true;
-  final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
-  final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
-  final ReificationConstraints reif = new ReificationConstraints(this);
-  final ImplicationConstraints imply = new ImplicationConstraints(this);
 
   public Support(Store store, Tables d, SatTranslation sat) {
     this.store = store;

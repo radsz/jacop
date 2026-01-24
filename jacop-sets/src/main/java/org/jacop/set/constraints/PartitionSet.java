@@ -60,15 +60,11 @@ public class PartitionSet extends Constraint {
   final SetVar[] s;
   final int n;
   final IntDomain u;
-
+  final HashMap<SetVar, Integer> varMap = new HashMap<>();
   AunionBeqC[] union;
   List<Constraint> constraints;
-
   boolean firstConsistencyCheck = true;
-
   LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
-  final HashMap<SetVar, Integer> varMap = new HashMap<>();
-
   Store store;
 
   /**

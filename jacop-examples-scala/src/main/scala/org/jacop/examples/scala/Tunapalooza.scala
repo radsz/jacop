@@ -35,24 +35,20 @@ import org.jacop.scala._
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object Tunapalooza extends App with jacop {
-
-  var vars = new ArrayBuffer[org.jacop.core.IntVar]()
 
   // names
   val Ellyfish = 1;
   val Korrupt = 2;
   val Retread = 3;
   val Yellow = 4
-
-
   // types
   val country = new IntVar("country", 1, 4)
   val grunge = new IntVar("grunge", 1, 4)
@@ -63,10 +59,10 @@ object Tunapalooza extends App with jacop {
   val information = new IntVar("information", 1, 4)
   val mosh = new IntVar("mosh", 1, 4)
   val vendor = new IntVar("vendor", 1, 4)
-
   // arrays of variables
   val types = Array(country, grunge, reggae, metal)
   val places = Array(carnival, information, mosh, vendor)
+  val statement1 = new BoolVar("s1")
 
   for (v <- types) vars :+= v
   for (v <- places) vars :+= v
@@ -95,10 +91,9 @@ object Tunapalooza extends App with jacop {
   // performance by Retread Ed and the Flat Tires.
   // c) The two friends won't meet at the T-shirt vendor while Yellow Reef
   // is playing.
-
-  val statement1 = new BoolVar("s1")
   val statement2 = new BoolVar("s2")
   val statement3 = new BoolVar("s3")
+  val result = satisfyAll(search(vars.toList, input_order, indomain_min))
 
   (grunge #= Ellyfish) <=> statement1
   statement2 <=> (information #\= Retread)
@@ -123,7 +118,6 @@ object Tunapalooza extends App with jacop {
 
   reggae #\= Korrupt
   reggae #\= information
-
-  val result = satisfyAll(search(vars.toList, input_order, indomain_min))
+  var vars = new ArrayBuffer[org.jacop.core.IntVar]()
 
 }

@@ -33,19 +33,18 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  * A problem defined as in Java based examples.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * A problem defined as in Java based examples.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object RegularExample extends App with jacop {
 
 
   val v = Array.tabulate(3)(i => new IntVar("v" + 0, 0, 2))
-
-  var dfa = new fsm(8) // create FSM with eight states
+  val result = satisfyAll(search(v.toList, input_order, indomain_min))
 
   //   var dfa = new fsm()
   //   for (i <- 0 until 8) dfa += new state()
@@ -69,6 +68,5 @@ object RegularExample extends App with jacop {
   println(dfa)
 
   regular(dfa, v.toList)
-
-  val result = satisfyAll(search(v.toList, input_order, indomain_min))
+  var dfa = new fsm(8) // create FSM with eight states
 }

@@ -429,8 +429,20 @@ public class RegularExpressionParser {
     }
 
     @Override
-    public boolean equals(Object c) {
-      return lit.equals(c);
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (!(obj instanceof Literal)) {
+        return false;
+      }
+      Literal other = (Literal) obj;
+      return lit.equals(other.lit);
+    }
+
+    @Override
+    public int hashCode() {
+      return lit.hashCode();
     }
 
     @Override

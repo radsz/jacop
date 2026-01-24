@@ -36,30 +36,30 @@ import org.jacop.scala._
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  *
-  * It shows the capabilities and usage of Knapsack constraint.
-  *
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski & Radoslaw Szymanek
-  * @version 4.5
-  *
-  *          It models and solves a simple knapsack problem. There
-  *          are two different models. The first one uses quantity
-  *          from 0 to n, where the second model is allowed to use
-  *          only binary variables.
-  *
-  *          Each item is specified by its weight and profit. Find
-  *          what objects should be put in the knapsack to maximize
-  *          the profit without exceeding the knapsack capacity.
-  *
-  */
+ *
+ * It shows the capabilities and usage of Knapsack constraint.
+ *
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski & Radoslaw Szymanek
+ * @version 4.5
+ *
+ *          It models and solves a simple knapsack problem. There
+ *          are two different models. The first one uses quantity
+ *          from 0 to n, where the second model is allowed to use
+ *          only binary variables.
+ *
+ *          Each item is specified by its weight and profit. Find
+ *          what objects should be put in the knapsack to maximize
+ *          the profit without exceeding the knapsack capacity.
+ *
+ */
 object KnapsackExample extends jacop {
 
   var args: Array[String] = null
   var vars: ArrayBuffer[IntVar] = new ArrayBuffer[IntVar]()
 
-  def main(arguments: Array[String]) : Unit = {
+  def main(arguments: Array[String]): Unit = {
 
     args = arguments
 
@@ -68,10 +68,10 @@ object KnapsackExample extends jacop {
   }
 
   /**
-    * It stores the parameters of the main function to be
-    * used by the model functions.
-    */
-  def model() : Unit = {
+   * It stores the parameters of the main function to be
+   * used by the model functions.
+   */
+  def model(): Unit = {
 
     var noItems = 3
     var volume = 9

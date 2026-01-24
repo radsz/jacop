@@ -33,17 +33,17 @@ package org.jacop.examples.scala
 import org.jacop.scala._
 
 /**
-  *
-  * It solves a simple conference session placement problem.
-  * rewriting to Scala by Krzysztof Kuchcinski.
-  *
-  * @author Krzysztof Kuchcinski & Radoslaw Szymanek
-  * @version 4.4
-  *
-  *          It solves a simple conference example problem, where different sessions
-  *          must be scheduled according to the specified constraints.
-  *
-  */
+ *
+ * It solves a simple conference session placement problem.
+ * rewriting to Scala by Krzysztof Kuchcinski.
+ *
+ * @author Krzysztof Kuchcinski & Radoslaw Szymanek
+ * @version 4.4
+ *
+ *          It solves a simple conference example problem, where different sessions
+ *          must be scheduled according to the specified constraints.
+ *
+ */
 
 object Conference extends App with jacop {
 

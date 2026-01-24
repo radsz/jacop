@@ -35,11 +35,11 @@ import org.jacop.core._
 import org.jacop.search._
 
 /**
-  * Graph coloring problem.
-  *
-  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
-  * @version 4.5
-  */
+ * Graph coloring problem.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 4.5
+ */
 object GraphColoringJ extends App {
 
   val store = new Store()
