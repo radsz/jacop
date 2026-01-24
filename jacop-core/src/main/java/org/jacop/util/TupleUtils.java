@@ -30,6 +30,8 @@
 
 package org.jacop.util;
 
+import org.jacop.core.IntVar;
+
 /**
  * Util functions for arrays of tuples.
  *
@@ -280,5 +282,61 @@ public class TupleUtils {
     }
 
     return result;
+  }
+
+  public static boolean tuplesSmaller(int[] tuple1, int[] tuple2) {
+    int arity = tuple1.length;
+    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
+      if (tuple1[i] < tuple2[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static boolean tuplesEqual(int[] tuple1, int[] tuple2) {
+    int arity = tuple1.length;
+    for (int i = 0; i < arity; i++) {
+      if (tuple1[i] != tuple2[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static int findValuePosition(int value, int[] values) {
+    int left = 0;
+    int right = values.length - 1;
+
+    int position = (left + right) >> 1;
+
+    while (!(left + 1 >= right)) {
+      if (values[position] > value) {
+        right = position;
+      } else {
+        left = position;
+      }
+      position = (left + right) >> 1;
+    }
+
+    if (values[left] == value) {
+      return left;
+    }
+
+    if (values[right] == value) {
+      return right;
+    }
+
+    return -1;
+  }
+
+  public static int seekInvalidPosition(int[] t, IntVar[] list) {
+    int noVars = list.length;
+    for (int i = 0; i < noVars; i++) {
+      if (!list[i].domain.contains(t[i])) {
+        return i;
+      }
+    }
+    return -1;
   }
 }

@@ -441,38 +441,7 @@ public class Alldistinct extends Constraint
             stamp.update(lastPosition - 1);
 
             if (lastPosition == 0) {
-
-              // index of last existing value
-              int stampValue = stampValues.value() - 1;
-              // Move value to the position pointed by stampValue
-
-              // indexDeletedValue is a current position of
-              // deleted Value
-
-              int indexDeletedValue = valueIndex.get(integerValue);
-
-              if (indexDeletedValue < stampValue) {
-                // Deleted value is NOT last in array of values
-                // if last then no moving necessary
-
-                // Update indexes in valueIndex hashtable
-                valueIndex.put(potentialFreeValues[indexDeletedValue], stampValue);
-                valueIndex.put(potentialFreeValues[stampValue], indexDeletedValue);
-
-                // integerValue points to an integer from
-                // potentialFreeValues
-                // previous integerValue equals
-                // potentialFreeValues[indexDeletedValue]
-                integerValue = potentialFreeValues[indexDeletedValue];
-
-                // Exchange values in potentialFreeValues array
-                // use integerValue as swap
-                potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
-                potentialFreeValues[stampValue] = integerValue;
-              }
-              // A value is not possible to be taken, decrease
-              // number of values.
-              stampValues.update(stampValues.value() - 1);
+              removeValueFromPotentialFreeValues(integerValue);
             }
           }
         }
@@ -505,36 +474,7 @@ public class Alldistinct extends Constraint
       freeVariables.remove(singleton);
       Integer integerValue = singleton.value();
       matching.get(singleton).update(integerValue);
-
-      // index of last existing value
-      int stampValue = stampValues.value() - 1;
-      // Move value to the position pointed by stampValue
-
-      // indexDeletedValue is a current position of deleted Value
-
-      int indexDeletedValue = valueIndex.get(integerValue);
-
-      if (indexDeletedValue < stampValue) {
-        // Deleted value is NOT last in array of values
-        // if last then no moving necessary
-
-        // Update indexes in valueIndex hashtable
-        valueIndex.put(potentialFreeValues[indexDeletedValue], stampValue);
-        valueIndex.put(potentialFreeValues[stampValue], indexDeletedValue);
-
-        // integerValue points to an integer from potentialFreeValues
-        // previous integerValue equals
-        // potentialFreeValues[indexDeletedValue]
-        integerValue = potentialFreeValues[indexDeletedValue];
-
-        // Exchange values in potentialFreeValues array
-        // use integerValue as swap
-        potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
-        potentialFreeValues[stampValue] = integerValue;
-      }
-      // A value is not possible to be taken, decrease
-      // number of values.
-      stampValues.update(stampValues.value() - 1);
+      removeValueFromPotentialFreeValues(integerValue);
     }
 
     if (!freeVariables.isEmpty()) {
@@ -1716,9 +1656,6 @@ public class Alldistinct extends Constraint
               maxCurrentPruning = pruningSecondVariable;
             } else if (pruningFirstVariable == minCurrentPruning
                 && pruningSecondVariable > maxCurrentPruning) {
-              // currentPruning.set(1, new
-              // Integer(pruningSecondVariable));
-
               // Equals sign means no greedy in propagation in
               // case of tie break
               // Lack of equal sign means greedy in propagation
@@ -1925,5 +1862,20 @@ public class Alldistinct extends Constraint
     }
 
     return pruning;
+  }
+
+  private void removeValueFromPotentialFreeValues(Integer integerValue) {
+    int stampValue = stampValues.value() - 1;
+    int indexDeletedValue = valueIndex.get(integerValue);
+
+    if (indexDeletedValue < stampValue) {
+      valueIndex.put(potentialFreeValues[indexDeletedValue], stampValue);
+      valueIndex.put(potentialFreeValues[stampValue], indexDeletedValue);
+
+      Integer swapValue = potentialFreeValues[indexDeletedValue];
+      potentialFreeValues[indexDeletedValue] = potentialFreeValues[stampValue];
+      potentialFreeValues[stampValue] = swapValue;
+    }
+    stampValues.update(stampValue);
   }
 }

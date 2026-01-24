@@ -31,16 +31,11 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
-import org.jacop.core.ValueEnumeration;
 
 /**
  * ChannelImply constraints "B {@literal =>} constraint".
@@ -48,113 +43,24 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class ChannelImply extends Constraint implements SatisfiedPresent {
+public class ChannelImply extends AbstractChannel {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** Variables that is checked for a value. */
-  public final IntVar x;
-
-  /** length of vector bs. */
-  final int n;
-
-  /** It specifies variables b and related values for variable x. */
-  final Item[] item;
-
-  final Map<Integer, IntVar> valueMap = new HashMap<>();
-  private TimeStamp<Integer> position;
-
-  /**
-   * It creates ChannelImply constraint.
-   *
-   * @param x variable to be checked.
-   * @param bs array representing the status of equality x = i.
-   * @param value array of values that are checked against x.
-   */
   public ChannelImply(IntVar x, IntVar[] bs, int[] value) {
-
-    if (value.length != bs.length) {
-      throw new IllegalArgumentException(
-          "ChannelImply: Status array size ("
-              + bs.length
-              + "), has not equal size as number of values "
-              + value.length);
-    }
-
-    checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
-    for (IntVar b : bs) {
-      if (b.min() > 1 || b.max() < 0) {
-        throw new IllegalArgumentException(
-            "ChannelImply: Variable b in reified constraint must have domain at most 0..1");
-      }
-    }
-
-    numberId = idNumber.incrementAndGet();
-    this.x = x;
-    this.n = bs.length;
-
-    item = new Item[n];
-    for (int i = 0; i < n; i++) {
-      item[i] = new Item(bs[i], value[i]);
-    }
-
-    for (int i = 0; i < value.length; i++) {
-      valueMap.put(value[i], bs[i]);
-    }
-
-    setScope(Stream.concat(Stream.of(x), Arrays.stream(bs)));
-    this.queueIndex = 0;
+    super(idNumber.incrementAndGet(), x, bs, value, "ChannelImply");
   }
 
-  /**
-   * It creates ChannelImply constraint.
-   *
-   * @param x variable to be checked.
-   * @param bs array representing the status of equality x = i.
-   * @param value set of values that are checked against x.
-   */
   public ChannelImply(IntVar x, IntVar[] bs, IntDomain value) {
     this(x, bs, toArray(value));
   }
 
   public ChannelImply(IntVar x, IntVar[] bs) {
-
     this(x, bs, toArray(x.domain));
   }
 
   public ChannelImply(IntVar x, Map<Integer, ? extends IntVar> bs) {
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.n = bs.size();
-
-    item = new Item[n];
-    IntVar[] bbs = new IntVar[n];
-    int i = 0;
-    for (Map.Entry<Integer, ? extends IntVar> e : bs.entrySet()) {
-      int val = e.getKey();
-      IntVar b = e.getValue();
-      item[i] = new Item(b, val);
-
-      valueMap.put(val, b);
-      bbs[i] = b;
-      i++;
-    }
-
-    setScope(Stream.concat(Stream.of(x), Arrays.stream(bbs)));
-    this.queueIndex = 0;
-  }
-
-  static int[] toArray(IntDomain d) {
-
-    int[] vs = new int[d.getSize()];
-    int i = 0;
-    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-      int v = e.nextElement();
-      vs[i++] = v;
-    }
-    return vs;
+    super(idNumber.incrementAndGet(), x, bs);
   }
 
   @Override
@@ -165,17 +71,17 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
 
     for (int i = start; i < n; i++) {
 
-      if (item[i].b.max() == 0) {
+      if (item[i].b().max() == 0) {
         swap(start, i);
         start++;
         startChanged = true;
         continue;
-      } else if (item[i].b.min() == 1) {
-        x.domain.inValue(store.level, x, item[i].value);
+      } else if (item[i].b().min() == 1) {
+        x.domain.inValue(store.level, x, item[i].value());
       }
 
-      if (!x.domain.contains(item[i].value)) {
-        item[i].b.domain.inValue(store.level, item[i].b, 0);
+      if (!x.domain.contains(item[i].value())) {
+        item[i].b().domain.inValue(store.level, item[i].b(), 0);
         swap(start, i);
         start++;
         startChanged = true;
@@ -197,71 +103,15 @@ public class ChannelImply extends Constraint implements SatisfiedPresent {
       IntVar b = valueMap.get(x.value());
 
       for (int i = start; i < n; i++) {
-        if (item[i].b != b) {
-          item[i].b.domain.inValue(store.level, item[i].b, 0);
+        if (item[i].b() != b) {
+          item[i].b().domain.inValue(store.level, item[i].b(), 0);
         }
       }
     }
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      Item tmp = item[i];
-      item[i] = item[j];
-      item[j] = tmp;
-    }
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  public boolean satisfied() {
-
-    int one = Integer.MIN_VALUE;
-    if (x.singleton()) {
-      for (int i = 0; i < n; i++) {
-        if (item[i].b.singleton()) {
-          if (item[i].b.value() == 1) {
-            if (one == -1) {
-              one = i;
-            } else {
-              return false;
-            }
-          } else {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      }
-    } else {
-      return false;
-    }
-
-    return one != Integer.MIN_VALUE && x.value() == item[one].value;
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    position = new TimeStamp<>(store, 0);
   }
 
   @Override
   public String toString() {
-
     return id() + " : ChannelImply(" + x + ", " + Arrays.asList(item) + " )";
-  }
-
-  record Item(IntVar b, int value) {
-
-    public String toString() {
-
-      return "[" + b + ", " + value + "]";
-    }
   }
 }

@@ -30,6 +30,10 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.util.TupleUtils.findValuePosition;
+import static org.jacop.util.TupleUtils.tuplesEqual;
+import static org.jacop.util.TupleUtils.tuplesSmaller;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -213,44 +217,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   }
 
   protected int findPosition(int value, int[] values) {
-
-    int left = 0;
-    int right = values.length - 1;
-
-    int position = (left + right) >> 1;
-
-    if (debugAll) {
-      IO.println("Looking for " + value);
-      for (int v : values) {
-        IO.print("val " + v);
-      }
-      IO.println("");
-    }
-
-    while (!(left + 1 >= right)) {
-
-      if (debugAll) {
-        IO.println("left " + left + " right " + right + " position " + position);
-      }
-
-      if (values[position] > value) {
-        right = position;
-      } else {
-        left = position;
-      }
-
-      position = (left + right) >> 1;
-    }
-
-    if (values[left] == value) {
-      return left;
-    }
-
-    if (values[right] == value) {
-      return right;
-    }
-
-    return -1;
+    return findValuePosition(value, values);
   }
 
   @Override
@@ -434,27 +401,11 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   }
 
   boolean smaller(int[] tuple1, int[] tuple2) {
-
-    int arity = tuple1.length;
-    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
-      if (tuple1[i] < tuple2[i]) {
-        return true;
-      }
-    }
-
-    return false;
+    return tuplesSmaller(tuple1, tuple2);
   }
 
   boolean equal(int[] tuple1, int[] tuple2) {
-
-    int arity = tuple1.length;
-    for (int i = 0; i < arity; i++) {
-      if (tuple1[i] != tuple2[i]) {
-        return false;
-      }
-    }
-
-    return true;
+    return tuplesEqual(tuple1, tuple2);
   }
 
   @Override
@@ -626,21 +577,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     }
   }
 
-  /**
-   * It gives the position of the variable for which current domain of this variable does not hold
-   * the used value. It is variable because of which allowed tuple does not become a support tuple.
-   *
-   * @param t tuple being checked.
-   * @return -1 if tuple is both valid and allowed (support), otherwise the position.
-   */
   public int seekInvalidPosition(int[] t) {
-
-    int noVars = list.length;
-    for (int i = 0; i < noVars; i++) {
-      if (!list[i].domain.contains(t[i])) {
-        return i;
-      }
-    }
-    return -1;
+    return TupleUtils.seekInvalidPosition(t, list);
   }
 }

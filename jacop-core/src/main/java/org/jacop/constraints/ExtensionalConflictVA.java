@@ -30,6 +30,10 @@
 
 package org.jacop.constraints;
 
+import static org.jacop.util.TupleUtils.findValuePosition;
+import static org.jacop.util.TupleUtils.tuplesEqual;
+import static org.jacop.util.TupleUtils.tuplesSmaller;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -308,23 +312,8 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     return -1;
   }
 
-  /**
-   * It finds the position at which the tuple is invalid. The value is not in the domain of the
-   * corresponding variable.
-   *
-   * @param t tuple being check for in-validity
-   * @return the position in the tuple at which the corresponding variable does not contain the
-   *     value used by tuple, -1 if no invalid position exists.
-   */
   public int seekInvalidPosition(int[] t) {
-
-    int noVars = list.length;
-    for (int i = 0; i < noVars; i++) {
-      if (!list[i].domain.contains(t[i])) {
-        return i;
-      }
-    }
-    return -1;
+    return TupleUtils.seekInvalidPosition(t, list);
   }
 
   /**
@@ -388,44 +377,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   }
 
   protected int findPosition(int value, int[] values) {
-
-    int left = 0;
-    int right = values.length - 1;
-
-    int position = (left + right) >> 1;
-
-    if (debugAll) {
-      IO.println("Looking for " + value);
-      for (int v : values) {
-        IO.print("val " + v);
-      }
-      IO.println("");
-    }
-
-    while (!(left + 1 >= right)) {
-
-      if (debugAll) {
-        IO.println("left " + left + " right " + right + " position " + position);
-      }
-
-      if (values[position] > value) {
-        right = position;
-      } else {
-        left = position;
-      }
-
-      position = (left + right) >> 1;
-    }
-
-    if (values[left] == value) {
-      return left;
-    }
-
-    if (values[right] == value) {
-      return right;
-    }
-
-    return -1;
+    return findValuePosition(value, values);
   }
 
   @Override
@@ -659,27 +611,11 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   }
 
   boolean smaller(int[] tuple1, int[] tuple2) {
-
-    int arity = tuple1.length;
-    for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
-      if (tuple1[i] < tuple2[i]) {
-        return true;
-      }
-    }
-
-    return false;
+    return tuplesSmaller(tuple1, tuple2);
   }
 
   boolean equal(int[] tuple1, int[] tuple2) {
-
-    int arity = tuple1.length;
-    for (int i = 0; i < arity; i++) {
-      if (tuple1[i] != tuple2[i]) {
-        return false;
-      }
-    }
-
-    return true;
+    return tuplesEqual(tuple1, tuple2);
   }
 
   @Override

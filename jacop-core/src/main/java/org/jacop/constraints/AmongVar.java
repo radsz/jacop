@@ -165,14 +165,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       // watch the relation with lbS
       if (lbSDom.getSize() > 0) {
         if (lbSDom.contains(x.domain)) {
-          // put in the beginning  of the array
-          if (i != lb0) {
-            tmpX = listOfX[lb0];
-            listOfX[lb0] = x;
-            listOfX[i] = tmpX;
-            xIndex.put(x, lb0);
-            xIndex.put(tmpX, i);
-          }
+          swapXToFront(i, lb0);
           lb0++;
           inLb = true;
           x.removeConstraint(this);
@@ -181,15 +174,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
       if (!inLb) {
         if (!lbSDom.isIntersecting(x.domain)) {
-          // X is not intersecting the domain of y
-          // put at the end of the array
-          if (i != ub0 - 1) {
-            tmpX = listOfX[ub0 - 1];
-            listOfX[ub0 - 1] = x;
-            listOfX[i] = tmpX;
-            xIndex.put(x, ub0 - 1);
-            xIndex.put(tmpX, i);
-          }
+          swapXToBack(i, ub0 - 1);
           ub0--;
           i--;
           x.removeConstraint(this);
@@ -641,13 +626,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                   IO.println("Cardinality of " + v + " is 1 => Groud " + y_last.id);
                 }
 
-                if (last != lastIndex) {
-                  IntVar tmp = listOfY[lastIndex];
-                  listOfY[lastIndex] = y_last;
-                  listOfY[last] = tmp;
-                  yIndex.put(y_last, lastIndex);
-                  yIndex.put(tmp, last);
-                }
+                swapYToFront(last, lastIndex);
                 lastIndex++;
                 y_last.domain.inValue(store.level, y_last, v); // , v);
 
@@ -714,35 +693,17 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           // b) watch the relation with lbS
           if (lbSDom.getSize() > 0) {
             if (lbSDom.contains(x.domain)) {
-
-              // put in the beginning  of the array
-              if (i != lb0) {
-                tmpX = listOfX[lb0];
-                listOfX[lb0] = x;
-                listOfX[i] = tmpX;
-                xIndex.put(x, lb0);
-                xIndex.put(tmpX, i);
-              }
+              swapXToFront(i, lb0);
               lb0++;
               glb0++;
-
               x.removeConstraint(this);
-
             } else if (lbSDom.isIntersecting(x.domain)) {
               glb0++;
             }
           }
 
           if (!ubSDom.isIntersecting(x.domain)) {
-            // X is not intersecting the domain of y
-            // put at the end of the array
-            if (i != ub0 - 1) {
-              tmpX = listOfX[ub0 - 1];
-              listOfX[ub0 - 1] = x;
-              listOfX[i] = tmpX;
-              xIndex.put(x, ub0 - 1);
-              xIndex.put(tmpX, i);
-            }
+            swapXToBack(i, ub0 - 1);
             ub0--;
             i--;
             x.removeConstraint(this);
@@ -966,13 +927,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                   mustBeCoveredNow =
                       (IntervalDomain) mustBeCoveredNow.union(y_last.domain.subtract(v, v));
 
-                  if (last != lastIndex) {
-                    IntVar tmp = listOfY[lastIndex];
-                    listOfY[lastIndex] = y_last;
-                    listOfY[last] = tmp;
-                    yIndex.put(y_last, lastIndex);
-                    yIndex.put(tmp, last);
-                  }
+                  swapYToFront(last, lastIndex);
                   lastIndex++;
 
                   y_last.domain.in(store.level, y_last, v, v);
@@ -1043,14 +998,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           // watch the relation with lbS
           if (lbSDom.getSize() > 0) {
             if (lbSDom.contains(x.domain)) {
-              // put in the beginning  of the array
-              if (i != lb0) {
-                tmpX = this.listOfX[lb0];
-                this.listOfX[lb0] = x;
-                this.listOfX[i] = tmpX;
-                this.xIndex.put(x, lb0);
-                this.xIndex.put(tmpX, i);
-              }
+              swapXToFront(i, lb0);
               lb0++;
               inLb = true;
               x.removeConstraint(this);
@@ -1059,15 +1007,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
           if (!inLb && recalculateUB0) {
             if (!ubSDom.isIntersecting(x.domain)) {
-              // X is not intersecting the domain of y
-              // put at the end of the array
-              if (i != ub0 - 1) {
-                tmpX = listOfX[ub0 - 1];
-                listOfX[ub0 - 1] = x;
-                listOfX[i] = tmpX;
-                xIndex.put(x, ub0 - 1);
-                xIndex.put(tmpX, i);
-              }
+              swapXToBack(i, ub0 - 1);
               ub0--;
               i--;
               x.removeConstraint(this);
@@ -1245,5 +1185,38 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     result.append(n.domain.constraints().contains(this)).append("\n");
 
     return result.toString();
+  }
+
+  private void swapXToFront(int fromIndex, int targetIndex) {
+    if (fromIndex != targetIndex) {
+      IntVar x = listOfX[fromIndex];
+      IntVar tmp = listOfX[targetIndex];
+      listOfX[targetIndex] = x;
+      listOfX[fromIndex] = tmp;
+      xIndex.put(x, targetIndex);
+      xIndex.put(tmp, fromIndex);
+    }
+  }
+
+  private void swapXToBack(int fromIndex, int targetIndex) {
+    if (fromIndex != targetIndex) {
+      IntVar x = listOfX[fromIndex];
+      IntVar tmp = listOfX[targetIndex];
+      listOfX[targetIndex] = x;
+      listOfX[fromIndex] = tmp;
+      xIndex.put(x, targetIndex);
+      xIndex.put(tmp, fromIndex);
+    }
+  }
+
+  private void swapYToFront(int fromIndex, int targetIndex) {
+    if (fromIndex != targetIndex) {
+      IntVar y = listOfY[fromIndex];
+      IntVar tmp = listOfY[targetIndex];
+      listOfY[targetIndex] = y;
+      listOfY[fromIndex] = tmp;
+      yIndex.put(y, targetIndex);
+      yIndex.put(tmp, fromIndex);
+    }
   }
 }
