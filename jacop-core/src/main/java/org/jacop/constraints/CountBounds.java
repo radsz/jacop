@@ -206,7 +206,7 @@ public class CountBounds extends PrimitiveConstraint {
       return;
     }
 
-    if (start == list.length && numberEq >= lb && numberEq <= ub) {
+    if (start == list.length && numberEq >= lb) {
       throw Store.failException;
     }
 

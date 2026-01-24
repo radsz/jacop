@@ -184,7 +184,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       intervalBasedTrail.add(valueTrue);
       trail.add(currentIntervals);
       levelInfo.add(currentLevel);
-    } else if (level > currentLevel && !trailContainsAllChanges) {
+    } else if (!trailContainsAllChanges) {
       // store old level
       if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
         // remember the trail.

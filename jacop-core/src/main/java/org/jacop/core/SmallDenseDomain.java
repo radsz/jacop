@@ -166,8 +166,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       this.min = min;
       this.bits = bits;
 
-      assert (bits != 0) : "Empty Domain not yet allowed";
-
       adaptMin();
       this.size = getSize(bits);
 
@@ -375,7 +373,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         result = result << 1;
         shift++;
       }
-      if (!inInterval && result > 0) {
+      if (!inInterval) {
         result = result << 1;
         shift++;
       }
@@ -579,9 +577,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       if (this.max > max) {
         this.max = previousValue(max + 1);
       }
-
-      assert (max <= max) : "Domain update incorrect.";
-      assert (min >= min) : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
 

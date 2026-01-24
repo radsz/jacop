@@ -391,7 +391,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
         putAt0And1(clause, watch1pos, highestPos);
         // trigger propagation of the first literal if not already fixed literal satisfying the
         // clause.
-        if (trail.values[clause[0] < 0 ? -clause[0] : clause[0]] == 0) {}
         core.triggerPropagateEvent(clause[0], clauseId);
         break;
       /*
@@ -573,9 +572,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     } else {
       // j and i are 0 and 1
       if (i == 0) {
-        assert j == 1;
       } else {
-        assert i == 1 && j == 0;
         swap(clause, 0, 1);
       }
     }

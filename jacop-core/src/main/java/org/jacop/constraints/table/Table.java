@@ -319,7 +319,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
 
       // check only for not assign variables and variables that become single value at this store
       // level
-      if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
+      if (!xiSingleton || xi.dom().stamp() == store.level) {
 
         Map<Integer, long[]> xSupport = supports[i];
 

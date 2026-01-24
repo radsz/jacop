@@ -2052,13 +2052,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             continue;
           }
 
-          if (currentDomain2.max() < currentDomain1.max()) {
-            i2++;
-            if (i2 == max2) {
-              break;
-            }
-            currentDomain2 = intervalDomain.intervals[i2];
+          i2++;
+          if (i2 == max2) {
+            break;
           }
+          currentDomain2 = intervalDomain.intervals[i2];
         }
 
         if (i1 == max1) {
@@ -2301,13 +2299,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             continue;
           }
 
-          if (currentDomain2.max() < currentDomain1.max()) {
-            i2++;
-            if (i2 < domain.noIntervals()) {
-              currentDomain2 = domain.getInterval(i2);
-            } else {
-              break;
-            }
+          i2++;
+          if (i2 < domain.noIntervals()) {
+            currentDomain2 = domain.getInterval(i2);
+          } else {
+            break;
           }
         }
 

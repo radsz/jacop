@@ -235,7 +235,7 @@ public class Tree {
 
         if (right == null) {
           // one item only.
-          nextLevel[next] = right;
+          nextLevel[next] = null;
         } else {
 
           TreeNode root = new TreeNode(left, right);

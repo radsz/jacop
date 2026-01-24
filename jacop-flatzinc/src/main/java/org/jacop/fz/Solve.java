@@ -548,8 +548,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     initTime = currentTime - startCPU;
     startCPU = currentTime;
 
-    if (si == null
-        || si.exploration() == null
+    if (si.exploration() == null
         || "complete".equals(si.exploration())
         || "lds".equals(si.exploration())
         || "credit".equals(si.exploration())) {
@@ -855,9 +854,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           backtracks += l.getBacktracks();
           depth += l.getMaximumDepth();
           solutions =
-              l != null && l instanceof PrioritySearch
-                  ? solutions
-                  : l.getSolutionListener().solutionsNo();
+              l instanceof PrioritySearch ? solutions : l.getSolutionListener().solutionsNo();
         }
       }
 
@@ -1196,7 +1193,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     for (int i = 0; i < si.getSearchItems().size(); i++) {
       if (i == 0) { // master search
-        masterLabel = sub_search(si.getSearchItems().get(i), masterLabel, true);
+        masterLabel = sub_search(si.getSearchItems().get(i), null, true);
         last_search = getLastSearch(masterLabel);
         masterSelect = variable_selection;
         if (!print_search_info) {

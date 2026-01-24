@@ -164,7 +164,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     int i = 0;
     while (notSat && i < listOfC.length) {
-      notSat = notSat && listOfC[i].notSatisfied();
+      notSat = listOfC[i].notSatisfied();
       i++;
     }
     return notSat;
@@ -176,7 +176,7 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable {
 
     int i = 0;
     while (!sat && i < listOfC.length) {
-      sat = sat || listOfC[i].satisfied();
+      sat = listOfC[i].satisfied();
       i++;
     }
     return sat;

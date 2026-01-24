@@ -197,7 +197,7 @@ public class BoxDisplay extends JFrame {
     // a box that has dimension more than 2 should only be drawn if it cuts the plane
     boolean shouldDraw = true;
     if (b.origin.length > 2) {
-      for (int i = 2; shouldDraw && i < b.origin.length; i++) {
+      for (int i = 2; i < b.origin.length; i++) {
         if (b.origin[i] > 0 || b.origin[i] + b.length[i] < 0) {
           shouldDraw = false;
           break;
@@ -274,18 +274,6 @@ public class BoxDisplay extends JFrame {
 
     // draw bounding box
     final boolean draw_bounding_box = false;
-    if (draw_bounding_box) {
-      Color outColor = c.brighter();
-      for (int i = 0; i < o.dimension; i++) {
-        IntVar coordVar = o.coords[i];
-        area.origin[i] = coordVar.min() + shape.boundingBox.origin[i];
-        area.length[i] =
-            coordVar.max() /*+ hole.origin[i]*/
-                + shape.boundingBox.length[i]
-                - coordVar.min() /*-hole.origin[i]*/;
-      }
-      display2DBox(area, outColor, false);
-    }
   }
 
   /**
@@ -317,18 +305,6 @@ public class BoxDisplay extends JFrame {
     }
     // draw bounding box
     final boolean draw_bounding_box = false;
-    if (draw_bounding_box) {
-      Color outColor = c.brighter();
-      for (int i = 0; i < o.dimension; i++) {
-        IntVar coordVar = o.coords[i];
-        area.origin[i] = coordVar.min() + shape.boundingBox.origin[i];
-        area.length[i] =
-            coordVar.max() /*+ hole.origin[i]*/
-                + shape.boundingBox.length[i]
-                - coordVar.min() /*-hole.origin[i]*/;
-      }
-      display2DBox(area, outColor, false);
-    }
   }
 
   /**

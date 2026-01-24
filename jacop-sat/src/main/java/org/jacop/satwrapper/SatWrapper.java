@@ -246,8 +246,6 @@ public final class SatWrapper extends Constraint
       throw Store.failException;
     }
 
-    assert !mustBacktrack;
-
     // clear the structure that watches changes in literals
     satChangesListener.clear();
 
@@ -779,10 +777,6 @@ public final class SatWrapper extends Constraint
    * @return always true
    */
   public boolean log(Object o, String format, Object... args) {
-    if (verbosity >= 1) {
-      String msg = format.formatted(args);
-      System.out.printf("[%s] %s%n", o, msg);
-    }
     return true;
   }
 

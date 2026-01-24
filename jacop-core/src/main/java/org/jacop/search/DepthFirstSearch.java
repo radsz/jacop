@@ -493,9 +493,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             boolean childFoundSolution = false;
             currentChildSearch = 0;
 
-            for (;
-                currentChildSearch < childSearches.length && !childResult;
-                currentChildSearch++) {
+            for (; currentChildSearch < childSearches.length; currentChildSearch++) {
               childSearches[currentChildSearch]
                   .getSolutionListener()
                   .setParentSolutionListener(solutionListener);

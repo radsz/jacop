@@ -134,19 +134,13 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     this.queueIndex = 2;
     this.numberId = idNumber.incrementAndGet();
 
-    if (starts.length == durations.length && durations.length == resources.length) {
+    this.Ts = new Task[starts.length];
+    this.starts = Arrays.copyOf(starts, starts.length);
+    this.durations = Arrays.copyOf(durations, durations.length);
+    this.resources = Arrays.copyOf(resources, resources.length);
 
-      this.Ts = new Task[starts.length];
-      this.starts = Arrays.copyOf(starts, starts.length);
-      this.durations = Arrays.copyOf(durations, durations.length);
-      this.resources = Arrays.copyOf(resources, resources.length);
-
-      for (int i = 0; i < starts.length; i++) {
-        Ts[i] = new Task(starts[i], durations[i], resources[i]);
-      }
-
-    } else {
-      throw new IllegalArgumentException("\nNot equal sizes of Variable vectors in cumulative");
+    for (int i = 0; i < starts.length; i++) {
+      Ts[i] = new Task(starts[i], durations[i], resources[i]);
     }
 
     this.doEdgeFinding = doEdgeFinding;
@@ -511,7 +505,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           L.remove(indexOfl);
           removeFromS_Lct(S);
         } else {
-          if (between && !after) {
+          if (between) {
             // update upper bound of l
             long slack, a;
             int startS;
@@ -571,7 +565,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               removeFromS_Lct(S);
             }
           } else {
-            if (!between && after) {
+            if (after) {
               L.remove(indexOfl);
             } else {
               // ! between && ! after => before
@@ -579,7 +573,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               // update upper bound of l.Start and l.Dur
 
               if (debug) {
-                IO.println("after=" + after + " between=" + between + "!!!");
+                IO.println("after=" + false + " between=" + false + "!!!");
               }
 
               int areaOfS = 0;
@@ -721,7 +715,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           L.remove(indexOfl);
           removeFromS_Est(S);
         } else {
-          if (between && !before) {
+          if (between) {
             // update lower bound of l
 
             long slack, a;
@@ -782,14 +776,14 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               removeFromS_Est(S);
             }
           } else {
-            if (!between && before) {
+            if (before) {
               L.remove(indexOfl);
             } else {
               // ! between && ! before => after S
               // l must be after S
               // update lower bound of l
               if (debug) {
-                IO.println("before=" + before + " between=" + between + "!!!");
+                IO.println("before=" + false + " between=" + false + "!!!");
               }
 
               int areaOfS = 0;

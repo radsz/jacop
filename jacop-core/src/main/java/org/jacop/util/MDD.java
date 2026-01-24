@@ -623,7 +623,7 @@ public class MDD {
       for (int j = same[level][numberOfChildren].size() - 1; j >= 0; j--) {
         int[] currentNode = same[level][numberOfChildren].get(j);
         boolean equal = true;
-        for (int i = currentNode.length - 1; i >= 0 && equal; i--) {
+        for (int i = currentNode.length - 1; i >= 0; i--) {
           if (currentNode[i] != nodeChildren[i]) {
             equal = false;
             break;

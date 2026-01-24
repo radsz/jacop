@@ -185,25 +185,23 @@ public class Derivative {
           if (f.equals(ceqR.r)) {
             resolved.add(cc);
           }
-        } else if (cc instanceof PminusQeqR qeqR1) {
-          if (f.equals(qeqR1.p)) {
-            resolved.add(cc);
-          }
-        } else if (cc instanceof PdivQeqR qeqR) {
-          if (f.equals(qeqR.p)) {
-            resolved.add(cc);
-          }
-        } else if (cc instanceof LinearFloat float1) {
-          if (float1.relationType == LinearFloat.eq) {
-            double[] ws = float1.weights;
-            FloatVar[] ls = float1.list;
-            for (int i = 0; i < ls.length; i++) {
-              if (f.equals(ls[i]) && ws[i] == -1.0) {
-                resolved.add(cc);
+        } else {
+          if (cc instanceof PdivQeqR qeqR) {
+            if (f.equals(qeqR.p)) {
+              resolved.add(cc);
+            }
+          } else if (cc instanceof LinearFloat float1) {
+            if (float1.relationType == LinearFloat.eq) {
+              double[] ws = float1.weights;
+              FloatVar[] ls = float1.list;
+              for (int i = 0; i < ls.length; i++) {
+                if (f.equals(ls[i]) && ws[i] == -1.0) {
+                  resolved.add(cc);
+                }
               }
             }
-          }
-        } // else if (cc instanceof EquationSystem)
+          } // else if (cc instanceof EquationSystem)
+        }
         // ;
       }
     }

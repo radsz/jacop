@@ -331,7 +331,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
 
     assert (level > currentLevel) : "It is possible only to add higher levels";
 
-    if (level > currentLevel && !trailContainsAllChanges) {
+    if (!trailContainsAllChanges) {
       // store old level
       if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
         // remember the trail.

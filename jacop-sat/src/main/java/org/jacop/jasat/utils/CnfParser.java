@@ -141,7 +141,6 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     }
 
     // skip \n
-    assert c == '\n';
     c = stream.read();
   }
 

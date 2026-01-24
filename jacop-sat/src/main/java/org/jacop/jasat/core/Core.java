@@ -377,7 +377,6 @@ public final class Core implements SolverComponent {
   public void unitPropagate() {
     // propagate until there remain no unit clauses or a conflict occurs
     while (currentState != SolverState.CONFLICT && !toPropagate.isEmpty()) {
-      assert !toPropagate.isEmpty();
 
       // find the next literal to propagate
       int literalToPropagate = toPropagate.pop();
@@ -389,7 +388,6 @@ public final class Core implements SolverComponent {
       dbStore.assertLiteral(literalToPropagate);
     }
 
-    assert toPropagate.isEmpty() || currentState == SolverState.CONFLICT;
     // at this point, propagation is over. If no conflict or restart,
     // search can continue.
   }

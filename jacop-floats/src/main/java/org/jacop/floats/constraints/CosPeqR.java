@@ -257,23 +257,8 @@ public class CosPeqR extends Constraint
 
   }
 
-  /*
-   * Normalizes argument to interval -2*PI..2*PI
-   */
   FloatInterval normalize(FloatVar v) {
-    double min = v.min();
-    double max = v.max();
-
-    double normMin = FloatDomain.down(min % (2 * FloatDomain.PI));
-    double maxmin = max - min;
-    double normMax = FloatDomain.up(normMin + maxmin);
-
-    if (normMax >= 2 * FloatDomain.PI) {
-      normMin = FloatDomain.down(normMin - 2 * FloatDomain.PI);
-      normMax = FloatDomain.up(normMax - 2 * FloatDomain.PI);
-    }
-
-    return new FloatInterval(normMin, normMax);
+    return FloatDomain.normalizeAngle(v.min(), v.max());
   }
 
   int intervalNo(double d) {

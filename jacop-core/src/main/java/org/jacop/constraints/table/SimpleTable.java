@@ -314,7 +314,7 @@ public class SimpleTable extends Constraint
 
       // check only for not assign variables and variables that become single value at this store
       // level
-      if (!xiSingleton || (xiSingleton && xi.dom().stamp() == store.level)) {
+      if (!xiSingleton || xi.dom().stamp() == store.level) {
 
         Map<Integer, Long> xSupport = supports[i];
 

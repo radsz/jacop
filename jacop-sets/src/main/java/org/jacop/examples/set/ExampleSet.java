@@ -210,10 +210,6 @@ public abstract class ExampleSet {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) {
-      store.print();
-    }
-
     T2 = System.currentTimeMillis();
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");

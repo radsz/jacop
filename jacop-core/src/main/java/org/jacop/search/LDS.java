@@ -87,7 +87,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         // since we do not want to
         if (exitChildListeners != null) {
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(var, value, status);
+            exitChildListener.leftChild(var, value, false);
           }
         }
 
@@ -99,7 +99,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         if (exitChildListeners != null) {
           boolean code = false;
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            code |= exitChildListener.leftChild(var, value, status);
+            code |= exitChildListener.leftChild(var, value, false);
           }
 
           // the children listeners disallow entering the right child
@@ -115,7 +115,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
     }
 
     // the search exits with the solution, so no discrepancy is required.
-    return status;
+    return true;
   }
 
   /**
@@ -138,7 +138,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         // since we do not want to
         if (exitChildListeners != null) {
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(choice, status);
+            exitChildListener.leftChild(choice, false);
           }
         }
 
@@ -150,7 +150,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
         if (exitChildListeners != null) {
           boolean code = false;
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            code |= exitChildListener.leftChild(choice, status);
+            code |= exitChildListener.leftChild(choice, false);
           }
 
           // the children listeners disallow entering the right child
@@ -166,7 +166,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
     }
 
     // solution was found, no discrepancy calculation needed.
-    return status;
+    return true;
   }
 
   /**

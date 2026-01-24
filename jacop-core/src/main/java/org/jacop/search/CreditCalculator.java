@@ -259,7 +259,7 @@ public class CreditCalculator<T extends Var>
 
         if (exitChildListeners != null) {
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(var, value, status);
+            exitChildListener.leftChild(var, value, false);
           }
         }
 
@@ -272,7 +272,7 @@ public class CreditCalculator<T extends Var>
       if (exitChildListeners != null) {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(var, value, status);
+          code |= exitChildListener.leftChild(var, value, true);
         }
 
         if (!code) {
@@ -287,7 +287,7 @@ public class CreditCalculator<T extends Var>
     if (timeOut) {
       if (exitChildListeners != null) {
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(var, value, status);
+          exitChildListener.leftChild(var, value, false);
         }
         // return code is an and relationship with a parent
       }
@@ -301,7 +301,7 @@ public class CreditCalculator<T extends Var>
       if (exitChildListeners != null) {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(var, value, status);
+          code |= exitChildListener.leftChild(var, value, false);
         }
         if (!code) {
           currentLevel--;
@@ -335,7 +335,7 @@ public class CreditCalculator<T extends Var>
 
         if (exitChildListeners != null) {
           for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-            exitChildListener.leftChild(choice, status);
+            exitChildListener.leftChild(choice, false);
           }
         }
 
@@ -348,7 +348,7 @@ public class CreditCalculator<T extends Var>
       if (exitChildListeners != null) {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(choice, status);
+          code |= exitChildListener.leftChild(choice, true);
         }
         return code;
       }
@@ -358,7 +358,7 @@ public class CreditCalculator<T extends Var>
     if (timeOut) {
       if (exitChildListeners != null) {
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          exitChildListener.leftChild(choice, status);
+          exitChildListener.leftChild(choice, false);
         }
       }
 
@@ -371,7 +371,7 @@ public class CreditCalculator<T extends Var>
       if (exitChildListeners != null) {
         boolean code = false;
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
-          code |= exitChildListener.leftChild(choice, status);
+          code |= exitChildListener.leftChild(choice, false);
         }
         if (!code) {
           currentLevel--;

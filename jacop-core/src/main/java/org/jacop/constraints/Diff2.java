@@ -437,7 +437,7 @@ public class Diff2 extends Diff {
           int sOriginIMax = sOriginIdom.max();
           s_min = sOriginIdom.min();
           s_max = sOriginIMax + sLengthIdom.max();
-          overlap = overlap && intervalOverlap(r_min[m], r_max[m], s_min, s_max);
+          overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
 
           // min start, max stop and min length
           sOriginMin[m] = s_min;
@@ -599,7 +599,7 @@ public class Diff2 extends Diff {
       Rectangle[] toEvaluate = ((Diff2VarValue) EvalRects[i].value()).Rects;
       while (sat && j < toEvaluate.length) {
         rectj = toEvaluate[j];
-        sat = sat && !recti.domOverlap(rectj);
+        sat = !recti.domOverlap(rectj);
         j++;
       }
       i++;

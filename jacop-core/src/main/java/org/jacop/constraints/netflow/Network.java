@@ -188,11 +188,8 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     deletedArcs.add(arc);
     deletedSize.update(deletedArcs.size());
 
-    if (arc.companion != null) {
-      //     ((Pruning)this).numActiveArcs--;
-    }
+    //     ((Pruning)this).numActiveArcs--;
 
-    if (SHOW_CHANGES) {}
   }
 
   public void modified(ArcCompanion companion) {

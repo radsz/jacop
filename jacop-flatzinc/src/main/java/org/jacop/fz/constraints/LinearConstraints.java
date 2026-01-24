@@ -208,7 +208,7 @@ class LinearConstraints implements ParserTreeConstants {
               if (p3 == 0) {
                 support.pose(new XneqY(p2[0], p4));
                 return;
-              } else if (p3 == 1) {
+              } else {
                 support.pose(new XeqY(p2[0], p4));
                 return;
               }
@@ -230,7 +230,7 @@ class LinearConstraints implements ParserTreeConstants {
               support.pose(new Not(new OrBoolSimple(p2[0], p2[1], p4)));
             } else if (p3 == 1) {
               support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
-            } else if (p3 == 2) {
+            } else {
               support.pose(new AndBoolSimple(p2[0], p2[1], p4));
             }
           } else {
@@ -988,17 +988,9 @@ class LinearConstraints implements ParserTreeConstants {
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1 && p3 == 0) {
           support.pose(new XlteqY(p2[1], p2[0]));
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-          if (p3 == 0) {
-            support.pose(new XlteqY(p2[0], p2[1]));
-          } else {
-            support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
-          }
+          support.pose(new XplusClteqZ(p2[0], -p3, p2[1]));
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-          if (p3 == 0) {
-            support.pose(new XlteqY(p2[1], p2[0]));
-          } else {
-            support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
-          }
+          support.pose(new XplusClteqZ(p2[1], -p3, p2[0]));
         } else if (allWeightsOne(p1)) {
           t = support.dictionary.getConstant(p3); // new IntVar(store, p3, p3);
           if (boolSum(p2)) {

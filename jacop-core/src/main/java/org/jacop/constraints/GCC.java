@@ -1049,7 +1049,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         C1 = S2.pop();
         while (!S1.isEmpty() && S1.peek() >= C1.root && S1.peek() <= C1.rightmostY) {
           int popY;
-          assert (!S1.isEmpty());
           popY = S1.pop();
           compOfY[popY] = sccNb;
           compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yReachesLeft[popY]);
@@ -1063,7 +1062,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // this second part treat the case the new c1 is in fact attainable by the current component
 
       while (!S2.isEmpty() && yReachesLeft[y] <= S2.peek().rightmostY) {
-        assert (!S2.isEmpty());
         C1 = S2.pop();
         C.maxX = Math.max(C.maxX, C1.maxX);
         C.root =
@@ -1087,7 +1085,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       while (!S1.isEmpty() && S1.peek() >= C.root && S1.peek() <= C.rightmostY) {
         int y;
-        assert (!S1.isEmpty());
         y = S1.pop();
         compOfY[y] = sccNb;
         compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yReachesLeft[y]);
@@ -1096,7 +1093,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       sccNb++;
     }
 
-    assert (S1.isEmpty() && S2.isEmpty());
+    assert S1.isEmpty();
     return sccNb;
   }
 

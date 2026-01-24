@@ -155,11 +155,9 @@ public class VariablesParameters implements ParserTreeConstants {
 
     int initChild = getAnnotations(node, 1);
 
-    if (annotations.contains("var_is_introduced")) {}
     if (annotations.contains("output_var")) {
       output_var = true;
     }
-    if (annotations.contains("is_defined_var")) {}
 
     String ident;
     IntVar varInt;
@@ -573,7 +571,6 @@ public class VariablesParameters implements ParserTreeConstants {
 
     String ident = ((ASTVarDeclItem) node).getIdent();
 
-    if (annotations.contains("var_is_introduced")) {}
     if (annotations.contains("output_array")) {
       output_array = true;
       outArrayAnn = new OutputArrayAnnotation(ident, indexBounds);
@@ -1278,11 +1275,7 @@ public class VariablesParameters implements ParserTreeConstants {
             return var;
           } else {
             Integer n = dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
-            if (n != null) {
-              return dictionary.getConstant(n); // new IntVar(store, n.intValue(), n.intValue());
-            } else {
-              break;
-            }
+            return dictionary.getConstant(n); // new IntVar(store, n.intValue(), n.intValue());
           }
         case 3: // array acces
           IntVar avar =
@@ -1296,11 +1289,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 dictionary
                     .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            if (an != null) {
-              return dictionary.getConstant(an); // new IntVar(store, an.intValue(), an.intValue());
-            } else {
-              break;
-            }
+            return dictionary.getConstant(an); // new IntVar(store, an.intValue(), an.intValue());
           }
         default: // string & float;
           throw new IllegalArgumentException(
@@ -1310,7 +1299,6 @@ public class VariablesParameters implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "Not supported parameter assignment; compilation aborted.");
     }
-    return new IntVar(store);
   }
 
   FloatVar getScalarFlatExpr_varFloat(Store store, SimpleNode node, int i) {
@@ -1323,12 +1311,8 @@ public class VariablesParameters implements ParserTreeConstants {
             return var;
           } else {
             Double n = dictionary.getFloat(((ASTScalarFlatExpr) child).getIdent());
-            if (n != null) {
-              return dictionary.getFloatConstant(
-                  n); // new FloatVar(store, n.doubleValue(), n.doubleValue());
-            } else {
-              break;
-            }
+            return dictionary.getFloatConstant(
+                n); // new FloatVar(store, n.doubleValue(), n.doubleValue());
           }
         case 3: // array acces
           FloatVar avar =
@@ -1342,12 +1326,8 @@ public class VariablesParameters implements ParserTreeConstants {
                 dictionary
                     .getFloatArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            if (an != null) {
-              return dictionary.getFloatConstant(
-                  an); // new FloatVar(store, an.doubleValue(), an.doubleValue());
-            } else {
-              break;
-            }
+            return dictionary.getFloatConstant(
+                an); // new FloatVar(store, an.doubleValue(), an.doubleValue());
           }
         case 5: // float
           return dictionary.getFloatConstant(((ASTScalarFlatExpr) child).getFloat());
@@ -1359,7 +1339,6 @@ public class VariablesParameters implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "Not supported parameter assignment; compilation aborted.");
     }
-    return new FloatVar(store);
   }
 
   SetVar[] getSetFlatExpr_ArrayVar(Store store, SimpleNode node, int index) {

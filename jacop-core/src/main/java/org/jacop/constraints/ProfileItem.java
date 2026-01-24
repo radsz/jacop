@@ -295,9 +295,9 @@ public class ProfileItem {
         if (max <= a.min) {
           left.set(min, max, value);
         } else {
-          if (max > a.min && max <= a.max) {
+          if (max <= a.max) {
             left.set(min, a.min, value);
-          } else if (max > a.max) {
+          } else {
             // a.Max < Max
             right.set(a.max, max, value);
             left.set(min, a.min, value);

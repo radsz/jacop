@@ -113,8 +113,6 @@ public class DomainHoles extends InternalConstraint {
       }
     }
 
-    assert (holeCount == 0 || holeCount == 1 || holeCount == 2) : "bad number of holes";
-
     if (holeCount == 0) {
       // no hole: no infeasible area
       Arrays.fill(outPoint, 0);

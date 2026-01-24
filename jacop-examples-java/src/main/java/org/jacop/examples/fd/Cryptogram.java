@@ -134,11 +134,9 @@ public class Cryptogram extends ExampleFD {
       }
     } else {
 
-      if (lines != null) {
-        // Standard use case if no file is supplied
-        lines[0] = "HERE+SHE=COMES";
-        noLines = 1;
-      }
+      // Standard use case if no file is supplied
+      lines[0] = "HERE+SHE=COMES";
+      noLines = 1;
 
       IO.println("No input file was supplied, using lines : ");
       for (int i = 0; i < noLines; i++) {

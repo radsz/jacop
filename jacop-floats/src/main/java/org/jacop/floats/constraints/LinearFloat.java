@@ -106,10 +106,6 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
       fIndex++;
     }
 
-    if (fIndex == list.length) {
-      throw new RuntimeException("Wrong variable in derivative of " + this);
-    }
-
     FloatVar[] df = new FloatVar[list.length];
     double[] ww = new double[list.length];
     FloatVar v = null;

@@ -256,10 +256,8 @@ public final class SatChangesListener
 
       if (isOneValue > 0 || isZeroValue < 0) {
         variable.domain.in(storeLevel, variable, 1, 1);
-      } else if (isZeroValue > 0 || isOneValue < 0) {
-        variable.domain.in(storeLevel, variable, 0, 0);
       } else {
-        throw new AssertionError("no changes for boolean var " + variable + "?");
+        variable.domain.in(storeLevel, variable, 0, 0);
       }
     }
 

@@ -633,8 +633,6 @@ public class NetworkSimplex {
       //     if (arc.isInCut(forward)) {// && arc.capacity > 0) {
       if (arc.capacity > 0 && arc.isInCut(forward)) {
 
-        assert (arc.capacity > 0) : "" + arc;
-
         int reducedCost = arc.reducedCost();
         if (minimumCost > reducedCost) {
           minimumCost = reducedCost;

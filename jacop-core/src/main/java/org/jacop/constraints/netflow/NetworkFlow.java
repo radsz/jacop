@@ -227,7 +227,7 @@ public class NetworkFlow extends Constraint
     previousLevel = store.level;
 
     int iteration = 0;
-    while (network.needsUpdate(costVariable.max()) || (first && iteration == 0)) {
+    while (network.needsUpdate(costVariable.max()) || iteration == 0) {
 
       if (DO_INSTRUMENTATION) {
         statistics.consistencyIterations++;

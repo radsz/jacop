@@ -493,8 +493,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (costVariable != null) {
           if (costVariable instanceof IntVar) {
             IO.println("Solution cost is " + costValue);
-          } else if (costVariable instanceof IntVar) {
-            IO.println("Solution cost is " + costVariable.dom());
           }
         }
 

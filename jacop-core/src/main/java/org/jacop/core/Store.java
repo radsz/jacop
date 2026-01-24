@@ -509,19 +509,17 @@ public class Store {
       while (currentQueue < queueNo) {
         // Selects changed constraints from changed queue
         // and evaluates them
-        if (currentQueue < queueNo) {
-          while (!changed[currentQueue].isEmpty()) {
+        while (!changed[currentQueue].isEmpty()) {
 
-            currentConstraint = getFirstChanged();
+          currentConstraint = getFirstChanged();
 
-            numberConsistencyCalls++;
+          numberConsistencyCalls++;
 
-            currentConstraint.consistency(this);
+          currentConstraint.consistency(this);
 
-            if (variableActivityManagement) {
-              updateActivities(currentConstraint);
-              variablesPrunned.clear();
-            }
+          if (variableActivityManagement) {
+            updateActivities(currentConstraint);
+            variablesPrunned.clear();
           }
         }
 
@@ -589,13 +587,10 @@ public class Store {
    */
   public Var findVariable(String id) {
 
-    if (variablesHashMap != null) {
+    Var key = variablesHashMap.get(id);
 
-      Var key = variablesHashMap.get(id);
-
-      if (key != null) {
-        return key;
-      }
+    if (key != null) {
+      return key;
     }
 
     for (Var v : vars) {

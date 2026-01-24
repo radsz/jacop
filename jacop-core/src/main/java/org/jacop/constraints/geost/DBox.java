@@ -256,8 +256,7 @@ public class DBox {
     }
 
     // now we need to make sure that the correct list contains the boxes
-    assert (resultStep.isEmpty() && !resultWork.isEmpty())
-            || resultStep.isEmpty() && resultWork.isEmpty()
+    assert resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty()
         : // without this the assertion would fail when subtracting leaves nothing
         "bad cleaning of the lists";
 
@@ -608,8 +607,7 @@ public class DBox {
     }
 
     // now we need to make sure that the correct list contains the boxes
-    assert (resultStep.isEmpty() && !resultWork.isEmpty())
-            || resultStep.isEmpty() && resultWork.isEmpty()
+    assert resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty()
         : // without this the assertion would fail when subtracting leaves nothing
         "bad cleaning of the lists";
 

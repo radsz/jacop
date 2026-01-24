@@ -149,8 +149,6 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
       if (kSet.contains(var.domain)) {
 
-        assert posVar >= currentLB : "Variable " + var + " counted for lowerbound multiple times";
-
         if (posVar != currentLB) {
           list[posVar] = list[currentLB];
           list[currentLB] = var;
@@ -164,8 +162,6 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
         var.removeConstraint(this);
       }
       if (!kSet.isIntersecting(var.domain)) {
-
-        assert posVar <= currentUB : "Variable " + var + " counted for upperbound multiple times";
 
         if (posVar != currentUB) {
           list[posVar] = list[currentUB - 1];

@@ -41,7 +41,19 @@
 
     <build>
         <plugins>
-            <!-- JJTree and javacc plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <configLocation>${project.parent.basedir}/doc/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${project.parent.basedir}/doc/suppression.xml</suppressionsLocation>
+                </configuration>
+            </plugin>
+            <!--
+              JJTree/JavaCC generate TokenMgrError etc. into target/generated-sources/javacc.
+              If IntelliJ builds to target/, use "mvn clean test" from CLI for this module
+              to avoid "TokenMgrError cannot be resolved" from stale IDE-built classes.
+            -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>javacc-maven-plugin</artifactId>

@@ -177,19 +177,7 @@ public class NonOverlapping implements ExternalConstraint {
     final boolean inefficient = true;
 
     // TODO, do we keep inefficient version? If so, attribute constraints is no longer needed.
-    if (inefficient) {
-      return getObjectConstraints(o).contains(ic);
-    } else {
-
-      // TODO, Potentially a bug after introducing inheritance between ObstacleObject and
-      // ObstacleObjectFrame.
-      if (ic.getClass() != ObstacleObjectFrame.class) {
-        return false;
-      } else {
-        InternalConstraint oc = objectConstraintMap[o.no];
-        return oc != null && ic != oc && constraints.contains(ic);
-      }
-    }
+    return getObjectConstraints(o).contains(ic);
   }
 
   public GeostObject[] getObjectScope() {

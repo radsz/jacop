@@ -1512,4 +1512,17 @@ public abstract class FloatDomain extends Domain {
 
     return min();
   }
+
+  public static FloatInterval normalizeAngle(double min, double max) {
+    double normMin = FloatDomain.down(min % (2 * FloatDomain.PI));
+    double maxmin = max - min;
+    double normMax = FloatDomain.up(normMin + maxmin);
+
+    if (normMax >= 2 * FloatDomain.PI) {
+      normMin = FloatDomain.down(normMin - 2 * FloatDomain.PI);
+      normMax = FloatDomain.up(normMax - 2 * FloatDomain.PI);
+    }
+
+    return new FloatInterval(normMin, normMax);
+  }
 }

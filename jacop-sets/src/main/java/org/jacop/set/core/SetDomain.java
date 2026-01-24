@@ -328,7 +328,7 @@ public abstract class SetDomain extends Domain {
       boolean alreadyImposed = false;
 
       if (modelConstraintsToEvaluate[pruningEvent] > 0) {
-        for (int i = pruningEventConstraints.length - 1; i >= 0 && !alreadyImposed; i--) {
+        for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
           if (pruningEventConstraints[i] == C) {
             alreadyImposed = true;
             break;

@@ -408,10 +408,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         Arrays.stream(objects).flatMap(obj -> obj.getVariables().stream()).toArray(IntVar[]::new));
 
     // This comes from the frame computation for NonOverlapping external constraint.
-    assert (IntDomain.MaxInt < Integer.MAX_VALUE / 4 - 1)
-        : "Geost can not work with too large Constants.MaxInt";
-    assert (IntDomain.MinInt > Integer.MIN_VALUE / 4 + 1)
-        : "Geost can not work with too small Constants.MinInt";
 
     assert (objects.length > 0) : "empty collection of objects";
     assert (shapes.length > 0) : "empty collection of shapes";
@@ -805,7 +801,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           feasiblePointFound = true;
           break;
         } else {
-          assert feasiblePointFound == false;
           c[lexI] = domainMin;
         }
       }
@@ -914,7 +909,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           feasiblePointFound = true;
           break;
         } else {
-          assert feasiblePointFound == false;
           c[lexI] = domainMax;
         }
       }

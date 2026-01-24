@@ -90,7 +90,7 @@ class IntRectangle {
       IntDomain RoriginIDom = R.origin[i].dom();
       min2 = RoriginIDom.min();
       max2 = RoriginIDom.max() + R.length[i].max();
-      overlap = overlap && intervalOverlap(min1, max1, min2, max2);
+      overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }
     return overlap;
@@ -117,7 +117,7 @@ class IntRectangle {
       max1 = min1 + length[i];
       min2 = R.origin[i];
       max2 = min2 + R.length[i];
-      overlap = overlap && intervalOverlap(min1, max1, min2, max2);
+      overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }
     return overlap;

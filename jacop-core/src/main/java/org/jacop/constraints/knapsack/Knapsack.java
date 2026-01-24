@@ -787,9 +787,6 @@ public class Knapsack extends Constraint
 
     final boolean leftToCrit = leafForV.positionInTheTree < positionOfCriticalItem.value();
 
-    assert (!(leftToCrit && rightToCrit))
-        : "Error, a leaf cannot be right and left to the critical ";
-
     /* we look if there is some changed to do */
     if (maxBoundHasChanged) {
       /* for max decreased of mandatory items */

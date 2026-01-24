@@ -226,9 +226,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
       result.append(var).append(" ");
     }
 
-    if (mdd.vars != null) {
-      result.append(")").append("size = ").append(mdd.freePosition);
-    }
+    result.append(")").append("size = ").append(mdd.freePosition);
 
     result.append(")\n");
 

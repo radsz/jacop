@@ -90,7 +90,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
     this.a = a;
 
     this.increasingCosts = true;
-    for (int i = 0; i < weights.length - 1 && this.increasingCosts; i++) {
+    for (int i = 0; i < weights.length - 1; i++) {
       if (weights[i] > weights[i + 1]) {
         this.increasingCosts = false;
         break;

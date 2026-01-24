@@ -127,15 +127,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
    */
   public String checkInvariants() {
 
-    if (obstacle == null) {
-      return "obstacle field is null";
-    }
-
     if (frame == null) {
-      return "frame is null";
-    }
-
-    if (extendedHoles == null) {
       return "frame is null";
     }
 
@@ -443,19 +435,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
     int[] outPoint = DBox.getAllocatedInstance(obstacle.dimension + 1).origin;
 
     final boolean consider_all = false;
-    if (consider_all) {
-      switch (minlex) {
-        case PRUNEMAX:
-          Arrays.fill(outPoint, Integer.MAX_VALUE);
-          break;
-        case PRUNEMIN:
-          Arrays.fill(outPoint, Integer.MIN_VALUE);
-          break;
-        default:
-          assert false : "unhandled case";
-      }
-      return outPoint;
-    }
 
     if (frame.isEmpty()) {
       return null;

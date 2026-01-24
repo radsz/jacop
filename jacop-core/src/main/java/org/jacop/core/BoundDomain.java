@@ -842,12 +842,7 @@ class BoundDomain extends IntDomain implements Cloneable {
       return new BoundDomain(this.min, inputMin - 1);
     }
 
-    if (inputMax < this.max) {
-      return new BoundDomain(inputMax + 1, this.max);
-    }
-
-    assert false;
-    return null;
+    return new BoundDomain(inputMax + 1, this.max);
   }
 
   @Override
@@ -865,12 +860,7 @@ class BoundDomain extends IntDomain implements Cloneable {
       return new BoundDomain(this.min, min - 1);
     }
 
-    if (max < this.max) {
-      return new BoundDomain(max + 1, this.max);
-    }
-
-    assert false;
-    return null;
+    return new BoundDomain(max + 1, this.max);
   }
 
   @Override

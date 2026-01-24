@@ -219,10 +219,6 @@ public abstract class ExampleFD {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    if (result) {
-      store.print();
-    }
-
     T2 = System.currentTimeMillis();
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
@@ -440,7 +436,7 @@ public abstract class ExampleFD {
       search.setNodesOut(1000);
 
       result = search.labeling(store, select);
-      timeout &= collector.timeOut;
+      timeout = collector.timeOut;
 
       nodes += search.getNodes();
       decisions += search.getDecisions();

@@ -104,9 +104,7 @@ public final class RunSolver {
         @Override
         public Config handle(OptParse<Config> parser, Config e, String arg) {
           Long t = Long.parseLong(arg);
-          if (t != null) {
-            e.timeout = t * 1000;
-          }
+          e.timeout = t * 1000;
           return e;
         }
       };

@@ -243,10 +243,7 @@ public class DisjointConditional extends Diff {
     this.queueIndex = 2;
 
     int size = origin1.length;
-    if (size == origin1.length
-        && size == origin2.length
-        && size == length1.length
-        && size == length2.length) {
+    if (size == origin2.length && size == length1.length && size == length2.length) {
 
       this.rectangles = new Rectangle[size];
       for (int i = 0; i < size; i++) {
@@ -469,7 +466,7 @@ public class DisjointConditional extends Diff {
         s_min = sOriginIdom.min();
         s_max = sOriginIMax + sLengthIdom.max();
 
-        overlap = overlap && intervalOverlap(r_min[m], r_max[m], s_min, s_max);
+        overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
 
         // min start, max stop and min length
         sOriginMin[m] = s_min;
@@ -1031,7 +1028,7 @@ public class DisjointConditional extends Diff {
       Rectangle[] toEvaluate = ((DisjointCondVarValue) evalRects[i].value()).Rects;
       while (sat && j < toEvaluate.length) {
         rectj = toEvaluate[j];
-        sat = sat && !recti.domOverlap(rectj);
+        sat = !recti.domOverlap(rectj);
         j++;
       }
       i++;

@@ -107,10 +107,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
         length2);
 
     int size = origin1.length;
-    if (size == origin1.length
-        && size == origin2.length
-        && size == length1.length
-        && size == length2.length) {
+    if (size == origin2.length && size == length1.length && size == length2.length) {
 
       this.queueIndex = 2;
 

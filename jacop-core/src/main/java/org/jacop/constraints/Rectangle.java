@@ -141,10 +141,7 @@ public class Rectangle {
 
     int size = origin1.length;
 
-    if (size == origin1.length
-        && size == origin2.length
-        && size == length1.length
-        && size == length2.length) {
+    if (size == origin2.length && size == length1.length && size == length2.length) {
 
       Rectangle[] result = new Rectangle[size];
 
@@ -213,7 +210,7 @@ public class Rectangle {
       max1 = originIdom.max() + length[i].max();
       min2 = ROriginIdom.min();
       max2 = ROriginIdom.max() + r.length[i].max();
-      overlap = overlap && intervalOverlap(min1, max1, min2, max2);
+      overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }
     return overlap;
@@ -332,7 +329,7 @@ public class Rectangle {
     boolean sat = true;
     int i = 0;
     while (sat && i < dim) {
-      sat = sat && origin[i].singleton() && length[i].singleton();
+      sat = origin[i].singleton() && length[i].singleton();
       i++;
     }
     return sat;

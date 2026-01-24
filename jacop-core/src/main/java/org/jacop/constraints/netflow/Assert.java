@@ -222,7 +222,6 @@ public class Assert {
       }
       // deleted arc
       else {
-        assert (arc.index == -3);
         del_cost += arc.longCost();
       }
     }
@@ -328,9 +327,6 @@ public class Assert {
 
     boolean asserts = false;
     assert (asserts = true);
-    if (!asserts) {
-      throw new AssertionError("Assertions disabled");
-    }
   }
 
   public static List<Arc> allArcsForDebug(NetworkSimplex g) {

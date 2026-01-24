@@ -39,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -1513,7 +1514,8 @@ public class Alldistinct extends Constraint
 
               // Lack of equal sign means greedy in propagation
               if (stamps.get(firstValue).value() < stamps.get(secondValue).value()
-                  || (stamps.get(firstValue).value() == stamps.get(secondValue).value()
+                  || (Objects.equals(
+                          stamps.get(firstValue).value(), stamps.get(secondValue).value())
                       && !greedy)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
@@ -1532,7 +1534,8 @@ public class Alldistinct extends Constraint
 
               // Lack of equal sign means greedy in propagation
               if (stamps.get(firstValue).value() < stamps.get(secondValue).value()
-                  || (stamps.get(firstValue).value() == stamps.get(secondValue).value()
+                  || (Objects.equals(
+                          stamps.get(firstValue).value(), stamps.get(secondValue).value())
                       && !greedy)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
@@ -1554,7 +1557,8 @@ public class Alldistinct extends Constraint
               // Lack of equal sign means no greedy in propagation
               // Equal sign means greedy in propagation
               if (stamps.get(firstValue).value() <= stamps.get(secondValue).value()
-                  || (stamps.get(firstValue).value() == stamps.get(secondValue).value()
+                  || (Objects.equals(
+                          stamps.get(firstValue).value(), stamps.get(secondValue).value())
                       && greedy)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
@@ -1572,7 +1576,8 @@ public class Alldistinct extends Constraint
 
               // Equal sign means greedy in propagation
               if (stamps.get(firstValue).value() <= stamps.get(secondValue).value()
-                  || (stamps.get(firstValue).value() == stamps.get(secondValue).value()
+                  || (Objects.equals(
+                          stamps.get(firstValue).value(), stamps.get(secondValue).value())
                       && greedy)) {
                 // Value with lower number of variables has a
                 // higher change to have this value
@@ -1654,8 +1659,7 @@ public class Alldistinct extends Constraint
               }
               minCurrentPruning = pruningFirstVariable;
               maxCurrentPruning = pruningSecondVariable;
-            } else if (pruningFirstVariable == minCurrentPruning
-                && pruningSecondVariable > maxCurrentPruning) {
+            } else if (pruningSecondVariable > maxCurrentPruning) {
               // Equals sign means no greedy in propagation in
               // case of tie break
               // Lack of equal sign means greedy in propagation
@@ -1698,8 +1702,7 @@ public class Alldistinct extends Constraint
 
               minCurrentPruning = pruningSecondVariable;
               maxCurrentPruning = pruningFirstVariable;
-            } else if (pruningSecondVariable == minCurrentPruning
-                && pruningFirstVariable > maxCurrentPruning) {
+            } else if (pruningFirstVariable > maxCurrentPruning) {
 
               // Equal sign means greedy in case of tie break
               if (currentSimpleArrayList.getFirst().getSize()

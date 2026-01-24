@@ -193,7 +193,6 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
       curValues[i] = value;
     }
     // neither unknown nor satisfied
-    assert numUnknown <= 1;
 
     int clauseId = indexToUniqueId(clauseIndex);
     if (numUnknown == 0) {
@@ -207,14 +206,12 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
       return ClauseState.UNSATISFIABLE_CLAUSE;
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; true; i++) {
       if (curValues[i] == 0) {
         core.triggerPropagateEvent(curLit[i], clauseId);
         return ClauseState.SATISFIED_CLAUSE;
       }
     }
-
-    throw new AssertionError("should not reach this point");
   }
 
   @Override

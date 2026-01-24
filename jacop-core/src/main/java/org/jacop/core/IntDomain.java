@@ -165,20 +165,20 @@ public abstract class IntDomain extends Domain {
       min = IntDomain.MinInt;
       max = IntDomain.MaxInt;
       result = new Interval(min, max);
-    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) { // case 2
+    } else if (c == 0 && d == 0) { // case 2
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
 
-    } else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
+    } else if (c < 0 && d > 0) { // case 3
       max = Math.max(Math.abs(a), Math.abs(b));
       min = -max;
       result = new Interval(min, max);
-    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) { // case 4 a
+    } else if (c == 0 && (a > 0 || b < 0)) { // case 4 a
       result = divBounds(a, b, 1, d); // can happen if a..b or c..d are not proper intervals
 
     } else if (c != 0 && d == 0 && (a > 0 || b < 0)) { // case 4 b
       result = divBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
 
-    } else if ((c > 0 || d < 0) && c <= d) { // case 5
+    } else if (c <= d) { // case 5
       int ac = a / c;
       int ad = a / d;
       int bc = b / c;
@@ -205,20 +205,20 @@ public abstract class IntDomain extends Domain {
       min = IntDomain.MinInt;
       max = IntDomain.MaxInt;
       result = new Interval(min, max);
-    } else if (c == 0 && d == 0 && (a > 0 || b < 0)) { // case 2
+    } else if (c == 0 && d == 0) { // case 2
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
 
-    } else if (c < 0 && d > 0 && (a > 0 || b < 0)) { // case 3
+    } else if (c < 0 && d > 0) { // case 3
       max = Math.max(Math.abs(a), Math.abs(b));
       min = -max;
       result = new Interval(min, max);
-    } else if (c == 0 && d != 0 && (a > 0 || b < 0)) { // case 4 a
+    } else if (c == 0 && (a > 0 || b < 0)) { // case 4 a
       result = divIntBounds(a, b, 1, d); // can happen if a..b or c..d are not proper intervals
 
     } else if (c != 0 && d == 0 && (a > 0 || b < 0)) { // case 4 b
       result = divIntBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
 
-    } else if ((c > 0 || d < 0) && c <= d) { // case 5
+    } else if (c <= d) { // case 5
       double ac = (double) a / c;
       double ad = (double) a / d;
       double bc = (double) b / c;
