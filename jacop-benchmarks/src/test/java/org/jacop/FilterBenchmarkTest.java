@@ -35,8 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import org.jacop.core.Store;
 import org.jacop.examples.fd.filters.AR;
 import org.jacop.examples.fd.filters.DCT;
@@ -46,9 +45,9 @@ import org.jacop.examples.fd.filters.FFT;
 import org.jacop.examples.fd.filters.FIR;
 import org.jacop.examples.fd.filters.Filter;
 import org.jacop.examples.fd.filters.FilterBenchmark;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /*
  * This is a test based on the filter scheduling examples, commonly used in High-Level Synthesis.
@@ -56,142 +55,126 @@ import org.junit.runners.Parameterized;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  */
 
-@RunWith(Parameterized.class)
 public class FilterBenchmarkTest extends FilterBenchmark {
 
-  private final int[] resourcesConfiguration;
-  private final Filter filter;
-  private final int costExp;
-  private final String experiment;
-
-  public FilterBenchmarkTest(
-      int[] resourcesConfiguration, Filter filterTest, String experiment, int costExp) {
-    super();
-    this.resourcesConfiguration = resourcesConfiguration;
-    this.filter = filterTest;
-    this.experiment = experiment;
-    this.costExp = costExp;
+  static Stream<Arguments> testData() {
+    return Stream.of(
+        Arguments.of(new int[] {1, 1}, new DFQ(), "experiment1", 13),
+        Arguments.of(new int[] {1, 2}, new DFQ(), "experiment1", 8),
+        Arguments.of(new int[] {1, 3}, new DFQ(), "experiment1", 7),
+        Arguments.of(new int[] {2, 2}, new DFQ(), "experiment1", 7),
+        Arguments.of(new int[] {1, 4}, new DFQ(), "experiment1", 6),
+        Arguments.of(new int[] {2, 3}, new DFQ(), "experiment1", 6),
+        Arguments.of(new int[] {1, 1}, new FIR(), "experiment1", 18),
+        Arguments.of(new int[] {1, 2}, new FIR(), "experiment1", 15),
+        Arguments.of(new int[] {2, 2}, new FIR(), "experiment1", 11),
+        Arguments.of(new int[] {2, 3}, new FIR(), "experiment1", 10),
+        Arguments.of(new int[] {1, 1}, new AR(1, 1), "experiment2", 18),
+        Arguments.of(new int[] {1, 2}, new AR(1, 1), "experiment2", 13),
+        Arguments.of(new int[] {1, 3}, new AR(1, 1), "experiment2", 13),
+        Arguments.of(new int[] {2, 3}, new AR(1, 1), "experiment2", 10),
+        Arguments.of(new int[] {2, 4}, new AR(1, 1), "experiment2", 8),
+        Arguments.of(new int[] {1, 1}, new EWF(), "experiment1", 28),
+        Arguments.of(new int[] {2, 1}, new EWF(), "experiment1", 21),
+        Arguments.of(new int[] {2, 2}, new EWF(), "experiment1", 18),
+        Arguments.of(new int[] {3, 3}, new EWF(), "experiment1", 17),
+        Arguments.of(new int[] {1, 1}, new EWF(1, 1), "experiment1", 27),
+        Arguments.of(new int[] {2, 1}, new EWF(1, 1), "experiment1", 16),
+        Arguments.of(new int[] {2, 2}, new EWF(1, 1), "experiment1", 16),
+        Arguments.of(new int[] {3, 3}, new EWF(1, 1), "experiment1", 14),
+        Arguments.of(new int[] {1, 1}, new DCT(), "experiment1", 34),
+        Arguments.of(new int[] {1, 2}, new DCT(), "experiment1", 32),
+        Arguments.of(new int[] {2, 2}, new DCT(), "experiment1", 18),
+        Arguments.of(new int[] {2, 3}, new DCT(), "experiment1", 16),
+        Arguments.of(new int[] {3, 3}, new DCT(), "experiment1", 14),
+        Arguments.of(new int[] {3, 4}, new DCT(), "experiment1", 11),
+        Arguments.of(new int[] {4, 4}, new DCT(), "experiment1", 10),
+        Arguments.of(new int[] {1, 1}, new DFQ(), "experiment1PM", 8),
+        Arguments.of(new int[] {1, 2}, new DFQ(), "experiment1PM", 6),
+        Arguments.of(new int[] {1, 1}, new FIR(), "experiment1PM", 15),
+        Arguments.of(new int[] {2, 1}, new FIR(), "experiment1PM", 11),
+        Arguments.of(new int[] {2, 2}, new FIR(), "experiment1PM", 10),
+        Arguments.of(new int[] {1, 1}, new AR(), "experiment2PM", 19),
+        Arguments.of(new int[] {2, 1}, new AR(), "experiment2PM", 19),
+        Arguments.of(new int[] {2, 2}, new AR(), "experiment2PM", 13),
+        Arguments.of(new int[] {2, 4}, new AR(), "experiment2PM", 11),
+        Arguments.of(new int[] {2, 1}, new EWF(), "experiment1PM", 19),
+        Arguments.of(new int[] {3, 1}, new EWF(), "experiment1PM", 18),
+        Arguments.of(new int[] {3, 2}, new EWF(), "experiment1PM", 17),
+        Arguments.of(new int[] {1, 1}, new DCT(), "experiment1PM", 32),
+        Arguments.of(new int[] {2, 1}, new DCT(), "experiment1PM", 19),
+        Arguments.of(new int[] {2, 2}, new DCT(), "experiment1PM", 16),
+        Arguments.of(new int[] {3, 2}, new DCT(), "experiment1PM", 11),
+        Arguments.of(new int[] {4, 3}, new DCT(), "experiment1PM", 9),
+        Arguments.of(new int[] {5, 4}, new DCT(), "experiment1PM", 8),
+        Arguments.of(new int[] {6, 5}, new DCT(), "experiment1PM", 7),
+        Arguments.of(new int[] {1, 1, 3}, new DFQ(), "experiment1C", 18),
+        Arguments.of(new int[] {1, 2, 3}, new DFQ(), "experiment1C", 13),
+        Arguments.of(new int[] {2, 2, 3}, new DFQ(), "experiment1C", 9),
+        Arguments.of(new int[] {2, 1, 2}, new FIR(), "experiment1C", 19),
+        Arguments.of(new int[] {2, 2, 2}, new FIR(), "experiment1C", 15),
+        Arguments.of(new int[] {3, 2, 2}, new FIR(), "experiment1C", 12),
+        Arguments.of(new int[] {1, 1, 3}, new FIR(), "experiment1C", 43),
+        Arguments.of(new int[] {2, 1, 3}, new FIR(), "experiment1C", 24),
+        Arguments.of(new int[] {3, 2, 3}, new FIR(), "experiment1C", 15),
+        Arguments.of(new int[] {2, 2, 2}, new AR(), "experiment1C", 18),
+        Arguments.of(new int[] {2, 3, 2}, new AR(), "experiment1C", 16),
+        Arguments.of(new int[] {4, 4, 2}, new AR(), "experiment1C", 12),
+        Arguments.of(new int[] {1, 1, 3}, new AR(), "experiment1C", 49),
+        Arguments.of(new int[] {1, 2, 3}, new AR(), "experiment1C", 34),
+        Arguments.of(new int[] {2, 2, 3}, new AR(), "experiment1C", 25),
+        Arguments.of(new int[] {2, 3, 3}, new AR(), "experiment1C", 19),
+        Arguments.of(new int[] {3, 4, 3}, new AR(), "experiment1C", 13),
+        Arguments.of(new int[] {3, 4, 3}, new AR(), "experiment1C", 13),
+        Arguments.of(new int[] {2, 2, 4}, new AR(), "experiment1C", 32),
+        Arguments.of(new int[] {2, 3, 4}, new AR(), "experiment1C", 24),
+        Arguments.of(new int[] {2, 1, 2}, new EWF(), "experiment1C", 29),
+        Arguments.of(new int[] {3, 1, 2}, new EWF(), "experiment1C", 21),
+        Arguments.of(new int[] {1, 1, 3}, new EWF(), "experiment1C", 76),
+        Arguments.of(new int[] {2, 1, 3}, new EWF(), "experiment1C", 40),
+        Arguments.of(new int[] {3, 1, 3}, new EWF(), "experiment1C", 30),
+        Arguments.of(new int[] {1, 1, 4}, new EWF(), "experiment1C", 101),
+        Arguments.of(new int[] {2, 1, 4}, new EWF(), "experiment1C", 49),
+        Arguments.of(new int[] {3, 1, 4}, new EWF(), "experiment1C", 35),
+        Arguments.of(new int[] {2, 1, 2}, new DCT(), "experiment1C", 35),
+        Arguments.of(new int[] {2, 2, 2}, new DCT(), "experiment1C", 31),
+        Arguments.of(new int[] {3, 2, 2}, new DCT(), "experiment1C", 21),
+        Arguments.of(new int[] {4, 2, 2}, new DCT(), "experiment1C", 19),
+        Arguments.of(new int[] {4, 3, 2}, new DCT(), "experiment1C", 15),
+        Arguments.of(new int[] {5, 4, 2}, new DCT(), "experiment1C", 13),
+        Arguments.of(new int[] {1, 1, 3}, new DCT(), "experiment1C", 94),
+        Arguments.of(new int[] {2, 1, 3}, new DCT(), "experiment1C", 48),
+        Arguments.of(new int[] {3, 2, 3}, new DCT(), "experiment1C", 31),
+        Arguments.of(new int[] {4, 2, 3}, new DCT(), "experiment1C", 24),
+        Arguments.of(new int[] {5, 3, 3}, new DCT(), "experiment1C", 19),
+        Arguments.of(new int[] {1, 3}, new DFQ(), "experiment1P", 5),
+        Arguments.of(new int[] {2, 3}, new DFQ(), "experiment1P", 4),
+        Arguments.of(new int[] {2, 2}, new FIR(), "experiment1P", 9),
+        Arguments.of(new int[] {3, 3}, new FIR(), "experiment1P", 7),
+        Arguments.of(new int[] {3, 4}, new FIR(), "experiment1P", 6),
+        Arguments.of(new int[] {2, 4}, new AR(), "experiment1P", 9),
+        Arguments.of(new int[] {2, 6}, new AR(), "experiment1P", 9),
+        Arguments.of(new int[] {3, 8}, new AR(), "experiment1P", 9),
+        Arguments.of(new int[] {3, 2}, new EWF(), "experiment1P", 17),
+        Arguments.of(new int[] {4, 2}, new EWF(), "experiment1P", 17),
+        Arguments.of(new int[] {4, 3}, new EWF(), "experiment1P", 16),
+        Arguments.of(new int[] {5, 4}, new EWF(), "experiment1P", 15),
+        Arguments.of(new int[] {4, 4}, new DCT(), "experiment1P", 10),
+        Arguments.of(new int[] {4, 5}, new DCT(), "experiment1P", 9),
+        Arguments.of(new int[] {5, 6}, new DCT(), "experiment1P", 7),
+        Arguments.of(new int[] {6, 7}, new DCT(), "experiment1P", 7),
+        Arguments.of(new int[] {7, 8}, new DCT(), "experiment1P", 6),
+        Arguments.of(new int[] {1, 1}, new FFT(), "experiment1P", 8),
+        Arguments.of(new int[] {1, 2}, new FFT(), "experiment1P", 6),
+        Arguments.of(new int[] {2, 2}, new FFT(), "experiment1P", 4),
+        Arguments.of(new int[] {3, 4}, new FFT(), "experiment1P", 2));
   }
 
-  @Parameterized.Parameters
-  public static Collection<?> testData() {
-    return Arrays.asList(
-        new Object[][] {
-          {new int[] {1, 1}, new DFQ(), "experiment1", 13},
-          {new int[] {1, 2}, new DFQ(), "experiment1", 8},
-          {new int[] {1, 3}, new DFQ(), "experiment1", 7},
-          {new int[] {2, 2}, new DFQ(), "experiment1", 7},
-          {new int[] {1, 4}, new DFQ(), "experiment1", 6},
-          {new int[] {2, 3}, new DFQ(), "experiment1", 6},
-          {new int[] {1, 1}, new FIR(), "experiment1", 18},
-          {new int[] {1, 2}, new FIR(), "experiment1", 15},
-          {new int[] {2, 2}, new FIR(), "experiment1", 11},
-          {new int[] {2, 3}, new FIR(), "experiment1", 10},
-          {new int[] {1, 1}, new AR(1, 1), "experiment2", 18},
-          {new int[] {1, 2}, new AR(1, 1), "experiment2", 13},
-          {new int[] {1, 3}, new AR(1, 1), "experiment2", 13},
-          {new int[] {2, 3}, new AR(1, 1), "experiment2", 10},
-          {new int[] {2, 4}, new AR(1, 1), "experiment2", 8},
-          {new int[] {1, 1}, new EWF(), "experiment1", 28},
-          {new int[] {2, 1}, new EWF(), "experiment1", 21},
-          {new int[] {2, 2}, new EWF(), "experiment1", 18},
-          {new int[] {3, 3}, new EWF(), "experiment1", 17},
-          {new int[] {1, 1}, new EWF(1, 1), "experiment1", 27},
-          {new int[] {2, 1}, new EWF(1, 1), "experiment1", 16},
-          {new int[] {2, 2}, new EWF(1, 1), "experiment1", 16},
-          {new int[] {3, 3}, new EWF(1, 1), "experiment1", 14},
-          {new int[] {1, 1}, new DCT(), "experiment1", 34},
-          {new int[] {1, 2}, new DCT(), "experiment1", 32},
-          {new int[] {2, 2}, new DCT(), "experiment1", 18},
-          {new int[] {2, 3}, new DCT(), "experiment1", 16},
-          {new int[] {3, 3}, new DCT(), "experiment1", 14},
-          {new int[] {3, 4}, new DCT(), "experiment1", 11},
-          {new int[] {4, 4}, new DCT(), "experiment1", 10},
-          {new int[] {1, 1}, new DFQ(), "experiment1PM", 8},
-          {new int[] {1, 2}, new DFQ(), "experiment1PM", 6},
-          {new int[] {1, 1}, new FIR(), "experiment1PM", 15},
-          {new int[] {2, 1}, new FIR(), "experiment1PM", 11},
-          {new int[] {2, 2}, new FIR(), "experiment1PM", 10},
-          {new int[] {1, 1}, new AR(), "experiment2PM", 19},
-          {new int[] {2, 1}, new AR(), "experiment2PM", 19},
-          {new int[] {2, 2}, new AR(), "experiment2PM", 13},
-          {new int[] {2, 4}, new AR(), "experiment2PM", 11},
-          {new int[] {2, 1}, new EWF(), "experiment1PM", 19},
-          {new int[] {3, 1}, new EWF(), "experiment1PM", 18},
-          {new int[] {3, 2}, new EWF(), "experiment1PM", 17},
-          {new int[] {1, 1}, new DCT(), "experiment1PM", 32},
-          {new int[] {2, 1}, new DCT(), "experiment1PM", 19},
-          {new int[] {2, 2}, new DCT(), "experiment1PM", 16},
-          {new int[] {3, 2}, new DCT(), "experiment1PM", 11},
-          {new int[] {4, 3}, new DCT(), "experiment1PM", 9},
-          {new int[] {5, 4}, new DCT(), "experiment1PM", 8},
-          {new int[] {6, 5}, new DCT(), "experiment1PM", 7},
-          {new int[] {1, 1, 3}, new DFQ(), "experiment1C", 18},
-          {new int[] {1, 2, 3}, new DFQ(), "experiment1C", 13},
-          {new int[] {2, 2, 3}, new DFQ(), "experiment1C", 9},
-          {new int[] {2, 1, 2}, new FIR(), "experiment1C", 19},
-          {new int[] {2, 2, 2}, new FIR(), "experiment1C", 15},
-          {new int[] {3, 2, 2}, new FIR(), "experiment1C", 12},
-          {new int[] {1, 1, 3}, new FIR(), "experiment1C", 43},
-          {new int[] {2, 1, 3}, new FIR(), "experiment1C", 24},
-          {new int[] {3, 2, 3}, new FIR(), "experiment1C", 15},
-          {new int[] {2, 2, 2}, new AR(), "experiment1C", 18},
-          {new int[] {2, 3, 2}, new AR(), "experiment1C", 16},
-          {new int[] {4, 4, 2}, new AR(), "experiment1C", 12},
-          {new int[] {1, 1, 3}, new AR(), "experiment1C", 49},
-          {new int[] {1, 2, 3}, new AR(), "experiment1C", 34},
-          {new int[] {2, 2, 3}, new AR(), "experiment1C", 25},
-          {new int[] {2, 3, 3}, new AR(), "experiment1C", 19},
-          {new int[] {3, 4, 3}, new AR(), "experiment1C", 13},
-          {new int[] {3, 4, 3}, new AR(), "experiment1C", 13},
-          {new int[] {2, 2, 4}, new AR(), "experiment1C", 32},
-          {new int[] {2, 3, 4}, new AR(), "experiment1C", 24},
-          {new int[] {2, 1, 2}, new EWF(), "experiment1C", 29},
-          {new int[] {3, 1, 2}, new EWF(), "experiment1C", 21},
-          {new int[] {1, 1, 3}, new EWF(), "experiment1C", 76},
-          {new int[] {2, 1, 3}, new EWF(), "experiment1C", 40},
-          {new int[] {3, 1, 3}, new EWF(), "experiment1C", 30},
-          {new int[] {1, 1, 4}, new EWF(), "experiment1C", 101},
-          {new int[] {2, 1, 4}, new EWF(), "experiment1C", 49},
-          {new int[] {3, 1, 4}, new EWF(), "experiment1C", 35},
-          {new int[] {2, 1, 2}, new DCT(), "experiment1C", 35},
-          {new int[] {2, 2, 2}, new DCT(), "experiment1C", 31},
-          {new int[] {3, 2, 2}, new DCT(), "experiment1C", 21},
-          {new int[] {4, 2, 2}, new DCT(), "experiment1C", 19},
-          {new int[] {4, 3, 2}, new DCT(), "experiment1C", 15},
-          {new int[] {5, 4, 2}, new DCT(), "experiment1C", 13},
-          {new int[] {1, 1, 3}, new DCT(), "experiment1C", 94},
-          {new int[] {2, 1, 3}, new DCT(), "experiment1C", 48},
-          {new int[] {3, 2, 3}, new DCT(), "experiment1C", 31},
-          {new int[] {4, 2, 3}, new DCT(), "experiment1C", 24},
-          {new int[] {5, 3, 3}, new DCT(), "experiment1C", 19},
-          {new int[] {1, 3}, new DFQ(), "experiment1P", 5},
-          {new int[] {2, 3}, new DFQ(), "experiment1P", 4},
-          {new int[] {2, 2}, new FIR(), "experiment1P", 9},
-          {new int[] {3, 3}, new FIR(), "experiment1P", 7},
-          {new int[] {3, 4}, new FIR(), "experiment1P", 6},
-          {new int[] {2, 4}, new AR(), "experiment1P", 9},
-          {new int[] {2, 6}, new AR(), "experiment1P", 9},
-          {new int[] {3, 8}, new AR(), "experiment1P", 9},
-          {new int[] {3, 2}, new EWF(), "experiment1P", 17},
-          {new int[] {4, 2}, new EWF(), "experiment1P", 17},
-          {new int[] {4, 3}, new EWF(), "experiment1P", 16},
-          {new int[] {5, 4}, new EWF(), "experiment1P", 15},
-          {new int[] {4, 4}, new DCT(), "experiment1P", 10},
-          {new int[] {4, 5}, new DCT(), "experiment1P", 9},
-          {new int[] {5, 6}, new DCT(), "experiment1P", 7},
-          {new int[] {6, 7}, new DCT(), "experiment1P", 7},
-          {new int[] {7, 8}, new DCT(), "experiment1P", 6},
-          {new int[] {1, 1}, new FFT(), "experiment1P", 8},
-          {new int[] {1, 2}, new FFT(), "experiment1P", 6},
-          {new int[] {2, 2}, new FFT(), "experiment1P", 4},
-          {new int[] {3, 4}, new FFT(), "experiment1P", 2},
-        });
-  }
-
-  @Test
+  @ParameterizedTest
+  @MethodSource("testData")
   @SuppressWarnings("unchecked")
-  public void testFilter()
+  public void testFilter(
+      int[] resourcesConfiguration, Filter filter, String experiment, int costExp)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
 
     Class<? extends FilterBenchmarkTest> cls = this.getClass();
@@ -200,7 +183,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
     int costFound = (Integer) exp.invoke(this, new Store(), filter, resourcesConfiguration);
 
     assertThat(costFound)
-        .as("Test " + experiment + " failed for " + Filter.class)
+        .as("Test " + experiment + " failed for " + filter.getClass())
         .isEqualTo(costExp);
   }
 

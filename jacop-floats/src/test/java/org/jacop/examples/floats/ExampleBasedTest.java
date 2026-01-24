@@ -30,97 +30,111 @@
 
 package org.jacop.examples.floats;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class ExampleBasedTest {
 
   private static final int TIMEOUT_MS = 15_000;
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testWilkinson() {
     Wilkinson example = new Wilkinson();
 
     example.wilkinson();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testRosenbrock() {
     Rosenbrock example = new Rosenbrock();
 
     example.rosenbrock();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testMinCostFlow() {
     MinCostFlow example = new MinCostFlow();
 
     example.min_cost_flow();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testCircleIntersection() {
     CircleIntersection example = new CircleIntersection();
 
     example.circle_intersection();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testCyclohexane() {
     Cyclohexane example = new Cyclohexane();
 
     example.cyclohexane();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testSixHumpCamelFunction() {
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
     example.six_hump_camel_function();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testCurveFitting() {
     CurveFitting example = new CurveFitting();
 
     example.curve_fitting3();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testTinyTSP() {
     TinyTSP example = new TinyTSP();
 
     example.tiny_tsp();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testSinCosExample() {
     SinCosExample example = new SinCosExample();
 
     example.model();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testTanExample() {
     TanExample example = new TanExample();
 
     example.model();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testLaplace() {
     Laplace example = new Laplace();
 
     example.laplace();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testMarkov() {
     Markov example = new Markov();
 
     example.markov_chains_taha();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testLoan() {
     Loan example = new Loan();
 

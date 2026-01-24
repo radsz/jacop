@@ -30,13 +30,15 @@
 
 package org.jacop.examples.set;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class ExampleBasedTest {
 
   private static final int TIMEOUT_MS = 10_000;
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testGardner() {
     Gardner example = new Gardner();
     example.model();
@@ -44,7 +46,8 @@ public class ExampleBasedTest {
     example.search();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testSocialGolfer() {
     SocialGolfer example = new SocialGolfer();
 
@@ -117,7 +120,8 @@ public class ExampleBasedTest {
     example.search();
   }
 
-  @Test(timeout = TIMEOUT_MS)
+  @Test
+  @Timeout(TIMEOUT_MS)
   public void testSteiner() {
     Steiner example = new Steiner();
     example.n = 7;

@@ -30,14 +30,13 @@
 
 package org.jacop;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * It is performing testing for performance comparisons.
@@ -63,7 +62,7 @@ public class PerformanceTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(31733221));
+    assertThat(noOfSolutions).isEqualTo(31733221);
   }
 
   @Test
@@ -83,7 +82,7 @@ public class PerformanceTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(31733221));
+    assertThat(noOfSolutions).isEqualTo(31733221);
   }
 
   @Test
@@ -107,7 +106,7 @@ public class PerformanceTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(81428571));
+    assertThat(noOfSolutions).isEqualTo(81428571);
   }
 
   @Test
@@ -131,6 +130,6 @@ public class PerformanceTest extends TestHelper {
 
     int noOfSolutions = noOfAllSolutionsNoRecord(store, x, new IntVar[] {n});
 
-    assertThat(noOfSolutions, is(81428571));
+    assertThat(noOfSolutions).isEqualTo(81428571);
   }
 }

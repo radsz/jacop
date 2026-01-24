@@ -4,7 +4,7 @@ import org.jacop.constraints.ExtensionalConflictVA;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ConstraintStatusKnownAtImposition {
 

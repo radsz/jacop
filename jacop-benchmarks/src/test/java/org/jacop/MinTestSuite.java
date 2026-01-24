@@ -30,8 +30,8 @@
 
 package org.jacop;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
 
 /**
  * It is class to encompass all tests that belong to min profile.
@@ -39,6 +39,6 @@ import org.junit.runners.Suite;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({MinizincBasedTestUpTo5Seconds.class})
+@Suite
+@SelectClasses({MinizincBasedTestUpTo5Seconds.class})
 public class MinTestSuite {}

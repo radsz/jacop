@@ -31,6 +31,7 @@
 package org.jacop;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,11 +83,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * It is performing testing based on simple problems containing only one constraint.
@@ -94,15 +94,15 @@ import org.junit.runner.Description;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@ExtendWith(SingleConstraintTest.TestWatcherExtension.class)
 public class SingleConstraintTest extends TestHelper {
 
-  @Rule
-  public TestRule watcher =
-      new TestWatcher() {
-        protected void starting(Description description) {
-          IO.println("Starting test: " + description.getMethodName());
-        }
-      };
+  static class TestWatcherExtension implements BeforeEachCallback {
+    @Override
+    public void beforeEach(ExtensionContext context) {
+      IO.println("Starting test: " + context.getDisplayName());
+    }
+  }
 
   @Test
   public void testAnonymousConstraint() {
@@ -170,7 +170,7 @@ public class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(2);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidTable() {
 
     Store store = new Store();
@@ -180,11 +180,10 @@ public class SingleConstraintTest extends TestHelper {
     IntVar[] x = getIntVars(store, "x", xLength, xSize);
     int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
-    Table c = new Table(x, tuples);
-    store.impose(c);
+    assertThatThrownBy(() -> new Table(x, tuples)).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidSimpleTable() {
 
     Store store = new Store();
@@ -194,8 +193,8 @@ public class SingleConstraintTest extends TestHelper {
     IntVar[] x = getIntVars(store, "x", xLength, xSize);
     int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
-    SimpleTable c = new SimpleTable(x, tuples);
-    store.impose(c);
+    assertThatThrownBy(() -> new SimpleTable(x, tuples))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -288,19 +287,20 @@ public class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(21);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidSubcircuit() {
 
     Store store = new Store();
     IntVar[] list = getIntVars(store, "list", 3, 3);
     list[list.length - 1] = list[0];
-    Subcircuit c = new Subcircuit(list);
+    assertThatThrownBy(() -> new Subcircuit(list)).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidStretch() {
     IntVar[] list = null;
-    Stretch stretch = new Stretch(null, null, null, list);
+    assertThatThrownBy(() -> new Stretch(null, null, null, list))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -325,45 +325,49 @@ public class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(5);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidElementVariable() {
 
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 0, 4);
     IntVar[] list = null;
-    ElementVariable c = new ElementVariable(x, list, x);
+    assertThatThrownBy(() -> new ElementVariable(x, list, x))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidAmong3() {
 
     Store store = new Store();
     IntVar min = new IntVar(store, "x", 0, 4);
     IntVar[] list = getIntVars(store, "list", 3, 3);
     list[list.length - 1] = null;
-    Among c = new Among(list, new IntervalDomain(1, 2), null);
+    assertThatThrownBy(() -> new Among(list, new IntervalDomain(1, 2), null))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidAmong2() {
 
     Store store = new Store();
 
     IntVar[] list = getIntVars(store, "list", 3, 3);
-    Among c = new Among(list, new IntervalDomain(1, 2), null);
+    assertThatThrownBy(() -> new Among(list, new IntervalDomain(1, 2), null))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidAmong1() {
 
     Store store = new Store();
 
     IntVar min = new IntVar(store, "x", 0, 4);
     IntVar[] list = getIntVars(store, "list", 3, 3);
-    Among c = new Among(list, null, min);
+    assertThatThrownBy(() -> new Among(list, null, min))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidMin2() {
 
     Store store = new Store();
@@ -371,10 +375,10 @@ public class SingleConstraintTest extends TestHelper {
     IntVar min = new IntVar(store, "x", 0, 4);
     IntVar[] list = getIntVars(store, "list", 3, 3);
     list[list.length - 1] = null;
-    Min c = new Min(list, min);
+    assertThatThrownBy(() -> new Min(list, min)).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidMin1() {
 
     Store store = new Store();
@@ -382,10 +386,10 @@ public class SingleConstraintTest extends TestHelper {
     IntVar min = new IntVar(store, "x", 0, 4);
     IntVar[] list = null;
 
-    Min c = new Min(list, min);
+    assertThatThrownBy(() -> new Min(list, min)).isInstanceOf(IllegalArgumentException.class);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidAbs() {
 
     Store store = new Store();
@@ -393,7 +397,7 @@ public class SingleConstraintTest extends TestHelper {
     IntVar x = new IntVar(store, "x", 0, 4);
     IntVar y = null;
 
-    AbsXeqY absXeqY = new AbsXeqY(x, y);
+    assertThatThrownBy(() -> new AbsXeqY(x, y)).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

@@ -47,8 +47,8 @@ import java.util.Collection;
 import java.util.List;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.Fz2jacop;
-import org.junit.After;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Test Helper used by all Minizinc based tests.
@@ -69,7 +69,7 @@ public class MinizincBasedTestsHelper {
     this.timeCategory = timeCategory;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void initialize() {
     fz2jacop = new Fz2jacop();
   }
@@ -98,7 +98,7 @@ public class MinizincBasedTestsHelper {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     String outputFilename = relativePath + timeCategory + testFilename + ".fzn" + ".out";
     try {

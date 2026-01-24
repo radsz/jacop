@@ -43,7 +43,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 import org.jacop.search.Search;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * It is performing testing for QueueForward functionality that makes it possible to forward

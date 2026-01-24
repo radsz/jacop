@@ -87,7 +87,7 @@ import org.jacop.examples.fd.crosswords.CrossWord;
 import org.jacop.examples.fd.muca.MUCA;
 import org.jacop.examples.fd.nonogram.Nonogram;
 import org.jacop.examples.fd.qcp.QCP;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * It is performing testing based on the examples present in the library.

@@ -31,10 +31,9 @@
 package org.jacop;
 
 import java.io.IOException;
-import java.util.Collection;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test class for running problems above 1hour. It is not really used except to see if some problems
@@ -43,24 +42,21 @@ import org.junit.runners.Parameterized;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.10
  */
-@RunWith(Parameterized.class)
 public class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
   protected static final String timeCategory = "above1hour/";
 
-  public MinizincBasedTestAbove1Hours(String testFilename) {
+  public MinizincBasedTestAbove1Hours() {
     super(timeCategory);
+  }
+
+  static Stream<String> parametricTest() throws IOException {
+    return fileReader(timeCategory).stream();
+  }
+
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
-  }
-
-  @Parameterized.Parameters
-  public static Collection<String> parametricTest() throws IOException {
-
-    return fileReader(timeCategory);
-  }
-
-  @Test()
-  public void testMinizinc() throws IOException {
-
     testExecution(timeCategory);
   }
 }

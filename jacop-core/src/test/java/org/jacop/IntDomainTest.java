@@ -33,7 +33,6 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.MockitoAnnotations.initMocks;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -44,11 +43,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * Tests to test different domain operations for IntDomains in particular SmallDenseDomain and
@@ -57,25 +57,25 @@ import org.mockito.Mock;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 4.10
  */
-@RunWith(Parameterized.class)
+@ExtendWith(MockitoExtension.class)
 public class IntDomainTest {
 
-  private final Method prepareMethod;
+  private Method prepareMethod;
   private @Mock IntVar var;
   private IntDomain intDomain;
 
-  public IntDomainTest(String prepareMethodName) throws NoSuchMethodException {
+  static Collection<String> parametricTest() {
+    return Arrays.asList("prepareSmallDenseDomain", "prepareIntervalDomain");
+  }
+
+  private void setupPrepareMethod(String prepareMethodName) throws NoSuchMethodException {
     prepareMethod = this.getClass().getMethod(prepareMethodName, int[].class);
   }
 
-  @Parameterized.Parameters
-  public static Collection<?> parametricTest() {
-    return Arrays.asList(
-        new String[] {"prepareSmallDenseDomain"}, new String[] {"prepareIntervalDomain"});
-  }
-
-  @Test
-  public void testContains() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testContains(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -90,24 +90,30 @@ public class IntDomainTest {
         .isFalse();
   }
 
-  @Test
-  public void testComplement() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testComplement(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(testedDomain.complement().toString())
         .isEqualTo("{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}");
   }
 
-  @Test
-  public void testGetElementAt() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testGetElementAt(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     assertThat(testedDomain.getElementAt(0)).isEqualTo(1);
     assertThat(testedDomain.getElementAt(1)).isEqualTo(2);
   }
 
-  @Test
-  public void testIntersect() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testIntersect(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -137,8 +143,10 @@ public class IntDomainTest {
     assertThat(testedDomain.intersect(15, 15).toString()).isEqualTo(goldenResultDomain.toString());
   }
 
-  @Test
-  public void testIntersectAdapt() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testIntersectAdapt(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -240,8 +248,10 @@ public class IntDomainTest {
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(-4, 1)))).isEqualTo(1);
   }
 
-  @Test
-  public void testIsIntersecting() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testIsIntersecting(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
         (IntDomain)
@@ -251,8 +261,10 @@ public class IntDomainTest {
     assertThat(testedDomain.isIntersecting(0, 0)).isTrue();
   }
 
-  @Test
-  public void testSubtract() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testSubtract(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IntDomain testedDomain =
         (IntDomain)
@@ -277,29 +289,35 @@ public class IntDomainTest {
     assertThat(testedDomain.subtract(8, 26).toString()).isEqualTo(goldenResultDomain.toString());
   }
 
-  @Test
-  public void testNextValue() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testNextValue(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(goldenResultDomain.nextValue(3)).isEqualTo(5);
   }
 
-  @Test
-  public void testPreviousValue() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testPreviousValue(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
     IntDomain goldenResultDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
     assertThat(goldenResultDomain.previousValue(2)).isEqualTo(1);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
-    initMocks(this);
     intDomain = new IntervalDomain();
   }
 
-  @Test
-  public void testinterval() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intDomain.inComplement(100, var, 2);
@@ -307,8 +325,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval2() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval2(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intDomain.inComplement(100, var, 1);
@@ -316,8 +337,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval3() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval3(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intDomain.setStamp(100);
@@ -326,8 +350,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval4() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval4(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
     intDomain.inComplement(100, var, 2);
@@ -335,8 +362,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval5() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval5(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
@@ -345,16 +375,22 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval6() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval6(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.inComplement(100, var, 5);
 
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval7() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval7(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
@@ -363,8 +399,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval8() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval8(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5, 7, 10}});
@@ -374,8 +413,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval9() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval9(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5, 7, 7}});
     intDomain.setStamp(100);
@@ -384,8 +426,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval10() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval10(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
@@ -395,8 +440,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval11() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval11(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
@@ -406,8 +454,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval12() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval12(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
@@ -416,8 +467,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval13() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval13(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 9, 20}});
@@ -426,8 +480,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval14() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval14(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 2, 2}});
     intDomain.inComplement(100, var, 0);
@@ -435,8 +492,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval15() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval15(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
     intDomain.inComplement(100, var, 5);
@@ -444,8 +504,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval16() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval16(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 5, 7, 9, 11, 20}});
@@ -454,8 +517,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval17() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval17(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
     intDomain.inComplement(100, var, 10);
@@ -463,8 +529,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval18() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval18(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
     intDomain.setStamp(100);
@@ -473,8 +542,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval19() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval19(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7}});
     intDomain.inComplement(100, var, 7);
@@ -482,16 +554,22 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval20() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval20(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intDomain.setStamp(100);
     intDomain.inComplement(100, var, 2);
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval21() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval21(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12}});
     intDomain.setStamp(100);
@@ -500,8 +578,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval22() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval22(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
     intDomain =
         (IntDomain)
             prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12, 15, 22}});
@@ -511,8 +592,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval23() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval23(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);
@@ -521,8 +605,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval24() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval24(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 15}});
     intDomain.setStamp(100);
@@ -531,8 +618,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval25a() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval25a(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 33}});
@@ -542,8 +632,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval25b() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval25b(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
     intDomain.setStamp(100);
@@ -552,9 +645,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testintervalNoEventGenerated()
-      throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testintervalNoEventGenerated(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 12, 20}});
     intDomain.setStamp(100);
@@ -565,8 +660,11 @@ public class IntDomainTest {
     verify(var, never()).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval27() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval27(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intDomain.setStamp(100);
@@ -575,8 +673,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval28() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval28(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain)
@@ -588,8 +689,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval29() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval29(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intDomain.setStamp(100);
@@ -598,8 +702,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval30() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval30(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.inComplement(100, var, 1, 2);
@@ -607,8 +714,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval31() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval31(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.inComplement(100, var, 2, 4);
@@ -616,8 +726,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval32() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval32(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.inComplement(100, var, 2, 11);
@@ -625,8 +738,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval33() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval33(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
     intDomain.inComplement(100, var, 2, 11);
@@ -634,8 +750,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval34() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval34(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
     intDomain.inComplement(100, var, 2, 4);
@@ -643,8 +762,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval35() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval35(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 5}});
     intDomain.inComplement(100, var, 2, 4);
@@ -652,8 +774,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval36() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval36(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.inComplement(100, var, 1, 9);
@@ -661,8 +786,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval37() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval37(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
     intDomain.inComplement(100, var, 25, 50);
@@ -670,8 +798,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval38() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval38(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
     intDomain.setStamp(100);
@@ -679,16 +810,22 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval39() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval39(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20, 30, 40}});
     intDomain.inComplement(100, var, 5, 11);
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
-  public void testinterval40() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval40(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20}});
     intDomain.setStamp(100);
@@ -696,8 +833,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval41() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval41(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 3, 6, 7, 18}});
@@ -706,8 +846,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval42() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval42(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {18, 20, 22, 23}});
     intDomain.setStamp(100);
@@ -715,8 +858,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
-  public void testinterval43() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval43(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 4, 4, 16, 26}});
@@ -726,8 +872,11 @@ public class IntDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
-  public void testinterval44() throws InvocationTargetException, IllegalAccessException {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testinterval44(String prepareMethodName)
+      throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    setupPrepareMethod(prepareMethodName);
 
     intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intDomain.setStamp(100);

@@ -5,7 +5,6 @@ import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,38 +15,37 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
  * @author Mariusz Świerkot
  */
-@RunWith(Parameterized.class)
+@ExtendWith(MockitoExtension.class)
 public class SmallDenseDomainTest {
 
-  private final Method prepareMethod;
+  private Method prepareMethod;
   @Mock IntVar var;
   IntDomain intervalDomain;
 
-  @SuppressWarnings("unchecked")
-  public SmallDenseDomainTest(String prepareMethodName) throws NoSuchMethodException {
-    Class<SmallDenseDomainTest> cls = (Class<SmallDenseDomainTest>) this.getClass();
+  static Collection<String> parametricTest() {
+    return Arrays.asList("prepareSmallDenseDomain", "prepareIntervalDomain");
+  }
+
+  private void setupPrepareMethod(String prepareMethodName) throws NoSuchMethodException {
+    Class<SmallDenseDomainTest> cls = SmallDenseDomainTest.class;
     prepareMethod = cls.getMethod(prepareMethodName, int[].class);
   }
 
-  @Parameterized.Parameters
-  public static Collection parametricTest() {
-
-    return Arrays.asList(
-        new String[] {"prepareSmallDenseDomain"}, new String[] {"prepareIntervalDomain"});
-  }
-
-  @Test
-  public void testContains() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testContains(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IO.println("Contains function test");
     IntDomain testedDomain =
@@ -64,8 +62,10 @@ public class SmallDenseDomainTest {
         .isFalse();
   }
 
-  @Test
-  public void testComplement() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testComplement(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
     IO.println("Complement function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7, 12, 18}});
@@ -73,8 +73,10 @@ public class SmallDenseDomainTest {
         .isEqualTo("{" + IntDomain.MinInt + "..0, 4, 8..11, 19.." + IntDomain.MaxInt + "}");
   }
 
-  @Test
-  public void testGetElementAt() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testGetElementAt(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
     IO.println("GetElementAt function test");
     IntDomain testedDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -82,8 +84,10 @@ public class SmallDenseDomainTest {
     assertThat(testedDomain.getElementAt(1)).isEqualTo(2);
   }
 
-  @Test
-  public void testIntersect() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testIntersect(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
     IO.println("Intersect function test");
 
     IntDomain testedDomain =
@@ -114,8 +118,10 @@ public class SmallDenseDomainTest {
     assertThat(testedDomain.intersect(15, 15).toString()).isEqualTo(goldenResultDomain.toString());
   }
 
-  @Test
-  public void testIntersectAdapt() throws Exception {
+  @ParameterizedTest
+  @MethodSource("parametricTest")
+  public void testIntersectAdapt(String prepareMethodName) throws Exception {
+    setupPrepareMethod(prepareMethodName);
 
     IO.println("IntersectAdapt function test");
     IntDomain testedDomain =
@@ -218,7 +224,8 @@ public class SmallDenseDomainTest {
     assertThat(testedDomain.intersectAdapt(createDomain(new Interval(-4, 1)))).isEqualTo(1);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testIsIntersecting() throws Exception {
 
     IO.println("IsIntersecting function test");
@@ -231,7 +238,8 @@ public class SmallDenseDomainTest {
     assertThat(testedDomain.isIntersecting(0, 26)).isTrue();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testSubtract() throws Exception {
 
     IO.println("Subtract function test");
@@ -258,7 +266,8 @@ public class SmallDenseDomainTest {
     assertThat(testedDomain.subtract(8, 26).toString()).isEqualTo(goldenResultDomain.toString());
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testNextValue() throws Exception {
 
     IO.println("NextValue function test");
@@ -268,7 +277,8 @@ public class SmallDenseDomainTest {
     assertThat(goldenResultDomain.nextValue(3)).isEqualTo(5);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testPreviousValue() throws Exception {
 
     IO.println("previousValue function test");
@@ -278,13 +288,13 @@ public class SmallDenseDomainTest {
     assertThat(goldenResultDomain.previousValue(2)).isEqualTo(1);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
-    initMocks(this);
     intervalDomain = new IntervalDomain();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -293,7 +303,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval2() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -302,7 +313,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval3() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -312,7 +324,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval4() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
@@ -321,7 +334,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval5() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -331,7 +345,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval6() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.inComplement(100, var, 5);
@@ -339,7 +354,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval7() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -349,7 +365,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval8() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -360,7 +377,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval9() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5, 7, 7}});
@@ -370,7 +388,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval10() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -381,7 +400,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval11() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -392,7 +412,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval12() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -402,7 +423,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval13() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -412,7 +434,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval14() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {0, 0, 2, 2}});
@@ -421,7 +444,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval15() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
@@ -430,7 +454,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval16() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -440,7 +465,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval17() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
     intervalDomain.setStamp(100);
@@ -449,7 +475,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval18() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 5}});
@@ -459,7 +486,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval19() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 3, 5, 7}});
@@ -468,7 +496,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval20() throws InvocationTargetException, IllegalAccessException {
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
     intervalDomain.setStamp(100);
@@ -476,7 +505,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval21() throws InvocationTargetException, IllegalAccessException {
     intervalDomain =
         (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10, 12, 12}});
@@ -486,7 +516,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval22() throws InvocationTargetException, IllegalAccessException {
     intervalDomain =
         (IntDomain)
@@ -497,7 +528,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval23() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -507,7 +539,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval24() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 15}});
@@ -517,7 +550,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval25() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -528,7 +562,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval26() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
@@ -538,7 +573,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval27() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
@@ -548,7 +584,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval28() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -561,7 +598,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval29() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
@@ -571,7 +609,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval30() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -580,7 +619,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval31() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -589,7 +629,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval32() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -598,7 +639,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval33() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 20}});
@@ -607,7 +649,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval34() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 6}});
@@ -616,7 +659,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval35() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {3, 5}});
@@ -625,7 +669,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval36() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -634,7 +679,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval37() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -644,7 +690,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval38() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -654,7 +701,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval39() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -663,7 +711,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval40() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 20}});
@@ -672,7 +721,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval41() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -682,7 +732,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval42() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -692,7 +743,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval43() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -703,7 +755,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval44() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2, 4, 10}});
@@ -713,7 +766,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.ANY);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval37b() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -723,7 +777,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval46() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -733,7 +788,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval47() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -743,7 +799,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval48() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -753,7 +810,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval49() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -763,7 +821,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval50() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -773,7 +832,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval51() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -783,7 +843,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval52() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -793,7 +854,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval53() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -803,7 +865,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval54() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -812,7 +875,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval55() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -821,7 +885,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval56() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -831,7 +896,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval57() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -841,7 +907,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval58() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -851,7 +918,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval59() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -861,7 +929,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval60() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -871,7 +940,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval61() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -881,7 +951,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval62() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -891,7 +962,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval63() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -901,7 +973,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval64() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -911,7 +984,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval65() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -921,7 +995,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval66() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -931,7 +1006,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval67() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -941,7 +1017,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval68() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11}});
@@ -950,7 +1027,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval69() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 11}});
@@ -959,7 +1037,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval70() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {10, 12}});
@@ -968,7 +1047,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval71() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -978,7 +1058,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval72() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 3, 3}});
@@ -987,7 +1068,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval73() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 1, 3, 3}});
@@ -996,7 +1078,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval74() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -1006,7 +1089,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval75() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -1016,7 +1100,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval76() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {-10, 10}});
@@ -1025,7 +1110,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval77() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -1035,7 +1121,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval78() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -1045,7 +1132,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval79() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -1055,7 +1143,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval80() throws InvocationTargetException, IllegalAccessException {
 
     intervalDomain =
@@ -1065,7 +1154,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval81() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {1, 2}});
@@ -1074,7 +1164,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.GROUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval82() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain =
@@ -1084,7 +1175,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval83() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain =
@@ -1094,7 +1186,8 @@ public class SmallDenseDomainTest {
     verify(var).domainHasChanged(IntDomain.BOUND);
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval84() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain =
@@ -1108,7 +1201,8 @@ public class SmallDenseDomainTest {
     assertThat(result).isTrue();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval86() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain =
@@ -1124,7 +1218,8 @@ public class SmallDenseDomainTest {
     assertThat(result).isTrue();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval87() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5}});
@@ -1136,7 +1231,8 @@ public class SmallDenseDomainTest {
     assertThat(result).isTrue();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval88() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5}});
@@ -1149,7 +1245,8 @@ public class SmallDenseDomainTest {
     assertThat(result).isFalse();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval89() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain = (IntDomain) prepareMethod.invoke(this, new Object[] {new int[] {5, 5}});
@@ -1162,7 +1259,8 @@ public class SmallDenseDomainTest {
     assertThat(result).isFalse();
   }
 
-  @Test
+  @ParameterizedTest
+  @MethodSource("parametricTest")
   public void testinterval188() throws InvocationTargetException, IllegalAccessException {
 
     IntDomain intDomain =
