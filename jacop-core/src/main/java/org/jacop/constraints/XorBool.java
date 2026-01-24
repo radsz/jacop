@@ -102,18 +102,11 @@ public class XorBool extends PrimitiveConstraint {
    * @return the string describing the violation of the invariant, null otherwise.
    */
   public String checkInvariants() {
-
-    for (IntVar e : x) {
-      if (e.min() < 0 || e.max() > 1) {
-        return "Variable " + e + " does not have boolean domain";
-      }
+    String error = checkBooleanDomains(x);
+    if (error != null) {
+      return error;
     }
-
-    if (y.min() < 0 || y.max() > 1) {
-      return "Variable " + y + " does not have boolean domain";
-    }
-
-    return null;
+    return checkBooleanDomain(y);
   }
 
   @Override

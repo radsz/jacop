@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.Hashtable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.StoreAware;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -196,5 +197,22 @@ public abstract class PrimitiveConstraint extends Constraint
     if (constraintScope != null) {
       constraintScope.forEach(i -> i.include(store));
     }
+  }
+
+  protected static String checkBooleanDomain(IntVar var) {
+    if (var.min() < 0 || var.max() > 1) {
+      return "Variable " + var + " does not have boolean domain";
+    }
+    return null;
+  }
+
+  protected static String checkBooleanDomains(IntVar... vars) {
+    for (IntVar var : vars) {
+      String error = checkBooleanDomain(var);
+      if (error != null) {
+        return error;
+      }
+    }
+    return null;
   }
 }

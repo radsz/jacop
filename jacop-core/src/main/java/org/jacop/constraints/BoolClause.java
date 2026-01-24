@@ -114,20 +114,11 @@ public class BoolClause extends PrimitiveConstraint {
    * @return the string describing the violation of the invariant, null otherwise.
    */
   public String checkInvariants() {
-
-    for (IntVar var : x) {
-      if (var.min() < 0 || var.max() > 1) {
-        return "Variable " + var + " does not have boolean domain";
-      }
+    String error = checkBooleanDomains(x);
+    if (error != null) {
+      return error;
     }
-
-    for (IntVar var : y) {
-      if (var.min() < 0 || var.max() > 1) {
-        return "Variable " + var + " does not have boolean domain";
-      }
-    }
-
-    return null;
+    return checkBooleanDomains(y);
   }
 
   @Override

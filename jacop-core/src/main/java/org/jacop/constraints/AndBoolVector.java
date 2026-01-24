@@ -119,14 +119,7 @@ public class AndBoolVector extends PrimitiveConstraint {
    * @return the string describing the violation of the invariant, null otherwise.
    */
   public String checkInvariants() {
-
-    for (IntVar var : list) {
-      if (var.min() < 0 || var.max() > 1) {
-        return "Variable " + var + " does not have boolean domain";
-      }
-    }
-
-    return null;
+    return checkBooleanDomains(list);
   }
 
   @Override
@@ -315,12 +308,7 @@ public class AndBoolVector extends PrimitiveConstraint {
     StringBuilder resultString = new StringBuilder(id());
 
     resultString.append(" : andBool([ ");
-    for (int i = 0; i < l; i++) {
-      resultString.append(list[i]);
-      if (i < l - 1) {
-        resultString.append(", ");
-      }
-    }
+    appendArrayToString(resultString, list);
     resultString.append("], ");
     resultString.append(result);
     resultString.append(")");

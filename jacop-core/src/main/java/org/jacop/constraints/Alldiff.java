@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
@@ -301,6 +302,18 @@ public class Alldiff extends Alldifferent {
     result.append("])");
 
     return result.toString();
+  }
+
+  protected void propagateAllDifferentOnSingletons(Store store, LinkedHashSet<IntVar> fdvs) {
+    for (IntVar changedVar : fdvs) {
+      if (changedVar.singleton()) {
+        for (IntVar var : list) {
+          if (var != changedVar) {
+            var.domain.inComplement(store.level, var, changedVar.min());
+          }
+        }
+      }
+    }
   }
 
   // Overwritten as QueueForwardQueue checks that constraint has declared this method.

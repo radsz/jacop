@@ -92,20 +92,7 @@ public class IfThenBool extends PrimitiveConstraint {
    * @return the string describing the violation of the invariant, null otherwise.
    */
   public String checkInvariants() {
-
-    if (x.min() < 0 || x.max() > 1) {
-      return "Variable " + x + " does not have boolean domain";
-    }
-
-    if (y.min() < 0 || y.max() > 1) {
-      return "Variable " + y + " does not have boolean domain";
-    }
-
-    if (z.min() < 0 || z.max() > 1) {
-      return "Variable " + z + " does not have boolean domain";
-    }
-
-    return null;
+    return checkBooleanDomains(x, y, z);
   }
 
   @Override

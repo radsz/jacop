@@ -145,14 +145,7 @@ public class OrBoolSimple extends PrimitiveConstraint {
    * @return the string describing the violation of the invariant, null otherwise.
    */
   public String checkInvariants() {
-
-    for (IntVar var : new IntVar[] {a, b}) {
-      if (var.min() < 0 || var.max() > 1) {
-        return "Variable " + var + " does not have boolean domain";
-      }
-    }
-
-    return null;
+    return checkBooleanDomains(a, b);
   }
 
   @Override

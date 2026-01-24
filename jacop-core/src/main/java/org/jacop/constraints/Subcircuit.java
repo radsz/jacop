@@ -140,7 +140,7 @@ public class Subcircuit extends Alldiff {
       LinkedHashSet<IntVar> fdvs = variableQueue;
       variableQueue = new LinkedHashSet<>();
 
-      alldifferent(store, fdvs);
+      propagateAllDifferentOnSingletons(store, fdvs);
 
     } while (store.propagationHasOccurred);
 
@@ -162,19 +162,6 @@ public class Subcircuit extends Alldiff {
     }
     if (store.propagationHasOccurred) {
       store.addChanged(this);
-    }
-  }
-
-  void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
-
-    for (IntVar changedVar : fdvs) {
-      if (changedVar.singleton()) {
-        for (IntVar var : list) {
-          if (var != changedVar) {
-            var.domain.inComplement(store.level, var, changedVar.min());
-          }
-        }
-      }
     }
   }
 

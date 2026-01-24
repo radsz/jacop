@@ -139,16 +139,7 @@ public class AndBoolSimple extends PrimitiveConstraint {
   }
 
   public String checkInvariants() {
-
-    if (a.min() < 0 || a.max() > 1) {
-      return "Variable " + a + " does not have boolean domain";
-    }
-
-    if (b.min() < 0 || b.max() > 1) {
-      return "Variable " + b + " does not have boolean domain";
-    }
-
-    return null;
+    return checkBooleanDomains(a, b);
   }
 
   @Override

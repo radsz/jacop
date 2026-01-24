@@ -222,13 +222,7 @@ public class Sum extends Constraint implements SatisfiedPresent {
 
     StringBuilder result = new StringBuilder(id());
     result.append(" : sum( [");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
+    appendArrayToString(result, list);
     result.append("], ").append(sum).append(" )");
 
     return result.toString();

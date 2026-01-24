@@ -120,26 +120,13 @@ public class Circuit extends Alldiff implements Stateful {
       LinkedHashSet<IntVar> fdvs = variableQueue;
       variableQueue = new LinkedHashSet<>();
 
-      alldifferent(store, fdvs);
+      propagateAllDifferentOnSingletons(store, fdvs);
 
       oneCircuit(store, fdvs);
 
     } while (store.propagationHasOccurred);
 
     sccs(store); // strongly connected components
-  }
-
-  void alldifferent(Store store, LinkedHashSet<IntVar> fdvs) {
-
-    for (IntVar changedVar : fdvs) {
-      if (changedVar.singleton()) {
-        for (IntVar var : list) {
-          if (var != changedVar) {
-            var.domain.inComplement(store.level, var, changedVar.min());
-          }
-        }
-      }
-    }
   }
 
   int firstNode(int current) {

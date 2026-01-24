@@ -262,14 +262,7 @@ public class CountBounds extends PrimitiveConstraint {
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : CountBounds(").append("[");
-
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
-
+    appendArrayToString(result, list);
     result.append("], ").append(value).append(", ").append(lb).append(", ").append(ub).append(" )");
 
     return result.toString();
