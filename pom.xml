@@ -19,6 +19,7 @@
         <module>jacop-benchmarks</module>
         <module>jacop-scala</module>
         <module>jacop-examples-scala</module>
+        <module>jacop-all</module>
     </modules>
 
     <name>JaCoP</name>
@@ -294,6 +295,12 @@ setup to run configuration. -->
             </build>
         </profile>
 
+        <profile>
+            <id>all</id>
+            <properties>
+                <jacop-all.enabled>true</jacop-all.enabled>
+            </properties>
+        </profile>
 
     </profiles>
 
