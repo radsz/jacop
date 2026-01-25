@@ -31,6 +31,7 @@ package org.jacop.constraints.geost;
 
 import java.util.Arrays;
 import java.util.Collection;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
@@ -45,6 +46,7 @@ import org.jacop.core.Var;
  *     of internal constraints
  *     <p>TODO implement outbox generation for time (if feasible)
  */
+@Slf4j
 public class DomainHoles extends InternalConstraint {
 
   static final boolean debug = false;
@@ -216,7 +218,7 @@ public class DomainHoles extends InternalConstraint {
               : "current point not located in a domain hole";
 
           if (debug) {
-            IO.println(Arrays.toString(c) + " is in a hole of " + o.coords[d]);
+            log.debug("{} is in a hole of {}", Arrays.toString(c), o.coords[d]);
           }
 
           /*
@@ -234,7 +236,7 @@ public class DomainHoles extends InternalConstraint {
           }
 
           if (debug) {
-            IO.println("forbidden domain: " + forbiddenRegion);
+            log.debug("forbidden domain: {}", forbiddenRegion);
           }
 
           assert forbiddenRegion.checkInvariants() == null : forbiddenRegion.checkInvariants();
@@ -244,7 +246,7 @@ public class DomainHoles extends InternalConstraint {
           return forbiddenRegion;
         }
         if (debug) {
-          IO.println(Arrays.toString(c) + " is not in a hole of " + o.coords[d]);
+          log.debug("{} is not in a hole of {}", Arrays.toString(c), o.coords[d]);
         }
       }
     }

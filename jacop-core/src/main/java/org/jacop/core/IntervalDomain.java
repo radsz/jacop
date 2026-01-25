@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import java.util.Iterator;
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 
 // TODO, test default function which use sparse (dense) representation. Default code if
@@ -44,6 +45,7 @@ import org.jacop.constraints.Constraint;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class IntervalDomain extends IntDomain implements Cloneable {
 
   // FIXME, implement all already implemented functions from IntDomain
@@ -1080,7 +1082,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       try {
         temp = domain.getClass().getConstructor().newInstance();
       } catch (Exception ex) {
-        IO.println(ex.getMessage());
+        log.error("{}", ex.getMessage());
       }
 
       ValueEnumeration enumer = domain.valueEnumeration();

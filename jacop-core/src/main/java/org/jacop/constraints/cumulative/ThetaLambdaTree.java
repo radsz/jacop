@@ -34,6 +34,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 
 /*
@@ -46,6 +47,7 @@ import org.jacop.core.IntVar;
 /*
  * Defines the basic data structure for cumulative constraint's edge-finding algorithm.
  */
+@Slf4j
 class ThetaLambdaTree extends Tree {
 
   private final ThetaLambdaNode empty = new ThetaLambdaNode();

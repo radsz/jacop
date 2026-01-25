@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
@@ -42,6 +43,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 class DisjointCondVar implements MutableVar {
 
   final int index;

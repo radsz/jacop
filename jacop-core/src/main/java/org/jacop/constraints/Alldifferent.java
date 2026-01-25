@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
@@ -56,6 +57,7 @@ import org.jacop.util.BipartiteGraphMatching;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Alldifferent extends Constraint implements UsesQueueVariable, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -209,12 +211,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
       }
     }
     for (int i = 0; i < adj.length; i++) {
-      IO.print(i + ": ");
-
-      for (int j = 0; j < adj[i].length; j++) {
-        IO.print(adj[i][j] + ", ");
-      }
-      IO.println();
+      log.debug("{}: {}", i, java.util.Arrays.toString(adj[i]));
     }
     // compute maximal value for count
     BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, list.length, valueMap.size());

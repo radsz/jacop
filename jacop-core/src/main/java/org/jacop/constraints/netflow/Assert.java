@@ -32,6 +32,7 @@ package org.jacop.constraints.netflow;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -40,6 +41,7 @@ import org.jacop.constraints.netflow.simplex.Node;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Assert {
 
   private Assert() {}

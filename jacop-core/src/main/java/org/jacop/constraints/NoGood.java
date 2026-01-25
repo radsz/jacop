@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -54,6 +55,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class NoGood extends Constraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -118,7 +120,7 @@ public class NoGood extends Constraint {
   public void consistency(Store store) {
 
     if (debug) {
-      IO.println("Start " + this);
+      log.debug("Start {}", this);
     }
 
     if (firstWatch == secondWatch) {
@@ -127,7 +129,7 @@ public class NoGood extends Constraint {
       // watched.
 
       if (debug) {
-        IO.println("Special cases of noGood constraints have occured");
+        log.debug("Special cases of noGood constraints have occured");
       }
 
       if (listOfVars.length == 1) {
@@ -201,7 +203,7 @@ public class NoGood extends Constraint {
 
         // store.in(secondWatch, Domain.domain.complement(secondValue));
         if (debug) {
-          IO.println(secondWatch);
+          log.debug("{}", secondWatch);
         }
 
         return;
@@ -234,13 +236,13 @@ public class NoGood extends Constraint {
 
         // store.in(firstWatch, Domain.domain.complement(firstValue));
         if (debug) {
-          IO.println(firstWatch);
+          log.debug("{}", firstWatch);
         }
       }
     }
 
     if (debug) {
-      IO.println("End" + this);
+      log.debug("End{}", this);
     }
   }
 

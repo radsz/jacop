@@ -36,7 +36,6 @@ public class SophisticatedLengauerTarjan extends LengauerTarjan {
 
   public SophisticatedLengauerTarjan(int n) {
     super(n);
-
     child = new int[n];
     size = new int[n];
     for (int i = 0; i < n; i++) {

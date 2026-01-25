@@ -33,6 +33,7 @@ package org.jacop.search;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -44,6 +45,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
 
   static final boolean debugAll = false;
@@ -96,12 +98,13 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     assert (index < searchVariables.length);
 
     if (debugAll) {
-      IO.println("index = " + index);
+      log.debug("index = {}", index);
 
+      StringBuilder vars = new StringBuilder();
       for (T searchVariable : searchVariables) {
-        IO.print(searchVariable + " ");
+        vars.append(searchVariable).append(" ");
       }
-      IO.println();
+      log.debug("{}", vars);
     }
 
     int finalIndex = searchVariables.length;
@@ -122,7 +125,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
       currentIndex = index;
 
       if (debugAll) {
-        IO.println("selected " + currentVariable);
+        log.debug("selected {}", currentVariable);
       }
 
       return currentVariable;

@@ -31,6 +31,7 @@
 package org.jacop.core;
 
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Defines small dense domain based on bits within a long number.
@@ -38,6 +39,7 @@ import java.util.Random;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class SmallDenseDomain extends IntDomain implements Cloneable {
 
   /**

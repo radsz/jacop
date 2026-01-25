@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
@@ -65,6 +66,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.10
  */
+@Slf4j
 public class Knapsack extends Constraint
     implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate {
 
@@ -266,8 +268,8 @@ public class Knapsack extends Constraint
       int REMOVE_INFO_FROM = 0;
       if (countRemoveLevel >= REMOVE_INFO_FROM) {
 
-        IO.println("Removelevel for " + level + " is called.");
-        IO.println(displayQuantitiesInEfficiencyOrder());
+        log.debug("Removelevel for {} is called.", level);
+        log.debug("{}", displayQuantitiesInEfficiencyOrder());
       }
     }
 
@@ -401,7 +403,7 @@ public class Knapsack extends Constraint
         tree.alreadyUsedCapacity + tree.root.getWSum());
 
     if (debugAll) {
-      IO.println("Capacity after potential update : " + knapsackCapacity);
+      log.debug("Capacity after potential update : {}", knapsackCapacity);
     }
 
     // It computes based on the minimum required capacity the minimum possible profit obtained if
@@ -430,7 +432,7 @@ public class Knapsack extends Constraint
         tree.alreadyObtainedProfit + (int) Math.ceil(tree.optimalProfit));
 
     if (debugAll) {
-      IO.println("Profit after potential update : " + knapsackProfit);
+      log.debug("Profit after potential update : {}", knapsackProfit);
     }
   }
 
@@ -448,7 +450,7 @@ public class Knapsack extends Constraint
     }
 
     if (debugAll) {
-      IO.println("Entering consistency " + this);
+      log.debug("Entering consistency {}", this);
     }
 
     currentLevel = store.level;
@@ -465,14 +467,14 @@ public class Knapsack extends Constraint
     int CONSISTENCY_INFO_FROM = 0;
     if (debugAll) {
       if (countConsistency >= CONSISTENCY_INFO_FROM) {
-        IO.println(displayQuantitiesInEfficiencyOrder());
+        log.debug("{}", displayQuantitiesInEfficiencyOrder());
       }
     }
 
     assert (sliceInvariant());
 
     if (debugAll) {
-      IO.println("Tree root \n" + tree.root);
+      log.debug("Tree root \n{}", tree.root);
     }
 
     // it checks if not too many items exceeding the capacity constraints
@@ -489,11 +491,11 @@ public class Knapsack extends Constraint
     }
 
     if (debugAll) {
-      IO.println("After single item restrictions " + this);
+      log.debug("After single item restrictions {}", this);
     }
 
     if (debugAll) {
-      IO.println("Tree root \n" + tree.root);
+      log.debug("Tree root \n{}", tree.root);
     }
 
     assert (checkInvariants());
@@ -524,7 +526,7 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
       if (countConsistency >= CONSISTENCY_INFO_FROM) {
-        IO.println(displayQuantitiesInEfficiencyOrder());
+        log.debug("{}", displayQuantitiesInEfficiencyOrder());
       }
     }
 
@@ -582,8 +584,7 @@ public class Knapsack extends Constraint
       }
 
       if (debugAll) {
-        IO.println(
-            "Forbidden check for " + leaf + " finished. Intrusion weight = " + intrusionWeight);
+        log.debug("Forbidden check for {} finished. Intrusion weight = {}", leaf, intrusionWeight);
       }
 
       leaf = tree.findPreviousLeafAtLeastOfWeight(leaf, tree.currentWeight);
@@ -647,7 +648,7 @@ public class Knapsack extends Constraint
       }
 
       if (debugAll) {
-        IO.println("Mandatory check for " + leaf + " finished. MaxWeight = " + replacableWeight);
+        log.debug("Mandatory check for {} finished. MaxWeight = {}", leaf, replacableWeight);
       }
 
       leaf = tree.findNextLeafAtLeastOfWeight(leaf, tree.currentWeight);
@@ -703,13 +704,13 @@ public class Knapsack extends Constraint
     if (debugAll) {
 
       if (!impositionFailure) {
-        IO.println("The impose function is completed. ");
+        log.debug("The impose function is completed. ");
       } else {
-        IO.println("The impose function has already detected inconsistency.");
+        log.debug("The impose function has already detected inconsistency.");
       }
 
-      IO.println(this);
-      IO.println(tree.toString());
+      log.debug("{}", this);
+      log.debug("{}", tree.toString());
     }
 
     super.impose(store);
@@ -732,8 +733,8 @@ public class Knapsack extends Constraint
       int QUEUE_INFO_FROM = 0;
       if (countQueueVariable >= QUEUE_INFO_FROM) {
 
-        IO.println("queueVariable is executed for the " + countQueueVariable + "-th time");
-        IO.println(displayQuantitiesInEfficiencyOrder());
+        log.debug("queueVariable is executed for the {}-th time", countQueueVariable);
+        log.debug("{}", displayQuantitiesInEfficiencyOrder());
       }
     }
 

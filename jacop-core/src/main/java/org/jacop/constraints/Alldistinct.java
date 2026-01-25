@@ -43,6 +43,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -69,6 +70,7 @@ import org.jacop.util.SimpleHashSet;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class Alldistinct extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
@@ -288,7 +290,7 @@ public class Alldistinct extends Constraint
     LinkedHashSet<IntVar> fdvs = variableQueue;
 
     if (debugAll) {
-      IO.println("Changed Variables " + variableQueue);
+      log.debug("Changed Variables {}", variableQueue);
     }
 
     IntDomain Qdom;
@@ -370,10 +372,10 @@ public class Alldistinct extends Constraint
     Iterator<IntVar> iter = fdvs.iterator();
 
     if (debugAll) {
-      IO.println("Before");
-      IO.println("Mapping Value->Variable" + valueMapVariable);
-      IO.println("Stamps for size of Mapping Value->Variable" + stamps);
-      IO.println("Maximum Matching " + matching);
+      log.debug("Before");
+      log.debug("Mapping Value->Variable{}", valueMapVariable);
+      log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
+      log.debug("Maximum Matching {}", matching);
     }
 
     boolean narrowingEvent = false;
@@ -383,8 +385,8 @@ public class Alldistinct extends Constraint
       IntDomain vPrunedDomain = V.recentDomainPruning();
 
       if (debugAll) {
-        IO.println("Variable changed " + V);
-        IO.println("Pruned Domain " + vPrunedDomain);
+        log.debug("Variable changed {}", V);
+        log.debug("Pruned Domain {}", vPrunedDomain);
       }
 
       if (!vPrunedDomain.isEmpty()) {
@@ -399,15 +401,12 @@ public class Alldistinct extends Constraint
         }
 
         if (debugAll) {
-          IO.println(
-              " V "
-                  + V
-                  + " matchedValue "
-                  + matchedValue
-                  + " prunedDom "
-                  + vPrunedDomain
-                  + "contains? "
-                  + vPrunedDomain.contains(matchedValue));
+          log.debug(
+              " V {} matchedValue {} prunedDom {}contains? {}",
+              V,
+              matchedValue,
+              vPrunedDomain,
+              vPrunedDomain.contains(matchedValue));
         }
 
         for (ValueEnumeration enumer = vPrunedDomain.valueEnumeration();
@@ -448,23 +447,21 @@ public class Alldistinct extends Constraint
         }
 
       } else if (debugAll) {
-        IO.println(
-            "There was an Variable which was marked as changed"
-                + " but there is no difference in domain"
-                + V);
-        IO.println(
-            "Most probably the result of current " + " implementation of variableQueue signals");
+        log.debug(
+            "There was an Variable which was marked as changed but there is no difference in domain{}",
+            V);
+        log.debug("Most probably the result of current implementation of variableQueue signals");
       }
     }
 
     if (debugAll) {
-      IO.println("After");
-      IO.println("Mapping Value->Variable" + valueMapVariable);
-      IO.println("Stamps for size of Mapping Value->Variable" + stamps);
+      log.debug("After");
+      log.debug("Mapping Value->Variable{}", valueMapVariable);
+      log.debug("Stamps for size of Mapping Value->Variable{}", stamps);
     }
 
     if (debugAll) {
-      IO.println("Looking Maximum Matching ");
+      log.debug("Looking Maximum Matching ");
     }
 
     // Remove singletons from changed variables as no pruning
@@ -518,7 +515,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      IO.println("Maximum Matching " + matching);
+      log.debug("Maximum Matching {}", matching);
     }
 
     // Revisited Tarjan
@@ -540,13 +537,13 @@ public class Alldistinct extends Constraint
         fdvs.remove(changedVariable);
 
         if (debugAll) {
-          IO.println("Tarjan start, changed variabled " + changedVariable);
+          log.debug("Tarjan start, changed variabled {}", changedVariable);
         }
 
         revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
 
         if (debugAll) {
-          IO.println("Tarjan end");
+          log.debug("Tarjan end");
         }
       }
 
@@ -563,8 +560,8 @@ public class Alldistinct extends Constraint
       for (int i = 0; i <= lastNotGroundedVariable; i++) {
 
         if (debugAll) {
-          IO.println("Tarjan start, changed variabled " + list[i]);
-          IO.println("Tarjan start, value mapping " + valueMapVariable);
+          log.debug("Tarjan start, changed variabled {}", list[i]);
+          log.debug("Tarjan start, value mapping {}", valueMapVariable);
         }
 
         if (scc.get(list[i]) == null) {
@@ -572,12 +569,12 @@ public class Alldistinct extends Constraint
         }
 
         if (debugAll) {
-          IO.println("Tarjan end");
+          log.debug("Tarjan end");
         }
       }
 
       if (debugAll) {
-        IO.println("Tarjan end state " + scc);
+        log.debug("Tarjan end state {}", scc);
       }
 
       // Update stamps for new matching
@@ -635,11 +632,10 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      IO.println("All reached variables " + variablesReachableFromFreeValues);
+      log.debug("All reached variables {}", variablesReachableFromFreeValues);
 
-      IO.println(
-          "Check for All NOT reached variables if there is an "
-              + " edge from matched variable to a different");
+      log.debug(
+          "Check for All NOT reached variables if there is an edge from matched variable to a different");
     }
 
     IntVar variable;
@@ -653,13 +649,13 @@ public class Alldistinct extends Constraint
       variable = list[j];
 
       if (debugAll) {
-        IO.println("Variable " + variable + " is considered ");
+        log.debug("Variable {} is considered ", variable);
       }
 
       if (!variablesReachableFromFreeValues.contains(variable)) {
 
         if (debugPruning) {
-          IO.println("Variable " + variable + " is not reached by free values ");
+          log.debug("Variable {} is not reached by free values ", variable);
         }
 
         variableComponentId = sccStamp.get(variable).value();
@@ -673,7 +669,7 @@ public class Alldistinct extends Constraint
         lastPosition = stamp.value();
 
         if (debugAll) {
-          IO.println("currentSimpleArrayList " + currentSimpleArrayList + " stamp " + lastPosition);
+          log.debug("currentSimpleArrayList {} stamp {}", currentSimpleArrayList, lastPosition);
         }
 
         // If permutation constraint
@@ -684,7 +680,7 @@ public class Alldistinct extends Constraint
         if (lastPosition == 0 && permutationConsistency) {
 
           if (debugPruning) {
-            IO.println("Value " + matched + " has only this variable possible " + variable);
+            log.debug("Value {} has only this variable possible {}", matched, variable);
           }
 
           // store.in(variable, matched, matched);
@@ -704,13 +700,10 @@ public class Alldistinct extends Constraint
           if (variableComponentId != sccStamp.get(possibleDifferentComponentVariable).value()) {
 
             if (debugPruning) {
-
-              IO.println(
-                  "\n\n\n\n\nVariable "
-                      + possibleDifferentComponentVariable
-                      + "can not take value "
-                      + matched
-                      + "\n\n\n\n");
+              log.debug(
+                  "\n\n\n\n\nVariable {}can not take value {}\n\n\n\n",
+                  possibleDifferentComponentVariable,
+                  matched);
             }
 
             possibleDifferentComponentVariable.domain.inComplement(
@@ -751,7 +744,7 @@ public class Alldistinct extends Constraint
         if (stampValue == 0) {
 
           if (valueMapVariable.get(value).getFirst().dom().getSize() > 1) {
-            IO.println("Transformation Alldistinct-Permutation and " + "missing propagation ");
+            log.debug("Transformation Alldistinct-Permutation and missing propagation ");
 
             valueMapVariable
                 .get(value)
@@ -777,7 +770,7 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      IO.println("Consistency technique has finished execution ");
+      log.debug("Consistency technique has finished execution ");
     }
   }
 
@@ -861,7 +854,7 @@ public class Alldistinct extends Constraint
       LinkedList<Object> path = new LinkedList<>();
 
       if (debugAll) {
-        IO.println("Non Free Values" + nonFreeValues);
+        log.debug("Non Free Values{}", nonFreeValues);
       }
 
       Set<IntVar> visitedVariables = new HashSet<>(matching.size());
@@ -887,7 +880,7 @@ public class Alldistinct extends Constraint
         }
 
         if (debugAll) {
-          IO.println("First element of the path " + path);
+          log.debug("First element of the path {}", path);
         }
 
         if (path.isEmpty()) {
@@ -918,15 +911,15 @@ public class Alldistinct extends Constraint
           // variable to be used.
 
           if (debugAll) {
-            IO.println("Visited variables " + visitedVariables);
+            log.debug("Visited variables {}", visitedVariables);
           }
 
           if (debugAll) {
-            IO.println("Free variables " + freeVariables);
+            log.debug("Free variables {}", freeVariables);
           }
 
           if (debugAll) {
-            IO.println("Values for last path element " + valueMapVariable.get(top));
+            log.debug("Values for last path element {}", valueMapVariable.get(top));
           }
 
           // MAKE SURE you have increase level before worrying about
@@ -936,7 +929,7 @@ public class Alldistinct extends Constraint
           int notYetUsedVariable = notYetUsedVariablePointer.get(top);
 
           if (debugAll) {
-            IO.println("notYetUsedVariable " + notYetUsedVariable);
+            log.debug("notYetUsedVariable {}", notYetUsedVariable);
           }
 
           if (notYetUsedVariable == -1) {
@@ -944,12 +937,12 @@ public class Alldistinct extends Constraint
               break;
             } else {
               if (debugAll) {
-                IO.println("Path to shorten " + path);
+                log.debug("Path to shorten {}", path);
               }
               path.removeLast();
               path.removeLast();
               if (debugAll) {
-                IO.println("Shorten path" + path);
+                log.debug("Shorten path{}", path);
               }
               top = (Integer) path.getLast();
               continue;
@@ -968,7 +961,7 @@ public class Alldistinct extends Constraint
             visitedVariables.add(first);
 
             if (debugAll) {
-              IO.println("Current path " + path);
+              log.debug("Current path {}", path);
             }
 
             // if first is free variable then path
@@ -984,7 +977,7 @@ public class Alldistinct extends Constraint
           }
 
           if (debugAll) {
-            IO.println("Current path " + path);
+            log.debug("Current path {}", path);
           }
         }
 
@@ -1011,11 +1004,11 @@ public class Alldistinct extends Constraint
         // path
 
         if (debugAll) {
-          IO.println("Free variables " + freeVariables);
+          log.debug("Free variables {}", freeVariables);
         }
 
         if (debugAll) {
-          IO.println("Allpaths " + allpaths);
+          log.debug("Allpaths {}", allpaths);
         }
 
         if (freeVariables.size() == allpaths.size()) {
@@ -1025,7 +1018,7 @@ public class Alldistinct extends Constraint
       }
 
       if (debugAll) {
-        IO.println("Allpaths " + allpaths);
+        log.debug("Allpaths {}", allpaths);
       }
 
       if (allpaths.isEmpty()) {
@@ -1145,8 +1138,8 @@ public class Alldistinct extends Constraint
     nStamp.update(n + 1);
 
     if (debugAll) {
-      IO.println("Mapping Value->Variable" + valueMapVariable);
-      IO.println("Maximum Matching " + matching);
+      log.debug("Mapping Value->Variable{}", valueMapVariable);
+      log.debug("Maximum Matching {}", matching);
     }
 
     store.raiseLevelBeforeConsistency = true;
@@ -1156,7 +1149,7 @@ public class Alldistinct extends Constraint
       LinkedHashSet<IntVar> variablesReachableFromFreeValues, Integer value) {
 
     if (debugAll) {
-      IO.println("Start mark reachable variables " + value);
+      log.debug("Start mark reachable variables {}", value);
     }
 
     SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(value);
@@ -1178,7 +1171,7 @@ public class Alldistinct extends Constraint
       }
 
       if (debugAll) {
-        IO.println("Variable " + reachableVariable + " has been reached from value " + value);
+        log.debug("Variable {} has been reached from value {}", reachableVariable, value);
       }
 
       matched = matching.get(reachableVariable).value();
@@ -1193,7 +1186,7 @@ public class Alldistinct extends Constraint
   public void queueVariable(int level, Var var) {
 
     if (debugAll) {
-      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+      log.debug("Var {}{}", var, ((IntVar) var).recentDomainPruning());
     }
 
     variableQueue.add((IntVar) var);
@@ -1213,18 +1206,8 @@ public class Alldistinct extends Constraint
     n++;
 
     if (debugAll) {
-      IO.println(
-          "Tarjan invocation : \nx "
-              + x
-              + "\nn "
-              + n
-              + "\nl "
-              + l
-              + "\ndfsnum "
-              + dfsnum
-              + "\nlow "
-              + low
-              + "\n");
+      log.debug(
+          "Tarjan invocation : \nx {}\nn {}\nl {}\ndfsnum {}\nlow {}\n", x, n, l, dfsnum, low);
     }
 
     l.add(x);
@@ -1232,13 +1215,13 @@ public class Alldistinct extends Constraint
     Integer matchedValue = matching.get(x).value();
 
     if (debugAll) {
-      IO.println("Matched value " + matchedValue + " for " + x);
+      log.debug("Matched value {} for {}", matchedValue, x);
     }
 
     SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
     if (debugAll) {
-      IO.println("Mapped variables to Matched value " + currentSimpleArrayList);
+      log.debug("Mapped variables to Matched value {}", currentSimpleArrayList);
     }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
@@ -1246,7 +1229,7 @@ public class Alldistinct extends Constraint
     int lastPosition = stamp.value();
 
     if (debugAll) {
-      IO.println("Last valid position for variables " + lastPosition);
+      log.debug("Last valid position for variables {}", lastPosition);
     }
 
     int sccStampX = sccStamp.get(x).value();
@@ -1268,8 +1251,7 @@ public class Alldistinct extends Constraint
         } else {
 
           if (debugAll) {
-            IO.println(
-                "Part 2 : low " + x + "=" + low.get(x) + " dfsnum " + v + "=" + dfsnum.get(v));
+            log.debug("Part 2 : low {}={} dfsnum {}={}", x, low.get(x), v, dfsnum.get(v));
           }
 
           int dfsnumv = dfsnum.get(v);
@@ -1288,8 +1270,8 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      IO.println("Invocation " + x + " Low values for it " + low);
-      IO.println("Invocation " + x + " Dfsnum values for it " + dfsnum);
+      log.debug("Invocation {} Low values for it {}", x, low);
+      log.debug("Invocation {} Dfsnum values for it {}", x, dfsnum);
     }
 
     int lowx = low.get(x);
@@ -1297,7 +1279,7 @@ public class Alldistinct extends Constraint
     if (lowx == dfsnum.get(x)) {
 
       if (debugAll) {
-        IO.println("Component found  ");
+        log.debug("Component found  ");
       }
 
       Var component;
@@ -1306,7 +1288,7 @@ public class Alldistinct extends Constraint
         component = l.removeLast();
 
         if (debugAll) {
-          IO.println("Component part  " + component + "id " + lowx);
+          log.debug("Component part  {}id {}", component, lowx);
         }
 
         sccStamp.get(component).update(lowx);
@@ -1367,18 +1349,8 @@ public class Alldistinct extends Constraint
     vn++;
 
     if (debugAll) {
-      IO.println(
-          "Tarjan invocation : \nx "
-              + x
-              + "\nn "
-              + vn
-              + "\nl "
-              + l
-              + "\ndfsnum "
-              + dfsnum
-              + "\nlow "
-              + low
-              + "\n");
+      log.debug(
+          "Tarjan invocation : \nx {}\nn {}\nl {}\ndfsnum {}\nlow {}\n", x, vn, l, dfsnum, low);
     }
 
     l.add(x);
@@ -1386,13 +1358,13 @@ public class Alldistinct extends Constraint
     Integer matchedValue = matching.get(x).value();
 
     if (debugAll) {
-      IO.println("Matched value " + matchedValue + " for " + x);
+      log.debug("Matched value {} for {}", matchedValue, x);
     }
 
     SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
 
     if (debugAll) {
-      IO.println("Mapped variables to Matched value " + currentSimpleArrayList);
+      log.debug("Mapped variables to Matched value {}", currentSimpleArrayList);
     }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
@@ -1400,7 +1372,7 @@ public class Alldistinct extends Constraint
     int lastPosition = stamp.value();
 
     if (debugAll) {
-      IO.println("Last valid position for variables " + lastPosition);
+      log.debug("Last valid position for variables {}", lastPosition);
     }
 
     IntVar v;
@@ -1423,7 +1395,7 @@ public class Alldistinct extends Constraint
       } else {
 
         if (debugAll) {
-          IO.println("Part 2 : low " + x + "=" + low.get(x) + " dfsnum " + v + "=" + dfsnum.get(v));
+          log.debug("Part 2 : low {}={} dfsnum {}={}", x, low.get(x), v, dfsnum.get(v));
         }
 
         int dfsnumv = dfsnum.get(v);
@@ -1441,8 +1413,8 @@ public class Alldistinct extends Constraint
     }
 
     if (debugAll) {
-      IO.println("Invocation " + x + " Low values for it " + low);
-      IO.println("Invocation " + x + " Dfsnum values for it " + dfsnum);
+      log.debug("Invocation {} Low values for it {}", x, low);
+      log.debug("Invocation {} Dfsnum values for it {}", x, dfsnum);
     }
 
     int lowx = low.get(x);
@@ -1450,14 +1422,14 @@ public class Alldistinct extends Constraint
     if (lowx == dfsnum.get(x)) {
 
       if (debugAll) {
-        IO.println("Component found  ");
+        log.debug("Component found  ");
       }
 
       while (true) {
         IntVar component = l.removeLast();
 
         if (debugAll) {
-          IO.println("Component part  " + component);
+          log.debug("Component part  {}", component);
         }
 
         scc.put(component, lowx);
@@ -1809,17 +1781,17 @@ public class Alldistinct extends Constraint
             }
 
             if (single && singleVar == null) {
-              IO.println(this);
-              IO.println("StampValues - 1 " + (stampValues.value() - 1));
-              IO.println("Not grounded Var " + stampNotGroundedVariables.value());
+              log.debug("{}", this);
+              log.debug("StampValues - 1 {}", (stampValues.value() - 1));
+              log.debug("Not grounded Var {}", stampNotGroundedVariables.value());
 
               int lastNotGroundedVariable = stampNotGroundedVariables.value();
               Var variable;
 
               for (int l = 0; l <= lastNotGroundedVariable; l++) {
                 variable = list[l];
-                IO.println("Stamp for " + variable + " " + sccStamp.get(variable).value());
-                IO.println("Matching " + matching.get(variable).value());
+                log.debug("Stamp for {} {}", variable, sccStamp.get(variable).value());
+                log.debug("Matching {}", matching.get(variable).value());
               }
             }
 

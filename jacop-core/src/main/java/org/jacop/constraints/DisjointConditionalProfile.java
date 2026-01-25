@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.io.Serial;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 
 /**
@@ -41,6 +42,7 @@ import org.jacop.core.IntDomain;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 class DisjointConditionalProfile extends ProfileConditional {
 
   static final boolean trace = false;
@@ -75,14 +77,11 @@ class DisjointConditionalProfile extends ProfileConditional {
         R.dim = 0;
         if (t.minUse(i, R)) {
           if (trace) {
-            IO.println(
-                "Update profile "
-                    + "["
-                    + R.origin[j]
-                    + ".."
-                    + (R.origin[j] + R.length[j])
-                    + ")="
-                    + t.length(i).min());
+            log.debug(
+                "Update profile [{}..{})={}",
+                R.origin[j],
+                R.origin[j] + R.length[j],
+                t.length(i).min());
           }
 
           ExclusiveList tExclusive = ExList.listFor(t.index);

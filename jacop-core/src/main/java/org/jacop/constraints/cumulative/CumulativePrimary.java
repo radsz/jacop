@@ -36,6 +36,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -51,6 +52,7 @@ import org.jacop.core.TimeStamp;
  * @version 4.10
  */
 
+@Slf4j
 class CumulativePrimary extends Constraint {
 
   private static final boolean debug = false;
@@ -243,9 +245,9 @@ class CumulativePrimary extends Constraint {
     Arrays.sort(es, 0, N, eventComparator);
 
     if (debugNarr) {
-      IO.println(Arrays.asList(es));
-      IO.println("limit.max() = " + limitMax);
-      IO.println("===========================");
+      log.debug("{}", Arrays.asList(es));
+      log.debug("limit.max() = {}", limitMax);
+      log.debug("===========================");
     }
 
     BitSet tasksToPrune = new BitSet(start.length);
@@ -275,7 +277,7 @@ class CumulativePrimary extends Constraint {
             // check the tasks for pruning only at the end of all profile events
 
             if (debug) {
-              IO.println("Profile at " + e.date() + ": " + curProfile);
+              log.debug("Profile at {}: {}", e.date(), curProfile);
             }
 
             // prune limit variable
@@ -298,18 +300,17 @@ class CumulativePrimary extends Constraint {
                 // end of excluded interval
 
                 if (debugNarr) {
-                  IO.print(
-                      ">>> CumulativePrimary Profile 1. Narrowed "
-                          + start[ti]
-                          + " \\ "
-                          + new IntervalDomain(startExcluded[ti], e.date() - 1));
+                  log.debug(
+                      ">>> CumulativePrimary Profile 1. Narrowed {} \\ {}",
+                      start[ti],
+                      new IntervalDomain(startExcluded[ti], e.date() - 1));
                 }
 
                 start[ti].domain.inComplement(
                     store.level, start[ti], startExcluded[ti], e.date() - 1);
 
                 if (debugNarr) {
-                  IO.println(" => " + start[ti]);
+                  log.debug(" => {}", start[ti]);
                 }
 
                 startConsidered[ti] = false;
@@ -339,18 +340,14 @@ class CumulativePrimary extends Constraint {
             // task ends and we remove forbidden area
 
             if (debugNarr) {
-              IO.print(
-                  ">>> CumulativePrimary Profile 2. Narrowed "
-                      + start[ti]
-                      + " inMax "
-                      + (startExcluded[ti] - 1));
+              log.debug(
+                  ">>> CumulativePrimary Profile 2. Narrowed {} inMax {} => {}",
+                  start[ti],
+                  (startExcluded[ti] - 1),
+                  start[ti]);
             }
 
             start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
-
-            if (debugNarr) {
-              IO.println(" => " + start[ti]);
-            }
           }
 
           startConsidered[ti] = false;

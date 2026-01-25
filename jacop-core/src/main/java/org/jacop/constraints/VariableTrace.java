@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
@@ -44,6 +45,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class VariableTrace extends Constraint implements UsesQueueVariable, RemoveLevelLate {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -107,18 +109,12 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   public void queueVariable(int level, Var var) {
-    IO.println("Var: " + var + ", level: " + level + ", constraint: " + store.currentConstraint);
+    log.debug("Var: {}, level: {}, constraint: {}", var, level, store.currentConstraint);
   }
 
   @Override
   public void removeLevelLate(int level) {
-
-    IO.print("Restore level: " + level + ", vars: ");
-
-    for (Var v : vars) {
-      IO.print(v + " ");
-    }
-    IO.println();
+    log.debug("Restore level: {}, vars: {}", level, java.util.Arrays.toString(vars));
   }
 
   public void removeConstraint() {}

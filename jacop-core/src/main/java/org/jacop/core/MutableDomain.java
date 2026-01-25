@@ -30,10 +30,13 @@
 
 package org.jacop.core;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class MutableDomain implements MutableVar {
 
   /** It specifies if debugging info should be printed out. */
@@ -99,18 +102,18 @@ public class MutableDomain implements MutableVar {
     if (value.stamp == store.level) {
 
       if (debug) {
-        IO.print("1. Level: " + store.level + ", IN " + value + ", New " + val);
+        log.debug("1. Level: {}, IN {}, New {}", store.level, value, val);
       }
 
       value.setValue(((MutableDomainValue) val).domain);
 
       if (debug) {
-        IO.println(", OUT " + value);
+        log.debug(", OUT {}", value);
       }
 
     } else if (value.stamp < store.level) {
       if (debug) {
-        IO.print("2. Level: " + store.level + ", IN " + this + ", New " + val);
+        log.debug("2. Level: {}, IN {}, New {}", store.level, this, val);
       }
 
       val.setStamp(store.level);
@@ -119,7 +122,7 @@ public class MutableDomain implements MutableVar {
       value = (MutableDomainValue) val;
 
       if (debug) {
-        IO.println("\n=> OUT " + this + "\nOLD " + value().previous());
+        log.debug("=> OUT {} OLD {}", this, value().previous());
       }
     }
   }

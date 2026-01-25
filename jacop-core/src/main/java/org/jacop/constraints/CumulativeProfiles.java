@@ -30,6 +30,8 @@
 
 package org.jacop.constraints;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Defines a basic data structure to keep two profiles for the cumulative constraints. It consists
  * of ordered pair of time points and the current value.
@@ -37,6 +39,7 @@ package org.jacop.constraints;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 class CumulativeProfiles {
 
   static final boolean trace = false;
@@ -66,7 +69,7 @@ class CumulativeProfiles {
         stp = t.lastCT();
         value = t.res().max();
         if (trace) {
-          IO.println("Update profile " + "[" + strt + ".." + stp + ")=" + value);
+          log.debug("Update profile [{}..{})={}", strt, stp, value);
         }
         maxProfile.addToProfile(strt, stp, value);
       }
@@ -74,15 +77,7 @@ class CumulativeProfiles {
       if (tDurMin > 0 && tResMin > 0) {
         if (t.minUse(iTask)) {
           if (trace) {
-            IO.println(
-                "Update profile "
-                    + t
-                    + " ["
-                    + iTask.start()
-                    + ".."
-                    + iTask.stop()
-                    + ")="
-                    + tResMin);
+            log.debug("Update profile {} [{}..{})={}", t, iTask.start(), iTask.stop(), tResMin);
           }
           minProfile.addToProfile(iTask.start(), iTask.stop(), tResMin);
         }

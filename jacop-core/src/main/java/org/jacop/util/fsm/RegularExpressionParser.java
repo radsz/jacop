@@ -34,6 +34,7 @@ import java.io.Serial;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
@@ -44,6 +45,7 @@ import org.jacop.core.IntervalDomain;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class RegularExpressionParser {
 
   /** Constant denoting an expression. */
@@ -187,7 +189,7 @@ public class RegularExpressionParser {
     }
 
     if (Regular.debugAll) {
-      IO.println("Succesful parsing of " + c);
+      log.debug("Successful parsing of {}", c);
     }
 
     return c;
@@ -204,7 +206,7 @@ public class RegularExpressionParser {
 
       String msg = "found " + tokenName(token) + " when expecting " + tokenName(t);
 
-      System.err.println("Syntax error: " + msg);
+      log.error("Syntax error: {}", msg);
     }
   }
 

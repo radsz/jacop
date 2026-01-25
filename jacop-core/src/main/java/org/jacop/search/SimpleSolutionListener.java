@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.Domain;
@@ -51,6 +52,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class SimpleSolutionListener<T extends Var> implements SolutionListener<T> {
 
   /** It specifies if the debugging information should be printed. */
@@ -395,7 +397,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     while (!(left + 1 >= right)) {
 
       if (debug) {
-        IO.println("left " + left + " right " + right + " middle " + middle);
+        log.debug("left {} right {} middle {}", left, right, middle);
       }
 
       middle = (left + right) >> 1;
@@ -434,34 +436,38 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public void printAllSolutions() {
 
     if (recordSolutions) {
-      IO.println("\nAll solutions: \n");
-      IO.println("Number of Solutions: " + noSolutions);
+      log.info("\nAll solutions: \n");
+      log.info("Number of Solutions: {}", noSolutions);
+      StringBuilder varIds = new StringBuilder();
       for (int i = 0; i < solutions[0].length; i++) {
-        IO.print(vars[i].id() + " ");
+        varIds.append(vars[i].id()).append(" ");
       }
-      IO.println();
+      log.info("{}", varIds);
       for (int s = 0; s < noSolutions; s++) {
+        StringBuilder solutionLine = new StringBuilder();
         for (int i = 0; i < solutions[0].length; i++) {
-          IO.print(solutions[s][i] + " ");
+          solutionLine.append(solutions[s][i]).append(" ");
         }
-        IO.println();
+        log.info("{}", solutionLine);
       }
     } else {
 
       if (noSolutions > 0) {
-        IO.println("\nLast recorded solution: \n");
-        IO.println("Number of Solutions: " + noSolutions);
+        log.info("\nLast recorded solution: \n");
+        log.info("Number of Solutions: {}", noSolutions);
 
+        StringBuilder varIds = new StringBuilder();
         for (int i = 0; i < solutions[0].length; i++) {
-          IO.print(vars[i].id() + " ");
+          varIds.append(vars[i].id()).append(" ");
         }
-        IO.println();
+        log.info("{}", varIds);
+        StringBuilder solutionLine = new StringBuilder();
         for (int i = 0; i < solutions[0].length; i++) {
-          IO.print(solutions[0][i] + " ");
+          solutionLine.append(solutions[0][i]).append(" ");
         }
-        IO.println();
+        log.info("{}", solutionLine);
       } else {
-        IO.println("\nNo solution found. \n");
+        log.info("\nNo solution found. \n");
       }
     }
   }

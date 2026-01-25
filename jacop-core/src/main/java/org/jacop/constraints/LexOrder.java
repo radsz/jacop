@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -56,6 +57,7 @@ import org.jacop.util.SimpleHashSet;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class LexOrder extends Constraint
     implements UsesQueueVariable, Stateful, SatisfiedPresent, RemoveLevelLate {
 
@@ -324,7 +326,7 @@ public class LexOrder extends Constraint
     }
 
     if (debug) {
-      IO.println("INIT entry: a = " + a);
+      log.debug("INIT entry: a = {}", a);
     }
 
     if (a == n) {
@@ -372,7 +374,7 @@ public class LexOrder extends Constraint
     }
 
     if (debug) {
-      IO.println("INIT exit: a = " + a + ", b = " + b);
+      log.debug("INIT exit: a = {}, b = {}", a, b);
     }
   }
 
@@ -382,8 +384,8 @@ public class LexOrder extends Constraint
     int b = betaValue;
 
     if (debug) {
-      IO.println("reestablishGAC entry for " + i + ", alpha = " + a + ", beta = " + b);
-      IO.println(this);
+      log.debug("reestablishGAC entry for {}, alpha = {}, beta = {}", i, a, b);
+      log.debug("{}", this);
     }
 
     if (a > b || satisfied) {
@@ -409,8 +411,8 @@ public class LexOrder extends Constraint
     }
 
     if (debug) {
-      IO.println("reestablishGAC exit for " + i + ", alpha = " + a + ", beta = " + b);
-      IO.println(this);
+      log.debug("reestablishGAC exit for {}, alpha = {}, beta = {}", i, a, b);
+      log.debug("{}", this);
     }
   }
 
@@ -420,7 +422,7 @@ public class LexOrder extends Constraint
     int b = betaValue;
 
     if (debug) {
-      IO.println("updateAlpha entry: a = " + a + ", b = " + b);
+      log.debug("updateAlpha entry: a = {}, b = {}", a, b);
     }
 
     if (a == n) {
@@ -446,7 +448,7 @@ public class LexOrder extends Constraint
     }
 
     if (debug) {
-      IO.println("updateAlfa exit: a = " + a + ", b = " + b);
+      log.debug("updateAlfa exit: a = {}, b = {}", a, b);
     }
   }
 
@@ -457,7 +459,7 @@ public class LexOrder extends Constraint
     betaValue = b;
 
     if (debug) {
-      IO.println("updateBeta entry: a = " + a + ", b = " + b);
+      log.debug("updateBeta entry: a = {}, b = {}", a, b);
     }
 
     if (a == b) {
@@ -472,7 +474,7 @@ public class LexOrder extends Constraint
     }
 
     if (debug) {
-      IO.println("updateBeta exit: a = " + a + ", b = " + b);
+      log.debug("updateBeta exit: a = {}, b = {}", a, b);
     }
   }
 

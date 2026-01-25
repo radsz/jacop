@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -58,6 +59,7 @@ import org.jacop.core.Var;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -127,8 +129,8 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   public void consistency(Store store) {
     // ----------------------------------------------------------
     if (debugAll) {
-      IO.println("LEVEL : " + store.level);
-      IO.println(this);
+      log.debug("LEVEL : {}", store.level);
+      log.debug("{}", this);
     }
     // ----------------------------------------------------------
 
@@ -181,9 +183,9 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     // ----------------------------------------------------------
     if (debugAll) {
-      IO.println("lbS = " + currentLB);
-      IO.println("ubS = " + currentUB);
-      IO.println(" domain of N " + n.domain + " is in [ " + currentLB + ", " + currentUB + " ]");
+      log.debug("lbS = {}", currentLB);
+      log.debug("ubS = {}", currentUB);
+      log.debug(" domain of N {} is in [ {}, {} ]", n.domain, currentLB, currentUB);
     }
     // ----------------------------------------------------------
 
@@ -213,14 +215,14 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
         IntVar var = list[i];
         if (!kSet.contains(var.domain)) {
           if (debugAll) {
-            IO.println("lb >> The value before in of " + var.id + ": " + var.domain);
-            IO.println("lb >> subtrack " + kSet);
-            IO.println("lb >> equals " + var.domain.subtract(kSet));
+            log.debug("lb >> The value before in of {}: {}", var.id, var.domain);
+            log.debug("lb >> subtrack {}", kSet);
+            log.debug("lb >> equals {}", var.domain.subtract(kSet));
           }
           var.domain.in(store.level, var, var.domain.subtract(kSet));
           var.removeConstraint(this);
           if (debugAll) {
-            IO.println("lb >> The value after in of " + var.id + ": " + var.domain);
+            log.debug("lb >> The value after in of {}: {}", var.id, var.domain);
           }
         }
       }
@@ -230,7 +232,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
       // The constrain became satisfied
       if (debugAll) {
-        IO.println("Simple Among is satisfied");
+        log.debug("Simple Among is satisfied");
       }
     }
 
@@ -249,12 +251,12 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
       // The constrain became satisfied
       if (debugAll) {
-        IO.println("Simple Among is satisfied");
+        log.debug("Simple Among is satisfied");
       }
     }
 
     if (debugAll) {
-      IO.println(this);
+      log.debug("{}", this);
     }
   }
 
@@ -277,7 +279,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
   @Override
   public void queueVariable(int level, Var var) {
     if (debugAll) {
-      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+      log.debug("Var {}{}", var, ((IntVar) var).recentDomainPruning());
     }
 
     if (var != n) {

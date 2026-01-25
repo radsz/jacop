@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.io.Serial;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 
 /**
@@ -41,6 +42,7 @@ import org.jacop.core.IntDomain;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 class DiffnProfile extends Profile {
 
   static final boolean trace = false;
@@ -67,14 +69,11 @@ class DiffnProfile extends Profile {
         iR.dim = 0;
         if (t.minUse(i, iR)) {
           if (trace) {
-            IO.println(
-                "Update profile "
-                    + "["
-                    + iR.origin[j]
-                    + ".."
-                    + (iR.origin[j] + iR.length[j])
-                    + ")="
-                    + t.length(i).min());
+            log.debug(
+                "Update profile [{}..{})={}",
+                iR.origin[j],
+                iR.origin[j] + iR.length[j],
+                t.length(i).min());
           }
           addToProfile(iR.origin[j], iR.origin[j] + iR.length[j], t.length[i].min());
         }

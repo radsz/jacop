@@ -32,6 +32,7 @@ package org.jacop.constraints.knapsack;
 
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 
 /**
@@ -40,6 +41,7 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.10
  */
+@Slf4j
 public class Tree {
 
   /** It specifies the root of the tree. */
@@ -593,7 +595,7 @@ public class Tree {
     if (!exhaustedRightItems) {
 
       if (currentNode.rightNeighbor == null) {
-        IO.println("Problem " + this);
+        log.debug("Problem {}", this);
       }
 
       double efficiencyLoss =

@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -48,6 +49,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Disjoint extends Diff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -488,8 +490,8 @@ public class Disjoint extends Diff {
 
         if (!Profile.isEmpty()) {
           if (trace) {
-            IO.println(" *** " + r + "\n" + ProfileCandidates);
-            IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
+            log.debug(" *** {}\n{}", r, ProfileCandidates);
+            log.debug("Profile in dimension {} and {}\n{}", i, j, Profile);
           }
 
           profileCheckRectangle(Profile, r, i, j);

@@ -33,6 +33,7 @@ package org.jacop.core;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -42,6 +43,7 @@ import java.util.List;
  *     as a list of holes. There is a possibility to express the maximum number of holes being
  *     registered as well as minimum size requirement for hole.
  */
+@Slf4j
 public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManager {
 
   final int minHoleSizeAfterSplit = 4;
@@ -92,7 +94,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   public void addChanged(int index) {
 
     if (debug) {
-      IO.println(this + "Add item " + index + "max reached " + currentLevelMax);
+      log.debug("{}Add item {} max reached {}", this, index, currentLevelMax);
     }
 
     if (currentLevelMax) {
@@ -102,11 +104,10 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     if (trailContainsAllChanges) {
 
       if (debug) {
-
-        IO.println("Level info " + levelInfo);
-        IO.println("Intervals? " + intervalBasedTrail);
-        IO.println("LastTrail " + trail.getLast());
-        IO.println(super.toString());
+        log.debug("Level info {}", levelInfo);
+        log.debug("Intervals? {}", intervalBasedTrail);
+        log.debug("LastTrail {}", trail.getLast());
+        log.debug("{}", super.toString());
       }
 
       trailContainsAllChanges = false;
@@ -164,18 +165,17 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
 
     if (debug) {
-
-      IO.println("Level being set" + level);
-      IO.println("Last Level info " + levelInfo);
-      IO.println("Intervals? " + intervalBasedTrail);
+      log.debug("Level being set {}", level);
+      log.debug("Last Level info {}", levelInfo);
+      log.debug("Intervals? {}", intervalBasedTrail);
       if (!trail.isEmpty()) {
-        IO.println("LastTrail " + trail.getLast());
+        log.debug("LastTrail {}", trail.getLast());
       }
-      IO.println(super.toString());
+      log.debug("{}", super.toString());
     }
 
     if (debug) {
-      IO.println(">" + this + "Add level " + level);
+      log.debug(">{}Add level {}", this, level);
     }
 
     assert (level > this.currentLevel) : "It is possible only to add higher levels";
@@ -220,7 +220,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     this.currentLevel = level;
 
     if (debug) {
-      IO.println("<" + this + "Add level " + level + "\n");
+      log.debug("<{}Add level {}", this, level);
     }
   }
 
@@ -280,11 +280,11 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     removeCount++;
 
     if (debug) {
-      IO.println("Remove level count " + removeCount);
+      log.debug("Remove level count {}", removeCount);
     }
 
     if (debug) {
-      IO.println(">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
+      log.debug(">{}Remove level {} current level {}", this, removedLevel, currentLevel);
     }
 
     if (currentLevel == removedLevel) {
@@ -413,7 +413,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
 
     if (debug) {
-      IO.println("<" + this + "Remove level " + removedLevel + "\n");
+      log.debug("<{}Remove level {}", this, removedLevel);
     }
 
     assert (removedLevel >= currentLevel)

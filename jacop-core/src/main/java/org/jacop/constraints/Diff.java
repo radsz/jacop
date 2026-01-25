@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -59,6 +60,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   protected static final boolean trace = false;
@@ -572,14 +574,14 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               Update.unionAdapt(exclude.Max, IntDomain.MaxInt);
 
               if (traceNarr) {
-                IO.print("7. Obligatory rectangles Narrow " + r.origin[i] + " in " + Update);
+                log.debug(
+                    "7. Obligatory rectangles Narrow {} in {} --> {}",
+                    r.origin[i],
+                    Update,
+                    r.origin[i]);
               }
 
               r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
-
-              if (traceNarr) {
-                IO.println(" -->" + r.origin[i]);
-              }
 
               computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.Min, exclude.Max);
 
@@ -592,7 +594,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       // Update rectangles length in direction i
       // sort rectangles on increasing origin i
       if (trace) {
-        IO.println("10. length = " + durMax);
+        log.debug("10. length = {}", durMax);
       }
 
       int lengthLimit = 0;
@@ -603,7 +605,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       }
 
       if (traceNarr) {
-        IO.println("10. Duration " + r.length[i] + " <-- 0.." + lengthLimit);
+        log.debug("10. Duration {} <-- 0..{}", r.length[i], lengthLimit);
       }
 
       r.length[i].domain.in(currentStore.level, r.length[i], 0, lengthLimit);
@@ -631,7 +633,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
 
     if (trace) {
-      IO.println("+++ " + durMax);
+      log.debug("+++ {}", durMax);
     }
   }
 
@@ -639,8 +641,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       Rectangle r, List<IntRectangle> UsedRect, List<Rectangle> ProfileCandidates) {
 
     if (trace) {
-      IO.println("Narrowing " + r);
-      IO.println(UsedRect);
+      log.debug("Narrowing {}", r);
+      log.debug("{}", UsedRect);
     }
 
     for (int i = 0; i < r.dim; i++) {
@@ -794,7 +796,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int iMax = i_max + dur;
     for (ProfileItem p : Profile) {
       if (trace) {
-        IO.println("Comparing " + "[" + iMin + ", " + i_max + "]" + " with profile item " + p);
+        log.debug("Comparing [{}, {}] with profile item {}", iMin, i_max, p);
       }
 
       if (intervalOverlap(iMin, iMax, p.min, p.max)) {
@@ -809,14 +811,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             Update.unionAdapt(p.max, IntDomain.MaxInt);
 
             if (traceNarr) {
-              IO.print("6. Profile Narrowed " + Start + " \\ " + Update);
+              log.debug("6. Profile Narrowed {} \\ {} => {}", Start, Update, Start);
             }
 
             Start.domain.in(store.level, Start, Update);
-
-            if (traceNarr) {
-              IO.println(" => " + Start);
-            }
 
             computeNewMaxDuration(Start, dur, p.min, p.max);
 
@@ -828,7 +826,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             }
 
             if (traceNarr) {
-              IO.println("6b. Length " + Duration + " <-- 0.." + lengthLimit);
+              log.debug("6b. Length {} <-- 0..{}", Duration, lengthLimit);
             }
 
             Duration.domain.in(currentStore.level, Duration, 0, lengthLimit);
@@ -842,14 +840,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               IntervalDomain Update = new IntervalDomain(0, updateMax);
 
               if (traceNarr) {
-                IO.println("8. Profile Narrowed " + Resources + " in " + Update);
+                log.debug("8. Profile Narrowed {} in {} => {}", Resources, Update, Resources);
               }
 
               Resources.domain.in(store.level, Resources, Update);
-
-              if (traceNarr) {
-                IO.println(" => " + Resources);
-              }
             }
           }
         }
@@ -866,7 +860,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
     if (trace) {
-      IO.println("Start time = " + s + ", resource use = " + resUse);
+      log.debug("Start time = {}, resource use = {}", s, resUse);
     }
 
     IntDomain sDom = s.dom();
@@ -892,8 +886,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
         if (!Profile.isEmpty()) {
           if (trace) {
-            IO.println(r + "\n" + ProfileCandidates);
-            IO.println("Profile in dimension " + i + " and " + j + "\n" + Profile);
+            log.debug("{}\n{}", r, ProfileCandidates);
+            log.debug("Profile in dimension {} and {}\n{}", i, j, Profile);
           }
 
           profileCheckRectangle(Profile, r, i, j);

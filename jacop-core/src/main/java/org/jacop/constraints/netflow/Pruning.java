@@ -36,6 +36,7 @@ import static org.jacop.constraints.netflow.Assert.checkStructure;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.DomainStructure.Behavior;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -49,6 +50,7 @@ import org.jacop.core.IntervalDomain;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Pruning extends Network {
 
   // whether to count success rates, etc..

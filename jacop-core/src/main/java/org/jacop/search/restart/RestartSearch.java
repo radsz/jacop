@@ -31,6 +31,7 @@
 package org.jacop.search.restart;
 
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntVar;
@@ -53,6 +54,7 @@ import org.jacop.search.SolutionListener;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class RestartSearch<T extends Var> {
 
   final Store store;
@@ -163,7 +165,7 @@ public class RestartSearch<T extends Var> {
 
       if (timeOutCheck && System.currentTimeMillis() > timeOut) {
         search.timeOutOccured = true;
-        IO.println("%% =====TIME-OUT=====");
+        log.info("%% =====TIME-OUT=====");
         return false;
       }
 

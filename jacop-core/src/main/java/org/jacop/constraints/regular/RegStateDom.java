@@ -31,6 +31,7 @@
 package org.jacop.constraints.regular;
 
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.TimeStamp;
@@ -43,6 +44,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class RegStateDom extends RegState {
 
   private final IntDomain[] toSucDom;
@@ -76,14 +78,12 @@ public class RegStateDom extends RegState {
 
     if (pos < outDegree) {
       if (debugAll) {
-        IO.println(
-            "remove the SUC arc q_"
-                + level
-                + id
-                + " -> "
-                + "q_"
-                + this.successors[pos].level
-                + this.successors[pos].id);
+        log.debug(
+            "remove the SUC arc q_{}{} -> q_{}{}",
+            level,
+            id,
+            this.successors[pos].level,
+            this.successors[pos].id);
       }
 
       successors[pos].inDegree--;
@@ -101,8 +101,7 @@ public class RegStateDom extends RegState {
     }
 
     if (debugAll) {
-      System.err.println(
-          "State q_" + level + id + ": Successors on position " + pos + " is already removed");
+      log.error("State q_{}{}: Successors on position {} is already removed", level, id, pos);
     }
 
     assert false;

@@ -31,6 +31,7 @@
 package org.jacop.search.restart;
 
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Var;
 
 /**
@@ -39,6 +40,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class CustomReport {
 
   Var[] vars;
@@ -53,6 +55,6 @@ public class CustomReport {
   }
 
   public void report() {
-    IO.println(Arrays.asList(vars));
+    log.info("{}", Arrays.asList(vars));
   }
 }

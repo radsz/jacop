@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -53,6 +54,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class LinearIntDom extends LinearInt {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -165,7 +167,7 @@ public class LinearIntDom extends LinearInt {
         break;
 
       default:
-        IO.println("Not implemented relation in LinearIntDom; implemented == and != only.");
+        log.error("Not implemented relation in LinearIntDom; implemented == and != only.");
         break;
     }
   }

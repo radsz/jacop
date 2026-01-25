@@ -31,6 +31,7 @@
 package org.jacop.util;
 
 import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
@@ -41,6 +42,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class IndexDomainView {
 
   private static final boolean debugAll = false;
@@ -236,17 +238,16 @@ public class IndexDomainView {
     int position = (left + right) >> 1;
 
     if (debugAll) {
-      IO.println("Looking for " + value);
+      log.debug("Looking for {}", value);
       for (int v : indexToValue) {
-        IO.print("val " + v);
+        log.debug("val {}", v);
       }
-      IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
       if (debugAll) {
-        IO.println("left " + left + " right " + right + " position " + position);
+        log.debug("left {} right {} position {}", left, right, position);
       }
 
       if (indexToValue[position] > value) {

@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
@@ -54,6 +55,7 @@ import org.jacop.util.SparseSet;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class Store {
 
   /** It stores standard fail exception used when empty domain encountered. */
@@ -817,7 +819,7 @@ public class Store {
 
   /** This function prints the information of the store to standard output stream. */
   public void print() {
-    IO.println(toString());
+    log.debug("{}", this);
   }
 
   /**
@@ -1116,7 +1118,7 @@ public class Store {
     }
 
     if (removeDebug) {
-      IO.println("Store level changes from " + level + " to " + levelSetTo);
+      log.debug("Store level changes from {} to {}", level, levelSetTo);
     }
 
     level = levelSetTo;

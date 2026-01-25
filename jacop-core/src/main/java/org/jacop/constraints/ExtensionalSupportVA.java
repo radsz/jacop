@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
@@ -59,6 +60,7 @@ import org.jacop.util.TupleUtils;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class ExtensionalSupportVA extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
@@ -154,7 +156,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   public void consistency(Store store) {
 
     if (debugAll) {
-      IO.println("Begin " + this);
+      log.debug("Begin {}", this);
     }
 
     if (firstConsistencyCheck) {
@@ -195,12 +197,12 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
           int value = enumer.nextElement();
 
           if (debugAll) {
-            IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+            log.debug("Seeking support for {} and value {}", list[varPosition], value);
           }
           int[] t = seekSupportVA(varPosition, value);
 
           if (debugAll) {
-            IO.println("Found support?" + !(t == null));
+            log.debug("Found support? {}", t != null);
           }
 
           if (t == null) {
@@ -212,7 +214,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     }
 
     if (debugAll) {
-      IO.println("End " + this);
+      log.debug("End {}", this);
     }
   }
 
@@ -232,7 +234,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
     if (debugAll) {
       for (Var var : list) {
-        IO.println("Variable " + var);
+        log.debug("Variable {}", var);
       }
     }
 
@@ -253,11 +255,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       int j = 0;
 
       if (debugAll) {
-        IO.print("support for analysis[");
-        for (int val : t) {
-          IO.print(val + " ");
-        }
-        IO.println("]");
+        log.debug("support for analysis{}", java.util.Arrays.toString(t));
       }
 
       for (int val : t) {
@@ -276,11 +274,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
       if (debugAll) {
         if (!stillSupport[i]) {
-          IO.print("Not support [");
-          for (int val : t) {
-            IO.print(val + " ");
-          }
-          IO.println("]");
+          log.debug("Not support {}", java.util.Arrays.toString(t));
         }
       }
 
@@ -288,7 +282,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     }
 
     if (debugAll) {
-      IO.println("No. still supports " + noSupports);
+      log.debug("No. still supports {}", noSupports);
     }
 
     int[][] temp4Shrinking = new int[noSupports][];
@@ -303,11 +297,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
         i++;
 
         if (debugAll) {
-          IO.print("Still support [");
-          for (int val : t) {
-            IO.print(val + " ");
-          }
-          IO.println("]");
+          log.debug("Still support {}", java.util.Arrays.toString(t));
         }
       }
 
@@ -338,13 +328,13 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       }
 
       if (debugAll) {
-        IO.println("values " + val.keySet());
+        log.debug("values {}", val.keySet());
       }
 
       PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
       if (debugAll) {
-        IO.println("Sorted val size " + sortedVal.size());
+        log.debug("Sorted val size {}", sortedVal.size());
       }
 
       values[i] = new int[sortedVal.size()];
@@ -352,13 +342,13 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
       this.tuples[i] = new int[sortedVal.size()][][];
 
       if (debugAll) {
-        IO.println("values length " + values[i].length);
+        log.debug("values length {}", values[i].length);
       }
 
       for (int j = 0; j < values[i].length; j++) {
 
         if (debugAll) {
-          IO.println("sortedVal " + sortedVal);
+          log.debug("sortedVal {}", sortedVal);
         }
 
         values[i][j] = sortedVal.poll();
@@ -394,7 +384,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   public void queueVariable(int level, Var var) {
 
     if (debugAll) {
-      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+      log.debug("Var {} {}", var, ((IntVar) var).recentDomainPruning());
     }
 
     variableQueue.add((IntVar) var);
@@ -471,7 +461,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   public int[] seekSupportVA(int varPosition, int value) {
 
     if (debugAll) {
-      IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+      log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
 
     int[] t = setFirstValid(varPosition, value);
@@ -540,7 +530,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
   public int[] findFirstAllowed(int varPosition, int value, int[] t) {
 
     if (debugAll) {
-      IO.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
+      log.debug("variable {} position {} value {}", list[varPosition], varPosition, value);
     }
 
     int[][] tuplesForGivenVariableValuePair =

@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -49,6 +50,7 @@ import org.jacop.core.Store;
  * @version 4.10
  */
 
+@Slf4j
 public class ProfileOptional {
 
   // event type
@@ -186,9 +188,9 @@ public class ProfileOptional {
     Arrays.sort(es, 0, N, eventComparator);
 
     if (debugNarr) {
-      IO.println(Arrays.asList(es));
-      IO.println("limit.max() = " + limitMax);
-      IO.println("===========================");
+      log.debug("{}", Arrays.asList(es));
+      log.debug("limit.max() = {}", limitMax);
+      log.debug("===========================");
     }
 
     final BitSet tasksToPrune = new BitSet(ts.length);
@@ -252,7 +254,7 @@ public class ProfileOptional {
             // check the tasks for pruning only at the end of all profile events
 
             if (debug) {
-              IO.println("Profile at " + e.date() + ": " + curProfile);
+              log.debug("Profile at {}: {}", e.date(), curProfile);
             }
 
             // prune limit variable
@@ -283,18 +285,17 @@ public class ProfileOptional {
                   // end of excluded interval
 
                   if (debugNarr) {
-                    IO.print(
-                        ">>> CumulativeBasic Profile 1. Narrowed "
-                            + t.start
-                            + " \\ "
-                            + new IntervalDomain(startExcluded[ti], (e.date() - 1)));
+                    log.debug(
+                        ">>> CumulativeBasic Profile 1. Narrowed {} \\ {}",
+                        t.start,
+                        new IntervalDomain(startExcluded[ti], (e.date() - 1)));
                   }
 
                   t.start.domain.inComplement(
                       store.level, t.start, startExcluded[ti], e.date() - 1);
 
                   if (debugNarr) {
-                    IO.println(" => " + t.start);
+                    log.debug(" => {}", t.start);
                   }
 
                   startConsidered[ti] = false;
@@ -378,18 +379,14 @@ public class ProfileOptional {
               // task ends and we remove forbidden area
 
               if (debugNarr) {
-                IO.print(
-                    ">>> CumulativeBasic Profile 2. Narrowed "
-                        + t.start
-                        + " inMax "
-                        + (startExcluded[ti] - 1));
+                log.debug(
+                    ">>> CumulativeBasic Profile 2. Narrowed {} inMax {} => {}",
+                    t.start,
+                    (startExcluded[ti] - 1),
+                    t.start);
               }
 
               t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
-
-              if (debugNarr) {
-                IO.println(" => " + t.start);
-              }
             }
           }
 
@@ -411,15 +408,14 @@ public class ProfileOptional {
 
           if (maxDuration[ti] != Integer.MIN_VALUE && maxDuration[ti] < t.dur.max()) {
             if (debugNarr) {
-              IO.print(
-                  ">>> CumulativeBasic Profile 3. Narrowed " + t.dur + " in 0.." + maxDuration[ti]);
+              log.debug(
+                  ">>> CumulativeBasic Profile 3. Narrowed {} in 0..{} => {}",
+                  t.dur,
+                  maxDuration[ti],
+                  t.dur);
             }
 
             t.dur.domain.inMax(store.level, t.dur, maxDuration[ti]);
-
-            if (debugNarr) {
-              IO.println(" => " + t.dur);
-            }
           }
 
           tasksToPrune.set(ti, false);

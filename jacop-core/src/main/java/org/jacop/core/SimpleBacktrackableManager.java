@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.util.SparseSet;
 
 /**
@@ -40,6 +41,7 @@ import org.jacop.util.SparseSet;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class SimpleBacktrackableManager implements BacktrackableManager {
 
   /** It is a fake variable to distinguish between empty levels and full levels. */
@@ -126,7 +128,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
   public void addChanged(int index) {
 
     if (debug) {
-      IO.println(this + "Add item " + index + "max reached " + currentLevelMax);
+      log.debug("{}Add item {} max reached {}", this, index, currentLevelMax);
     }
 
     if (currentLevelMax) {
@@ -172,7 +174,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
   public void removeLevel(int removedLevel) {
 
     if (debug) {
-      IO.println(">" + this + "Remove level " + removedLevel + " current level " + currentLevel);
+      log.debug(">{}Remove level {} current level {}", this, removedLevel, currentLevel);
     }
 
     if (currentLevel == removedLevel) {
@@ -228,7 +230,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     }
 
     if (debug) {
-      IO.println("<" + this + "Remove level " + removedLevel + "\n");
+      log.debug("<{}Remove level {}", this, removedLevel);
     }
 
     assert (removedLevel >= currentLevel)
@@ -326,7 +328,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     }
 
     if (debug) {
-      IO.println(">" + this + "Add level " + level);
+      log.debug(">{}Add level {}", this, level);
     }
 
     assert (level > this.currentLevel) : "It is possible only to add higher levels";
@@ -357,7 +359,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     this.currentLevel = level;
 
     if (debug) {
-      IO.println("<" + this + "Add level " + level + "\n");
+      log.debug("<{}Add level {}", this, level);
     }
   }
 

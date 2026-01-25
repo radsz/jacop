@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportVA;
 import org.jacop.core.Domain;
@@ -50,6 +51,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class TransformExtensional implements InitializeListener {
 
   static final boolean debug = false;
@@ -147,7 +149,7 @@ public class TransformExtensional implements InitializeListener {
       store.impose(transformationIntoExtensionalConstraint);
 
       if (debug) {
-        IO.println(transformationIntoExtensionalConstraint);
+        log.debug("{}", transformationIntoExtensionalConstraint);
       }
     }
   }

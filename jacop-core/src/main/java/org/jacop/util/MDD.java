@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 
 /**
@@ -47,6 +48,7 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MDD {
 
@@ -490,17 +492,16 @@ public class MDD {
     int position = (left + right) >> 1;
 
     if (debugAll) {
-      IO.println("Looking for " + value);
+      log.debug("Looking for {}", value);
       for (int v : values) {
-        IO.print("val " + v);
+        log.debug("val {}", v);
       }
-      IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
       if (debugAll) {
-        IO.println("left " + left + " right " + right + " position " + position);
+        log.debug("left {} right {} position {}", left, right, position);
       }
 
       if (values[position] > value) {
@@ -531,17 +532,16 @@ public class MDD {
     int position = (left + right) >> 1;
 
     if (debugAll) {
-      IO.println("Looking for " + value);
+      log.debug("Looking for {}", value);
       for (int v : values) {
-        IO.print("val " + v);
+        log.debug("val {}", v);
       }
-      IO.println("");
     }
 
     while (!(left + 1 >= right)) {
 
       if (debugAll) {
-        IO.println("left " + left + " right " + right + " position " + position);
+        log.debug("left {} right {} position {}", left, right, position);
       }
 
       if (values[position] > value) {

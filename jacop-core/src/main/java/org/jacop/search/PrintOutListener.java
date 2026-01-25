@@ -30,6 +30,7 @@
 
 package org.jacop.search;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Var;
 
 /**
@@ -39,6 +40,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
     implements SolutionListener<T> {
 
@@ -81,7 +83,7 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
 
     buf.append("]\n");
 
-    IO.println(buf.toString());
+    log.info("{}", buf);
 
     return parent;
   }

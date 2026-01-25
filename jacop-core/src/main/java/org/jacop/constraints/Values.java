@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,6 +53,7 @@ import org.jacop.util.BipartiteGraphMatching;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Values extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -105,7 +107,7 @@ public class Values extends Constraint implements SatisfiedPresent {
       Arrays.sort(list, minFDV);
 
       if (debug) {
-        IO.println("Sorted : \n" + this);
+        log.debug("Sorted : \n{}", this);
       }
 
       int minNumberDifferent = 1, minimumMax = list[0].max();
@@ -157,16 +159,16 @@ public class Values extends Constraint implements SatisfiedPresent {
       int maxNumberDifferent = matcher.hopcroftKarp();
 
       if (debug) {
-        IO.println("Minimum number of different values = " + minNumberDifferent);
+        log.debug("Minimum number of different values = {}", minNumberDifferent);
       }
       if (debug) {
-        IO.println("Maximum number of different values = " + maxNumberDifferent);
+        log.debug("Maximum number of different values = {}", maxNumberDifferent);
       }
 
       count.domain.in(store.level, count, minNumberDifferent, maxNumberDifferent);
 
       if (debug) {
-        IO.println("Number singleton values = " + numberSingleton + " Values = " + singletonValues);
+        log.debug("Number singleton values = {} Values = {}", numberSingleton, singletonValues);
       }
 
       if (count.max() == singletonValues.getSize() && numberSingleton < list.length) {

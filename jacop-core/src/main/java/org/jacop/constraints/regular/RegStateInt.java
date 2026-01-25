@@ -31,6 +31,7 @@
 package org.jacop.constraints.regular;
 
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
@@ -43,6 +44,7 @@ import org.jacop.core.TimeStamp;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class RegStateInt extends RegState {
 
   private final int[] toSucDom;
@@ -110,16 +112,9 @@ public class RegStateInt extends RegState {
     if (pos < outDegree) {
 
       if (debugAll) {
-        IO.println(
-            "remove the SUC arc q_"
-                + level
-                + "%"
-                + id
-                + " -> "
-                + "q_"
-                + this.successors[pos].level
-                + "%"
-                + this.successors[pos].id);
+        log.debug(
+            "remove the SUC arc q_{}%{} -> q_{}%{}",
+            level, id, this.successors[pos].level, this.successors[pos].id);
       }
 
       // must be first, before swap.

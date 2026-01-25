@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Min;
@@ -55,6 +56,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class Diffn extends Nooverlap {
 
   // event type
@@ -324,11 +326,11 @@ public class Diffn extends Nooverlap {
     // Arrays.parallelSort(es, 0, N, new EventIncComparator<Event>());
 
     if (debugNarr) {
-      IO.println("===========================");
-      IO.println("Profile in dimension " + dim);
-      IO.println(Arrays.asList(es));
-      IO.println("limit = " + limit);
-      IO.println("===========================");
+      log.debug("===========================");
+      log.debug("Profile in dimension {}", dim);
+      log.debug("{}", Arrays.asList(es));
+      log.debug("limit = {}", limit);
+      log.debug("===========================");
     }
 
     boolean considerR = false;
@@ -370,7 +372,7 @@ public class Diffn extends Nooverlap {
             // events
 
             if (debug) {
-              IO.println("Profile at " + e.date() + ": " + curProfile);
+              log.debug("Profile at {}: {}", e.date(), curProfile);
             }
 
             // fail if we go over limit limit variable
@@ -407,13 +409,11 @@ public class Diffn extends Nooverlap {
                   if (startExcluded <= r.lst(dim)) {
 
                     if (debugNarr) {
-                      IO.print(
-                          ">>> Diffn ("
-                              + dim
-                              + ") Profile 1. Narrowed "
-                              + r.origin(dim)
-                              + " \\ "
-                              + new IntervalDomain(startExcluded, (e.date() - 1)));
+                      log.debug(
+                          ">>> Diffn ({}) Profile 1. Narrowed {} \\ {}",
+                          dim,
+                          r.origin(dim),
+                          new IntervalDomain(startExcluded, (e.date() - 1)));
                     }
 
                     IntervalDomain update = new IntervalDomain(IntDomain.MinInt, startExcluded - 1);
@@ -421,7 +421,7 @@ public class Diffn extends Nooverlap {
                     r.origin(dim).domain.in(store.level, r.origin(dim), update);
 
                     if (debugNarr) {
-                      IO.println(" => " + r.origin(dim));
+                      log.debug(" => {}", r.origin(dim));
                     }
                   }
                   startExcluded = Integer.MAX_VALUE;
@@ -496,17 +496,16 @@ public class Diffn extends Nooverlap {
 
               if (startExcluded - 1 <= rr.lst(dim)) {
                 if (debugNarr) {
-                  IO.print(
-                      ">>> Diffn Profile 2. Narrowed "
-                          + rr.origin(dim)
-                          + " \\ "
-                          + new IntervalDomain(startExcluded, e.date()));
+                  log.debug(
+                      ">>> Diffn Profile 2. Narrowed {} \\ {}",
+                      rr.origin(dim),
+                      new IntervalDomain(startExcluded, e.date()));
                 }
 
                 rr.origin(dim).domain.inMax(store.level, rr.origin(dim), startExcluded - 1);
 
                 if (debugNarr) {
-                  IO.println(" => " + rr.origin(dim));
+                  log.debug(" => {}", rr.origin(dim));
                 }
               }
             }
@@ -526,21 +525,16 @@ public class Diffn extends Nooverlap {
 
           if (maxDuration < rr.length(dim).max()) {
             if (debugNarr) {
-              IO.println(
-                  ">>> "
-                      + rr.origin(dim)
-                      + ", lastBarier = "
-                      + lastBarier
-                      + ", e.date() = "
-                      + e.date());
-              IO.print(
-                  ">>> Diffn Profile 3. Narrowed " + rr.length(dim) + " in -inf.." + maxDuration);
+              log.debug(
+                  ">>> {}, lastBarier = {}, e.date() = {}", rr.origin(dim), lastBarier, e.date());
+              log.debug(
+                  ">>> Diffn Profile 3. Narrowed {} in -inf..{}", rr.length(dim), maxDuration);
             }
 
             rr.length(dim).domain.inMax(store.level, rr.length(dim), maxDuration);
 
             if (debugNarr) {
-              IO.println(" => " + rr.length(dim));
+              log.debug(" => {}", rr.length(dim));
             }
           }
 

@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -58,6 +59,7 @@ import org.jacop.core.Var;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class NetworkFlow extends Constraint
     implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
@@ -163,7 +165,7 @@ public class NetworkFlow extends Constraint
 
     if (costVariable == null) {
       costVariable = new IntVar(store, 0, 0);
-      System.err.println("WARNING: No cost variable was set, using zero cost.");
+      log.error("WARNING: No cost variable was set, using zero cost.");
     }
 
     network.initialize(store);
@@ -212,9 +214,9 @@ public class NetworkFlow extends Constraint
   public void consistency(Store store) {
 
     if (SHOW_LEVEL) {
-      IO.println();
-      IO.println("--------- Level " + store.level);
-      IO.println();
+      log.debug("");
+      log.debug("--------- Level {}", store.level);
+      log.debug("");
     }
 
     if (DO_INSTRUMENTATION) {
@@ -236,7 +238,7 @@ public class NetworkFlow extends Constraint
 
       iteration++;
       if (SHOW_LEVEL) {
-        IO.println("--------- => Iteration " + iteration);
+        log.debug("--------- => Iteration {}", iteration);
       }
 
       // recompute flow
@@ -306,9 +308,9 @@ public class NetworkFlow extends Constraint
   public void removeLevelLate(int level) {
 
     if (SHOW_LEVEL) {
-      IO.println();
-      IO.println("######### Level " + level);
-      IO.println();
+      log.debug("");
+      log.debug("######### Level {}", level);
+      log.debug("");
     }
 
     network.backtrack();

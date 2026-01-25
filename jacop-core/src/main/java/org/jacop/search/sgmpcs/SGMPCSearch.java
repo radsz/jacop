@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.Random;
 import java.util.function.Function;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -56,6 +57,7 @@ import org.jacop.search.SimpleSelect;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class SGMPCSearch {
 
   // strategy to get limit l on fails
@@ -135,11 +137,9 @@ public class SGMPCSearch {
 
     int bestCostSolution = bestCostSolution();
     if (trace) {
-      IO.println(
-          "%% Best Cost elite solution is "
-              + bestCostSolution
-              + " with cost "
-              + elite[bestCostSolution][costPosition]);
+      log.debug(
+          "%% Best Cost elite solution is {} with cost {}",
+          bestCostSolution, elite[bestCostSolution][costPosition]);
     }
 
     improveSolution();
@@ -196,14 +196,14 @@ public class SGMPCSearch {
     }
 
     if (trace) {
-      IO.println("%% Initial pool of solutions");
+      log.debug("%% Initial pool of solutions");
 
       for (int i = 0; i < solutionPool.length; i++) {
-        IO.print("%% Solution " + (i + 1) + ": ");
+        StringBuilder sb = new StringBuilder("%% Solution ").append(i + 1).append(": ");
         for (int j = 0; j < v.length; j++) {
-          IO.print(solutionPool[i][j] + " ");
+          sb.append(solutionPool[i][j]).append(" ");
         }
-        IO.println();
+        log.debug("{}", sb);
       }
     }
 
@@ -216,14 +216,14 @@ public class SGMPCSearch {
     }
 
     if (trace) {
-      IO.println("%% Selected best " + e + " solutions");
+      log.debug("%% Selected best {} solutions", e);
 
       for (int i = 0; i < e; i++) {
-        IO.print("%% Solution " + (i + 1) + ": ");
+        StringBuilder solution = new StringBuilder("%% Solution ").append(i + 1).append(": ");
         for (int j = 0; j < v.length; j++) {
-          IO.print(elite[i][j] + " ");
+          solution.append(elite[i][j]).append(" ");
         }
-        IO.println();
+        log.debug("{}", solution);
       }
     }
   }
@@ -263,13 +263,13 @@ public class SGMPCSearch {
           updateFailLimit(true);
         } else {
           if (printInfo) {
-            IO.println("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
+            log.info("%% Fails {}({})", search.getNumberFails(), search.getFailLimit());
           }
 
           solution = search.getSolution();
 
           if (printInfo) {
-            IO.println("%% Solution starting from empty ");
+            log.info("%% Solution starting from empty ");
             printSolution(solution);
           }
 
@@ -296,13 +296,13 @@ public class SGMPCSearch {
         } else {
 
           if (printInfo) {
-            IO.println("%% Fails " + search.getNumberFails() + "(" + search.getFailLimit() + ")");
+            log.info("%% Fails {}({})", search.getNumberFails(), search.getFailLimit());
           }
 
           solution = search.getSolution();
 
           if (printInfo) {
-            IO.println("%% Solution starting from reference with cost " + elite[n][costPosition]);
+            log.info("%% Solution starting from reference with cost {}", elite[n][costPosition]);
             printSolution(solution);
           }
 
@@ -331,12 +331,8 @@ public class SGMPCSearch {
             || (numberConsecutiveFails > 0 && search.getNumberFails() < search.getFailLimit());
 
     if (printInfo && termination) {
-      IO.println(
-          "%% Termination search fails "
-              + search.getNumberFails()
-              + "("
-              + search.getFailLimit()
-              + ")");
+      log.info(
+          "%% Termination search fails {}({})", search.getNumberFails(), search.getFailLimit());
 
       if (solution == null) {
 
@@ -425,11 +421,10 @@ public class SGMPCSearch {
 
   public void setEliteSolutions(int[][] solutions) {
     if (solutions.length != e) {
-      IO.println(
-          "Number of initial siolutions not correct; it is "
-              + solutions.length
-              + "and should be "
-              + e);
+      log.error(
+          "Number of initial solutions not correct; it is {} and should be {}",
+          solutions.length,
+          e);
       return;
     }
 
@@ -464,18 +459,18 @@ public class SGMPCSearch {
     if (strategy == poly || strategy == luby) {
       this.strategy = strategy;
     } else {
-      IO.println("Wrong fail strategy limit; assumed poly");
+      log.warn("Wrong fail strategy limit; assumed poly");
 
       this.strategy = poly;
     }
   }
 
   public void printSolution(int[] solution) {
-
+    StringBuilder sb = new StringBuilder();
     for (int j : solution) {
-      IO.print(j + " ");
+      sb.append(j).append(" ");
     }
-    IO.println();
+    log.info("{}", sb);
   }
 
   public int[] lastSolution() {

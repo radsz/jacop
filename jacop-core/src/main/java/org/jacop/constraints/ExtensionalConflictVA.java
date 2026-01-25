@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
@@ -59,6 +60,7 @@ import org.jacop.util.TupleUtils;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class ExtensionalConflictVA extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
@@ -135,7 +137,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   public int[] seekSupportVA(int varPosition, int value) {
 
     if (debugAll) {
-      IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+      log.debug("Seeking support for {} and value {}", list[varPosition], value);
     }
 
     int[] t = tuple;
@@ -272,7 +274,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   public int isDisallowed(int varPosition, int value, int[] t) {
 
     if (debugAll) {
-      IO.println("variable" + list[varPosition] + " position " + varPosition + " value " + value);
+      log.debug("variable {} position {} value {}", list[varPosition], varPosition, value);
     }
 
     int[][] tuplesForGivenVariableValuePair =
@@ -332,7 +334,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   public void consistency(Store store) {
 
     if (debugAll) {
-      IO.println("Begin " + this);
+      log.debug("Begin {}", this);
     }
 
     if (satisfiedAlreadyAtImposition) {
@@ -354,12 +356,12 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
           int value = enumer.nextElement();
 
           if (debugAll) {
-            IO.println("Seeking support for " + list[varPosition] + " and value " + value);
+            log.debug("Seeking support for {} and value {}", list[varPosition], value);
           }
           int[] t = seekSupportVA(varPosition, value);
 
           if (debugAll) {
-            IO.println("Found support?" + !(t == null));
+            log.debug("Found support? {}", t != null);
           }
 
           if (t == null) {
@@ -372,7 +374,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     }
 
     if (debugAll) {
-      IO.println("End " + this);
+      log.debug("End {}", this);
     }
   }
 
@@ -393,7 +395,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
     if (debugAll) {
       for (Var var : list) {
-        IO.println("Variable " + var);
+        log.debug("Variable {}", var);
       }
     }
 
@@ -414,11 +416,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       int j = 0;
 
       if (debugAll) {
-        IO.print("conflict for analysis[");
-        for (int val : t) {
-          IO.print(val + " ");
-        }
-        IO.println("]");
+        log.debug("conflict for analysis{}", java.util.Arrays.toString(t));
       }
 
       for (int val : t) {
@@ -438,11 +436,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
 
       if (debugAll) {
         if (!stillConflict[i]) {
-          IO.print("Not support [");
-          for (int val : t) {
-            IO.print(val + " ");
-          }
-          IO.println("]");
+          log.debug("Not support {}", java.util.Arrays.toString(t));
         }
       }
 
@@ -450,7 +444,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
     }
 
     if (debugAll) {
-      IO.println("No. still conflicts " + noConflicts);
+      log.debug("No. still conflicts {}", noConflicts);
     }
 
     int[][] temp4Shrinking = new int[noConflicts][];
@@ -465,11 +459,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
         i++;
 
         if (debugAll) {
-          IO.print("Still support [");
-          for (int val : t) {
-            IO.print(val + " ");
-          }
-          IO.println("]");
+          log.debug("Still support {}", java.util.Arrays.toString(t));
         }
       }
 
@@ -504,13 +494,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       }
 
       if (debugAll) {
-        IO.println("values " + val.keySet());
+        log.debug("values {}", val.keySet());
       }
 
       PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
 
       if (debugAll) {
-        IO.println("Sorted val size " + sortedVal.size());
+        log.debug("Sorted val size {}", sortedVal.size());
       }
 
       values[i] = new int[sortedVal.size()];
@@ -518,13 +508,13 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
       this.tuples[i] = new int[sortedVal.size()][][];
 
       if (debugAll) {
-        IO.println("values length " + values[i].length);
+        log.debug("values length {}", values[i].length);
       }
 
       for (int j = 0; j < values[i].length; j++) {
 
         if (debugAll) {
-          IO.println("sortedVal " + sortedVal);
+          log.debug("sortedVal {}", sortedVal);
         }
 
         values[i][j] = sortedVal.poll();
@@ -604,7 +594,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
   public void queueVariable(int level, Var var) {
 
     if (debugAll) {
-      IO.println("Var " + var + ((IntVar) var).recentDomainPruning());
+      log.debug("Var {} {}", var, ((IntVar) var).recentDomainPruning());
     }
 
     variableQueue.add(var);

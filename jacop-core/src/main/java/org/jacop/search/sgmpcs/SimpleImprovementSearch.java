@@ -31,6 +31,7 @@
 package org.jacop.search.sgmpcs;
 
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -55,6 +56,7 @@ import org.jacop.search.SmallestMin;
  * @author krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {
 
   /*
@@ -181,7 +183,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
       searchCost = cost.value();
 
       if (printInfo) {
-        IO.println("----------\nCost = " + searchCost);
+        log.info("----------\nCost = {}", searchCost);
       }
 
       return returnCode;

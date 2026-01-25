@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -64,6 +65,7 @@ import org.jacop.core.Store;
  * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
 
+@Slf4j
 public class Cumulative extends CumulativeBasic {
 
   protected final Comparator<TaskView> taskIncEstComparator =

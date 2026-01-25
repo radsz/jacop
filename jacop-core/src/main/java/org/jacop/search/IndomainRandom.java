@@ -31,6 +31,7 @@
 package org.jacop.search;
 
 import java.util.Random;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -43,6 +44,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
   private final Random generator;
@@ -86,7 +88,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
       int currentMin = dom.leftElement(i);
       int currentMax = dom.rightElement(i);
 
-      // System.out.println( dom +", "+value);
+      // log.debug("{}, {}", dom, value);
       if (currentMax - currentMin + 1 > value) {
         return currentMin + value;
       } else {

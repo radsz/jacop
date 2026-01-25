@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -56,6 +57,7 @@ import org.jacop.search.restart.Calculator;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 @SuppressWarnings("serial")
 public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
@@ -202,7 +204,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       } catch (SolutionsLimitReached _) {
         solutionsReached = true;
         if (printInfo) {
-          IO.println("Solution limit " + solutionsLimit + " reached");
+          log.info("Solution limit {} reached", solutionsLimit);
         }
       }
 
@@ -223,7 +225,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (timeOutOccured) {
 
       if (printInfo) {
-        IO.println("Time-out " + tOut + "s");
+        log.info("Time-out {}s", tOut);
       }
     }
 
@@ -234,7 +236,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       }
 
       if (printInfo) {
-        IO.println(statistics());
+        log.info("{}", statistics());
       }
 
       return true;
@@ -242,30 +244,16 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       if (printInfo) {
 
-        IO.println("No solution found.");
+        log.info("No solution found.");
 
-        String buf =
-            "Depth First Search "
-                + id
-                + "\n"
-                + "\n"
-                + "Nodes : "
-                + nodes
-                + "\n"
-                + "Decisions : "
-                + decisions
-                + "\n"
-                + "Wrong Decisions : "
-                + wrongDecisions
-                + "\n"
-                + "Backtracks : "
-                + numberBacktracks
-                + "\n"
-                + "Max Depth : "
-                + maxDepthExcludePaths
-                + "\n";
-
-        IO.println(buf);
+        log.info(
+            "Depth First Search {}\n\nNodes : {}\nDecisions : {}\nWrong Decisions : {}\nBacktracks : {}\nMax Depth : {}",
+            id,
+            nodes,
+            decisions,
+            wrongDecisions,
+            numberBacktracks,
+            maxDepthExcludePaths);
       }
 
       return false;
@@ -331,7 +319,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         solutionsReached = true;
         if (printInfo) {
-          IO.println("Solution limit " + solutionsLimit + " reached");
+          log.info("Solution limit {} reached", solutionsLimit);
         }
       }
 
@@ -354,7 +342,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (timeOutOccured) {
 
       if (printInfo) {
-        IO.println("Time-out " + tOut + "s");
+        log.info("Time-out {}s", tOut);
       }
     }
 
@@ -369,14 +357,14 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
         if (costHandler != null) {
           double costValue = costHandler.getCostValue(costVariable);
-          IO.println("Solution cost is " + costValue);
+          log.info("Solution cost is {}", costValue);
         } else if (costVariable instanceof IntVar) {
-          IO.println("Solution cost is " + search.getFirst().costValue);
+          log.info("Solution cost is {}", search.getFirst().costValue);
         }
       }
 
       if (printInfo) {
-        IO.println(statistics());
+        log.info("{}", statistics());
       }
 
       return true;
@@ -385,9 +373,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       if (printInfo) {
 
-        IO.println("No solution found.");
+        log.info("No solution found.");
 
-        IO.println(statistics());
+        log.info("{}", statistics());
       }
 
       return false;
@@ -461,7 +449,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
         solutionsReached = true;
         if (printInfo) {
-          IO.println("Solution limit " + solutionsLimit + " reached");
+          log.info("Solution limit {} reached", solutionsLimit);
         }
       }
 
@@ -485,7 +473,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     if (timeOutOccured) {
 
       if (printInfo) {
-        IO.println("Time-out " + tOut + "s");
+        log.info("Time-out {}s", tOut);
       }
     }
 
@@ -496,12 +484,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       if (printInfo) {
         if (costVariable != null) {
           if (costVariable instanceof IntVar) {
-            IO.println("Solution cost is " + costValue);
+            log.info("Solution cost is {}", costValue);
           }
         }
 
         if (printInfo) {
-          IO.println(statistics());
+          log.info("{}", statistics());
         }
       }
 
@@ -520,9 +508,9 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
       if (printInfo) {
 
-        IO.println("No solution found.");
+        log.info("No solution found.");
 
-        IO.println(statistics());
+        log.info("{}", statistics());
       }
 
       if (raisedLevel) {

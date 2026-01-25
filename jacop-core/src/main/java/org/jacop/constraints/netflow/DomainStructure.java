@@ -34,6 +34,7 @@ import static org.jacop.constraints.netflow.simplex.NetworkSimplex.DELETED_ARC;
 
 import java.util.Collections;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -49,6 +50,7 @@ import org.jacop.core.Var;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class DomainStructure implements VarHandler {
 
   public final IntVar variable;

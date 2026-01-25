@@ -109,7 +109,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     assert (arc.capacity == 0 || arc.sister.capacity == 0);
 
     if (SHOW_CHANGES) {
-      IO.println("Adding arc :  " + arc);
+      log.debug("Adding arc: {}", arc);
     }
 
     // adjust node balance
@@ -144,7 +144,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
     if (SHOW_CHANGES) {
       // print();
-      IO.println("Before removing arc: " + arc);
+      log.debug("Before removing arc: {}", arc);
     }
 
     // Remove arc from tree, if it is a tree arc
@@ -211,7 +211,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
 
     if (SHOW_CHANGES) {
-      IO.println("  modified arc : " + companion.arc + ", time = " + modifiedSize.stamp());
+      log.debug("  modified arc: {}, time = {}", companion.arc, modifiedSize.stamp());
     }
   }
 

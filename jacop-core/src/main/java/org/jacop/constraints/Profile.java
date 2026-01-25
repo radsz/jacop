@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Iterator;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Defines a basic data structure to keep the profile for the diffn/1 and cumulative/4 constraints.
@@ -41,6 +42,7 @@ import java.util.Iterator;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Profile extends ArrayList<ProfileItem> {
 
   static final boolean trace = false;
@@ -77,7 +79,7 @@ public class Profile extends ArrayList<ProfileItem> {
 
     if (size() == 0) {
       if (trace) {
-        IO.println("1. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position 0");
+        log.debug("1. Add [{}..{})={} at position 0", a, b, val);
       }
       add(new ProfileItem(type, a, b, val));
       if (maxProfileItemHeight < val) {
@@ -90,8 +92,7 @@ public class Profile extends ArrayList<ProfileItem> {
           if (a != b) {
             if (b == p.min && val == p.value) {
               if (trace) {
-                IO.println(
-                    "2a. Change " + "[" + a + ".." + p.max + ")" + "=" + val + " at position " + i);
+                log.debug("2a. Change [{}..{})={} at position {}", a, p.max, val, i);
               }
               p.min = a;
               if (i > 0) {
@@ -112,8 +113,7 @@ public class Profile extends ArrayList<ProfileItem> {
                 }
               } else {
                 if (trace) {
-                  IO.println(
-                      "2b. Add " + "[" + a + ".." + b + ")" + "=" + val + " at position " + i);
+                  log.debug("2b. Add [{}..{})={} at position {}", a, b, val, i);
                 }
                 add(i, new ProfileItem(type, a, b, val));
               }
@@ -130,32 +130,12 @@ public class Profile extends ArrayList<ProfileItem> {
               if (a != b) {
                 if (p.max == a && val == p.value) {
                   if (trace) {
-                    IO.println(
-                        "3a. Change "
-                            + "["
-                            + p.min
-                            + ".."
-                            + b
-                            + ")"
-                            + "="
-                            + val
-                            + " at position "
-                            + i);
+                    log.debug("3a. Change [{}..{})={} at position {}", p.min, b, val, i);
                   }
                   p.max = b;
                 } else {
                   if (trace) {
-                    IO.println(
-                        "3b. Add "
-                            + "["
-                            + a
-                            + ".."
-                            + b
-                            + ")"
-                            + "="
-                            + val
-                            + " at position "
-                            + (i + 1));
+                    log.debug("3b. Add [{}..{})={} at position {}", a, b, val, i + 1);
                   }
                   add(i + 1, new ProfileItem(type, a, b, val));
                 }
@@ -175,23 +155,15 @@ public class Profile extends ArrayList<ProfileItem> {
             p.overlap(new ProfileItem(type, a, b, val), new1, new2, new3);
 
             if (trace) {
-              IO.println(
-                  "Overlap of "
-                      + "["
-                      + a
-                      + ".."
-                      + b
-                      + ")"
-                      + "="
-                      + val
-                      + " and "
-                      + p
-                      + "\nResult = "
-                      + new1
-                      + ", "
-                      + new2
-                      + ", "
-                      + new3);
+              log.debug(
+                  "Overlap of [{}..{})={} and {}\nResult = {}, {}, {}",
+                  a,
+                  b,
+                  val,
+                  p,
+                  new1,
+                  new2,
+                  new3);
             }
 
             remove(i);
@@ -205,22 +177,13 @@ public class Profile extends ArrayList<ProfileItem> {
               }
               if (previous.max == new1.min && previous.value == new1.value) {
                 if (trace) {
-                  IO.println(
-                      "4a. Change "
-                          + "["
-                          + previous.min
-                          + ".."
-                          + new1.max
-                          + ")"
-                          + "="
-                          + val
-                          + " at position "
-                          + i);
+                  log.debug(
+                      "4a. Change [{}..{})={} at position {}", previous.min, new1.max, val, i);
                 }
                 previous.setMax(new1.max);
               } else {
                 if (trace) {
-                  IO.println("4b. Adding " + new1);
+                  log.debug("4b. Adding {}", new1);
                 }
                 add(i, new1);
                 if (maxProfileItemHeight < new1.value) {
@@ -239,22 +202,13 @@ public class Profile extends ArrayList<ProfileItem> {
               }
               if (previous.max == new2.min && previous.value == new2.value) {
                 if (trace) {
-                  IO.println(
-                      "5a. Change "
-                          + "["
-                          + previous.min
-                          + ".."
-                          + new2.max
-                          + ")"
-                          + "="
-                          + val
-                          + " at position "
-                          + i);
+                  log.debug(
+                      "5a. Change [{}..{})={} at position {}", previous.min, new2.max, val, i);
                 }
                 previous.setMax(new2.max);
               } else {
                 if (trace) {
-                  IO.println("5b. Adding " + new2);
+                  log.debug("5b. Adding {}", new2);
                 }
                 add(i, new2);
                 if (maxProfileItemHeight < new2.value) {

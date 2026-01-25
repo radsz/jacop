@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -48,6 +49,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -132,7 +134,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
       store.propagationHasOccurred = false;
 
       if (debugAll) {
-        IO.println("X " + x + " Y " + y);
+        log.debug("X {} Y {}", x, y);
       }
 
       IntervalDomain xDom;
@@ -193,7 +195,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
       yDom.addDom(yDom1);
 
       if (debugAll) {
-        IO.println("new Ydom " + yDom);
+        log.debug("new Ydom {}", yDom);
       }
 
       // @todo, test more the change from yDom1 to yDom.
@@ -225,7 +227,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
       xDom.addDom(yDom);
 
       if (debugAll) {
-        IO.println("new Xdom " + xDom);
+        log.debug("new Xdom {}", xDom);
       }
 
       x.domain.in(store.level, x, xDom);

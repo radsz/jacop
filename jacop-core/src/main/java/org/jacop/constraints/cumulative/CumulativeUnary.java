@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -48,6 +49,7 @@ import org.jacop.core.Store;
  * @version 4.10
  */
 
+@Slf4j
 public class CumulativeUnary extends Cumulative {
 
   /*
@@ -142,7 +144,7 @@ public class CumulativeUnary extends Cumulative {
     this(starts, durations, resources, limit);
 
     if (!doProfile && !doEdgeFind) {
-      System.err.println("% Warning: CumulativeUnary has no effect (no propagators defined).");
+      log.warn("CumulativeUnary has no effect (no propagators defined).");
     } else {
       this.doProfile = doProfile;
       this.doEdgeFind = doEdgeFind;

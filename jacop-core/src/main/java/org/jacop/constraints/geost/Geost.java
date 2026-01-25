@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -90,6 +91,7 @@ import org.jacop.util.SimpleHashSet;
  *     <p>5. If objects have the same shape, and they are indistingushable then symmetry breaking
  *     can be employed.
  */
+@Slf4j
 @SuppressWarnings("PointlessBooleanExpression")
 public class Geost extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
@@ -744,7 +746,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       int limit) {
 
     if (DEBUG_MAIN) {
-      IO.println("pruneMin");
+      log.debug("pruneMin");
     }
 
     order.setMostSignificantDimension(d);
@@ -759,13 +761,13 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     n[dimension] = o.start.max() + 1;
 
     if (DEBUG_MAIN) {
-      IO.println("shape ID in pruneMin: " + currentShape);
+      log.debug("shape ID in pruneMin: {}", currentShape);
     }
 
     if (DEBUG_MAIN) {
-      IO.println("inital, c and n:");
-      IO.println("c:" + Arrays.toString(c));
-      IO.println("n:" + Arrays.toString(n));
+      log.debug("inital, c and n:");
+      log.debug("c:{}", Arrays.toString(c));
+      log.debug("n:{}", Arrays.toString(n));
     }
 
     boolean feasiblePointFound = true;
@@ -811,9 +813,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
 
       if (DEBUG_MAIN) {
-        IO.println("outbox found, c and n:");
-        IO.println("c:" + Arrays.toString(c));
-        IO.println("n:" + Arrays.toString(n));
+        log.debug("outbox found, c and n:");
+        log.debug("c:{}", Arrays.toString(c));
+        log.debug("n:{}", Arrays.toString(n));
       }
     }
 
@@ -852,7 +854,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       int limit) {
 
     if (DEBUG_MAIN) {
-      IO.println("pruneMax");
+      log.debug("pruneMax");
     }
 
     order.setMostSignificantDimension(d);
@@ -868,12 +870,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     n[dimension] = o.end.min() - 1;
 
     if (DEBUG_MAIN) {
-      IO.println("shape ID in pruneMax: " + currentShape);
+      log.debug("shape ID in pruneMax: {}", currentShape);
     }
     if (DEBUG_MAIN) {
-      IO.println("initial c and n:");
-      IO.println("c:" + Arrays.toString(c));
-      IO.println("n:" + Arrays.toString(n));
+      log.debug("initial c and n:");
+      log.debug("c:{}", Arrays.toString(c));
+      log.debug("n:{}", Arrays.toString(n));
     }
 
     boolean feasiblePointFound = true;
@@ -918,9 +920,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
 
       if (DEBUG_MAIN) {
-        IO.println("outbox found, c and n:");
-        IO.println("c:" + Arrays.toString(c));
-        IO.println("n:" + Arrays.toString(n));
+        log.debug("outbox found, c and n:");
+        log.debug("c:{}", Arrays.toString(c));
+        log.debug("n:{}", Arrays.toString(n));
       }
     }
 
@@ -945,8 +947,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       LexicographicalOrder order) {
 
     if (DEBUG_MAIN) {
-      //   System.out.println("findForbidenDomain: constraints:" + constraints.size());
-      IO.println("shape ID in findForbiddenDomain: " + currentShape);
+      log.debug("shape ID in findForbiddenDomain: {}", currentShape);
     }
 
     if (GATHER_STATS) {
@@ -959,8 +960,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     DomainHoles holeConstraint = domainHolesConstraints[o.no];
 
     if (DomainHoles.debug) {
-      IO.println("checking for holes of object " + o);
-      IO.println("associated constraint: " + holeConstraint);
+      log.debug("checking for holes of object {}", o);
+      log.debug("associated constraint: {}", holeConstraint);
     }
 
     // If the hole within domain can be used to generate the outbox then it is checked first.
@@ -1014,7 +1015,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       changedShapeID = false;
 
       if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
-        IO.println("consistency(" + store.level + ")");
+        log.debug("consistency({})", store.level);
       }
 
       if (firstConsistencyCheck) {
@@ -1066,7 +1067,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         pruneIfGrounded[o.no] = false;
 
         if (DEBUG_OBJECT_GROUNDING) {
-          IO.println("pruning object " + o);
+          log.debug("pruning object {}", o);
         }
 
         boolean fullSweep = true;
@@ -1083,10 +1084,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
         if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
 
-          IO.println("pruning " + o);
+          log.debug("pruning {}", o);
 
           if (DEBUG_SHAPE_SKIP) {
-            IO.println("o.bestShapeID = " + Arrays.toString(o.bestShapeID));
+            log.debug("o.bestShapeID = {}", Arrays.toString(o.bestShapeID));
           }
         }
 
@@ -1170,7 +1171,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
               int sid = shapeIdsToPrune[i];
 
               if (DEBUG_MAIN) {
-                IO.println("shape ID in consistency: " + sid);
+                log.debug("shape ID in consistency: {}", sid);
               }
 
               if (GATHER_STATS) {
@@ -1190,7 +1191,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
                 // remove shape ID, it is infeasible
                 if (DEBUG_DOUBLE_LAYER) {
-                  IO.println("geost " + id() + " changing " + o.shapeID + ", removing " + sid);
+                  log.debug("geost {} changing {}, removing {}", id(), o.shapeID, sid);
                 }
 
                 changedShapeID = true;
@@ -1224,7 +1225,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
                   // remove shape ID, it is infeasible
                   if (DEBUG_DOUBLE_LAYER) {
-                    IO.println("geost " + id() + " changing " + o.shapeID + ", removing " + sid);
+                    log.debug("geost {} changing {}, removing {}", id(), o.shapeID, sid);
                   }
 
                   changedShapeID = true;
@@ -1258,13 +1259,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
               if (DEBUG_DOUBLE_LAYER) {
                 if (minLowerBound > prunedVariable.min()) {
-                  IO.println(
-                      "geost "
-                          + id()
-                          + " changing "
-                          + prunedVariable
-                          + " min bound to "
-                          + minLowerBound);
+                  log.debug(
+                      "geost {} changing {} min bound to {}", id(), prunedVariable, minLowerBound);
                 }
               }
 
@@ -1288,13 +1284,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
               if (DEBUG_DOUBLE_LAYER) {
                 if (maxUpperBound < prunedVariable.max()) {
-                  IO.println(
-                      "geost "
-                          + id()
-                          + " changing "
-                          + prunedVariable
-                          + " max bound to "
-                          + maxUpperBound);
+                  log.debug(
+                      "geost {} changing {} max bound to {}", id(), prunedVariable, maxUpperBound);
                 }
               }
 
@@ -1319,8 +1310,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         }
 
         if (DEBUG_MAIN) {
-          IO.print("pruned " + o);
-          IO.println(""); // just to place breakpoint
+          log.debug("pruned {}", o);
         }
       }
 
@@ -1342,7 +1332,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         setStart.update(objectList.size());
 
         if (DEBUG_BACKTRACK) {
-          IO.println("new set, begins at " + setStart.value() + ", stamp: " + setStart);
+          log.debug("new set, begins at {}, stamp: {}", setStart.value(), setStart);
         }
       }
 
@@ -1440,7 +1430,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     if (DEBUG_REORDER) {
-      IO.println("changed pruning object");
+      log.debug("changed pruning object");
     }
   }
 
@@ -1492,7 +1482,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     if (!(o.isGrounded() && pruneIfGrounded[o.no] == false)) {
 
       if (DEBUG_OBJECT_GROUNDING) {
-        IO.println("queued " + o);
+        log.debug("queued {}", o);
       }
 
       if (GATHER_STATS) {
@@ -1502,7 +1492,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       objectQueue.add(o);
 
     } else if (DEBUG_OBJECT_GROUNDING) {
-      IO.println("The object " + o + " was skipped.");
+      log.debug("The object {} was skipped.", o);
     }
   }
 
@@ -1525,7 +1515,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     if (DEBUG_MAIN) {
-      IO.println("adding objects to the queue");
+      log.debug("adding objects to the queue");
     }
 
     for (ExternalConstraint ec : externalConstraints) {
@@ -1539,7 +1529,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       updatedObjectSet.add(o);
 
       if (DEBUG_BACKTRACK) {
-        IO.println("updating object " + o);
+        log.debug("updating object {}", o);
       }
 
       if (allLinked) {
@@ -1645,7 +1635,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       o.onGround(v);
 
       if (DEBUG_OBJECT_GROUNDING) {
-        IO.println("grounding " + v);
+        log.debug("grounding {}", v);
       }
 
       if (!inConsistency) {
@@ -1686,12 +1676,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     if (DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
       if (inConsistency) {
-        IO.println("The variable " + v + " was pruned by geost consistency function itself");
+        log.debug("The variable {} was pruned by geost consistency function itself", v);
       } else {
-        IO.println(
-            "The variable "
-                + v
-                + " was pruned by outside constraints and it is queued as changed within geost");
+        log.debug(
+            "The variable {} was pruned by outside constraints and it is queued as changed within geost",
+            v);
       }
     }
   }
@@ -1706,7 +1695,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
 
     if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
-      IO.println("removeLevel(" + store.level + ")");
+      log.debug("removeLevel({})", store.level);
     }
 
     assert !inConsistency;
@@ -1737,7 +1726,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         assert v != null;
 
         if (DEBUG_OBJECT_GROUNDING) {
-          IO.println("The variable " + v + " is being ungrounded");
+          log.debug("The variable {} is being ungrounded", v);
         }
 
         // no need to check for null as only not null variables are put in groundedVars.
@@ -1752,7 +1741,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
         onObjectUpdate(o);
         if (DEBUG_BACKTRACK) {
-          IO.println("restored object " + o);
+          log.debug("restored object {}", o);
         }
       }
     }
@@ -1771,7 +1760,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       onObjectUpdate(o);
 
       if (DEBUG_BACKTRACK) {
-        IO.println("restored object " + o);
+        log.debug("restored object {}", o);
       }
     }
 

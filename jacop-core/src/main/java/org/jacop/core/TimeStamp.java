@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 
 /**
@@ -49,6 +50,7 @@ import org.jacop.api.Stateful;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class TimeStamp<T> implements Stateful {
 
   static final boolean debug = false;
@@ -171,14 +173,13 @@ public class TimeStamp<T> implements Stateful {
 
     if (stamps[pointer4Last] == store.level) {
       if (debug) {
-        IO.print(
-            "1. Level: " + store.level + ", In " + this + ",  New value " + val + "replaces old");
+        log.debug("1. Level: {}, In {}, New value {} replaces old", store.level, this, val);
       }
 
       values[pointer4Last] = val;
     } else if (stamps[pointer4Last] < store.level) {
       if (debug) {
-        IO.print("2. Level: " + store.level + ", IN " + this + ",  New value" + val);
+        log.debug("2. Level: {}, IN {}, New value {}", store.level, this, val);
       }
 
       addLast(val, store.level);

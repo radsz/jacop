@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
@@ -41,6 +42,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 class CircuitVar implements MutableVar {
 
   final int index;

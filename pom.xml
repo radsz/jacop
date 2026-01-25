@@ -122,6 +122,34 @@ setup to run configuration. -->
         </profile>
 
         <profile>
+            <id>jdeps</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jdeps-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <configuration>
+                            <multiRelease>25</multiRelease>
+                            <include>org.jacop.*</include>
+                            <dependenciesToAnalyzeExcludes>
+                                <exclude>net.bytebuddy:byte-buddy</exclude>
+                            </dependenciesToAnalyzeExcludes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jdkinternals</goal>
+                                    <goal>test-jdkinternals</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
             <id>min</id>
             <build>
                 <plugins>
@@ -660,27 +688,6 @@ setup to run configuration. -->
                         </goals>
                     </execution>
 
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jdeps-plugin</artifactId>
-                <version>3.2.0</version>
-                <configuration>
-                    <multiRelease>25</multiRelease>
-                    <include>org.jacop.*</include>
-                    <dependenciesToAnalyzeExcludes>
-                        <exclude>net.bytebuddy:byte-buddy</exclude>
-                    </dependenciesToAnalyzeExcludes>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>jdkinternals</goal> <!-- verify main classes -->
-                            <goal>test-jdkinternals</goal> <!-- verify test classes -->
-                        </goals>
-                    </execution>
                 </executions>
             </plugin>
 

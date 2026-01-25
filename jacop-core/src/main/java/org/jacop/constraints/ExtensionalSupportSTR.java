@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
@@ -54,6 +55,7 @@ import org.jacop.util.TupleUtils;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
@@ -260,7 +262,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
     if (reinsertBefore) {
 
       if (tailsOfEliminatedTuples.value() == -1) {
-        IO.print("Error");
+        log.error("Error: tailsOfEliminatedTuples value is -1");
       }
 
       nexts[tailsOfEliminatedTuples.value()] = first;
@@ -307,11 +309,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
         int j = 0;
 
         if (debugAll) {
-          IO.print("support for analysis[");
-          for (int val : t) {
-            IO.print(val + " ");
-          }
-          IO.println("]");
+          log.debug("support for analysis{}", java.util.Arrays.toString(t));
         }
 
         for (int val : t) {
@@ -337,11 +335,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
         if (debugAll) {
           if (!stillSupport[i]) {
-            IO.print("Not support [");
-            for (int val : t) {
-              IO.print(val + " ");
-            }
-            IO.println("]");
+            log.debug("Not support {}", java.util.Arrays.toString(t));
           }
         }
 
@@ -349,7 +343,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
       }
 
       if (debugAll) {
-        IO.println("No. still supports " + noSupports);
+        log.debug("No. still supports {}", noSupports);
       }
 
       int[][] temp4Shrinking = new int[noSupports][];
@@ -364,11 +358,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
           i++;
 
           if (debugAll) {
-            IO.print("Still support [");
-            for (int val : t) {
-              IO.print(val + " ");
-            }
-            IO.println("]");
+            log.debug("Still support {}", java.util.Arrays.toString(t));
           }
         }
 
@@ -551,7 +541,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
     if (debugAll) {
       for (Var var : list) {
-        IO.println("Variable " + var);
+        log.debug("Variable {}", var);
       }
     }
 
