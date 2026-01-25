@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -134,6 +135,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    * @param l2 list of variables denoting length of the rectangle in the second dimension.
    * @param profile it specifies if the profile should be computed and used.
    */
+  @Builder
   public Diff(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
     this(o1, o2, l1, l2);
     doProfile = profile;

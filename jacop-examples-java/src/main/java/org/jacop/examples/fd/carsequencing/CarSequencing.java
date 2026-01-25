@@ -287,7 +287,14 @@ public class CarSequencing extends ExampleFD {
         if (required[j][i])
           classesWithGivenOption.addDom(j, j);
 
-      DecomposedConstraint c = new Sequence(cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+      DecomposedConstraint c =
+          Sequence.builder()
+              .list(cars)
+              .set(classesWithGivenOption)
+              .q(blockSizePerOption[i])
+              .min(0)
+              .max(maxNoOfCarsPerOption[i])
+              .build();
       ArrayList<Constraint> decomposition = c.decompose(store);
 
       regulars.addAll(decomposition);
@@ -454,15 +461,25 @@ public class CarSequencing extends ExampleFD {
       // It uses Regular constraint.
       if (regular) {
         store.imposeDecomposition(
-            new Sequence(
-                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]));
+            Sequence.builder()
+                .list(cars)
+                .set(classesWithGivenOption)
+                .q(blockSizePerOption[i])
+                .min(0)
+                .max(maxNoOfCarsPerOption[i])
+                .build());
       }
 
       // It uses decomposition of Regular into ternary constraints.
       if (slideDecomposition) {
         DecomposedConstraint<Constraint> c =
-            new Sequence(
-                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+            Sequence.builder()
+                .list(cars)
+                .set(classesWithGivenOption)
+                .q(blockSizePerOption[i])
+                .min(0)
+                .max(maxNoOfCarsPerOption[i])
+                .build();
         List<Constraint> decomposition = c.decompose(store);
 
         for (Constraint regular : decomposition) {
@@ -474,8 +491,13 @@ public class CarSequencing extends ExampleFD {
       // based on MDDs.
       if (extensionalMDD) {
         DecomposedConstraint<Constraint> c =
-            new Sequence(
-                cars, classesWithGivenOption, blockSizePerOption[i], 0, maxNoOfCarsPerOption[i]);
+            Sequence.builder()
+                .list(cars)
+                .set(classesWithGivenOption)
+                .q(blockSizePerOption[i])
+                .min(0)
+                .max(maxNoOfCarsPerOption[i])
+                .build();
         List<Constraint> decomposition = c.decompose(store);
 
         for (Constraint constraint : decomposition) {

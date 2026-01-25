@@ -34,6 +34,7 @@ import java.io.Serial;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
@@ -406,6 +407,7 @@ public class RegularExpressionParser {
   }
 
   /** It specifies a simple literal. */
+  @EqualsAndHashCode(callSuper = false)
   public static class Literal extends Expression {
 
     /** String denoting the literal. */
@@ -428,22 +430,6 @@ public class RegularExpressionParser {
     @Override
     public String toString() {
       return lit;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) {
-        return true;
-      }
-      if (!(obj instanceof Literal other)) {
-        return false;
-      }
-      return lit.equals(other.lit);
-    }
-
-    @Override
-    public int hashCode() {
-      return lit.hashCode();
     }
 
     @Override

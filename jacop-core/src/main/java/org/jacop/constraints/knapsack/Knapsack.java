@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.SatisfiedPresent;
@@ -193,6 +194,7 @@ public class Knapsack extends Constraint
    * @param knapsackCapacity finite domain variable specifying the capacity limit of the knapsack.
    * @param knapsackProfit finite domain variable defining the profit
    */
+  @Builder
   public Knapsack(
       int[] profits,
       int[] weights,

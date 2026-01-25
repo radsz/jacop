@@ -212,8 +212,8 @@ object SocialGolfer extends jacop {
     val tread = java.lang.Thread.currentThread()
     val b = java.lang.management.ManagementFactory.getThreadMXBean()
 
-    val startCPU = b.getThreadCpuTime(tread.getId())
-    val startUser = b.getThreadUserTime(tread.getId())
+    val startCPU = b.getThreadCpuTime(tread.threadId())
+    val startUser = b.getThreadUserTime(tread.threadId())
 
     val result = satisfy(search(vars, min_lub_card, indomain_min_set), printSolution())
 
@@ -231,8 +231,8 @@ object SocialGolfer extends jacop {
 
     statistics()
 
-    println("ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / 1e+6 + "ms")
-    println("ThreadUserTime = " + (b.getThreadUserTime(tread.getId()) - startUser) / 1e+6 + "ms")
+    println("ThreadCpuTime = " + (b.getThreadCpuTime(tread.threadId()) - startCPU) / 1e+6 + "ms")
+    println("ThreadUserTime = " + (b.getThreadUserTime(tread.threadId()) - startUser) / 1e+6 + "ms")
 
   }
 

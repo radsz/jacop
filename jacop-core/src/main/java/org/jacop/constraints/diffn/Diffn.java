@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Max;
@@ -110,6 +111,7 @@ public class Diffn extends Nooverlap {
    * @param strict true- zero size rectangles need to be between other rectangles; false- these
    *     rectangles can be anywhere
    */
+  @Builder
   public Diffn(
       IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2, boolean strict) {
     super(origin1, origin2, length1, length2, strict);

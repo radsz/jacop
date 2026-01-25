@@ -140,7 +140,14 @@ public class KnapsackExample extends ExampleFD {
 
     //  Redundant constraints.
 
-    store.impose(new Knapsack(profits, weights, quantity, weight, profit));
+    store.impose(
+        Knapsack.builder()
+            .profits(profits)
+            .weights(weights)
+            .quantity(quantity)
+            .knapsackCapacity(weight)
+            .knapsackProfit(profit)
+            .build());
 
     store.impose(new XlteqC(weight, volume));
 
@@ -266,7 +273,14 @@ public class KnapsackExample extends ExampleFD {
     store.impose(new LinearInt(quantity, weights, "==", weight));
     // store.impose(new SumWeight(quantity, weights, weight));
 
-    store.impose(new Knapsack(profits, weights, quantity, weight, profit));
+    store.impose(
+        Knapsack.builder()
+            .profits(profits)
+            .weights(weights)
+            .quantity(quantity)
+            .knapsackCapacity(weight)
+            .knapsackProfit(profit)
+            .build());
 
     store.impose(new LinearInt(quantity, profits, "==", profit));
     // store.impose(new SumWeight(quantity, profits, profit));

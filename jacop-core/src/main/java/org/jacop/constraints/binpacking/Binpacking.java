@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
@@ -196,6 +197,7 @@ public class Binpacking extends Constraint
     minBinNumber = minBin;
   }
 
+  @Builder
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean LBpruning) {
     this(bin, load, w, minBin);
     this.LBpruning = LBpruning;

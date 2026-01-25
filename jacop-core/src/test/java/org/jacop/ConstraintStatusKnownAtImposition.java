@@ -20,7 +20,13 @@ public class ConstraintStatusKnownAtImposition {
     IntVar v4 = new IntVar(store, "v4", 0, 0);
 
     Knapsack cons =
-        new Knapsack(new int[] {1, 2, 3}, new int[] {1, 2, 3}, new IntVar[] {v1, v2, v3}, v4, v0);
+        Knapsack.builder()
+            .profits(new int[] {1, 2, 3})
+            .weights(new int[] {1, 2, 3})
+            .quantity(new IntVar[] {v1, v2, v3})
+            .knapsackCapacity(v4)
+            .knapsackProfit(v0)
+            .build();
 
     store.impose(cons);
   }

@@ -32,18 +32,20 @@ package org.jacop.util.fsm;
 
 import java.util.HashSet;
 import java.util.Set;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class FSMState {
 
   /** It specifies the list of transitions outgoing from this state. */
   public final Set<FSMTransition> transitions;
 
   /** Id of the state. There can be multiple copies of the same state with the same id. */
-  public int id;
+  @EqualsAndHashCode.Include public int id;
 
   /**
    * It constructs a FSM state.
@@ -107,16 +109,6 @@ public class FSMState {
    */
   public void addTransition(FSMTransition transition) {
     transitions.add(transition);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    return this.id == ((FSMState) o).id;
-  }
-
-  @Override
-  public int hashCode() {
-    return id;
   }
 
   @Override

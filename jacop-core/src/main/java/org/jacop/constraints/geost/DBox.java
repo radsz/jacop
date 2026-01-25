@@ -33,11 +33,13 @@ package org.jacop.constraints.geost;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
  */
+@EqualsAndHashCode
 public class DBox {
 
   /**
@@ -659,38 +661,5 @@ public class DBox {
   public String toString() {
 
     return "DBox(" + Arrays.toString(origin) + " ; " + Arrays.toString(length) + ")";
-  }
-
-  @Override
-  public int hashCode() {
-    // TODO profile and make sure this does not kill efficiency
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + Arrays.hashCode(length);
-    result = prime * result + Arrays.hashCode(origin);
-    return result;
-  }
-
-  public boolean equals(Object obj) {
-
-    if (this == obj) {
-      return true;
-    }
-
-    if (obj == null) {
-      return false;
-    }
-
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-
-    DBox other = (DBox) obj;
-
-    if (!Arrays.equals(length, other.length)) {
-      return false;
-    }
-
-    return Arrays.equals(origin, other.origin);
   }
 }

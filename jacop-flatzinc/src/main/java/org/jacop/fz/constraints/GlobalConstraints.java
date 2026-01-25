@@ -701,7 +701,8 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(new Diffn(x, y, lx, ly, true));
+    support.pose(
+        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(true).build());
   }
 
   void gen_jacop_list_diff2(SimpleNode node) {
@@ -710,7 +711,8 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(new Diffn(x, y, lx, ly, false));
+    support.pose(
+        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
   }
 
   void gen_jacop_count(SimpleNode node) {
@@ -1361,7 +1363,14 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
-    support.pose(new Knapsack(profits, weights, x, W, P));
+    support.pose(
+        Knapsack.builder()
+            .profits(profits)
+            .weights(weights)
+            .quantity(x)
+            .knapsackCapacity(W)
+            .knapsackProfit(P)
+            .build());
   }
 
   void gen_jacop_sequence(SimpleNode node) {
@@ -1381,7 +1390,8 @@ class GlobalConstraints implements ParserTreeConstants {
       }
     }
 
-    DecomposedConstraint<Constraint> c = new Sequence(x, setImpl, q, min, max);
+    DecomposedConstraint<Constraint> c =
+        Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
     support.poseDC(c);
   }
 
@@ -1539,7 +1549,8 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] cc = removeDuplicates(capacity);
 
     // support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
-    Constraint binPack = new Binpacking(bin, cc, w, min_bin, true);
+    Constraint binPack =
+        Binpacking.builder().bin(bin).load(cc).w(w).minBin(min_bin).LBpruning(true).build();
     support.delayedConstraints.add(binPack);
   }
 
@@ -1554,7 +1565,8 @@ class GlobalConstraints implements ParserTreeConstants {
       load[i] = new IntVar(store, 0, capacity[i]);
     }
 
-    Constraint binPack = new Binpacking(bin, load, w, min_bin, true);
+    Constraint binPack =
+        Binpacking.builder().bin(bin).load(load).w(w).minBin(min_bin).LBpruning(true).build();
     support.delayedConstraints.add(binPack);
   }
 
@@ -1948,7 +1960,8 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] ones = new IntVar[str.length];
     Arrays.fill(ones, one);
 
-    support.pose(new Diffn(str, ones, dur, opt, true));
+    support.pose(
+        Diffn.builder().origin1(str).origin2(ones).length1(dur).length2(opt).strict(true).build());
   }
 
   IntVar[] removeDuplicates(IntVar[] x) {

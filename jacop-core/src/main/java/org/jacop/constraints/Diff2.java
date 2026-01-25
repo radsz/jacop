@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.Builder;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -184,6 +185,7 @@ public class Diff2 extends Diff {
    * @param l2 list of variables denoting the length in the second dimension.
    * @param profile specifies if the profile should be computed.
    */
+  @Builder(builderMethodName = "diff2Builder")
   public Diff2(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
     this(o1, o2, l1, l2);
     doProfile = profile;

@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -172,6 +173,7 @@ public class Disjoint extends Diff {
    * @param l2 list of variables denoting the length in the second dimension.
    * @param profile specifies if the profile should be computed.
    */
+  @Builder(builderMethodName = "disjointBuilder")
   public Disjoint(IntVar[] o1, IntVar[] o2, IntVar[] l1, IntVar[] l2, boolean profile) {
     this(o1, o2, l1, l2);
     doProfile = profile;
