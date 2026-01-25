@@ -30,6 +30,8 @@
 
 package org.jacop.search.restart;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.jacop.search.ConsistencyListener;
 
 /**
@@ -40,9 +42,9 @@ import org.jacop.search.ConsistencyListener;
  */
 public abstract class Calculator implements ConsistencyListener {
 
-  long numberFails;
+  @Getter long numberFails;
 
-  long failLimit;
+  @Getter @Setter long failLimit;
 
   ConsistencyListener child;
 
@@ -69,21 +71,6 @@ public abstract class Calculator implements ConsistencyListener {
 
   public boolean pointsExhausted() {
     return numberFails >= failLimit;
-  }
-
-  public long getFailLimit() {
-
-    return failLimit;
-  }
-
-  public void setFailLimit(int limit) {
-
-    failLimit = limit;
-  }
-
-  public long getNumberFails() {
-
-    return numberFails;
   }
 
   public void setChildrenListeners(ConsistencyListener[] children) {}

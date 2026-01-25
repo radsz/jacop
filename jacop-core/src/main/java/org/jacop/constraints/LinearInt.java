@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -59,6 +60,7 @@ import org.jacop.core.Store;
  * @version 4.10
  */
 
+@Slf4j
 public class LinearInt extends PrimitiveConstraint {
 
   /*
@@ -630,7 +632,7 @@ public class LinearInt extends PrimitiveConstraint {
         return ge;
       }
       case null, default -> {
-        System.err.println("Wrong relation symbol in LinearInt constraint " + r + "; assumed ==");
+        log.error("Wrong relation symbol in LinearInt constraint {}; assumed ==", r);
         return eq;
       }
     }

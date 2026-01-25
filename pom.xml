@@ -93,6 +93,7 @@
         <google.java.format.version>1.33.0</google.java.format.version>
         <scala.maven.plugin.version>4.9.8</scala.maven.plugin.version>
         <assertj.version>3.27.6</assertj.version>
+        <lombok.version>1.18.42</lombok.version>
     </properties>
 
     <!-- In order to see logging output,
@@ -519,6 +520,13 @@ setup to run configuration. -->
                     <showWarnings>false</showWarnings>
                     <!--  <showDeprecation>true</showDeprecation>  -->
                     <release>25</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
 
@@ -841,6 +849,12 @@ setup to run configuration. -->
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
             <version>2.0.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>

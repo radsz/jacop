@@ -30,6 +30,8 @@
 
 package org.jacop.search.sgmpcs;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.jacop.core.Var;
 import org.jacop.search.ConsistencyListener;
 
@@ -41,9 +43,9 @@ import org.jacop.search.ConsistencyListener;
  */
 public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
 
-  int numberFails;
+  @Getter int numberFails;
 
-  int failLimit;
+  @Getter @Setter int failLimit;
 
   public SGMPCSCalculator(int limit) {
     failLimit = limit;
@@ -64,21 +66,6 @@ public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
 
       return consistent;
     }
-  }
-
-  public int getFailLimit() {
-
-    return failLimit;
-  }
-
-  public void setFailLimit(int limit) {
-
-    failLimit = limit;
-  }
-
-  public int getNumberFails() {
-
-    return numberFails;
   }
 
   public void setChildrenListeners(ConsistencyListener[] children) {}

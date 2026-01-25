@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.knapsack;
 
+import lombok.Getter;
 import org.jacop.core.IntVar;
 
 /**
@@ -43,6 +44,7 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.10
  */
+@Getter
 public final class KnapsackItem implements Comparable<KnapsackItem> {
 
   /** It is a finite domain variable specifying the possible quantity of that item. */
@@ -108,42 +110,6 @@ public final class KnapsackItem implements Comparable<KnapsackItem> {
         return -1;
       }
     }
-  }
-
-  /**
-   * t returns quantity variable associated with that item.
-   *
-   * @return quantity finite domain variable.
-   */
-  public IntVar getVariable() {
-    return quantity;
-  }
-
-  /**
-   * It returns a profit of a single instance of that item.
-   *
-   * @return profit of a single instance of that item.
-   */
-  public int getProfit() {
-    return profit;
-  }
-
-  /**
-   * It returns a weight of a single instance of that item.
-   *
-   * @return weight of a single instance of that item.
-   */
-  public int getWeight() {
-    return weight;
-  }
-
-  /**
-   * It returns an efficiency of that item.
-   *
-   * @return the efficiency of that item.
-   */
-  public double getEfficiency() {
-    return efficiency;
   }
 
   @Override

@@ -56,19 +56,16 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
         }
       };
 
-  protected final List<int[]> eqns;
-  protected final List<IntVar> vars;
-  protected final Map<IntVar, Integer> map;
+  protected final List<int[]> eqns = new ArrayList<>();
+  protected final List<IntVar> vars = new ArrayList<>(List.of(NULL_VAR));
+  protected final Map<IntVar, Integer> map = initMap();
 
   List<Constraint> decomposition;
 
-  public Arithmetic() {
-    this.eqns = new ArrayList<>();
-    this.vars = new ArrayList<>();
-    this.map = Var.createEmptyPositioning();
-
-    vars.add(NULL_VAR);
-    map.put(NULL_VAR, 0);
+  private static Map<IntVar, Integer> initMap() {
+    Map<IntVar, Integer> m = Var.createEmptyPositioning();
+    m.put(NULL_VAR, 0);
+    return m;
   }
 
   private static int weight(int[] array) {

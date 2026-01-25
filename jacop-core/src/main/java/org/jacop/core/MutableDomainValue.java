@@ -30,10 +30,13 @@
 
 package org.jacop.core;
 
+import lombok.NoArgsConstructor;
+
 /**
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@NoArgsConstructor
 public class MutableDomainValue implements MutableVarValue, Cloneable {
 
   /** It stores the value of the mutable domain. */
@@ -42,8 +45,6 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
   MutableDomainValue previousMutableDomainVariableValue;
 
   int stamp;
-
-  MutableDomainValue() {}
 
   /**
    * @param domain specifies domain stored by a mutable domain.
@@ -68,6 +69,7 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
     previousMutableDomainVariableValue = (MutableDomainValue) nn;
   }
 
+  @Override
   public void setStamp(int stamp) {
     this.stamp = stamp;
   }
@@ -76,6 +78,7 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
     this.domain = domain;
   }
 
+  @Override
   public int stamp() {
     return stamp;
   }

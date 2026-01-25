@@ -32,6 +32,8 @@ package org.jacop.search;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicInteger;
+import lombok.Getter;
+import lombok.Setter;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -68,25 +70,25 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   public boolean respectSolutionListenerAdvice;
 
   /** It represents the cost value of currently best solution for IntVar cost. */
-  public int costValue = Integer.MAX_VALUE;
+  @Getter public int costValue = Integer.MAX_VALUE;
 
   /** It represents the cost value of currently best solution for FloatVar cost. */
-  public double costValueFloat = Double.MAX_VALUE;
+  @Getter public double costValueFloat = Double.MAX_VALUE;
 
   /** It represents the cost variable. */
-  public Var costVariable;
+  @Getter public Var costVariable;
 
   /** It is invoked when returning from left or right child. */
-  public ExitChildListener<T> exitChildListener;
+  @Getter @Setter public ExitChildListener<T> exitChildListener;
 
   /** It is invoked when consistency function has been executed. */
-  public ConsistencyListener consistencyListener;
+  @Getter @Setter public ConsistencyListener consistencyListener;
 
   /** It is executed when a solution is found. */
-  public SolutionListener<T> solutionListener = new SimpleSolutionListener<>();
+  @Getter @Setter public SolutionListener<T> solutionListener = new SimpleSolutionListener<>();
 
   /** It is executed when search is started, before entering the search. */
-  public InitializeListener initializeListener;
+  @Getter @Setter public InitializeListener initializeListener;
 
   /** It stores searches which will be executed when this one has assign all its variables. */
   public Search<? extends Var>[] childSearches;
@@ -95,10 +97,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    * If this search is a sub-search then this pointer will point out to the master search (i.e. the
    * search which have invoked this search).
    */
-  public Search<? extends Var> masterSearch;
+  @Setter public Search<? extends Var> masterSearch;
 
   /** It represents store within which a search is performed. */
-  public Store store;
+  @Setter public Store store;
 
   /** It specifies that the time-out has occured */
   public boolean timeOutOccured;
@@ -119,7 +121,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    * imposed and before the search is executed and never remove the level at which the store resides
    * after store.consistency() method is executed.
    */
-  boolean assignSolution = true;
+  @Setter boolean assignSolution = true;
 
   /** It specifies after how many backtracks the search exits. */
   long backtracksOut = -1;
@@ -136,10 +138,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    */
   Constraint cost;
 
-  boolean optimize;
+  @Setter boolean optimize;
 
   /** It stores number of nodes with decisions during search. */
-  int decisions;
+  @Getter int decisions;
 
   /** It specifies after how many decisions the search exits. */
   long decisionsOut = -1;
@@ -163,7 +165,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   int maxDepthExcludePaths;
 
   /** It stores number of nodes visited during search. */
-  int nodes;
+  @Getter int nodes;
 
   /** It specifies after how many nodes the search exits. */
   long nodesOut = -1;
@@ -178,13 +180,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   int numberBacktracks;
 
   /** It decides if information about search is printed. */
-  boolean printInfo = true;
+  @Setter boolean printInfo = true;
 
   /** The object informed about the determination of the timeout. */
-  TimeOutListener timeOutListener;
+  @Getter @Setter TimeOutListener timeOutListener;
 
   /** It is executed upon search exit. It allows to add learnt constraints. */
-  ExitListener exitListener;
+  @Getter @Setter ExitListener exitListener;
 
   /** It specifies the exact time point after which the timeout will occur (in miliseconds). */
   long timeOut;
@@ -199,7 +201,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    * It stores number of wrong decisions during search. A wrong decision is a leaf of a search which
    * has failed.
    */
-  int wrongDecisions;
+  @Getter int wrongDecisions;
 
   /** It specifies after how many wrong decisions the search exits. */
   long wrongDecisionsOut = -1;
@@ -271,24 +273,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return numberBacktracks;
   }
 
-  /** It returns number of decisions performed by the search. */
-  public int getDecisions() {
-    return decisions;
-  }
-
   /** It returns the maximum depth reached by a search. */
   public int getMaximumDepth() {
     return maxDepthExcludePaths;
-  }
-
-  /** It returns number of search nodes explored by the search. */
-  public int getNodes() {
-    return nodes;
-  }
-
-  /** It returns number of wrong decisions performed by the search. */
-  public int getWrongDecisions() {
-    return wrongDecisions;
   }
 
   public Domain[] getSolution() {
@@ -310,15 +297,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     assert false : "Fix it. Uncomment below.";
 
     return null;
-  }
-
-  public SolutionListener<T> getSolutionListener() {
-
-    return solutionListener;
-  }
-
-  public void setSolutionListener(SolutionListener<T> listener) {
-    solutionListener = listener;
   }
 
   /** This function is called recursively to assign variables one by one. */
@@ -772,10 +750,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
-  public void setStore(Store store) {
-    this.store = store;
-  }
-
   public void setCostVar(Var cost) {
 
     costVariable = cost;
@@ -1150,15 +1124,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   }
 
   /**
-   * It decides if a solution is assigned to store after search exits.
-   *
-   * @param value defines if solution is assigned.
-   */
-  public void setAssignSolution(boolean value) {
-    assignSolution = value;
-  }
-
-  /**
    * It turns on the backtrack out.
    *
    * @param out defines how many backtracks are performed before the search exits.
@@ -1192,15 +1157,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   }
 
   /**
-   * It decides if information about search is printed.
-   *
-   * @param value defines if info is printed to standard output.
-   */
-  public void setPrintInfo(boolean value) {
-    printInfo = value;
-  }
-
-  /**
    * It turns on the timeout.
    *
    * @param out defines how many seconds before the search exits.
@@ -1228,11 +1184,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     wrongDecisionsOut = out;
     check = true;
     wrongDecisionsOutCheck = true;
-  }
-
-  public void setMasterSearch(Search<? extends Var> master) {
-
-    masterSearch = master;
   }
 
   @Override
@@ -1318,63 +1269,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return true;
   }
 
-  public ConsistencyListener getConsistencyListener() {
-    return consistencyListener;
-  }
-
-  public void setConsistencyListener(ConsistencyListener listener) {
-    consistencyListener = listener;
-  }
-
-  public ExitChildListener<T> getExitChildListener() {
-    return exitChildListener;
-  }
-
-  public void setExitChildListener(ExitChildListener<T> listener) {
-    exitChildListener = listener;
-  }
-
-  public ExitListener getExitListener() {
-    return exitListener;
-  }
-
-  public void setExitListener(ExitListener listener) {
-    exitListener = listener;
-  }
-
-  public TimeOutListener getTimeOutListener() {
-    return timeOutListener;
-  }
-
-  public void setTimeOutListener(TimeOutListener listener) {
-    timeOutListener = listener;
-  }
-
-  public InitializeListener getInitializeListener() {
-    return initializeListener;
-  }
-
-  public void setInitializeListener(InitializeListener listener) {
-    initializeListener = listener;
-  }
-
   public void printAllSolutions() {
     solutionListener.printAllSolutions();
-  }
-
-  public Var getCostVariable() {
-    return costVariable;
-  }
-
-  public int getCostValue() {
-    return costValue;
-  }
-
-  public double getCostValueFloat() {
-    return costValueFloat;
-  }
-
-  public void setOptimize(boolean value) {
-    optimize = value;
   }
 }

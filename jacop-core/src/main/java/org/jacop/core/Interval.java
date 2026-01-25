@@ -41,11 +41,6 @@ package org.jacop.core;
  */
 public record Interval(int min, int max) implements Cloneable {
 
-  /** It creates the largest possible interval. */
-  public Interval() {
-    this(IntDomain.MinInt, IntDomain.MaxInt);
-  }
-
   /**
    * It creates an interval with a given minimum and maximal value.
    *

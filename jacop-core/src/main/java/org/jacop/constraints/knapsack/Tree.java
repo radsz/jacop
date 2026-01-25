@@ -185,7 +185,7 @@ public class Tree {
 
       KnapsackItem item = items[i];
 
-      IntVar v = item.getVariable();
+      IntVar v = item.getQuantity();
       int v_weight = item.getWeight();
       int v_profit = item.getProfit();
 

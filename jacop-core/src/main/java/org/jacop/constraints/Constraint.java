@@ -43,6 +43,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
@@ -63,6 +65,7 @@ import org.jacop.util.BipartiteGraphMatching;
  * @version 4.10
  */
 
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
   /**
@@ -107,8 +110,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    *
    */
   double afcWeight = 1.0d;
-
-  protected Constraint() {}
 
   protected Constraint(Var[]... vars) {
     setScope(vars);

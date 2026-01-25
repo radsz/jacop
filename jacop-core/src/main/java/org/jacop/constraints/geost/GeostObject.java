@@ -26,7 +26,8 @@ package org.jacop.constraints.geost;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -71,7 +72,7 @@ public class GeostObject {
    * It stores all finite domain variables in connection to this object. E.g. shape variables are
    * one of the objects in the focus of the constraint.
    */
-  public final ArrayList<Var> variables;
+  @Getter public final ArrayList<Var> variables;
 
   /** It specifies the time constraint to execute to ensure that start + duration = end. */
   final TimeBoundConstraint timeConstraint;
@@ -127,15 +128,6 @@ public class GeostObject {
   }
 
   /**
-   * It returns finite domain variables which belong to this object.
-   *
-   * @return variables that constitute this object.
-   */
-  public Collection<Var> getVariables() {
-    return variables;
-  }
-
-  /**
    * It is executed as soon as any object variable is grounded.
    *
    * @param variable variable being grounded.
@@ -188,10 +180,8 @@ public class GeostObject {
    * @author Marc-Olivier Fleury and Radoslaw Szymanek
    *     <p>It contains facility to keep the domain of time variables consistent.
    */
+  @NoArgsConstructor
   public class TimeBoundConstraint {
-
-    /** TODO, is it really needed this constructor? */
-    public TimeBoundConstraint() {}
 
     /**
      * It evaluates part of the constraint that ensures that start + duration = end

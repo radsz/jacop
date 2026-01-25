@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Setter;
 import org.jacop.constraints.Constraint;
 
 /**
@@ -88,7 +89,7 @@ public abstract class Domain {
    * used. The domain is only valid (used) at a store level equal domain stamp.
    */
   // TODO: change stamp name to level in ALL places, e.g. setStamp(int) too.
-  public int stamp;
+  @Setter public int stamp;
 
   /** It removes all elements. */
   public abstract void clear();
@@ -152,15 +153,6 @@ public abstract class Domain {
    */
   public List<Constraint> searchConstraints() {
     return searchConstraints;
-  }
-
-  /**
-   * It sets the stamp of the domain.
-   *
-   * @param stamp defines the time stamp of the domain.
-   */
-  public void setStamp(int stamp) {
-    this.stamp = stamp;
   }
 
   /**

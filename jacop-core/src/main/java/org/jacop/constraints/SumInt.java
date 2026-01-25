@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -52,6 +53,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+@Slf4j
 public class SumInt extends PrimitiveConstraint {
 
   /** Defines relations */
@@ -449,7 +451,7 @@ public class SumInt extends PrimitiveConstraint {
         return ge;
       }
       default -> {
-        System.err.println("Wrong relation symbol in SumInt constraint " + r + "; assumed ==");
+        log.error("Wrong relation symbol in SumInt constraint {}; assumed ==", r);
         return eq;
       }
     }

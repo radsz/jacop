@@ -50,8 +50,6 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
 
   InitializeListener[] childrenInitializeListeners;
 
-  public OneSolution() {}
-
   /*
    * Initilize listener
    */

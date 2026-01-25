@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
 import java.util.function.Function;
+import lombok.Setter;
 import org.jacop.constraints.XltC;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -81,7 +82,7 @@ public class SGMPCSearch {
   // at position 0 is cost and values of variables start at positions 1
   public int[][] elite;
   public int costPosition;
-  boolean printInfo = true;
+  @Setter boolean printInfo = true;
   // Start time of the search to compute termination criteria
   long searchStartTime;
   /*
@@ -467,10 +468,6 @@ public class SGMPCSearch {
 
       this.strategy = poly;
     }
-  }
-
-  public void setPrintInfo(boolean print) {
-    printInfo = print;
   }
 
   public void printSolution(int[] solution) {

@@ -41,12 +41,6 @@ import org.jacop.core.Var;
  */
 public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T> {
 
-  /**
-   * It constructs variable comparator with priority based on the minimal value of domain size
-   * divided by the number of constraints currently attached to a variable.
-   */
-  public MinDomainOverDegree() {}
-
   public int compare(double left, T var) {
 
     double right = (double) var.getSize() / var.sizeConstraints();

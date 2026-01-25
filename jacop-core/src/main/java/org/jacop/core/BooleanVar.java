@@ -41,9 +41,6 @@ import org.jacop.constraints.Constraint;
  */
 public class BooleanVar extends IntVar {
 
-  /** No parameter, explicit, empty constructor for subclasses. */
-  public BooleanVar() {}
-
   /**
    * This constructor creates a variable with empty domain (standard FD domain), automatically
    * generated name, and empty attached constraint list.

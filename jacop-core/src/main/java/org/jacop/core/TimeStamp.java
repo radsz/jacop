@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import lombok.AccessLevel;
+import lombok.Getter;
 import org.jacop.api.Stateful;
 
 /**
@@ -50,8 +52,11 @@ import org.jacop.api.Stateful;
 public class TimeStamp<T> implements Stateful {
 
   static final boolean debug = false;
+
+  @Getter(AccessLevel.PACKAGE)
   final int index;
-  final Store store;
+
+  @Getter final Store store;
   public int pointer4Last = -1;
   public transient int[] stamps = new int[10];
 
@@ -102,10 +107,6 @@ public class TimeStamp<T> implements Stateful {
       stamps = new int[newCapacity];
       System.arraycopy(oldStamps, 0, stamps, 0, pointer4Last);
     }
-  }
-
-  final int index() {
-    return index;
   }
 
   /**

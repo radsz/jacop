@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import lombok.Setter;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XneqC;
@@ -111,7 +112,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   /**
    * It specifies current store, so shaving can obtained information about recent failed constraint.
    */
-  Store store;
+  @Setter Store store;
 
   Constraint recentlyFailedConstraint;
   boolean rightChild;
@@ -354,15 +355,5 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   public void addShavingConstraint(Constraint c) {
 
     shavingConstraints.add(c);
-  }
-
-  /**
-   * It specifies the constraint store in which context the shaving will take place.
-   *
-   * @param store constraint store.
-   */
-  public void setStore(Store store) {
-
-    this.store = store;
   }
 }

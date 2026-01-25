@@ -177,7 +177,7 @@ public class Knapsack extends Constraint
     commonInitialization(
         Arrays.stream(items).mapToInt(KnapsackItem::getProfit).toArray(),
         Arrays.stream(items).mapToInt(KnapsackItem::getWeight).toArray(),
-        Arrays.stream(items).map(KnapsackItem::getVariable).toArray(IntVar[]::new),
+        Arrays.stream(items).map(KnapsackItem::getQuantity).toArray(IntVar[]::new),
         knapsackCapacity,
         knapsackProfit);
   }
@@ -575,7 +575,7 @@ public class Knapsack extends Constraint
         int forbiddenQuantity =
             (int) Math.ceil((itemMaxWeight - intrusionWeight) / (double) leaf.weightOfOne);
 
-        IntVar quantity = leaf.getVariable();
+        IntVar quantity = leaf.getQuantity();
         quantity.domain.inMax(currentLevel, quantity, quantity.max() - forbiddenQuantity);
 
         needUpdate = true;
@@ -640,7 +640,7 @@ public class Knapsack extends Constraint
         int mandatoryWeight = itemMaxWeight - replacableWeight;
         int mandatoryQuantity = (int) Math.ceil(mandatoryWeight / (double) leaf.weightOfOne);
 
-        IntVar quantity = leaf.getVariable();
+        IntVar quantity = leaf.getQuantity();
         quantity.domain.inMin(currentLevel, quantity, quantity.min() + mandatoryQuantity);
 
         needUpdate = true;
@@ -907,7 +907,7 @@ public class Knapsack extends Constraint
     result.append("[ ");
 
     for (KnapsackItem item : items) {
-      result.append(item.getVariable().domain).append(" ");
+      result.append(item.getQuantity().domain).append(" ");
     }
 
     result.append("]");

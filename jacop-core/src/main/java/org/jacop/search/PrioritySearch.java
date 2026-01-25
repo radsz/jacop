@@ -280,7 +280,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   public boolean labeling(Store store, Var costVar) {
 
     this.store = store;
-    ((SimpleSolutionListener) solutionListener).setVariables(allVars);
+    ((SimpleSolutionListener<T>) solutionListener).setVariables(allVars);
 
     if (solutionsLimit == -1) {
       solutionsLimit = Integer.MAX_VALUE;
@@ -371,7 +371,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           double costValue = costHandler.getCostValue(costVariable);
           IO.println("Solution cost is " + costValue);
         } else if (costVariable instanceof IntVar) {
-          IO.println("Solution cost is " + search.get(0).costValue);
+          IO.println("Solution cost is " + search.getFirst().costValue);
         }
       }
 
@@ -396,7 +396,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
   public boolean labeling() {
 
-    this.store = allVars.get(0).getStore();
+    this.store = allVars.getFirst().getStore();
     ((SimpleSolutionListener<T>) solutionListener).setVariables(allVars);
 
     for (DepthFirstSearch<T> dfs : search) {
@@ -852,7 +852,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
 
             DepthFirstSearch<T> childSearch = null;
 
-            for (DepthFirstSearch<T> child : (DepthFirstSearch[]) master.childSearches) {
+            for (Search<? extends Var> childObj : master.childSearches) {
+              DepthFirstSearch<T> child = (DepthFirstSearch<T>) childObj;
               childSearch = child;
               child.setStore(store);
               child.getSolutionListener().setParentSolutionListener(solutionListener);
@@ -899,7 +900,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         } else if (master.childSearches != null) { // no optimization and child search
           DepthFirstSearch<T> childSearch = null;
 
-          for (DepthFirstSearch<T> child : (DepthFirstSearch[]) master.childSearches) {
+          for (Search<? extends Var> childObj2 : master.childSearches) {
+            DepthFirstSearch<T> child = (DepthFirstSearch<T>) childObj2;
             childSearch = child;
             child.setStore(store);
             child.getSolutionListener().setParentSolutionListener(solutionListener);

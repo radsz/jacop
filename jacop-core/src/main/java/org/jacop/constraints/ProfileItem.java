@@ -30,6 +30,10 @@
 
 package org.jacop.constraints;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 /**
  * Defines a basic structure used to update profile for cumulative constraint. It consists if to
  * time-points and a value denoting the interval [a, b) (a belongs to it nad b does not) and the
@@ -38,21 +42,19 @@ package org.jacop.constraints;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
+@NoArgsConstructor
 public class ProfileItem {
 
   /** It specifies the starting point of the profile item. */
-  public int min = -1;
+  @Getter @Setter public int min = -1;
 
   /** It specifies the ending point of the profile item. */
-  public int max = -1;
+  @Getter @Setter public int max = -1;
 
   /** It specifies the amount by which this profile item contributes in the profile. */
-  public int value = -1;
+  @Getter @Setter public int value = -1;
 
-  short type = Profile.cumul;
-
-  /** It constructs a profile item. By default it is a cumulative profile item. */
-  public ProfileItem() {}
+  @Setter short type = Profile.cumul;
 
   /**
    * It constructs a profile item which spans over interval (a, b) with a given amount specified by
@@ -93,22 +95,19 @@ public class ProfileItem {
     value = val;
   }
 
-  /**
-   * It returns the ending point of the profile item.
-   *
-   * @return the ending point of the profile item.
-   */
-  public int max() {
-    return max;
+  /** Returns the starting point of the profile item. */
+  public int min() {
+    return getMin();
   }
 
-  /**
-   * It returns the starting point of the profile item.
-   *
-   * @return the starting point of the profile item.
-   */
-  public int min() {
-    return min;
+  /** Returns the ending point of the profile item. */
+  public int max() {
+    return getMax();
+  }
+
+  /** Returns the amount contributed by this profile item to the profile. */
+  public int value() {
+    return getValue();
   }
 
   /**
@@ -251,33 +250,6 @@ public class ProfileItem {
   }
 
   /**
-   * It sets the ending point of the profile item.
-   *
-   * @param b the ending point of the profile item
-   */
-  public void setMax(int b) {
-    max = b;
-  }
-
-  /**
-   * It sets the starting point of the profile item.
-   *
-   * @param a the starting point of the profile item.
-   */
-  public void setMin(int a) {
-    min = a;
-  }
-
-  /**
-   * It sets the amount by which this profile item is contributing towards the profile.
-   *
-   * @param val amount by which this profile item is contributing towards the profile
-   */
-  public void setValue(int val) {
-    value = val;
-  }
-
-  /**
    * It computes subtraction of a given item and returns the result.
    *
    * @param a the item being subtracted from this profile item.
@@ -320,14 +292,5 @@ public class ProfileItem {
   @Override
   public String toString() {
     return "[" + min + ".." + max + ") = " + value;
-  }
-
-  /**
-   * It returns the amount which is being contributed by this profile item to the profile.
-   *
-   * @return the amount contributed by this profile item to the profile.
-   */
-  public int value() {
-    return value;
   }
 }

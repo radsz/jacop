@@ -30,17 +30,19 @@
 
 package org.jacop.constraints.cumulative;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * Implements TreeNode for Tree.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
+@Getter
+@Setter
 class TreeNode {
 
   TaskView task;
-  // index in the tree
   int index;
-
-  TreeNode() {}
 }

@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import lombok.Setter;
 import org.jacop.core.IntDomain;
 
 /**
@@ -43,7 +44,7 @@ class IntRectangle {
 
   final int[] length;
   final int[] origin;
-  int dim;
+  @Setter int dim;
 
   public IntRectangle(List<Integer> R) {
     dim = R.size() / 2;
@@ -121,10 +122,6 @@ class IntRectangle {
       i++;
     }
     return overlap;
-  }
-
-  void setDim(int i) {
-    dim = i;
   }
 
   @Override

@@ -433,10 +433,9 @@ public class RegularExpressionParser {
       if (this == obj) {
         return true;
       }
-      if (!(obj instanceof Literal)) {
+      if (!(obj instanceof Literal other)) {
         return false;
       }
-      Literal other = (Literal) obj;
       return lit.equals(other.lit);
     }
 

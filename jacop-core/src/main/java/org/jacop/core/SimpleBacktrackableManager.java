@@ -321,7 +321,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
    */
   public void setLevel(int level) {
 
-    if (currentLevel == level) {
+    if (this.currentLevel == level) {
       return;
     }
 
@@ -329,7 +329,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
       IO.println(">" + this + "Add level " + level);
     }
 
-    assert (level > currentLevel) : "It is possible only to add higher levels";
+    assert (level > this.currentLevel) : "It is possible only to add higher levels";
 
     if (!trailContainsAllChanges) {
       // store old level
@@ -348,13 +348,13 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         }
       }
 
-      levelInfo.add(currentLevel);
+      levelInfo.add(this.currentLevel);
     }
 
     currentlyChanged.clear();
     trailContainsAllChanges = false;
     currentLevelMax = false;
-    currentLevel = level;
+    this.currentLevel = level;
 
     if (debug) {
       IO.println("<" + this + "Add level " + level + "\n");

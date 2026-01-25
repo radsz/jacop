@@ -159,7 +159,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
   @Override
   public void setLevel(int level) {
 
-    if (currentLevel == level) {
+    if (this.currentLevel == level) {
       return;
     }
 
@@ -178,12 +178,12 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       IO.println(">" + this + "Add level " + level);
     }
 
-    assert (level > currentLevel) : "It is possible only to add higher levels";
+    assert (level > this.currentLevel) : "It is possible only to add higher levels";
 
     if (addingToIntervals) {
       intervalBasedTrail.add(valueTrue);
       trail.add(currentIntervals);
-      levelInfo.add(currentLevel);
+      levelInfo.add(this.currentLevel);
     } else if (!trailContainsAllChanges) {
       // store old level
       if (currentlyChanged.members <= cutOffValue && !currentlyChanged.isEmpty()) {
@@ -211,13 +211,13 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
         }
       }
 
-      levelInfo.add(currentLevel);
+      levelInfo.add(this.currentLevel);
     }
 
     currentlyChanged.clear();
     trailContainsAllChanges = false;
     currentLevelMax = false;
-    currentLevel = level;
+    this.currentLevel = level;
 
     if (debug) {
       IO.println("<" + this + "Add level " + level + "\n");

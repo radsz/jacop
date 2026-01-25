@@ -33,6 +33,8 @@ package org.jacop.search;
 import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.Domain;
@@ -64,16 +66,16 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public T[] vars;
 
   /** It specifies the number of solutions we want to find. */
-  public int solutionLimit = -1;
+  @Setter public int solutionLimit = -1;
 
-  public Domain[][] solutions;
+  @Getter public Domain[][] solutions;
 
   /**
    * If this search is a slave search than each solution within this search must be connected to a
    * solution of the master search. The parentSolutionListener is a solution listener of the master
    * search.
    */
-  public SolutionListener<? extends Var> parentSolutionListener;
+  @Setter public SolutionListener<? extends Var> parentSolutionListener;
 
   /**
    * If this search is a slave search than each solution within this search must be connected to a
@@ -113,21 +115,6 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public boolean solutionLimitReached() {
 
     return solutionLimit == noSolutions;
-  }
-
-  public void setSolutionLimit(int limit) {
-
-    solutionLimit = limit;
-  }
-
-  public void setParentSolutionListener(SolutionListener<? extends Var> parent) {
-
-    parentSolutionListener = parent;
-  }
-
-  public Domain[][] getSolutions() {
-
-    return solutions;
   }
 
   /** It returns the solution number no. The first solution has an index 1. */
@@ -385,6 +372,10 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     return null;
   }
 
+  public boolean isRecordingSolutions() {
+    return recordSolutions;
+  }
+
   public int findSolutionMatchingParent(int parentNo) {
 
     if (!isRecordingSolutions()) {
@@ -438,10 +429,6 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   public void setChildrenListeners(SolutionListener<T> child) {
     childrenSolutionListeners = new SolutionListener[1];
     childrenSolutionListeners[0] = child;
-  }
-
-  public boolean isRecordingSolutions() {
-    return recordSolutions;
   }
 
   public void printAllSolutions() {

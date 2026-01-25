@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.knapsack;
 
+import lombok.Getter;
 import org.jacop.core.IntVar;
 
 /**
@@ -38,6 +39,7 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.10
  */
+@Getter
 public final class TreeLeaf extends TreeNode {
 
   /** It specifies the finite domain variable denoting the allowed quantity of the item, */
@@ -99,27 +101,6 @@ public final class TreeLeaf extends TreeNode {
   }
 
   /**
-   * @return The variable stored in this leaf
-   */
-  public IntVar getVariable() {
-    return quantity;
-  }
-
-  /**
-   * @return The profit of one unit of the variable
-   */
-  public int getProfitOfOne() {
-    return profitOfOne;
-  }
-
-  /**
-   * @return The weight of one unit of the variable
-   */
-  public int getWeightOfOne() {
-    return weightOfOne;
-  }
-
-  /**
    * Used to know the changes that occurred
    *
    * @return If the minimum has changed
@@ -171,15 +152,6 @@ public final class TreeLeaf extends TreeNode {
   @Override
   public boolean isLeaf() {
     return true;
-  }
-
-  /**
-   * It returns computed beforehand the efficiency of the item stored in this tree leaf.
-   *
-   * @return the efficiency of the item stored at this computer.
-   */
-  public double getEfficiency() {
-    return efficiency;
   }
 
   @Override

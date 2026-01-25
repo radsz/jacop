@@ -47,8 +47,6 @@ public class CustomReport {
     addVariables(vs);
   }
 
-  public CustomReport() {}
-
   public void addVariables(Var[] vs) {
     vars = new Var[vs.length];
     System.arraycopy(vs, 0, vars, 0, vs.length);

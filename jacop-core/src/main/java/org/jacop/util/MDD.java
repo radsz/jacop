@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jacop.core.IntVar;
 
 /**
@@ -45,6 +47,7 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MDD {
 
   /** It specifies an identifier which denotes a terminal node. */
@@ -262,10 +265,6 @@ public class MDD {
 
     // Adding tuples and MDD reduction must be performed separetely.
 
-  }
-
-  protected MDD() {
-    // Empty constructor to allowed MDD be read from external sources.
   }
 
   /**

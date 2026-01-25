@@ -91,7 +91,7 @@ public class RestartSearch<T extends Var> {
     do {
       // ns.setCostVar(null); // cost is handled internally by restart search
 
-      if (ns instanceof PrioritySearch prioritySearch) {
+      if (ns instanceof PrioritySearch<T> prioritySearch) {
         prioritySearch.addRestartCalculator(prioritySearch, calculator);
       }
 

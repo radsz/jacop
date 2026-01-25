@@ -30,12 +30,17 @@
 
 package org.jacop.constraints.knapsack;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 /**
  * It contains information required by an internal node of the item tree.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
  * @version 4.10
  */
+@NoArgsConstructor(force = true)
 public class TreeNode {
 
   /** It specifies the left child. It can not be equal to null. */
@@ -51,29 +56,23 @@ public class TreeNode {
   public TreeNode parent;
 
   /** It specifies the left neighbor. */
-  public TreeNode leftNeighbor;
+  @Setter public TreeNode leftNeighbor;
 
   /** It specifies the right neighbor. */
-  public TreeNode rightNeighbor;
+  @Setter public TreeNode rightNeighbor;
 
   /**
    * It specifies the maximal weight of an item in the subtree rooted at this node. The consistency
    * algorithm will know that it can skip the entire subtree if the weight is not sufficiently
    * large.
    */
-  private int wMax;
+  @Getter private int wMax;
 
   /** It specifies the sum of the weight of all items in the subtree rooted at this node. */
-  private int wSum;
+  @Getter private int wSum;
 
   /** It specifies the sum of the profit of all items in the subtree rooted at this node. */
-  private int pSum;
-
-  /** The constructor used by tree leaves. */
-  public TreeNode() {
-    this.left = null;
-    this.right = null;
-  }
+  @Getter private int pSum;
 
   /**
    * It constructs a node of the item tree.
@@ -92,55 +91,10 @@ public class TreeNode {
   }
 
   /**
-   * It sets the left neighbor of this tree node.
-   *
-   * @param leftNeighbor left neighbor of this node.
-   */
-  public void setLeftNeighbor(TreeNode leftNeighbor) {
-    this.leftNeighbor = leftNeighbor;
-  }
-
-  /**
-   * It sets the right neighbor of this tree node.
-   *
-   * @param rightNeighbor right neighbor of this node.
-   */
-  public void setRightNeighbor(TreeNode rightNeighbor) {
-    this.rightNeighbor = rightNeighbor;
-  }
-
-  /**
    * @return true if the node is a leaf, false otherwise.
    */
   public boolean isLeaf() {
     return false;
-  }
-
-  /**
-   * It does not recompute the maximum of weights.
-   *
-   * @return The previously computed maximum weight of its children
-   */
-  public int getWMax() {
-    return wMax;
-  }
-
-  /**
-   * It does not recompute sum of weights.
-   *
-   * @return The previously computed sum of weights of its children
-   */
-  public int getWSum() {
-    return wSum;
-  }
-
-  /**
-   * It does not recompute sum of profits.
-   *
-   * @return The previously computed sum of profits of its children
-   */
-  public int getPSum() {
-    return pSum;
   }
 
   @Override

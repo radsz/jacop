@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -50,6 +51,7 @@ import org.jacop.core.TimeStamp;
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
+@Slf4j
 public class Network extends NetworkSimplex implements MutableNetwork {
 
   private static final boolean SHOW_CHANGES = false;
@@ -248,7 +250,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     Arc arc = companion.arc;
 
     if (SHOW_CHANGES) {
-      System.err.println("Before restore: " + companion.arc + ", time = " + modifiedSize.stamp());
+      log.debug("Before restore: {}, time = {}", companion.arc, modifiedSize.stamp());
     }
 
     // TODO, CRUCIAL, BUG, switched off. Is it ok?
@@ -257,7 +259,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     companion.restore(this);
 
     if (SHOW_CHANGES) {
-      System.err.println("After restore: " + companion.arc);
+      log.debug("After restore: {}", companion.arc);
     }
 
     // at upper bound
