@@ -43,6 +43,6 @@ public class ThreadTimer implements Timer {
   }
 
   public long getCPUTime() {
-    return timer.getThreadCpuTime(thread.getId());
+    return timer.getThreadCpuTime(thread.threadId());
   }
 }

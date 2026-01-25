@@ -29,9 +29,9 @@
  */
 package org.jacop.constraints.geost;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import org.jacop.core.IntDomain;
-import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -46,7 +46,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
    * It shifts boxes of the given shape as required by the frame. It recomputed always when frame is
    * updated. It allows for faster execution in between frame updates.
    */
-  final SimpleArrayList<DBox> preshiftedElems;
+  final ArrayList<DBox> preshiftedElems;
 
   final int[] lowerAbsInsfeasible;
   final int[] upperAbsInsfeasible;
@@ -75,7 +75,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     super(geost, obstacle, selectedDimensions);
 
-    preshiftedElems = new SimpleArrayList<>();
+    preshiftedElems = new ArrayList<>();
 
     assert obstacle.shapeID.singleton()
         : "Polymorphism not supperted by this simple internal constraint. Use ObstacleObjectFrame instead.";

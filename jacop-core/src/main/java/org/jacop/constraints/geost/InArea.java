@@ -34,7 +34,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -104,7 +103,8 @@ public class InArea implements ExternalConstraint {
     return constraints;
   }
 
-  public boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator) {
+  @Override
+  public boolean addPrunableObjects(GeostObject o, Set<GeostObject> accumulator) {
     // whatever object has been changed this constraint will not cause
     // any new pruning of any objects in the scope of this constraint.
     return false;

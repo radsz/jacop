@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +52,6 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.SimpleArrayList;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -205,7 +204,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * It stores all variables which have been grounded. It is used to upon backtracking to update
    * objects to their previous state.
    */
-  final SimpleArrayList<Var> groundedVars;
+  final ArrayList<Var> groundedVars;
 
   /**
    * If running a complete sweep for each shape is costly, because some shapes may require a
@@ -221,14 +220,14 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * constraint checks every object from this set to see if that is actually necessary to invoke the
    * pruning for that object.
    */
-  final SimpleHashSet<GeostObject> temporaryObjectSet;
+  final LinkedHashSet<GeostObject> temporaryObjectSet;
 
   /**
    * A temporary list to collect bounding boxes for each shape of the given object to compute one
    * bounding box whatever the shape of the object. It is made as a member of the geost constraint
    * to avoid multiple memory allocations.
    */
-  final SimpleArrayList<DBox> workingList;
+  final ArrayList<DBox> workingList;
 
   /** It specifies the number of dimensions of each object given to the geost constraint. */
   final int dimension;
@@ -237,7 +236,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * It is used inside flushQueue function to separate timeconsistency execution from object update
    * (potentially expensive if for example object frame is recomputed).
    */
-  final SimpleArrayList<GeostObject> objectList4Flush = new SimpleArrayList<>();
+  final ArrayList<GeostObject> objectList4Flush = new ArrayList<>();
 
   // int lowerBound;
   /**
@@ -328,7 +327,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   TimeStamp<Integer> lastLevelLastVar;
 
   /** It contains all the objects which have been updated in the previous levels. */
-  SimpleArrayList<GeostObject> objectList;
+  ArrayList<GeostObject> objectList;
 
   /**
    * It contains all the objects which have been updated at current level. The objects from this set
@@ -345,7 +344,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   TimeStamp<Integer> setStart;
 
   /** It contains objects that need to be checked in the next sweep. */
-  SimpleHashSet<GeostObject> objectQueue;
+  LinkedHashSet<GeostObject> objectQueue;
 
   /**
    * For each object, the set of constraint that apply to it we use object ids as keys, and can thus
@@ -422,7 +421,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     this.numberId = idNumber.incrementAndGet();
     this.variableQueue = new LinkedHashSet<>();
 
-    objectQueue = new SimpleHashSet<>(objects.length);
+    objectQueue = new LinkedHashSet<>(objects.length);
     for (GeostObject o : objects) {
       objectQueue.add(o);
     }
@@ -572,14 +571,14 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     inConsistency = false;
 
-    temporaryObjectSet = new SimpleHashSet<>();
+    temporaryObjectSet = new LinkedHashSet<>();
 
     backtracking = false;
-    workingList = new SimpleArrayList<>();
+    workingList = new ArrayList<>();
 
     assert (checkInvariants() == null) : checkInvariants();
 
-    groundedVars = new SimpleArrayList<>();
+    groundedVars = new ArrayList<>();
 
     setScope(variableObjectMap.keySet());
 
@@ -1044,7 +1043,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       while (!objectQueue.isEmpty()) {
 
-        GeostObject o = objectQueue.removeFirst();
+        Iterator<GeostObject> it = objectQueue.iterator();
+        GeostObject o = it.next();
+        it.remove();
 
         boolean emptyQueue = false;
 
@@ -1052,7 +1053,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         // if it was grounded twice in the same pruning
         while (o.isGrounded() && !pruneIfGrounded[o.no] && !emptyQueue) {
           if (!objectQueue.isEmpty()) {
-            o = objectQueue.removeFirst();
+            it = objectQueue.iterator();
+            o = it.next();
+            it.remove();
           } else {
             emptyQueue = true;
           }
@@ -1358,7 +1361,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     if (filterUseless) {
 
       // maximal possible size of the object
-      workingList.clearNoGC();
+      workingList.clear();
       ValueEnumeration sids = o.shapeID.domain.valueEnumeration();
 
       while (sids.hasMoreElements()) {
@@ -1442,7 +1445,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   protected void flushQueue(Collection<Var> variables) {
 
-    objectList4Flush.clearNoGC();
+    objectList4Flush.clear();
 
     for (Var v : variables) {
 
@@ -1548,7 +1551,10 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
           ec.addPrunableObjects(o, temporaryObjectSet);
           while (!temporaryObjectSet.isEmpty()) {
-            queueObject(temporaryObjectSet.removeFirst());
+            Iterator<GeostObject> it = temporaryObjectSet.iterator();
+            GeostObject next = it.next();
+            it.remove();
+            queueObject(next);
           }
         }
       }
@@ -1601,7 +1607,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     setStart = new TimeStamp<>(store, store.level);
     setStart.update(0);
 
-    objectList = new SimpleArrayList<>();
+    objectList = new ArrayList<>();
     updatedObjectSet = new HashSet<>();
   }
 

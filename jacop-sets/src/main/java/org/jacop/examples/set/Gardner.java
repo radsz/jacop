@@ -121,8 +121,8 @@ public class Gardner extends ExampleSet {
     Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
-    long startCPU = b.getThreadCpuTime(tread.getId());
-    long startUser = b.getThreadUserTime(tread.getId());
+    long startCPU = b.getThreadCpuTime(tread.threadId());
+    long startUser = b.getThreadUserTime(tread.threadId());
 
     boolean result = store.consistency();
     IO.println("*** consistency = " + result);
@@ -148,10 +148,12 @@ public class Gardner extends ExampleSet {
     }
 
     IO.println(
-        "ThreadCpuTime = " + (b.getThreadCpuTime(tread.getId()) - startCPU) / (long) 1e+6 + "ms");
+        "ThreadCpuTime = "
+            + (b.getThreadCpuTime(tread.threadId()) - startCPU) / (long) 1e+6
+            + "ms");
     IO.println(
         "ThreadUserTime = "
-            + (b.getThreadUserTime(tread.getId()) - startUser) / (long) 1e+6
+            + (b.getThreadUserTime(tread.threadId()) - startUser) / (long) 1e+6
             + "ms");
 
     return result;

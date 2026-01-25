@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -44,7 +46,6 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * It constructs a LexOrder (lexicographical order) constraint.
@@ -82,7 +83,7 @@ public class LexOrder extends Constraint
   boolean satisfied;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
-  SimpleHashSet<Integer> indexQueue = new SimpleHashSet<>();
+  LinkedHashSet<Integer> indexQueue = new LinkedHashSet<>();
   private Store store;
   private TimeStamp<Integer> alpha;
   private TimeStamp<Integer> beta;
@@ -208,11 +209,13 @@ public class LexOrder extends Constraint
 
       store.propagationHasOccurred = false;
 
-      SimpleHashSet<Integer> index = indexQueue;
-      indexQueue = new SimpleHashSet<>();
+      LinkedHashSet<Integer> index = indexQueue;
+      indexQueue = new LinkedHashSet<>();
 
       while (!index.isEmpty()) {
-        int i = index.removeFirst();
+        Iterator<Integer> it = index.iterator();
+        int i = it.next();
+        it.remove();
 
         if (!(i >= betaValue)) {
           reestablishGAC(i);

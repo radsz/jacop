@@ -35,7 +35,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
-import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -56,7 +55,7 @@ public class Shape {
   /** It defines the area (2D) or volume (3D) of the shape. */
   private int area;
 
-  private SimpleArrayList<DBox> holes;
+  private ArrayList<DBox> holes;
 
   /**
    * It constructs a shape with a given id based on a specified collection of Dboxes.
@@ -213,13 +212,13 @@ public class Shape {
      * box of all components
      */
     if (holes == null) {
-      holes = new SimpleArrayList<>();
+      holes = new ArrayList<>();
     } else {
       if (!holes.isEmpty()) {
         for (DBox hole : holes) {
           DBox.dispatchBox(hole);
         }
-        holes.clearNoGC(); // DBoxes will not be garbage anyway
+        holes.clear();
       }
     }
 

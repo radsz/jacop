@@ -30,9 +30,9 @@
 
 package org.jacop.constraints.geost;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -45,7 +45,7 @@ public class DBox {
    * previously used boxes that are not used anymore. The user should use dispatchBox() to get rid
    * of a box that is not needed anymore, and newBox(dimension) to get a new one.
    */
-  public static final SimpleArrayList<SimpleArrayList<DBox>> freeBoxes = new SimpleArrayList<>();
+  private static final ArrayList<ArrayList<DBox>> freeBoxes = new ArrayList<>();
 
   /** It specifies point in n-dimensional space where the dbox originates from. */
   public final int[] origin;
@@ -53,7 +53,7 @@ public class DBox {
   /** It specifies for each dimension the length of dbox in that dimension. */
   public final int[] length;
 
-  // private static final SimpleArrayList<DBox> workingList = new SimpleArrayList<DBox>();
+  // private static final ArrayList<DBox> workingList = new ArrayList<>();
 
   /**
    * constructs a new Box. The parameter arrays are not copied.
@@ -93,7 +93,7 @@ public class DBox {
 
     if (size <= dimension) {
       for (int i = size; i <= dimension; i++) {
-        freeBoxes.add(new SimpleArrayList<>());
+        freeBoxes.add(new ArrayList<>());
       }
     }
   }
@@ -107,7 +107,7 @@ public class DBox {
    */
   public static synchronized void dispatchBox(DBox unusedBox) {
 
-    freeBoxes.get(unusedBox.origin.length).push(unusedBox);
+    freeBoxes.get(unusedBox.origin.length).add(unusedBox);
   }
 
   /**
@@ -120,10 +120,10 @@ public class DBox {
    */
   public static synchronized DBox newBox(int dimension) {
 
-    SimpleArrayList<DBox> boxes = freeBoxes.get(dimension);
+    ArrayList<DBox> boxes = freeBoxes.get(dimension);
 
     if (!boxes.isEmpty()) {
-      return boxes.pop();
+      return boxes.remove(boxes.size() - 1);
     } else {
       return new DBox(new int[dimension], new int[dimension]);
     }
@@ -145,11 +145,11 @@ public class DBox {
    *
    * @return string representation of the pool of DBoxes.
    */
-  public static String poolStatus() {
+  public static synchronized String poolStatus() {
 
     StringBuilder builder = new StringBuilder();
 
-    for (SimpleArrayList<DBox> freeBox : freeBoxes) {
+    for (ArrayList<DBox> freeBox : freeBoxes) {
       builder.append(freeBox).append("\n");
     }
 
@@ -225,7 +225,7 @@ public class DBox {
     }
     Collection<DBox> resultWork = result;
 
-    Collection<DBox> resultStep = new SimpleArrayList<>();
+    Collection<DBox> resultStep = new ArrayList<>();
 
     /*
      * proceed hole by hole: for each hole, subtract it to each remaining piece.
@@ -572,7 +572,7 @@ public class DBox {
     Collection<DBox> resultWork = result;
     resultWork.add(this.copyInto(newBox(origin.length)));
 
-    Collection<DBox> resultStep = new SimpleArrayList<>();
+    Collection<DBox> resultStep = new ArrayList<>();
 
     /*
      * proceed hole by hole: for each hole, subtract it to each remaining piece.

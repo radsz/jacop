@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -77,7 +76,7 @@ public class NonOverlapping implements ExternalConstraint {
     System.arraycopy(selectedDimensions, 0, this.selectedDimensions, 0, selectedDimensions.length);
     Arrays.sort(this.selectedDimensions);
 
-    objectConstraintMap = null; // TODO replace by an array/SimpleArrayList
+    objectConstraintMap = null; // TODO replace by an array/ArrayList
     constraints = null;
   }
 
@@ -95,7 +94,8 @@ public class NonOverlapping implements ExternalConstraint {
     this(objects.toArray(new GeostObject[0]), selectedDimensions);
   }
 
-  public boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator) {
+  @Override
+  public boolean addPrunableObjects(GeostObject o, Set<GeostObject> accumulator) {
 
     boolean changed = false;
 

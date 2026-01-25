@@ -33,7 +33,9 @@ package org.jacop.constraints.binpacking;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +53,6 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that items are packed into bins
@@ -78,8 +79,8 @@ public class Binpacking extends Constraint
   /** It specifies a list of variables which define bin load. */
   public final IntVar[] load;
 
-  private final SimpleHashSet<IntVar> itemQueue = new SimpleHashSet<>();
-  private final SimpleHashSet<IntVar> binQueue = new SimpleHashSet<>();
+  private final LinkedHashSet<IntVar> itemQueue = new LinkedHashSet<>();
+  private final LinkedHashSet<IntVar> binQueue = new LinkedHashSet<>();
   private final Map<IntVar, Integer> itemMap;
   private final Map<IntVar, Integer> binMap;
   boolean LBpruning = true;
@@ -242,12 +243,16 @@ public class Binpacking extends Constraint
     //      - item[i] variables have changed (we check both current domain and pruned values)
     IntervalDomain d = new IntervalDomain();
     while (!binQueue.isEmpty()) {
-      IntVar var = binQueue.removeFirst();
+      Iterator<IntVar> it = binQueue.iterator();
+      IntVar var = it.next();
+      it.remove();
       int i = binMap.get(var) + minBinNumber;
       d.addDom(new IntervalDomain(i, i));
     }
     while (!itemQueue.isEmpty()) {
-      IntVar var = itemQueue.removeFirst();
+      Iterator<IntVar> it = itemQueue.iterator();
+      IntVar var = it.next();
+      it.remove();
       IntDomain pd = var.dom().previousDomain;
       if (pd != null) {
         d.addDom(pd);

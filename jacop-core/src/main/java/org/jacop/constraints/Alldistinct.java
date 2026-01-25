@@ -54,8 +54,6 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.SimpleArrayList;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Alldistinct constraint assures that all FDVs have different values.
@@ -119,7 +117,7 @@ public class Alldistinct extends Constraint
   // array.
   final Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
-  final Map<Integer, SimpleArrayList<IntVar>> valueMapVariable;
+  final Map<Integer, ArrayList<IntVar>> valueMapVariable;
   final boolean greedy = true;
 
   /** It counts the number of executions of the consistency function. */
@@ -199,7 +197,7 @@ public class Alldistinct extends Constraint
     // Therefore it is enough that one variable has a domain 0..1000000 to
     // create huge value graph making this constraint very ineffective
     int value;
-    SimpleArrayList<IntVar> currentSimpleArrayList;
+    ArrayList<IntVar> currentList;
 
     potentialFreeValues = new Integer[sum.getSize()];
 
@@ -215,13 +213,13 @@ public class Alldistinct extends Constraint
       valueIndex.put(valueInteger, m);
       m++;
 
-      currentSimpleArrayList = new SimpleArrayList<>();
+      currentList = new ArrayList<>();
       for (IntVar intVar : this.list) {
         if (intVar.domain.contains(value)) {
-          currentSimpleArrayList.add(intVar);
+          currentList.add(intVar);
         }
       }
-      valueMapVariable.put(valueInteger, currentSimpleArrayList);
+      valueMapVariable.put(valueInteger, currentList);
     }
 
     setScope(list);
@@ -295,10 +293,10 @@ public class Alldistinct extends Constraint
 
     IntDomain Qdom;
     Integer zero = 0;
-    SimpleArrayList<IntVar> currentSimpleArrayList;
+    ArrayList<IntVar> currentList;
     TimeStamp<Integer> stamp;
 
-    SimpleHashSet<IntVar> singletons = new SimpleHashSet<>();
+    LinkedHashSet<IntVar> singletons = new LinkedHashSet<>();
 
     while (!variableQueue.isEmpty()) {
 
@@ -322,7 +320,7 @@ public class Alldistinct extends Constraint
             }
           }
 
-          currentSimpleArrayList = valueMapVariable.get(qValue);
+          currentList = valueMapVariable.get(qValue);
 
           // Timestamp variable which points to the position of
           // the last variable which still has qValue in its
@@ -331,7 +329,7 @@ public class Alldistinct extends Constraint
 
           int lastPosition = stamp.value();
 
-          int positionV = currentSimpleArrayList.indexOf(Q);
+          int positionV = currentList.indexOf(Q);
 
           // It has to set position to variable which has
           // Qvalue in its domain to value 0 since only
@@ -340,25 +338,21 @@ public class Alldistinct extends Constraint
 
           if (positionV > 0) {
 
-            currentSimpleArrayList.setElementAt(currentSimpleArrayList.getFirst(), positionV);
-
-            currentSimpleArrayList.setElementAt(Q, 0);
+            currentList.set(positionV, currentList.get(0));
+            currentList.set(0, Q);
           }
 
           // All Variable which still had qValue in its domain
           // have this value removed
           // Domain complement = Domain.domain.complement(qValue);
           for (int c = 1; c <= lastPosition; c++) {
-            currentSimpleArrayList
-                .get(c)
-                .domain
-                .inComplement(store.level, currentSimpleArrayList.get(c), qValue);
+            currentList.get(c).domain.inComplement(store.level, currentList.get(c), qValue);
           }
 
           // Should be seperate from above loop since failure
           // in indexicals (in) will not clear variableQueue
           for (int c = 1; c <= lastPosition; c++) {
-            variableQueue.add(currentSimpleArrayList.get(c));
+            variableQueue.add(currentList.get(c));
           }
         }
       }
@@ -414,13 +408,19 @@ public class Alldistinct extends Constraint
 
           Integer integerValue = enumer.nextElement();
 
-          currentSimpleArrayList = valueMapVariable.get(integerValue);
+          currentList = valueMapVariable.get(integerValue);
 
           stamp = stamps.get(integerValue);
 
           int lastPosition = stamp.value();
 
-          int positionV = currentSimpleArrayList.indexOf(V, lastPosition);
+          int positionV = -1;
+          for (int k = 0; k <= lastPosition; k++) {
+            if (currentList.get(k) == V) {
+              positionV = k;
+              break;
+            }
+          }
 
           if (positionV == -1) {
             continue;
@@ -430,9 +430,8 @@ public class Alldistinct extends Constraint
 
             stamp.update(lastPosition - 1);
 
-            currentSimpleArrayList.setElementAt(
-                currentSimpleArrayList.get(lastPosition), positionV);
-            currentSimpleArrayList.setElementAt(V, lastPosition);
+            currentList.set(positionV, currentList.get(lastPosition));
+            currentList.set(lastPosition, V);
 
             continue;
           }
@@ -467,7 +466,9 @@ public class Alldistinct extends Constraint
     // Remove singletons from changed variables as no pruning
     // can be achieved for them.
     while (!singletons.isEmpty()) {
-      IntVar singleton = singletons.removeFirst();
+      Iterator<IntVar> it = singletons.iterator();
+      IntVar singleton = it.next();
+      it.remove();
       fdvs.remove(singleton);
       freeVariables.remove(singleton);
       Integer integerValue = singleton.value();
@@ -502,14 +503,13 @@ public class Alldistinct extends Constraint
         variable = list[i];
 
         matchedValue = matching.get(variable).value();
-        currentSimpleArrayList = valueMapVariable.get(matchedValue);
+        currentList = valueMapVariable.get(matchedValue);
 
-        positionMatched = currentSimpleArrayList.indexOf(variable);
+        positionMatched = currentList.indexOf(variable);
         if (positionMatched != 0) {
 
-          currentSimpleArrayList.setElementAt(currentSimpleArrayList.getFirst(), positionMatched);
-
-          currentSimpleArrayList.setElementAt(variable, 0);
+          currentList.set(positionMatched, currentList.get(0));
+          currentList.set(0, variable);
         }
       }
     }
@@ -532,9 +532,9 @@ public class Alldistinct extends Constraint
 
       while (!fdvs.isEmpty()) {
 
-        IntVar changedVariable = fdvs.getFirst();
-
-        fdvs.remove(changedVariable);
+        Iterator<IntVar> it = fdvs.iterator();
+        IntVar changedVariable = it.next();
+        it.remove();
 
         if (debugAll) {
           log.debug("Tarjan start, changed variabled {}", changedVariable);
@@ -662,14 +662,14 @@ public class Alldistinct extends Constraint
 
         matched = matching.get(variable).value();
 
-        currentSimpleArrayList = valueMapVariable.get(matched);
+        currentList = valueMapVariable.get(matched);
 
         stamp = stamps.get(matched);
 
         lastPosition = stamp.value();
 
         if (debugAll) {
-          log.debug("currentSimpleArrayList {} stamp {}", currentSimpleArrayList, lastPosition);
+          log.debug("currentList {} stamp {}", currentList, lastPosition);
         }
 
         // If permutation constraint
@@ -696,7 +696,7 @@ public class Alldistinct extends Constraint
         }
 
         for (int i = 0; i <= lastPosition; i++) {
-          possibleDifferentComponentVariable = currentSimpleArrayList.get(i);
+          possibleDifferentComponentVariable = currentList.get(i);
           if (variableComponentId != sccStamp.get(possibleDifferentComponentVariable).value()) {
 
             if (debugPruning) {
@@ -713,8 +713,8 @@ public class Alldistinct extends Constraint
 
             // Required to keep the data structure consistent
             variableQueue.add(possibleDifferentComponentVariable);
-            currentSimpleArrayList.set(i, currentSimpleArrayList.get(lastPosition));
-            currentSimpleArrayList.set(lastPosition, possibleDifferentComponentVariable);
+            currentList.set(i, currentList.get(lastPosition));
+            currentList.set(lastPosition, possibleDifferentComponentVariable);
 
             lastPosition = lastPosition - 1;
             stamp.update(lastPosition);
@@ -743,16 +743,16 @@ public class Alldistinct extends Constraint
 
         if (stampValue == 0) {
 
-          if (valueMapVariable.get(value).getFirst().dom().getSize() > 1) {
+          if (valueMapVariable.get(value).get(0).dom().getSize() > 1) {
             log.debug("Transformation Alldistinct-Permutation and missing propagation ");
 
             valueMapVariable
                 .get(value)
-                .getFirst()
+                .get(0)
                 .domain
-                .inValue(store.level, valueMapVariable.get(value).getFirst(), value); // , value);
+                .inValue(store.level, valueMapVariable.get(value).get(0), value); // , value);
 
-            variableQueue.add(valueMapVariable.get(value).getFirst());
+            variableQueue.add(valueMapVariable.get(value).get(0));
 
             narrowingEvent = true;
           }
@@ -804,7 +804,7 @@ public class Alldistinct extends Constraint
 
         if (backtrackOccured) {
 
-          SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matched);
+          ArrayList<IntVar> currentList = valueMapVariable.get(matched);
 
           // Correcting matching in ValueMapVariable for
           // notGroundedYetVariable.
@@ -812,12 +812,11 @@ public class Alldistinct extends Constraint
           // matching
           // since last time this function was called
 
-          int positionMatched = currentSimpleArrayList.indexOf(variable);
+          int positionMatched = currentList.indexOf(variable);
           if (positionMatched != 0) {
 
-            currentSimpleArrayList.setElementAt(currentSimpleArrayList.getFirst(), positionMatched);
-
-            currentSimpleArrayList.setElementAt(variable, 0);
+            currentList.set(positionMatched, currentList.get(0));
+            currentList.set(0, variable);
           }
         }
       }
@@ -1041,12 +1040,12 @@ public class Alldistinct extends Constraint
 
           // Update valueMapVariable with new matched value
 
-          SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
-          int positionMatched = currentSimpleArrayList.indexOf(matchedVariable);
+          ArrayList<IntVar> currentList = valueMapVariable.get(matchedValue);
+          int positionMatched = currentList.indexOf(matchedVariable);
           if (positionMatched != 0) {
 
-            currentSimpleArrayList.setElementAt(currentSimpleArrayList.getFirst(), positionMatched);
-            currentSimpleArrayList.setElementAt(matchedVariable, 0);
+            currentList.set(positionMatched, currentList.get(0));
+            currentList.set(0, matchedVariable);
           }
 
           nonFreeValues.add(matchedValue);
@@ -1100,9 +1099,9 @@ public class Alldistinct extends Constraint
     Var.addPositionMapping(matching, list, f, false, this.getClass());
     Var.addPositionMapping(sccStamp, list, f, false, this.getClass());
 
-    for (Map.Entry<Integer, SimpleArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
+    for (Map.Entry<Integer, ArrayList<IntVar>> entry : valueMapVariable.entrySet()) {
       Integer key = entry.getKey();
-      SimpleArrayList<IntVar> value = entry.getValue();
+      ArrayList<IntVar> value = entry.getValue();
       // Use the key and the value
       stamps.put(key, new TimeStamp<>(store, value.size() - 1));
     }
@@ -1128,9 +1127,9 @@ public class Alldistinct extends Constraint
 
     while (!fdvs.isEmpty()) {
 
-      IntVar changedVariable = fdvs.getFirst();
-
-      fdvs.remove(changedVariable);
+      Iterator<IntVar> it = fdvs.iterator();
+      IntVar changedVariable = it.next();
+      it.remove();
 
       revisitTarjan(changedVariable, l, dfsnum, low, fdvs);
     }
@@ -1152,7 +1151,7 @@ public class Alldistinct extends Constraint
       log.debug("Start mark reachable variables {}", value);
     }
 
-    SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(value);
+    ArrayList<IntVar> currentList = valueMapVariable.get(value);
 
     TimeStamp<Integer> stamp = stamps.get(value);
 
@@ -1164,7 +1163,7 @@ public class Alldistinct extends Constraint
     // edges
     for (int i = 0; i <= lastPosition; i++) {
 
-      IntVar reachableVariable = currentSimpleArrayList.get(i);
+      IntVar reachableVariable = currentList.get(i);
 
       if (variablesReachableFromFreeValues.contains(reachableVariable)) {
         continue;
@@ -1218,10 +1217,10 @@ public class Alldistinct extends Constraint
       log.debug("Matched value {} for {}", matchedValue, x);
     }
 
-    SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
+    ArrayList<IntVar> currentList = valueMapVariable.get(matchedValue);
 
     if (debugAll) {
-      log.debug("Mapped variables to Matched value {}", currentSimpleArrayList);
+      log.debug("Mapped variables to Matched value {}", currentList);
     }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
@@ -1236,7 +1235,7 @@ public class Alldistinct extends Constraint
     // first variable is matched value
     for (int i = 0; i <= lastPosition; i++) {
 
-      IntVar v = currentSimpleArrayList.get(i);
+      IntVar v = currentList.get(i);
 
       if (sccStampX == sccStamp.get(v).value()) {
         if (dfsnum.get(v) == null) {
@@ -1361,10 +1360,10 @@ public class Alldistinct extends Constraint
       log.debug("Matched value {} for {}", matchedValue, x);
     }
 
-    SimpleArrayList<IntVar> currentSimpleArrayList = valueMapVariable.get(matchedValue);
+    ArrayList<IntVar> currentList = valueMapVariable.get(matchedValue);
 
     if (debugAll) {
-      log.debug("Mapped variables to Matched value {}", currentSimpleArrayList);
+      log.debug("Mapped variables to Matched value {}", currentList);
     }
 
     TimeStamp<Integer> stamp = stamps.get(matchedValue);
@@ -1380,7 +1379,7 @@ public class Alldistinct extends Constraint
     // first variable is matched value
     for (int i = 1; i <= lastPosition; i++) {
 
-      v = currentSimpleArrayList.get(i);
+      v = currentList.get(i);
 
       if (dfsnum.get(v) == null) {
 
@@ -1580,7 +1579,7 @@ public class Alldistinct extends Constraint
       TimeStamp<Integer> stamp;
       int stampValue;
 
-      SimpleArrayList<IntVar> currentSimpleArrayList;
+      ArrayList<IntVar> currentList;
 
       while (currentlyUsedPotentialFreeValue < sizePotentialFreeValues) {
 
@@ -1595,15 +1594,15 @@ public class Alldistinct extends Constraint
         // Value with two variables
         if (stampValue == 1) {
 
-          currentSimpleArrayList = valueMapVariable.get(value);
+          currentList = valueMapVariable.get(value);
 
-          int pruningFirstVariable = estimatePruning(currentSimpleArrayList.getFirst(), value);
+          int pruningFirstVariable = estimatePruning(currentList.get(0), value);
 
           if (pruningFirstVariable < minCurrentPruning) {
             continue;
           }
 
-          int pruningSecondVariable = estimatePruning(currentSimpleArrayList.get(1), value);
+          int pruningSecondVariable = estimatePruning(currentList.get(1), value);
 
           if (pruningSecondVariable < minCurrentPruning) {
             continue;
@@ -1615,18 +1614,15 @@ public class Alldistinct extends Constraint
 
               // Equals sign means no greedy in propagation
               // Lack of equal sign means greedy in propagation
-              if (currentSimpleArrayList.getFirst().getSize()
-                      < currentSimpleArrayList.get(1).getSize()
-                  || (currentSimpleArrayList.getFirst().getSize()
-                          == currentSimpleArrayList.get(1).getSize()
-                      && !greedy)) {
+              if (currentList.get(0).getSize() < currentList.get(1).getSize()
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
 
-                guideVariable = currentSimpleArrayList.getFirst();
+                guideVariable = currentList.get(0);
                 guideValue = value;
 
               } else {
 
-                guideVariable = currentSimpleArrayList.get(1);
+                guideVariable = currentList.get(1);
                 guideValue = value;
               }
               minCurrentPruning = pruningFirstVariable;
@@ -1635,18 +1631,15 @@ public class Alldistinct extends Constraint
               // Equals sign means no greedy in propagation in
               // case of tie break
               // Lack of equal sign means greedy in propagation
-              if (currentSimpleArrayList.getFirst().getSize()
-                      < currentSimpleArrayList.get(1).getSize()
-                  || (currentSimpleArrayList.getFirst().getSize()
-                          == currentSimpleArrayList.get(1).getSize()
-                      && !greedy)) {
+              if (currentList.get(0).getSize() < currentList.get(1).getSize()
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
 
-                guideVariable = currentSimpleArrayList.getFirst();
+                guideVariable = currentList.get(0);
                 guideValue = value;
 
               } else {
 
-                guideVariable = currentSimpleArrayList.get(1);
+                guideVariable = currentList.get(1);
                 guideValue = value;
               }
 
@@ -1658,17 +1651,14 @@ public class Alldistinct extends Constraint
             if (pruningSecondVariable > minCurrentPruning) {
 
               // Equal sign means greedy in case of tie break
-              if (currentSimpleArrayList.getFirst().getSize()
-                      <= currentSimpleArrayList.get(1).getSize()
-                  || (currentSimpleArrayList.getFirst().getSize()
-                          == currentSimpleArrayList.get(1).getSize()
-                      && greedy)) {
+              if (currentList.get(0).getSize() <= currentList.get(1).getSize()
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && greedy)) {
 
-                guideVariable = currentSimpleArrayList.getFirst();
+                guideVariable = currentList.get(0);
                 guideValue = value;
               } else {
 
-                guideVariable = currentSimpleArrayList.get(1);
+                guideVariable = currentList.get(1);
                 guideValue = value;
               }
 
@@ -1677,18 +1667,15 @@ public class Alldistinct extends Constraint
             } else if (pruningFirstVariable > maxCurrentPruning) {
 
               // Equal sign means greedy in case of tie break
-              if (currentSimpleArrayList.getFirst().getSize()
-                      <= currentSimpleArrayList.get(1).getSize()
-                  || (currentSimpleArrayList.getFirst().getSize()
-                          == currentSimpleArrayList.get(1).getSize()
-                      && !greedy)) {
+              if (currentList.get(0).getSize() <= currentList.get(1).getSize()
+                  || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
 
-                guideVariable = currentSimpleArrayList.getFirst();
+                guideVariable = currentList.get(0);
                 guideValue = value;
 
               } else {
 
-                guideVariable = currentSimpleArrayList.get(1);
+                guideVariable = currentList.get(1);
                 guideValue = value;
               }
               maxCurrentPruning = pruningFirstVariable;
@@ -1709,13 +1696,13 @@ public class Alldistinct extends Constraint
 
     int pruning = estimatePruningRecursive(x, v, exploredX, exploredV);
 
-    SimpleArrayList<IntVar> currentSimpleArrayList;
+    ArrayList<IntVar> currentList;
     Integer value;
 
     for (Integer integer : exploredV) {
 
       value = integer;
-      currentSimpleArrayList = valueMapVariable.get(value);
+      currentList = valueMapVariable.get(value);
 
       TimeStamp<Integer> stamp = stamps.get(value);
 
@@ -1723,7 +1710,7 @@ public class Alldistinct extends Constraint
 
       for (int j = 0; j <= lastPosition; j++) {
         // Edge between j and value was not counted yet
-        if (!exploredX.contains(currentSimpleArrayList.get(j))) {
+        if (!exploredX.contains(currentList.get(j))) {
           pruning++;
         }
       }
@@ -1748,7 +1735,7 @@ public class Alldistinct extends Constraint
     pruning = xDom.getSize() - 1;
 
     TimeStamp<Integer> stamp;
-    SimpleArrayList<IntVar> currentSimpleArrayList;
+    ArrayList<IntVar> currentList;
     ValueEnumeration enumer = xDom.valueEnumeration();
 
     // Permutation only
@@ -1765,15 +1752,15 @@ public class Alldistinct extends Constraint
           // is atmost one variable for value
           if (lastPosition < exploredX.size() + 1) {
 
-            currentSimpleArrayList = valueMapVariable.get(iInteger);
+            currentList = valueMapVariable.get(iInteger);
 
             IntVar singleVar = null;
             boolean single = true;
 
             for (int m = 0; m <= lastPosition; m++) {
-              if (!exploredX.contains(currentSimpleArrayList.get(m))) {
+              if (!exploredX.contains(currentList.get(m))) {
                 if (singleVar == null) {
-                  singleVar = currentSimpleArrayList.get(m);
+                  singleVar = currentList.get(m);
                 } else {
                   single = false;
                 }
@@ -1804,12 +1791,12 @@ public class Alldistinct extends Constraint
     }
 
     stamp = stamps.get(v);
-    currentSimpleArrayList = valueMapVariable.get(v);
+    currentList = valueMapVariable.get(v);
 
     int lastPosition = stamp.value();
 
     for (int i = 0; i <= lastPosition; i++) {
-      IntVar variable = currentSimpleArrayList.get(i);
+      IntVar variable = currentList.get(i);
 
       // checks if there is at most one value for variable
       if (!exploredX.contains(variable) && variable.dom().getSize() < exploredV.size() + 2) {

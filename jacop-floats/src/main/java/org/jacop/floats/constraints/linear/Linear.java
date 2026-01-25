@@ -33,9 +33,12 @@ package org.jacop.floats.constraints.linear;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
@@ -49,7 +52,6 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatVar;
-import org.jacop.util.SimpleHashSet;
 
 /**
  * Linear constraint implements the weighted summation over several Variable's . It provides the
@@ -76,8 +78,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
-  // LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<FloatVar>();
-  final SimpleHashSet<FloatVar> variableQueue = new SimpleHashSet<>();
+  final LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<>();
 
   /** It specifies what relations is used by this constraint */
   public byte relationType;
@@ -330,18 +331,22 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     while (!variableQueue.isEmpty()) {
       // propagate changes in FDV's and prune
 
-      FloatVar v = variableQueue.removeFirst();
+      Iterator<FloatVar> it = variableQueue.iterator();
+      FloatVar v = it.next();
+      it.remove();
       VariableNode n = varMap.get(v);
 
       n.propagateAndPrune();
     }
   }
 
-  void propagate(SimpleHashSet<FloatVar> fdvs) {
+  void propagate(Set<FloatVar> fdvs) {
 
     while (!fdvs.isEmpty()) {
 
-      FloatVar v = fdvs.removeFirst();
+      Iterator<FloatVar> it = fdvs.iterator();
+      FloatVar v = it.next();
+      it.remove();
       VariableNode n = varMap.get(v);
 
       n.propagate();

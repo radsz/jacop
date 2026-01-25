@@ -35,6 +35,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,7 +48,6 @@ import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.util.SimpleHashSet;
 import org.jacop.util.SparseSet;
 
 /**
@@ -73,7 +74,7 @@ public class Store {
    * It stores constraints scheduled for reevaluation. It does not register constraints which are
    * already scheduled for reevaluation.
    */
-  public final SimpleHashSet<Constraint>[] changed;
+  public final LinkedHashSet<Constraint>[] changed;
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -273,10 +274,10 @@ public class Store {
 
     vars = new Var[size];
 
-    changed = new SimpleHashSet[queueNo];
+    changed = new LinkedHashSet[queueNo];
 
     for (int i = 0; i < queueNo; i++) {
-      changed[i] = new SimpleHashSet<>(100);
+      changed[i] = new LinkedHashSet<>(100);
     }
 
     trailManager =
@@ -644,7 +645,10 @@ public class Store {
    */
   public Constraint getFirstChanged() {
 
-    return changed[currentQueue].removeFirst();
+    Iterator<Constraint> it = changed[currentQueue].iterator();
+    Constraint c = it.next();
+    it.remove();
+    return c;
   }
 
   /**

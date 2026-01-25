@@ -39,7 +39,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.SimpleArrayList;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -80,7 +79,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
    * the collection of holes that are included in all possible shapes, enlarged to include the whole
    * domain that can be covered for any feasible choice of the origin
    */
-  private final SimpleArrayList<DBox> extendedHoles;
+  private final ArrayList<DBox> extendedHoles;
 
   /**
    * the frame is the area that is ensured to be covered by the obstacle, given the domain of its
@@ -116,7 +115,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     // check whether time should be used or not
     useTime = selectedDimensions[selectedDimensions.length - 1] == obstacle.dimension;
 
-    extendedHoles = new SimpleArrayList<>();
+    extendedHoles = new ArrayList<>();
   }
 
   /**
@@ -403,7 +402,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
      * This can be further improved by updating the extended the holes in the only
      * dimension that changed.
      */
-    extendedHoles.clearNoGC(); // DBoxes are not collected anyway
+    extendedHoles.clear(); // DBoxes are not collected anyway
 
     final ValueEnumeration vals = obstacle.shapeID.domain.valueEnumeration();
     while (vals.hasMoreElements()) {

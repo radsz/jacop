@@ -30,7 +30,7 @@
 package org.jacop.constraints.geost;
 
 import java.util.Collection;
-import org.jacop.util.SimpleHashSet;
+import java.util.Set;
 
 /**
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -83,7 +83,7 @@ public interface ExternalConstraint {
    * @param accumulator the set of objects to add the object to
    * @return true if a value was added, false otherwise
    */
-  boolean addPrunableObjects(GeostObject o, SimpleHashSet<GeostObject> accumulator);
+  boolean addPrunableObjects(GeostObject o, Set<GeostObject> accumulator);
 
   /**
    * Handler method called by the Geost kernel when the domain of the object changes. Use this
