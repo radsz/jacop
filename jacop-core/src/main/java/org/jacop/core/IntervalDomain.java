@@ -104,6 +104,22 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     this.size = 1;
   }
 
+  /**
+   * Creates a domain that takes ownership of the given intervals array. The array must hold sorted,
+   * disjoint intervals in {@code [0..size-1]}; slots at {@code size} and beyond are ignored.
+   *
+   * @param intervals array of intervals (caller transfers ownership)
+   * @param size number of valid intervals
+   */
+  public IntervalDomain(Interval[] intervals, int size) {
+    this.intervals = intervals;
+    this.size = size;
+    searchConstraints = null;
+    searchConstraintsToEvaluate = 0;
+    previousDomain = null;
+    searchConstraintsCloned = false;
+  }
+
   public IntDomain getPreviousDomain() {
     return previousDomain;
   }
@@ -2819,52 +2835,35 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       throw failException;
     }
 
-    IntervalDomain result = new IntervalDomain(size + 1);
+    int out = 0;
+    int p = pointer;
 
-    if (intervals[pointer].min() >= min) {
-      if (intervals[pointer].max() <= max) {
-        result.unionAdapt(intervals[pointer]);
-      } else {
-        result.unionAdapt(new Interval(intervals[pointer].min(), max));
-      }
-    } else if (intervals[pointer].max() <= max) {
-      result.unionAdapt(new Interval(min, intervals[pointer].max()));
-    } else {
-      result.unionAdapt(new Interval(min, max));
+    Interval iv = intervals[p];
+    int a = Math.max(iv.min(), min);
+    int b = Math.min(iv.max(), max);
+    Interval[] copy = new Interval[size];
+    copy[out] = (a == iv.min() && b == iv.max()) ? iv : new Interval(a, b);
+    out++;
+    p++;
+
+    while (p < size && intervals[p].max() <= max) {
+      copy[out++] = intervals[p++];
     }
 
-    pointer++;
-
-    while (pointer < size) {
-      if (intervals[pointer].max() <= max) {
-        result.unionAdapt(intervals[pointer++]);
-      } else {
-        break;
-      }
+    if (p < size && intervals[p].min() <= max) {
+      iv = intervals[p];
+      a = Math.max(iv.min(), min);
+      b = Math.min(iv.max(), max);
+      copy[out] = (a == iv.min() && b == iv.max()) ? iv : new Interval(a, b);
+      out++;
     }
 
-    if (pointer < size) {
-      if (intervals[pointer].min() <= max) {
-        result.unionAdapt(new Interval(intervals[pointer].min(), max));
-      }
-    }
-
+    IntervalDomain result = null;
     if (stamp == storeLevel) {
-
-      // Copy all intervals
-      if (result.size <= intervals.length) {
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      } else {
-        intervals = new Interval[result.size];
-        System.arraycopy(result.intervals, 0, intervals, 0, result.size);
-      }
-
-      size = result.size;
-
+      intervals = copy;
+      size = out;
     } else {
-
-      assert stamp < storeLevel;
-
+      result = new IntervalDomain(copy, out);
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
@@ -2874,10 +2873,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       ((IntVar) var).domain = result;
     }
 
-    assert checkInvariants() == null : checkInvariants();
-    assert result.checkInvariants() == null : result.checkInvariants();
-
-    if (result.singleton()) {
+    IntervalDomain effective = stamp == storeLevel ? this : result;
+    assert effective.checkInvariants() == null : effective.checkInvariants();
+    if (effective.singleton()) {
       var.domainHasChanged(IntDomain.GROUND);
     } else {
       var.domainHasChanged(IntDomain.BOUND);
@@ -3651,9 +3649,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It specifies the position of the interval which contains specified value.
-   * Hybrid: linear check for indices 0–1, then binary search over [2, size-1].
-   * Interval-count frequency (approx.): size 1 ~76%, 2 ~8%, 3 ~4%, 4 ~2%, others ~10%.
+   * It specifies the position of the interval which contains specified value. Hybrid: linear check
+   * for indices 0–1, then binary search over [2, size-1]. Interval-count frequency (approx.): size
+   * 1 ~76%, 2 ~8%, 3 ~4%, 4 ~2%, others ~10%.
    *
    * @param value value for which an interval containing it is searched.
    * @return the position of the interval containing the specified value.
