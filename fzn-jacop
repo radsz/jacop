@@ -1,0 +1,5 @@
+#!/bin/bash
+cd "$(dirname "$0")"
+mvn -q -pl jacop-flatzinc dependency:build-classpath -Dmdep.outputFile=jacop-flatzinc/target/.fzn-jacop-cp.txt || exit 1
+sep=':'; [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || -n "${WINDIR:-}" ]] && sep=';'
+exec java -XX:+UseSerialGC -server -Xmx12G -Xss100M -cp "jacop-flatzinc/target/jacop-flatzinc-5.0-SNAPSHOT.jar${sep}$(cat jacop-flatzinc/target/.fzn-jacop-cp.txt)" org.jacop.fz.Fz2jacop "$@"
