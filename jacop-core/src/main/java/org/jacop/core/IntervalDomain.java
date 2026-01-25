@@ -2650,56 +2650,32 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (stamp == storeLevel) {
+    int pointer = 0;
+    while (intervals[pointer].max() < min) {
+      pointer++;
+    }
 
-      int pointer = 0;
-
-      while (intervals[pointer].max() < min) {
-        pointer++;
-      }
-
-      int i = 0;
-      if (intervals[pointer].min() < min) {
-        intervals[0] = new Interval(min, intervals[pointer].max());
-        pointer++;
-        i++;
-      }
-
-      for (; pointer < size; i++, pointer++) {
-        intervals[i] = intervals[pointer];
-      }
-      // intervals[pointer] = null;
-
-      size = i;
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
-      } else {
-        var.domainHasChanged(IntDomain.BOUND);
-      }
-
+    int out = 0;
+    int p = pointer;
+    Interval iv = intervals[p];
+    Interval[] copy = new Interval[size];
+    if (iv.min() < min) {
+      copy[out++] = new Interval(min, iv.max());
+      p++;
     } else {
+      copy[out++] = iv;
+      p++;
+    }
+    while (p < size) {
+      copy[out++] = intervals[p++];
+    }
 
-      assert stamp < storeLevel;
-
-      IntervalDomain result = new IntervalDomain(size + 1);
-      int pointer = 0;
-
-      // pointer is always smaller than size as domains intersect
-      while (intervals[pointer].max() < min) {
-        pointer++;
-      }
-
-      if (intervals[pointer].min() < min) {
-        result.unionAdapt(new Interval(min, intervals[pointer++].max()));
-      }
-
-      for (; pointer < size; pointer++) {
-        result.unionAdapt(intervals[pointer]);
-      }
-
+    IntervalDomain result = null;
+    if (stamp == storeLevel) {
+      intervals = copy;
+      size = out;
+    } else {
+      result = new IntervalDomain(copy, out);
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
@@ -2707,15 +2683,13 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) var).domain = result;
-
-      assert checkInvariants() == null : checkInvariants();
-      assert result.checkInvariants() == null : result.checkInvariants();
-
-      if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
-      } else {
-        var.domainHasChanged(IntDomain.BOUND);
-      }
+    }
+    IntervalDomain effective = stamp == storeLevel ? this : result;
+    assert effective.checkInvariants() == null : effective.checkInvariants();
+    if (effective.singleton()) {
+      var.domainHasChanged(IntDomain.GROUND);
+    } else {
+      var.domainHasChanged(IntDomain.BOUND);
     }
   }
 
@@ -2739,48 +2713,29 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
 
     int pointer = size - 1;
+    while (intervals[pointer].min() > max) {
+      pointer--;
+    }
 
-    if (stamp == storeLevel) {
-
-      while (intervals[pointer].min() > max) {
-        // intervals[pointer] = null;
-        pointer--;
-      }
-
-      if (intervals[pointer].max() > max) {
-        intervals[pointer] = new Interval(intervals[pointer].min(), max);
-      }
-
-      size = pointer + 1;
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
-      } else {
-        var.domainHasChanged(IntDomain.BOUND);
-      }
-
+    int out = 0;
+    int p = 0;
+    Interval[] copy = new Interval[size];
+    while (p < pointer) {
+      copy[out++] = intervals[p++];
+    }
+    Interval iv = intervals[pointer];
+    if (iv.max() > max) {
+      copy[out++] = new Interval(iv.min(), max);
     } else {
+      copy[out++] = iv;
+    }
 
-      assert stamp < storeLevel;
-
-      while (intervals[pointer].min() > max) {
-        pointer--;
-      }
-
-      IntervalDomain result = new IntervalDomain(pointer + 1);
-
-      for (int i = 0; i < pointer; i++) {
-        result.unionAdapt(intervals[i]);
-      }
-
-      if (intervals[pointer].max() > max) {
-        result.unionAdapt(new Interval(intervals[pointer].min(), max));
-      } else {
-        result.unionAdapt(intervals[pointer]);
-      }
-
+    IntervalDomain result = null;
+    if (stamp == storeLevel) {
+      intervals = copy;
+      size = out;
+    } else {
+      result = new IntervalDomain(copy, out);
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
@@ -2788,15 +2743,13 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) var).domain = result;
-
-      assert result.checkInvariants() == null : result.checkInvariants();
-      assert checkInvariants() == null : checkInvariants();
-
-      if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
-      } else {
-        var.domainHasChanged(IntDomain.BOUND);
-      }
+    }
+    IntervalDomain effective = stamp == storeLevel ? this : result;
+    assert effective.checkInvariants() == null : effective.checkInvariants();
+    if (effective.singleton()) {
+      var.domainHasChanged(IntDomain.GROUND);
+    } else {
+      var.domainHasChanged(IntDomain.BOUND);
     }
   }
 
