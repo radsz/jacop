@@ -245,6 +245,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public void addChildSearch(Search<? extends Var> child) {
 
     if (childSearches == null) {

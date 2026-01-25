@@ -142,6 +142,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     this.tieBreak = tieBreak;
   }
 
+  @SuppressWarnings("unchecked")
+  private DepthFirstSearch<T> asDfs(Search<? extends Var> s) {
+    return (DepthFirstSearch<T>) s;
+  }
+
   DepthFirstSearch<T> lastSearch(DepthFirstSearch<T> dfs) {
     DepthFirstSearch<T> ns = dfs;
     DepthFirstSearch<T> lastNotNullSearch;
@@ -152,7 +157,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       if (ns.childSearches == null) {
         ns = null;
       } else {
-        ns = (DepthFirstSearch<T>) ns.childSearches[0];
+        ns = asDfs(ns.childSearches[0]);
       }
     } while (ns != null);
 
@@ -281,7 +286,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         ns.setCostVar(costVar);
         ns.respectSolutionListenerAdvice = true;
         // find next search
-        ns = ns.childSearches == null ? null : (DepthFirstSearch<T>) ns.childSearches[0];
+        ns = ns.childSearches == null ? null : asDfs(ns.childSearches[0]);
       } while (ns != null);
     }
 
@@ -752,6 +757,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       master = m;
     }
 
+    @SuppressWarnings("unchecked")
     void constraineCost() {
       if (costVariable instanceof IntVar var) {
         int newCost = var.dom().max();
@@ -787,6 +793,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       }
     }
 
+    @SuppressWarnings("unchecked")
     void constraineCostFromChild(DepthFirstSearch<T> child) {
       if (costVariable instanceof IntVar) {
         int newCost = child.costValue;
@@ -822,6 +829,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       }
     }
 
+    @SuppressWarnings("unchecked")
     public boolean labeling() {
 
       int index = getSubSearch();
@@ -841,7 +849,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
             DepthFirstSearch<T> childSearch = null;
 
             for (Search<? extends Var> childObj : master.childSearches) {
-              DepthFirstSearch<T> child = (DepthFirstSearch<T>) childObj;
+              DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj);
               childSearch = child;
               child.setStore(store);
               child.getSolutionListener().setParentSolutionListener(solutionListener);
@@ -889,7 +897,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
           DepthFirstSearch<T> childSearch = null;
 
           for (Search<? extends Var> childObj2 : master.childSearches) {
-            DepthFirstSearch<T> child = (DepthFirstSearch<T>) childObj2;
+            DepthFirstSearch<T> child = (DepthFirstSearch<T>) asDfs(childObj2);
             childSearch = child;
             child.setStore(store);
             child.getSolutionListener().setParentSolutionListener(solutionListener);
