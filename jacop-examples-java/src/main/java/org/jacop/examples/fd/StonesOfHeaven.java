@@ -90,16 +90,25 @@ public class StonesOfHeaven extends ExampleFD {
     IO.println("Solution for problem Stones of Heaven");
 
     String[] ColorNames = {"red", "lightgreen", "white", "darkgreen"};
-    int /* ired = 0, */ iLgreen = 1, iwhite = 2, iDgreen = 3;
+    int /* ired = 0, */ iLgreen = 1;
+    int iwhite = 2;
+    int iDgreen = 3;
 
     String[] CountryNames = {"USA", "Finland", "Japan", "Italy"};
-    int iusa = 0, ifin = 1, ijapan = 2 /*, iitaly = 3 */;
+    int iusa = 0;
+    int ifin = 1;
+    int ijapan = 2; /*, iitaly = 3 */
 
     String[] ItemNames = {"beltbuckle", "dragon", "grasshopper", "horse"};
-    int ibelt = 0, idragon = 1, igrasshopper = 2, ihorse = 3;
+    int ibelt = 0;
+    int idragon = 1;
+    int igrasshopper = 2;
+    int ihorse = 3;
 
     String[] DynastyNames = {"Ching", "Ming", "Sung", "Tang"};
-    int iChing = 0, /* iMing = 1, */ iSung = 2, iTang = 3;
+    int iChing = 0; /* iMing = 1, */
+    int iSung = 2;
+    int iTang = 3;
 
     IntVar[] Color = new IntVar[4];
     IntVar[] Country = new IntVar[4];

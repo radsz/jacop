@@ -84,12 +84,19 @@ public class BabySitting extends ExampleFD {
     // arrays with surnames
     String[] surnameNames = {"Fell", "Grant", "Hall", "Ivey", "Jule"};
 
-    int ifell = 0, /* igrant = 1, */ ihall = 2, iivey = 3, ijule = 4;
+    int ifell = 0; /* igrant = 1, */
+    int ihall = 2;
+    int iivey = 3;
+    int ijule = 4;
 
     // arrays with names
     String[] nameNames = {"Keith", "Libby", "Margo", "Nora", "Otto"};
 
-    int ikeith = 0, ilibby = 1, imargo = 2, inora = 3, iotto = 4;
+    int ikeith = 0;
+    int ilibby = 1;
+    int imargo = 2;
+    int inora = 3;
+    int iotto = 4;
 
     // FDV's in the model
     IntVar[] surname = new IntVar[5];

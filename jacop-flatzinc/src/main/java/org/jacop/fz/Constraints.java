@@ -43,7 +43,12 @@ import org.jacop.satwrapper.SatTranslation;
  */
 public class Constraints implements ParserTreeConstants {
 
-  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+  static final int eq = 0;
+  static final int ne = 1;
+  static final int lt = 2;
+  static final int gt = 3;
+  static final int le = 4;
+  static final int ge = 5;
   final ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
   final Tables dictionary;
   final Store store;
@@ -184,7 +189,8 @@ public class Constraints implements ParserTreeConstants {
 
         ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
         ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
-        IntVar v1 = support.getVariable(p1), v2 = support.getVariable(p2);
+        IntVar v1 = support.getVariable(p1);
+        IntVar v2 = support.getVariable(p2);
         dictionary.addAlias(v1, v2);
 
         if (v1.singleton() || v2.singleton()) {

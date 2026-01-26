@@ -43,8 +43,10 @@ import org.jacop.core.TimeStamp;
  */
 public class Nooverlap extends Constraint {
 
-  static final boolean trace = false, traceNarr = false;
-  static final int x = 0, y = 1;
+  static final boolean trace = false;
+  static final boolean traceNarr = false;
+  static final int x = 0;
+  static final int y = 1;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
@@ -331,7 +333,8 @@ public class Nooverlap extends Constraint {
     int yMin = r.est(y);
     int yMax = r.lct(y);
     long rSpace = (long) (xMax - xMin) * (yMax - yMin);
-    int xLengthMin = r.length(x).min(), yLengthMin = r.length(y).min();
+    int xLengthMin = r.length(x).min();
+    int yLengthMin = r.length(y).min();
     long minArea = (long) xLengthMin * yLengthMin;
     for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
       Rectangle rectj = rectangle[j];
@@ -339,7 +342,8 @@ public class Nooverlap extends Constraint {
       xMax = Math.max(xMax, rectj.lct(x));
       yMin = Math.min(yMin, rectj.est(y));
       yMax = Math.max(yMax, rectj.lct(y));
-      int rjXLength = rectj.length(x).min(), rjYLength = rectj.length(y).min();
+      int rjXLength = rectj.length(x).min();
+      int rjYLength = rectj.length(y).min();
       xLengthMin = Math.min(xLengthMin, rjXLength);
       yLengthMin = Math.min(yLengthMin, rjYLength);
       minArea += (long) rjXLength * rjYLength;

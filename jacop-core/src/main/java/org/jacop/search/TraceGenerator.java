@@ -594,7 +594,8 @@ public class TraceGenerator<T extends Var>
         visAtt.addAttribute("", "", "x", "CDATA", "0");
         visAtt.addAttribute("", "", "y", "CDATA", "0");
 
-        int minV = minValue(tracedVar), maxV = maxValue(tracedVar);
+        int minV = minValue(tracedVar);
+        int maxV = maxValue(tracedVar);
         visAtt.addAttribute("", "", "width", "CDATA", "" + tracedVar.size());
         visAtt.addAttribute("", "", "height", "CDATA", "" + (maxV - minV + 1));
 

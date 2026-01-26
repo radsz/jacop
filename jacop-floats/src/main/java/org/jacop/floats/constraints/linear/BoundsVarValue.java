@@ -42,8 +42,10 @@ class BoundsVarValue implements MutableVarValue, Cloneable {
 
   BoundsVarValue previousBoundsVarValue;
 
-  double min, max;
-  double lb, ub;
+  double min;
+  double max;
+  double lb;
+  double ub;
 
   int stamp;
 

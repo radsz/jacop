@@ -56,9 +56,9 @@ class DiffnProfile extends Profile {
     maxProfileItemHeight = 0;
     IntDomain rOrigin_i_Dom = r.origin[i].dom();
     IntDomain rLength_i_Dom = r.length[i].dom();
-    int rOriginMin = rOrigin_i_Dom.min(),
-        rOriginMax = rOrigin_i_Dom.max(),
-        rLengthMax = rLength_i_Dom.max();
+    int rOriginMin = rOrigin_i_Dom.min();
+    int rOriginMax = rOrigin_i_Dom.max();
+    int rLengthMax = rLength_i_Dom.max();
     IntRectangle iR = new IntRectangle(r.dim);
 
     for (Rectangle t : Rs) {

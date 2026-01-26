@@ -178,7 +178,9 @@ public class GeostExample extends ExampleFD {
 
   public boolean search() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     boolean result = store.consistency();

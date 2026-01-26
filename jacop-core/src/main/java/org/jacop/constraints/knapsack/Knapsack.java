@@ -264,9 +264,9 @@ public class Knapsack extends Constraint
     if (debugAll) {
 
       /*
-        It specifies how many removeLevel functions must be executed before the information about
-        the constraint is being printed out.
-       */
+       It specifies how many removeLevel functions must be executed before the information about
+       the constraint is being printed out.
+      */
       int REMOVE_INFO_FROM = 0;
       if (countRemoveLevel >= REMOVE_INFO_FROM) {
 
@@ -463,9 +463,9 @@ public class Knapsack extends Constraint
     blockUpdate();
 
     /*
-      It specifies how many consistency functions must be executed before the information about the
-      constraint is being printed out.
-     */
+     It specifies how many consistency functions must be executed before the information about the
+     constraint is being printed out.
+    */
     int CONSISTENCY_INFO_FROM = 0;
     if (debugAll) {
       if (countConsistency >= CONSISTENCY_INFO_FROM) {
@@ -729,9 +729,9 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
       /*
-        It specifies how many queueVariable functions must be executed before the information about
-        the constraint is being printed out.
-       */
+       It specifies how many queueVariable functions must be executed before the information about
+       the constraint is being printed out.
+      */
       int QUEUE_INFO_FROM = 0;
       if (countQueueVariable >= QUEUE_INFO_FROM) {
 
@@ -885,7 +885,8 @@ public class Knapsack extends Constraint
    */
   private boolean sliceInvariant() {
 
-    int alreadyObtainedProfit = 0, alreadyUsedCapacity = 0;
+    int alreadyObtainedProfit = 0;
+    int alreadyUsedCapacity = 0;
 
     for (TreeLeaf leave : leaves) {
       if (leave.slice > 0) {

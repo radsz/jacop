@@ -110,7 +110,8 @@ public class Values extends Constraint implements SatisfiedPresent {
         log.debug("Sorted : \n{}", this);
       }
 
-      int minNumberDifferent = 1, minimumMax = list[0].max();
+      int minNumberDifferent = 1;
+      int minimumMax = list[0].max();
 
       int[][] adj = new int[list.length + 1][];
       adj[0] = new int[0];

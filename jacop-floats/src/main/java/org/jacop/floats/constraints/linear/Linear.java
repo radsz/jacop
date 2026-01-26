@@ -64,7 +64,13 @@ import org.jacop.floats.core.FloatVar;
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   /** Defines relations */
-  public static final byte eq = 0, lt = 1, le = 2, ne = 3, gt = 4, ge = 5;
+  public static final byte eq = 0;
+
+  public static final byte lt = 1;
+  public static final byte le = 2;
+  public static final byte ne = 3;
+  public static final byte gt = 4;
+  public static final byte ge = 5;
 
   /** Defines negated relations */
   static final byte[] negRel = {
@@ -477,7 +483,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   void checkForOverflow() {
 
-    double sumMin = 0, sumMax = 0;
+    double sumMin = 0;
+    double sumMax = 0;
     for (int i = 0; i < list.length; i++) {
       double n1 = list[i].min() * weights[i];
       double n2 = list[i].max() * weights[i];
@@ -569,7 +576,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     VarWeightComparator() {}
 
     public int compare(T o1, T o2) {
-      double diff_o1, diff_o2;
+      double diff_o1;
+      double diff_o2;
 
       if (o1 instanceof VarNode) {
         diff_o1 = o1.max() - o1.min();

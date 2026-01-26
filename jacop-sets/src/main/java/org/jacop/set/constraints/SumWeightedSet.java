@@ -175,7 +175,8 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
 
       enumer = potentialEl.valueEnumeration();
 
-      int el, weight;
+      int el;
+      int weight;
       boolean change = false;
       while (enumer.hasMoreElements()) {
 

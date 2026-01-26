@@ -122,7 +122,8 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
 
-      double qMin, qMax;
+      double qMin;
+      double qMax;
       switch (intervalForMin) {
         case 1:
           switch (intervalForMax) {
@@ -206,7 +207,8 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
         pMax = FloatDomain.PI / 2;
       }
 
-      double low, high;
+      double low;
+      double high;
       double k = Math.floor(p.min() / FloatDomain.PI);
       low = FloatDomain.down(pMin + k * FloatDomain.PI);
       k = Math.ceil(p.max() / FloatDomain.PI);
@@ -264,7 +266,8 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
   public boolean satisfied() {
 
     if (grounded()) {
-      double tanMin = Math.tan(p.min()), tanMax = Math.tan(p.max());
+      double tanMin = Math.tan(p.min());
+      double tanMax = Math.tan(p.max());
 
       FloatInterval minDiff =
           tanMin < q.min()

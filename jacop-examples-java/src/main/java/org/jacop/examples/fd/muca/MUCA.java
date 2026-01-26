@@ -1163,7 +1163,9 @@ public class MUCA extends ExampleFD {
       int bid_xorCounter = 1;
       int transformationCounter = 0;
       int goodsCounter;
-      int Id, in, out;
+      int Id;
+      int in;
+      int out;
 
       int[] input;
       int[] output;

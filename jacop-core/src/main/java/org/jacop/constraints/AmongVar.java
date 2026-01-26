@@ -157,7 +157,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int lb0 = lb0TS.value();
     int ub0 = ub0TS.value();
 
-    IntVar x, tmpX;
+    IntVar x;
+    IntVar tmpX;
 
     boolean inLb;
 

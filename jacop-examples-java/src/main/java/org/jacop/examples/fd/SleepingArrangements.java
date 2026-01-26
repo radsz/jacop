@@ -89,10 +89,18 @@ public class SleepingArrangements extends ExampleFD {
     vars = new ArrayList<>();
 
     String[] nameID = {"Ollie", "Rollie", "Mellie", "Nellie", "Pollie"};
-    int iOllie = 0, iRollie = 1, iMellie = 2, iNellie = 3, iPollie = 4;
+    int iOllie = 0;
+    int iRollie = 1;
+    int iMellie = 2;
+    int iNellie = 3;
+    int iPollie = 4;
 
     String[] roomID = {"Yellow1", "Yellow2", "White1", "White2", "Green"};
-    int iYellow1 = 0, iYellow2 = 1, iWhite1 = 2, iWhite2 = 3, iGreen = 4;
+    int iYellow1 = 0;
+    int iYellow2 = 1;
+    int iWhite1 = 2;
+    int iWhite2 = 3;
+    int iGreen = 4;
 
     IntVar[] name = new IntVar[5];
     IntVar[] room = new IntVar[5];

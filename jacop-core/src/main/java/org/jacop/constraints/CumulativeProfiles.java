@@ -53,8 +53,11 @@ class CumulativeProfiles {
   void make(Task[] Ts, boolean doMaxProfile) {
     Task t;
     IntTask iTask = new IntTask();
-    int strt, stp, value;
-    int tDurMin, tResMin;
+    int strt;
+    int stp;
+    int value;
+    int tDurMin;
+    int tResMin;
 
     minProfile = new Profile();
     maxProfile = new Profile();

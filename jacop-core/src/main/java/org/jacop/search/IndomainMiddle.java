@@ -59,7 +59,8 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 
       IntervalDomain domain = (IntervalDomain) var.domain;
 
-      int dMin = domain.min(), dMax = domain.max();
+      int dMin = domain.min();
+      int dMax = domain.max();
 
       if (domain.singleton()) {
         return dMin;
@@ -98,7 +99,8 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
     } else {
 
       IntDomain dom = var.dom();
-      int dMin = dom.min(), dMax = dom.max();
+      int dMin = dom.min();
+      int dMax = dom.max();
 
       if (dom.singleton()) {
         return dMin;

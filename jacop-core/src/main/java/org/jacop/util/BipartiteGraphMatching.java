@@ -56,7 +56,9 @@ public class BipartiteGraphMatching {
   final int[][] adj;
 
   // These are arrays needed for hopcroftKarp()
-  int[] pairU, pairV, dist;
+  int[] pairU;
+  int[] pairV;
+  int[] dist;
 
   /**
    * Constructs empty data structure for Hopcroft Karp algorithm for maximum matching edges can be

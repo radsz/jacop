@@ -58,8 +58,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /**
-   * Extra capacity added to size-based Interval[] allocations for headroom and fewer resizes.
-   * Helps to reduce the resize operations by 75%. Used in all in / inMin / inMax / inValue /
+   * Extra capacity added to size-based Interval[] allocations for headroom and fewer resizes. Helps
+   * to reduce the resize operations by 75%. Used in all in / inMin / inMax / inValue /
    * in(IntDomain) / inComplement propagation methods. Not used for length-based allocations (e.g.
    * intervals.length + 5) to avoid unbounded growth.
    */
@@ -4981,12 +4981,12 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       for (int i = size; i > counter + 1; i--) {
         intervals[i] = intervals[i - 1];
       }
-      } else {
-        Interval[] updatedIntervals = new Interval[size + 1 + ALLOCATION_MARGIN];
-        System.arraycopy(intervals, 0, updatedIntervals, 0, counter + 1);
-        System.arraycopy(intervals, counter, updatedIntervals, counter + 1, size - counter);
-        intervals = updatedIntervals;
-      }
+    } else {
+      Interval[] updatedIntervals = new Interval[size + 1 + ALLOCATION_MARGIN];
+      System.arraycopy(intervals, 0, updatedIntervals, 0, counter + 1);
+      System.arraycopy(intervals, counter, updatedIntervals, counter + 1, size - counter);
+      intervals = updatedIntervals;
+    }
 
     int max = intervals[counter].max();
     intervals[counter] = new Interval(intervals[counter].min(), value - 1);

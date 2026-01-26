@@ -239,7 +239,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     int i = 0;
     while (sat && i < list.length) {
       IntDomain vDom = list[i].dom();
-      int vMin = vDom.min(), vMax = vDom.max();
+      int vMin = vDom.min();
+      int vMax = vDom.max();
       int j = i + 1;
       while (sat && j < list.length) {
         IntDomain ljDom = list[j].dom();

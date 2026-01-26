@@ -70,7 +70,12 @@ import org.jacop.set.core.SetVar;
 public class Support implements ParserTreeConstants {
 
   // comparison operators
-  static final int eq = 0, ne = 1, lt = 2, gt = 3, le = 4, ge = 5;
+  static final int eq = 0;
+  static final int ne = 1;
+  static final int lt = 2;
+  static final int gt = 3;
+  static final int le = 4;
+  static final int ge = 5;
   static final AtomicInteger n1 = new AtomicInteger(0);
   static final AtomicInteger n2 = new AtomicInteger(0);
   static final AtomicInteger n3 = new AtomicInteger(0);

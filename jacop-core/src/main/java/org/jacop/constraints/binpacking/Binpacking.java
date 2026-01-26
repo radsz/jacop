@@ -88,7 +88,8 @@ public class Binpacking extends Constraint
   private boolean firstConsistencyCheck = true;
   private int minBinNumber;
   private int sizeAllItems;
-  private int alphaP, betaP;
+  private int alphaP;
+  private int betaP;
   private TimeStamp<Boolean> LBpruningStamp;
 
   /**
@@ -344,7 +345,8 @@ public class Binpacking extends Constraint
       }
     }
 
-    int allCapacityMin = 0, allCapacityMax = 0;
+    int allCapacityMin = 0;
+    int allCapacityMax = 0;
     for (IntVar aLoad : load) {
       allCapacityMin += aLoad.min();
       allCapacityMax += aLoad.max();
@@ -410,10 +412,12 @@ public class Binpacking extends Constraint
   }
 
   private int getNumberBins(BinItem[] item) {
-    int min = IntDomain.MaxInt, max = 0;
+    int min = IntDomain.MaxInt;
+    int max = 0;
     for (BinItem anItem : item) {
       IntVar bin = anItem.bin();
-      int bmin = bin.min(), bmax = bin.max();
+      int bmin = bin.min();
+      int bmax = bin.max();
       max = Math.max(max, bmax);
       min = Math.min(min, bmin);
     }
@@ -422,7 +426,8 @@ public class Binpacking extends Constraint
 
   private int[] merge(int[] a, int aLength, int[] b) {
     int[] c = new int[aLength + b.length];
-    int i = 0, j = b.length - 1;
+    int i = 0;
+    int j = b.length - 1;
     for (int k = 0; k < c.length; k++) {
       if (i >= aLength) {
         c[k] = b[j--];
@@ -503,7 +508,12 @@ public class Binpacking extends Constraint
       return false;
     }
 
-    int sum_a = 0, sum_b, sum_c = 0, k = 0, kPrime = 0, N = x.length - 1; // |x|
+    int sum_a = 0;
+    int sum_b;
+    int sum_c = 0;
+    int k = 0;
+    int kPrime = 0;
+    int N = x.length - 1; // |x|
 
     while (sum_c + x[N - kPrime] < alpha) {
       sum_c += x[N - kPrime];
@@ -552,7 +562,8 @@ public class Binpacking extends Constraint
     }
 
     for (int K = 0; K <= C / 2; K++) {
-      int N1 = 0, N2 = 0;
+      int N1 = 0;
+      int N2 = 0;
 
       int i = 0;
       while (i < nn && x[i] > C - K) {

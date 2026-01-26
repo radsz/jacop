@@ -123,7 +123,8 @@ public class Min extends Constraint implements SatisfiedPresent {
         var = list[i];
 
         vDom = var.dom();
-        int varMin = vDom.min(), varMax = vDom.max();
+        int varMin = vDom.min();
+        int varMax = vDom.max();
 
         if (varMin > maxMin) {
           swap(start, i);

@@ -84,7 +84,8 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
     // it must stay as the code below assumes y is never equal to 0.
     y.domain.inComplement(store.level, y, 0);
 
-    int reminderMin, reminderMax;
+    int reminderMin;
+    int reminderMax;
 
     do {
 

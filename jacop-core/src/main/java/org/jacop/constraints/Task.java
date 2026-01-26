@@ -83,7 +83,8 @@ record Task(IntVar start, IntVar dur, IntVar res) {
   }
 
   boolean minUse(IntTask t) {
-    int lst, ect;
+    int lst;
+    int ect;
     IntDomain sDom = start.dom();
 
     lst = sDom.max();

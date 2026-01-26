@@ -400,7 +400,8 @@ public class Nonogram extends ExampleFD {
    */
   public boolean searchAll() {
 
-    long T1, T2;
+    long T1;
+    long T2;
 
     // In case of nonograms, value ordering does not matter since we
     // a) search for all solutions

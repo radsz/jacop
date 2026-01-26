@@ -95,8 +95,16 @@ public class ProAndCon extends ExampleFD {
 
     String[] surname = {"Mr._Akerman", "Ms._Baird", "Mr._Chatham", "Ms._Duval", "Mr._Etting"};
 
-    int iAkerman = 0, iBaird = 1, iChatham = 2, iDuval = 3, iEtting = 4;
-    int iMotion1 = 0, iMotion2 = 1, iMotion3 = 2, iMotion4 = 3, iMotion5 = 4;
+    int iAkerman = 0;
+    int iBaird = 1;
+    int iChatham = 2;
+    int iDuval = 3;
+    int iEtting = 4;
+    int iMotion1 = 0;
+    int iMotion2 = 1;
+    int iMotion3 = 2;
+    int iMotion4 = 3;
+    int iMotion5 = 4;
 
     // Votes are encoded as two dimensional array - one index for person,
     // one index for group

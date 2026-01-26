@@ -218,7 +218,8 @@ public class Golomb extends ExampleFD {
    */
   public boolean searchOptimalInfo() {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =

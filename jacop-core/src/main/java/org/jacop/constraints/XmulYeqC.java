@@ -177,7 +177,8 @@ public class XmulYeqC extends PrimitiveConstraint {
 
   @Override
   public boolean notSatisfied() {
-    IntDomain Xdom = x.dom(), Ydom = y.dom();
+    IntDomain Xdom = x.dom();
+    IntDomain Ydom = y.dom();
     return Xdom.max() * Ydom.max() < c || Xdom.min() * Ydom.min() > c;
   }
 

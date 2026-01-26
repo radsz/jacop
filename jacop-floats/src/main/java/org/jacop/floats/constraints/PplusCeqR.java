@@ -135,7 +135,8 @@ public class PplusCeqR extends PrimitiveConstraint implements FloatDerivableCons
 
   @Override
   public boolean notSatisfied() {
-    FloatDomain pDom = p.dom(), rDom = r.dom();
+    FloatDomain pDom = p.dom();
+    FloatDomain rDom = r.dom();
     return pDom.max() + c < rDom.min() || pDom.min() + c > rDom.max();
   }
 

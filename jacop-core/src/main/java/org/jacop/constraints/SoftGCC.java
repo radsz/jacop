@@ -632,7 +632,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
       if (vm == ViolationMeasure.VALUE_BASED) {
 
-        int n = xVars.length, m = doms.length;
+        int n = xVars.length;
+        int m = doms.length;
 
         Node[] xNodes = new Node[n];
         Node[] valueNodes = new Node[m];

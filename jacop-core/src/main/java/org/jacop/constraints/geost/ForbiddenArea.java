@@ -44,7 +44,8 @@ public class ForbiddenArea extends InternalConstraint {
   // cache area, since it will make cardInfeasible() faster
   final int area;
 
-  final int[] origin, length;
+  final int[] origin;
+  final int[] length;
 
   final Geost geost;
 

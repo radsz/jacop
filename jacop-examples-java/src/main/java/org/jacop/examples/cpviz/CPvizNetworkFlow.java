@@ -65,7 +65,9 @@ public class CPvizNetworkFlow {
   }
 
   void transportationProblem() {
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     store = new Store();

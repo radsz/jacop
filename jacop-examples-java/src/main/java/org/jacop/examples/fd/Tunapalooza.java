@@ -98,7 +98,10 @@ public class Tunapalooza extends ExampleFD {
     vars = new ArrayList<>();
 
     // names
-    int Ellyfish = 1, Korrupt = 2, Retread = 3, Yellow = 4;
+    int Ellyfish = 1;
+    int Korrupt = 2;
+    int Retread = 3;
+    int Yellow = 4;
 
     // types
     IntVar country = new IntVar(store, "country", 1, 4);

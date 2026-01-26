@@ -850,9 +850,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private void SCCs() {
 
-    int sccNb, C;
-    int maxYReachedFromS, maxYReachesS;
-    int minYReachedFromS, minYReachesS;
+    int sccNb;
+    int C;
+    int maxYReachedFromS;
+    int maxYReachesS;
+    int minYReachedFromS;
+    int minYReachesS;
     int[] compReachesLeft = new int[ySize];
     int[] compReachesRight = new int[ySize];
     int[] yReachesLeft = new int[ySize];
@@ -1192,7 +1195,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   private void upperCount(int[] max_u) {
 
-    int xIndex, x;
+    int xIndex;
+    int x;
     pCount.clear();
     xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {
@@ -1219,7 +1223,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   }
 
   private void lowerCount(int[] min_l) {
-    int xIndex, count, x;
+    int xIndex;
+    int count;
+    int x;
     pCount.clear();
     xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {

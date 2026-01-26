@@ -177,7 +177,9 @@ public class PmulQeqR extends Constraint implements SatisfiedPresent, FloatDeriv
 
   @Override
   public boolean satisfied() {
-    FloatDomain pDom = p.dom(), qDom = q.dom(), rDom = r.dom();
+    FloatDomain pDom = p.dom();
+    FloatDomain qDom = q.dom();
+    FloatDomain rDom = r.dom();
     return grounded()
         && rDom.eq(FloatDomain.mulBounds(pDom.min(), pDom.max(), qDom.min(), qDom.max()));
   }

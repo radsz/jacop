@@ -121,7 +121,8 @@ public class Max extends Constraint implements SatisfiedPresent {
         var = list[i];
 
         vDom = var.dom();
-        int varMin = vDom.min(), varMax = vDom.max();
+        int varMin = vDom.min();
+        int varMax = vDom.max();
 
         if (varMax < minMax) {
           swap(start, i);
@@ -180,7 +181,8 @@ public class Max extends Constraint implements SatisfiedPresent {
 
     boolean sat = max.singleton();
     int MAX = max.min();
-    int i = 0, eq = 0;
+    int i = 0;
+    int eq = 0;
     while (sat && i < list.length) {
       if (list[i].singleton() && list[i].value() == MAX) {
         eq++;

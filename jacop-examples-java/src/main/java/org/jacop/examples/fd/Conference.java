@@ -76,8 +76,17 @@ public class Conference extends ExampleFD {
     // A, B, C, D, E, F, G, H, I, J, K
     // session index number
     // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-    int iA = 0, iB = 1, iC = 2, iD = 3, iE = 4, iF = 5;
-    int iG = 6, iH = 7, iI = 8, iJ = 9, iK = 10;
+    int iA = 0;
+    int iB = 1;
+    int iC = 2;
+    int iD = 3;
+    int iE = 4;
+    int iF = 5;
+    int iG = 6;
+    int iH = 7;
+    int iI = 8;
+    int iJ = 9;
+    int iK = 10;
 
     IntVar[] sessions = new IntVar[11];
 

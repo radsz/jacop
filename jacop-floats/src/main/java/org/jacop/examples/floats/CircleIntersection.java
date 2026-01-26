@@ -60,7 +60,9 @@ public class CircleIntersection {
 
   void circle_intersection() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     IO.println("========= circle_intersection =========");

@@ -83,7 +83,10 @@ class IntRectangle {
 
   public boolean domOverlap(Rectangle R) {
     boolean overlap = true;
-    int min1, max1, min2, max2;
+    int min1;
+    int max1;
+    int min2;
+    int max2;
     int i = 0;
     while (overlap && i < dim) {
       min1 = origin[i];
@@ -111,7 +114,10 @@ class IntRectangle {
 
   public boolean overlap(IntRectangle R) {
     boolean overlap = true;
-    int min1, max1, min2, max2;
+    int min1;
+    int max1;
+    int min2;
+    int max2;
     int i = 0;
     while (overlap && i < dim) {
       min1 = origin[i];

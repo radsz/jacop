@@ -132,7 +132,8 @@ public class SinPeqR extends Constraint
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
 
-      double qMin, qMax;
+      double qMin;
+      double qMax;
       switch (intervalForMin) {
         case 1:
           switch (intervalForMax) {
@@ -264,7 +265,8 @@ public class SinPeqR extends Constraint
         pMax = FloatDomain.PI / 2;
       }
 
-      double low, high;
+      double low;
+      double high;
       double k = Math.floor(p.min() / (2 * FloatDomain.PI));
       low = FloatDomain.down(pMin + 2 * k * FloatDomain.PI);
       k = Math.ceil(p.max() / (2 * FloatDomain.PI));
@@ -314,7 +316,8 @@ public class SinPeqR extends Constraint
   public boolean satisfied() {
 
     if (grounded()) {
-      double sinMin = Math.sin(p.min()), sinMax = Math.sin(p.max());
+      double sinMin = Math.sin(p.min());
+      double sinMax = Math.sin(p.max());
 
       FloatInterval minDiff =
           sinMin < q.min()

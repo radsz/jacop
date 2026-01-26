@@ -57,7 +57,13 @@ import org.jacop.core.Var;
 public class SumInt extends PrimitiveConstraint {
 
   /** Defines relations */
-  static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
+  static final byte eq = 0;
+
+  static final byte le = 1;
+  static final byte lt = 2;
+  static final byte ne = 3;
+  static final byte gt = 4;
+  static final byte ge = 5;
 
   /** Defines negated relations */
   static final byte[] negRel = {
@@ -91,7 +97,9 @@ public class SumInt extends PrimitiveConstraint {
   boolean reified = true;
 
   /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values) */
-  long sumXmin, sumXmax;
+  long sumXmin;
+
+  long sumXmax;
 
   int guideValue;
 
@@ -248,8 +256,10 @@ public class SumInt extends PrimitiveConstraint {
   }
 
   private void computeInit() {
-    long f = 0, e = 0;
-    long min, max;
+    long f = 0;
+    long e = 0;
+    long min;
+    long max;
 
     for (int i = 0; i < l; i++) {
       IntDomain xd = x[i].dom();
@@ -268,7 +278,8 @@ public class SumInt extends PrimitiveConstraint {
 
     sum.domain.inMin(store.level, sum, long2int(sumXmin + b));
 
-    long min, max;
+    long min;
+    long max;
     long sMax = sum.max();
 
     for (int i = 0; i < l; i++) {
@@ -288,7 +299,8 @@ public class SumInt extends PrimitiveConstraint {
 
     sum.domain.inMax(store.level, sum, long2int(sumXmax - b));
 
-    long min, max;
+    long min;
+    long max;
     long sMin = sum.min();
 
     for (int i = 0; i < l; i++) {
@@ -311,7 +323,8 @@ public class SumInt extends PrimitiveConstraint {
     }
     store.propagationHasOccurred = false;
 
-    long min, max;
+    long min;
+    long max;
 
     for (int i = 0; i < l; i++) {
       min = x[i].min();
@@ -360,7 +373,8 @@ public class SumInt extends PrimitiveConstraint {
 
   public boolean satisfiedEq() {
 
-    long sMin = 0, sMax = 0;
+    long sMin = 0;
+    long sMax = 0;
 
     for (int i = 0; i < l; i++) {
       sMin += x[i].min();
@@ -373,7 +387,8 @@ public class SumInt extends PrimitiveConstraint {
 
   public boolean satisfiedNeq() {
 
-    long sMax = 0, sMin = 0;
+    long sMax = 0;
+    long sMin = 0;
 
     for (int i = 0; i < l; i++) {
       sMin += x[i].min();

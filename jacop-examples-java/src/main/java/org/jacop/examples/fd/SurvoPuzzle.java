@@ -113,7 +113,8 @@ public class SurvoPuzzle extends ExampleFD {
 
     m.model();
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     boolean result = m.searchWithMaxRegret();

@@ -93,16 +93,27 @@ public class LectureSeries extends ExampleFD {
     IO.println("Program to solve Lecture Series ");
 
     String[] firstNames = {"Alice", "Bernadette", "Charles", "Duane", "Eddie"};
-    int iAlice = 0, iBernadette = 1, iCharles = 2, iDuane = 3, iEddie = 4;
+    int iAlice = 0;
+    int iBernadette = 1;
+    int iCharles = 2;
+    int iDuane = 3;
+    int iEddie = 4;
 
     String[] lastNames = {"Felicidad", "Garber", "Haller", "Itakura", "Jeffreys"};
-    int iFelicidad = 0, /* iGarber = 1, */ iHaller = 2, iItakura = 3, iJeffreys = 4;
+    int iFelicidad = 0; /* iGarber = 1, */
+    int iHaller = 2;
+    int iItakura = 3;
+    int iJeffreys = 4;
 
     String[] daysNames = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"};
-    int iMonday = 0, /* iTuesday = 1, iWednesday = 2, iThursday = 3, */ iFriday = 4;
+    int iMonday = 0; /* iTuesday = 1, iWednesday = 2, iThursday = 3, */
+    int iFriday = 4;
 
     String[] subjectsNames = {"College", "Hygiene", "Art", "Nutrition", "Study"};
-    int /* iCollege = 0, */ iHygiene = 1, iArt = 2, iNutrition = 3, iStudy = 4;
+    int /* iCollege = 0, */ iHygiene = 1;
+    int iArt = 2;
+    int iNutrition = 3;
+    int iStudy = 4;
 
     IntVar[] first = new IntVar[5];
     IntVar[] last = new IntVar[5];

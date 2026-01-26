@@ -86,17 +86,27 @@ public class DollarAndTicket extends ExampleFD {
     String[] firstnames = {"Diane", "Jenny", "Maggie", "Greg", "Kevin"};
 
     // Creating indexes for ease of referring.
-    int idiane = 0, ijenny = 1, /* imaggie = 2, */ igreg = 3, ikevin = 4;
+    int idiane = 0;
+    int ijenny = 1; /* imaggie = 2, */
+    int igreg = 3;
+    int ikevin = 4;
 
     String[] surnames = {"Borecki", "Ott", "Pamos", "Ruiz", "Vogel"};
 
     // Creating indexes for ease of referring.
-    int /* ivogel = 0, */ iborecki = 1, iott = 2, ipamos = 3, iruiz = 4;
+    int /* ivogel = 0, */ iborecki = 1;
+    int iott = 2;
+    int ipamos = 3;
+    int iruiz = 4;
 
     String[] teams = {"Bobcats", "Cheetahs", "Kickers", "Stars", "Wolves"};
 
     // Creating indexes for ease of referring.
-    int ibobcats = 0, icheetahs = 1, ikickers = 2, istars = 3, iwolves = 4;
+    int ibobcats = 0;
+    int icheetahs = 1;
+    int ikickers = 2;
+    int istars = 3;
+    int iwolves = 4;
 
     IntVar[] firstname = new IntVar[5];
     IntVar[] surname = new IntVar[5];

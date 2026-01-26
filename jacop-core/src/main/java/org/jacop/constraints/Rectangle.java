@@ -201,7 +201,10 @@ public class Rectangle {
    */
   public boolean domOverlap(Rectangle r) {
     boolean overlap = true;
-    int min1, max1, min2, max2;
+    int min1;
+    int max1;
+    int min2;
+    int max2;
     int i = 0;
     while (overlap && i < dim) {
       IntDomain originIdom = origin[i].dom();
@@ -233,7 +236,8 @@ public class Rectangle {
     int level = 0;
     int i = 0;
     while (i < dim) {
-      int originStamp = origin[i].level(), lengthStamp = length[i].level();
+      int originStamp = origin[i].level();
+      int lengthStamp = length[i].level();
       if (level < originStamp) {
         level = originStamp;
       }
@@ -272,7 +276,8 @@ public class Rectangle {
 
   public boolean minUse(int selDimension, IntRectangle u) {
     boolean use = true;
-    int start, stop;
+    int start;
+    int stop;
 
     int i = 0;
     //   int j = 0;
@@ -297,7 +302,8 @@ public class Rectangle {
 
   public boolean minUse(IntRectangle u) {
     boolean use = true;
-    int start, stop;
+    int start;
+    int stop;
 
     int i = 0;
     //   int j = 0;

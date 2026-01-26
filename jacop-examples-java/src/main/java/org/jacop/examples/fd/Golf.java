@@ -95,17 +95,24 @@ public class Golf extends ExampleFD {
     // First names of golf players.
     String[] FNNames = {"Bill", "Paul", "Frank", "Jack"};
     // Creation of indexes for ease of referring.
-    int iBill = 0, iPaul = 1, iFrank = 2, iJack = 3;
+    int iBill = 0;
+    int iPaul = 1;
+    int iFrank = 2;
+    int iJack = 3;
 
     // Last names of golf players.
     String[] LNNames = {"Clubb", "Carter", "Sands", "Green"};
     // Creation of indexes for ease of referring.
-    int /* iGreen = 0, */ iClubb = 1, iCarter = 2, iSands = 3;
+    int /* iGreen = 0, */ iClubb = 1;
+    int iCarter = 2;
+    int iSands = 3;
 
     // Jobs of the golf players.
     String[] JobsNames = {"Maint", "Caddy", "Clerk", "Cook"};
     // Creation of indexes for ease of referring.
-    int iMaint = 0, iCaddy = 1, iClerk = 2 /*, iCook = 3 */;
+    int iMaint = 0;
+    int iCaddy = 1;
+    int iClerk = 2; /*, iCook = 3 */
 
     // FDV's arrays
     IntVar[] FN = new IntVar[4];

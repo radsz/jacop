@@ -149,9 +149,9 @@ public class Profile extends ArrayList<ProfileItem> {
               i++;
             }
           } else {
-            ProfileItem new1 = new ProfileItem(type),
-                new2 = new ProfileItem(type),
-                new3 = new ProfileItem(type);
+            ProfileItem new1 = new ProfileItem(type);
+            ProfileItem new2 = new ProfileItem(type);
+            ProfileItem new3 = new ProfileItem(type);
             p.overlap(new ProfileItem(type, a, b, val), new1, new2, new3);
 
             if (trace) {

@@ -1307,7 +1307,8 @@ public class Alldistinct extends Constraint
 
     while (sat && i < list.length) {
       IntDomain vDom = list[i].dom();
-      int vMin = vDom.min(), vMax = vDom.max();
+      int vMin = vDom.min();
+      int vMax = vDom.max();
       int j = 0;
       while (sat && j < list.length) {
         if (i != j) {

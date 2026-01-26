@@ -57,7 +57,8 @@ class BoolConstraints implements ParserTreeConstants {
   final Store store;
   final SatTranslation sat;
   final Support support;
-  boolean reified, implied;
+  boolean reified;
+  boolean implied;
 
   public BoolConstraints(Support support) {
     this.support = support;

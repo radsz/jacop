@@ -112,7 +112,11 @@ public class SiblingUproar extends ExampleFD {
     String[] childrenNames = {"Brian", "Russell", "Stuart", "Nina", "Paula"};
 
     // Creation of indexes for ease of referring
-    int iBrian = 0, iRussell = 1, iStuart = 2, iNina = 3, iPaula = 4;
+    int iBrian = 0;
+    int iRussell = 1;
+    int iStuart = 2;
+    int iNina = 3;
+    int iPaula = 4;
 
     // Specification of being angry at someone.
     String[] angryatNames = {
@@ -120,7 +124,11 @@ public class SiblingUproar extends ExampleFD {
     };
 
     // Creation of indexes for ease of referring
-    int jBrian = 0, jRussell = 1, jStuart = 2, jNina = 3, jPaula = 4;
+    int jBrian = 0;
+    int jRussell = 1;
+    int jStuart = 2;
+    int jNina = 3;
+    int jPaula = 4;
 
     // Specification of the reasons for being angry.
     String[] reasonNames = {
@@ -131,11 +139,11 @@ public class SiblingUproar extends ExampleFD {
       "hogged_television"
     };
     // Creation of indexes for ease of referring
-    int ifinished_cereal = 0,
-        ilet_dog_in_room = 1,
-        iused_up_hot_water = 2,
-        ifailed_to_return_rollerblades = 3,
-        ihogged_television = 4;
+    int ifinished_cereal = 0;
+    int ilet_dog_in_room = 1;
+    int iused_up_hot_water = 2;
+    int ifailed_to_return_rollerblades = 3;
+    int ihogged_television = 4;
 
     // Specification of different types of revenge.
     String[] wayNames = {
@@ -147,10 +155,10 @@ public class SiblingUproar extends ExampleFD {
     };
 
     // Creation of indexes for ease of referring
-    int iknocked_over_chess_game = 0, /* ilet_gerbil_out_of_cage = 1, */
-        ihung_up_on_friend = 2,
-        iremoved_light_bulbs = 3,
-        ihid_violin = 4;
+    int iknocked_over_chess_game = 0; /* ilet_gerbil_out_of_cage = 1, */
+    int ihung_up_on_friend = 2;
+    int iremoved_light_bulbs = 3;
+    int ihid_violin = 4;
 
     // Specification of different punishment.
     String[] choreNames = {
@@ -161,11 +169,11 @@ public class SiblingUproar extends ExampleFD {
       "washing_the_windows"
     };
     // Creation of indexes for ease of referring
-    int icleaning_the_attic = 0,
-        icleaning_the_basement = 1,
-        icleaning_the_garage = 2,
-        iwashing_the_blinds = 3,
-        iwashing_the_windows = 4;
+    int icleaning_the_attic = 0;
+    int icleaning_the_basement = 1;
+    int icleaning_the_garage = 2;
+    int iwashing_the_blinds = 3;
+    int iwashing_the_windows = 4;
 
     // Creation of FDV's array
     IntVar[] children = new IntVar[5];

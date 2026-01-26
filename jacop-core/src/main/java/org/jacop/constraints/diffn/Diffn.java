@@ -61,8 +61,12 @@ import org.jacop.core.Var;
 public class Diffn extends Nooverlap {
 
   // event type
-  static final int profileSubtract = 0, profileAdd = 1, pruneStart = 2, pruneEnd = 3;
-  private static final boolean debug = false, debugNarr = false;
+  static final int profileSubtract = 0;
+  static final int profileAdd = 1;
+  static final int pruneStart = 2;
+  static final int pruneEnd = 3;
+  private static final boolean debug = false;
+  private static final boolean debugNarr = false;
   protected final List<Var> auxVar = new ArrayList<>();
   final Comparator<Event> eventComparator =
       (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
@@ -276,18 +280,21 @@ public class Diffn extends Nooverlap {
 
     boolean mandatoryExists = false;
     int j = 0;
-    int minLimit = r.est(oDim), maxLimit = r.lct(oDim);
+    int minLimit = r.est(oDim);
+    int maxLimit = r.lct(oDim);
     for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
       Rectangle rr = rectangle[i];
       rr.index = i;
 
       // mandatory task parts to create profile
-      int min = rr.lst(dim), max = rr.ect(dim);
+      int min = rr.lst(dim);
+      int max = rr.ect(dim);
       int lMin = rr.length(oDim).min();
       if (min < max && lMin > 0) {
         if (rr.est(oDim) >= r.est(oDim) && rr.lct(oDim) <= r.lct(oDim)) {
           // for profile take only rectangles with their area laying within the considered rectangle
-          int oMin = rr.lst(oDim), oMax = rr.ect(oDim);
+          int oMin = rr.lst(oDim);
+          int oMax = rr.ect(oDim);
           if (oMin < oMax) {
             Interval block = new Interval(oMin, oMax);
             es[j++] = new Event(profileAdd, rr, min, lMin, block);
@@ -300,7 +307,8 @@ public class Diffn extends Nooverlap {
           maxLimit = Math.max(rr.lct(oDim), maxLimit);
           mandatoryExists = true;
         } else {
-          int oMin = rr.lst(oDim), oMax = rr.ect(oDim);
+          int oMin = rr.lst(oDim);
+          int oMax = rr.ect(oDim);
           if (oMin < oMax) {
             Interval block = new Interval(oMin, oMax);
             es[j++] = new Event(profileAdd, rr, min, 0, block);

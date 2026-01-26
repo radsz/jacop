@@ -66,7 +66,8 @@ import org.jacop.ui.PrintSchedule;
  */
 public class FilterBenchmark {
 
-  static List<IntVar> Ts, Rs;
+  static List<IntVar> Ts;
+  static List<IntVar> Rs;
 
   static List<Integer> Ds;
 
@@ -85,7 +86,9 @@ public class FilterBenchmark {
    */
   static void main(String[] args) {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     schedule();
@@ -108,7 +111,8 @@ public class FilterBenchmark {
 
     int[][] dfqEx = {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {1, 4}, {2, 3}};
     for (int[] dfqEx1 : dfqEx) {
-      int a = dfqEx1[0], m = dfqEx1[1];
+      int a = dfqEx1[0];
+      int m = dfqEx1[1];
       Store store = new Store();
       DFQ dfq = new DFQ();
       experiment1(store, dfq, a, m);
@@ -116,7 +120,8 @@ public class FilterBenchmark {
 
     int[][] firEx = {{1, 1}, {1, 2}, {2, 2}, {2, 3}};
     for (int[] element : firEx) {
-      int a = element[0], m = element[1];
+      int a = element[0];
+      int m = element[1];
       FIR fir = new FIR();
       Store store = new Store();
       experiment1(store, fir, a, m);
@@ -124,7 +129,8 @@ public class FilterBenchmark {
 
     int[][] arEx = {{1, 1}, {1, 2}, {1, 3}, {2, 3}, {2, 4}};
     for (int[] item : arEx) {
-      int a = item[0], m = item[1];
+      int a = item[0];
+      int m = item[1];
       AR ar = new AR(1, 1);
       Store store = new Store();
       experiment2(store, ar, a, m);
@@ -132,7 +138,8 @@ public class FilterBenchmark {
 
     int[][] ewfEx = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
     for (int[] value : ewfEx) {
-      int a = value[0], m = value[1];
+      int a = value[0];
+      int m = value[1];
       EWF ewf = new EWF();
       Store store = new Store();
       experiment1(store, ewf, a, m);
@@ -140,7 +147,8 @@ public class FilterBenchmark {
 
     int[][] ewfEx2 = {{1, 1}, {2, 1}, {2, 2}, {3, 3}};
     for (int[] ints : ewfEx2) {
-      int a = ints[0], m = ints[1];
+      int a = ints[0];
+      int m = ints[1];
       EWF ewf = new EWF(1, 1);
       Store store = new Store();
       experiment1(store, ewf, a, m);
@@ -148,7 +156,8 @@ public class FilterBenchmark {
 
     int[][] dctEx = {{1, 1}, {1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {4, 4}};
     for (int[] ex : dctEx) {
-      int a = ex[0], m = ex[1];
+      int a = ex[0];
+      int m = ex[1];
       DCT dct = new DCT();
       Store store = new Store();
       experiment1(store, dct, a, m);
@@ -163,7 +172,8 @@ public class FilterBenchmark {
 
     int[][] dfqEx = {{1, 1}, {1, 2}};
     for (int[] element : dfqEx) {
-      int a = element[0], m = element[1];
+      int a = element[0];
+      int m = element[1];
       Store store = new Store();
       DFQ dfq = new DFQ();
       experiment1PM(store, dfq, a, m);
@@ -171,7 +181,8 @@ public class FilterBenchmark {
 
     int[][] firEx = {{1, 1}, {2, 1}, {2, 2}};
     for (int[] item : firEx) {
-      int a = item[0], m = item[1];
+      int a = item[0];
+      int m = item[1];
       FIR fir = new FIR();
       Store store = new Store();
       experiment1PM(store, fir, a, m);
@@ -179,7 +190,8 @@ public class FilterBenchmark {
 
     int[][] arEx = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
     for (int[] value : arEx) {
-      int a = value[0], m = value[1];
+      int a = value[0];
+      int m = value[1];
       AR ar = new AR();
       Store store = new Store();
       experiment2PM(store, ar, a, m);
@@ -187,7 +199,8 @@ public class FilterBenchmark {
 
     int[][] ewfEx = {{2, 1}, {3, 1}, {3, 2}};
     for (int[] ints : ewfEx) {
-      int a = ints[0], m = ints[1];
+      int a = ints[0];
+      int m = ints[1];
       EWF ewf = new EWF();
       Store store = new Store();
       experiment1PM(store, ewf, a, m);
@@ -195,7 +208,8 @@ public class FilterBenchmark {
 
     int[][] dctEx = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
     for (int[] ex : dctEx) {
-      int a = ex[0], m = ex[1];
+      int a = ex[0];
+      int m = ex[1];
       DCT dct = new DCT();
       Store store = new Store();
       experiment1PM(store, dct, a, m);
@@ -210,7 +224,9 @@ public class FilterBenchmark {
 
     int[][] dfqEx = {{1, 1, 3}, {1, 2, 3}, {2, 2, 3}};
     for (int[] element : dfqEx) {
-      int a = element[0], m = element[1], s = element[2];
+      int a = element[0];
+      int m = element[1];
+      int s = element[2];
       Store store = new Store();
       DFQ dfq = new DFQ();
       experiment1C(store, dfq, a, m, s);
@@ -218,7 +234,9 @@ public class FilterBenchmark {
 
     int[][] firEx = {{2, 1, 2}, {2, 2, 2}, {3, 2, 2}, {1, 1, 3}, {2, 1, 3}, {3, 2, 3}};
     for (int[] item : firEx) {
-      int a = item[0], m = item[1], s = item[2];
+      int a = item[0];
+      int m = item[1];
+      int s = item[2];
       FIR fir = new FIR();
       Store store = new Store();
       experiment1C(store, fir, a, m, s);
@@ -229,7 +247,9 @@ public class FilterBenchmark {
       {3, 4, 3}, {2, 2, 4}, {2, 3, 4}, {3, 4, 4}
     };
     for (int[] value : arEx) {
-      int a = value[0], m = value[1], s = value[2];
+      int a = value[0];
+      int m = value[1];
+      int s = value[2];
       AR ar = new AR();
       Store store = new Store();
       experiment1C(store, ar, a, m, s);
@@ -239,7 +259,9 @@ public class FilterBenchmark {
       {2, 1, 2}, {3, 1, 2}, {1, 1, 3}, {2, 1, 3}, {3, 1, 3}, {1, 1, 4}, {2, 1, 4}, {3, 1, 4}
     };
     for (int[] ints : ewfEx) {
-      int a = ints[0], m = ints[1], s = ints[2];
+      int a = ints[0];
+      int m = ints[1];
+      int s = ints[2];
       EWF ewf = new EWF();
       Store store = new Store();
       experiment1C(store, ewf, a, m, s);
@@ -250,7 +272,9 @@ public class FilterBenchmark {
       {3, 2, 3}, {4, 2, 3}, {5, 3, 3}
     };
     for (int[] ex : dctEx) {
-      int a = ex[0], m = ex[1], s = ex[2];
+      int a = ex[0];
+      int m = ex[1];
+      int s = ex[2];
       DCT dct = new DCT();
       Store store = new Store();
       experiment1C(store, dct, a, m, s);
@@ -267,7 +291,8 @@ public class FilterBenchmark {
 
     int[][] dfqEx = {{1, 3}, {2, 3}};
     for (int[] dfqEx1 : dfqEx) {
-      int a = dfqEx1[0], m = dfqEx1[1];
+      int a = dfqEx1[0];
+      int m = dfqEx1[1];
       Store store = new Store();
       DFQ dfqP = new DFQ();
       experiment1P(store, dfqP, a, m);
@@ -275,7 +300,8 @@ public class FilterBenchmark {
 
     int[][] firEx = {{2, 2}, {3, 3}, {3, 4}};
     for (int[] element : firEx) {
-      int a = element[0], m = element[1];
+      int a = element[0];
+      int m = element[1];
       FIR firP = new FIR();
       Store store = new Store();
       experiment1P(store, firP, a, m);
@@ -283,7 +309,8 @@ public class FilterBenchmark {
 
     int[][] arEx = {{2, 4}, {2, 6}, {3, 8}};
     for (int[] item : arEx) {
-      int a = item[0], m = item[1];
+      int a = item[0];
+      int m = item[1];
       AR arP = new AR();
       Store store = new Store();
       experiment1P(store, arP, a, m);
@@ -291,7 +318,8 @@ public class FilterBenchmark {
 
     int[][] ewfEx = {{3, 2}, {4, 2}, {4, 3}, {5, 4}};
     for (int[] value : ewfEx) {
-      int a = value[0], m = value[1];
+      int a = value[0];
+      int m = value[1];
       EWF ewfP = new EWF();
       Store store = new Store();
       experiment1P(store, ewfP, a, m);
@@ -299,7 +327,8 @@ public class FilterBenchmark {
 
     int[][] dctEx = {{4, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}};
     for (int[] ints : dctEx) {
-      int a = ints[0], m = ints[1];
+      int a = ints[0];
+      int m = ints[1];
       DCT dctP = new DCT();
       Store store = new Store();
       experiment1P(store, dctP, a, m);
@@ -307,7 +336,8 @@ public class FilterBenchmark {
 
     int[][] fftEx = {{1, 1}, {1, 2}, {2, 2}, {3, 4}};
     for (int[] ex : fftEx) {
-      int a = ex[0], m = ex[1];
+      int a = ex[0];
+      int m = ex[1];
       FFT fftP = new FFT();
       Store store = new Store();
       experiment1P(store, fftP, a, m);
@@ -357,7 +387,9 @@ public class FilterBenchmark {
 
     IO.println("1. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
@@ -423,7 +455,9 @@ public class FilterBenchmark {
 
     IO.println("2. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
@@ -499,7 +533,9 @@ public class FilterBenchmark {
 
     IO.println("3. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
@@ -571,7 +607,9 @@ public class FilterBenchmark {
 
     IO.println("4. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
@@ -679,7 +717,9 @@ public class FilterBenchmark {
 
     IO.println("6. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     result = search.labeling(store, select, cost);
@@ -837,7 +877,9 @@ public class FilterBenchmark {
 
     IO.println("8. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     Search<IntVar> search = new DepthFirstSearch<>();
@@ -915,7 +957,9 @@ public class FilterBenchmark {
 
     IO.println("10. Constraints consistent = " + result);
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     Search<IntVar> search = new DepthFirstSearch<>();

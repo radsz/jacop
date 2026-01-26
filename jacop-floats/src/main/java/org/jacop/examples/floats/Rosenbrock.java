@@ -59,7 +59,9 @@ public class Rosenbrock {
 
   void rosenbrock() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     IO.println("========= rosenbrock =========");

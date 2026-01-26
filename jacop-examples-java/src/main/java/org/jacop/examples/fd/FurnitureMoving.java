@@ -69,7 +69,9 @@ public class FurnitureMoving extends ExampleFD {
    */
   static void main(String[] args) {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     FurnitureMoving example = new FurnitureMoving();

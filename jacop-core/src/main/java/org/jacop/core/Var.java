@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-
 import lombok.Getter;
 import org.jacop.constraints.Constraint;
 
@@ -62,8 +61,7 @@ public abstract class Var implements Backtrackable {
    * Each variable is created in a store. This attribute represents the store in which this variable
    * was created.
    */
-  @Getter
-  public Store store;
+  @Getter public Store store;
 
   /** Pruning activity of this variable. */
   double pruningActivity = 1.0d;
@@ -245,7 +243,7 @@ public abstract class Var implements Backtrackable {
    */
   public abstract void putConstraint(Constraint c);
 
-    /**
+  /**
    * This function returns variable id.
    *
    * @return the id of the variable.

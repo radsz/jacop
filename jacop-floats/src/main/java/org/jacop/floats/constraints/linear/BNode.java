@@ -170,7 +170,8 @@ public class BNode extends BinaryNode {
 
   void prune(double min, double max) {
 
-    boolean left_changed, right_changed;
+    boolean left_changed;
+    boolean right_changed;
 
     left_changed = pruneNode(min, max, left, right);
 

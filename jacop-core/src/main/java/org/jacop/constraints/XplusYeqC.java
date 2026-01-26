@@ -80,7 +80,8 @@ public class XplusYeqC extends PrimitiveConstraint {
 
   void checkForOverflow() {
 
-    int sumMin = 0, sumMax = 0;
+    int sumMin = 0;
+    int sumMax = 0;
 
     sumMin = Math.addExact(sumMin, x.min());
     sumMax = Math.addExact(sumMax, x.max());
@@ -157,14 +158,16 @@ public class XplusYeqC extends PrimitiveConstraint {
 
   @Override
   public boolean notSatisfied() {
-    IntDomain Xdom = x.dom(), Ydom = y.dom();
+    IntDomain Xdom = x.dom();
+    IntDomain Ydom = y.dom();
     return Xdom.max() + Ydom.max() < c || Xdom.min() + Ydom.min() > c;
   }
 
   @Override
   public boolean satisfied() {
     // return (grounded() && (x.min() + y.min() == c));
-    int xMin = x.min(), yMin = y.min();
+    int xMin = x.min();
+    int yMin = y.min();
     return x.singleton(xMin) && y.singleton(yMin) && xMin + yMin == c;
   }
 

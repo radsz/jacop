@@ -130,7 +130,8 @@ public class CosPeqR extends Constraint
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
 
-      double qMin, qMax;
+      double qMin;
+      double qMax;
       switch (intervalForMin) {
         case 1:
           switch (intervalForMax) {
@@ -240,7 +241,8 @@ public class CosPeqR extends Constraint
         pMax = FloatDomain.PI;
       }
 
-      double low, high;
+      double low;
+      double high;
       double k = Math.floor(p.min() / (2 * FloatDomain.PI));
       low = FloatDomain.down(pMin + 2 * k * FloatDomain.PI);
       k = Math.ceil(p.max() / (2 * FloatDomain.PI));
@@ -287,7 +289,8 @@ public class CosPeqR extends Constraint
   public boolean satisfied() {
 
     if (grounded()) {
-      double cosMin = Math.cos(p.min()), cosMax = Math.cos(p.max());
+      double cosMin = Math.cos(p.min());
+      double cosMax = Math.cos(p.max());
 
       FloatInterval minDiff =
           cosMin < q.min()

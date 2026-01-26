@@ -186,9 +186,9 @@ class OperationConstraints implements ParserTreeConstants {
       support.pose(
           new XmulYeqC(support.getVariable(p1), support.getVariable(p2), support.getInt(p3)));
     } else {
-      IntVar v1 = support.getVariable(p1),
-          v2 = support.getVariable(p2),
-          v3 = support.getVariable(p3);
+      IntVar v1 = support.getVariable(p1);
+      IntVar v2 = support.getVariable(p2);
+      IntVar v3 = support.getVariable(p3);
       if (v1.min() >= 0
           && v1.max() <= 1
           && v2.min() >= 0

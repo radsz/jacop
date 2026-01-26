@@ -53,7 +53,9 @@ public class Markov {
 
   void markov_chains_taha() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     IO.println("========= markov_chains_taha =========");

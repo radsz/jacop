@@ -103,7 +103,8 @@ public abstract class ExampleFD {
    */
   public boolean search() {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -139,7 +140,8 @@ public abstract class ExampleFD {
    */
   public boolean searchOptimal() {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -167,7 +169,9 @@ public abstract class ExampleFD {
    */
   public boolean searchAllOptimal() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -195,7 +199,8 @@ public abstract class ExampleFD {
    */
   public boolean searchSmallestDomain(boolean optimal) {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -235,7 +240,8 @@ public abstract class ExampleFD {
    */
   public boolean searchWeightedDegree() {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -305,7 +311,8 @@ public abstract class ExampleFD {
    */
   public boolean searchAllAtOnce() {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
@@ -577,7 +584,9 @@ public abstract class ExampleFD {
    */
   public boolean searchMaxRegretOptimal() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     search = new DepthFirstSearch<>();

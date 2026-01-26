@@ -186,7 +186,8 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
       super(costVar);
 
-      int n = xVars.length, m = doms.length;
+      int n = xVars.length;
+      int m = doms.length;
       Node[] d = valueGraph(xVars, doms)[1];
       Node t = addNode("sink", -n);
 

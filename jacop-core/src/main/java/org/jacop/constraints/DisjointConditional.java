@@ -58,7 +58,8 @@ import org.jacop.core.Store;
 @Slf4j
 public class DisjointConditional extends Diff {
 
-  static final boolean trace = false, traceNarr = false;
+  static final boolean trace = false;
+  static final boolean traceNarr = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what rectangles can conditionally overlap. */
@@ -384,7 +385,8 @@ public class DisjointConditional extends Diff {
     int maxJ = rOriginJdom.max() + rLengthJdom.min();
     int durJ = rLengthJdom.min();
     int currentJposition = minJ;
-    int k = 0, barrierSize = barrier.size();
+    int k = 0;
+    int barrierSize = barrier.size();
     while (k < barrierSize && excludedState) {
       ProfileItem p = barrier.get(k);
       int hinderStart = p.min;
@@ -425,7 +427,8 @@ public class DisjointConditional extends Diff {
       List<RectangleWithCondition> OverlappingRects,
       Set<IntVar> fdvQueue) {
     // Variable condition;
-    boolean contains = false, checkArea = false;
+    boolean contains = false;
+    boolean checkArea = false;
 
     long area = 0;
     int totalNumberOfRectangles = 0;
@@ -433,7 +436,8 @@ public class DisjointConditional extends Diff {
     int[] startMin = new int[dim];
     int[] stopMax = new int[dim];
     int[] minLength = new int[dim];
-    int[] r_min = new int[dim], r_max = new int[dim];
+    int[] r_min = new int[dim];
+    int[] r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MaxInt;
@@ -454,10 +458,17 @@ public class DisjointConditional extends Diff {
       IntRectangle Use = new IntRectangle(dim);
       long sArea = 1;
 
-      boolean use = true, minLength0 = false;
-      int s_min, s_max, start, stop;
-      int m = 0, j = 0;
-      int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
+      boolean use = true;
+      boolean minLength0 = false;
+      int s_min;
+      int s_max;
+      int start;
+      int stop;
+      int m = 0;
+      int j = 0;
+      int[] sOriginMin = new int[dim];
+      int[] sOriginMax = new int[dim];
+      int[] sLengthMin = new int[dim];
 
       while (overlap && m < dim) {
         // check if domains of r and s overlap
@@ -544,9 +555,9 @@ public class DisjointConditional extends Diff {
       for (int i = 0; i < startMin.length; i++) {
         IntDomain rOriginIdom = r.origin[i].dom();
         IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginIMin = rOriginIdom.min(),
-            rOriginIMax = rOriginIdom.max(),
-            rLengthIMin = rLengthIdom.min();
+        int rOriginIMin = rOriginIdom.min();
+        int rOriginIMax = rOriginIdom.max();
+        int rLengthIMin = rLengthIdom.min();
         if (rOriginIMin < startMin[i]) {
           startMin[i] = rOriginIMin;
         }
@@ -633,7 +644,8 @@ public class DisjointConditional extends Diff {
     int s;
     int j = i == 0 ? 1 : 0;
     int rSize = r.origin[j].max() - r.origin[j].min();
-    int rLengthJMin = r.length[j].min(), rLengthIMin = r.length[i].min();
+    int rLengthJMin = r.length[j].min();
+    int rLengthIMin = r.length[i].min();
     int barierSize = 0;
 
     if (!ProfileCandidates.isEmpty() && doProfile) {
@@ -652,7 +664,8 @@ public class DisjointConditional extends Diff {
       IntRectangle strtR = new IntRectangle(r.dim);
       IntRectangle maxRect = new IntRectangle(r.dim);
       for (int k = 0; k < r.dim; k++) {
-        IntDomain rOrigin = r.origin[k].dom(), rLength = r.length[k].dom();
+        IntDomain rOrigin = r.origin[k].dom();
+        IntDomain rLength = r.length[k].dom();
         strtR.add(rOrigin.min(), rLength.min());
         if (k == i) {
           maxRect.add(rOrigin.max(), rLength.max());
@@ -863,7 +876,8 @@ public class DisjointConditional extends Diff {
 
         int currentJposition = minJ;
         // System.out.println(maxJ+", "+durJ+", "+currentJposition);
-        int k = 0, barrierSize = barrier.size();
+        int k = 0;
+        int barrierSize = barrier.size();
         while (k < barrierSize && excludedState) {
           ProfileItem p = barrier.get(k);
           int hinderStart = p.min;
@@ -905,7 +919,8 @@ public class DisjointConditional extends Diff {
         if (limit - p.value < Resources.min()) {
           // Check for possible narrowing of Start or fail
           IntDomain StartDom = Start.dom();
-          int updateMin = p.min - dur + 1, updateMax = p.max - 1;
+          int updateMin = p.min - dur + 1;
+          int updateMax = p.max - 1;
           if (!(updateMin > StartDom.max() || updateMax < StartDom.min())) {
             IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
             Update.unionAdapt(p.max, IntDomain.MaxInt);
@@ -926,7 +941,8 @@ public class DisjointConditional extends Diff {
           }
         } else {
           IntDomain StartDom = Start.dom();
-          int start = StartDom.max(), stop = StartDom.min() + dur;
+          int start = StartDom.max();
+          int stop = StartDom.min() + dur;
           if (start < stop && intervalOverlap(start, stop, p.min, p.max)) {
             int updateMax = limit - p.value;
             IntervalDomain Update = new IntervalDomain(0, updateMax);
@@ -999,7 +1015,8 @@ public class DisjointConditional extends Diff {
   public boolean satisfied() {
     boolean sat = true;
 
-    Rectangle recti, rectj;
+    Rectangle recti;
+    Rectangle rectj;
     int i = 0;
     while (sat && i < rectangles.length) {
       recti = rectangles[i];

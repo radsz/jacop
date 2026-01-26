@@ -81,7 +81,8 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
 
     do {
 
-      double pMin, pMax;
+      double pMin;
+      double pMax;
       if (q.min() == 1.0 && q.max() == 1.0) {
         pMin = 0.0;
         pMax = 0.0;
@@ -109,7 +110,8 @@ public class ExpPeqR extends Constraint implements SatisfiedPresent, FloatDeriva
 
       store.propagationHasOccurred = false;
 
-      double qMin, qMax;
+      double qMin;
+      double qMax;
       if (p.min() == p.max() && p.min() == 0.0) {
         qMin = 1.0;
         qMax = 1.0;

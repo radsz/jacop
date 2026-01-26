@@ -1775,7 +1775,9 @@ public class PerfectSquare extends ExampleFD {
   @Override
   public boolean search() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     store.consistency();
@@ -1848,9 +1850,11 @@ public class PerfectSquare extends ExampleFD {
     IntVar[] yl = size;
 
     // Print the geometry information latex format:
-    int xlen = 0, ylen = 0;
+    int xlen = 0;
+    int ylen = 0;
 
-    float picxsize, picysize;
+    float picxsize;
+    float picysize;
 
     for (int i = 0; i < xl.length; i++) {
       xlen = Math.max(xlen, varsX[i].value() + xl[i].value());
@@ -1878,7 +1882,11 @@ public class PerfectSquare extends ExampleFD {
 
     for (int i = 0; i < varsX.length; i++) {
 
-      int bnr, xc, yc, sizex, sizey;
+      int bnr;
+      int xc;
+      int yc;
+      int sizex;
+      int sizey;
       bnr = i; // block number
       xc = varsX[i].value();
       yc = varsY[i].value(); // slot y coordinate
@@ -1886,7 +1894,8 @@ public class PerfectSquare extends ExampleFD {
       sizey = yl[bnr].value(); // y size of block
 
       // If the block has been rotated, we exchange x and y size:
-      float blockx, blocky;
+      float blockx;
+      float blocky;
       blockx = sizex * scalefac;
       blocky = sizey * scalefac;
 

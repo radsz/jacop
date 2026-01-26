@@ -119,9 +119,9 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
             }
           } else {
             // b > p.Min && a < p.Max; [a,b) overlaps p
-            ProfileItemCondition new1 = new ProfileItemCondition(),
-                new2 = new ProfileItemCondition(),
-                new3 = new ProfileItemCondition();
+            ProfileItemCondition new1 = new ProfileItemCondition();
+            ProfileItemCondition new2 = new ProfileItemCondition();
+            ProfileItemCondition new3 = new ProfileItemCondition();
             int[] r = {index, val};
 
             if (trace) {

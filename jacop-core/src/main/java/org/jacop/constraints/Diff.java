@@ -278,7 +278,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       List<Rectangle> ProfileCandidates,
       Set<IntVar> fdvQueue) {
 
-    boolean contains = false, checkArea = false;
+    boolean contains = false;
+    boolean checkArea = false;
 
     long area = 0;
     long commonArea = 0;
@@ -287,7 +288,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int[] startMin = new int[dim];
     int[] stopMax = new int[dim];
     int[] minLength = new int[dim];
-    int[] r_min = new int[dim], r_max = new int[dim];
+    int[] r_min = new int[dim];
+    int[] r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       startMin[i] = IntDomain.MaxInt;
       stopMax[i] = 0;
@@ -298,7 +300,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       r_max[i] = rOriginDom.max() + r.length[i].max();
     }
 
-    int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
+    int[] sOriginMin = new int[dim];
+    int[] sOriginMax = new int[dim];
+    int[] sLengthMin = new int[dim];
 
     for (Rectangle s : rectangles) {
 
@@ -311,9 +315,14 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         long sArea = 1;
         long partialCommonArea = 1;
 
-        boolean use = true, minLength0 = false;
-        int s_min, s_max, start, stop;
-        int m = 0, j = 0;
+        boolean use = true;
+        boolean minLength0 = false;
+        int s_min;
+        int s_max;
+        int start;
+        int stop;
+        int m = 0;
+        int j = 0;
 
         while (overlap && m < dim) {
           // check if domains of r and s overlap
@@ -437,9 +446,9 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       for (int i = 0; i < startMin.length; i++) {
         IntDomain rOriginIdom = r.origin[i].dom();
         IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginIMin = rOriginIdom.min(),
-            rOriginIMax = rOriginIdom.max(),
-            rLengthIMin = rLengthIdom.min();
+        int rOriginIMin = rOriginIdom.min();
+        int rOriginIMax = rOriginIdom.max();
+        int rLengthIMin = rLengthIdom.min();
         if (rOriginIMin < startMin[i]) {
           startMin[i] = rOriginIMin;
         }
@@ -659,7 +668,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     List<Rectangle> ProfileCandidates = new ArrayList<>();
 
     for (Rectangle r : rectangles) {
-      boolean settled = true, minLengthEq0 = false;
+      boolean settled = true;
+      boolean minLengthEq0 = false;
       int maxLevel = 0;
       for (int i = 0; i < r.dim; i++) {
         IntDomain rOrigin = r.origin[i].dom();
@@ -668,7 +678,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
         minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
 
-        int originStamp = rOrigin.stamp, lengthStamp = rLength.stamp;
+        int originStamp = rOrigin.stamp;
+        int lengthStamp = rLength.stamp;
         if (maxLevel < originStamp) {
           maxLevel = originStamp;
         }
@@ -723,7 +734,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
         // System.out.println("Barrier : " + barrier);
 
-        int k = 0, barrierSize = barrier.size();
+        int k = 0;
+        int barrierSize = barrier.size();
         while (k < barrierSize && excludedState) {
           ProfileItem p = barrier.get(k);
           int hinderStart = p.min;
@@ -805,7 +817,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         if (limit - p.value < Resources.min()) {
           // Check for possible narrowing of Start or fail
           IntDomain StartDom = Start.dom();
-          int updateMin = p.min - dur + 1, updateMax = p.max - 1;
+          int updateMin = p.min - dur + 1;
+          int updateMax = p.max - 1;
 
           if (!(updateMin > StartDom.max() || updateMax < StartDom.min())) {
 
@@ -835,7 +848,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
           }
         } else {
           IntDomain StartDom = Start.dom();
-          int start = StartDom.max(), stop = StartDom.min() + dur;
+          int start = StartDom.max();
+          int stop = StartDom.min() + dur;
           if (start < stop && intervalOverlap(start, stop, p.min, p.max)) {
             int updateMax = limit - p.value;
             if (updateMax < Resources.max()) {
@@ -913,7 +927,8 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   public boolean satisfied() {
     boolean sat = true;
 
-    Rectangle recti, rectj;
+    Rectangle recti;
+    Rectangle rectj;
     int i = 0;
     while (sat && i < rectangles.length) {
       recti = rectangles[i];

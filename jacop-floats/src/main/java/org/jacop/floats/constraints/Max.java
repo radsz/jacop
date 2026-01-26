@@ -113,7 +113,8 @@ public class Max extends Constraint implements SatisfiedPresent {
         var.domain.inMax(store.level, var, maxMax);
 
         vDom = var.dom();
-        double VdomMin = vDom.min(), VdomMax = vDom.max();
+        double VdomMin = vDom.min();
+        double VdomMax = vDom.max();
 
         minValue = Math.max(minValue, VdomMin);
         maxValue = Math.max(maxValue, VdomMax);
@@ -121,7 +122,8 @@ public class Max extends Constraint implements SatisfiedPresent {
 
       max.domain.in(store.level, max, minValue, maxValue);
 
-      int n = 0, pos = -1;
+      int n = 0;
+      int pos = -1;
       for (int i = 0; i < list.length; i++) {
         var = list[i];
         if (minValue > var.max()) {
@@ -149,7 +151,8 @@ public class Max extends Constraint implements SatisfiedPresent {
 
     boolean sat = max.singleton();
     double MAX = max.min();
-    int i = 0, eq = 0;
+    int i = 0;
+    int eq = 0;
     while (sat && i < list.length) {
       if (list[i].singleton() && list[i].value() == MAX) {
         eq++;

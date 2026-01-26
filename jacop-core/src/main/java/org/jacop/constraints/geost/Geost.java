@@ -749,7 +749,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     order.setMostSignificantDimension(d);
 
     // c is initialized with the lower bound of the object's domain, n with the upper bound+1
-    for (int i = 0, size = o.dimension; i < size; i++) {
+    final int size = o.dimension;
+    for (int i = 0; i < size; i++) {
       c[i] = o.coords[i].min();
       n[i] = o.coords[i].max() + 1;
     }
@@ -777,7 +778,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       assert f.containsPoint(c) : "bad forbidden region, c is not contained";
 
       // update n
-      for (int i = 0, size = o.dimension + 1; i < size; i++) {
+      final int size1 = o.dimension + 1;
+      for (int i = 0; i < size1; i++) {
 
         n[i] = Math.min(n[i], f.origin[i] + f.length[i]);
         assert n[i] > c[i] : "n is not larger than c in pruneMin";
@@ -857,7 +859,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     order.setMostSignificantDimension(d);
 
     // c is initialized with the upper bound of the object's domain, n with the lower bound-1
-    for (int i = 0, size = o.dimension; i < size; i++) {
+    final int size2 = o.dimension;
+    for (int i = 0; i < size2; i++) {
       c[i] = o.coords[i].max();
       n[i] = o.coords[i].min() - 1;
     }
@@ -884,7 +887,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       assert f.containsPoint(c) : "bad forbidden region, c is not contained";
 
       // update n
-      for (int i = 0, size = o.dimension + 1; i < size; i++) {
+      final int size3 = o.dimension + 1;
+      for (int i = 0; i < size3; i++) {
         /*
          * need to subtract 1 to the origin of the outbox because we want
          * the next feasible point, and the outbox origin is still infeasible
@@ -1098,9 +1102,8 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         // loop below we will be changing most significant dimension.
         int[] ordering = order.masterOrdering();
 
-        for (int di = 0, size = dimension + 1;
-            di < size;
-            di++) { // time is the additional dimension
+        final int size4 = dimension + 1;
+        for (int di = 0; di < size4; di++) { // time is the additional dimension
 
           int d = ordering[di];
 

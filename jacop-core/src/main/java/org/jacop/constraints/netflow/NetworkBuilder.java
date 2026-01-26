@@ -170,9 +170,11 @@ public class NetworkBuilder {
    */
   public Node[][] valueGraph(IntVar[] vars, IntDomain[] domains) {
 
-    int n = vars.length, m = domains.length;
+    int n = vars.length;
+    int m = domains.length;
 
-    Node[] v = new Node[n], d = new Node[m];
+    Node[] v = new Node[n];
+    Node[] d = new Node[m];
 
     for (int i = 0; i < n; i++) {
       v[i] = addNode(vars[i].id, 1);

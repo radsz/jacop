@@ -155,7 +155,8 @@ public class BoxDisplay extends JFrame {
           heightMax = o.coords[2].max() + bb.length[2] + bb.origin[2] - 1;
         }
         for (int height = heightMin; height <= heightMax; height++) {
-          for (int timeVal = o.start.min(), timeMax = o.end.min(); timeVal < timeMax; timeVal++) {
+          int timeMax = o.end.min();
+          for (int timeVal = o.start.min(); timeVal < timeMax; timeVal++) {
             xCellsShift = timeVal * (domainWidth + 1);
             yCellsShift = height * (domainWidth + 1);
 

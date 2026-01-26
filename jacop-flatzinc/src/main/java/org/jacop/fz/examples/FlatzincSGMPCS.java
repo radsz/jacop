@@ -54,7 +54,9 @@ public class FlatzincSGMPCS {
 
   void ex(String[] args) {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     if (args.length == 0) {

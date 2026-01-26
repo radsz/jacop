@@ -338,7 +338,8 @@ public class Diff2 extends Diff {
     for (int l = 0; l < rectangles.length; l++) {
       Rectangle r = rectangles[l];
 
-      boolean settled = true, minLengthEq0 = false;
+      boolean settled = true;
+      boolean minLengthEq0 = false;
       int maxLevel = 0;
       for (int i = 0; i < r.dim(); i++) {
         IntDomain rOrigin = r.origin[i].dom();
@@ -347,7 +348,8 @@ public class Diff2 extends Diff {
 
         minLengthEq0 = minLengthEq0 || (rLength.min() <= 0);
 
-        int originStamp = rOrigin.stamp, lengthStamp = rLength.stamp;
+        int originStamp = rOrigin.stamp;
+        int lengthStamp = rLength.stamp;
         if (maxLevel < originStamp) {
           maxLevel = originStamp;
         }
@@ -394,7 +396,8 @@ public class Diff2 extends Diff {
       List<Rectangle> OverlappingRects,
       Set<IntVar> fdvQueue) {
 
-    boolean contains = false, checkArea = false;
+    boolean contains = false;
+    boolean checkArea = false;
 
     long area = 0;
     long commonArea = 0;
@@ -403,7 +406,8 @@ public class Diff2 extends Diff {
     int[] startMin = new int[dim];
     int[] stopMax = new int[dim];
     int[] minLength = new int[dim];
-    int[] r_min = new int[dim], r_max = new int[dim];
+    int[] r_min = new int[dim];
+    int[] r_max = new int[dim];
     for (int i = 0; i < startMin.length; i++) {
       IntDomain rLengthDom = r.length[i].dom();
       startMin[i] = IntDomain.MaxInt;
@@ -426,10 +430,17 @@ public class Diff2 extends Diff {
         long sArea = 1;
         long partialCommonArea = 1;
 
-        boolean use = true, minLength0 = false;
-        int s_min, s_max, start, stop;
-        int m = 0, j = 0;
-        int[] sOriginMin = new int[dim], sOriginMax = new int[dim], sLengthMin = new int[dim];
+        boolean use = true;
+        boolean minLength0 = false;
+        int s_min;
+        int s_max;
+        int start;
+        int stop;
+        int m = 0;
+        int j = 0;
+        int[] sOriginMin = new int[dim];
+        int[] sOriginMax = new int[dim];
+        int[] sLengthMin = new int[dim];
 
         while (overlap && m < dim) {
           // check if domains of r and s overlap
@@ -554,9 +565,9 @@ public class Diff2 extends Diff {
       for (int i = 0; i < startMin.length; i++) {
         IntDomain rOriginIdom = r.origin[i].dom();
         IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginIMin = rOriginIdom.min(),
-            rOriginIMax = rOriginIdom.max(),
-            rLengthIMin = rLengthIdom.min();
+        int rOriginIMin = rOriginIdom.min();
+        int rOriginIMax = rOriginIdom.max();
+        int rLengthIMin = rLengthIdom.min();
         if (rOriginIMin < startMin[i]) {
           startMin[i] = rOriginIMin;
         }
@@ -593,7 +604,8 @@ public class Diff2 extends Diff {
   public boolean satisfied() {
     boolean sat = true;
 
-    Rectangle recti, rectj;
+    Rectangle recti;
+    Rectangle rectj;
     int i = 0;
     while (sat && i < rectangles.length) {
       recti = rectangles[i];

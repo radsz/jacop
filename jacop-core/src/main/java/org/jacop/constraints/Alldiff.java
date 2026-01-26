@@ -76,7 +76,8 @@ public class Alldiff extends Alldifferent {
 
   private int nb; // holds the number of unique bounds.
 
-  private Element[] minsorted, maxsorted;
+  private Element[] minsorted;
+  private Element[] maxsorted;
 
   protected Alldiff() {}
 
@@ -173,7 +174,8 @@ public class Alldiff extends Alldifferent {
     int last = min - 2;
     int nb = 0;
     bounds[0] = last;
-    int i = 0, j = 0;
+    int i = 0;
+    int j = 0;
     while (true) {
       if (i < n && min <= max) {
         if (min != last) {
@@ -324,6 +326,7 @@ public class Alldiff extends Alldifferent {
 
   private static class Element {
     private IntVar var;
-    private int minrank, maxrank;
+    private int minrank;
+    private int maxrank;
   }
 }

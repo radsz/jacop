@@ -112,9 +112,21 @@ public class Exodus extends ExampleFD {
     String[] countrynames = {"Ethiopia", "Kazakhstan", "Lithuania", "Morocco", "Yemen"};
 
     // Indexes for easy of referring to objects.
-    int ibernice = 0, icarl = 1, idebby = 2, isammy = 3, ited = 4;
-    int iburn = 0, icap = 1, imoses = 2, ipass = 3, iten = 4;
-    int iet = 0, ika = 1, ili = 2, imo = 3, iye = 4;
+    int ibernice = 0;
+    int icarl = 1;
+    int idebby = 2;
+    int isammy = 3;
+    int ited = 4;
+    int iburn = 0;
+    int icap = 1;
+    int imoses = 2;
+    int ipass = 3;
+    int iten = 4;
+    int iet = 0;
+    int ika = 1;
+    int ili = 2;
+    int imo = 3;
+    int iye = 4;
 
     // Arrays of FDVs'
     IntVar[] name = new IntVar[5];

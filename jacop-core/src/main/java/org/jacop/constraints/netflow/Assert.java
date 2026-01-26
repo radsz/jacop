@@ -58,8 +58,10 @@ public class Assert {
     assert (g.root.balance == 0) : "root balance != 0";
 
     for (Node n : g.nodes) {
-      int del_out = 0, del_in = 0;
-      int out = 0, in = 0;
+      int del_out = 0;
+      int del_in = 0;
+      int out = 0;
+      int in = 0;
 
       for (Arc a : allArcsForDebug) {
         if (!a.forward) {
@@ -130,7 +132,8 @@ public class Assert {
     }
 
     {
-      int out = 0, in = 0;
+      int out = 0;
+      int in = 0;
       for (Arc a : allArcsForDebug) {
         if (!a.forward) {
           a = a.sister;
@@ -242,7 +245,8 @@ public class Assert {
     assert (0 == g.root.potential);
     assert (0 == g.root.depth);
     int x = 1;
-    for (Node i = g.root.thread; i != g.root; i = i.thread, x++) {
+    for (Node i = g.root.thread; i != g.root; i = i.thread) {
+      x++;
 
       Node p = i.parent;
 

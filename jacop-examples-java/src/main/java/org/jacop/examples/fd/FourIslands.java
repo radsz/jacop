@@ -92,19 +92,30 @@ public class FourIslands extends ExampleFD {
 
     // names of islands
     String[] islandNames = {"Pwana", "Quero", "Rayou", "Skern"};
-    int iPwana = 0, iQuero = 1, iRayou = 2, iSkern = 3;
+    int iPwana = 0;
+    int iQuero = 1;
+    int iRayou = 2;
+    int iSkern = 3;
 
     // names of exported goods
     String[] exportNames = {"alabaster", "bananas", "coconuts", "durian_fruit"};
-    int iAlabaster = 0, iBananas = 1, /* iCoconuts = 2, */ iDurianFruit = 3;
+    int iAlabaster = 0;
+    int iBananas = 1; /* iCoconuts = 2, */
+    int iDurianFruit = 3;
 
     // names of attractions
     String[] attractionNames = {"hotel", "ice_skating_rink", "jai_alai_stadium", "koala_preserve"};
-    int iHotel = 0, iIceSkating = 1, iJaiAlai = 2, iKoala = 3;
+    int iHotel = 0;
+    int iIceSkating = 1;
+    int iJaiAlai = 2;
+    int iKoala = 3;
 
     // names of location
     String[] locationNames = {"northwest", "northeast", "southwest", "southeast"};
-    int iNorthWest = 0, iNorthEast = 1, iSouthWest = 2, iSouthEast = 3;
+    int iNorthWest = 0;
+    int iNorthEast = 1;
+    int iSouthWest = 2;
+    int iSouthEast = 3;
 
     // arrays of variables
     IntVar[] island = new IntVar[4];

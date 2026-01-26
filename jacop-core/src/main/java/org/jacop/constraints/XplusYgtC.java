@@ -78,7 +78,8 @@ public class XplusYgtC extends PrimitiveConstraint {
 
   void checkForOverflow() {
 
-    int sumMin = 0, sumMax = 0;
+    int sumMin = 0;
+    int sumMax = 0;
 
     sumMin = Math.addExact(sumMin, x.min());
     sumMax = Math.addExact(sumMax, x.max());

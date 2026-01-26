@@ -130,7 +130,9 @@ public class TSP extends ExampleFD {
    */
   public boolean searchMaxRegretForMatrixOptimal() {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     search = new DepthFirstSearch<>();

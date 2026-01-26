@@ -111,7 +111,8 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
   void checkForOverflow() {
 
-    int sumMin = 0, sumMax = 0;
+    int sumMin = 0;
+    int sumMax = 0;
 
     sumMin = Math.addExact(sumMin, x.min());
     sumMax = Math.addExact(sumMax, x.max());
@@ -167,7 +168,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
 
   @Override
   public boolean notSatisfied() {
-    IntDomain xDom = x.dom(), yDom = y.dom(), zDom = z.dom();
+    IntDomain xDom = x.dom();
+    IntDomain yDom = y.dom();
+    IntDomain zDom = z.dom();
     return xDom.max() + yDom.max() < zDom.min() || xDom.min() + yDom.min() > zDom.max();
   }
 
@@ -175,7 +178,9 @@ public class XplusYeqZ extends PrimitiveConstraint {
   public boolean satisfied() {
 
     // return (grounded() && x.value() + y.value() == z.value());
-    int xMin = x.min(), yMin = y.min(), zMin = z.min();
+    int xMin = x.min();
+    int yMin = y.min();
+    int zMin = z.min();
     return x.singleton(xMin) && y.singleton(yMin) && z.singleton(zMin) && xMin + yMin == zMin;
   }
 

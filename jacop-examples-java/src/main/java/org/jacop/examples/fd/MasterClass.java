@@ -95,19 +95,31 @@ public class MasterClass extends ExampleFD {
     String[] glos = {"mezzosoprano", "soprano", "bass", "tenor_1", "tenor_2"};
 
     // indexes for ease of referring
-    int isopran = 0, imezzosoprano = 1, ibas = 2, itenor1 = 3, itenor2 = 4;
+    int isopran = 0;
+    int imezzosoprano = 1;
+    int ibas = 2;
+    int itenor1 = 3;
+    int itenor2 = 4;
 
     // people's names
     String[] imie = {"Val", "JP", "Chris", "Lee", "Pat"};
 
     // indexes for ease of referring
-    int iVal = 0, iJP = 1, iChris = 2, iLee = 3, iPat = 4;
+    int iVal = 0;
+    int iJP = 1;
+    int iChris = 2;
+    int iLee = 3;
+    int iPat = 4;
 
     // people's surnames
     String[] nazwisko = {"Kisley", "Robinson_1", "Robinson_2", "Walker", "Urlich"};
 
     // indexes for ease of referring
-    int iKinsley = 0, iRobinson1 = 1, iRobinson2 = 2, iWalker = 3, iUrlich = 4;
+    int iKinsley = 0;
+    int iRobinson1 = 1;
+    int iRobinson2 = 2;
+    int iWalker = 3;
+    int iUrlich = 4;
 
     // FDV's arrays
 

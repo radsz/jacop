@@ -206,7 +206,8 @@ public class ElementVariable extends Constraint
       }
 
       // IntDomain valDomain = new IntervalDomain();
-      int valMin = IntDomain.MaxInt, valMax = IntDomain.MinInt;
+      int valMin = IntDomain.MaxInt;
+      int valMax = IntDomain.MinInt;
       for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
         int position = e.nextElement() - 1 - indexOffset;
         // valDomain.addDom(list[position].domain);

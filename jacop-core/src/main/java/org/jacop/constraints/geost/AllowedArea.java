@@ -47,7 +47,8 @@ public class AllowedArea extends InternalConstraint {
 
   final Geost geost;
 
-  final int[] origin, length;
+  final int[] origin;
+  final int[] length;
 
   /**
    * It constructs an internal Geost constraint that restricts an object to be within an allowed

@@ -101,7 +101,8 @@ public class CrossWord extends ExampleFD {
 
     m.model();
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     m.searchAllAtOnceNoRecord();
@@ -298,7 +299,8 @@ public class CrossWord extends ExampleFD {
    */
   public boolean searchAllAtOnceNoRecord() {
 
-    long T1, T2;
+    long T1;
+    long T2;
     T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =

@@ -327,7 +327,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
         }
         var.domainHasChanged(IntDomain.GROUND);
       } else {
-        int min = glb.getSize(), max = lub.getSize();
+        int min = glb.getSize();
+        int max = lub.getSize();
         if (min > max) {
           throw Store.failException;
         }

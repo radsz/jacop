@@ -256,7 +256,9 @@ public class ConferenceTalkPlacement {
    */
   public boolean searchMaxRegretForMatrixOptimal(int timeOutSeconds) {
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     search = new DepthFirstSearch<>();
@@ -294,7 +296,9 @@ public class ConferenceTalkPlacement {
       store.impose(new XlteqC(cost, maxCostAllowed));
     }
 
-    long T1, T2, T;
+    long T1;
+    long T2;
+    long T;
     T1 = System.currentTimeMillis();
 
     search = new DepthFirstSearch<>();

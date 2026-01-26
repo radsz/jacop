@@ -56,7 +56,8 @@ import org.jacop.core.Store;
 public class Cumulative extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean debug = false, debugNarr = false;
+  private static final boolean debug = false;
+  private static final boolean debugNarr = false;
   private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
   private final Task[] Ts;
   private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
@@ -329,8 +330,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   boolean between(Task l, List<Task> S) {
-    int completionS = IntDomain.MinInt, startS = IntDomain.MaxInt;
-    long a = 0, larea;
+    int completionS = IntDomain.MinInt;
+    int startS = IntDomain.MaxInt;
+    long a = 0;
+    long larea;
     boolean betweenS = true;
 
     if (!S.isEmpty()) {
@@ -431,7 +434,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       // Create S = {t|EST(t) >= est0}
       // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-      List<Task> S = new ArrayList<>(Ts.length), L = new ArrayList<>(Ts.length);
+      List<Task> S = new ArrayList<>(Ts.length);
+      List<Task> L = new ArrayList<>(Ts.length);
       for (Task t : Ts) {
         if (t.nonZeroTask()) {
           if (t.est() >= est0) {
@@ -464,8 +468,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and after S
 
-        int startOfS = IntDomain.MaxInt, completionOfS = IntDomain.MinInt;
-        long area1 = 0, area2 = 0;
+        int startOfS = IntDomain.MaxInt;
+        int completionOfS = IntDomain.MinInt;
+        long area1 = 0;
+        long area2 = 0;
         if (debug) {
           log.debug("Checking if {} can be after {}", l, S);
         }
@@ -489,7 +495,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         } else {
           if (between) {
             // update upper bound of l
-            long slack, a;
+            long slack;
+            long a;
             int startS;
             final int maxuse = limitMax - l.res().min();
 
@@ -611,7 +618,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       // Create S = {t|EST(t) <= lct0}
       // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-      List<Task> S = new ArrayList<>(Ts.length), L = new ArrayList<>(Ts.length);
+      List<Task> S = new ArrayList<>(Ts.length);
+      List<Task> L = new ArrayList<>(Ts.length);
       for (Task t : Ts) {
         if (t.nonZeroTask()) {
           if (t.lct() <= lct0) {
@@ -644,8 +652,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and before S
 
-        int completionOfS = IntDomain.MinInt, startOfS = IntDomain.MaxInt;
-        long area1 = 0, area2 = 0;
+        int completionOfS = IntDomain.MinInt;
+        int startOfS = IntDomain.MaxInt;
+        long area1 = 0;
+        long area2 = 0;
         if (debug) {
           log.debug("Checking if {} can be before or between tasks in {}", l, S);
         }
@@ -685,7 +695,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           if (between) {
             // update lower bound of l
 
-            long slack, a;
+            long slack;
+            long a;
             int completionS;
             final int maxuse = limitMax - l.res().min();
 
@@ -791,7 +802,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private boolean fitTasksAfter(List<Task> s, int est0) {
-    int areaS = 0, lctOfS = IntDomain.MinInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
+    int areaS = 0;
+    int lctOfS = IntDomain.MinInt;
+    int minDur = IntDomain.MaxInt;
+    int minRes = IntDomain.MaxInt;
     boolean FitAfter;
 
     for (Task t : s) {
@@ -819,7 +833,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private boolean fitTasksBefore(List<Task> s, int lct0) {
-    int areaS = 0, estOfS = IntDomain.MaxInt, minDur = IntDomain.MaxInt, minRes = IntDomain.MaxInt;
+    int areaS = 0;
+    int estOfS = IntDomain.MaxInt;
+    int minDur = IntDomain.MaxInt;
+    int minRes = IntDomain.MaxInt;
     boolean FitBefore;
 
     for (Task t : s) {
@@ -932,8 +949,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private void notFirst(Store store, Task s, List<Task> S) {
     int sEST = s.est(); // sLCT = s.LCT();
-    int completionS = IntDomain.MinInt, newStartl = IntDomain.MinInt, startl = sEST;
-    long a = 0, slack, maxuse = limit.max() - s.res().min();
+    int completionS = IntDomain.MinInt;
+    int newStartl = IntDomain.MinInt;
+    int startl = sEST;
+    long a = 0;
+    long slack;
+    long maxuse = limit.max() - s.res().min();
 
     if (S.size() > 1) {
 
@@ -1004,8 +1025,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int sLCT = s.lct();
     int compl = sLCT;
 
-    int startS = IntDomain.MaxInt, newCompl, newStartl;
-    long a = 0, slack, maxuse = limit.max() - s.res().min();
+    int startS = IntDomain.MaxInt;
+    int newCompl;
+    int newStartl;
+    long a = 0;
+    long slack;
+    long maxuse = limit.max() - s.res().min();
 
     if (S.size() > 1) {
 
@@ -1099,7 +1124,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             p.subtract(use, left, right);
 
             if (left.min != -1) {
-              int UpdateMin = left.min - Duration.min() + 1, UpdateMax = left.max - 1;
+              int UpdateMin = left.min - Duration.min() + 1;
+              int UpdateMax = left.max - 1;
               if (!(UpdateMin > Start.max() || UpdateMax < Start.min())) {
                 if (debugNarr) {
                   log.debug(
@@ -1116,7 +1142,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             }
 
             if (right.min != -1) {
-              int UpdateMin = right.min - Duration.min() + 1, UpdateMax = right.max - 1;
+              int UpdateMin = right.min - Duration.min() + 1;
+              int UpdateMax = right.max - 1;
               if (!(UpdateMin > Start.max() || UpdateMax < Start.min())) {
                 if (debugNarr) {
                   log.debug(
@@ -1142,7 +1169,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               }
             }
           } else { // (mustUse.min() == -1 )
-            int UpdateMin = p.min - Duration.min() + 1, UpdateMax = p.max - 1;
+            int UpdateMin = p.min - Duration.min() + 1;
+            int UpdateMax = p.max - 1;
             if (!(UpdateMin > Start.max() || UpdateMax < Start.min())) {
               if (debugNarr) {
                 log.debug(
@@ -1195,7 +1223,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     for (Task t : Ts) {
       // check only for tasks which cannot allow to have duration or resources = 0
       if (t.nonZeroTask()) {
-        int a = -1, b = -1;
+        int a = -1;
+        int b = -1;
         if (t.minUse(minUse)) {
           a = minUse.start();
           b = minUse.stop();

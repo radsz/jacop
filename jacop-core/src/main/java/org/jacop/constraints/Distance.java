@@ -302,7 +302,9 @@ public class Distance extends PrimitiveConstraint implements Stateful {
 
   @Override
   public boolean satisfied() {
-    IntDomain Xdom = x.dom(), Ydom = y.dom(), Zdom = z.dom();
+    IntDomain Xdom = x.dom();
+    IntDomain Ydom = y.dom();
+    IntDomain Zdom = z.dom();
     return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()
@@ -323,7 +325,9 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   @Override
   public boolean notSatisfied() {
 
-    IntDomain Xdom = x.dom(), Ydom = y.dom(), Zdom = z.dom();
+    IntDomain Xdom = x.dom();
+    IntDomain Ydom = y.dom();
+    IntDomain Zdom = z.dom();
     return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()

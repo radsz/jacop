@@ -59,7 +59,12 @@ public class SumBool extends PrimitiveConstraint {
   /*
    * Defines relations
    */
-  static final byte eq = 0, le = 1, lt = 2, ne = 3, gt = 4, ge = 5;
+  static final byte eq = 0;
+  static final byte le = 1;
+  static final byte lt = 2;
+  static final byte ne = 3;
+  static final byte gt = 4;
+  static final byte ge = 5;
   /*
    * Defines negated relations
    */

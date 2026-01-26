@@ -334,9 +334,12 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
      * try to find the watches
      */
 
-    int watch1pos = -1, watch2pos = -1; // position of watches
-    int highestPos = -1, highestLevel = -1; // literal with highest level
-    int secondHighestPos = -1, secondHighestLevel = -1; // literal with second highest level
+    int watch1pos = -1; // position of watches
+    int watch2pos = -1;
+    int highestPos = -1; // literal with highest level
+    int highestLevel = -1;
+    int secondHighestPos = -1; // literal with second highest level
+    int secondHighestLevel = -1;
     int numFoundWatch = 0; // how many watches did we found?
     /*
      * search for watches or literals asserted at current level
