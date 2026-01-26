@@ -194,7 +194,7 @@ public class QCP extends ExampleFD {
           int currentNo = Integer.parseInt(s);
           numbers[i - 1][current++] = currentNo;
         } catch (Exception _) {
-
+          // Ignore parsing errors
         }
       }
     }

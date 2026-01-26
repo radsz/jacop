@@ -69,7 +69,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
   public final IntVar[] vars;
   /*
    * cost variable
-   */ final IntVar cost;
+   */
+  final IntVar cost;
   /*
    * The solution produced by last search
    */
@@ -78,7 +79,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
   boolean printInfo = true;
   /*
    * The cost produced by last search
-   */ int searchCost;
+   */
+  int searchCost;
   long timeOut;
 
   public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {

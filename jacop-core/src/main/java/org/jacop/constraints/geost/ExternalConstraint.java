@@ -27,20 +27,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.Collection;
 import java.util.Set;
 
 /**
+ * This interface defines the minimal functionality that is required by a constraint in order to be
+ * used by Geost as an external constraint.
+ *
+ * <p>External constraints are loosely coupled with Geost internals, in the sense that they are only
+ * required to be able to provide a representation usable by Geost.
+ *
+ * <p>The generation of internal constraints is done only once per search, implying that it is
+ * possible to do costly operations in order to generate these constraints.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>This interface defines the minimal functionality that is required by a constraint in order
- *     to be used by Geost as an external constraint.
- *     <p>External constraints are loosely coupled with Geost internals, in the sense that they are
- *     only required to be able to provide a representation usable by Geost.
- *     <p>The generation of internal constraints is done only once per search, implying that it is
- *     possible to do costly operations in order to generate these constraints.
  */
 public interface ExternalConstraint {
 

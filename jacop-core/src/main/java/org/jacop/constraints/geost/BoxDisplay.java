@@ -31,17 +31,21 @@
 
 package org.jacop.constraints.geost;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.io.Serial;
-import javax.swing.*;
+import javax.swing.JFrame;
 import org.jacop.core.IntVar;
 
 /**
+ * It specifies a simple functionality to graphically represent 2D geost. It was mostly used during
+ * development phase but it may be still useful if user is interested in visualizing Geost
+ * constraint.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>It specifies a simple functionality to graphically represent 2D geost. It was mostly used
- *     during development phase but it may be still useful if user is interested in visualizing
- *     Geost constraint.
  */
 public class BoxDisplay extends JFrame {
 

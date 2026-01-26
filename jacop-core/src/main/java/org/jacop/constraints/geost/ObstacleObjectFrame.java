@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.awt.Color;
@@ -41,11 +42,13 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
+ * This version of the ObstacleObject internal constraint allows the use of multiple d-boxes per
+ * shape.
+ *
+ * <p>TODO, description explaining how it works, what is it good for, etc...
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>This version of the ObstacleObject internal constraint allows the use of multiple d-boxes
- *     per shape.
- *     <p>TODO, description explaining how it works, what is it good for, etc...
  */
 public class ObstacleObjectFrame extends InternalConstraint {
 

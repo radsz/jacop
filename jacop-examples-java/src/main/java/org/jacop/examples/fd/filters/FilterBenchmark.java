@@ -481,7 +481,8 @@ public class FilterBenchmark {
   }
 
   private static int div(int A, int B) {
-    int Div, Rem;
+    int Div;
+    int Rem;
 
     Div = A / B;
     Rem = A % B;
@@ -1028,7 +1029,8 @@ public class FilterBenchmark {
     IntVar[] Dmul = new IntVar[filter.noMul()];
     IntVar[] ResMul = new IntVar[filter.noMul()];
 
-    int j = 0, k = 0;
+    int j = 0;
+    int k = 0;
     for (int i = 0; i < delays.length; i++) {
       String t = nameT + i;
       String r = nameR + i;
@@ -1136,7 +1138,8 @@ public class FilterBenchmark {
     IntVar[] Dmul = new IntVar[filter.noMul()];
     IntVar[] ResMul = new IntVar[filter.noMul()];
 
-    int j = 0, k = 0;
+    int j = 0;
+    int k = 0;
     for (int i = 0; i < delays.length; i++) {
       String t = nameT + i;
       String r = nameR + i;
@@ -1249,7 +1252,8 @@ public class FilterBenchmark {
     IntVar[] DmulClock = new IntVar[filter.noMul()];
     IntVar[] ResMul = new IntVar[filter.noMul()];
 
-    int j = 0, k = 0;
+    int j = 0;
+    int k = 0;
     for (int i = 0; i < delays.length; i++) {
       String t = nameT + i;
       String r = nameR + i;
@@ -1377,7 +1381,8 @@ public class FilterBenchmark {
     IntVar[] Dmul = new IntVar[3 * filter.noMul()];
     IntVar[] ResMul = new IntVar[3 * filter.noMul()];
 
-    int j = 0, k = 0;
+    int j = 0;
+    int k = 0;
 
     for (int i = 0; i < delays.length; i++) {
       String t = nameT + i;

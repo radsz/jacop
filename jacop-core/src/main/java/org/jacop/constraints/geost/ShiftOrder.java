@@ -27,13 +27,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 /**
+ * It provides a very simple lexicographical order based on the dimension ordering, with the
+ * possibility to choose the most significant dimension.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>It provides a very simple lexicographical order based on the dimension ordering, with the
- *     possibility to choose the most significant dimension
  */
 public class ShiftOrder implements LexicographicalOrder {
 

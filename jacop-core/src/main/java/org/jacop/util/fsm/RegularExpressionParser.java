@@ -182,6 +182,9 @@ public class RegularExpressionParser {
           }
 
           break;
+
+        default:
+          break;
       }
 
       if (parseOneNext && !(token == LexicalAnalyzer.STAR)) {

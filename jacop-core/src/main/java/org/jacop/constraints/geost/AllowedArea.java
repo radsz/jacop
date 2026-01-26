@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.ArrayList;
@@ -36,9 +37,10 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.Var;
 
 /**
+ * Constraint that represents a domain in which objects need to be contained.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>Constraint that represents a domain in which objects need to be contained
  */
 public class AllowedArea extends InternalConstraint {
 
@@ -200,6 +202,8 @@ public class AllowedArea extends InternalConstraint {
         break;
       case PRUNEMIN:
         Arrays.fill(dataBox.origin, IntDomain.MinInt);
+        break;
+      default:
         break;
     }
 

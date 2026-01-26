@@ -975,11 +975,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        // interval1.min > interval2.min
-        {
+        } else {
+          // interval1.max >= interval2.min
+          // interval2.max >= interval1.min
+          // interval1.min > interval2.min
           if (interval2.max() <= interval1.max()) {
             temp.unionAdapt(interval1.min(), interval2.max());
             pointer2++;
@@ -1049,11 +1048,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             break;
           }
 
-        } else
-        // interval1.max >= min
-        // max >= interval1.min
-        // interval1.min > min
-        {
+        } else {
+          // interval1.max >= min
+          // max >= interval1.min
+          // interval1.min > min
           if (max <= interval1.max()) {
             temp.unionAdapt(interval1.min(), max);
             break;
@@ -1160,11 +1158,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        // interval1.min > interval2.min
-        {
+        } else {
+          // interval1.max >= interval2.min
+          // interval2.max >= interval1.min
+          // interval1.min > interval2.min
           if (interval2.max() <= interval1.max()) {
             temp.unionAdapt(interval1.min(), interval2.max());
             pointer2++;
@@ -1234,11 +1231,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           break;
         }
 
-      } else
-      // interval1.max >= interval2.min
-      // interval2.max >= interval1.min
-      // interval1.min > interval2.min
-      {
+      } else {
+        // interval1.max >= interval2.min
+        // interval2.max >= interval1.min
+        // interval1.min > interval2.min
         if (max <= interval1.max()) {
           temp.unionAdapt(new Interval(interval1.min(), max));
           // pointer2++;
@@ -3252,11 +3248,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
               }
             }
 
-          } else
-          // interval1Max >= interval2Min
-          // interval2Max >= interval1Min
-          // interval1Min > interval2Min
-          {
+          } else {
+            // interval1Max >= interval2Min
+            // interval2Max >= interval1Min
+            // interval1Min > interval2Min
             if (interval2Max <= interval1Max) {
 
               result.unionAdapt(new Interval(interval1Min, interval2Max));
@@ -3443,11 +3438,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        {
+        } else {
+          // interval1Max >= interval2Min
+          // interval2Max >= interval1Min
+          // interval1Min > interval2Min
           if (interval2Max <= interval1Max) {
             result.unionAdapt(new Interval(interval1Min, interval2Max));
 
@@ -4202,11 +4196,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        {
+        } else {
+          // interval1Max >= interval2Min
+          // interval2Max >= interval1Min
+          // interval1Min > interval2Min
           if (interval2Max <= interval1Max) {
             result.unionAdapt(new Interval(interval1Min, interval2Max));
 
@@ -4509,11 +4502,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
               }
             }
 
-          } else
-          // interval1Max >= interval2Min
-          // interval2Max >= interval1Min
-          // interval1Min > interval2Min
-          {
+          } else {
+            // interval1Max >= interval2Min
+            // interval2Max >= interval1Min
+            // interval1Min > interval2Min
             if (interval2Max <= interval1Max) {
               result.unionAdapt(new Interval(interval1Min, interval2Max));
 
@@ -4695,11 +4687,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        {
+        } else {
+          // interval1Max >= interval2Min
+          // interval2Max >= interval1Min
+          // interval1Min > interval2Min
           if (interval2Max <= interval1Max) {
             result.unionAdapt(new Interval(interval1Min, interval2Max));
 
@@ -5216,11 +5207,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        {
+        } else {
+          // interval1Max >= interval2Min
+          // interval2Max >= interval1Min
+          // interval1Min > interval2Min
           if (interval2Max <= interval1Max) {
             result.unionAdapt(new Interval(interval1Min, interval2Max));
 
@@ -5552,11 +5542,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        // interval1.min > interval2.min
-        {
+        } else {
+          // interval1.max >= interval2.min
+          // interval2.max >= interval1.min
+          // interval1.min > interval2.min
           if (interval2.max() <= interval1.max()) {
             temp += interval2.max() - interval1.min() + 1;
             pointer2++;
@@ -5625,11 +5614,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             break;
           }
 
-        } else
-        // interval1.max >= min
-        // max >= interval1.min
-        // interval1.min > min
-        {
+        } else {
+          // interval1.max >= min
+          // max >= interval1.min
+          // interval1.min > min
           if (max <= interval1.max()) {
             temp += max - interval1.min() - 1;
             break;
@@ -5719,11 +5707,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             }
           }
 
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        // interval1.min > interval2.min
-        {
+        } else {
+          // interval1.max >= interval2.min
+          // interval2.max >= interval1.min
+          // interval1.min > interval2.min
           if (interval2.max() <= interval1.max()) {
             temp += interval2.max() - interval1.min() + 1;
             pointer2++;

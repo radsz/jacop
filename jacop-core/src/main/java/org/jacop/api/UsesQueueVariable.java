@@ -31,9 +31,10 @@
 package org.jacop.api;
 
 /**
+ * It specifies the marker interface for constraints that depend on calling queueVariable function
+ * of Constraint interface for correct/efficient execution of consistency function.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
- *     <p>It specifies the marker interface for constraints that depend on calling queueVariable
- *     function of Constraint interface for correct/efficient execution of consistency function.
  */
 public interface UsesQueueVariable {}

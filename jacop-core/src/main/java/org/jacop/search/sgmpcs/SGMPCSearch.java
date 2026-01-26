@@ -89,7 +89,8 @@ public class SGMPCSearch {
   long searchStartTime;
   /*
    * The cost produced by last search
-   */ int searchCost;
+   */
+  int searchCost;
 
   /** Parameters. */
 

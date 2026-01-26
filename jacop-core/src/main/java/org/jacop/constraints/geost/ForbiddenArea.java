@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.ArrayList;
@@ -34,10 +35,11 @@ import java.util.Collection;
 import org.jacop.core.Var;
 
 /**
+ * The simplest possible internal constraint: DBox defining a set of points with which no object can
+ * overlap.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>The simplest possible internal constraint: DBox defining a set of points with which no
- *     object can overlap.
  */
 public class ForbiddenArea extends InternalConstraint {
 

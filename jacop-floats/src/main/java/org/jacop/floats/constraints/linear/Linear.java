@@ -476,6 +476,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
           return true;
         }
         break;
+      default:
+        break;
     }
 
     return false;

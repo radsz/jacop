@@ -219,7 +219,7 @@ public class Nonogram extends ExampleFD {
           int currentNo = Integer.parseInt(s);
           dimensions[current++] = currentNo;
         } catch (Exception _) {
-
+          // Ignore parsing errors
         }
       }
 
@@ -254,6 +254,7 @@ public class Nonogram extends ExampleFD {
         try {
           sequence[current++] = Integer.parseInt(s);
         } catch (Exception _) {
+          // Ignore parsing errors
         }
       }
 

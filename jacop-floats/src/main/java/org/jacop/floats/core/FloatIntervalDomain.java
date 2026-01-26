@@ -692,11 +692,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           }
         }
 
-      } else
-      // interval1.max >= interval2.min
-      // interval2.max >= interval1.min
-      // interval1.min > interval2.min
-      {
+      } else {
+        // interval1.max >= interval2.min
+        // interval2.max >= interval1.min
+        // interval1.min > interval2.min
         if (interval2.max() <= interval1.max()) {
           temp.unionAdapt(interval1.min(), interval2.max());
           pointer2++;
@@ -768,11 +767,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           break;
         }
 
-      } else
-      // interval1.max >= interval2.min
-      // interval2.max >= interval1.min
-      // interval1.min > interval2.min
-      {
+      } else {
+        // interval1.max >= interval2.min
+        // interval2.max >= interval1.min
+        // interval1.min > interval2.min
         if (max <= interval1.max()) {
           temp.unionAdapt(new FloatInterval(interval1.min(), max));
           //                                      pointer2++;
@@ -1983,11 +1981,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           }
         }
 
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      // interval1Min > interval2Min
-      {
+      } else {
+        // interval1Max >= interval2Min
+        // interval2Max >= interval1Min
+        // interval1Min > interval2Min
         if (interval2Max <= interval1Max) {
           result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
 
@@ -2727,11 +2724,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           }
         }
 
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      // interval1Min > interval2Min
-      {
+      } else {
+        // interval1Max >= interval2Min
+        // interval2Max >= interval1Min
+        // interval1Min > interval2Min
         if (interval2Max <= interval1Max) {
           result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
 
@@ -3357,11 +3353,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           }
         }
 
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      // interval1Min > interval2Min
-      {
+      } else {
+        // interval1Max >= interval2Min
+        // interval2Max >= interval1Min
+        // interval1Min > interval2Min
         if (interval2Max <= interval1Max) {
           result.unionAdapt(new FloatInterval(interval1Min, interval2Max));
 
@@ -3592,11 +3587,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
           }
         }
 
-      } else
-      // interval1.max >= interval2.min
-      // interval2.max >= interval1.min
-      // interval1.min > interval2.min
-      {
+      } else {
+        // interval1.max >= interval2.min
+        // interval2.max >= interval1.min
+        // interval1.min > interval2.min
         if (interval2.max() <= interval1.max()) {
           temp += next(interval2.max() - interval1.min());
           pointer2++;

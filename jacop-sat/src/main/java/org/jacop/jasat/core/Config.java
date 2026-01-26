@@ -130,6 +130,7 @@ public class Config extends Properties {
       try {
         sb.append("%-30s: %s\n".formatted(field.getName(), field.get(this)));
       } catch (IllegalArgumentException | IllegalAccessException _) {
+        // Ignore reflection errors
       }
     }
 

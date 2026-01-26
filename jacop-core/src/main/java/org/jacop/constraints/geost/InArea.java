@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.ArrayList;
@@ -36,14 +37,16 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
+ * InArea constraint allows on to define an area within which objects should be contained, as well
+ * as a collection of "holes" within the area.
+ *
+ * <p>TODO implement the use of a subset of objects only. In some applications, classes of objects
+ * may need to be placed in different portions of the space. Possibly, create class
+ * InAreaSetOfObjects extending from InArea to allow specification of the objects in the focus of
+ * the constraint.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>InArea constraint allows on to define an area within which objects should be contained, as
- *     well as a collection of "holes" within the area
- *     <p>TODO implement the use of a subset of objects only. In some applications, classes of
- *     objects may need to be placed in different portions of the space. Possibly, create class
- *     InAreaSetOfObjects extending from InArea to allow specification of the objects in the focus
- *     of the constraint.
  */
 public class InArea implements ExternalConstraint {
 

@@ -27,13 +27,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 /**
+ * It defines the necessary functionalities needed to define a lexicographical ordering of
+ * k-dimensional points.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>It defines the necessary functionalities needed to define a lexicographical ordering of
- *     k-dimensional points.
  */
 public interface LexicographicalOrder {
 

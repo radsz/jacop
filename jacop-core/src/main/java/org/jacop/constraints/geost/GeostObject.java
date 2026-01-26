@@ -33,10 +33,11 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
+ * It contains all information about the Geost object as well as functionality to maintain the
+ * consistency among time variables.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>It contains all information about the Geost object as well as functionality to maintain
- *     the consistency among time variables.
  */
 public class GeostObject {
 
@@ -177,8 +178,9 @@ public class GeostObject {
   }
 
   /**
+   * It contains facility to keep the domain of time variables consistent.
+   *
    * @author Marc-Olivier Fleury and Radoslaw Szymanek
-   *     <p>It contains facility to keep the domain of time variables consistent.
    */
   @NoArgsConstructor
   public class TimeBoundConstraint {

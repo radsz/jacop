@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.ArrayList;
@@ -54,41 +55,61 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
+ * Geost constraint for handling geometric placement problems.
+ *
+ * <p>1) DONE. FlushAndQueue function should be changed and some functionality moved to
+ * firstConsistencyCheck.
+ *
+ * <p>2) DONE. No propagation inside queueVariable function.
+ *
+ * <p>3) DONE. How to incorporate GUI code within Geost constraint.
+ *
+ * <p>4) DONE. Move part of the functionality of onObjectUpdate to consistency function.
+ *
+ * <p>5) Refactor use of TimeBoundConstraint 5b) DONE. remove runTimeConstraint boolean variable.
+ *
+ * <p>6) DONE. asserts for Shape register 6b) asserts about possible values of MaxInt and MinInt.
+ *
+ * <p>7) DONE. Use simpleHashSet instead of LinkedHashSet for objectQueue.
+ *
+ * <p>8) DONE. Discuss pruning events, do we really need ANY for all variables? For example, maybe
+ * time variables always BOUND pruning event.
+ *
+ * <p>9) DONE. Simplify queueObject by removing if statements and make sure that this function is
+ * being called properly (avoid non-asserts checks inside it).
+ *
+ * <p>10) DONE. Discuss the possible implementation of satisfied function.
+ *
+ * <p>11) Introduce time switch so geost can work without time dimension.
+ *
+ * <p>12) Lessen the feature of geost that it does not work with variables used multiple times
+ * within different objects 12b) DONE. (at least for singleton variables).
+ *
+ * <p>13) DONE. Verify fix to address bug in case of multiple level removals, or level removals for
+ * which no consistency function has been called. Functionality around variable currentLevel. It is
+ * still needed.
+ *
+ * <p>14. DONE. Fixing a bug connected with timestamps and multiple remove levels calls. 14b Check
+ * lastLevelVar (possibly needs to be done similarly as setStart).
+ *
+ * <p>Future Work :
+ *
+ * <p>1. InArea should support subset of objects and dimensions.
+ *
+ * <p>2. Reuse previously generated outboxes. Create a function to create a hashkey from points
+ * coordinates for which an outbox is required. Later, for each new point we check if we have proper
+ * outbox for a given hash-key generated from this outbox.
+ *
+ * <p>3. Not always finishing at consistency fixpoint, speculative fixpoint.
+ *
+ * <p>4. consider polymorphism due to rotations only, and see if better performance can be reached
+ * under this assumption.
+ *
+ * <p>5. If objects have the same shape, and they are indistingushable then symmetry breaking can be
+ * employed.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>1) DONE. FlushAndQueue function should be changed and some functionality moved to
- *     firstConsistencyCheck.
- *     <p>2) DONE. No propagation inside queueVariable function.
- *     <p>3) DONE. How to incorporate GUI code within Geost constraint.
- *     <p>4) DONE. Move part of the functionality of onObjectUpdate to consistency function.
- *     <p>5) Refactor use of TimeBoundConstraint 5b) DONE. remove runTimeConstraint boolean
- *     variable.
- *     <p>6) DONE. asserts for Shape register 6b) asserts about possible values of MaxInt and
- *     MinInt.
- *     <p>7) DONE. Use simpleHashSet instead of LinkedHashSet for objectQueue.
- *     <p>8) DONE. Discuss pruning events, do we really need ANY for all variables? For example,
- *     maybe time variables always BOUND pruning event.
- *     <p>9) DONE. Simplify queueObject by removing if statements and make sure that this function
- *     is being called properly (avoid non-asserts checks inside it).
- *     <p>10) DONE. Discuss the possible implementation of satisfied function.
- *     <p>11) Introduce time switch so geost can work without time dimension.
- *     <p>12) Lessen the feature of geost that it does not work with variables used multiple times
- *     within different objects 12b) DONE. (at least for singleton variables).
- *     <p>13) DONE. Verify fix to address bug in case of multiple level removals, or level removals
- *     for which no consistency function has been called. Functionality around variable
- *     currentLevel. It is still needed.
- *     <p>14. DONE. Fixing a bug connected with timestamps and multiple remove levels calls. 14b
- *     Check lastLevelVar (possibly needs to be done similarly as setStart).
- *     <p>Future Work :
- *     <p>1. InArea should support subset of objects and dimensions.
- *     <p>2. Reuse previously generated outboxes. Create a function to create a hashkey from points
- *     coordinates for which an outbox is required. Later, for each new point we check if we have
- *     proper outbox for a given hash-key generated from this outbox.
- *     <p>3. Not always finishing at consistency fixpoint, speculative fixpoint.
- *     <p>4. consider polymorphism due to rotations only, and see if better performance can be
- *     reached under this assumption.
- *     <p>5. If objects have the same shape, and they are indistingushable then symmetry breaking
- *     can be employed.
  */
 @Slf4j
 @SuppressWarnings("PointlessBooleanExpression")
@@ -1809,8 +1830,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   }
 
   /**
+   * It specifies in what direction the sweep algorithm is progressing.
+   *
    * @author Marc-Olivier Fleury and Radoslaw Szymanek
-   *     <p>It specifies in what direction the sweep algorithm is progressing.
    */
   public enum SweepDirection {
     /** The sweep algorithm prunes the minimal values for the origins. */

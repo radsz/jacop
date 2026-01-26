@@ -78,7 +78,8 @@ public class Loan {
     //        result P = 907.47 (precision 1e-4)
 
     IO.println(
-        "\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\nR- quarterly repayment and B4- balance owing at end\nParameters:");
+        "\nProgram to solve loan payments under four quaeter\nI- interest rate, P- principal initially borrowed\n"
+            + "R- quarterly repayment and B4- balance owing at end\nParameters:");
 
     Store store = new Store();
 

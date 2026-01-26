@@ -117,7 +117,8 @@ public class Options {
                 --restart <value> defines restart search; one of "none", "constant", "linear", "luby", "geometric"
                 --restart-base <value> base for geomteric restart search
                 --restart-scale <value> scale for restart search
-                --restart-limit <value> limits number of restarts in restart search""");
+                --restart-limit <value> limits number of restarts in restart search
+            """);
         System.exit(0);
       } else { // input file
         fileName = args[0];

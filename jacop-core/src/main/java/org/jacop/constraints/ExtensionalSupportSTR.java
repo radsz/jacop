@@ -72,7 +72,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
 
   final IndexDomainView[] views;
 
-  /** */
+  /** It specifies the tuples. */
   public int[][] tuples;
 
   /**
@@ -129,7 +129,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   /** It specifies the mapping of the variable into its index. */
   public Map<Var, Integer> varToIndex;
 
-  /** */
+  /** It specifies the position of the last assigned variable. */
   public int lastAssignedVariablePosition = -1;
 
   /** It specifies if there was no first consistency check yet. */

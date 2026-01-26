@@ -27,19 +27,23 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.Collection;
 import org.jacop.core.Var;
 
 /**
+ * This interface defines the functionality required by a constraint in order to be used by Geost's
+ * sweeping algorithm.
+ *
+ * <p>The different methods defined by this interface are likely to be called often during a single
+ * call to the consistency function, and should therefore be as efficient as possible.
+ *
+ * <p>Comments about implementation details.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>This interface defines the functionality required by a constraint in order to be used by
- *     Geost's sweeping algorithm.
- *     <p>The different methods defined by this interface are likely to be called often during a
- *     single call to the consistency function, and should therefore be as efficient as possible.
- *     <p>Comments about implementation details.
  */
 public abstract class InternalConstraint {
 

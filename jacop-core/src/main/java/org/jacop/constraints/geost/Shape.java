@@ -37,9 +37,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 
 /**
+ * A shape is composed of a set of shifted boxes.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>A shape is composed of a set of shifted boxes.
  */
 public class Shape {
 

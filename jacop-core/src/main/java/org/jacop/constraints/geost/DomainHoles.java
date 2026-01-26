@@ -27,6 +27,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package org.jacop.constraints.geost;
 
 import java.util.Arrays;
@@ -37,14 +38,17 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
 /**
+ * Internal constraint used to generate outboxes that correspond to holes in the feasible domain of
+ * the object origin.
+ *
+ * <p>Due to the amount of space it can cover, this constraint will probably cause slower processing
+ * in case of domains with holes, when using the event point series to prune the set of internal
+ * constraints
+ *
+ * <p>TODO implement outbox generation for time (if feasible)
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
- *     <p>Internal constraint used to generate outboxes that correspond to holes in the feasible
- *     domain of the object origin.
- *     <p>Due to the amount of space it can cover, this constraint will probably cause slower
- *     processing in case of domains with holes, when using the event point series to prune the set
- *     of internal constraints
- *     <p>TODO implement outbox generation for time (if feasible)
  */
 @Slf4j
 public class DomainHoles extends InternalConstraint {
@@ -131,6 +135,8 @@ public class DomainHoles extends InternalConstraint {
           break;
         case PRUNEMIN:
           Arrays.fill(outPoint, Integer.MIN_VALUE);
+          break;
+        default:
           break;
       }
 
