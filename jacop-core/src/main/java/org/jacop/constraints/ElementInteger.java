@@ -339,11 +339,6 @@ public class ElementInteger extends Constraint
     return !(index.min() >= 1 + indexOffset && index.max() <= list.length + indexOffset);
   }
 
-  /**
-   * It imposes the constraint in a given store.
-   *
-   * @param store the constraint store to which the constraint is imposed to.
-   */
   @Override
   public void impose(Store store) {
 

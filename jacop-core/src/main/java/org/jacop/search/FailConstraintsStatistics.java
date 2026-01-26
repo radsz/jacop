@@ -91,7 +91,7 @@ public class FailConstraintsStatistics implements ConsistencyListener {
 
     // ======== add fail constraints classes to list of fails
     String cName = currentConstraint.getClass().getSimpleName();
-    if (cName == "") {
+    if (cName.isEmpty()) {
       cName = currentConstraint.getClass().getTypeName();
     }
     Integer n = failConstraintsStatistics.get(cName);

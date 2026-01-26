@@ -131,13 +131,11 @@ public class BooleanVar extends IntVar {
   }
 
   /**
-   * It registers constraint with current variable, so anytime this variable is changed the
-   * constraint is reevaluated. Pruning event is ignored as all are evaluated with GROUND event,
-   * since any change to Boolean Variable makes it ground.
+   * {@inheritDoc}
    *
-   * @param constraint - constraint being attached to a variable.
-   * @param pruningEvent - Only NONE and GROUND events are considered. By default GROUND event is
-   *     used.
+   * <p>Pruning event is ignored as all are evaluated with GROUND event, since any change to Boolean
+   * Variable makes it ground. Only NONE and GROUND events are considered. By default GROUND event
+   * is used.
    */
   @Override
   public void putModelConstraint(Constraint constraint, int pruningEvent) {
@@ -155,12 +153,6 @@ public class BooleanVar extends IntVar {
     store.recordBooleanChange(this);
   }
 
-  /**
-   * It registers constraint with current variable, so anytime this variable is changed the
-   * constraint is reevaluated.
-   *
-   * @param constraint It specifies the constraint which is being added.
-   */
   @Override
   public void putSearchConstraint(Constraint constraint) {
 
@@ -172,12 +164,6 @@ public class BooleanVar extends IntVar {
     store.recordBooleanChange(this);
   }
 
-  /**
-   * It unregisters constraint with current variable, so change in variable will not cause
-   * constraint reevaluation.
-   *
-   * @param constraint it specifies the constraint which is no longer attached to a variable.
-   */
   @Override
   public void removeConstraint(Constraint constraint) {
 
@@ -199,42 +185,26 @@ public class BooleanVar extends IntVar {
     store.recordBooleanChange(this);
   }
 
-  /**
-   * It returns current number of constraints which are associated with variable and are not yet
-   * satisfied.
-   *
-   * @return the number of constraints currently attached to this variable.
-   */
   @Override
   public int sizeConstraints() {
     return domain.sizeConstraints();
   }
 
-  /**
-   * It returns all constraints which are associated with variable, even the ones which are already
-   * satisfied.
-   *
-   * @return the number of constraints originally attached to this variable.
-   */
   @Override
   public int sizeConstraintsOriginal() {
     return domain.sizeConstraintsOriginal();
   }
 
   /**
-   * It returns current number of constraints which are associated with a boolean variable and are
-   * not yet satisfied.
+   * {@inheritDoc}
    *
-   * @return the number of constraints.
+   * <p>For boolean variables, this returns the number of search constraints.
    */
   @Override
   public int sizeSearchConstraints() {
     return domain.searchConstraintsToEvaluate;
   }
 
-  /**
-   * @return it returns the string description of the boolean variable.
-   */
   @Override
   public String toString() {
     if (domain.singleton()) {
@@ -244,10 +214,6 @@ public class BooleanVar extends IntVar {
     }
   }
 
-  /**
-   * @return It returns elaborate string description of the boolean variable and all the components
-   *     of its domain.
-   */
   @Override
   public String toStringFull() {
     return id + domain.toStringFull();

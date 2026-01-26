@@ -422,9 +422,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     this.variableQueue = new LinkedHashSet<>();
 
     objectQueue = new LinkedHashSet<>(objects.length);
-    for (GeostObject o : objects) {
-      objectQueue.add(o);
-    }
+    objectQueue.addAll(Arrays.asList(objects));
 
     Map<Integer, Shape> idShapeMap = new HashMap<>();
 

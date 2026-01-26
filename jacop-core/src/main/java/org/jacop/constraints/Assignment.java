@@ -134,17 +134,6 @@ public class Assignment extends Constraint
   }
 
   /**
-   * It enforces the relationship x[d[i]-min]=i+min and d[x[i]-min]=i+min.
-   *
-   * @param xs arraylist of variables x
-   * @param ds arraylist of variables d
-   * @param min shift
-   */
-  public Assignment(List<? extends Var> xs, List<? extends Var> ds, int min) {
-    this(xs.toArray(new IntVar[0]), ds.toArray(new IntVar[0]), min, min);
-  }
-
-  /**
    * It constructs an Assignment constraint with shift equal 0. It enforces relation - d[x[i]] = i
    * and x[d[i]] = i.
    *

@@ -44,10 +44,6 @@ import org.jacop.core.Var;
 public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
     implements SolutionListener<T> {
 
-  /**
-   * It is executed right after consistency of the current search node. The return code specifies if
-   * the search should continue or exit.
-   */
   @Override
   public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 

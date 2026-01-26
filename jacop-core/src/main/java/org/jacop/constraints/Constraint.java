@@ -439,24 +439,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     return scope.size();
   }
 
-  /**
-   * It imposes the decomposition of the given constraint in a given store.
-   *
-   * @param store the constraint store to which the constraint is imposed to.
-   */
   @Override
   public void imposeDecomposition(Store store) {
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * It returns an array list of constraint which are used to decompose this constraint. It actually
-   * creates a decomposition (possibly also creating variables), but it does not impose the
-   * constraint.
-   *
-   * @param store the constraint store in which context the decomposition takes place.
-   * @return an array list of constraints used to decompose this constraint.
-   */
   @Override
   public List<Constraint> decompose(final Store store) {
     throw new UnsupportedOperationException();

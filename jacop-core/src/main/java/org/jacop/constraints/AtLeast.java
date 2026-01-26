@@ -46,13 +46,12 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AtLeast extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /*
-   * It specifies variable idNumber to count the number of occurences of the specified value in a list.
+   * It specifies variable idNumber to count the number of occurrences of the specified value in a list.
    */
   public final int counter;
 

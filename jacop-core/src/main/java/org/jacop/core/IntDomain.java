@@ -927,11 +927,6 @@ public abstract class IntDomain extends Domain {
         + modelConstraintsToEvaluate[ANY];
   }
 
-  /**
-   * It adds a constraint to a domain, it should only be called by putConstraint function of
-   * Variable object. putConstraint function from Variable must make a copy of a vector of
-   * constraints if vector was not cloned.
-   */
   @Override
   public void putModelConstraint(int storeLevel, Var var, Constraint c, int pruningEvent) {
 
@@ -1169,11 +1164,6 @@ public abstract class IntDomain extends Domain {
     }
   }
 
-  /**
-   * It adds a constraint to a domain, it should only be called by putConstraint function of
-   * Variable object. putConstraint function from Variable must make a copy of a vector of
-   * constraints if vector was not cloned.
-   */
   @Override
   public void putSearchConstraint(int storeLevel, Var var, Constraint c) {
 
@@ -1220,14 +1210,6 @@ public abstract class IntDomain extends Domain {
     }
   }
 
-  /**
-   * It removes a constraint from a domain, it should only be called by removeConstraint function of
-   * Variable object.
-   *
-   * @param storeLevel the current level of the store.
-   * @param var the variable for which the constraint is being removed.
-   * @param c the constraint being removed.
-   */
   public void removeSearchConstraint(int storeLevel, Var var, Constraint c) {
 
     if (stamp < storeLevel) {
@@ -1265,10 +1247,6 @@ public abstract class IntDomain extends Domain {
     }
   }
 
-  /**
-   * It removes a constraint from a domain, it should only be called by removeConstraint function of
-   * Variable object.
-   */
   @Override
   public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint c) {
 

@@ -125,7 +125,7 @@ public class DBox {
     ArrayList<DBox> boxes = freeBoxes.get(dimension);
 
     if (!boxes.isEmpty()) {
-      return boxes.remove(boxes.size() - 1);
+      return boxes.removeLast();
     } else {
       return new DBox(new int[dimension], new int[dimension]);
     }

@@ -83,11 +83,6 @@ class BoundDomain extends IntDomain implements Cloneable {
     searchConstraintsCloned = false;
   }
 
-  /**
-   * Union of interval i and current domain.
-   *
-   * @param i interval for union operation.
-   */
   @Override
   public void unionAdapt(Interval i) {
 
@@ -106,7 +101,6 @@ class BoundDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** Adds "domain" to the current domain. */
   @Override
   public void addDom(IntDomain domain) {
 

@@ -263,9 +263,9 @@ public class Knapsack extends Constraint
 
     if (debugAll) {
 
-      /**
-       * It specifies how many removeLevel functions must be executed before the information about
-       * the constraint is being printed out.
+      /*
+        It specifies how many removeLevel functions must be executed before the information about
+        the constraint is being printed out.
        */
       int REMOVE_INFO_FROM = 0;
       if (countRemoveLevel >= REMOVE_INFO_FROM) {
@@ -462,9 +462,9 @@ public class Knapsack extends Constraint
 
     blockUpdate();
 
-    /**
-     * It specifies how many consistency functions must be executed before the information about the
-     * constraint is being printed out.
+    /*
+      It specifies how many consistency functions must be executed before the information about the
+      constraint is being printed out.
      */
     int CONSISTENCY_INFO_FROM = 0;
     if (debugAll) {
@@ -728,9 +728,9 @@ public class Knapsack extends Constraint
     countQueueVariable++;
 
     if (debugAll) {
-      /**
-       * It specifies how many queueVariable functions must be executed before the information about
-       * the constraint is being printed out.
+      /*
+        It specifies how many queueVariable functions must be executed before the information about
+        the constraint is being printed out.
        */
       int QUEUE_INFO_FROM = 0;
       if (countQueueVariable >= QUEUE_INFO_FROM) {
@@ -755,7 +755,7 @@ public class Knapsack extends Constraint
       return;
     }
 
-    final TreeLeaf leafForV = variableLeafMapping.get(v);
+    final TreeLeaf leafForV = variableLeafMapping.get((IntVar) v);
 
     final boolean maxBoundHasChanged = leafForV.hasMaxChanged();
     final boolean minBoundHasChanged = leafForV.hasMinChanged();

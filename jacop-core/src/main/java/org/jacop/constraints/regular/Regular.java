@@ -81,9 +81,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   /** It specifies if debugging information should be printed out. */
   public static final boolean debugAll = false;
 
-  /** It specifies if constraint description should be saved to latex for later viewing. */
-  public static final boolean saveAllToLatex = false;
-
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
@@ -748,9 +745,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     if (debugAll) {
       log.debug("..next prunning");
     }
-    if (saveAllToLatex) {
-      saveLatexToFile("After graph sweep");
-    }
 
     leftPosition = list.length;
     rightPosition = 0;
@@ -836,10 +830,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
           this.list[level].domain.in(store.level, list[level], varDom);
         }
-      }
-
-      if (saveAllToLatex) {
-        saveLatexToFile("End of consistency level " + store.level);
       }
 
       firstConsistencyCheck = false;
@@ -954,10 +944,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           list[level].domain.in(store.level, list[level], varDom);
         }
       }
-    }
-
-    if (saveAllToLatex) {
-      saveLatexToFile("End of consistency level " + store.level);
     }
 
     touchedIndex.update(this.currentTouchedIndex);
@@ -1103,186 +1089,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     return constraints;
-  }
-
-  /**
-   * It creates a latex description of the constraint state.
-   *
-   * @param addDescription added description.
-   * @return description of the constraint state.
-   */
-  public String toLatex(String addDescription) {
-
-    // todo use StringBuffer in toLatex function. */
-
-    StringBuilder res = new StringBuilder("\\begin{minipage}[b]{.4\\textwidth} \n");
-    res.append(addDescription).append("\n");
-    res.append("\\end{minipage} \n\\begin{minipage}[b]{.55\\textwidth} \n");
-    if (list != null) {
-      StringBuilder s1 = new StringBuilder();
-      StringBuilder s2 = new StringBuilder();
-      StringBuilder s3 = new StringBuilder();
-      for (Var v : list) {
-        s1.append("c|");
-        s2.append("& $").append(v.id()).append("$ ");
-        s3.append("& ").append(v.dom()).append(" ");
-      }
-      res.append("\\begin{tabular}{|c|").append(s1).append("}").append("\n");
-      res.append("\\hline  ").append(s2).append(" \\\\").append("\n");
-      res.append("\\hline Domain ").append(s3).append(" \\\\").append("\n");
-      res.append("\\hline " + "\n");
-      res.append(
-          """
-              \\end{tabular} \\\\\s
-              \\vspace{10mm}\s
-              """);
-    }
-
-    res.append("\\end{minipage}\n\\\\\n\\vspace{.7cm} \n");
-    res.append("\\resizebox{!}{.17\\textheight}{\n\\resizebox{.17\\textwidth}{!}{ \n");
-    res.append("\\tikzstyle{stateS}= [circle, fill=black!40, minimum size=25pt]");
-    res.append("\\tikzstyle{active}= [draw, fill=black!40, minimum size=25pt]");
-    res.append("\\tikzstyle{ann} = [above, text width=5em, text centered]");
-    res.append("\\tikzstyle{n}= [circle, fill=black!15, minimum size=15pt]");
-    res.append("\\begin{tikzpicture}[shorten >=1pt,node distance=2cm,auto]" + "\n");
-    RegState init = this.stateLevels[0][0];
-    res.append("\\node[active,initial] (q_")
-        .append(init.level)
-        .append(init.id)
-        .append(") {$q_{")
-        .append(init.level)
-        .append(init.id)
-        .append("}$};")
-        .append("\n");
-    RegState curState;
-    String style;
-    for (int l = 1; l < list.length + 1; l++) {
-      for (int i = 0; i < stateNumber; i++) {
-        curState = getState(l, i);
-
-        if (curState == null) {
-          style = "n";
-        } else if (curState.isActive(activeLevels)) {
-          style = "active";
-        } else {
-          style = "stateS";
-        }
-
-        if (i > 0) {
-          res.append("\\node[")
-              .append(style)
-              .append("] (q_")
-              .append(l)
-              .append(i)
-              .append(") [below of=q_")
-              .append(l)
-              .append(i - 1)
-              .append("] {$q_{")
-              .append(l)
-              .append(i)
-              .append("}$};")
-              .append("\n");
-        } else {
-          res.append("\\node[")
-              .append(style)
-              .append("] (q_")
-              .append(l)
-              .append(i)
-              .append(") [right of=q_")
-              .append(l - 1)
-              .append(i)
-              .append("] {$q_{")
-              .append(l)
-              .append(i)
-              .append("}$};")
-              .append("\n");
-        }
-      }
-    }
-
-    res.append("\\path[ann,->]");
-    for (int i = 0; i < stateLevels.length; i++) {
-      for (int r = 0; r < this.activeLevels[i].value(); r++) {
-        RegState s = stateLevels[i][r];
-        for (int j = 0; j < s.outDegree; j++) {
-          if (dNames != null) {
-            res.append("     (q_")
-                .append(s.level)
-                .append(s.id)
-                .append(")   edge node    {$")
-                .append(dNames.get(s.sucDomToString(j)))
-                .append("$}    (q_")
-                .append(s.successors[j].level)
-                .append(s.successors[j].id)
-                .append(")")
-                .append("\n");
-          } else {
-            res.append("     (q_")
-                .append(s.level)
-                .append(s.id)
-                .append(")   edge node    {")
-                .append(s.sucDomToString(j))
-                .append("}    (q_")
-                .append(s.successors[j].level)
-                .append(s.successors[j].id)
-                .append(")")
-                .append("\n");
-          }
-        }
-      }
-    }
-    res.append(";\n");
-    res.append("\\end{tikzpicture}\\\\ " + "\n");
-    res.append("}\n }\n");
-    return res.toString();
-  }
-
-  /**
-   * It saves the constraint latex description into file.
-   *
-   * @param desc description of the constraint
-   */
-  public void saveLatexToFile(String desc) {
-    String fileName = this.latexFile + (calls++) + ".tex";
-    File f = new File(fileName);
-    try (FileOutputStream fs = new FileOutputStream(f)) {
-      log.debug("save latex file {}", fileName);
-      fs.write(this.toLatex(desc).getBytes(StandardCharsets.UTF_8));
-      fs.flush();
-      // fs.close(); not needed; auto close
-    } catch (IOException | NumberFormatException e) {
-      e.printStackTrace();
-    }
-  }
-
-  /**
-   * It sets the filename for the file which is used to save latex descriptions.
-   *
-   * @param filename the name of the file
-   */
-  public void setLatexBaseFileName(String filename) {
-    this.latexFile = filename;
-  }
-
-  /**
-   * It appends latex description of the constraint current state to the specified filename.
-   *
-   * @param desc appended description.
-   * @param fileName filename where the description is appended.
-   */
-  public void uppendToLatexFile(String desc, String fileName) {
-    try (OutputStreamWriter char_output =
-            new OutputStreamWriter(
-                new FileOutputStream(fileName), StandardCharsets.UTF_8.newEncoder());
-        BufferedWriter fs = new BufferedWriter(char_output)) {
-
-      log.debug("save latex file {}", fileName);
-      fs.append(this.toLatex(desc));
-      fs.flush();
-      // fs.close(); not needed; auto close
-    } catch (IOException | NumberFormatException e) {
-      e.printStackTrace();
-    }
   }
 
   /**

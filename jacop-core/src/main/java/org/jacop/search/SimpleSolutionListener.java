@@ -347,7 +347,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
    * primitive constraints.
    *
    * @param number the solution number (0 denotes the first solution).
-   * @return set of primitive constraint which if imposed will enforce given solution.
+   * @return array of primitive constraint which if imposed will enforce given solution.
    */
   public PrimitiveConstraint[] returnSolution(int number) {
 

@@ -150,7 +150,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    * Fix suggested by Radek: a set that keeps track of the variables that have changed and need to
    * be revisited in the consistency method
    */
-  private Set<Var> changedVariables = new HashSet<>();
+  private Set<IntVar> changedVariables = new HashSet<>();
 
   /**
    * It constructs global cardinality constraint.
@@ -314,19 +314,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       assert checkXorder() : "Inconsistent X variable order: " + Arrays.toString(this.x);
     }
 
-    // no need to rerun the consistancy function as the reduction on x domains doesn't affect
+    // no need to rerun the consistency function as the reduction on x domains doesn't affect
     // the matching and the y count is base on the matching and doesn't affect it. So
     // rerunning the constraint doesn't bring anything new. We can suppose that y counting
-    // achieve bound consistancy.
+    // achieve bound consistency.
 
     do {
 
       store.propagationHasOccurred = false;
 
       // Fix suggested by Radek (moved from queueVariable)
-      Set<Var> changedVariablesCopy = this.changedVariables;
+      Set<IntVar> changedVariablesCopy = this.changedVariables;
       this.changedVariables = new HashSet<>();
-      for (Var var : changedVariablesCopy) {
+      for (IntVar var : changedVariablesCopy) {
         // if v is singleton and is an X variable
         if (var.singleton() && xNodesHash.containsKey(var)) {
           // if
@@ -557,10 +557,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     if (debug) {
       log.debug("in queue variable {} level {}", var, level);
     }
-
-    // Fix suggested by Radek: the queueVariable function should store the variables that are
-    // changing in a HashSet
-    this.changedVariables.add(var);
+    this.changedVariables.add((IntVar) var);
   }
 
   @Override

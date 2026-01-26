@@ -268,12 +268,6 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     }
   }
 
-  /**
-   * It allows to inform all objects which have changed at removedLevel that the backtracking from
-   * that level has occurred.
-   *
-   * @param removedLevel it specifies the level which is being removed.
-   */
   @Override
   public void removeLevel(int removedLevel) {
 
@@ -497,13 +491,6 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
     intervalCutOffValue = Math.max(noOfObjects / 2, cutOffValue + 1);
   }
 
-  /**
-   * It allows for easy testing if a given object is considered by the manager as the object which
-   * has changed and needs being informed about backtracking.
-   *
-   * @param index the position of the object which status is in question.
-   * @return it returns true if the manager recognizes object at position index as changed one.
-   */
   @Override
   public boolean isRecognizedAsChanged(int index) {
 

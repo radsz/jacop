@@ -431,10 +431,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     return ((int) xDown & 0x0000003f) + ((int) xUp & 0x0000003f);
   }
 
-  /**
-   * It updates the domain to have a single value within its domain. The type of update is decided
-   * by the value of stamp. It informs the variable of a change if it occurred.
-   */
   @Override
   public void inValue(int storeLevel, IntVar var, int value) {
 
@@ -488,10 +484,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /**
-   * It updates the domain to have values only within the interval min..max. The type of update is
-   * decided by the value of stamp. It informs the variable of a change if it occurred.
-   */
   @Override
   public void in(int storeLevel, Var var, int min, int max) {
 

@@ -1120,7 +1120,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       log.debug("Var {}{}", var, ((IntVar) var).recentDomainPruning());
     }
 
-    Integer index = yIndex.get(var);
+    Integer index = yIndex.get((IntVar) var);
     if (index != null) {
       variableQueueY.add(index);
       return;

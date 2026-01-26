@@ -70,7 +70,7 @@ public interface SolutionListener<T extends Var> {
   /**
    * It returns the variables in the same order as the one used to encode solutions.
    *
-   * @return list of variables
+   * @return array of variables
    */
   T[] getVariables();
 
@@ -84,7 +84,7 @@ public interface SolutionListener<T extends Var> {
   /**
    * It returns a collection of constraints which represent the last found solution.
    *
-   * @return the set of constraints which imposed enforce the last found solution.
+   * @return the array of constraints which imposed enforce the last found solution.
    */
   PrimitiveConstraint[] returnSolution();
 

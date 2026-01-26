@@ -306,7 +306,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private boolean before(Task l, List<Task> S) {
     int completionS = IntDomain.MinInt;
-    int a = 0;
+    long a = 0;
     boolean beforeS = true;
 
     if (!S.isEmpty()) {
@@ -556,7 +556,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                 log.debug("after={} between={}!!!", false, false);
               }
 
-              int areaOfS = 0;
+              long areaOfS = 0;
               int compl = 0;
               for (Task t : S) {
                 areaOfS += t.areaMin();
@@ -751,12 +751,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
                 log.debug("before={} between={}!!!", false, false);
               }
 
-              int areaOfS = 0;
+              long areaOfS = 0;
               for (Task t : S) {
                 areaOfS += t.areaMin();
               }
 
-              int start = startOfS + areaOfS / limit.max();
+              int start = startOfS + (int) (areaOfS / limit.max());
               if (start > l.start().min()) {
                 if (debugNarr) {
                   log.debug(

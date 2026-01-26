@@ -152,7 +152,7 @@ public class NetworkFlow extends Constraint
 
   @Override
   public int getConsistencyPruningEvent(Var var) {
-    return map.get(var).getPruningEvent(var);
+    return map.get((IntVar) var).getPruningEvent(var);
   }
 
   @Override

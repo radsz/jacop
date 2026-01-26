@@ -452,7 +452,7 @@ public class Binpacking extends Constraint
 
   @Override
   public void queueVariable(int level, Var var) {
-    if (itemMap.containsKey(var)) {
+    if (itemMap.containsKey((IntVar) var)) {
       itemQueue.add((IntVar) var);
     } else {
       binQueue.add((IntVar) var);

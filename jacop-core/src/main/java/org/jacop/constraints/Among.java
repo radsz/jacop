@@ -189,18 +189,10 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     }
     // ----------------------------------------------------------
 
-    // Changed KK, 2015-10-17;
-    // Not needed, in method will fail in such case
     if (currentLB > currentUB) {
       throw Store.failException;
     }
 
-    // n.domain.in(store.level, n, Math.max(n.min(), currentLB), Math.min(n.max(),
-    //     currentUB));
-
-    // Changed KK, 2015-10-17;
-    // Math.max is not needed since method in is doing
-    // intersection between new domain and original domain
     n.domain.in(store.level, n, currentLB, currentUB);
 
     // Just in case LB or UB have changed.
@@ -230,7 +222,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       // since the constraint is satisfied UB is equal to LB.
       upperBorder.update(currentLB);
 
-      // The constrain became satisfied
+      // The constraint became satisfied
       if (debugAll) {
         log.debug("Simple Among is satisfied");
       }

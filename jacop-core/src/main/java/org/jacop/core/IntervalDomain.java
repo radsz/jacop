@@ -133,8 +133,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It adds interval of values to the domain. It adds at the end without checks for the correctness
-   * of domain representation.
+   * {@inheritDoc}
+   *
+   * <p>It adds at the end without checks for the correctness of domain representation.
    */
   @Override
   public void unionAdapt(Interval i) {
@@ -180,8 +181,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It adds values as specified by the parameter to the domain. The input parameter can not be an
-   * empty set.
+   * {@inheritDoc}
+   *
+   * <p>The input parameter can not be an empty set.
    */
   @Override
   public void addDom(IntDomain domain) {
@@ -256,7 +258,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It adds all values between min and max to the domain. */
   @Override
   public void unionAdapt(int min, int max) {
 
@@ -366,7 +367,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert contains(max) : "The maximum was not added";
   }
 
-  /** Checks if two domains intersect. */
   @Override
   public boolean isIntersecting(IntDomain domain) {
 
@@ -516,7 +516,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return i != size && intervals[i].min() <= max;
   }
 
-  /** It removes all elements. */
   @Override
   public void clear() {
     size = 0;
@@ -544,7 +543,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return cloned;
   }
 
-  /** It clones the domain object. */
   @Override
   public IntervalDomain clone() {
 
@@ -573,8 +571,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It specifies if the current domain contains the domain given as a parameter. It assumes that
-   * input parameter does not represent an empty domain.
+   * {@inheritDoc}
+   *
+   * <p>It assumes that input parameter does not represent an empty domain.
    */
   @Override
   public boolean contains(IntDomain domain) {
@@ -706,7 +705,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It creates a complement of a domain. */
   @Override
   public IntDomain complement() {
 
@@ -733,7 +731,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result;
   }
 
-  /** It checks if value belongs to the domain. */
   @Override
   public boolean contains(int value) {
 
@@ -762,9 +759,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It gives next value in the domain from the given value (lexigraphical ordering). The provided
-   * value does not have to belong to the domain. If no value can be found then returns the same
-   * value.
+   * {@inheritDoc}
+   *
+   * <p>The provided value does not have to belong to the domain.
    */
   @Override
   public int nextValue(int value) {
@@ -794,19 +791,16 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return rem > 0 ? div + 1 : div;
   }
 
-  /** It returns value enumeration of the domain values. */
   @Override
   public ValueEnumeration valueEnumeration() {
     return new IntervalDomainValueEnumeration(this);
   }
 
-  /** It returns interval enumeration of the domain values. */
   @Override
   public IntervalEnumeration intervalEnumeration() {
     return new IntervalDomainIntervalEnumeration(this);
   }
 
-  /** It checks if the domain is equal to the supplied domain. */
   @Override
   public boolean eq(IntDomain domain) {
 
@@ -892,7 +886,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It returns the size of the domain. */
   @Override
   public int getSize() {
 
@@ -907,7 +900,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return n;
   }
 
-  /** It interesects current domain with the one given as a parameter. */
   @Override
   public IntDomain intersect(IntDomain domain) {
 
@@ -1197,7 +1189,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** In intersects current domain with the domain min..max. */
   @Override
   public IntDomain intersect(int min, int max) {
 
@@ -1328,13 +1319,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result;
   }
 
-  /** It returns true if given domain is empty. */
   @Override
   public boolean isEmpty() {
     return size == 0;
   }
 
-  /** It returns the maximum value in a domain. */
   @Override
   public int max() {
 
@@ -1345,7 +1334,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return intervals[size - 1].max();
   }
 
-  /** It returns the minimum value in a domain. */
   @Override
   public int min() {
 
@@ -1414,7 +1402,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
   }
 
-  /** It sets the domain to the specified domain. */
   @Override
   public void setDomain(IntDomain domain) {
 
@@ -1470,27 +1457,23 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It sets the domain to all values between min and max. */
   @Override
   public void setDomain(int min, int max) {
     size = 1;
     intervals[0] = new Interval(min, max);
   }
 
-  /** It returns true if given domain has only one element. */
   @Override
   public boolean singleton() {
     return size == 1 && intervals[0].min() == intervals[0].max();
   }
 
-  /** It returns true if given domain has only one element equal c. */
   @Override
   public boolean singleton(int c) {
     assert checkInvariants() == null : checkInvariants();
     return size == 1 && intervals[0].min() == c && c == intervals[0].max();
   }
 
-  /** It subtracts domain from current domain and returns the result. */
   @Override
   public IntDomain subtract(IntDomain domain) {
 
@@ -1897,7 +1880,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It subtracts min..max from current domain and returns the result. */
   @Override
   public IntervalDomain subtract(int min, int max) {
 
@@ -1994,7 +1976,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result;
   }
 
-  /** It computes union of dom1 from dom2 and returns the result. */
   @Override
   public IntDomain union(IntDomain domain) {
 
@@ -2398,7 +2379,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It computes union of current domain and an interval min..max; */
   @Override
   public IntDomain union(int min, int max) {
 
@@ -2481,8 +2461,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result;
   }
 
-  /** It computes union of dom1 and value and returns the result. */
-
   // TODO, write Junit tests.
   @Override
   public IntDomain union(int value) {
@@ -2549,7 +2527,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result;
   }
 
-  /** It returns string description of the domain (only values in the domain). */
   @Override
   public String toString() {
 
@@ -2571,7 +2548,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return s.toString();
   }
 
-  /** It returns string description of the constraints attached to the domain. */
   @Override
   public String toStringConstraints() {
 
@@ -2587,7 +2563,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result.toString();
   }
 
-  /** It returns complete string description containing all relevant information. */
   @Override
   public String toStringFull() {
 
@@ -2631,10 +2606,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result.toString();
   }
 
-  /**
-   * It updates the domain according to the minimum value and stamp value. It informs the variable
-   * of a change if it occurred.
-   */
   @Override
   public void inMin(int storeLevel, Var var, int min) {
 
@@ -2691,10 +2662,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /**
-   * It updates the domain according to the maximum value and stamp value. It informs the variable
-   * of a change if it occurred.
-   */
   @Override
   public void inMax(int storeLevel, Var var, int max) {
 
@@ -2751,10 +2718,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /**
-   * It updates the domain to have values only within the interval min..max. The type of update is
-   * decided by the value of stamp. It informs the variable of a change if it occurred.
-   */
   @Override
   public void in(int storeLevel, Var var, int min, int max) {
 
@@ -2833,10 +2796,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /**
-   * It updates the domain to have a single value within its domain. The type of update is decided
-   * by the value of stamp. It informs the variable of a change if it occurred.
-   */
   @Override
   public void inValue(int storeLevel, IntVar var, int value) {
 
@@ -2881,10 +2840,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     var.domainHasChanged(IntDomain.GROUND);
   }
 
-  /**
-   * It updates the domain to have values only within the domain. The type of update is decided by
-   * the value of stamp. It informs the variable of a change if it occurred.
-   */
   @Override
   public void in(int storeLevel, Var var, IntDomain domain) {
 
@@ -3572,7 +3527,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It returns the number intervals into which this domain is split. */
   @Override
   public int noIntervals() {
 
@@ -3627,10 +3581,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
   // TODO check and test inComplement below.
 
-  /**
-   * It updates the domain to not contain the value complement. It informs the variable of a change
-   * if it occurred.
-   */
   @Override
   public void inComplement(int storeLevel, Var var, int complement) {
 
@@ -4133,8 +4083,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It updates the domain to contain the elements as specifed by the domain, which is shifted. E.g.
-   * {1..4} + 3 = 4..7
+   * {@inheritDoc}
+   *
+   * <p>Example: {1..4} + 3 = 4..7
    */
   @Override
   public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
@@ -4828,25 +4779,21 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
   }
 
-  /** It returns an unique identifier of the domain. */
   @Override
   public int domainID() {
     return IntervalDomainID;
   }
 
-  /** It specifies if the domain type is more suited to representing sparse domain. */
   @Override
   public boolean isSparseRepresentation() {
     return false;
   }
 
-  /** It specifies if domain is a finite domain of numeric values (integers). */
   @Override
   public boolean isNumeric() {
     return true;
   }
 
-  /** It returns the left most element of the given interval. */
   @Override
   public int leftElement(int intervalNo) {
 
@@ -4854,7 +4801,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return intervals[intervalNo].min();
   }
 
-  /** It returns the left most element of the given interval. */
   @Override
   public int rightElement(int intervalNo) {
 
@@ -4863,8 +4809,10 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   /**
-   * It removes a level of a domain. If domain is represented as a list of domains, the domain
-   * pointer within variable will be updated.
+   * {@inheritDoc}
+   *
+   * <p>If domain is represented as a list of domains, the domain pointer within variable will be
+   * updated.
    */
   @Override
   public void removeLevel(int level, Var var) {
@@ -4879,10 +4827,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert (((IntVar) var).domain.stamp < level);
   }
 
-  /**
-   * It removes a constraint from a domain, it should only be called by removeConstraint function of
-   * Variable object.
-   */
   @Override
   public IntDomain recentDomainPruning(int storeLevel) {
 
@@ -4897,13 +4841,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return previousDomain.subtract(this);
   }
 
-  /**
-   * It returns all constraints which are associated with variable, even the ones which are already
-   * satisfied.
-   */
   @Override
   public int sizeConstraintsOriginal() {
-
     IntDomain domain = this;
 
     while (domain.domainID() == IntervalDomainID) {

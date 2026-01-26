@@ -338,7 +338,7 @@ public class Alldistinct extends Constraint
 
           if (positionV > 0) {
 
-            currentList.set(positionV, currentList.get(0));
+            currentList.set(positionV, currentList.getFirst());
             currentList.set(0, Q);
           }
 
@@ -508,7 +508,7 @@ public class Alldistinct extends Constraint
         positionMatched = currentList.indexOf(variable);
         if (positionMatched != 0) {
 
-          currentList.set(positionMatched, currentList.get(0));
+          currentList.set(positionMatched, currentList.getFirst());
           currentList.set(0, variable);
         }
       }
@@ -743,16 +743,16 @@ public class Alldistinct extends Constraint
 
         if (stampValue == 0) {
 
-          if (valueMapVariable.get(value).get(0).dom().getSize() > 1) {
+          if (valueMapVariable.get(value).getFirst().dom().getSize() > 1) {
             log.debug("Transformation Alldistinct-Permutation and missing propagation ");
 
             valueMapVariable
                 .get(value)
-                .get(0)
+                .getFirst()
                 .domain
-                .inValue(store.level, valueMapVariable.get(value).get(0), value); // , value);
+                .inValue(store.level, valueMapVariable.get(value).getFirst(), value); // , value);
 
-            variableQueue.add(valueMapVariable.get(value).get(0));
+            variableQueue.add(valueMapVariable.get(value).getFirst());
 
             narrowingEvent = true;
           }
@@ -815,7 +815,7 @@ public class Alldistinct extends Constraint
           int positionMatched = currentList.indexOf(variable);
           if (positionMatched != 0) {
 
-            currentList.set(positionMatched, currentList.get(0));
+            currentList.set(positionMatched, currentList.getFirst());
             currentList.set(0, variable);
           }
         }
@@ -1044,7 +1044,7 @@ public class Alldistinct extends Constraint
           int positionMatched = currentList.indexOf(matchedVariable);
           if (positionMatched != 0) {
 
-            currentList.set(positionMatched, currentList.get(0));
+            currentList.set(positionMatched, currentList.getFirst());
             currentList.set(0, matchedVariable);
           }
 
@@ -1617,7 +1617,7 @@ public class Alldistinct extends Constraint
               if (currentList.get(0).getSize() < currentList.get(1).getSize()
                   || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
 
-                guideVariable = currentList.get(0);
+                guideVariable = currentList.getFirst();
                 guideValue = value;
 
               } else {
@@ -1634,7 +1634,7 @@ public class Alldistinct extends Constraint
               if (currentList.get(0).getSize() < currentList.get(1).getSize()
                   || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
 
-                guideVariable = currentList.get(0);
+                guideVariable = currentList.getFirst();
                 guideValue = value;
 
               } else {
@@ -1654,7 +1654,7 @@ public class Alldistinct extends Constraint
               if (currentList.get(0).getSize() <= currentList.get(1).getSize()
                   || (currentList.get(0).getSize() == currentList.get(1).getSize() && greedy)) {
 
-                guideVariable = currentList.get(0);
+                guideVariable = currentList.getFirst();
                 guideValue = value;
               } else {
 
@@ -1670,7 +1670,7 @@ public class Alldistinct extends Constraint
               if (currentList.get(0).getSize() <= currentList.get(1).getSize()
                   || (currentList.get(0).getSize() == currentList.get(1).getSize() && !greedy)) {
 
-                guideVariable = currentList.get(0);
+                guideVariable = currentList.getFirst();
                 guideValue = value;
 
               } else {
