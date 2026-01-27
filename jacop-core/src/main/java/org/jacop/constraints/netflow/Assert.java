@@ -200,10 +200,7 @@ public class Assert {
           assert (arc.sister == j.toParent) : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
           assert (i == j.parent) : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
         }
-
-      }
-      // non-tree arc
-      else if (arc.index != -3) {
+      } else if (arc.index != -3) { // non-tree arc
         //       String s = arc.toString();
 
         assert (arc.index == arc.sister.index);
@@ -224,9 +221,7 @@ public class Assert {
           assert (b1 ^ b2);
           // assertTrue(s, b1 ^ b2);
         }
-      }
-      // deleted arc
-      else {
+      } else { // deleted arc
         del_cost += arc.longCost();
       }
     }

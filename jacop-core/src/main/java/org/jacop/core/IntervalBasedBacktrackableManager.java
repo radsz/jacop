@@ -321,9 +321,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
           for (int j = left; j < noOfObjects; j++) {
             objects[j].remove(removedLevel);
           }
-
-        } // non-interval based representation.
-        else {
+        } else { // non-interval based representation.
 
           if (lastTrail != emptyLevel && lastTrail != fullLevel) {
             for (int i : lastTrail) {

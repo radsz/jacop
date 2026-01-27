@@ -141,9 +141,7 @@ public class IfThenElse extends PrimitiveConstraint implements UsesQueueVariable
           return possibleEvent;
         }
       }
-    }
-    // If notConsistency function mode
-    else {
+    } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
         if (possibleEvent != null) {

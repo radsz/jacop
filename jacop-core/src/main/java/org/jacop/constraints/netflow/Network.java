@@ -157,9 +157,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       if (tail.parent == arc.head) {
         //       addArc(tail.artificial);
         updateTree(arc.sister, tail.artificial);
-      }
-      // pointing downwards
-      else {
+      } else { // pointing downwards
         assert (arc.head.parent == tail);
         //       addArc(arc.head.artificial);
         updateTree(arc, arc.head.artificial);
@@ -267,16 +265,11 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       if (arc.index >= 0) {
         lower[arc.index] = arc.sister;
       }
-    }
-
-    // at lower bound
-    else if (arc.sister.capacity == 0) {
+    } else if (arc.sister.capacity == 0) { // at lower bound
       if (arc.index >= 0) {
         lower[arc.index] = arc;
       }
-    }
-    // at neither bound
-    else {
+    } else { // at neither bound
       if (arc.index != TREE_ARC) {
         if (arc.reducedCost() <= 0) {
           primalStep(arc);

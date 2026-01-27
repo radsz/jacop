@@ -127,9 +127,7 @@ public abstract class PrimitiveConstraint extends Constraint
       }
 
       return getDefaultNestedConsistencyPruningEvent();
-    }
-    // If notConsistency function mode
-    else {
+    } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
         if (possibleEvent != null) {

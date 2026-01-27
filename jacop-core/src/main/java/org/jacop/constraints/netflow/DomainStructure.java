@@ -135,9 +135,7 @@ public class DomainStructure implements VarHandler {
         if (behavior != Behavior.PRUNE_ACTIVE) {
           groundArc(id, false, network);
         }
-      }
-      // make arc active ?
-      else if (inter == size) {
+      } else if (inter == size) { // make arc active ?
         if (behavior != Behavior.PRUNE_INACTIVE) {
           groundArc(id, true, network);
         }
@@ -173,10 +171,7 @@ public class DomainStructure implements VarHandler {
         // TODO: this isn't nice
         ((Network) network).lower[arc.index] = arc.sister;
       }
-
-    }
-    // inactive arc - ground flow at lower bound
-    else {
+    } else { // inactive arc - ground flow at lower bound
       int minFlow = companion.flowOffset;
 
       if (xVar != null) {

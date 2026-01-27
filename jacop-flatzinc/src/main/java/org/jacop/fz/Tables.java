@@ -657,9 +657,7 @@ public class Tables {
           s.append("], ");
         }
         s.append("}\n");
-      }
-      // float array
-      else if (i == indexFloatArray) {
+      } else if (i == indexFloatArray) { // float array
         s.append(tableNames[i]).append("\n");
         s.append("{");
         Set<String> keys = dictionary[i].keySet();
@@ -675,9 +673,7 @@ public class Tables {
           s.append("], ");
         }
         s.append("}\n");
-      }
-      // Set Array
-      else if (i == indexSetArray) {
+      } else if (i == indexSetArray) { // Set Array
         s.append(tableNames[i]).append("\n");
         s.append("{");
         Set<String> keys = dictionary[i].keySet();
@@ -688,9 +684,7 @@ public class Tables {
           s.append(", ");
         }
         s.append("}\n");
-      }
-      // Variable Array (IntVar, FloatVar, SetVar)
-      else if (i == indexVariableArray
+      } else if (i == indexVariableArray // Variable Array (IntVar, FloatVar, SetVar)
           || i == indexFloatVariableArray
           || i == indexSetVariableArray) {
         s.append(tableNames[i]).append("\n");

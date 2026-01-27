@@ -710,10 +710,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           }
 
           store.removeLevel(depth);
-
-        }
-        //       else if (!fdv.dom().singleton(val)) {
-        else if (!fdv.dom().singleton()) {
+        } else if (!fdv.dom().singleton()) { //       else if (!fdv.dom().singleton(val)) {
 
           assert (store.currentConstraint == null);
 

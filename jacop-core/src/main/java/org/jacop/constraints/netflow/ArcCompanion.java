@@ -210,10 +210,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       if (updated) {
         structure.processEvent(structure.variable, network);
       }
-
-    }
-    // Weight variable was bounded
-    else if (variable == wVar) {
+    } else if (variable == wVar) { // Weight variable was bounded
       // get new cost
       // int newCost = network.isMinimizng() ? wVar.min() : -wVar.max();
       int newCost = wVar.min();

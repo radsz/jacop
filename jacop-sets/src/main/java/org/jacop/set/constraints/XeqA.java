@@ -171,9 +171,7 @@ public class XeqA extends PrimitiveConstraint {
         }
       }
       return getConsistencyPruningEvent(var);
-    }
-    // If notConsistency function mode
-    else {
+    } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
         if (possibleEvent != null) {

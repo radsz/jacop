@@ -798,9 +798,8 @@ public class Knapsack extends Constraint
         needMandatory = true;
         needForbidden = true;
         needCriticalUpdate = true;
-      }
-      /* for max decreased of forbidden items */
-      else {
+      } else {
+        /* for max decreased of forbidden items */
         needConsistency = true;
         if (leafForV.positionInTheTree <= tree.criticalRightLeaf) {
           needMandatory = true;
@@ -815,9 +814,8 @@ public class Knapsack extends Constraint
         if (leafForV.positionInTheTree >= tree.criticalLeftLeaf) {
           needForbidden = true;
         }
-      }
-      /* for min increased of forbidden items */
-      else {
+      } else {
+        /* for min increased of forbidden items */
         needConsistency = true;
         needMandatory = true;
         needForbidden = true;

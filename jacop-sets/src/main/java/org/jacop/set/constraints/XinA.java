@@ -189,10 +189,7 @@ public class XinA extends PrimitiveConstraint {
           return possibleEvent;
         }
       }
-
-    }
-    // If notConsistency function mode
-    else {
+    } else { // If notConsistency function mode
       if (notConsistencyPruningEvents != null) {
         Integer possibleEvent = notConsistencyPruningEvents.get(var);
         if (possibleEvent != null) {
