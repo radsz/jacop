@@ -43,9 +43,9 @@ class IntTask {
 
   IntTask() {}
 
-  IntTask(int Start, int Stop) {
-    start = Start;
-    stop = Stop;
+  IntTask(int start, int stop) {
+    this.start = start;
+    this.stop = stop;
   }
 
   int start() {

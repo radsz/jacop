@@ -558,15 +558,15 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
   }
 
   @Override
-  public void queueVariable(int level, Var V) {
+  public void queueVariable(int level, Var var) {
 
     if (backtrackOccured) {
       // Variables have changed after backtracking and before consistency function.
-      domainSizeAfterConsistency[varToIndex.get(V)] = 0;
+      domainSizeAfterConsistency[varToIndex.get(var)] = 0;
     }
 
-    if (V.singleton()) {
-      lastAssignedVariablePosition = varToIndex.get(V);
+    if (var.singleton()) {
+      lastAssignedVariablePosition = varToIndex.get(var);
     }
   }
 

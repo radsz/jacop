@@ -281,17 +281,17 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     this(starts, durations, resources, limit, edgeFinding, true);
   }
 
-  boolean after(Task l, List<Task> S) {
+  boolean after(Task l, List<Task> tasks) {
 
     int startS = IntDomain.MaxInt;
     long a = 0;
     boolean afterS = true;
 
-    if (!S.isEmpty()) {
+    if (!tasks.isEmpty()) {
       if (debug) {
-        log.debug("Checking if {} can be after {}", l, S);
+        log.debug("Checking if {} can be after {}", l, tasks);
       }
-      for (Task t : S) {
+      for (Task t : tasks) {
         startS = Math.min(startS, t.est());
         a += t.areaMin();
       }
@@ -305,16 +305,16 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return afterS;
   }
 
-  private boolean before(Task l, List<Task> S) {
+  private boolean before(Task l, List<Task> tasks) {
     int completionS = IntDomain.MinInt;
     long a = 0;
     boolean beforeS = true;
 
-    if (!S.isEmpty()) {
+    if (!tasks.isEmpty()) {
       if (debug) {
-        log.debug("Checking if {} can be before tasks in {}", l, S);
+        log.debug("Checking if {} can be before tasks in {}", l, tasks);
       }
-      for (Task t : S) {
+      for (Task t : tasks) {
         completionS = Math.max(completionS, t.lct());
         a += t.areaMin();
       }
@@ -329,18 +329,18 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return beforeS;
   }
 
-  boolean between(Task l, List<Task> S) {
+  boolean between(Task l, List<Task> tasks) {
     int completionS = IntDomain.MinInt;
     int startS = IntDomain.MaxInt;
     long a = 0;
     long larea;
     boolean betweenS = true;
 
-    if (!S.isEmpty()) {
+    if (!tasks.isEmpty()) {
       if (debug) {
-        log.debug("Checking if {} can be between tasks in {}", l, S);
+        log.debug("Checking if {} can be between tasks in {}", l, tasks);
       }
-      for (Task t : S) {
+      for (Task t : tasks) {
         completionS = Math.max(completionS, t.lct());
         startS = Math.min(startS, t.est());
         a += minOverlap(t, startS, completionS);
@@ -789,10 +789,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private int est(List<Task> S) {
+  private int est(List<Task> tasks) {
     int estS = IntDomain.MaxInt;
 
-    for (Task t : S) {
+    for (Task t : tasks) {
       int tEST = t.est();
       if (tEST < estS) {
         estS = tEST;
@@ -877,10 +877,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return !(min1 >= max2 || max1 <= min2);
   }
 
-  private int lct(List<Task> S) {
+  private int lct(List<Task> tasks) {
     int lctS = IntDomain.MinInt;
 
-    for (Task t : S) {
+    for (Task t : tasks) {
       lctS = Math.max(lctS, t.lct());
     }
     return lctS;
@@ -947,7 +947,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return (long) tDur_min * t.res().min();
   }
 
-  private void notFirst(Store store, Task s, List<Task> S) {
+  private void notFirst(Store store, Task s, List<Task> tasks) {
     int sEST = s.est(); // sLCT = s.LCT();
     int completionS = IntDomain.MinInt;
     int newStartl = IntDomain.MinInt;
@@ -956,12 +956,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     long slack;
     long maxuse = limit.max() - s.res().min();
 
-    if (S.size() > 1) {
+    if (tasks.size() > 1) {
 
       if (debug) {
-        log.debug("Not first {} in {}", s, S);
+        log.debug("Not first {} in {}", s, tasks);
       }
-      for (Task t : S) {
+      for (Task t : tasks) {
         if (t != s) {
           completionS = Math.max(completionS, t.lct());
           a += t.areaMin();
@@ -978,28 +978,28 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       // Upadate LB for task s
 
       int j = 0;
-      Task[] tasks = new Task[S.size() - 1];
+      Task[] taskArray = new Task[tasks.size() - 1];
       int tasksLength = 0;
-      while (slack < 0 && j < S.size()) {
-        Task t = S.get(j);
+      while (slack < 0 && j < tasks.size()) {
+        Task t = tasks.get(j);
 
         if (t != s) {
           if (t.res().min() <= maxuse || sEST >= t.ect()) {
             slack += t.areaMin();
           } else {
-            tasks[tasksLength++] = t;
+            taskArray[tasksLength++] = t;
           }
         }
         j++;
       }
 
-      // System.out.println("slack after = " + slack + "tasks = " + tasks );
+      // System.out.println("slack after = " + slack + "tasks = " + taskArray );
       if (slack < 0 && tasksLength != 0) {
-        Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator);
+        Arrays.sort(taskArray, 0, tasksLength, taskAscEctComparator);
         j = 0;
         int limitMin = limit.min();
         while (slack < 0 && j < tasksLength) {
-          Task t = tasks[j];
+          Task t = taskArray[j];
           j++;
           newStartl = t.ect();
           slack = slack - (long) (newStartl - startl) * limitMin + t.areaMin();
@@ -1021,7 +1021,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void notLast(Store store, Task s, List<Task> S) {
+  private void notLast(Store store, Task s, List<Task> tasks) {
     int sLCT = s.lct();
     int compl = sLCT;
 
@@ -1032,12 +1032,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     long slack;
     long maxuse = limit.max() - s.res().min();
 
-    if (S.size() > 1) {
+    if (tasks.size() > 1) {
 
       if (debug) {
-        log.debug("Not last {} in {}", s, S);
+        log.debug("Not last {} in {}", s, tasks);
       }
-      for (Task t : S) {
+      for (Task t : tasks) {
         if (t != s) {
           startS = Math.min(startS, t.est());
           a += t.areaMin();
@@ -1053,28 +1053,28 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       // Upadate UB for task s
 
       int j = 0;
-      Task[] tasks = new Task[S.size() - 1];
+      Task[] taskArray = new Task[tasks.size() - 1];
       int tasksLength = 0;
-      while (slack < 0 && j < S.size()) {
-        Task t = S.get(j);
+      while (slack < 0 && j < tasks.size()) {
+        Task t = tasks.get(j);
         if (t != s) {
 
           if (t.res().min() <= maxuse || sLCT <= t.lst()) {
             slack += t.areaMin();
           } else {
-            tasks[tasksLength++] = t;
+            taskArray[tasksLength++] = t;
           }
         }
         j++;
       }
 
       if (slack < 0 && tasksLength != 0) {
-        Arrays.sort(tasks, 0, tasksLength, taskDescLstComparator);
+        Arrays.sort(taskArray, 0, tasksLength, taskDescLstComparator);
 
         j = 0;
         int limitMin = limit.min();
         while (slack < 0 && j < tasksLength) {
-          Task t = tasks[j];
+          Task t = taskArray[j];
           j++;
           newCompl = t.lst();
           slack = slack - (long) (compl - newCompl) * limitMin + t.areaMin();
@@ -1099,10 +1099,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private void profileCheckInterval(
       Store store,
-      IntVar Start,
-      IntVar Duration,
+      IntVar start,
+      IntVar duration,
       Interval i,
-      IntVar Resources,
+      IntVar resources,
       int mustUseMin,
       int mustUseMax) {
 
@@ -1111,106 +1111,106 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         log.debug("Comparing {} with profile item {}", i, p);
       }
 
-      if (intervalOverlap(i.min(), i.max() + Duration.min(), p.min, p.max)) {
+      if (intervalOverlap(i.min(), i.max() + duration.min(), p.min, p.max)) {
         if (debug) {
           log.debug("Overlapping");
         }
-        if (limit.max() - p.value < Resources.min()) {
+        if (limit.max() - p.value < resources.min()) {
           // Check for possible narrowing or fail
           if (mustUseMin != -1) {
-            ProfileItem use = new ProfileItem(mustUseMin, mustUseMax, Resources.min());
+            ProfileItem use = new ProfileItem(mustUseMin, mustUseMax, resources.min());
             ProfileItem left = new ProfileItem();
             ProfileItem right = new ProfileItem();
             p.subtract(use, left, right);
 
             if (left.min != -1) {
-              int UpdateMin = left.min - Duration.min() + 1;
+              int UpdateMin = left.min - duration.min() + 1;
               int UpdateMax = left.max - 1;
-              if (!(UpdateMin > Start.max() || UpdateMax < Start.min())) {
+              if (!(UpdateMin > start.max() || UpdateMax < start.min())) {
                 if (debugNarr) {
                   log.debug(
                       ">>> Cumulative Profile 7a. Narrowed {} \\ {} => {}",
-                      Start,
+                      start,
                       new IntervalDomain(UpdateMin, UpdateMax),
-                      Start);
+                      start);
                 }
 
                 if (UpdateMin <= UpdateMax) {
-                  Start.domain.inComplement(store.level, Start, UpdateMin, UpdateMax);
+                  start.domain.inComplement(store.level, start, UpdateMin, UpdateMax);
                 }
               }
             }
 
             if (right.min != -1) {
-              int UpdateMin = right.min - Duration.min() + 1;
+              int UpdateMin = right.min - duration.min() + 1;
               int UpdateMax = right.max - 1;
-              if (!(UpdateMin > Start.max() || UpdateMax < Start.min())) {
+              if (!(UpdateMin > start.max() || UpdateMax < start.min())) {
                 if (debugNarr) {
                   log.debug(
                       ">>> Cumulative Profile 7b. Narrowed {} \\ {} => {}",
-                      Start,
+                      start,
                       new IntervalDomain(UpdateMin, UpdateMax),
-                      Start);
+                      start);
                 }
 
                 if (UpdateMin <= UpdateMax) {
-                  Start.domain.inComplement(store.level, Start, UpdateMin, UpdateMax);
+                  start.domain.inComplement(store.level, start, UpdateMin, UpdateMax);
                 }
               }
             }
 
-            if (Start.max() < right.min && Start.dom().noIntervals() == 1) {
-              int rs = right.min - Start.min();
-              if (rs < Duration.max()) {
+            if (start.max() < right.min && start.dom().noIntervals() == 1) {
+              int rs = right.min - start.min();
+              if (rs < duration.max()) {
                 if (debugNarr) {
-                  log.debug(">>> Cumulative Profile 9. Narrow {} in 0..{}", Duration, rs);
+                  log.debug(">>> Cumulative Profile 9. Narrow {} in 0..{}", duration, rs);
                 }
-                Duration.domain.inMax(store.level, Duration, rs);
+                duration.domain.inMax(store.level, duration, rs);
               }
             }
           } else { // (mustUse.min() == -1 )
-            int UpdateMin = p.min - Duration.min() + 1;
+            int UpdateMin = p.min - duration.min() + 1;
             int UpdateMax = p.max - 1;
-            if (!(UpdateMin > Start.max() || UpdateMax < Start.min())) {
+            if (!(UpdateMin > start.max() || UpdateMax < start.min())) {
               if (debugNarr) {
                 log.debug(
                     ">>> Cumulative Profile 6. Narrowed {} \\ {} => {}",
-                    Start,
+                    start,
                     new IntervalDomain(UpdateMin, UpdateMax),
-                    Start);
+                    start);
               }
               if (UpdateMin <= UpdateMax) {
-                Start.domain.inComplement(store.level, Start, UpdateMin, UpdateMax);
+                start.domain.inComplement(store.level, start, UpdateMin, UpdateMax);
               }
             }
           }
         } else { // ( Overlapping &&
-          // limit.max() - p.Value >= Resources.min() )
+          // limit.max() - p.Value >= resources.min() )
           if (mustUseMin != -1 && !(mustUseMax <= p.min() || mustUseMin >= p.max())) {
             int offset = 0;
             if (intervalOverlap(p.min(), p.max(), mustUseMin, mustUseMax)) {
-              offset = Resources.min();
+              offset = resources.min();
             }
             if (debugNarr) {
               log.debug(
                   ">>> Cumulative Profile 8. Narrowed {} in 0..{}",
-                  Resources,
+                  resources,
                   (limit.max() - p.value + offset));
             }
 
-            Resources.domain.in(store.level, Resources, 0, limit.max() - p.value + offset);
+            resources.domain.in(store.level, resources, 0, limit.max() - p.value + offset);
           }
         }
       } else { // ( ( i.min() >= p.max() || i.max()+dur <= p.min()) )
-        if (Start.max() < p.min && Start.dom().noIntervals() == 1) {
-          // System.out.println("Nonoverlaping "+Start+", "+i+", "+p);
-          int ps = p.min - Start.min();
-          if (ps < Duration.max() && limit.max() - p.value < Resources.min()) {
+        if (start.max() < p.min && start.dom().noIntervals() == 1) {
+          // System.out.println("Nonoverlaping "+start+", "+i+", "+p);
+          int ps = p.min - start.min();
+          if (ps < duration.max() && limit.max() - p.value < resources.min()) {
             if (debugNarr) {
-              log.debug(">>> Cumulative Profile 10. Narrowed {} in 0..{}", Duration, ps);
+              log.debug(">>> Cumulative Profile 10. Narrowed {} in 0..{}", duration, ps);
             }
 
-            Duration.domain.inMax(store.level, Duration, ps);
+            duration.domain.inMax(store.level, duration, ps);
           }
         }
       }

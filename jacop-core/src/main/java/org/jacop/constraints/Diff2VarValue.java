@@ -50,8 +50,8 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
   // Constructors for temporary Duff2VarValue
   Diff2VarValue() {}
 
-  Diff2VarValue(Rectangle[] R) {
-    Rects = R;
+  Diff2VarValue(Rectangle[] rectangles) {
+    Rects = rectangles;
   }
 
   // Methods
@@ -77,16 +77,16 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
     stamp = s;
   }
 
-  void setValue(List<Rectangle> VR) {
-    Rects = new Rectangle[VR.size()];
+  void setValue(List<Rectangle> rectangles) {
+    Rects = new Rectangle[rectangles.size()];
     for (int i = 0; i < Rects.length; i++) {
-      Rects[i] = VR.get(i);
+      Rects[i] = rectangles.get(i);
     }
-    // System.arraycopy(VR.toArray(),0,Rects,0,Rects.length);
+    // System.arraycopy(rectangles.toArray(),0,Rects,0,Rects.length);
   }
 
-  void setValue(Rectangle[] R) {
-    Rects = R;
+  void setValue(Rectangle[] rectangles) {
+    Rects = rectangles;
   }
 
   public int stamp() {

@@ -52,12 +52,12 @@ public class IntervalGaussSeidel {
   FloatInterval[][] A;
   double[] b;
 
-  public IntervalGaussSeidel(FloatInterval[][] A, double[] b) {
+  public IntervalGaussSeidel(FloatInterval[][] a, double[] b) {
 
-    this.A = new FloatInterval[A.length][];
-    for (int i = 0; i < A.length; i++) {
-      this.A[i] = new FloatInterval[A[i].length];
-      System.arraycopy(A[i], 0, this.A[i], 0, A[i].length);
+    this.A = new FloatInterval[a.length][];
+    for (int i = 0; i < a.length; i++) {
+      this.A[i] = new FloatInterval[a[i].length];
+      System.arraycopy(a[i], 0, this.A[i], 0, a[i].length);
     }
     this.b = new double[b.length];
     System.arraycopy(b, 0, this.b, 0, b.length);

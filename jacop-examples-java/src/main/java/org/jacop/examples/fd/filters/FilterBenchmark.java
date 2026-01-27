@@ -480,13 +480,13 @@ public class FilterBenchmark {
     }
   }
 
-  private static int div(int A, int B) {
-    int Div;
-    int Rem;
+  private static int div(int a, int b) {
+    int div;
+    int rem;
 
-    Div = A / B;
-    Rem = A % B;
-    return Rem > 0 ? Div + 1 : Div;
+    div = a / b;
+    rem = a % b;
+    return rem > 0 ? div + 1 : div;
   }
 
   /**
@@ -1489,20 +1489,20 @@ public class FilterBenchmark {
   /**
    * It creates an array of arrays using two arrays.
    *
-   * @param T an array of variables corresponding to start time of an operation.
-   * @param R an array of variables corresponding to resource of an operation.
+   * @param t an array of variables corresponding to start time of an operation.
+   * @param r an array of variables corresponding to resource of an operation.
    * @return an array of arrays, each array containing one starttime and one resource assignment
    *     variable.
    */
-  public static List<List<IntVar>> makeLabelingList(IntVar[] T, IntVar[] R) {
+  public static List<List<IntVar>> makeLabelingList(IntVar[] t, IntVar[] r) {
 
     List<List<IntVar>> list = new ArrayList<>();
 
-    for (int i = 0; i < T.length; i++) {
-      List<IntVar> TR = new ArrayList<>();
-      TR.add(T[i]);
-      TR.add(R[i]);
-      list.add(TR);
+    for (int i = 0; i < t.length; i++) {
+      List<IntVar> tr = new ArrayList<>();
+      tr.add(t[i]);
+      tr.add(r[i]);
+      list.add(tr);
     }
     return list;
   }

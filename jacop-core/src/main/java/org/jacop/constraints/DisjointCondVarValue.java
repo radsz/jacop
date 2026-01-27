@@ -49,8 +49,8 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
 
   DisjointCondVarValue() {}
 
-  DisjointCondVarValue(RectangleWithCondition[] R) {
-    Rects = R;
+  DisjointCondVarValue(RectangleWithCondition[] rectangles) {
+    Rects = rectangles;
   }
 
   @Override
@@ -73,14 +73,14 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
     stamp = s;
   }
 
-  void setValue(RectangleWithCondition[] R) {
-    Rects = R;
+  void setValue(RectangleWithCondition[] rectangles) {
+    Rects = rectangles;
   }
 
-  void setValue(List<RectangleWithCondition> VR) {
-    Rects = new RectangleWithCondition[VR.size()];
+  void setValue(List<RectangleWithCondition> rectangles) {
+    Rects = new RectangleWithCondition[rectangles.size()];
     for (int i = 0; i < Rects.length; i++) {
-      Rects[i] = VR.get(i);
+      Rects[i] = rectangles.get(i);
     }
   }
 

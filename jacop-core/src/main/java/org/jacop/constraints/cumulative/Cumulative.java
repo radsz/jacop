@@ -215,7 +215,7 @@ public class Cumulative extends CumulativeBasic {
     adjustBounds(store, tree, lctList, prec, limit.max());
   }
 
-  private int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long C) {
+  private int[] detectOrder(ThetaLambdaTree tree, TaskView[] t, int[] lctInvOrder, long capacity) {
 
     int n = t.length;
     int[] prec = new int[n];
@@ -225,11 +225,11 @@ public class Cumulative extends CumulativeBasic {
     }
 
     for (TaskView aT : t) {
-      if (tree.rootNode().env > C * (long) aT.lct()) {
+      if (tree.rootNode().env > capacity * (long) aT.lct()) {
         throw Store.failException;
       }
 
-      while (tree.rootNode().envLambda > C * (long) aT.lct()) {
+      while (tree.rootNode().envLambda > capacity * (long) aT.lct()) {
         int i = tree.rootNode().responsibleEnvLambda;
         prec[tree.get(i).task.index] = Math.max(prec[tree.get(i).task.index], aT.lct());
         tree.removeFromLambda(i);

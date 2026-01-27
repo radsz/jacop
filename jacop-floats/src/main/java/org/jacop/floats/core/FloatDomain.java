@@ -1244,7 +1244,7 @@ public abstract class FloatDomain extends Domain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putModelConstraint(int storeLevel, Var var, Constraint C, int pruningEvent) {
+  public void putModelConstraint(int storeLevel, Var var, Constraint constraint, int pruningEvent) {
 
     if (stamp < storeLevel) {
 
@@ -1258,7 +1258,7 @@ public abstract class FloatDomain extends Domain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
 
-      result.putModelConstraint(storeLevel, var, C, pruningEvent);
+      result.putModelConstraint(storeLevel, var, constraint, pruningEvent);
       return;
     }
 
@@ -1270,7 +1270,7 @@ public abstract class FloatDomain extends Domain {
 
       if (modelConstraintsToEvaluate[pruningEvent] > 0) {
         for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
-          if (pruningEventConstraints[i] == C) {
+          if (pruningEventConstraints[i] == constraint) {
             alreadyImposed = true;
             break;
           }
@@ -1288,7 +1288,7 @@ public abstract class FloatDomain extends Domain {
             newPruningEventConstraints,
             0,
             pruningConstraintsToEvaluate);
-        newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
+        newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
 
         Constraint[][] newModelConstraints = new Constraint[3][];
 
@@ -1315,7 +1315,7 @@ public abstract class FloatDomain extends Domain {
 
       Constraint[] newPruningEventConstraints = new Constraint[1];
 
-      newPruningEventConstraints[0] = C;
+      newPruningEventConstraints[0] = constraint;
 
       Constraint[][] newModelConstraints = new Constraint[3][];
 
@@ -1340,7 +1340,7 @@ public abstract class FloatDomain extends Domain {
   }
 
   @Override
-  public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
+  public void removeModelConstraint(int storeLevel, Var var, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -1354,7 +1354,7 @@ public abstract class FloatDomain extends Domain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
 
-      result.removeModelConstraint(storeLevel, var, C);
+      result.removeModelConstraint(storeLevel, var, constraint);
       return;
     }
 
@@ -1369,7 +1369,7 @@ public abstract class FloatDomain extends Domain {
       int i;
 
       for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == C) {
+        if (pruningEventConstraints[i] == constraint) {
           isImposed = true;
           break;
         }
@@ -1382,7 +1382,7 @@ public abstract class FloatDomain extends Domain {
           modelConstraints[pruningEvent][i] =
               modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
         int[] newModelConstraintsToEvaluate = new int[3];
@@ -1410,7 +1410,7 @@ public abstract class FloatDomain extends Domain {
       int i;
 
       for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == C) {
+        if (pruningEventConstraints[i] == constraint) {
           isImposed = true;
           break;
         }
@@ -1423,7 +1423,7 @@ public abstract class FloatDomain extends Domain {
           modelConstraints[pruningEvent][i] =
               modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
         int[] newModelConstraintsToEvaluate = new int[3];
@@ -1451,7 +1451,7 @@ public abstract class FloatDomain extends Domain {
       int i;
 
       for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == C) {
+        if (pruningEventConstraints[i] == constraint) {
           isImposed = true;
           break;
         }
@@ -1464,7 +1464,7 @@ public abstract class FloatDomain extends Domain {
           modelConstraints[pruningEvent][i] =
               modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
         int[] newModelConstraintsToEvaluate = new int[3];

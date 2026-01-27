@@ -45,20 +45,20 @@ class RectangleWithCondition extends Rectangle {
 
   final int index;
 
-  public RectangleWithCondition(int i, List<? extends IntVar> R, IntVar cond) {
-    super(R);
+  public RectangleWithCondition(int i, List<? extends IntVar> r, IntVar cond) {
+    super(r);
     c = cond;
     index = i;
   }
 
-  public RectangleWithCondition(int i, IntVar[] R, IntVar cond) {
-    super(R);
+  public RectangleWithCondition(int i, IntVar[] r, IntVar cond) {
+    super(r);
     c = cond;
     index = i;
   }
 
-  public RectangleWithCondition(int i, Rectangle R, IntVar cond) {
-    super(R);
+  public RectangleWithCondition(int i, Rectangle r, IntVar cond) {
+    super(r);
     c = cond;
     index = i;
   }

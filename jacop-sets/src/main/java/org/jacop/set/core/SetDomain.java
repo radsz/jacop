@@ -302,7 +302,7 @@ public abstract class SetDomain extends Domain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putModelConstraint(int storeLevel, Var var, Constraint C, int pruningEvent) {
+  public void putModelConstraint(int storeLevel, Var var, Constraint constraint, int pruningEvent) {
 
     if (stamp < storeLevel) {
 
@@ -316,7 +316,7 @@ public abstract class SetDomain extends Domain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((SetVar) var).domain = result;
 
-      result.putModelConstraint(storeLevel, var, C, pruningEvent);
+      result.putModelConstraint(storeLevel, var, constraint, pruningEvent);
       return;
     }
 
@@ -329,7 +329,7 @@ public abstract class SetDomain extends Domain {
 
       if (modelConstraintsToEvaluate[pruningEvent] > 0) {
         for (int i = pruningEventConstraints.length - 1; i >= 0; i--) {
-          if (pruningEventConstraints[i] == C) {
+          if (pruningEventConstraints[i] == constraint) {
             alreadyImposed = true;
             break;
           }
@@ -349,7 +349,7 @@ public abstract class SetDomain extends Domain {
             0,
             pruningConstraintsToEvaluate);
 
-        newPruningEventConstraints[pruningConstraintsToEvaluate] = C;
+        newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
 
         Constraint[][] newModelConstraints = new Constraint[modelConstraints.length][];
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
@@ -369,7 +369,7 @@ public abstract class SetDomain extends Domain {
     } else {
 
       Constraint[] newPruningEventConstraints = new Constraint[1];
-      newPruningEventConstraints[0] = C;
+      newPruningEventConstraints[0] = constraint;
 
       Constraint[][] newModelConstraints = new Constraint[modelConstraints.length][];
       int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
@@ -393,9 +393,9 @@ public abstract class SetDomain extends Domain {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putSearchConstraint(int storeLevel, Var var, Constraint C) {
+  public void putSearchConstraint(int storeLevel, Var var, Constraint constraint) {
 
-    if (!searchConstraints.contains(C)) {
+    if (!searchConstraints.contains(constraint)) {
 
       if (stamp < storeLevel) {
 
@@ -412,12 +412,12 @@ public abstract class SetDomain extends Domain {
         result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
         ((SetVar) var).domain = result;
 
-        result.putSearchConstraint(storeLevel, var, C);
+        result.putSearchConstraint(storeLevel, var, constraint);
         return;
       }
 
       if (searchConstraints.size() == searchConstraintsToEvaluate) {
-        searchConstraints.add(C);
+        searchConstraints.add(constraint);
       } else {
         // Exchange the first satisfied constraint with just added
         // constraint
@@ -425,13 +425,13 @@ public abstract class SetDomain extends Domain {
 
         if (searchConstraintsCloned) {
           Constraint firstSatisfied = searchConstraints.get(searchConstraintsToEvaluate);
-          searchConstraints.set(searchConstraintsToEvaluate, C);
+          searchConstraints.set(searchConstraintsToEvaluate, constraint);
           searchConstraints.add(firstSatisfied);
         } else {
           searchConstraints =
               new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
           searchConstraintsCloned = true;
-          searchConstraints.add(C);
+          searchConstraints.add(constraint);
         }
       }
       searchConstraintsToEvaluate++;
@@ -483,7 +483,7 @@ public abstract class SetDomain extends Domain {
    * Variable object.
    */
   @Override
-  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint C) {
+  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -497,7 +497,7 @@ public abstract class SetDomain extends Domain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((SetVar) var).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, position, C);
+      result.removeSearchConstraint(storeLevel, var, position, constraint);
       return;
     }
 
@@ -506,7 +506,7 @@ public abstract class SetDomain extends Domain {
     if (position < searchConstraintsToEvaluate) {
 
       searchConstraints.set(position, searchConstraints.get(searchConstraintsToEvaluate - 1));
-      searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+      searchConstraints.set(searchConstraintsToEvaluate - 1, constraint);
       searchConstraintsToEvaluate--;
     }
   }
@@ -516,7 +516,7 @@ public abstract class SetDomain extends Domain {
    * Variable object.
    */
   @Override
-  public void removeModelConstraint(int storeLevel, Var var, Constraint C) {
+  public void removeModelConstraint(int storeLevel, Var var, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -530,7 +530,7 @@ public abstract class SetDomain extends Domain {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((SetVar) var).domain = result;
 
-      result.removeModelConstraint(storeLevel, var, C);
+      result.removeModelConstraint(storeLevel, var, constraint);
       return;
     }
 
@@ -545,7 +545,7 @@ public abstract class SetDomain extends Domain {
       int i;
 
       for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == C) {
+        if (pruningEventConstraints[i] == constraint) {
           isImposed = true;
           break;
         }
@@ -558,7 +558,7 @@ public abstract class SetDomain extends Domain {
           modelConstraints[pruningEvent][i] =
               modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
@@ -588,7 +588,7 @@ public abstract class SetDomain extends Domain {
       int i;
 
       for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == C) {
+        if (pruningEventConstraints[i] == constraint) {
           isImposed = true;
           break;
         }
@@ -601,7 +601,7 @@ public abstract class SetDomain extends Domain {
           modelConstraints[pruningEvent][i] =
               modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];
@@ -631,7 +631,7 @@ public abstract class SetDomain extends Domain {
       int i;
 
       for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
-        if (pruningEventConstraints[i] == C) {
+        if (pruningEventConstraints[i] == constraint) {
           isImposed = true;
           break;
         }
@@ -644,7 +644,7 @@ public abstract class SetDomain extends Domain {
           modelConstraints[pruningEvent][i] =
               modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
 
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = C;
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
         int[] newModelConstraintsToEvaluate = new int[modelConstraintsToEvaluate.length];

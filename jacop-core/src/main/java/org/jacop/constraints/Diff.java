@@ -909,13 +909,13 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   }
 
   @Override
-  public void queueVariable(int level, Var V) {
+  public void queueVariable(int level, Var var) {
     if (level == stamp) {
-      variableQueue.add((IntVar) V);
+      variableQueue.add((IntVar) var);
     } else {
       variableQueue.clear();
       stamp = level;
-      variableQueue.add((IntVar) V);
+      variableQueue.add((IntVar) var);
     }
   }
 

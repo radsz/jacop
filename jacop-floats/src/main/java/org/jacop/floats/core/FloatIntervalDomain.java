@@ -2856,9 +2856,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
    * constraints if vector was not cloned.
    */
   @Override
-  public void putSearchConstraint(int storeLevel, Var var, Constraint C) {
+  public void putSearchConstraint(int storeLevel, Var var, Constraint constraint) {
 
-    if (!searchConstraints.contains(C)) {
+    if (!searchConstraints.contains(constraint)) {
 
       if (stamp < storeLevel) {
 
@@ -2875,12 +2875,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
         ((FloatVar) var).domain = result;
 
-        result.putSearchConstraint(storeLevel, var, C);
+        result.putSearchConstraint(storeLevel, var, constraint);
         return;
       }
 
       if (searchConstraints.size() == searchConstraintsToEvaluate) {
-        searchConstraints.add(C);
+        searchConstraints.add(constraint);
       } else {
         // Exchange the first satisfied constraint with just added
         // constraint
@@ -2888,13 +2888,13 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
         if (searchConstraintsCloned) {
           Constraint firstSatisfied = searchConstraints.get(searchConstraintsToEvaluate);
-          searchConstraints.set(searchConstraintsToEvaluate, C);
+          searchConstraints.set(searchConstraintsToEvaluate, constraint);
           searchConstraints.add(firstSatisfied);
         } else {
           searchConstraints =
               new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
           searchConstraintsCloned = true;
-          searchConstraints.add(C);
+          searchConstraints.add(constraint);
         }
       }
       searchConstraintsToEvaluate++;
@@ -2907,9 +2907,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
    *
    * @param storeLevel the current level of the store.
    * @param var the variable for which the constraint is being removed.
-   * @param C the constraint being removed.
+   * @param constraint the constraint being removed.
    */
-  public void removeSearchConstraint(int storeLevel, Var var, Constraint C) {
+  public void removeSearchConstraint(int storeLevel, Var var, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -2923,7 +2923,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, C);
+      result.removeSearchConstraint(storeLevel, var, constraint);
       return;
     }
 
@@ -2934,10 +2934,10 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     // TODO: improve by using interval find function.
 
     while (i < searchConstraintsToEvaluate) {
-      if (searchConstraints.get(i) == C) {
+      if (searchConstraints.get(i) == constraint) {
 
         searchConstraints.set(i, searchConstraints.get(searchConstraintsToEvaluate - 1));
-        searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+        searchConstraints.set(searchConstraintsToEvaluate - 1, constraint);
         searchConstraintsToEvaluate--;
 
         break;
@@ -2951,7 +2951,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
    * Variable object.
    */
   @Override
-  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint C) {
+  public void removeSearchConstraint(int storeLevel, Var var, int position, Constraint constraint) {
 
     if (stamp < storeLevel) {
 
@@ -2965,19 +2965,19 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((FloatVar) var).domain = result;
 
-      result.removeSearchConstraint(storeLevel, var, position, C);
+      result.removeSearchConstraint(storeLevel, var, position, constraint);
       return;
     }
 
     assert (stamp == storeLevel);
 
-    assert (searchConstraints.get(position) == C)
+    assert (searchConstraints.get(position) == constraint)
         : "Position of the removed constraint not specified properly";
 
     if (position < searchConstraintsToEvaluate) {
 
       searchConstraints.set(position, searchConstraints.get(searchConstraintsToEvaluate - 1));
-      searchConstraints.set(searchConstraintsToEvaluate - 1, C);
+      searchConstraints.set(searchConstraintsToEvaluate - 1, constraint);
       searchConstraintsToEvaluate--;
     }
   }

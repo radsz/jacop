@@ -250,11 +250,12 @@ public abstract class Domain {
    *
    * @param storeLevel the level at which the model constraint is to be added.
    * @param var variable to which the constraint is attached to.
-   * @param C the constraint which is being attached to a variable.
+   * @param constraint the constraint which is being attached to a variable.
    * @param pruningEvent the type of the prunning event required to check the consistency of the
    *     attached constraint.
    */
-  public abstract void putModelConstraint(int storeLevel, Var var, Constraint C, int pruningEvent);
+  public abstract void putModelConstraint(
+      int storeLevel, Var var, Constraint constraint, int pruningEvent);
 
   /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of
@@ -263,9 +264,9 @@ public abstract class Domain {
    *
    * @param storeLevel the level at which the search constraint is to be added.
    * @param var variable to which the constraint is attached to.
-   * @param C the constraint which is being attached to a variable.
+   * @param constraint the constraint which is being attached to a variable.
    */
-  public abstract void putSearchConstraint(int storeLevel, Var var, Constraint C);
+  public abstract void putSearchConstraint(int storeLevel, Var var, Constraint constraint);
 
   // public abstract Domain recentDomainPruning(int currentStoreLevel);
 

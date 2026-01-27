@@ -28,6 +28,7 @@
  *
  * <p>A simple model to solve Sudoku problem.
  */
+
 package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;

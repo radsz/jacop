@@ -156,8 +156,8 @@ public class Element extends Constraint implements UsesQueueVariable {
   }
 
   @Override
-  public void queueVariable(int level, Var V) {
-    c.queueVariable(level, V);
+  public void queueVariable(int level, Var var) {
+    c.queueVariable(level, var);
   }
 
   @Override

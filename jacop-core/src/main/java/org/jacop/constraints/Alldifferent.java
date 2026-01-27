@@ -229,8 +229,8 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   }
 
   @Override
-  public void queueVariable(int level, Var V) {
-    variableQueue.add((IntVar) V);
+  public void queueVariable(int level, Var var) {
+    variableQueue.add((IntVar) var);
   }
 
   @SuppressWarnings("unused")
