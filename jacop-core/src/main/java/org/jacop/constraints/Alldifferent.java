@@ -159,7 +159,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   }
 
   @SuppressWarnings("unused")
-  private boolean satisfiedFullCheck(Store S) {
+  private boolean satisfiedFullCheck(Store store) {
 
     int i = 0;
 

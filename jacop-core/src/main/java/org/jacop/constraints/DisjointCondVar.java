@@ -52,23 +52,23 @@ class DisjointCondVar implements MutableVar {
 
   DisjointCondVarValue value;
 
-  DisjointCondVar(Store S) {
+  DisjointCondVar(Store store) {
     value = new DisjointCondVarValue();
-    index = S.putMutableVar(this);
-    store = S;
+    index = store.putMutableVar(this);
+    this.store = store;
   }
 
-  DisjointCondVar(Store S, RectangleWithCondition[] R) {
+  DisjointCondVar(Store store, RectangleWithCondition[] R) {
     value = new DisjointCondVarValue(R);
-    index = S.putMutableVar(this);
-    store = S;
+    index = store.putMutableVar(this);
+    this.store = store;
   }
 
-  DisjointCondVar(Store S, List<RectangleWithCondition> R) {
+  DisjointCondVar(Store store, List<RectangleWithCondition> R) {
     value = new DisjointCondVarValue();
     value.setValue(R);
-    index = S.putMutableVar(this);
-    store = S;
+    index = store.putMutableVar(this);
+    this.store = store;
   }
 
   int index() {
