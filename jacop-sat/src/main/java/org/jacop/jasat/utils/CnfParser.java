@@ -89,7 +89,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    * reads an int from the stream
    *
    * @return the parsed int
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   private int parseInt() throws IOException {
     int answer = 0;
@@ -132,7 +132,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   /**
    * skip the rest of the line (\n included)
    *
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   private void skipLine() throws IOException {
     // read until \n
@@ -158,7 +158,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   /**
    * reads number of clauses and number of vars
    *
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   private void readProblemDef() throws IOException {
 

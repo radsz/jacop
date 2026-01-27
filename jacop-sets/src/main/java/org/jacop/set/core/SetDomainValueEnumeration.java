@@ -153,7 +153,7 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
   /**
    * Returns the maximum place number for an element in this level
    *
-   * @param level
+   * @param level the level
    * @return the maximum place number for an element in this level
    */
   private int getMaxPascal(int level) {

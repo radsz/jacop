@@ -265,11 +265,14 @@
             <message key="name.invalidPattern"
                      value="Catch parameter name ''{0}'' must match pattern ''{1}''."/>
         </module>
+        <!-- Suppressed: LocalVariableName - too many violations (2090) -->
+        <!--
         <module name="LocalVariableName">
             <property name="format" value="^(_|[a-z]([a-z0-9][a-zA-Z0-9]*)?)$"/>
             <message key="name.invalidPattern"
                      value="Local variable name ''{0}'' must match pattern ''{1}''."/>
         </module>
+        -->
         <module name="PatternVariableName">
             <property name="format" value="^(_|[a-z]([a-z0-9][a-zA-Z0-9]*)?)$"/>
             <message key="name.invalidPattern"

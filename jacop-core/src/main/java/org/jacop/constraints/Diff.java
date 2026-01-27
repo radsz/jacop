@@ -25,7 +25,7 @@
  * License version 3.
  * <p>
  * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
 package org.jacop.constraints;
@@ -688,10 +688,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
       }
 
-      if ( // !minLengthEq0 && // Check for rectangle r which has
-      // all lengths > 0
-      !(settled && maxLevel < currentStore.level)) {
-        // and are not fixed already
+      if (!(settled && maxLevel < currentStore.level)) {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
@@ -700,7 +697,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         boolean ntN = findRectangles(r, UsedRect, ProfileCandidates, fdvQueue);
         needToNarrow = needToNarrow || ntN;
 
-        // Checking r against all s with minUse in the domain of r
         if (needToNarrow) {
           narrowRectangle(r, UsedRect, ProfileCandidates);
         }

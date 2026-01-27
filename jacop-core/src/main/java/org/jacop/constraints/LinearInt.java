@@ -25,7 +25,7 @@
  * License version 3.
  * <p>
  * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
 package org.jacop.constraints;
@@ -612,7 +612,6 @@ public class LinearInt extends PrimitiveConstraint {
       case gt -> satisfiedGtEq(b + 1);
       case ge -> satisfiedGtEq(b);
       default -> false;
-        // throw new RuntimeException("Internal error in " + getClass().getName());
     };
   }
 
