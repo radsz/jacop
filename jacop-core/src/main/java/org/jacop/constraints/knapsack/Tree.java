@@ -506,7 +506,7 @@ public class Tree {
                 - (currentProfit + currentNode.rightNeighbor.getPSum())
                 - profitFromCriticalLeft;
 
-        // @TODO < changed to <=, double check that it causes no problems...
+        // @TODO: < changed to <=, double check that it causes no problems...
         if (profitEaten <= profitSlack) {
 
           currentNode = currentNode.parent;
@@ -524,7 +524,7 @@ public class Tree {
         }
 
         // move right does not exceed slack.
-        // @TODO < changed to <=, double check that it causes no problems...
+        // @TODO: < changed to <=, double check that it causes no problems...
         if (efficiencyOfItemChecked * (currentWeight + currentNode.rightNeighbor.getWSum())
                 - (currentProfit + currentNode.rightNeighbor.getPSum())
                 - profitFromCriticalLeft
@@ -606,7 +606,7 @@ public class Tree {
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
       // Playing safe, we decrease replacable weight to floor for the next iteration so we do not
       // miss mandatory item.
-      // @TODO commented out below
+      // @TODO: commented out below
       // currentWeight += (int) Math.floor( lastWeight );
 
     } else {
@@ -617,7 +617,7 @@ public class Tree {
       // Playing safe, we can replace more, so we do not make an item mandatory when we should not.
       // Playing safe, we decrease replacable weight to floor for the next iteration so we do not
       // miss mandatory item.
-      // @TODO commented out below
+      // @TODO: commented out below
       // currentWeight += (int) Math.floor( lastWeight );
     }
     return currentWeight + (int) Math.ceil(lastWeight);

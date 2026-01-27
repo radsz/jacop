@@ -671,7 +671,7 @@ public final class Core implements SolverComponent {
 
   /** prints the current solution on standard output */
   public void printSolution() {
-    // TODO : clean it (factor code, avoid repetition)
+    // TODO: clean it (factor code, avoid repetition)
 
     assert hasSolution();
     IO.println("s " + SolverState.show(currentState));

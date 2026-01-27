@@ -148,7 +148,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
 
     // Remove arc from tree, if it is a tree arc
-    // TODO perform dual pivot instead ?
+    // TODO: perform dual pivot instead ?
     // (it is slower and may fail, but preserves optimality)
 
     if (arc.index == TREE_ARC /* && !dualPivot(arc) */) {
@@ -217,12 +217,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
   public void increaseLevel() {
 
-    // TODO does this solve the problem below ?
+    // TODO: does this solve the problem below ?
     if (modifiedSize.stamp() < store.level) {
       lastModifiedArcs.clear();
     }
 
-    // TODO the same arc can be marked as modified
+    // TODO: the same arc can be marked as modified
     // multiple times on the same level if the consistency
     // function is executed multiple times at that level.
     // (Geost has the same problem)
@@ -253,7 +253,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       log.debug("Before restore: {}, time = {}", companion.arc, modifiedSize.stamp());
     }
 
-    // TODO, CRUCIAL, BUG, switched off. Is it ok?
+    // TODO: CRUCIAL, BUG, switched off. Is it ok?
     // assert (arc.index >= TREE_ARC);
 
     companion.restore(this);
@@ -286,7 +286,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       }
     }
 
-    // TODO, CRUCIAL, BUG, switched off. Is it ok?
+    // TODO: CRUCIAL, BUG, switched off. Is it ok?
     // assert (arc.index >= TREE_ARC);
 
     assert (checkFlow(this));

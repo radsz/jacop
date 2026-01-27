@@ -38,7 +38,7 @@ import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
-// TODO, test default function which use sparse (dense) representation. Default code if
+// TODO: test default function which use sparse (dense) representation. Default code if
 // domain is neither Interval nor Bound domain.
 
 /*
@@ -128,7 +128,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   @Override
   public void unionAdapt(FloatInterval i) {
 
-    // TODO, Move all check invariant code into Aspect CheckInvariants.
+    // TODO: Move all check invariant code into Aspect CheckInvariants.
     assert checkInvariants() == null : checkInvariants();
 
     if (size == intervals.length) {
@@ -2335,7 +2335,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     var.domainHasChanged(IntDomain.ANY);
   }
 
-  // TODO check and test inComplement below.
+  // TODO: check and test inComplement below.
 
   @Override
   public void inComplement(int storeLevel, Var var, double min, double max) {
@@ -2931,7 +2931,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     int i = 0;
 
-    // TODO , improve by using interval find function.
+    // TODO: improve by using interval find function.
 
     while (i < searchConstraintsToEvaluate) {
       if (searchConstraints.get(i) == C) {

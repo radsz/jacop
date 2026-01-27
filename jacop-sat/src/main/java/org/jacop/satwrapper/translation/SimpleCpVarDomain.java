@@ -101,7 +101,7 @@ public class SimpleCpVarDomain extends SatCPBridge {
     int var = Math.abs(literal);
 
     return ((var - firstVar) & 0x1) == 0; // modulo 2
-    // TODO : later, use parity (be sure the equality literal is even)
+    // TODO: later, use parity (be sure the equality literal is even)
   }
 
   @Override

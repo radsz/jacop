@@ -224,7 +224,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
   @Override
   public int size() {
-    // TODO : compute the number of clauses that *would* be needed
+    // TODO: compute the number of clauses that *would* be needed
     return 0; // 0 clauses, always !
   }
 
@@ -256,6 +256,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    // TODO, perform translation for toCNF operation only.
+    // TODO: perform translation for toCNF operation only.
   }
 }

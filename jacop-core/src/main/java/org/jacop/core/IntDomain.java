@@ -1232,7 +1232,7 @@ public abstract class IntDomain extends Domain {
 
     int i = 0;
 
-    // TODO , improve by using interval find function.
+    // TODO: improve by using interval find function.
 
     while (i < searchConstraintsToEvaluate) {
       if (searchConstraints.get(i) == c) {

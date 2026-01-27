@@ -196,7 +196,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
       } else {
         // do remove level by checking all variables.
-        // @TODO, later implement intervals functionality.
+        // @TODO: later implement intervals functionality.
 
         if (currentlyChanged.members <= intervalCutOffValue && !currentlyChanged.isEmpty()) {
           intervalBasedTrail.add(valueTrue);

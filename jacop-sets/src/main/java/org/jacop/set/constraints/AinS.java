@@ -133,7 +133,7 @@ public class AinS extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    // TODO, test it properly.
+    // TODO: test it properly.
 
     if (a.domain.lub().getSize() > set.getSize() + 1) {
       return;

@@ -96,7 +96,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     this.lub = lub.cloneLight();
     this.cardinality = new IntervalDomain(glb.getSize(), lub.getSize());
 
-    // TODO, test the replacement of intervaldomain when possible by SmallDenseDomain.
+    // TODO: test the replacement of intervaldomain when possible by SmallDenseDomain.
     // this.cardinality = new SmallDenseDomain(glb.getSize(), lub.getSize());
 
     searchConstraints = null;
@@ -1008,7 +1008,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       IntDomain resultLUB = lub.intersect(intersect);
 
       // This check was generalized and moved to the beginning of the function.
-      // TODO, Check that early exit is ok. For some reason it is NOT ok,
+      // TODO: Check that early exit is ok. For some reason it is NOT ok,
       // most likely a pruning bug in some other code in respect to cardinality part.
       // Cardinality part most likey fixed, some of the constraints maybe is missing
       // propagation and only forced call of consistency function below recovers
@@ -1019,7 +1019,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
         throw Store.failException;
       }
 
-      // TODO, remove as early exit is moved higher.
+      // TODO: remove as early exit is moved higher.
 
       BoundSetDomain result = new BoundSetDomain();
 
@@ -1134,7 +1134,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       IntDomain resultGLB = glb.union(intersect);
 
-      // TODO CRUCIAL, if resultGLB is equal current glb then nothing should happen and the function
+      // TODO: CRUCIAL, if resultGLB is equal current glb then nothing should happen and the
+      // function
       // should return. Check that this addition is
       // correct.
       // Turn on the lines below after domains are stable to check for potential pruning bugs.

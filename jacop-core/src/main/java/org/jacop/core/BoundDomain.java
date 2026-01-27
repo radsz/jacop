@@ -1102,7 +1102,7 @@ class BoundDomain extends IntDomain implements Cloneable {
     return this.min + index;
   }
 
-  // TODO, test it.
+  // TODO: test it.
   @Override
   public int sizeOfIntersection(IntDomain domain) {
 

@@ -210,7 +210,7 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     }
   }
 
-  // TODO, what about include function, should it have registerRemoveLevelLateListener?
+  // TODO:, what about include function, should it have registerRemoveLevelLateListener?
   @Override
   public void impose(Store store) {
 

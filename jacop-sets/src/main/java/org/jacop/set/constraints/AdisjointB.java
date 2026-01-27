@@ -96,7 +96,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
     }
 
     if (performCardinalityReasoning) {
-      // TODO implement cardinality reasoning.
+      // TODO: implement cardinality reasoning.
       int maxSizeOfIntersection = -1;
 
       int elementsReservedForB = b.domain.card().min();
@@ -117,7 +117,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
 
           // now elementsReservedForB hold number of elements required for B from aLUB /\ bLUB
 
-          // TODO, check if that actually does any propagation, under what conditions?
+          // TODO: check if that actually does any propagation, under what conditions?
           a.domain.inCardinality(
               store.level, a, 0, a.domain.lub().getSize() - elementsReservedForB);
         }
@@ -144,7 +144,7 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
 
           // now elementsReservedForA hold number of elements required for A from aLUB /\ bLUB
 
-          // TODO, check if that actually does any propagation, under what conditions?
+          // TODO: check if that actually does any propagation, under what conditions?
           b.domain.inCardinality(
               store.level, b, 0, b.domain.lub().getSize() - elementsReservedForA);
         }

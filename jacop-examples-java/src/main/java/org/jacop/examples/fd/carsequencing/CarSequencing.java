@@ -265,7 +265,7 @@ public class CarSequencing extends ExampleFD {
     return result;
   }
 
-  /* @TODO Add functionality to FSM to be able to do intersections and use the model below.
+  /* @TODO: Add functionality to FSM to be able to do intersections and use the model below.
    public void modelIntersection() {
 
     store = new FDstore();

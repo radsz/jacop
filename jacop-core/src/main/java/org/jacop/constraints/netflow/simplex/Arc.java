@@ -205,7 +205,7 @@ public final class Arc {
   /* for debugging */
   public String toString() {
 
-    // TODO only for debugging, otherwise we would use StringBuilder
+    // TODO: only for debugging, otherwise we would use StringBuilder
     Node tail = tail();
     int flow = sister.capacity;
     int total = capacity + flow;
@@ -231,7 +231,7 @@ public final class Arc {
   }
 
   public String toFlow() {
-    // TODO only for debugging, otherwise we would use StringBuilder
+    // TODO: only for debugging, otherwise we would use StringBuilder
     Node tail = tail();
     int flow = sister.capacity;
     int total = capacity + flow;

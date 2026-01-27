@@ -237,7 +237,7 @@ public class NetworkBuilder {
 
     List<Constraint> result = new ArrayList<>();
 
-    // @TODO, fix it? Check the remark above.
+    // @TODO: fix it? Check the remark above.
     for (Node node : nodeList) {
       List<IntVar> in = new ArrayList<>();
       List<IntVar> out = new ArrayList<>();
@@ -338,7 +338,7 @@ public class NetworkBuilder {
       }
     }
 
-    // @TODO, SumWeight could be used instead of Sum and auxiliary variables weight above.
+    // @TODO: SumWeight could be used instead of Sum and auxiliary variables weight above.
     if (simpleSum) {
       sumC(result, store, vars, costVariable);
     } else {

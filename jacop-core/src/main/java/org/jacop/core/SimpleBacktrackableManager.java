@@ -342,7 +342,7 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         trail.add(trailLevel);
       } else {
         // do remove level by checking all variables.
-        // @TODO, later implement intervals functionality.
+        // @TODO: later implement intervals functionality.
         if (!currentlyChanged.isEmpty()) {
           trail.add(fullLevel);
         } else {

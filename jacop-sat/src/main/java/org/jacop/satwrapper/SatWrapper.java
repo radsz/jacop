@@ -109,7 +109,7 @@ public final class SatWrapper extends Constraint
   // association from CP variables to boolean variables
   // public HashMap<IntVar, CpVarDomain<? extends IntVar>> cpVarToDomain =
   // new HashMap<IntVar, CpVarDomain<? extends IntVar>>();
-  // TODO : find more efficient ? hard, because IntVar has no unique ID
+  // TODO: find more efficient ? hard, because IntVar has no unique ID
   /*
    * TODO : a way to add those only if needed
    */
@@ -282,7 +282,7 @@ public final class SatWrapper extends Constraint
       core.unitPropagate();
     }
 
-    // TODO : some flag to disable queueVariable() during propagation ?
+    // TODO: some flag to disable queueVariable() during propagation ?
     // XXX NOTE : remember to set this flag to false in case of conflict
 
     /*

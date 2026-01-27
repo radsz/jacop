@@ -128,7 +128,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     G_no.setSize(G_no_size.value());
 
-    // TODO initialize notSupportedIndexesYes to 0..domainLimits
+    // TODO: initialize notSupportedIndexesYes to 0..domainLimits
     for (IndexDomainView indexDomainView : views) {
       indexDomainView.intializeSupportSweep();
     }
@@ -177,7 +177,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
               result = true;
 
-              // TODO check if allIndexesSupported needs updating
+              // TODO: check if allIndexesSupported needs updating
               // if it needs updating check the break condition below.
               // break if for all following levels variables
               // have all values been signaled as already supported

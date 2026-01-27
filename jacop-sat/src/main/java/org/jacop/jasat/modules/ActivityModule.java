@@ -252,7 +252,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
 
     // RS: Rebasing should use shift operations instead of *
     // e.g. >> 20 (?)
-    // TODO : kind of integer log
+    // TODO: kind of integer log
     int rebaseFactor = 100 / value;
     for (int curVar = 1; curVar <= activitiesIndex; curVar++) {
       posActivities[curVar] = posActivities[curVar] * rebaseFactor;

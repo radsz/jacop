@@ -66,7 +66,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   private int[][] literalsCache = new int[DEFAULT_INITIAL_NUMBER_OF_CLAUSES][];
 
   public int addClause(int[] clause, boolean isModel) {
-    // TODO : reuse empty slots ?
+    // TODO: reuse empty slots ?
     assert clause.length > 2 * SIZE_OF_CLAUSE_CACHE;
 
     int newIndex = currentIndex++;
@@ -235,22 +235,22 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   }
 
   public void removeClause(int clauseId) {
-    // TODO Auto-generated method stub
+    // TODO: Auto-generated method stub
 
   }
 
   public boolean canRemove(int clauseId) {
-    // TODO Auto-generated method stub
+    // TODO: Auto-generated method stub
     return false;
   }
 
   public MapClause resolutionWith(int clauseIndex, MapClause clause) {
-    // TODO Auto-generated method stub
+    // TODO: Auto-generated method stub
     return null;
   }
 
   public void backjump(int level) {
-    // TODO Auto-generated method stub
+    // TODO: Auto-generated method stub
 
   }
 
@@ -264,7 +264,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   }
 
   public int size() {
-    // TODO Auto-generated method stub
+    // TODO: Auto-generated method stub
     return 0;
   }
 

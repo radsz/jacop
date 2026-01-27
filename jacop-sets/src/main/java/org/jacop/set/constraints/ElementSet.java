@@ -133,7 +133,7 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
         if (el >= list.length) {
           break;
         }
-        // TODO, implement some support functionality
+        // TODO: implement some support functionality
         // e.g. values in valueLUB can be supported by element from the list
         // if index has some value being removed from it then new supports
         // for values from valueLUB may need to be found.

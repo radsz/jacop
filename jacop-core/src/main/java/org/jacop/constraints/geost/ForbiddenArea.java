@@ -117,7 +117,7 @@ public class ForbiddenArea extends InternalConstraint {
      * the sweep direction has none either
      */
 
-    // TODO, are the dboxes within geost objects ordered according to its area? It may be useful as
+    // TODO: are the dboxes within geost objects ordered according to its area? It may be useful as
     // here we return
     // the first dbox which generates useful outbox.
     for (DBox constrainedPiece : geost.getShape(currentShape).boxes) {
@@ -131,7 +131,7 @@ public class ForbiddenArea extends InternalConstraint {
 
       // the forbidden area is the same at any time, thus the box covers the whole space in that
       // dimension
-      // TODO, why -Integer.MAX_VALUE/2 and not Integer.MIN_VALUE for example?
+      // TODO: why -Integer.MAX_VALUE/2 and not Integer.MIN_VALUE for example?
       outOrigin[dimension] = -Integer.MAX_VALUE / 2;
       outLength[dimension] = Integer.MAX_VALUE;
 

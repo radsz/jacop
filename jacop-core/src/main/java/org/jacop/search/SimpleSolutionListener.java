@@ -63,7 +63,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
    * the search should continue or exit.
    */
 
-  // TODO, change one solution only to limit of solutions.
+  // TODO: change one solution only to limit of solutions.
 
   public T[] vars;
 
@@ -186,7 +186,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
       solutions[noSolutions] = currentSolution;
 
-      // TODO connection between parent and child search depending if
+      // TODO: connection between parent and child search depending if
       // they are recording solutions.
       noSolutions++;
       if (parentSolutionListener != null) {
@@ -207,7 +207,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
         solutions[0][i] = vars[i].dom();
       }
 
-      // TODO connection between parent and child search depending if
+      // TODO: connection between parent and child search depending if
       // they are recording solutions.
       noSolutions++;
       if (parentSolutionListener != null) {

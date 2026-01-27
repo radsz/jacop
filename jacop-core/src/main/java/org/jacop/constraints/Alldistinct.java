@@ -1686,7 +1686,7 @@ public class Alldistinct extends Constraint
       }
     }
 
-    // TODO, fix it, si does not return singleton variables.
+    // TODO: fix it, si does not return singleton variables.
     return guideVariable;
   }
 

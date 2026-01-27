@@ -128,7 +128,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
   @Override
   public int[] absInfeasible(Geost.SweepDirection minlex) {
 
-    // TODO implement,
+    // TODO: implement,
 
     if (frameExists) {
       return super.absInfeasible(minlex);
@@ -149,7 +149,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       return super.cardInfeasible();
     } else {
       // rough approximation, but consistent among ObstacleObject constraint
-      return 1; // TODO correct
+      return 1; // TODO: correct
     }
   }
 
@@ -161,7 +161,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       int currentShape,
       int[] c) {
 
-    // TODO, Does it make sense from efficiency point of view to work on polymorphism?
+    // TODO: Does it make sense from efficiency point of view to work on polymorphism?
     assert obstacle.shapeID.singleton()
         : "no support for polymorphism. Use ObstacleObjectFrame instead.";
 
@@ -243,7 +243,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
         selectedDimIndex = 0;
 
-        // TODO precompute elem.origin[i] + obstacle.coords[i].max() and elem.origin[i] +
+        // TODO: precompute elem.origin[i] + obstacle.coords[i].max() and elem.origin[i] +
         // elem.length[i] + obstacle.coords[i].min()
         // and update whenever the object gets updated
 
@@ -315,7 +315,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       DBox bb = geost.getShape(shapeId).boundingBox;
 
       for (int i = 0; i < obstacle.dimension; i++) {
-        // TODO, Are the max and min functions here, put correctly?
+        // TODO: Are the max and min functions here, put correctly?
         upperAbsInsfeasible[i] = obstacle.coords[i].min() + bb.origin[i] + bb.length[i];
         lowerAbsInsfeasible[i] = obstacle.coords[i].max() + bb.origin[i];
       }

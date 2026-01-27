@@ -152,13 +152,13 @@ public class CreditCalculator<T extends Var>
 
     currentLevel++;
 
-    // TODO, if not consistent in left child then transfer credits to right child?
+    // TODO: if not consistent in left child then transfer credits to right child?
 
     if (!consistent && leftChild) {
       currentLevel--;
       if (currentLevel > 0 && currentLevel < creditsLeft.length) {
 
-        // TODO, do we need that?  if (creditsLeft[currentLevel - 1] > 1)
+        // TODO: do we need that?  if (creditsLeft[currentLevel - 1] > 1)
         creditsRight[currentLevel] += creditsLeft[currentLevel];
         creditsLeft[currentLevel] = 0;
       }
@@ -245,7 +245,7 @@ public class CreditCalculator<T extends Var>
    */
   public boolean leftChild(T var, int value, boolean status) {
 
-    // TODO if credits are encountered in the node then backtracks should be set to zero. where?
+    // TODO: if credits are encountered in the node then backtracks should be set to zero. where?
 
     if (!status) {
 

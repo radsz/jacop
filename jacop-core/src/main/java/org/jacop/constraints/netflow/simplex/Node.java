@@ -61,7 +61,7 @@ public final class Node {
 
   // we use the parent-thread-depth data structure to store the spanning tree
   public Arc toParent;
-  public Node parent; // TODO useful (?) redundancy: parent == toParent.head
+  public Node parent; // TODO: useful (?) redundancy: parent == toParent.head
   public Node thread;
   public int depth;
 
@@ -161,7 +161,7 @@ public final class Node {
 
   // a string representation of the state
   public String toString() {
-    // TODO only for debugging, otherwise we would use StringBuilder
+    // TODO: only for debugging, otherwise we would use StringBuilder
     return "[node: "
         + name
         + ", balance="

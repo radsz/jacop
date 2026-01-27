@@ -52,18 +52,18 @@ import org.jacop.core.Var;
  */
 public class ObstacleObjectFrame extends InternalConstraint {
 
-  // TODO, introduce boolean switch computeArea(Precisely) which if is set to false will not compute
+  // TODO: introduce boolean switch computeArea(Precisely) which if is set to false will not compute
   // the area at all or precisely.
   // Possibly, useful to set to 1 if greater than 1 and to 0 if empty.
 
-  // TODO, use << 2, instead of *4. Explain precisely why this scalling was needed in the first
+  // TODO: use << 2, instead of *4. Explain precisely why this scalling was needed in the first
   // place.
 
   static final boolean DISPLAY_FRAME = false;
 
   static BoxDisplay display;
 
-  // TODO remove if not needed anymore, or better separate from other code by putting it inside
+  // TODO: remove if not needed anymore, or better separate from other code by putting it inside
   // functions.
 
   /** It specifies the geost constraint to which this internal constraint belongs to. */
@@ -178,7 +178,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
    */
   public void updateFrame() {
 
-    // TODO optimize the frame computation given the set of dimensions used
+    // TODO: optimize the frame computation given the set of dimensions used
 
     if (geost.backtracking && obstacle.isGrounded()) {
       return;

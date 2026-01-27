@@ -116,7 +116,7 @@ public final class HeuristicForgetModule
 
       assert lbd > 0 && lbd < learntClauses.length;
 
-      // TODO : try to bind it with the ID of the clause, because it
+      // TODO: try to bind it with the ID of the clause, because it
       // will be added soon
       // learntClauses[lbd].add(42);
     }
@@ -149,7 +149,7 @@ public final class HeuristicForgetModule
    * @return the LBD of this clause
    */
   private int computeLBD(MapClause clause) {
-    // TODO : compute the number
+    // TODO: compute the number
 
     return 0;
   }

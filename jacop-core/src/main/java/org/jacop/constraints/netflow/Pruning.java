@@ -214,7 +214,7 @@ public class Pruning extends Network {
   }
 
   void pruneNodesWithSmallDegree() {
-    // TODO filter arcs with x-variables first ?
+    // TODO: filter arcs with x-variables first ?
     // It should work on fixpoint principle, so there is propagation in the chain of 2-degree nodes.
     for (Node node : nodes) {
       if (node.degree == 1) {
@@ -266,7 +266,7 @@ public class Pruning extends Network {
             nVarInShift(companion1, xVar2.domain, -shift);
             nVarInShift(companion2, xVar1.domain, shift);
           } else {
-            // TODO Double test this code.
+            // TODO: Double test this code.
 
             IntDomain xDom = xVar1.dom();
             IntervalDomain yDomIn = new IntervalDomain(xDom.noIntervals() + 1);

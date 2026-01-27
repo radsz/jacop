@@ -71,7 +71,7 @@ public class NetworkSimplex {
   public final Arc[] lower;
   // the set of nodes with non-zero balance
   public final Set<Node> infeasibleNodes;
-  // TODO convenience or overhead ?
+  // TODO: convenience or overhead ?
   public final List<Arc> allArcs;
   protected final PivotRule pivotRule;
   public int numArcs;
@@ -147,7 +147,7 @@ public class NetworkSimplex {
   private void incrementDegree(Node node, Arc myArc) {
     //   System.out.println("INCR " + node.name);
 
-    // TODO, CRUCIAL, BUG?, assert removed.
+    // TODO: CRUCIAL, BUG?, assert removed.
     // assert(node != root);
 
     if (node.degree < 2) {

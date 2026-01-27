@@ -1343,7 +1343,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       if (!updatedObjectSet.isEmpty()) {
         // if(setStart.stamp() < store.level) {
 
-        // TODO, think of easy way of preventing multiple objects being put to the list at the same
+        // TODO: think of easy way of preventing multiple objects being put to the list at the same
         // level.
         // need to create the set for this level
         // flush last set
@@ -1403,7 +1403,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         domainBoxLengthShifted[i] =
             o.coords[i].max() + bb.origin[i] + bb.length[i] - domainBoxOriginShifted[i];
       }
-      // TODO cache the results of the computation above and recompute upon object change.
+      // TODO: cache the results of the computation above and recompute upon object change.
 
       domainBoxOriginShifted[dimension] = IntDomain.MinInt;
       domainBoxLengthShifted[dimension] = IntDomain.MaxInt * 2;
@@ -1799,7 +1799,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
   @Override
   public String toString() {
-    // TODO, proper string representation of the constraint.
+    // TODO: proper string representation of the constraint.
     return "Geost("
         + Arrays.asList(objects)
         + ", "

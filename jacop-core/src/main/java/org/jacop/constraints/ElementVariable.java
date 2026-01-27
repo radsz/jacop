@@ -260,7 +260,7 @@ public class ElementVariable extends Constraint
 
       if (!variableQueue.isEmpty()) {
 
-        // TODO, what if one variable occurs multiple times in list? Only one
+        // TODO: what if one variable occurs multiple times in list? Only one
         // occurence in the list can be active, the other ones have to be ignored.
 
         for (IntVar changedVar : variableQueue) {

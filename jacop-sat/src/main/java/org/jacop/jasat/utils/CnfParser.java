@@ -116,7 +116,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   /**
    * skips comment lines from the current position
    *
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   private void skipComments() throws IOException {
     if (c != 'c') {
@@ -147,7 +147,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   /**
    * skips white spaces and carriage returns
    *
-   * @throws IOException
+   * @throws IOException if an I/O error occurs
    */
   private void skipSpaces() throws IOException {
     while (c == ' ' || c == '\t' || c == '\n') {

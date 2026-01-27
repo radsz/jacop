@@ -367,7 +367,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
 
       }
 
-      // TODO, check sorting functionality.
+      // TODO: check sorting functionality.
       for (int j = 0; j < tuples[i].length; j++) {
         TupleUtils.sortTuplesWithin(tuples[i][j]);
       }
@@ -449,7 +449,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
     return tupleString.toString();
   }
 
-  // TODO raiseLevelBeforeConsistency may not be needed by this constraint.
+  // TODO: raiseLevelBeforeConsistency may not be needed by this constraint.
 
   /**
    * It seeks support for a given variable-value pair.

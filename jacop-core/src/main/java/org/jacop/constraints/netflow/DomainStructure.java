@@ -117,14 +117,14 @@ public class DomainStructure implements VarHandler {
 
       // arc already deleted ?
       if (arcs[id].index == DELETED_ARC) {
-        // TODO can this happen after we implement arc grounding?
+        // TODO: can this happen after we implement arc grounding?
         // if yes, ground arc now
         assert false;
         continue;
       }
 
       int inter = domains[id].intersect(vardom).getSize();
-      // TODO is this a bug ? BoundDomain.emptyDomain.getSize() == -1
+      // TODO: is this a bug ? BoundDomain.emptyDomain.getSize() == -1
       // (The bug is being fixed.. until then we use a workaround)
       if (inter < 0) {
         inter = 0;
@@ -165,12 +165,12 @@ public class DomainStructure implements VarHandler {
         xVar.domain.in(level, xVar, maxFlow, maxFlow);
       }
 
-      // TODO else here ? if queueVar performs update
+      // TODO: else here ? if queueVar performs update
 
       companion.setFlow(maxFlow);
 
       if (arc.index >= 0) {
-        // TODO this isn't nice
+        // TODO: this isn't nice
         ((Network) network).lower[arc.index] = arc.sister;
       }
 
@@ -183,11 +183,11 @@ public class DomainStructure implements VarHandler {
         int level = network.getStoreLevel();
         xVar.domain.in(level, xVar, minFlow, minFlow);
       }
-      // TODO else here ? if queueVar performs update
+      // TODO: else here ? if queueVar performs update
 
       companion.setFlow(minFlow);
       if (arc.index >= 0) {
-        // TODO this isn't nice either
+        // TODO: this isn't nice either
         ((Network) network).lower[arc.index] = arc;
       }
     }

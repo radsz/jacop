@@ -307,12 +307,12 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
           Node n2 = found == -1 ? root : nodes[found];
 
           if (eqn[var] > 0) {
-            // TODO use variable-view instead
+            // TODO: use variable-view instead
             for (int cnt = eqn[var]; cnt-- > 0; ) {
               addArc(n2, n1, 0, vars.get(var));
             }
           } else {
-            // TODO use variable-view instead
+            // TODO: use variable-view instead
             for (int cnt = -eqn[var]; cnt-- > 0; ) {
               addArc(n1, n2, 0, vars.get(var));
             }

@@ -64,7 +64,7 @@ import org.jacop.jasat.utils.Utils;
 public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
   /**
-   * @TODO efficiency.
+   * @TODO: efficiency.
    *
    * <p>It accepts binary or longer clauses.
    *
@@ -318,7 +318,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     assert checkWatches4var(Math.abs(literal)) == null;
   }
 
-  // TODO : reuse empty slots ?
+  // TODO: reuse empty slots ?
   public int addClause(int[] clause, boolean isModel) {
 
     assert clause.length >= 2;

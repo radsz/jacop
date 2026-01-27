@@ -44,7 +44,7 @@ import org.jacop.core.Var;
  */
 public class AllowedArea extends InternalConstraint {
 
-  // TODO, What is the reason for using it? What are the limitation of using this solution?
+  // TODO: What is the reason for using it? What are the limitation of using this solution?
   private static final int half_max = (Integer.MAX_VALUE - 1) / 2;
 
   final Geost geost;
@@ -93,7 +93,7 @@ public class AllowedArea extends InternalConstraint {
 
   @Override
   public int cardInfeasible() {
-    // TODO, change it to Geost constant, capable of generating outboxes.
+    // TODO: change it to Geost constant, capable of generating outboxes.
     return 10; // non zero since it can generate outboxes
   }
 

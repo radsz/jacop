@@ -484,7 +484,7 @@ public class Knapsack extends Constraint
 
     assert (checkInvariants());
 
-    // @TODO possibly redundant check, going from the root.
+    // @TODO: possibly redundant check, going from the root.
     restrictItemQuantity(store, tree.root, knapsackCapacity.max() - tree.alreadyUsedCapacity);
 
     if (needUpdate) {
@@ -784,7 +784,7 @@ public class Knapsack extends Constraint
       return;
     }
 
-    // @TODO What if item changed is critical, make sure the code is correct in that case.
+    // @TODO: What if item changed is critical, make sure the code is correct in that case.
 
     final boolean rightToCrit = leafForV.positionInTheTree > positionOfCriticalItem.value();
 

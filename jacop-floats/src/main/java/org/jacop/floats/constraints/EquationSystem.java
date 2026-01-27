@@ -112,7 +112,7 @@ public class EquationSystem extends Constraint {
 
     super.impose(store);
 
-    // TODO, why do we call consistency of the whole store inside impose function of the
+    // TODO: why do we call consistency of the whole store inside impose function of the
     // constraint???
     if (!store.consistency()) {
       throw Store.failException;

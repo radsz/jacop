@@ -65,7 +65,7 @@ public class PeqC extends PrimitiveConstraint {
 
     checkInputForNullness("p", new Object[] {p});
 
-    // TODO, BUG? why Integer constants used here?
+    // TODO: BUG? why Integer constants used here?
     assert (c >= IntDomain.MinInt && c <= IntDomain.MaxInt)
         : "Constant c " + c + " is not in the allowed range ";
 

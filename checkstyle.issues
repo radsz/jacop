@@ -1,0 +1,116 @@
+Running checkstyle on all modules...
+
+================================================================================
+CHECKSTYLE VIOLATIONS SUMMARY
+================================================================================
+
+Total violations: 4670
+Unique rules violated: 14
+
+VIOLATIONS BY RULE (sorted by count):
+================================================================================
+Count  Rule
+================================================================================
+ 1136  [MissingJavadocMethod]
+  936  [Indentation]
+  641  [a-z]
+  591  [SummaryJavadoc]
+  470  [VariableDeclarationUsageDistance]
+  358  [AbbreviationAsWordInName]
+  194  [JavadocParagraph]
+  166  [TodoComment]
+   72  [OverloadMethodsDeclarationOrder]
+   69  [MissingJavadocType]
+   20  [RightCurlySame]
+   13  [EmptyLineSeparator]
+    2  [NonEmptyAtclauseDescription]
+    2  [JavadocTagContinuationIndentation]
+================================================================================
+
+DETAILED EXAMPLES:
+
+--------------------------------------------------------------------------------
+Rule: [MissingJavadocMethod] - 1136 violation(s)
+Description: Missing a Javadoc comment.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\api\Replaceable.java:45
+  Class<T> forClass();
+
+--------------------------------------------------------------------------------
+Rule: [Indentation] - 936 violation(s)
+Description: 'method call' child has incorrect indentation level 16, expected level should be 20.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\Alldistinct.java:752
+  .domain
+
+--------------------------------------------------------------------------------
+Rule: [a-z] - 641 violation(s)
+Description: Parameter name 'S' must match pattern '^
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\Alldifferent.java:162
+  private boolean satisfiedFullCheck(Store S) {
+
+--------------------------------------------------------------------------------
+Rule: [SummaryJavadoc] - 591 violation(s)
+Description: First sentence of Javadoc is missing an ending period.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\AbsXeqY.java:44
+  /**
+
+--------------------------------------------------------------------------------
+Rule: [VariableDeclarationUsageDistance] - 470 violation(s)
+Description: Distance between variable 'narrowingEvent' declaration and its first usage is 11, but allowed 5. Consider making that variable final if you still need to store its value in advance (before method calls that might have side effects on the original value).
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\Alldistinct.java:375
+  boolean narrowingEvent = false;
+
+--------------------------------------------------------------------------------
+Rule: [AbbreviationAsWordInName] - 358 violation(s)
+Description: Abbreviation in name 'updateLB' must contain no more than '1' consecutive capital letters.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\Alldiff.java:207
+  private void updateLB() {
+
+--------------------------------------------------------------------------------
+Rule: [JavadocParagraph] - 194 violation(s)
+Description: <p> tag should be placed immediately before the first word, with no space after.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\GCC.java:131
+  * <p>
+
+--------------------------------------------------------------------------------
+Rule: [TodoComment] - 166 violation(s)
+Description: 'TODO:' must be written in all caps and followed by a colon.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\Alldistinct.java:1689
+  // TODO, fix it, si does not return singleton variables.
+
+--------------------------------------------------------------------------------
+Rule: [OverloadMethodsDeclarationOrder] - 72 violation(s)
+Description: All overloaded methods should be placed next to each other. Previous overloaded method located at line '263'.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\Constraint.java:307
+  public void impose(Store store, int queueIndex) {
+
+--------------------------------------------------------------------------------
+Rule: [MissingJavadocType] - 69 violation(s)
+Description: Missing a Javadoc comment.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\AndBoolVector.java:54
+  public class AndBoolVector extends PrimitiveConstraint {
+
+--------------------------------------------------------------------------------
+Rule: [RightCurlySame] - 20 violation(s)
+Description: '}' at column 5 should be on the same line as the next part of a multi-block statement (one that directly contains multiple blocks: if/else-if/else, do/while or try/catch/finally).
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\IfThen.java:226
+  }
+
+--------------------------------------------------------------------------------
+Rule: [EmptyLineSeparator] - 13 violation(s)
+Description: 'package' should be separated from previous line.
+Example: C:\Users\radek\JaCoP\jacop\jacop-core\src\main\java\org\jacop\constraints\diffn\Nooverlap.java:25
+  package org.jacop.constraints.diffn;
+
+--------------------------------------------------------------------------------
+Rule: [NonEmptyAtclauseDescription] - 2 violation(s)
+Description: At-clause should have a non-empty description.
+Example: C:\Users\radek\JaCoP\jacop\jacop-sat\src\main\java\org\jacop\jasat\utils\CnfParser.java:119
+  * @throws IOException
+
+--------------------------------------------------------------------------------
+Rule: [JavadocTagContinuationIndentation] - 2 violation(s)
+Description: Line continuation have incorrect indentation level, expected level should be 4.
+Example: C:\Users\radek\JaCoP\jacop\jacop-sat\src\main\java\org\jacop\jasat\core\clauses\DefaultClausesDatabase.java:69
+  * <p>It accepts binary or longer clauses.
+
+================================================================================

@@ -134,7 +134,7 @@ public class NetworkFlow extends Constraint
 
           @Override
           public void processEvent(IntVar variable, MutableNetwork network) {
-            // TODO, maybe here extra work that before was not being done can be done.
+            // TODO: maybe here extra work that before was not being done can be done.
           }
         });
 
@@ -189,7 +189,7 @@ public class NetworkFlow extends Constraint
       }
       queue.add((IntVar) variable);
     } else {
-      // TODO remove
+      // TODO: remove
       // System.err.println("Can this actually happen ... " + variable);
     }
   }

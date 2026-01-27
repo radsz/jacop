@@ -199,7 +199,7 @@ public class DomainHoles extends InternalConstraint {
     int[] forbiddenOrigin = forbiddenRegion.origin;
     int[] forbiddenLength = forbiddenRegion.length;
 
-    // TODO make sure which dimension ordering is the best
+    // TODO: make sure which dimension ordering is the best
     /*
      * give an outbox that advances the sweep most in its current dimension,
      * in other words, begin with the less significant dimension.

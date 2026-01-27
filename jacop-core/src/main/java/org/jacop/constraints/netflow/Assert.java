@@ -277,7 +277,7 @@ public class Assert {
         int count2 = 0;
         for (Arc arc : node.adjacencyList) {
           if (arc != null) {
-            // TODO, CRUCIAL, BUG?, assert removed.
+            // TODO: CRUCIAL, BUG?, assert removed.
             //         assertTrue(arc.forward);
             assert ((arc.head == node) ^ (arc.tail() == node));
             assert (arc.index != NetworkSimplex.DELETED_ARC);

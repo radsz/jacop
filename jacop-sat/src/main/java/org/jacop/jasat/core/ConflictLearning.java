@@ -141,7 +141,7 @@ public final class ConflictLearning implements SolverComponent {
    * @return the last set literal of the clause, at current level, or 0 if none has been found
    */
   private int findPositionTopLiteral(MapClause explanationClause, int level, int startingPosition) {
-    // TODO : improve perfs.
+    // TODO: improve perfs.
 
     for (int i = startingPosition; i >= 0; i--) {
       int var = trail.assertionStack.array[i];

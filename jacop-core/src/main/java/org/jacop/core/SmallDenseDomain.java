@@ -259,7 +259,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    /* TODO implement special code,
+    /* TODO: implement special code,
        if (domain.domainID() == IntDomain.IntervalDomainID) {
 
        IntervalDomain input = (IntervalDomain) domain;
@@ -280,7 +280,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public boolean contains(int value) {
 
-    // TODO, CHECK.
+    // TODO: CHECK.
     return value >= min && value <= min + 63 && (bits & TWO_N_ARRAY[63 - (value - min)]) != 0;
   }
 
@@ -324,7 +324,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    // TODO, implement special code, check the super implementation.
+    // TODO: implement special code, check the super implementation.
     return super.eq(domain);
   }
 
@@ -818,7 +818,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert (domain.max() - domain.min() + 1 == domain.getSize()) : "Loosing propagation" + domain;
 
-    // TODO, improve, it does not take yet holes in the domain.
+    // TODO: improve, it does not take yet holes in the domain.
     in(storeLevel, var, domain.min(), domain.max());
   }
 
@@ -862,7 +862,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         singleton = true;
       }
 
-      // TODO, remove asserts which require a local variable to speedup non asserts execution.
+      // TODO: remove asserts which require a local variable to speedup non asserts execution.
       final int previousMin = min;
       final int previousMax = max;
 
@@ -992,7 +992,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         singleton = true;
       }
 
-      // TODO, remove asserts which require a local variable to speedup non asserts execution.
+      // TODO: remove asserts which require a local variable to speedup non asserts execution.
       final int previousMin = min;
       final int previousMax = max;
 
@@ -1079,7 +1079,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       throw Store.failException;
     }
 
-    // TODO, improve.
+    // TODO: improve.
     in(storeLevel, var, min, max);
   }
 
@@ -1090,7 +1090,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       throw Store.failException;
     }
 
-    // TODO, improve.
+    // TODO: improve.
     in(storeLevel, var, min, max);
   }
 
@@ -1123,7 +1123,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    // TODO, create proper assert check for this case.
+    // TODO: create proper assert check for this case.
 
     if (domain.domainID() == IntDomain.IntervalDomainID) {
 
@@ -1186,7 +1186,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert (domain.max() - domain.min() + 1 == domain.getSize()) : "Loosing propagation" + domain;
 
-    // TODO, improve, it does not take yet holes in the domain.
+    // TODO: improve, it does not take yet holes in the domain.
     in(storeLevel, var, domain.min() + shift, domain.max() + shift);
   }
 
@@ -1194,7 +1194,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // System.out.println("Domain " + this + " intersecting with " + input);
 
-    // TODO, check all return empty domains to make sure that they are not being used
+    // TODO: check all return empty domains to make sure that they are not being used
     // as normal domains (constraints).
     if (isEmpty()) {
       return SmallDenseDomain.emptyDomain;
@@ -1331,7 +1331,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int intersectAdapt(IntDomain domain) {
 
-    // TODO, do a bit more testing, although code has been derived from in function.
+    // TODO: do a bit more testing, although code has been derived from in function.
 
     //      System.out.println("i>" + this  + "(" + domain + ")");
 
@@ -1439,7 +1439,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     if (domain.domainID() == IntDomain.BoundDomainID) {
 
-      // TODO, test this special case.
+      // TODO: test this special case.
       BoundDomain input = (BoundDomain) domain;
 
       final int previousMin = min;
@@ -1463,7 +1463,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
     }
 
-    // TODO, used by in functions of BoundSetDomain.
+    // TODO: used by in functions of BoundSetDomain.
     assert false : "Not implemented for class " + domain.getClass();
     return -1;
   }
@@ -1471,7 +1471,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int intersectAdapt(int min, int max) {
 
-    // TODO, test, recent code.
+    // TODO: test, recent code.
 
     if (isEmpty()) {
       return IntDomain.NONE;
@@ -1568,7 +1568,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert (min <= max) : "Illegal arguments min is greater than max";
 
-    // TODO, test.
+    // TODO: test.
 
     if (this.max < min || this.min > max) {
       return false;
@@ -1734,7 +1734,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain recentDomainPruning(int storeLevel) {
 
-    // TODO, CHECK.
+    // TODO: CHECK.
 
     if (previousDomain == null) {
       return IntervalDomain.emptyDomain;
@@ -1774,7 +1774,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public void setDomain(IntDomain domain) {
 
-    // TODO, test it a bit more. SETADD.
+    // TODO: test it a bit more. SETADD.
 
     if (domain.isEmpty()) {
       clear();
@@ -1831,7 +1831,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public void setDomain(int min, int max) {
 
-    // TODO, test recent change.
+    // TODO: test recent change.
     this.min = min;
 
     this.bits = -1;
@@ -1845,7 +1845,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public boolean singleton(int c) {
 
-    // TODO, check asserts.
+    // TODO: check asserts.
     // It is used by Lex in set package.
 
     assert checkInvariants() == null : checkInvariants();
@@ -1908,7 +1908,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // assert false;
 
-    // TODO CRUCIAL implement special function for IntervalDomain.
+    // TODO: CRUCIAL implement special function for IntervalDomain.
 
     IntDomain result = super.subtract(domain);
 
@@ -1934,7 +1934,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     min = Math.max(min, this.min);
     max = Math.min(max, this.max);
 
-    // TODO, Test properly. SETADD
+    // TODO: Test properly. SETADD
 
     bits = bits & ~(SEQ_ARRAY[max - min] << (63 - (max - min) - (min - this.min)));
 
@@ -1986,7 +1986,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     min = Math.max(min, this.min);
     max = Math.min(max, this.max);
 
-    // TODO, Test properly. SETADD
+    // TODO: Test properly. SETADD
 
     long result = this.bits & ~(SEQ_ARRAY[max - min] << (63 - (max - min) - (min - this.min)));
 
@@ -2006,7 +2006,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    // TODO test, SETADD.
+    // TODO: test, SETADD.
 
     if (!contains(value)) {
       return;
@@ -2043,7 +2043,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain union(IntDomain domain) {
 
-    // TODO, test it.
+    // TODO: test it.
 
     if (domain.domainID() == IntDomain.SmallDenseDomainID) {
 
@@ -2073,7 +2073,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // assert false;
 
-    // TODO, take care in a nice fashion (no exception) if smalldensedomain can not handle the
+    // TODO: take care in a nice fashion (no exception) if smalldensedomain can not handle the
     // result of union.
     IntDomain result = super.union(domain);
 
@@ -2118,7 +2118,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    // TODO, Test properly. SETADD.
+    // TODO: Test properly. SETADD.
 
     long result = SEQ_ARRAY[max - min] << (63 - (max - min));
 
@@ -2166,7 +2166,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public ValueEnumeration valueEnumeration() {
 
-    // TODO, CHECK.
+    // TODO: CHECK.
     return new SmallDenseDomainValueEnumeration(this);
   }
 
@@ -2222,7 +2222,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public boolean isEmpty() {
 
-    // TODO, CHECK.
+    // TODO: CHECK.
     return bits == 0;
   }
 
@@ -2235,7 +2235,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public boolean isSparseRepresentation() {
 
-    // TODO, adapt the answer depending on the particular instance
+    // TODO: adapt the answer depending on the particular instance
     // (e.g. it should return false for dense domains).
     return true;
   }
@@ -2308,14 +2308,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public String toStringConstraints() {
 
-    // TODO, implement properly.
+    // TODO: implement properly.
     return toString();
   }
 
   @Override
   public String toStringFull() {
 
-    // TODO, implement properly.
+    // TODO: implement properly.
     return toString();
   }
 
@@ -2343,7 +2343,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public boolean contains(int min, int max) {
 
-    // TODO, test more.
+    // TODO: test more.
     if (min < this.min) {
       return false;
     }

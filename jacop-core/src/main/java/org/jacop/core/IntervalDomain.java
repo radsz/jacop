@@ -35,7 +35,7 @@ import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 
-// TODO, test default function which use sparse (dense) representation. Default code if
+// TODO: test default function which use sparse (dense) representation. Default code if
 // domain is neither Interval nor Bound domain.
 
 /**
@@ -140,7 +140,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   @Override
   public void unionAdapt(Interval i) {
 
-    // TODO, Move all check invariant code into Aspect CheckInvariants.
+    // TODO: Move all check invariant code into Aspect CheckInvariants.
     assert checkInvariants() == null : checkInvariants();
 
     if (size == intervals.length) {
@@ -227,7 +227,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     if (domain.domainID() == SmallDenseDomainID) {
 
-      // TODO CRUCIAL, create special code to handle SmallDenseDomain.
+      // TODO: CRUCIAL, create special code to handle SmallDenseDomain.
 
       this.addDom(((SmallDenseDomain) domain).toIntervalDomain());
 
@@ -649,7 +649,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return intervals[i].min() <= min && intervals[i].max() >= domain.max();
     }
 
-    // TODO, CRUCIAL implement SmallDenseDomain case.
+    // TODO: CRUCIAL implement SmallDenseDomain case.
 
     if (domain.isSparseRepresentation()) {
 
@@ -842,7 +842,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     if (domain.domainID() == SmallDenseDomainID) {
 
-      // TODO CRUCIAL, create special code for SmallDenseDomain.
+      // TODO: CRUCIAL, create special code for SmallDenseDomain.
 
       return domain.eq(this);
     }
@@ -1072,7 +1072,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     if (domain.domainID() == IntDomain.SmallDenseDomainID) {
 
-      // TODO, CRUCIAL implement proper SmallDenseDomain case.
+      // TODO: CRUCIAL implement proper SmallDenseDomain case.
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1104,7 +1104,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     } else {
 
-      // TODO, check correctness.
+      // TODO: check correctness.
       IntervalDomain temp = new IntervalDomain(size);
 
       int pointer1 = 0;
@@ -1716,7 +1716,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         result.subtractAdapt(next);
       }
 
-      // TODO, remove later, or move to other place, SmallDenseDomain section.
+      // TODO: remove later, or move to other place, SmallDenseDomain section.
       assert !(domain instanceof SmallDenseDomain denseDomain)
               || result.eq(this.subtract(denseDomain.toIntervalDomain()))
           : "Subtract function is not working" + this + "d:" + domain + "r:" + result;
@@ -1725,7 +1725,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     } else {
 
-      // TODO Check.
+      // TODO: Check.
       if (domain.noIntervals() == 0) {
         return cloneLight();
       }
@@ -2229,7 +2229,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return result;
 
     } else {
-      // TODO, work with dense domain
+      // TODO: work with dense domain
 
       if (domain.noIntervals() == 0) {
         return cloneLight();
@@ -2457,7 +2457,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return result;
   }
 
-  // TODO, write Junit tests.
+  // TODO: write Junit tests.
   @Override
   public IntDomain union(int value) {
 
@@ -3026,7 +3026,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    // TODO, test special code for SmallDenseDomain.
+    // TODO: test special code for SmallDenseDomain.
     if (domain.domainID() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -3338,7 +3338,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     } else {
 
-      // TODO, Repetition of the else clause of the if inside the if clause of this if.
+      // TODO: Repetition of the else clause of the if inside the if clause of this if.
       // Remove the code below (?) and remove the if statement leading to this else clause.
       if (domain.getSize() == 0) {
         throw failException;
@@ -3573,7 +3573,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return intervals[position];
   }
 
-  // TODO check and test inComplement below.
+  // TODO: check and test inComplement below.
 
   @Override
   public void inComplement(int storeLevel, Var var, int complement) {
@@ -4288,7 +4288,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    // TODO, Test SmallDenseDomain input.
+    // TODO: Test SmallDenseDomain input.
     if (domain.domainID() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -5279,7 +5279,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
-      // TODO, use contains.
+      // TODO: use contains.
       //  if (input.contains(this))
       //  if (input.eq(this))
 

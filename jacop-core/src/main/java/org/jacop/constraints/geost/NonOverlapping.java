@@ -77,7 +77,7 @@ public class NonOverlapping implements ExternalConstraint {
     System.arraycopy(selectedDimensions, 0, this.selectedDimensions, 0, selectedDimensions.length);
     Arrays.sort(this.selectedDimensions);
 
-    objectConstraintMap = null; // TODO replace by an array/ArrayList
+    objectConstraintMap = null; // TODO: replace by an array/ArrayList
     constraints = null;
   }
 
@@ -177,7 +177,7 @@ public class NonOverlapping implements ExternalConstraint {
 
     final boolean inefficient = true;
 
-    // TODO, do we keep inefficient version? If so, attribute constraints is no longer needed.
+    // TODO: do we keep inefficient version? If so, attribute constraints is no longer needed.
     return getObjectConstraints(o).contains(ic);
   }
 

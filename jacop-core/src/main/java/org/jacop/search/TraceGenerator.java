@@ -538,7 +538,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "root");
 
     } catch (TransformerConfigurationException | SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -609,7 +609,7 @@ public class TraceGenerator<T extends Var>
       generateVisualizationNode(0, true);
 
     } catch (TransformerConfigurationException | SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -654,7 +654,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "succ");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -671,7 +671,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "try");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -688,7 +688,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "fail");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -718,7 +718,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "tryc");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -731,7 +731,7 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", "parent", "CDATA", "" + parentNode);
       atts.addAttribute("", "", "name", "CDATA", name);
       atts.addAttribute("", "", "size", "CDATA", "" + size);
-      // TODO, BUG? Why in the function above generateTrycNode, originally function filter*(dom) was
+      // TODO: BUG? Why in the function above generateTrycNode, originally function filter*(dom) was
       // called and here
       // our toString() for dom is being called.
       atts.addAttribute("", "", "choice", "CDATA", "" + dom);
@@ -739,7 +739,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "failc");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -754,7 +754,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "tryc");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -770,7 +770,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "failc");
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -825,7 +825,7 @@ public class TraceGenerator<T extends Var>
                 hdVis.startElement("", "", "sinteger", vAtts);
                 hdVis.endElement("", "", "sinteger");
               } else {
-                // TODO, BUG? Why the same thing is written to low and high attribute?
+                // TODO: BUG? Why the same thing is written to low and high attribute?
                 vAtts.addAttribute("", "", "low", "CDATA", domainStr);
                 vAtts.addAttribute("", "", "high", "CDATA", domainStr);
                 hdVis.startElement("", "", "svar", vAtts);
@@ -858,7 +858,7 @@ public class TraceGenerator<T extends Var>
       visualisationNodeId++;
 
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
+      // TODO: Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -915,7 +915,7 @@ public class TraceGenerator<T extends Var>
     }
   }
 
-  // TODO, what happens if DepthFirstSearch first evaluates x != v branch before evaluating x = v
+  // TODO: what happens if DepthFirstSearch first evaluates x != v branch before evaluating x = v
   // branch?
 
   static class SearchNode {

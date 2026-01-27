@@ -62,7 +62,7 @@ public class SparseSet {
     members = 0;
 
     // Added so value 0 can be added first.
-    // TODO, test if that is still necessary after fixing a rare bug with addition.
+    // TODO: test if that is still necessary after fixing a rare bug with addition.
     dense[0] = -1;
   }
 

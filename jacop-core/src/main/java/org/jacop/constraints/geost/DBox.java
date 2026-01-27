@@ -307,7 +307,7 @@ public class DBox {
 
     // unrolling for 2 dimensions
     if (pointDim == 2) {
-      // TODO, BUG? describe why >= is used and not >, what are the assumptions?
+      // TODO: BUG? describe why >= is used and not >, what are the assumptions?
       return !(pointCoordinates[0] < origin[0]
           || pointCoordinates[0] >= origin[0] + length[0]
           || pointCoordinates[1] < origin[1]

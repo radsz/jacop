@@ -58,7 +58,7 @@ public record Danzig(NetworkSimplex network) implements PivotRule {
   }
 
   public void reset() {
-    // TODO Auto-generated method stub
+    // TODO: Auto-generated method stub
 
   }
 }

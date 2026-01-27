@@ -125,7 +125,7 @@ public class Config extends Properties {
   public String toString() {
     StringBuilder sb = new StringBuilder();
 
-    // TODO : enhance
+    // TODO: enhance
     for (Field field : this.getClass().getFields()) {
       try {
         sb.append("%-30s: %s\n".formatted(field.getName(), field.get(this)));

@@ -126,7 +126,7 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
       // FIXME, TODO, implement cardinality based reasoning.
       if (performCardinalityReasoning) {
 
-        // TODO, check the code below, so that is can fire and propagate properly.
+        // TODO: check the code below, so that is can fire and propagate properly.
 
         int aMinCard = a.domain.card().min();
         if (aMinCard > 0) {
