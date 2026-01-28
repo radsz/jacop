@@ -86,7 +86,6 @@ public class Loan {
     FloatDomain.setPrecision(1e-13);
 
     FloatVar one = new FloatVar(store, "1.0", 1.0, 1.0);
-    FloatVar zero = new FloatVar(store, "0.0", 0.0, 0.0);
 
     FloatVar R; // quarterly repayment
     if (r != 0.0) {
@@ -111,15 +110,6 @@ public class Loan {
     FloatVar B1 =
         new FloatVar(
             store, "B1", FloatDomain.MinFloat, FloatDomain.MaxFloat); // balance after one quarter
-    FloatVar B2 =
-        new FloatVar(
-            store, "B2", FloatDomain.MinFloat, FloatDomain.MaxFloat); // balance after two quarters
-    FloatVar B3 =
-        new FloatVar(
-            store,
-            "B3",
-            FloatDomain.MinFloat,
-            FloatDomain.MaxFloat); // balance after three quarters
 
     FloatVar B4; //  balance owing at end
     if (b4 >= 0.0) {
@@ -135,15 +125,25 @@ public class Loan {
     FloatVar t2 = new FloatVar(store, "t2", FloatDomain.MinFloat, FloatDomain.MaxFloat);
     store.impose(new PmulQeqR(P, t1, t2));
     FloatVar negR = new FloatVar(store, "negR", FloatDomain.MinFloat, FloatDomain.MaxFloat);
+    FloatVar zero = new FloatVar(store, "0.0", 0.0, 0.0);
     store.impose(new PplusQeqR(R, negR, zero));
     store.impose(new PplusQeqR(t2, negR, B1));
 
     FloatVar t3 = new FloatVar(store, "t3", FloatDomain.MinFloat, FloatDomain.MaxFloat);
     store.impose(new PmulQeqR(B1, t1, t3));
+    FloatVar B2 =
+        new FloatVar(
+            store, "B2", FloatDomain.MinFloat, FloatDomain.MaxFloat); // balance after two quarters
     store.impose(new PplusQeqR(t3, negR, B2));
 
     FloatVar t4 = new FloatVar(store, "t4", FloatDomain.MinFloat, FloatDomain.MaxFloat);
     store.impose(new PmulQeqR(B2, t1, t4));
+    FloatVar B3 =
+        new FloatVar(
+            store,
+            "B3",
+            FloatDomain.MinFloat,
+            FloatDomain.MaxFloat); // balance after three quarters
     store.impose(new PplusQeqR(t4, negR, B3));
 
     FloatVar t5 = new FloatVar(store, "t5", FloatDomain.MinFloat, FloatDomain.MaxFloat);

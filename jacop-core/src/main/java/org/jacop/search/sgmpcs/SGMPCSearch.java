@@ -179,13 +179,13 @@ public class SGMPCSearch {
     }
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
-    SelectChoicePoint<IntVar> select = new SimpleSelect<>(v, null, new IndomainMin<>());
     label.getSolutionListener().searchAll(true);
     label.getSolutionListener().recordSolutions(true);
     label.getSolutionListener().setSolutionLimit(eInit);
     label.setAssignSolution(false);
     label.setPrintInfo(false);
 
+    SelectChoicePoint<IntVar> select = new SimpleSelect<>(v, null, new IndomainMin<>());
     label.labeling(store, select);
 
     int[][] solutionPool = new int[label.getSolutionListener().solutionsNo()][];

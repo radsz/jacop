@@ -93,8 +93,6 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
   public boolean searchFromEmptySolution(int failLimit) {
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
-    SelectChoicePoint<IntVar> select =
-        new SimpleSelect<>(vars, new SmallestMin<>(), new IndomainMin<>());
     label.setAssignSolution(false);
     label.setSolutionListener(new CostListener<>());
     label.getSolutionListener().recordSolutions(true);
@@ -103,6 +101,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     label.setPrintInfo(false);
     label.setTimeOut(timeOut);
 
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(vars, new SmallestMin<>(), new IndomainMin<>());
     boolean result = label.labeling(store, select);
 
     if (result) {
@@ -124,8 +124,6 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     }
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
-    SelectChoicePoint<IntVar> select =
-        new RandomSelect<>(vars, new IndomainDefaultValue<>(mapping, new IndomainMin<>()));
     label.setAssignSolution(false);
     label.setSolutionListener(new CostListener<>());
     label.getSolutionListener().recordSolutions(true);
@@ -134,6 +132,8 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     label.setPrintInfo(false);
     label.setTimeOut(timeOut);
 
+    SelectChoicePoint<IntVar> select =
+        new RandomSelect<>(vars, new IndomainDefaultValue<>(mapping, new IndomainMin<>()));
     boolean result = label.labeling(store, select);
 
     if (result) {

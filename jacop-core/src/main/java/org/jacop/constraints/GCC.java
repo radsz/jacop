@@ -128,11 +128,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    * <p>Similar principle applies to matching 2 (skip the positions (variables) until the first
    * index for which m1 did change or for which the m2 value is no longer in the domain.
    *
-   * <p>
-   *
    * <p>2. Use IndexDomainView instead of local solution.
-   *
-   * <p>
    *
    * <p>3. boolean variable first - is it only once in the consistency function? Then this
    * functionality can be moved out of the while(newPropagation), if it should be executed every
@@ -851,11 +847,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void SCCs() {
 
     int sccNb;
-    int C;
     int maxYReachedFromS;
-    int maxYReachesS;
-    int minYReachedFromS;
-    int minYReachesS;
     int[] compReachesLeft = new int[ySize];
     int[] compReachesRight = new int[ySize];
     int[] yReachesLeft = new int[ySize];
@@ -917,8 +909,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
 
     maxYReachedFromS = -1;
-    maxYReachesS = -1;
+    int maxYReachesS = -1;
 
+    int C;
     for (int i = 0; i < ySize; i++) {
       C = compOfY[i];
 
@@ -950,8 +943,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     // same as before but for minimum
 
-    minYReachedFromS = ySize;
-    minYReachesS = ySize;
+    int minYReachedFromS = ySize;
+    int minYReachesS = ySize;
 
     for (int i = ySize - 1; i >= 0; i--) {
       C = compOfY[i];

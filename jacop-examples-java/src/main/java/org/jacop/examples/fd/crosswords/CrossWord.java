@@ -300,12 +300,7 @@ public class CrossWord extends ExampleFD {
   public boolean searchAllAtOnceNoRecord() {
 
     long T1;
-    long T2;
     T1 = System.currentTimeMillis();
-
-    SelectChoicePoint<IntVar> select =
-        new SimpleSelect<>(
-            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
     search = new DepthFirstSearch<>();
     search.setSolutionListener(new PrintListener<>(crosswordTemplate));
@@ -314,9 +309,12 @@ public class CrossWord extends ExampleFD {
     search.getSolutionListener().recordSolutions(false);
     search.setAssignSolution(true);
 
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
     boolean result = search.labeling(store, select);
 
-    T2 = System.currentTimeMillis();
+    long T2 = System.currentTimeMillis();
 
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());

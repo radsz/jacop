@@ -384,11 +384,13 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
         if (cardinality.min() == lub.getSize()) {
           resultGLB = lub;
+          eventGLB = SetDomain.GLB;
           resultCardinality.intersectAdapt(lub.getSize(), lub.getSize());
         }
 
         if (cardinality.max() == glb.getSize()) {
           resultLUB = glb;
+          eventLUB = SetDomain.LUB;
           resultCardinality.intersectAdapt(glb.getSize(), glb.getSize());
         }
       }
@@ -409,7 +411,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-
         if (eventGLB == SetDomain.GLB && eventLUB == SetDomain.LUB) {
           var.domainHasChanged(SetDomain.BOUND);
         } else if (eventGLB != Domain.NONE) {

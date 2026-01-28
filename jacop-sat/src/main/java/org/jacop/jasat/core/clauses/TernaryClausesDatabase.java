@@ -68,7 +68,6 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
     assert clause.length == 3;
 
     int clauseIndex = currentIndex++;
-    int clauseId = indexToUniqueId(clauseIndex);
 
     int offset = 3 * clauseIndex;
 
@@ -91,6 +90,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
     addWatch(clause[1], clauseIndex);
     addWatch(clause[2], clauseIndex);
 
+    int clauseId = indexToUniqueId(clauseIndex);
     return clauseId;
   }
 

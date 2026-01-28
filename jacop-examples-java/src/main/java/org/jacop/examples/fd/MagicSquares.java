@@ -146,10 +146,6 @@ public class MagicSquares extends ExampleFD {
 
     IntVar[] squares = new IntVar[number * number];
 
-    IntVar k =
-        new IntVar(
-            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
-
     for (int i = 0; i < number; i++) {
       for (int j = 0; j < number; j++) {
         squares[i * number + j] =
@@ -166,6 +162,9 @@ public class MagicSquares extends ExampleFD {
     // Imposing inequalities constraints between squares
     store.impose(new Alldiff(squares));
 
+    IntVar k =
+        new IntVar(
+            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
     IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {
@@ -212,10 +211,6 @@ public class MagicSquares extends ExampleFD {
 
     IntVar[] squares = new IntVar[number * number];
 
-    IntVar k =
-        new IntVar(
-            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
-
     for (int i = 0; i < number; i++) {
       for (int j = 0; j < number; j++) {
         squares[i * number + j] =
@@ -232,6 +227,9 @@ public class MagicSquares extends ExampleFD {
     // Imposing inequalities constraints between squares
     store.impose(new Alldiff(squares));
 
+    IntVar k =
+        new IntVar(
+            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
     IntVar[] row = new IntVar[number];
 
     for (int i = 0; i < number; i++) {

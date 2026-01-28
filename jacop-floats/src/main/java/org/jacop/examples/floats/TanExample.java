@@ -57,7 +57,6 @@ public class TanExample {
     IO.println("\nProgram to solve tan(x) = -x problem in interval -4*pi..4*pi");
 
     long T1;
-    long T2;
     T1 = System.currentTimeMillis();
 
     Store store = new Store();
@@ -98,7 +97,7 @@ public class TanExample {
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 
-    T2 = System.currentTimeMillis();
+    long T2 = System.currentTimeMillis();
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
   }

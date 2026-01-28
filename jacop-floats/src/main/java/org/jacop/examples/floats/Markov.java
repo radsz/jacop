@@ -54,8 +54,6 @@ public class Markov {
   void markov_chains_taha() {
 
     long T1;
-    long T2;
-    long T;
     T1 = System.currentTimeMillis();
 
     IO.println("========= markov_chains_taha =========");
@@ -135,8 +133,8 @@ public class Markov {
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
 
     IO.println("\n\t*** Execution time = " + T + " ms");
   }

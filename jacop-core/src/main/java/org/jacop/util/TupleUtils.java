@@ -157,7 +157,6 @@ public class TupleUtils {
     }
 
     int previousPosition = 0;
-    int performedInserts = 1;
 
     for (; previousPosition < insert.length; previousPosition++) {
       if (insert[previousPosition]) {
@@ -178,6 +177,7 @@ public class TupleUtils {
 
     reusedTuples[previousPosition] = tuplesBeforeExtension[position[previousPosition]];
 
+    int performedInserts = 1;
     for (int i = previousPosition + 1; i < sortedTs.length; i++) {
 
       if (!insert[i]) {

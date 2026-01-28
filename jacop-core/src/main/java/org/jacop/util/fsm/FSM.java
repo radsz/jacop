@@ -453,8 +453,6 @@ public class FSM {
    */
   public MDD transformIntoMDD(IntVar[] vars) {
 
-    MDD result = new MDD(vars);
-
     int levels = vars.length;
     int stateNumber = this.allStates.size();
 
@@ -547,6 +545,7 @@ public class FSM {
     IntervalDomain dom;
     int[] tuple = new int[levels];
 
+    MDD result = new MDD(vars);
     // Part exploring all tuples and adding one by one to MDD.
     for (int i = 0; i < stateNumber; i++) {
       for (int j = 0; j < stateNumber; j++) {
@@ -620,8 +619,6 @@ public class FSM {
    * @return MDD representing the same constraint as Regular.
    */
   public MDD transformDirectlyIntoMDD(IntVar[] vars) {
-
-    MDD result = new MDD(vars);
 
     int levels = vars.length;
     int stateNumber = this.allStates.size();
@@ -715,6 +712,7 @@ public class FSM {
 
     int[] positions = new int[(vars.length + 1) * stateNumber];
 
+    MDD result = new MDD(vars);
     positions[initState.id] = 0;
     // not needed as constructor is already doing it.
     // result.freePosition += vars[0].getSize();

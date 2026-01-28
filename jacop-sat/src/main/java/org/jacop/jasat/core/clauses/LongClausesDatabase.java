@@ -112,7 +112,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
       int clauseIndex = varClauses[i];
       int[] cache = literalsCache[clauseIndex];
-      int[] clause = clauses[clauseIndex];
 
       // is the literal the first or second watch ?
       int myWatchPos = (cache[0] < 0 ? -cache[0] : cache[0]) == var ? 0 : 1;
@@ -153,6 +152,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
 
       // maybe watch replacement can be find in main clause array.
       // replace cache with new potential watches later on.
+      int[] clause = clauses[clauseIndex];
       int startingPosition = generator.nextInt(clause.length - 1);
       int currentPosition = startingPosition + 1;
       int right = cache.length - 1;

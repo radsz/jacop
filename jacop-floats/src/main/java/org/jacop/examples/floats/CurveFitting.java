@@ -68,25 +68,12 @@ public class CurveFitting {
 
     int n = 19;
 
-    double[] Sx = {
-      0.0, 0.5, 1.0, 1.5, 1.9, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.6, 7.0, 7.6, 8.5, 9.0, 10.0
-    };
-
-    double[] Sy = {
-      1.0, 0.9, 0.7, 1.5, 2.0, 2.4, 3.2, 2.0, 2.7, 3.5, 1.0, 4.0, 3.6, 2.7, 5.7, 4.6, 6.0, 6.8, 7.3
-    };
-
-    FloatVar X = new FloatVar(store, "X", MIN_FLOAT, MAX_FLOAT); // -10, 10);
-    FloatVar Y = new FloatVar(store, "Y", MIN_FLOAT, MAX_FLOAT); // -10, 10);
-
     FloatVar[] Ex = new FloatVar[n];
     FloatVar[] Ey = new FloatVar[n];
     for (int i = 0; i < n; i++) {
       Ex[i] = new FloatVar(store, "Ex[" + i + "]", MIN_FLOAT, MAX_FLOAT);
       Ey[i] = new FloatVar(store, "Ey[" + i + "]", MIN_FLOAT, MAX_FLOAT);
     }
-
-    FloatVar b1 = new FloatVar(store, "b1", MIN_FLOAT, MAX_FLOAT);
 
     FloatVar sumExEx = new FloatVar(store, "sumExEx", MIN_FLOAT, MAX_FLOAT);
     // FloatVar sumExEy = new FloatVar(store, "sumExEy", MIN_FLOAT, MAX_FLOAT);
@@ -113,6 +100,7 @@ public class CurveFitting {
       div[i] = new FloatVar(store, "div[" + i + "]", MIN_FLOAT, MAX_FLOAT);
       store.impose(new PmulQeqR(sumExEx, div[i], ExEy[i]));
     }
+    FloatVar b1 = new FloatVar(store, "b1", MIN_FLOAT, MAX_FLOAT);
     div[n] = b1;
 
     double[] ones1 = new double[n + 1];
@@ -127,6 +115,14 @@ public class CurveFitting {
     store.impose(new LinearFloat(Ex, ones, "==", 0.0));
     store.impose(new LinearFloat(Ey, ones, "==", 0.0));
 
+    double[] Sx = {
+      0.0, 0.5, 1.0, 1.5, 1.9, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.6, 7.0, 7.6, 8.5, 9.0, 10.0
+    };
+    double[] Sy = {
+      1.0, 0.9, 0.7, 1.5, 2.0, 2.4, 3.2, 2.0, 2.7, 3.5, 1.0, 4.0, 3.6, 2.7, 5.7, 4.6, 6.0, 6.8, 7.3
+    };
+    FloatVar X = new FloatVar(store, "X", MIN_FLOAT, MAX_FLOAT); // -10, 10);
+    FloatVar Y = new FloatVar(store, "Y", MIN_FLOAT, MAX_FLOAT); // -10, 10);
     for (int i = 0; i < n; i++) {
       store.impose(new PplusQeqR(X, Ex[i], new FloatVar(store, Sx[i], Sx[i])));
       store.impose(new PplusQeqR(Y, Ey[i], new FloatVar(store, Sy[i], Sy[i])));

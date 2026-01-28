@@ -349,7 +349,6 @@ public class Pruning extends Network {
       return;
     }
 
-    long cost = cost(Long.MAX_VALUE);
     int capacity = arc.capacity;
     int flow = analyzeArc(arc, costLimit);
     assert (arc.capacity == (capacity - flow));
@@ -385,6 +384,7 @@ public class Pruning extends Network {
     // if (cost(Long.MAX_VALUE) != cost)
     networkSimplex(999999);
 
+    long cost = cost(Long.MAX_VALUE);
     assert (cost(Long.MAX_VALUE) == cost) : cost(Long.MAX_VALUE) + " != " + cost;
   }
 

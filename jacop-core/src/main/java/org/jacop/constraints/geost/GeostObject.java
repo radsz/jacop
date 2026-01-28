@@ -1,4 +1,4 @@
-/**
+/*
  * GeostObject.java This file is part of JaCoP.
  *
  * <p>JaCoP is a Java Constraint Programming solver.

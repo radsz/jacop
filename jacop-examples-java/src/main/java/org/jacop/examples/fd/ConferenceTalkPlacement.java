@@ -258,7 +258,6 @@ public class ConferenceTalkPlacement {
 
     long T1;
     long T2;
-    long T;
     T1 = System.currentTimeMillis();
 
     search = new DepthFirstSearch<>();
@@ -277,7 +276,7 @@ public class ConferenceTalkPlacement {
     boolean result = search.labeling(store, select, cost);
 
     T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T = T2 - T1;
 
     if (result) {
       IO.println("Variables : " + vars);
@@ -298,7 +297,6 @@ public class ConferenceTalkPlacement {
 
     long T1;
     long T2;
-    long T;
     T1 = System.currentTimeMillis();
 
     search = new DepthFirstSearch<>();
@@ -315,7 +313,7 @@ public class ConferenceTalkPlacement {
     boolean result = search.labeling(store, select);
 
     T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T = T2 - T1;
 
     if (result) {
       IO.println("Variables : " + vars);

@@ -305,9 +305,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** This function is called recursively to assign variables one by one. */
   public boolean label(int firstVariable) {
 
-    int val = 0;
-    T fdv;
-    PrimitiveConstraint choice = null;
     boolean consistent;
 
     // int textInterfaceLength = 0;
@@ -432,7 +429,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       // Delete function indicates which is next variable for
       // labeling
 
-      fdv = heuristic.getChoiceVariable(firstVariable);
+      T fdv = heuristic.getChoiceVariable(firstVariable);
+      PrimitiveConstraint choice = null;
+      int val = 0;
 
       if (fdv != null) {
 

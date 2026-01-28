@@ -61,8 +61,6 @@ public class CircleIntersection {
   void circle_intersection() {
 
     long T1;
-    long T2;
-    long T;
     T1 = System.currentTimeMillis();
 
     IO.println("========= circle_intersection =========");
@@ -113,8 +111,8 @@ public class CircleIntersection {
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
 
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
