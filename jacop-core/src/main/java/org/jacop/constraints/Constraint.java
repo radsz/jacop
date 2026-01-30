@@ -303,6 +303,15 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * This is a function called to indicate which variable in a scope of constraint has changed. It
+   * also indicates a store level at which the change has occurred.
+   *
+   * @param level the level of the store at which the change has occurred.
+   * @param var variable which has changed.
+   */
+  public void queueVariable(final int level, final Var var) {}
+
   private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
     if (c instanceof RemoveLevelLate late) {
       fixpoint.add(late);
@@ -312,15 +321,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
     return fixpoint;
   }
-
-  /**
-   * This is a function called to indicate which variable in a scope of constraint has changed. It
-   * also indicates a store level at which the change has occurred.
-   *
-   * @param level the level of the store at which the change has occurred.
-   * @param var variable which has changed.
-   */
-  public void queueVariable(final int level, final Var var) {}
 
   /** It removes the constraint by removing this constraint from all variables. */
   public void removeConstraint() {

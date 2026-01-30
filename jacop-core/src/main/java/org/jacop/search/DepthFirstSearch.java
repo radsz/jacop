@@ -960,27 +960,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
-  // KKU, 2015-12-17: might be used to set cost variable and
-  // optimization = true for all sub-searches does not do it
-  // automatically since it might not be the intention (we might
-  // want to find only a single solution in the sub-search). This is
-  // why it is not added to labeling with costVar.
-  @SuppressWarnings("unchecked")
-  void setOptimizationForChildSearches(DepthFirstSearch<T> s, Var costVar) {
-
-    // set cost and optimization for child searches
-    if (s != null) {
-      DepthFirstSearch<T>[] childs = (DepthFirstSearch<T>[]) s.childSearches;
-      if (childs != null) {
-        for (DepthFirstSearch<T> child : childs) {
-          child.setCostVar(costVar);
-          child.setOptimize(true);
-          setOptimizationForChildSearches(child, costVar);
-        }
-      }
-    }
-  }
-
   public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar) {
 
     this.store = store;
@@ -1077,6 +1056,27 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
             maxDepthExcludePaths);
       }
       return false;
+    }
+  }
+
+  // KKU, 2015-12-17: might be used to set cost variable and
+  // optimization = true for all sub-searches does not do it
+  // automatically since it might not be the intention (we might
+  // want to find only a single solution in the sub-search). This is
+  // why it is not added to labeling with costVar.
+  @SuppressWarnings("unchecked")
+  void setOptimizationForChildSearches(DepthFirstSearch<T> s, Var costVar) {
+
+    // set cost and optimization for child searches
+    if (s != null) {
+      DepthFirstSearch<T>[] childs = (DepthFirstSearch<T>[]) s.childSearches;
+      if (childs != null) {
+        for (DepthFirstSearch<T> child : childs) {
+          child.setCostVar(costVar);
+          child.setOptimize(true);
+          setOptimizationForChildSearches(child, costVar);
+        }
+      }
     }
   }
 

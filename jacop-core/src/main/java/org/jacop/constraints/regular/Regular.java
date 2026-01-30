@@ -385,6 +385,139 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   }
 
   /**
+   * Initialization phase of the algorithm.
+   *
+   * <p>Considering that it needs to initialize the array of graph States - stateLevels, and, thus,
+   * it needs to know the actual number of the states on each level I found nothing better then run
+   * the initialization phase with the complete NxN array of states and then copy the useful ones
+   * into a final array (which is ugly)
+   */
+  @SuppressWarnings("unchecked")
+  private void initializeARRAY(MDD mdd) {
+
+    int levels = this.list.length;
+
+    // Initialization of the future state array
+    // and the time-stamps with the number of active states
+    this.stateLevels = new RegState[levels + 1][];
+
+    List<RegState>[] layeredGraph =
+        (ArrayList<RegState>[]) Array.newInstance(ArrayList.class, levels + 1);
+    for (int i = 0; i < layeredGraph.length; i++) {
+      layeredGraph[i] = new ArrayList<>();
+    }
+
+    this.activeLevelsTemp = new int[this.list.length + 1];
+
+    final int[] currentPosition = new int[list.length];
+    final int[] currentOffset = new int[list.length];
+    RegState[] currentState = new RegState[list.length + 1];
+
+    int currentLevel = 0;
+    int noNeighbours = 0;
+
+    for (int i = 0; i < list[0].getSize(); i++) {
+      if (mdd.diagram[i] != MDD.NOEDGE) {
+        noNeighbours++;
+      }
+    }
+
+    currentState[0] =
+        new RegStateInt(currentLevel, 0, noNeighbours, activeLevelsTemp[currentLevel]++);
+    currentState[list.length] = new RegStateInt(list.length, 0, 0, activeLevelsTemp[list.length]++);
+
+    layeredGraph[0].add(currentState[currentLevel]);
+    layeredGraph[list.length].add(currentState[list.length]);
+
+    currentPosition[0] = 0;
+    currentOffset[0] = 0;
+    currentLevel = 0;
+
+    while (currentLevel != -1) {
+
+      if (currentOffset[currentLevel] >= list[currentLevel].getSize()) {
+        currentLevel--;
+        if (currentLevel >= 0) {
+          currentOffset[currentLevel]++;
+        }
+        continue;
+      }
+
+      int nextNodePosition =
+          mdd.diagram[currentPosition[currentLevel] + currentOffset[currentLevel]];
+
+      // no path with a given value from a current node.
+      if (nextNodePosition == MDD.NOEDGE) {
+        currentOffset[currentLevel]++;
+        continue;
+      }
+
+      if (nextNodePosition == MDD.TERMINAL) {
+        currentState[currentLevel].addTransition(
+            currentState[list.length],
+            mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
+        currentOffset[currentLevel]++;
+        continue;
+      }
+
+      boolean visited = false;
+
+      RegState s = null;
+      for (RegState state : layeredGraph[currentLevel + 1]) {
+        if (state.id == nextNodePosition) {
+          s = state;
+          visited = true;
+        }
+      }
+
+      if (s == null) {
+        noNeighbours = 0;
+
+        if (currentLevel + 1 < list.length) {
+          for (int j = nextNodePosition;
+              j < nextNodePosition + list[currentLevel + 1].getSize();
+              j++) {
+            if (mdd.diagram[j] != MDD.NOEDGE) {
+              noNeighbours++;
+            }
+          }
+        }
+
+        s =
+            new RegStateInt(
+                currentLevel + 1,
+                nextNodePosition,
+                noNeighbours,
+                activeLevelsTemp[currentLevel + 1]++);
+        layeredGraph[currentLevel + 1].add(s);
+      }
+
+      currentState[currentLevel].addTransition(
+          s, mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
+
+      if (visited) {
+        currentOffset[currentLevel]++;
+        continue;
+      }
+
+      currentLevel++;
+
+      currentState[currentLevel] = s;
+      currentOffset[currentLevel] = 0;
+      currentPosition[currentLevel] = nextNodePosition;
+    }
+
+    for (int i = 0; i < layeredGraph.length; i++) {
+      stateLevels[i] = new RegState[layeredGraph[i].size()];
+      int j = 0;
+      for (RegState state : layeredGraph[i]) {
+        stateLevels[i][j] = state;
+        j++;
+      }
+    }
+  }
+
+  /**
    * Find the state with the corresponding id.
    *
    * @param level specifies the variable for which the state is seeked for.
@@ -1083,138 +1216,5 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     }
 
     return constraints;
-  }
-
-  /**
-   * Initialization phase of the algorithm.
-   *
-   * <p>Considering that it needs to initialize the array of graph States - stateLevels, and, thus,
-   * it needs to know the actual number of the states on each level I found nothing better then run
-   * the initialization phase with the complete NxN array of states and then copy the useful ones
-   * into a final array (which is ugly)
-   */
-  @SuppressWarnings("unchecked")
-  private void initializeARRAY(MDD mdd) {
-
-    int levels = this.list.length;
-
-    // Initialization of the future state array
-    // and the time-stamps with the number of active states
-    this.stateLevels = new RegState[levels + 1][];
-
-    List<RegState>[] layeredGraph =
-        (ArrayList<RegState>[]) Array.newInstance(ArrayList.class, levels + 1);
-    for (int i = 0; i < layeredGraph.length; i++) {
-      layeredGraph[i] = new ArrayList<>();
-    }
-
-    this.activeLevelsTemp = new int[this.list.length + 1];
-
-    final int[] currentPosition = new int[list.length];
-    final int[] currentOffset = new int[list.length];
-    RegState[] currentState = new RegState[list.length + 1];
-
-    int currentLevel = 0;
-    int noNeighbours = 0;
-
-    for (int i = 0; i < list[0].getSize(); i++) {
-      if (mdd.diagram[i] != MDD.NOEDGE) {
-        noNeighbours++;
-      }
-    }
-
-    currentState[0] =
-        new RegStateInt(currentLevel, 0, noNeighbours, activeLevelsTemp[currentLevel]++);
-    currentState[list.length] = new RegStateInt(list.length, 0, 0, activeLevelsTemp[list.length]++);
-
-    layeredGraph[0].add(currentState[currentLevel]);
-    layeredGraph[list.length].add(currentState[list.length]);
-
-    currentPosition[0] = 0;
-    currentOffset[0] = 0;
-    currentLevel = 0;
-
-    while (currentLevel != -1) {
-
-      if (currentOffset[currentLevel] >= list[currentLevel].getSize()) {
-        currentLevel--;
-        if (currentLevel >= 0) {
-          currentOffset[currentLevel]++;
-        }
-        continue;
-      }
-
-      int nextNodePosition =
-          mdd.diagram[currentPosition[currentLevel] + currentOffset[currentLevel]];
-
-      // no path with a given value from a current node.
-      if (nextNodePosition == MDD.NOEDGE) {
-        currentOffset[currentLevel]++;
-        continue;
-      }
-
-      if (nextNodePosition == MDD.TERMINAL) {
-        currentState[currentLevel].addTransition(
-            currentState[list.length],
-            mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
-        currentOffset[currentLevel]++;
-        continue;
-      }
-
-      boolean visited = false;
-
-      RegState s = null;
-      for (RegState state : layeredGraph[currentLevel + 1]) {
-        if (state.id == nextNodePosition) {
-          s = state;
-          visited = true;
-        }
-      }
-
-      if (s == null) {
-        noNeighbours = 0;
-
-        if (currentLevel + 1 < list.length) {
-          for (int j = nextNodePosition;
-              j < nextNodePosition + list[currentLevel + 1].getSize();
-              j++) {
-            if (mdd.diagram[j] != MDD.NOEDGE) {
-              noNeighbours++;
-            }
-          }
-        }
-
-        s =
-            new RegStateInt(
-                currentLevel + 1,
-                nextNodePosition,
-                noNeighbours,
-                activeLevelsTemp[currentLevel + 1]++);
-        layeredGraph[currentLevel + 1].add(s);
-      }
-
-      currentState[currentLevel].addTransition(
-          s, mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
-
-      if (visited) {
-        currentOffset[currentLevel]++;
-        continue;
-      }
-
-      currentLevel++;
-
-      currentState[currentLevel] = s;
-      currentOffset[currentLevel] = 0;
-      currentPosition[currentLevel] = nextNodePosition;
-    }
-
-    for (int i = 0; i < layeredGraph.length; i++) {
-      stateLevels[i] = new RegState[layeredGraph[i].size()];
-      int j = 0;
-      for (RegState state : layeredGraph[i]) {
-        stateLevels[i][j] = state;
-        j++;
-      }
-    }
   }
 }

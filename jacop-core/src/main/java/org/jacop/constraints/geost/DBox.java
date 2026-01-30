@@ -273,6 +273,77 @@ public class DBox {
   }
 
   /**
+   * It computes the result of a subtraction from this box of all the boxes given. The collection
+   * used to store the result is given to avoid allocating a new set of boxes each time the function
+   * is called. However, for ease of use, it is also returned (after the call, the result argument
+   * is equal to the returned value)
+   *
+   * @param others the boxes to subtract from this box
+   * @param result the collection to store the resulting boxes into
+   * @return the result argument, for ease of use
+   */
+  public Collection<DBox> subtractAll(Collection<DBox> others, Collection<DBox> result) {
+
+    /*
+     * begin with this as temporary result, then subtract each box
+     * to the temporary result.
+     */
+
+    assert result.isEmpty() : "collection must be emptied before call";
+
+    Collection<DBox> resultWork = result;
+    resultWork.add(this.copyInto(newBox(origin.length)));
+
+    Collection<DBox> resultStep = new ArrayList<>();
+
+    /*
+     * proceed hole by hole: for each hole, subtract it to each remaining piece.
+     *
+     * We need two lists, one to store the current pieces not yet subtracted with the
+     * current hole, and one to store the ones that were subtracted already.
+     */
+
+    for (DBox hole : others) {
+
+      for (DBox piece : resultWork) {
+        piece.subtract(hole, resultStep);
+      }
+
+      // the DBoxes contained in result can be reused
+      for (DBox piece : resultWork) {
+        assert piece != this : "dispatching this";
+        dispatchBox(piece);
+      }
+
+      resultWork.clear();
+
+      // switch lists
+      Collection<DBox> forExchange = resultWork;
+      resultWork = resultStep;
+      resultStep = forExchange;
+
+      // if there is nothing left, no need to continue
+      if (resultWork.isEmpty()) {
+        break;
+      }
+    }
+
+    // now we need to make sure that the correct list contains the boxes
+    assert resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty()
+        : // without this the assertion would fail when subtracting leaves nothing
+        "bad cleaning of the lists";
+
+    if (result == resultStep) {
+      // in that case we need to transfer the elements to the right list
+      result.addAll(resultWork);
+      // and clear the ones in the working list
+      resultWork.clear();
+    }
+
+    return result;
+  }
+
+  /**
    * It checks whether the DBox is consistent.
    *
    * @return It returns the string description of the problem, or null if no problem with data
@@ -550,77 +621,6 @@ public class DBox {
     }
 
     return difference;
-  }
-
-  /**
-   * It computes the result of a subtraction from this box of all the boxes given. The collection
-   * used to store the result is given to avoid allocating a new set of boxes each time the function
-   * is called. However, for ease of use, it is also returned (after the call, the result argument
-   * is equal to the returned value)
-   *
-   * @param others the boxes to subtract from this box
-   * @param result the collection to store the resulting boxes into
-   * @return the result argument, for ease of use
-   */
-  public Collection<DBox> subtractAll(Collection<DBox> others, Collection<DBox> result) {
-
-    /*
-     * begin with this as temporary result, then subtract each box
-     * to the temporary result.
-     */
-
-    assert result.isEmpty() : "collection must be emptied before call";
-
-    Collection<DBox> resultWork = result;
-    resultWork.add(this.copyInto(newBox(origin.length)));
-
-    Collection<DBox> resultStep = new ArrayList<>();
-
-    /*
-     * proceed hole by hole: for each hole, subtract it to each remaining piece.
-     *
-     * We need two lists, one to store the current pieces not yet subtracted with the
-     * current hole, and one to store the ones that were subtracted already.
-     */
-
-    for (DBox hole : others) {
-
-      for (DBox piece : resultWork) {
-        piece.subtract(hole, resultStep);
-      }
-
-      // the DBoxes contained in result can be reused
-      for (DBox piece : resultWork) {
-        assert piece != this : "dispatching this";
-        dispatchBox(piece);
-      }
-
-      resultWork.clear();
-
-      // switch lists
-      Collection<DBox> forExchange = resultWork;
-      resultWork = resultStep;
-      resultStep = forExchange;
-
-      // if there is nothing left, no need to continue
-      if (resultWork.isEmpty()) {
-        break;
-      }
-    }
-
-    // now we need to make sure that the correct list contains the boxes
-    assert resultStep.isEmpty() && !resultWork.isEmpty() || resultStep.isEmpty()
-        : // without this the assertion would fail when subtracting leaves nothing
-        "bad cleaning of the lists";
-
-    if (result == resultStep) {
-      // in that case we need to transfer the elements to the right list
-      result.addAll(resultWork);
-      // and clear the ones in the working list
-      resultWork.clear();
-    }
-
-    return result;
   }
 
   /**
