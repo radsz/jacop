@@ -285,6 +285,31 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
+  public boolean contains(int min, int max) {
+
+    // TODO: test more.
+    if (min < this.min) {
+      return false;
+    }
+
+    if (max > this.max) {
+      return false;
+    }
+
+    long result = bits;
+
+    result = result << min - this.min;
+    result = result >>> (min - this.min);
+    result = result >>> (this.min + 63 - max);
+
+    // SmallDenseDomain temp = new SmallDenseDomain(this.min, result);
+
+    return max - min + 1 == this.getSize(result);
+
+    //      System.out.println( this + " contains " + " min " + min + " max " + max );
+  }
+
+  @Override
   public boolean eq(IntDomain domain) {
 
     if (this.isEmpty()) {
@@ -626,21 +651,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
-  private void adaptMin() {
-
-    assert (bits != 0) : "Empty domain, min can not be adapted.";
-
-    while ((bits & first8) == 0) {
-      min += 8;
-      bits = bits << 8;
-    }
-
-    while ((bits & TWO_N_ARRAY[63]) == 0) {
-      min++;
-      bits = bits << 1;
-    }
-  }
-
   public void in(int storeLevel, Var var, long domain) {
 
     assert checkInvariants() == null : checkInvariants();
@@ -719,6 +729,21 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
           var.domainHasChanged(IntDomain.ANY);
         }
       }
+    }
+  }
+
+  private void adaptMin() {
+
+    assert (bits != 0) : "Empty domain, min can not be adapted.";
+
+    while ((bits & first8) == 0) {
+      min += 8;
+      bits = bits << 8;
+    }
+
+    while ((bits & TWO_N_ARRAY[63]) == 0) {
+      min++;
+      bits = bits << 1;
     }
   }
 
@@ -1854,6 +1879,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
+  public boolean singleton() {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    return singleton;
+  }
+
+  @Override
   public int sizeOfIntersection(IntDomain domain) {
 
     return super.sizeOfIntersection(domain);
@@ -1921,6 +1954,35 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
+  public IntDomain subtract(int min, int max) {
+
+    //      System.out.println("s>" + this  + "(" + min + ", " + max + ")");
+
+    assert checkInvariants() == null : checkInvariants();
+
+    if (min > this.max || max < this.min) {
+      return this.cloneLight();
+    }
+
+    min = Math.max(min, this.min);
+    max = Math.min(max, this.max);
+
+    // TODO: Test properly. SETADD
+
+    long result = this.bits & ~(SEQ_ARRAY[max - min] << (63 - (max - min) - (min - this.min)));
+
+    if (result == 0) {
+      return SmallDenseDomain.emptyIntDomain;
+    } else {
+      SmallDenseDomain returnObj = new SmallDenseDomain(this.min, result);
+      assert returnObj.checkInvariants() == null : returnObj.checkInvariants();
+
+      //          System.out.println("s<" + returnObj  );
+      return returnObj;
+    }
+  }
+
+  @Override
   public void subtractAdapt(int min, int max) {
 
     //      System.out.println("s>" + this  + "(" + min + ", " + max + ")");
@@ -1969,35 +2031,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         // max < this.max
         // no changes to min and max
       }
-    }
-  }
-
-  @Override
-  public IntDomain subtract(int min, int max) {
-
-    //      System.out.println("s>" + this  + "(" + min + ", " + max + ")");
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (min > this.max || max < this.min) {
-      return this.cloneLight();
-    }
-
-    min = Math.max(min, this.min);
-    max = Math.min(max, this.max);
-
-    // TODO: Test properly. SETADD
-
-    long result = this.bits & ~(SEQ_ARRAY[max - min] << (63 - (max - min) - (min - this.min)));
-
-    if (result == 0) {
-      return SmallDenseDomain.emptyIntDomain;
-    } else {
-      SmallDenseDomain returnObj = new SmallDenseDomain(this.min, result);
-      assert returnObj.checkInvariants() == null : returnObj.checkInvariants();
-
-      //          System.out.println("s<" + returnObj  );
-      return returnObj;
     }
   }
 
@@ -2267,14 +2300,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public boolean singleton() {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    return singleton;
-  }
-
-  @Override
   public int sizeConstraintsOriginal() {
 
     IntDomain domain = this;
@@ -2338,31 +2363,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert false;
     return min;
-  }
-
-  @Override
-  public boolean contains(int min, int max) {
-
-    // TODO: test more.
-    if (min < this.min) {
-      return false;
-    }
-
-    if (max > this.max) {
-      return false;
-    }
-
-    long result = bits;
-
-    result = result << min - this.min;
-    result = result >>> (min - this.min);
-    result = result >>> (this.min + 63 - max);
-
-    // SmallDenseDomain temp = new SmallDenseDomain(this.min, result);
-
-    return max - min + 1 == this.getSize(result);
-
-    //      System.out.println( this + " contains " + " min " + min + " max " + max );
   }
 
   /**

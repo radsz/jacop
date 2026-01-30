@@ -153,6 +153,16 @@ public class SetVar extends Var {
   }
 
   /**
+   * It is possible to add the domain of variable. It should be used with care, only right after
+   * variable was created and before it is used in constraints or search.
+   *
+   * @param dom the added domain.
+   */
+  public void addDom(SetDomain dom) {
+    domain.addDom(dom);
+  }
+
+  /**
    * It is possible to set the domain of variable. It should be used with care, only right after
    * variable was created and before it is used in constraints or search.
    *
@@ -171,16 +181,6 @@ public class SetVar extends Var {
    */
   public void setDomain(SetDomain dom) {
     domain.setDomain(dom);
-  }
-
-  /**
-   * It is possible to add the domain of variable. It should be used with care, only right after
-   * variable was created and before it is used in constraints or search.
-   *
-   * @param dom the added domain.
-   */
-  public void addDom(SetDomain dom) {
-    domain.addDom(dom);
   }
 
   /**

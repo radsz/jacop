@@ -270,12 +270,12 @@ public abstract class IntDomain extends Domain {
     return Math.floorDiv(a, b);
   }
 
-  public static long divRoundUp(long a, long b) {
-    return -Math.floorDiv(-a, b);
-  }
-
   public static int divRoundDown(int a, int b) {
     return Math.floorDiv(a, b);
+  }
+
+  public static long divRoundUp(long a, long b) {
+    return -Math.floorDiv(-a, b);
   }
 
   public static int divRoundUp(int a, int b) {
@@ -354,6 +354,44 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
+   * It adds all values between min and max to the domain.
+   *
+   * @param min the left bound of the interval being added.
+   * @param max the right bound of the interval being added.
+   */
+  public abstract void unionAdapt(int min, int max);
+
+  /**
+   * It adds a values to the domain.
+   *
+   * @param value value being added to the domain.
+   */
+  public void unionAdapt(int value) {
+    unionAdapt(value, value);
+  }
+
+  /**
+   * It computes a union between this domain and the domain provided as a parameter. This domain is
+   * changed to reflect the result.
+   *
+   * @param union the domain with is used for the union operation with this domain.
+   * @return it returns information about the pruning event which has occurred due to this
+   *     operation.
+   */
+  public int unionAdapt(IntDomain union) {
+
+    IntDomain result = union(union);
+
+    if (result.getSize() == getSize()) {
+      return Domain.NONE;
+    } else {
+      setDomain(result);
+      // FIXME, how to setup events for domain extending events?
+      return IntDomain.ANY;
+    }
+  }
+
+  /**
    * It adds values as specified by the parameter to the domain.
    *
    * @param domain Domain which needs to be added to the domain.
@@ -371,23 +409,6 @@ public abstract class IntDomain extends Domain {
         unionAdapt(enumer.nextElement());
       }
     }
-  }
-
-  /**
-   * It adds all values between min and max to the domain.
-   *
-   * @param min the left bound of the interval being added.
-   * @param max the right bound of the interval being added.
-   */
-  public abstract void unionAdapt(int min, int max);
-
-  /**
-   * It adds a values to the domain.
-   *
-   * @param value value being added to the domain.
-   */
-  public void unionAdapt(int value) {
-    unionAdapt(value, value);
   }
 
   /**
@@ -466,13 +487,6 @@ public abstract class IntDomain extends Domain {
   public abstract boolean contains(int min, int max);
 
   /**
-   * It creates a complement of a domain.
-   *
-   * @return it returns the complement of this domain.
-   */
-  public abstract IntDomain complement();
-
-  /**
    * It checks if value belongs to the domain.
    *
    * @param value which is checked if it exists in the domain.
@@ -481,6 +495,13 @@ public abstract class IntDomain extends Domain {
   public boolean contains(int value) {
     return contains(value, value);
   }
+
+  /**
+   * It creates a complement of a domain.
+   *
+   * @return it returns the complement of this domain.
+   */
+  public abstract IntDomain complement();
 
   /**
    * It gives next value in the domain from the given one (lexigraphical ordering). If no value can
@@ -549,6 +570,50 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
+   * It subtracts domain from current domain and returns the result.
+   *
+   * @param domain the domain which is subtracted from this domain.
+   * @return the result of the subtraction.
+   */
+  public IntDomain subtract(IntDomain domain) {
+
+    if (domain.isEmpty()) {
+      return this.cloneLight();
+    }
+
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      Interval first = enumer.nextElement();
+      IntDomain result = this.subtract(first.min(), first.max());
+      while (enumer.hasMoreElements()) {
+        Interval next = enumer.nextElement();
+        result.subtractAdapt(next.min(), next.max());
+      }
+      return result;
+    } else {
+      ValueEnumeration enumer = domain.valueEnumeration();
+      int first = enumer.nextElement();
+      IntDomain result = this.subtract(first);
+      while (enumer.hasMoreElements()) {
+        int next = enumer.nextElement();
+        if (result.contains(next)) {
+          result.subtractAdapt(next);
+        }
+      }
+      return result;
+    }
+  }
+
+  /**
+   * It subtracts interval min..max.
+   *
+   * @param min the left bound of the interval (inclusive).
+   * @param max the right bound of the interval (inclusive).
+   * @return the result of the subtraction.
+   */
+  public abstract IntDomain subtract(int min, int max);
+
+  /**
    * It removes value from the domain. It adapts current (this) domain.
    *
    * @param value the value for which the complement is computed
@@ -602,49 +667,28 @@ public abstract class IntDomain extends Domain {
     return min() == c && getSize() == 1;
   }
 
-  /**
-   * It subtracts domain from current domain and returns the result.
-   *
-   * @param domain the domain which is subtracted from this domain.
-   * @return the result of the subtraction.
-   */
-  public IntDomain subtract(IntDomain domain) {
+  @Override
+  public boolean singleton(Domain value) {
 
-    if (domain.isEmpty()) {
-      return this.cloneLight();
+    if (getSize() > 1) {
+      return false;
     }
 
-    if (!domain.isSparseRepresentation()) {
-      IntervalEnumeration enumer = domain.intervalEnumeration();
-      Interval first = enumer.nextElement();
-      IntDomain result = this.subtract(first.min(), first.max());
-      while (enumer.hasMoreElements()) {
-        Interval next = enumer.nextElement();
-        result.subtractAdapt(next.min(), next.max());
-      }
-      return result;
-    } else {
-      ValueEnumeration enumer = domain.valueEnumeration();
-      int first = enumer.nextElement();
-      IntDomain result = this.subtract(first);
-      while (enumer.hasMoreElements()) {
-        int next = enumer.nextElement();
-        if (result.contains(next)) {
-          result.subtractAdapt(next);
-        }
-      }
-      return result;
+    if (isEmpty()) {
+      return false;
     }
+
+    if (value.getSize() != 1) {
+      throw new IllegalArgumentException("An argument should be a singleton domain");
+    }
+
+    assert (value instanceof IntDomain)
+        : "Can not compare int domains with other types of domains.";
+
+    IntDomain domain = (IntDomain) value;
+
+    return eq(domain);
   }
-
-  /**
-   * It subtracts interval min..max.
-   *
-   * @param min the left bound of the interval (inclusive).
-   * @param max the right bound of the interval (inclusive).
-   * @return the result of the subtraction.
-   */
-  public abstract IntDomain subtract(int min, int max);
 
   /**
    * It computes union of the supplied domain with this domain.
@@ -742,6 +786,24 @@ public abstract class IntDomain extends Domain {
    */
   public abstract void in(int storeLevel, Var var, int min, int max);
 
+  /**
+   * It updates the domain to have values only within the domain. The type of update is decided by
+   * the value of stamp. It informs the variable of a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param var variable for which this domain is used.
+   * @param domain the domain according to which the domain is updated.
+   */
+  public void in(int storeLevel, Var var, IntDomain domain) {
+
+    inShift(storeLevel, var, domain, 0);
+  }
+
+  @Override
+  public void in(int level, Var var, Domain domain) {
+    in(level, var, (IntDomain) domain);
+  }
+
   /*
    * It returns the number of constraints
    *
@@ -757,19 +819,6 @@ public abstract class IntDomain extends Domain {
    */
   public void inValue(int level, IntVar var, int value) {
     in(level, var, value, value);
-  }
-
-  /**
-   * It updates the domain to have values only within the domain. The type of update is decided by
-   * the value of stamp. It informs the variable of a change if it occurred.
-   *
-   * @param storeLevel level of the store at which the update occurs.
-   * @param var variable for which this domain is used.
-   * @param domain the domain according to which the domain is updated.
-   */
-  public void in(int storeLevel, Var var, IntDomain domain) {
-
-    inShift(storeLevel, var, domain, 0);
   }
 
   /**
@@ -890,34 +939,6 @@ public abstract class IntDomain extends Domain {
       }
       return true;
     }
-  }
-
-  @Override
-  public void in(int level, Var var, Domain domain) {
-    in(level, var, (IntDomain) domain);
-  }
-
-  @Override
-  public boolean singleton(Domain value) {
-
-    if (getSize() > 1) {
-      return false;
-    }
-
-    if (isEmpty()) {
-      return false;
-    }
-
-    if (value.getSize() != 1) {
-      throw new IllegalArgumentException("An argument should be a singleton domain");
-    }
-
-    assert (value instanceof IntDomain)
-        : "Can not compare int domains with other types of domains.";
-
-    IntDomain domain = (IntDomain) value;
-
-    return eq(domain);
   }
 
   public int noConstraints() {
@@ -1350,27 +1371,6 @@ public abstract class IntDomain extends Domain {
    * @return type of event which has occurred due to the operation.
    */
   public abstract int intersectAdapt(IntDomain intersect);
-
-  /**
-   * It computes a union between this domain and the domain provided as a parameter. This domain is
-   * changed to reflect the result.
-   *
-   * @param union the domain with is used for the union operation with this domain.
-   * @return it returns information about the pruning event which has occurred due to this
-   *     operation.
-   */
-  public int unionAdapt(IntDomain union) {
-
-    IntDomain result = union(union);
-
-    if (result.getSize() == getSize()) {
-      return Domain.NONE;
-    } else {
-      setDomain(result);
-      // FIXME, how to setup events for domain extending events?
-      return IntDomain.ANY;
-    }
-  }
 
   /**
    * It computes an intersection of this domain with an interval [min..max]. It adapts this domain

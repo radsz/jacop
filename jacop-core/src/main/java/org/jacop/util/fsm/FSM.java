@@ -442,6 +442,44 @@ public class FSM {
     }
   }
 
+  // It recursively creates
+  private void recursiveCall(
+      int prevSuc,
+      int level,
+      int stateNumber,
+      IntervalDomain[][][] outarc,
+      int[] tuple,
+      MDD result) {
+
+    if (level == tuple.length) {
+      // it adds a tuple to an MDD.
+      result.addTuple(tuple);
+      return;
+    }
+
+    IntervalDomain dom;
+
+    for (int i = 0; i < stateNumber; i++) {
+      if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
+
+        dom = outarc[level][prevSuc][i];
+
+        for (int h = 0; h < dom.size; h++) {
+
+          Interval inv = dom.intervals[h];
+
+          if (inv != null) {
+            // For each value of the interval
+            for (int v = inv.min(); v <= inv.max(); v++) {
+              tuple[level] = v;
+              recursiveCall(i, level + 1, stateNumber, outarc, tuple, result);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /**
    * It generates one by one tuples allowed by a Regular constraint, which are added to the MDD
    * being built. After all tuples are added MDD is being reduced. The standard MDD creating
@@ -569,44 +607,6 @@ public class FSM {
 
     result.reduce();
     return result;
-  }
-
-  // It recursively creates
-  private void recursiveCall(
-      int prevSuc,
-      int level,
-      int stateNumber,
-      IntervalDomain[][][] outarc,
-      int[] tuple,
-      MDD result) {
-
-    if (level == tuple.length) {
-      // it adds a tuple to an MDD.
-      result.addTuple(tuple);
-      return;
-    }
-
-    IntervalDomain dom;
-
-    for (int i = 0; i < stateNumber; i++) {
-      if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
-
-        dom = outarc[level][prevSuc][i];
-
-        for (int h = 0; h < dom.size; h++) {
-
-          Interval inv = dom.intervals[h];
-
-          if (inv != null) {
-            // For each value of the interval
-            for (int v = inv.min(); v <= inv.max(); v++) {
-              tuple[level] = v;
-              recursiveCall(i, level + 1, stateNumber, outarc, tuple, result);
-            }
-          }
-        }
-      }
-    }
   }
 
   /**

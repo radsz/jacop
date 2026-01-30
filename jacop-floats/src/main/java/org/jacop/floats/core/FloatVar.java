@@ -160,6 +160,16 @@ public class FloatVar extends Var {
   }
 
   /**
+   * It is possible to add the domain of variable. It should be used with care, only right after
+   * variable was created and before it is used in constraints or search.
+   *
+   * @param dom the added domain.
+   */
+  public void addDom(FloatDomain dom) {
+    domain.addDom(dom);
+  }
+
+  /**
    * It is possible to set the domain of variable. It should be used with care, only right after
    * variable was created and before it is used in constraints or search.
    *
@@ -168,6 +178,16 @@ public class FloatVar extends Var {
    */
   public void setDomain(double min, double max) {
     domain.setDomain(min, max);
+  }
+
+  /**
+   * It is possible to set the domain of variable. It should be used with care, only right after
+   * variable was created and before it is used in constraints or search.
+   *
+   * @param dom domain to which the current variable domain is set to.
+   */
+  public void setDomain(FloatDomain dom) {
+    domain.setDomain(dom);
   }
 
   /**
@@ -194,6 +214,15 @@ public class FloatVar extends Var {
   }
 
   /**
+   * It checks if the domain contains only one value.
+   *
+   * @return true if the variable domain is a singleton, false otherwise.
+   */
+  public boolean singleton() {
+    return domain.singleton();
+  }
+
+  /**
    * This function returns current maximal value in the domain of the variable.
    *
    * @return the maximum value belonging to the domain.
@@ -209,26 +238,6 @@ public class FloatVar extends Var {
    */
   public double min() {
     return domain.min();
-  }
-
-  /**
-   * It is possible to set the domain of variable. It should be used with care, only right after
-   * variable was created and before it is used in constraints or search.
-   *
-   * @param dom domain to which the current variable domain is set to.
-   */
-  public void setDomain(FloatDomain dom) {
-    domain.setDomain(dom);
-  }
-
-  /**
-   * It is possible to add the domain of variable. It should be used with care, only right after
-   * variable was created and before it is used in constraints or search.
-   *
-   * @param dom the added domain.
-   */
-  public void addDom(FloatDomain dom) {
-    domain.addDom(dom);
   }
 
   /**
@@ -357,15 +366,6 @@ public class FloatVar extends Var {
     }
 
     store.recordChange(this);
-  }
-
-  /**
-   * It checks if the domain contains only one value.
-   *
-   * @return true if the variable domain is a singleton, false otherwise.
-   */
-  public boolean singleton() {
-    return domain.singleton();
   }
 
   /**

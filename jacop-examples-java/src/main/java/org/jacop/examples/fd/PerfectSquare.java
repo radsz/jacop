@@ -1691,6 +1691,11 @@ public class PerfectSquare extends ExampleFD {
     IO.println("Number of constraints: " + store.numberConstraints());
   }
 
+  @Override
+  public void model() {
+    model(0);
+  }
+
   public void modelGeost(int problemNo) {
 
     store = new Store();
@@ -1765,11 +1770,6 @@ public class PerfectSquare extends ExampleFD {
 
     IO.println("Number of variables: " + store.size());
     IO.println("Number of constraints: " + store.numberConstraints());
-  }
-
-  @Override
-  public void model() {
-    model(0);
   }
 
   @Override

@@ -308,6 +308,28 @@ public class TraceGenerator<T extends Var>
     consistencyListeners[0] = child;
   }
 
+  @SuppressWarnings("unchecked")
+  public void setChildrenListeners(ExitChildListener<T>[] children) {
+    exitChildListeners = new ExitChildListener[children.length];
+    System.arraycopy(children, 0, exitChildListeners, 0, children.length);
+  }
+
+  public void setChildrenListeners(ExitListener[] children) {
+    exitListeners = new ExitListener[children.length];
+    System.arraycopy(children, 0, exitListeners, 0, children.length);
+  }
+
+  @SuppressWarnings("unchecked")
+  public void setChildrenListeners(ExitChildListener<T> child) {
+    exitChildListeners = new ExitChildListener[1];
+    exitChildListeners[0] = child;
+  }
+
+  public void setChildrenListeners(ExitListener child) {
+    exitListeners = new ExitListener[1];
+    exitListeners[0] = child;
+  }
+
   public boolean executeAfterConsistency(boolean consistent) {
 
     if (consistencyListeners != null) {
@@ -360,17 +382,6 @@ public class TraceGenerator<T extends Var>
 
   // =================================================================
   // Metods for tracing using ExitChildListener
-
-  @SuppressWarnings("unchecked")
-  public void setChildrenListeners(ExitChildListener<T>[] children) {
-    exitChildListeners = new ExitChildListener[children.length];
-    System.arraycopy(children, 0, exitChildListeners, 0, children.length);
-  }
-
-  public void setChildrenListeners(ExitListener[] children) {
-    exitListeners = new ExitListener[children.length];
-    System.arraycopy(children, 0, exitListeners, 0, children.length);
-  }
 
   public boolean leftChild(T var, int value, boolean status) {
 
@@ -462,17 +473,6 @@ public class TraceGenerator<T extends Var>
 
   // =================================================================
   // Metods for tracing using ExitListener
-
-  @SuppressWarnings("unchecked")
-  public void setChildrenListeners(ExitChildListener<T> child) {
-    exitChildListeners = new ExitChildListener[1];
-    exitChildListeners[0] = child;
-  }
-
-  public void setChildrenListeners(ExitListener child) {
-    exitListeners = new ExitListener[1];
-    exitListeners[0] = child;
-  }
 
   public void executedAtExit(Store store, int solutionsNo) {
 
@@ -723,6 +723,21 @@ public class TraceGenerator<T extends Var>
     }
   }
 
+  void generateTrycNode(int searchNodeId, int parentNode, PrimitiveConstraint c) {
+    try {
+      AttributesImpl atts = new AttributesImpl();
+      atts.addAttribute("", "", "id", "CDATA", "" + searchNodeId);
+      atts.addAttribute("", "", "parent", "CDATA", "" + parentNode);
+      atts.addAttribute("", "", "choice", "CDATA", c.toString());
+      hdTree.startElement("", "", "tryc", atts);
+      hdTree.endElement("", "", "tryc");
+
+    } catch (SAXException e) {
+      // TODO: Auto-generated catch block
+      e.printStackTrace();
+    }
+  }
+
   void generateFailcNode(int searchNodeId, int parentNode, String name, int size, Domain dom) {
 
     try {
@@ -737,21 +752,6 @@ public class TraceGenerator<T extends Var>
       atts.addAttribute("", "", "choice", "CDATA", "" + dom);
       hdTree.startElement("", "", "failc", atts);
       hdTree.endElement("", "", "failc");
-
-    } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
-    }
-  }
-
-  void generateTrycNode(int searchNodeId, int parentNode, PrimitiveConstraint c) {
-    try {
-      AttributesImpl atts = new AttributesImpl();
-      atts.addAttribute("", "", "id", "CDATA", "" + searchNodeId);
-      atts.addAttribute("", "", "parent", "CDATA", "" + parentNode);
-      atts.addAttribute("", "", "choice", "CDATA", c.toString());
-      hdTree.startElement("", "", "tryc", atts);
-      hdTree.endElement("", "", "tryc");
 
     } catch (SAXException e) {
       // TODO: Auto-generated catch block

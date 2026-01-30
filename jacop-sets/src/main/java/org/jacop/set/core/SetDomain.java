@@ -210,6 +210,12 @@ public abstract class SetDomain extends Domain {
    */
   public abstract void in(int storeLevel, SetVar var, SetDomain domain);
 
+  @Override
+  public void in(int level, Var var, Domain domain) {
+
+    in(level, (SetVar) var, (SetDomain) domain);
+  }
+
   /**
    * It intersects current domain with the one given as a parameter.
    *
@@ -807,12 +813,6 @@ public abstract class SetDomain extends Domain {
    *     otherwise.
    */
   public abstract String checkInvariants();
-
-  @Override
-  public void in(int level, Var var, Domain domain) {
-
-    in(level, (SetVar) var, (SetDomain) domain);
-  }
 
   /**
    * It specifies what elements can be in LUB. It will not add any new elements only removed the
