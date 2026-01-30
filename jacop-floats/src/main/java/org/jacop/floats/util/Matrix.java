@@ -91,6 +91,53 @@ public class Matrix {
     return result;
   }
 
+  // A*m
+  public double[][] mult(double[][] b) { // A[m][n] * b[n][p]
+
+    if (A.length == 0) {
+      return new double[0][0];
+    }
+    if (A[0].length != b.length) {
+      return null; // invalid dims
+    }
+    int n = A[0].length;
+    int m = A.length;
+    int p = b[0].length;
+
+    double[][] result = new double[m][p];
+
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < p; j++) {
+        for (int k = 0; k < n; k++) {
+          result[i][j] += A[i][k] * b[k][j];
+        }
+      }
+    }
+    return result;
+  }
+
+  // A*m
+  public double[] mult(double[] b) { // A[m][n] * b[n]
+
+    if (A.length == 0) {
+      return new double[0];
+    }
+    if (A[0].length != b.length) {
+      return null; // invalid dims
+    }
+    int m = A.length;
+    int p = b.length;
+
+    double[] result = new double[m];
+
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < p; j++) {
+        result[i] += A[i][j] * b[j];
+      }
+    }
+    return result;
+  }
+
   public double determinant() {
     return determinant(A);
   }
@@ -145,53 +192,6 @@ public class Matrix {
   public double[][] inverse(double[][] m) {
 
     return multiplyByConstant(transpose(cofactor(m)), 1.0 / determinant(m));
-  }
-
-  // A*m
-  public double[][] mult(double[][] b) { // A[m][n] * b[n][p]
-
-    if (A.length == 0) {
-      return new double[0][0];
-    }
-    if (A[0].length != b.length) {
-      return null; // invalid dims
-    }
-    int n = A[0].length;
-    int m = A.length;
-    int p = b[0].length;
-
-    double[][] result = new double[m][p];
-
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < p; j++) {
-        for (int k = 0; k < n; k++) {
-          result[i][j] += A[i][k] * b[k][j];
-        }
-      }
-    }
-    return result;
-  }
-
-  // A*m
-  public double[] mult(double[] b) { // A[m][n] * b[n]
-
-    if (A.length == 0) {
-      return new double[0];
-    }
-    if (A[0].length != b.length) {
-      return null; // invalid dims
-    }
-    int m = A.length;
-    int p = b.length;
-
-    double[] result = new double[m];
-
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < p; j++) {
-        result[i] += A[i][j] * b[j];
-      }
-    }
-    return result;
   }
 
   double[][] multiplyByConstant(double[][] m, double c) {

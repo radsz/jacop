@@ -256,6 +256,21 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * It imposes the constraint and adjusts the queue index.
+   *
+   * @param store the constraint store to which the constraint is imposed to.
+   * @param queueIndex the index of the queue in the store it is assigned to.
+   */
+  public void impose(Store store, int queueIndex) {
+
+    assert (queueIndex < store.queueNo) : "Constraint queue number larger than permitted by store.";
+
+    this.queueIndex = queueIndex;
+
+    impose(store);
+  }
+
+  /**
    * It imposes the constraint in a given store.
    *
    * @param store the constraint store to which the constraint is imposed to.
@@ -296,21 +311,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
       c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
     }
     return fixpoint;
-  }
-
-  /**
-   * It imposes the constraint and adjusts the queue index.
-   *
-   * @param store the constraint store to which the constraint is imposed to.
-   * @param queueIndex the index of the queue in the store it is assigned to.
-   */
-  public void impose(Store store, int queueIndex) {
-
-    assert (queueIndex < store.queueNo) : "Constraint queue number larger than permitted by store.";
-
-    this.queueIndex = queueIndex;
-
-    impose(store);
   }
 
   /**

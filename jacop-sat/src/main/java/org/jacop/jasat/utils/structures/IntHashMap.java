@@ -105,6 +105,13 @@ public final class IntHashMap<E> {
     return i != -1;
   }
 
+  public boolean containsKey(Object arg0) {
+    if (arg0 instanceof Integer) {
+      return containsKey(((Integer) arg0).intValue());
+    }
+    return false;
+  }
+
   /**
    * get the value associated with key, or null otherwise
    *
@@ -207,13 +214,6 @@ public final class IntHashMap<E> {
 
   public int size() {
     return cardinal;
-  }
-
-  public boolean containsKey(Object arg0) {
-    if (arg0 instanceof Integer) {
-      return containsKey(arg0);
-    }
-    return false;
   }
 
   /** double the size of the table */

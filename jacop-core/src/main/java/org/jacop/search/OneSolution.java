@@ -78,6 +78,16 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
     childrenInitializeListeners[0] = child;
   }
 
+  public void setChildrenListeners(ConsistencyListener child) {
+
+    childrenConsistencyListeners = new ConsistencyListener[1];
+    childrenConsistencyListeners[0] = child;
+  }
+
+  public void setChildrenListeners(ConsistencyListener[] children) {
+    childrenConsistencyListeners = children;
+  }
+
   /*
    * Solution listener
    */
@@ -100,15 +110,5 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
     } else {
       return consistent;
     }
-  }
-
-  public void setChildrenListeners(ConsistencyListener[] children) {
-    childrenConsistencyListeners = children;
-  }
-
-  public void setChildrenListeners(ConsistencyListener child) {
-
-    childrenConsistencyListeners = new ConsistencyListener[1];
-    childrenConsistencyListeners[0] = child;
   }
 }

@@ -201,6 +201,17 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  public void checkInputForNullness(String a, int[] parameters) {
+    if (parameters == null) {
+      throw new IllegalArgumentException(
+          "Constraint of type "
+              + this.getClass().getSimpleName()
+              + " has parameter "
+              + a
+              + " that is null.");
+    }
+  }
+
   public void checkInputForDuplication(String a, Object[] parameters) {
 
     if (Arrays.stream(parameters).collect(Collectors.toSet()).size() != parameters.length) {
@@ -224,17 +235,6 @@ public abstract class DecomposedConstraint<T extends Constraint> {
               + a
               + " that contains repeated variables "
               + dubletons);
-    }
-  }
-
-  public void checkInputForNullness(String a, int[] parameters) {
-    if (parameters == null) {
-      throw new IllegalArgumentException(
-          "Constraint of type "
-              + this.getClass().getSimpleName()
-              + " has parameter "
-              + a
-              + " that is null.");
     }
   }
 

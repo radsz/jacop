@@ -78,6 +78,14 @@ public abstract class Var implements Backtrackable {
     return position;
   }
 
+  public static <T extends Var, R> Map<T, R> positionMapping(
+      T[] list, Function<T, R> function, boolean skipSingletons, Class<?> clazz) {
+
+    Map<T, R> position = new HashMap<>();
+    addPositionMapping(position, list, function, skipSingletons, clazz);
+    return position;
+  }
+
   public static <T extends Var> void addPositionMapping(
       Map<T, Integer> position, T[] list, boolean skipSingletons, Class<?> clazz) {
 
@@ -93,14 +101,6 @@ public abstract class Var implements Backtrackable {
       }
       position.put(list[i], i);
     }
-  }
-
-  public static <T extends Var, R> Map<T, R> positionMapping(
-      T[] list, Function<T, R> function, boolean skipSingletons, Class<?> clazz) {
-
-    Map<T, R> position = new HashMap<>();
-    addPositionMapping(position, list, function, skipSingletons, clazz);
-    return position;
   }
 
   public static <T extends Var, R> void addPositionMapping(

@@ -107,15 +107,6 @@ public final class SatChangesListener
     }
   }
 
-  /** clear on backjump */
-  public void onBackjump(int oldLevel, int newLevel) {
-    clear();
-  }
-
-  public void onRestart(int oldLevel) {
-    onBackjump(oldLevel, 0);
-  }
-
   /**
    * this should be called every time a new boolean variable representing a CP proposition is
    * asserted, but preferably only once per variable, so that it can later update the CP variables
@@ -191,6 +182,15 @@ public final class SatChangesListener
         }
       }
     }
+  }
+
+  /** clear on backjump */
+  public void onBackjump(int oldLevel, int newLevel) {
+    clear();
+  }
+
+  public void onRestart(int oldLevel) {
+    onBackjump(oldLevel, 0);
   }
 
   /**

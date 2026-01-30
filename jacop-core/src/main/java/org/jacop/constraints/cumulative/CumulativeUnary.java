@@ -316,28 +316,6 @@ public class CumulativeUnary extends Cumulative {
     detectablePhase(store, tr);
   }
 
-  private void detectablePhase(Store store, TaskView[] tc) {
-
-    TaskView[] t = new TaskView[tc.length];
-    System.arraycopy(tc, 0, t, 0, tc.length);
-    // tasks sorted in ascending order of EST for Theta tree
-    Arrays.sort(t, taskIncEstComparator);
-
-    ThetaTree tree = new ThetaTree();
-    tree.initTree(t);
-    // tree.printTree("tree_init");
-
-    // tasks sorted in ascending order of lct
-    Arrays.sort(t, taskIncEctComparator);
-
-    // tasks sorted in ascending order of lct - p (lst)
-    TaskView[] q = new TaskView[t.length];
-    System.arraycopy(t, 0, q, 0, t.length);
-    Arrays.sort(q, taskIncLstComparator);
-
-    detectable(store, tree, t, q, tc);
-  }
-
   private void detectable(Store store, ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] to) {
 
     int n = t.length;
@@ -358,6 +336,28 @@ public class CumulativeUnary extends Cumulative {
     for (int i = 0; i < n; i++) {
       t[i].updateDetectable(store.level, updateEST[i]);
     }
+  }
+
+  private void detectablePhase(Store store, TaskView[] tc) {
+
+    TaskView[] t = new TaskView[tc.length];
+    System.arraycopy(tc, 0, t, 0, tc.length);
+    // tasks sorted in ascending order of EST for Theta tree
+    Arrays.sort(t, taskIncEstComparator);
+
+    ThetaTree tree = new ThetaTree();
+    tree.initTree(t);
+    // tree.printTree("tree_init");
+
+    // tasks sorted in ascending order of lct
+    Arrays.sort(t, taskIncEctComparator);
+
+    // tasks sorted in ascending order of lct - p (lst)
+    TaskView[] q = new TaskView[t.length];
+    System.arraycopy(t, 0, q, 0, t.length);
+    Arrays.sort(q, taskIncLstComparator);
+
+    detectable(store, tree, t, q, tc);
   }
 
   void edgeFind(Store store, TaskView[] tn, TaskView[] tr) {
