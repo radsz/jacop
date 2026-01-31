@@ -131,17 +131,17 @@ public class CalendarMen extends ExampleFD {
     };
 
     // indexes for people involved for ease of referring later.
-    int iAntonio = 0;
-    int iBrett = 1; /* iCliff = 2, */
-    int iDabney = 3;
-    int iEd = 4;
-    int iFrancisco = 5;
-    int iGriff = 6;
-    int iHarry = 7;
-    int iIvor = 8;
-    int iJohn = 9;
-    int iKarl = 10;
-    int iLorenzo = 11;
+    final int iAntonio = 0;
+    final int iBrett = 1; /* iCliff = 2, */
+    final int iDabney = 3;
+    final int iEd = 4;
+    final int iFrancisco = 5;
+    final int iGriff = 6;
+    final int iHarry = 7;
+    final int iIvor = 8;
+    final int iJohn = 9;
+    final int iKarl = 10;
+    final int iLorenzo = 11;
 
     // Lastnames of people involved
 
@@ -161,17 +161,17 @@ public class CalendarMen extends ExampleFD {
     };
 
     // indexes for people involved for ease of referring later.
-    int iMoross = 0;
-    int iNelsen = 1;
-    int iO_Rourke = 2;
-    int iPaulos = 3;
-    int iQuarello = 4;
-    int iReede = 5;
-    int iSheldon = 6;
-    int iTaylor = 7;
-    int iUhler = 8; /* iVickers = 9, */
-    int iWang = 10;
-    int iXiao = 11;
+    final int iMoross = 0;
+    final int iNelsen = 1;
+    final int iO_Rourke = 2;
+    final int iPaulos = 3;
+    final int iQuarello = 4;
+    final int iReede = 5;
+    final int iSheldon = 6;
+    final int iTaylor = 7;
+    final int iUhler = 8; /* iVickers = 9, */
+    final int iWang = 10;
+    final int iXiao = 11;
 
     // Names of sports
 
@@ -191,18 +191,18 @@ public class CalendarMen extends ExampleFD {
     };
 
     // indexes for sports involved for ease of referring later.
-    int iarchery = 0;
-    int ibadminton = 1;
-    int icroquet = 2;
-    int ifootball = 3;
-    int igolf = 4;
-    int ihockey = 5;
-    int ilacrosse = 6;
-    int ivaulting = 7;
-    int irowing = 8;
-    int isquash = 9;
-    int itennis = 10;
-    int ivolleyball = 11;
+    final int iarchery = 0;
+    final int ibadminton = 1;
+    final int icroquet = 2;
+    final int ifootball = 3;
+    final int igolf = 4;
+    final int ihockey = 5;
+    final int ilacrosse = 6;
+    final int ivaulting = 7;
+    final int irowing = 8;
+    final int isquash = 9;
+    final int itennis = 10;
+    final int ivolleyball = 11;
 
     // Three sets of variables, the same values at different sets denote
     // relation between appropriate variables.
@@ -508,17 +508,17 @@ public class CalendarMen extends ExampleFD {
       "Lorentzo"
     };
 
-    int iAntonio = 0;
-    int iBrett = 1; /* iCliff = 2, */
-    int iDabney = 3;
-    int iEd = 4;
-    int iFrancisco = 5;
-    int iGriff = 6;
-    int iHarry = 7;
-    int iIvor = 8;
-    int iJohn = 9;
-    int iKarl = 10;
-    int iLorentzo = 11;
+    final int iAntonio = 0;
+    final int iBrett = 1; /* iCliff = 2, */
+    final int iDabney = 3;
+    final int iEd = 4;
+    final int iFrancisco = 5;
+    final int iGriff = 6;
+    final int iHarry = 7;
+    final int iIvor = 8;
+    final int iJohn = 9;
+    final int iKarl = 10;
+    final int iLorentzo = 11;
 
     String[] surnameID = {
       "Moross",
@@ -535,17 +535,17 @@ public class CalendarMen extends ExampleFD {
       "Xiao"
     };
 
-    int iMoross = 0;
-    int iNelsen = 1;
-    int iORourke = 2;
-    int iPaulos = 3;
-    int iQuarello = 4;
-    int iReede = 5;
-    int iSheldon = 6;
-    int iTaylor = 7;
-    int iUhler = 8; /* iVickers = 9, */
-    int iWang = 10;
-    int iXiao = 11;
+    final int iMoross = 0;
+    final int iNelsen = 1;
+    final int iORourke = 2;
+    final int iPaulos = 3;
+    final int iQuarello = 4;
+    final int iReede = 5;
+    final int iSheldon = 6;
+    final int iTaylor = 7;
+    final int iUhler = 8; /* iVickers = 9, */
+    final int iWang = 10;
+    final int iXiao = 11;
 
     String[] sportID = {
       "archery",
@@ -562,18 +562,18 @@ public class CalendarMen extends ExampleFD {
       "volleyball"
     };
 
-    int iarchery = 0;
-    int ibadmington = 1;
-    int icroquet = 2;
-    int ifootball = 3;
-    int igolf = 4;
-    int ihockey = 5;
-    int ilacrosse = 6;
-    int ip_vauliting = 7;
-    int irowing = 8;
-    int isquash = 9;
-    int itennis = 10;
-    int ivolleyball = 11;
+    final int iarchery = 0;
+    final int ibadmington = 1;
+    final int icroquet = 2;
+    final int ifootball = 3;
+    final int igolf = 4;
+    final int ihockey = 5;
+    final int ilacrosse = 6;
+    final int ip_vauliting = 7;
+    final int irowing = 8;
+    final int isquash = 9;
+    final int itennis = 10;
+    final int ivolleyball = 11;
 
     IntVar[] firstname = new IntVar[12];
     IntVar[] surname = new IntVar[12];

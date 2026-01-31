@@ -85,16 +85,16 @@ public class ArchFriends extends ExampleFD {
 
     String[] shoeNames = {"EcruEspadrilles", "FuchsiaFlats", "PurplePumps", "SuedeSandals"};
 
-    int /* iEcruEspadrilles = 0, */ iFuchsiaFlats = 1;
-    int iPurplePumps = 2;
-    int iSuedeSandals = 3;
+    final int /* iEcruEspadrilles = 0, */ iFuchsiaFlats = 1;
+    final int iPurplePumps = 2;
+    final int iSuedeSandals = 3;
 
     String[] shopNames = {"FootFarm", "HeelsInAHandcart", "TheShoePalace", "Tootsies"};
 
-    int iFootFarm = 0;
-    int iHeelsInAHandcart = 1;
-    int iTheShoePalace = 2;
-    int iTootsies = 3;
+    final int iFootFarm = 0;
+    final int iHeelsInAHandcart = 1;
+    final int iTheShoePalace = 2;
+    final int iTootsies = 3;
 
     // Variables shoe and shop
 

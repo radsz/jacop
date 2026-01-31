@@ -87,34 +87,34 @@ public class Zebra extends ExampleFD {
     IO.println("Program to solve Zebra problem ");
 
     String[] colorNames = {"red", "green", "white", "yellow", "blue"};
-    int ired = 0;
-    int igreen = 1;
-    int iwhite = 2;
-    int iyellow = 3;
-    int iblue = 4;
+    final int ired = 0;
+    final int igreen = 1;
+    final int iwhite = 2;
+    final int iyellow = 3;
+    final int iblue = 4;
     String[] nationalityNames = {"english", "spaniard", "japanese", "italian", "norwegian"};
-    int ienglish = 0;
-    int ispaniard = 1;
-    int ijapanese = 2;
-    int iitalian = 3;
-    int inorwegian = 4;
+    final int ienglish = 0;
+    final int ispaniard = 1;
+    final int ijapanese = 2;
+    final int iitalian = 3;
+    final int inorwegian = 4;
 
     String[] petNames = {"dog", "snails", "fox", "horse", "zebra"};
-    int idog = 0;
-    int isnails = 1;
-    int ifox = 2;
-    int ihorse = 3; /*, izebra = 4 */
+    final int idog = 0;
+    final int isnails = 1;
+    final int ifox = 2;
+    final int ihorse = 3; /*, izebra = 4 */
     String[] professionNames = {"painter", "sculptor", "diplomat", "violinist", "doctor"};
-    int ipainter = 0;
-    int isculptor = 1;
-    int idiplomat = 2;
-    int iviolinist = 3;
-    int idoctor = 4;
+    final int ipainter = 0;
+    final int isculptor = 1;
+    final int idiplomat = 2;
+    final int iviolinist = 3;
+    final int idoctor = 4;
     String[] drinkNames = {"tea", "coffee", "milk", "juice", "water"};
-    int itea = 0;
-    int icoffee = 1;
-    int imilk = 2;
-    int ijuice = 3; /* , iwater = 4 */
+    final int itea = 0;
+    final int icoffee = 1;
+    final int imilk = 2;
+    final int ijuice = 3; /* , iwater = 4 */
 
     IntVar[] color = new IntVar[5];
     IntVar[] nationality = new IntVar[5];

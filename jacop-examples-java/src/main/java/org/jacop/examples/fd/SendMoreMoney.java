@@ -104,14 +104,14 @@ public class SendMoreMoney extends ExampleFD {
 
     // Creating FDV (finite domain variables)
     // with indexes for accessing
-    int iS = 0;
-    int iE = 1;
-    int iN = 2;
-    int iD = 3;
-    int iM = 4;
-    int iO = 5;
-    int iR = 6;
-    int iY = 7;
+    final int iS = 0;
+    final int iE = 1;
+    final int iN = 2;
+    final int iD = 3;
+    final int iM = 4;
+    final int iO = 5;
+    final int iR = 6;
+    final int iY = 7;
 
     letters[iS] = new IntVar(store, "S", 0, 9);
     letters[iE] = new IntVar(store, "E", 0, 9);
@@ -140,7 +140,7 @@ public class SendMoreMoney extends ExampleFD {
     // which depends on the position of this letter
     // SEND = 1000 * S + 100 * E + N * 10 + D * 1
     IntVar[] numbersSEND = new IntVar[4];
-    IntVar valueSEND = new IntVar(store, "SEND", 0, 9999);
+    final IntVar valueSEND = new IntVar(store, "SEND", 0, 9999);
 
     // Creates FDV for each position in SEND with
     // appropriate domain, they all start with zero
@@ -171,7 +171,7 @@ public class SendMoreMoney extends ExampleFD {
     // which depends on the position of this letter
     // MORE = 1000 * M + 100 * O + R * 10 + E * 1
     IntVar[] numbersMORE = new IntVar[4];
-    IntVar valueMORE = new IntVar(store, "MORE", 0, 9999);
+    final IntVar valueMORE = new IntVar(store, "MORE", 0, 9999);
 
     // Creates FDV for each position in MORE with
     // appropriate domain, they all start with zero
@@ -202,7 +202,7 @@ public class SendMoreMoney extends ExampleFD {
     // which depends on the position of this letter
     // MONEY = 10000 * M + 1000 * O + N * 100 + E * 10 + Y * 1
     IntVar[] numbersMONEY = new IntVar[5];
-    IntVar valueMONEY = new IntVar(store, "MONEY", 0, 99999);
+    final IntVar valueMONEY = new IntVar(store, "MONEY", 0, 99999);
 
     // Creates FDV for each position in MONEY with
     // appropriate domain, they all start with zero

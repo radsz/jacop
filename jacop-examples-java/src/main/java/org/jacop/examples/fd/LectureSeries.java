@@ -93,27 +93,27 @@ public class LectureSeries extends ExampleFD {
     IO.println("Program to solve Lecture Series ");
 
     String[] firstNames = {"Alice", "Bernadette", "Charles", "Duane", "Eddie"};
-    int iAlice = 0;
-    int iBernadette = 1;
-    int iCharles = 2;
-    int iDuane = 3;
-    int iEddie = 4;
+    final int iAlice = 0;
+    final int iBernadette = 1;
+    final int iCharles = 2;
+    final int iDuane = 3;
+    final int iEddie = 4;
 
     String[] lastNames = {"Felicidad", "Garber", "Haller", "Itakura", "Jeffreys"};
-    int iFelicidad = 0; /* iGarber = 1, */
-    int iHaller = 2;
-    int iItakura = 3;
-    int iJeffreys = 4;
+    final int iFelicidad = 0; /* iGarber = 1, */
+    final int iHaller = 2;
+    final int iItakura = 3;
+    final int iJeffreys = 4;
 
     String[] daysNames = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"};
-    int iMonday = 0; /* iTuesday = 1, iWednesday = 2, iThursday = 3, */
-    int iFriday = 4;
+    final int iMonday = 0; /* iTuesday = 1, iWednesday = 2, iThursday = 3, */
+    final int iFriday = 4;
 
     String[] subjectsNames = {"College", "Hygiene", "Art", "Nutrition", "Study"};
-    int /* iCollege = 0, */ iHygiene = 1;
-    int iArt = 2;
-    int iNutrition = 3;
-    int iStudy = 4;
+    final int /* iCollege = 0, */ iHygiene = 1;
+    final int iArt = 2;
+    final int iNutrition = 3;
+    final int iStudy = 4;
 
     IntVar[] first = new IntVar[5];
     IntVar[] last = new IntVar[5];

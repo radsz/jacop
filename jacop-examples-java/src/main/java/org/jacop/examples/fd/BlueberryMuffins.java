@@ -97,10 +97,10 @@ public class BlueberryMuffins extends ExampleFD {
     String[] lastnames = {"Ellis", "Ingham", "Oakley", "Summers"};
 
     // Constant indexes to ease referring to variables denoting people.
-    int iellis = 0;
-    int iingham = 1;
-    int ioakley = 2;
-    int isummer = 3;
+    final int iellis = 0;
+    final int iingham = 1;
+    final int ioakley = 2;
+    final int isummer = 3;
 
     // String arrays with profession names.
 
@@ -108,9 +108,9 @@ public class BlueberryMuffins extends ExampleFD {
 
     // Constant indexes to ease referring to profession variables.
 
-    int /* izookeeper = 0, */ idogcatcher = 1;
-    int iflautist = 2;
-    int isecretary = 3;
+    final int /* izookeeper = 0, */ idogcatcher = 1;
+    final int iflautist = 2;
+    final int isecretary = 3;
 
     // String arrays with firstname.
 
@@ -118,18 +118,18 @@ public class BlueberryMuffins extends ExampleFD {
 
     // Constant indexes to ease referring to firstname variables.
 
-    int ilynn = 0;
-    int icalla = 1;
-    int ibill = 2;
-    int imark = 3;
+    final int ilynn = 0;
+    final int icalla = 1;
+    final int ibill = 2;
+    final int imark = 3;
 
     // String arrays with muffin numbers.
 
     String[] muffinnumbers = {"muffin1", "muffin2", "muffin3", "muffin4"};
-    int i1 = 0;
-    int i2 = 1;
-    int i3 = 2;
-    int i4 = 3;
+    final int i1 = 0;
+    final int i2 = 1;
+    final int i3 = 2;
+    final int i4 = 3;
 
     // Arrays for variables.
 

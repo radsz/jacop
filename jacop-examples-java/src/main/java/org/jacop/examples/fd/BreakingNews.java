@@ -90,27 +90,27 @@ public class BreakingNews extends ExampleFD {
     String[] ReporterName = {"Corey", "Jimmy", "Lous", "Perry"};
 
     // Constant indexes to ease referring to variables denoting reporters.
-    int /* iPerry = 0, */ iCorey = 1;
-    int iJimmy = 2;
-    int iLous = 3;
+    final int /* iPerry = 0, */ iCorey = 1;
+    final int iJimmy = 2;
+    final int iLous = 3;
 
     // String arrays with locations names.
     String[] LocationName = {"Bayonne", "NewHope", "PortCharles", "SouthAmboy"};
 
     // Constant indexes to ease referring to variables denoting locations.
-    int iBayonne = 0;
-    int iNewHope = 1;
-    int iPortCharles = 2;
-    int iSouthAmboy = 3;
+    final int iBayonne = 0;
+    final int iNewHope = 1;
+    final int iPortCharles = 2;
+    final int iSouthAmboy = 3;
 
     // String arrays with stories names.
     String[] StoryName = {"30pound", "blimp", "skyscraper", "beached"};
 
     // Constant indexes to ease referring to variables denoting stories.
-    int i30pound = 0;
-    int iblimp = 1;
-    int iskyscraper = 2;
-    int ibeached = 3;
+    final int i30pound = 0;
+    final int iblimp = 1;
+    final int iskyscraper = 2;
+    final int ibeached = 3;
 
     // Arrays to store variables.
 

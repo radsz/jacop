@@ -79,13 +79,6 @@ public class Newspaper extends ExampleFD {
     store = new Store();
     vars = new ArrayList<>();
 
-    // algy[0], bertie[0], charlie[0], digby[0]
-    // - when a person starts reading guardian
-    IntVar[] algy = new IntVar[4];
-    IntVar[] bertie = new IntVar[4];
-    IntVar[] charlie = new IntVar[4];
-    IntVar[] digby = new IntVar[4];
-
     IntVar[] guardian = new IntVar[4];
     guardian[0] = new IntVar(store, "durationAlgyGuardian", 30, 30);
     guardian[1] = new IntVar(store, "durationBertieGuardian", 75, 75);
@@ -112,6 +105,13 @@ public class Newspaper extends ExampleFD {
     durations[1] = ft;
     durations[2] = express;
     durations[3] = sun;
+
+    // algy[0], bertie[0], charlie[0], digby[0]
+    // - when a person starts reading guardian
+    IntVar[] algy = new IntVar[4];
+    IntVar[] bertie = new IntVar[4];
+    IntVar[] charlie = new IntVar[4];
+    IntVar[] digby = new IntVar[4];
 
     for (int i = 0; i < 4; i++) {
 

@@ -165,7 +165,7 @@ public class SocialGolfer extends ExampleSet {
 
   public void model() {
 
-    int N = groups * players;
+    final int N = groups * players;
 
     int[] weights = new int[players];
 
@@ -260,8 +260,8 @@ public class SocialGolfer extends ExampleSet {
     Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
-    long startCPU = b.getThreadCpuTime(tread.threadId());
-    long startUser = b.getThreadUserTime(tread.threadId());
+    final long startCPU = b.getThreadCpuTime(tread.threadId());
+    final long startUser = b.getThreadUserTime(tread.threadId());
 
     boolean result = store.consistency();
     IO.println("*** consistency = " + result);

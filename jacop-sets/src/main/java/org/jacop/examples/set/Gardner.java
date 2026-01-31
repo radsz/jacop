@@ -70,9 +70,9 @@ public class Gardner extends ExampleSet {
 
   public void model() {
 
-    int num_days = 35;
-    int num_persons_per_meeting = 3;
-    int persons = 15;
+    final int num_days = 35;
+    final int num_persons_per_meeting = 3;
+    final int persons = 15;
 
     IO.println("Gardner dinner problem ");
     store = new Store();
@@ -121,8 +121,8 @@ public class Gardner extends ExampleSet {
     Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
-    long startCPU = b.getThreadCpuTime(tread.threadId());
-    long startUser = b.getThreadUserTime(tread.threadId());
+    final long startCPU = b.getThreadCpuTime(tread.threadId());
+    final long startUser = b.getThreadUserTime(tread.threadId());
 
     boolean result = store.consistency();
     IO.println("*** consistency = " + result);

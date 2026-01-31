@@ -93,18 +93,18 @@ public class HistoricHomes extends ExampleFD {
       "street_Oleander_Road",
     };
 
-    int iAzalea_Drive = 0; /* iCrepe_Myrtle_Court = 1, */
-    int iJasmine_Boulevard = 2;
-    int iMagnolia_Street = 3;
-    int iOleander_Road = 4;
+    final int iAzalea_Drive = 0; /* iCrepe_Myrtle_Court = 1, */
+    final int iJasmine_Boulevard = 2;
+    final int iMagnolia_Street = 3;
+    final int iOleander_Road = 4;
 
     String[] orderName = {"1st", "2nd", "3rd", "4th", "5th"};
 
-    int i1st = 0;
-    int i2nd = 1;
-    int i3rd = 2;
-    int i4th = 3;
-    int i5th = 4;
+    final int i1st = 0;
+    final int i2nd = 1;
+    final int i3rd = 2;
+    final int i4th = 3;
+    final int i5th = 4;
 
     IntVar[] order = new IntVar[5];
     IntVar[] street = new IntVar[5];

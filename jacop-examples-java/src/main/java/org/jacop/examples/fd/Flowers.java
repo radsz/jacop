@@ -107,34 +107,34 @@ public class Flowers extends ExampleFD {
     String[] wifeWeek = {"Emma", "Kristin", "Lynn", "Toni"};
     String[] wifeDay = {"EmmaDay", "KristinDay", "LynnDay", "ToniDay"};
     // index to women for ease of referring.
-    int iEmma = 0;
-    int iKristin = 1;
-    int iLynn = 2;
-    int iToni = 3;
+    final int iEmma = 0;
+    final int iKristin = 1;
+    final int iLynn = 2;
+    final int iToni = 3;
 
     String[] husbandWeek = {"Doug", "Justin", "Shane", "Theo"};
     String[] husbandDay = {"DougDay", "JustinDay", "ShaneDay", "TheoDay"};
     // index to men for ease of referring.
-    int iDoug = 0;
-    int iJustin = 1;
-    int iShane = 2;
-    int iTheo = 3;
+    final int iDoug = 0;
+    final int iJustin = 1;
+    final int iShane = 2;
+    final int iTheo = 3;
 
     String[] flowerWeek = {"Violets", "Roses", "Chrys", "Daises"};
     String[] flowerDay = {"VioletsDay", "RosesDay", "ChrysDay", "DaisesDay"};
     // index to flowers for ease of referring.
-    int iViolets = 0;
-    int iRoses = 1;
-    int iChrys = 2;
-    int iDaises = 3;
+    final int iViolets = 0;
+    final int iRoses = 1;
+    final int iChrys = 2;
+    final int iDaises = 3;
 
     String[] occasionWeek = {"Walentynki", "Awans", "Urodziny", "Rocznica"};
     String[] occasionDay = {"WalentynkiDay", "AwansDay", "UrodzinyDay", "RocznicaDay"};
     // index to occasions for ease of referring.
-    int iWalentynki = 0;
-    int iAwans = 1;
-    int iUrodziny = 2;
-    int iRocznica = 3;
+    final int iWalentynki = 0;
+    final int iAwans = 1;
+    final int iUrodziny = 2;
+    final int iRocznica = 3;
 
     // For each (wife, husband, flower, occassion) there are two sets of
     // variables. One denotes a day and the

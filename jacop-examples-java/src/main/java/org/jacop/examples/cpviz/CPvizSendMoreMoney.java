@@ -89,14 +89,14 @@ public class CPvizSendMoreMoney {
 
     // Creating IntVar (finite domain variables)
     // with indexes for accessing
-    int iS = 0;
-    int iE = 1;
-    int iN = 2;
-    int iD = 3;
-    int iM = 4;
-    int iO = 5;
-    int iR = 6;
-    int iY = 7;
+    final int iS = 0;
+    final int iE = 1;
+    final int iN = 2;
+    final int iD = 3;
+    final int iM = 4;
+    final int iO = 5;
+    final int iR = 6;
+    final int iY = 7;
     letters[iS] = new IntVar(store, "S", 0, 9);
     letters[iE] = new IntVar(store, "E", 0, 9);
     letters[iN] = new IntVar(store, "N", 0, 9);

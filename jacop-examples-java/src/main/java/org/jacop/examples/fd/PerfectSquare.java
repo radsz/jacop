@@ -1724,11 +1724,11 @@ public class PerfectSquare extends ExampleFD {
 
       IntVar X = new IntVar(store, "x" + j, 0, masterSize - sqSize);
       IntVar Y = new IntVar(store, "y" + j, 0, masterSize - sqSize);
-      IntVar S = new IntVar(store, "s" + j, j, j);
+      final IntVar S = new IntVar(store, "s" + j, j, j);
 
-      IntVar startGeost = new IntVar(store, "start" + j, 0, 0);
-      IntVar durationGeost = new IntVar(store, "duration" + j, 1, 1);
-      IntVar endGeost = new IntVar(store, "end" + j, 1, 1);
+      final IntVar startGeost = new IntVar(store, "start" + j, 0, 0);
+      final IntVar durationGeost = new IntVar(store, "duration" + j, 1, 1);
+      final IntVar endGeost = new IntVar(store, "end" + j, 1, 1);
 
       size[j] = new IntVar(store, sqSize, sqSize);
 
@@ -1775,10 +1775,9 @@ public class PerfectSquare extends ExampleFD {
   @Override
   public boolean search() {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
+    final long T2;
+    final long T;
 
     store.consistency();
     boolean result;

@@ -372,7 +372,6 @@ public class Alldistinct extends Constraint
       log.debug("Maximum Matching {}", matching);
     }
 
-    boolean narrowingEvent = false;
     while (iter.hasNext()) {
 
       IntVar V = iter.next();
@@ -643,6 +642,7 @@ public class Alldistinct extends Constraint
     int variableComponentId;
     int lastPosition;
     IntVar possibleDifferentComponentVariable;
+    boolean narrowingEvent = false;
 
     for (int j = 0; j <= lastNotGroundedVariable; j++) {
 

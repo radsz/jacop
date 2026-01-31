@@ -89,15 +89,15 @@ public class FurnitureMoving extends ExampleFD {
 
     store = new Store();
 
-    IntVar numPersons = new IntVar(store, "numPersons", 2, 5); // will be minimized
-    IntVar maxTime = new IntVar(store, "maxTime", 60, 60);
+    final IntVar numPersons = new IntVar(store, "numPersons", 2, 5); // will be minimized
+    final IntVar maxTime = new IntVar(store, "maxTime", 60, 60);
 
     // Start times
     IntVar Sp = new IntVar(store, "Sp", 0, 60); // Piano
     IntVar Sc = new IntVar(store, "Sc", 0, 60); // Chair
     IntVar Sb = new IntVar(store, "Sb", 0, 60); // Bed
     IntVar St = new IntVar(store, "St", 0, 60); // Table
-    IntVar sumStartTimes = new IntVar(store, "SumStartTimes", 0, 1000);
+    final IntVar sumStartTimes = new IntVar(store, "SumStartTimes", 0, 1000);
 
     starts = new IntVar[4];
     starts[0] = Sp;
