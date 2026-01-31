@@ -579,10 +579,10 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
             Pair exclude = minForbiddenInterval(s, i, r, consideredRect);
 
-            if (exclude.Max != -1) {
+            if (exclude.max != -1) {
               IntervalDomain Update =
-                  new IntervalDomain(IntDomain.MinInt, exclude.Min - r.length[i].min());
-              Update.unionAdapt(exclude.Max, IntDomain.MaxInt);
+                  new IntervalDomain(IntDomain.MinInt, exclude.min - r.length[i].min());
+              Update.unionAdapt(exclude.max, IntDomain.MaxInt);
 
               if (traceNarr) {
                 log.debug(
@@ -594,7 +594,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
               r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
-              computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.Min, exclude.Max);
+              computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.min, exclude.max);
 
               // System.out.println ("7. length = "+   durMax);
             }
@@ -957,5 +957,5 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return result.append(")").toString();
   }
 
-  record Pair(int Min, int Max) {}
+  record Pair(int min, int max) {}
 }

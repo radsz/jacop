@@ -69,9 +69,9 @@ public class GeostExample extends ExampleFD {
 
     store = new Store();
 
-    List<Shape> shapes = new ArrayList<>();
-    List<GeostObject> objects = new ArrayList<>();
-    List<ExternalConstraint> constraints = new ArrayList<>();
+    final List<Shape> shapes = new ArrayList<>();
+    final List<GeostObject> objects = new ArrayList<>();
+    final List<ExternalConstraint> constraints = new ArrayList<>();
 
     // Object O1- shapes 1, 2, 3 and 4
     List<DBox> shape1 = new ArrayList<>();

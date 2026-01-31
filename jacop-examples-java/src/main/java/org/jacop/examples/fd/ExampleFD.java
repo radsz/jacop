@@ -169,10 +169,7 @@ public abstract class ExampleFD {
    */
   public boolean searchAllOptimal() {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
@@ -183,8 +180,8 @@ public abstract class ExampleFD {
 
     boolean result = search.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;
@@ -199,9 +196,7 @@ public abstract class ExampleFD {
    */
   public boolean searchSmallestDomain(boolean optimal) {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -209,13 +204,13 @@ public abstract class ExampleFD {
 
     search = new DepthFirstSearch<>();
 
-    boolean result = false;
-
     if (optimal) {
       search.labeling(store, select, cost);
     } else {
       search.labeling(store, select);
     }
+
+    final boolean result = false;
 
     IO.println();
     IO.print(search.getNodes() + "\t");
@@ -224,7 +219,7 @@ public abstract class ExampleFD {
     IO.print(search.getBacktracks() + "\t");
     IO.print(search.getMaximumDepth() + "\t");
 
-    T2 = System.currentTimeMillis();
+    long T2 = System.currentTimeMillis();
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
@@ -240,9 +235,7 @@ public abstract class ExampleFD {
    */
   public boolean searchWeightedDegree() {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -253,7 +246,7 @@ public abstract class ExampleFD {
 
     search = new DepthFirstSearch<>();
 
-    boolean result = search.labeling(store, select);
+    final boolean result = search.labeling(store, select);
 
     IO.println();
     IO.print(search.getNodes() + "\t");
@@ -266,7 +259,7 @@ public abstract class ExampleFD {
       store.print();
     }
 
-    T2 = System.currentTimeMillis();
+    long T2 = System.currentTimeMillis();
 
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
 
@@ -287,7 +280,7 @@ public abstract class ExampleFD {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
-    boolean result = search.labeling(store, select);
+    final boolean result = search.labeling(store, select);
 
     IO.println();
     IO.print(search.getNodes() + "\t");
@@ -311,9 +304,7 @@ public abstract class ExampleFD {
    */
   public boolean searchAllAtOnce() {
 
-    long T1;
-    long T2;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
@@ -327,7 +318,7 @@ public abstract class ExampleFD {
 
     boolean result = search.labeling(store, select);
 
-    T2 = System.currentTimeMillis();
+    long T2 = System.currentTimeMillis();
 
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
@@ -499,7 +490,7 @@ public abstract class ExampleFD {
     search.setExitChildListener(credit);
     search.setTimeOutListener(credit);
 
-    boolean result = search.labeling(store, select);
+    final boolean result = search.labeling(store, select);
 
     store.print();
 
@@ -701,9 +692,7 @@ public abstract class ExampleFD {
    */
   public boolean searchMasterSlave(List<Var> masterVars, List<Var> slaveVars) {
 
-    long T1 = System.currentTimeMillis();
-
-    boolean result;
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> labelSlave = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> selectSlave =
@@ -718,7 +707,7 @@ public abstract class ExampleFD {
 
     search = labelMaster;
 
-    result = labelMaster.labeling(store, selectMaster);
+    boolean result = labelMaster.labeling(store, selectMaster);
 
     if (result) {
       IO.println("Solution found");

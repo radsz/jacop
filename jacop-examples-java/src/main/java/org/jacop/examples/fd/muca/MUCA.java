@@ -175,9 +175,9 @@ public class MUCA extends ExampleFD {
 
     bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<>();
+    final List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<>();
+    final List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
@@ -205,9 +205,9 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<List<Transformation>> bid_2 = new ArrayList<>();
+    final List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<>();
+    final List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t3 = new Transformation();
     // ((0, 1))
@@ -252,9 +252,9 @@ public class MUCA extends ExampleFD {
 
     bid_2.add(bid_2_xor1);
 
-    List<List<Transformation>> bid_3 = new ArrayList<>();
+    final List<List<Transformation>> bid_3 = new ArrayList<>();
 
-    List<Transformation> bid_3_xor1 = new ArrayList<>();
+    final List<Transformation> bid_3_xor1 = new ArrayList<>();
 
     Transformation t6 = new Transformation();
     // ((0, 1))
@@ -284,9 +284,9 @@ public class MUCA extends ExampleFD {
 
     bid_3.add(bid_3_xor1);
 
-    List<List<Transformation>> bid_4 = new ArrayList<>();
+    final List<List<Transformation>> bid_4 = new ArrayList<>();
 
-    List<Transformation> bid_4_xor1 = new ArrayList<>();
+    final List<Transformation> bid_4_xor1 = new ArrayList<>();
 
     Transformation t8 = new Transformation();
     // ((0, 1))
@@ -303,9 +303,9 @@ public class MUCA extends ExampleFD {
 
     bid_4.add(bid_4_xor1);
 
-    List<List<Transformation>> bid_5 = new ArrayList<>();
+    final List<List<Transformation>> bid_5 = new ArrayList<>();
 
-    List<Transformation> bid_5_xor1 = new ArrayList<>();
+    final List<Transformation> bid_5_xor1 = new ArrayList<>();
 
     Transformation t9 = new Transformation();
     // ((0, 1))
@@ -324,9 +324,9 @@ public class MUCA extends ExampleFD {
 
     bid_5.add(bid_5_xor1);
 
-    List<List<Transformation>> bid_6 = new ArrayList<>();
+    final List<List<Transformation>> bid_6 = new ArrayList<>();
 
-    List<Transformation> bid_6_xor1 = new ArrayList<>();
+    final List<Transformation> bid_6_xor1 = new ArrayList<>();
 
     Transformation t10 = new Transformation();
     // ((0, 1))
@@ -343,9 +343,9 @@ public class MUCA extends ExampleFD {
 
     bid_6.add(bid_6_xor1);
 
-    List<List<Transformation>> bid_7 = new ArrayList<>();
+    final List<List<Transformation>> bid_7 = new ArrayList<>();
 
-    List<Transformation> bid_7_xor1 = new ArrayList<>();
+    final List<Transformation> bid_7_xor1 = new ArrayList<>();
 
     Transformation t11 = new Transformation();
     // ((0, 1))
@@ -390,9 +390,9 @@ public class MUCA extends ExampleFD {
 
     bid_7.add(bid_7_xor1);
 
-    List<List<Transformation>> bid_8 = new ArrayList<>();
+    final List<List<Transformation>> bid_8 = new ArrayList<>();
 
-    List<Transformation> bid_8_xor1 = new ArrayList<>();
+    final List<Transformation> bid_8_xor1 = new ArrayList<>();
 
     Transformation t14 = new Transformation();
     // ((1, 2))
@@ -490,9 +490,9 @@ public class MUCA extends ExampleFD {
   public void setupProblem2() {
     bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<>();
+    final List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<>();
+    final List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
@@ -537,9 +537,9 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<List<Transformation>> bid_2 = new ArrayList<>();
+    final List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<>();
+    final List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t4 = new Transformation();
     // ((0, 1))
@@ -558,9 +558,9 @@ public class MUCA extends ExampleFD {
 
     bid_2.add(bid_2_xor1);
 
-    List<List<Transformation>> bid_3 = new ArrayList<>();
+    final List<List<Transformation>> bid_3 = new ArrayList<>();
 
-    List<Transformation> bid_3_xor1 = new ArrayList<>();
+    final List<Transformation> bid_3_xor1 = new ArrayList<>();
 
     Transformation t5 = new Transformation();
     // ((0, 1))
@@ -605,9 +605,9 @@ public class MUCA extends ExampleFD {
 
     bid_3.add(bid_3_xor1);
 
-    List<List<Transformation>> bid_4 = new ArrayList<>();
+    final List<List<Transformation>> bid_4 = new ArrayList<>();
 
-    List<Transformation> bid_4_xor1 = new ArrayList<>();
+    final List<Transformation> bid_4_xor1 = new ArrayList<>();
 
     Transformation t8 = new Transformation();
     // ((1, 2))
@@ -672,9 +672,9 @@ public class MUCA extends ExampleFD {
 
     bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<>();
+    final List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<>();
+    final List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
@@ -700,9 +700,9 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<List<Transformation>> bid_2 = new ArrayList<>();
+    final List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<>();
+    final List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t4 = new Transformation();
     // ((0, 1))
@@ -728,9 +728,9 @@ public class MUCA extends ExampleFD {
 
     bid_2.add(bid_2_xor1);
 
-    List<List<Transformation>> bid_3 = new ArrayList<>();
+    final List<List<Transformation>> bid_3 = new ArrayList<>();
 
-    List<Transformation> bid_3_xor1 = new ArrayList<>();
+    final List<Transformation> bid_3_xor1 = new ArrayList<>();
 
     Transformation t3 = new Transformation();
     // ((1, 2))
@@ -783,9 +783,9 @@ public class MUCA extends ExampleFD {
 
     bids = new ArrayList<>();
 
-    List<List<Transformation>> bid_1 = new ArrayList<>();
+    final List<List<Transformation>> bid_1 = new ArrayList<>();
 
-    List<Transformation> bid_1_xor1 = new ArrayList<>();
+    final List<Transformation> bid_1_xor1 = new ArrayList<>();
 
     Transformation t1 = new Transformation();
     // ((0, 1))
@@ -811,7 +811,7 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor1);
 
-    List<Transformation> bid_1_xor2 = new ArrayList<>();
+    final List<Transformation> bid_1_xor2 = new ArrayList<>();
 
     Transformation t4 = new Transformation();
     // ((0, 1))
@@ -837,9 +837,9 @@ public class MUCA extends ExampleFD {
 
     bid_1.add(bid_1_xor2);
 
-    List<List<Transformation>> bid_2 = new ArrayList<>();
+    final List<List<Transformation>> bid_2 = new ArrayList<>();
 
-    List<Transformation> bid_2_xor1 = new ArrayList<>();
+    final List<Transformation> bid_2_xor1 = new ArrayList<>();
 
     Transformation t3 = new Transformation();
     // ((1, 2))

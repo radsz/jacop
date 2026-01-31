@@ -281,10 +281,7 @@ public class QCP extends ExampleFD {
    */
   public boolean searchAllTransform() {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     TransformExtensional transform = new TransformExtensional();
 
@@ -300,7 +297,7 @@ public class QCP extends ExampleFD {
 
     IO.println(transform.variablesTransformationScope);
 
-    SelectChoicePoint<IntVar> select =
+    final SelectChoicePoint<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMin<>());
 
@@ -313,8 +310,8 @@ public class QCP extends ExampleFD {
 
     boolean result = search.labeling(store, select);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     return result;

@@ -98,9 +98,9 @@ public class WhoKilledAgatha extends ExampleFD {
 
     IntVar the_killer = new IntVar(store, "the_killer", 0, n - 1);
 
-    int agatha = 0;
-    int butler = 1;
-    int charles = 2;
+    final int agatha = 0;
+    final int butler = 1;
+    final int charles = 2;
 
     IntVar[][] hates = new IntVar[n][n];
     IntVar[][] richer = new IntVar[n][n];

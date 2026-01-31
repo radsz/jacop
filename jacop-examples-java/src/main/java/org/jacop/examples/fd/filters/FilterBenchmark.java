@@ -86,10 +86,7 @@ public class FilterBenchmark {
    */
   static void main(String[] args) {
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     schedule();
 
@@ -99,8 +96,8 @@ public class FilterBenchmark {
 
     pipelineSchedule();
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
@@ -354,7 +351,6 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment1(Store store, Filter filter, int addNum, int mulNum) {
-    boolean result;
 
     IO.println(
         "\n\nTest of scheduling for "
@@ -383,21 +379,18 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("1. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -424,8 +417,6 @@ public class FilterBenchmark {
    */
   public static int experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
-    boolean result;
-
     IO.println("\n\nTest of scheduling for " + filter.name() + " example");
     IO.println(
         "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
@@ -451,21 +442,18 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("2. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -500,7 +488,6 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
-    boolean result;
 
     IO.println(
         "\n\nTest of scheduling for "
@@ -530,21 +517,18 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("3. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
 
     result = label.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -570,8 +554,6 @@ public class FilterBenchmark {
    */
   public static int experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
 
-    boolean result;
-
     IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
@@ -592,10 +574,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
             varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
-    SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
@@ -604,14 +586,11 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("4. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> label = new DepthFirstSearch<>();
 
@@ -622,8 +601,8 @@ public class FilterBenchmark {
       result = label.labeling(store, selectIO);
     }
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -647,8 +626,6 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment1P(Store store, Filter filter, int addNum, int mulNum) {
-
-    boolean result;
 
     IO.println(
         "\n\nTest of pipeline scheduling for "
@@ -681,7 +658,7 @@ public class FilterBenchmark {
       }
     }
 
-    SelectChoicePoint<IntVar> select =
+    final SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(
             vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
@@ -714,19 +691,16 @@ public class FilterBenchmark {
             + store.numberConstraints());
 
     store.impose(new XgteqC(cost, pipeLB));
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("6. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     result = search.labeling(store, select, cost);
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -750,8 +724,6 @@ public class FilterBenchmark {
    * @return cost of the solution or -1 if no solution found.
    */
   public static int experiment2P(Store store, Filter filter, int addNum, int mulNum) {
-
-    boolean result;
 
     IO.println(
         "\n\nTest of pipeline scheduling for "
@@ -781,10 +753,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
             varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
-    SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     CreditCalculator<IntVar> credit = new CreditCalculator<>(TR.size() / 2, 5, 10);
@@ -808,7 +780,7 @@ public class FilterBenchmark {
 
     store.impose(new XgteqC(cost, pipeLB));
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("7. Constraints consistent = " + result);
 
@@ -841,8 +813,6 @@ public class FilterBenchmark {
    */
   public static int experiment2(Store store, Filter filter, int addNum, int mulNum) {
 
-    boolean result;
-
     IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
@@ -862,10 +832,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
             varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
-    SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
@@ -874,14 +844,11 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("8. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
@@ -892,8 +859,8 @@ public class FilterBenchmark {
       result = search.labeling(store, selectIO);
     }
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -920,8 +887,6 @@ public class FilterBenchmark {
    */
   public static int experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
-    boolean result;
-
     IO.println(
         "\n\nTest of scheduling for "
             + filter.name()
@@ -942,10 +907,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMC =
         new SimpleSelect<>(
             varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
-    SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIO =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
@@ -954,14 +919,11 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    result = store.consistency();
+    boolean result = store.consistency();
 
     IO.println("10. Constraints consistent = " + result);
 
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
@@ -972,8 +934,8 @@ public class FilterBenchmark {
       result = search.labeling(store, selectIO);
     }
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
 
     if (result) {
@@ -1385,10 +1347,10 @@ public class FilterBenchmark {
     int k = 0;
 
     for (int i = 0; i < delays.length; i++) {
-      String t = nameT + i;
-      String ta = nameT + "a" + i;
-      String tb = nameT + "b" + i;
-      String r = nameR + i;
+      final String t = nameT + i;
+      final String ta = nameT + "a" + i;
+      final String tb = nameT + "b" + i;
+      final String r = nameR + i;
 
       T[i] = new IntVar(store, t, 0, 100);
       Ta[i] = new IntVar(store, ta, 0, 100);

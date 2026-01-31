@@ -65,26 +65,23 @@ public class CPvizNetworkFlow {
   }
 
   void transportationProblem() {
-    long T1;
-    long T2;
-    long T;
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     store = new Store();
 
     NetworkBuilder net = new NetworkBuilder();
-    Node A = net.addNode("A", 0);
-    Node B = net.addNode("B", 0);
-    Node C = net.addNode("C", 0);
-    Node D = net.addNode("D", 0);
-    Node E = net.addNode("E", 0);
-    Node F = net.addNode("F", 0);
+    final Node A = net.addNode("A", 0);
+    final Node B = net.addNode("B", 0);
+    final Node C = net.addNode("C", 0);
+    final Node D = net.addNode("D", 0);
+    final Node E = net.addNode("E", 0);
+    final Node F = net.addNode("F", 0);
 
-    Node source = net.addNode("source", 9); // should ne 5+3+3=11 but it does not work...
+    final Node source = net.addNode("source", 9); // should ne 5+3+3=11 but it does not work...
 
-    Node sinkD = net.addNode("sinkD", -3);
-    Node sinkE = net.addNode("sinkE", -3);
-    Node sinkF = net.addNode("sinkF", -3);
+    final Node sinkD = net.addNode("sinkD", -3);
+    final Node sinkE = net.addNode("sinkE", -3);
+    final Node sinkF = net.addNode("sinkF", -3);
 
     IntVar[] x = new IntVar[13];
 
@@ -133,11 +130,10 @@ public class CPvizNetworkFlow {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    boolean Result;
-    Search<IntVar> label = new DepthFirstSearch<>();
-    SelectChoicePoint<IntVar> varSelect = new SimpleSelect<>(x, null, new IndomainMin<>());
+    final Search<IntVar> label = new DepthFirstSearch<>();
+    final SelectChoicePoint<IntVar> varSelect = new SimpleSelect<>(x, null, new IndomainMin<>());
     // Trace --->
-    SelectChoicePoint<IntVar> select = new TraceGenerator<>(label, varSelect);
+    final SelectChoicePoint<IntVar> select = new TraceGenerator<>(label, varSelect);
 
     //      SelectChoicePoint<IntVar> select = new TraceGenerator<IntVar>(varSelect, false);
     //      label.setConsistencyListener((ConsistencyListener)select);
@@ -156,7 +152,7 @@ public class CPvizNetworkFlow {
     label.setAssignSolution(true);
     label.setPrintInfo(true);
 
-    Result = label.labeling(store, select, cost);
+    boolean Result = label.labeling(store, select, cost);
 
     if (Result) {
       IO.println("*** Yes");
@@ -165,8 +161,8 @@ public class CPvizNetworkFlow {
       IO.println("*** No");
     }
 
-    T2 = System.currentTimeMillis();
-    T = T2 - T1;
+    long T2 = System.currentTimeMillis();
+    long T = T2 - T1;
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
 

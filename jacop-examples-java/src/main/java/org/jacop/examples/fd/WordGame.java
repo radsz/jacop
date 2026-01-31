@@ -84,7 +84,7 @@ public class WordGame {
       IO.println("Attempt " + attempt);
 
       // Set up search
-      SelectChoicePoint<IntVar> select =
+      final SelectChoicePoint<IntVar> select =
           new SimpleSelect<>(unknownWord, new SmallestDomain<>(), new IndomainMin<>());
       Search<IntVar> search = new DepthFirstSearch<>();
       PrintListener<IntVar> simpleSolutionListener = new PrintListener<>();

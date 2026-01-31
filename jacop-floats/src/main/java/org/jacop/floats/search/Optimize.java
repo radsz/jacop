@@ -184,7 +184,7 @@ public class Optimize<T extends Var> {
 
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
-      boolean returnCode = super.executeAfterSolution(search, select);
+      final boolean returnCode = super.executeAfterSolution(search, select);
 
       costValue = cost.max();
 

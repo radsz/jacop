@@ -64,11 +64,8 @@ import org.jacop.jasat.utils.Utils;
 public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
   /**
-   * @TODO: efficiency.
-   *
-   * <p>It accepts binary or longer clauses.
-   *
-   * <p>Should we assume that clauses are at least length 4? Does it make the code quicker?
+   * It accepts binary or longer clauses. Should we assume that clauses are at least length 4? Does
+   * it make the code quicker? @TODO efficiency.
    */
   private static final int DEFAULT_INITIAL_NUMBER_OF_CLAUSES = 100;
 

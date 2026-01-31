@@ -312,10 +312,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  ArrayList<SearchItem<T>> parseSearchAnnotations(ArrayList<SearchItem<T>> search_seq) {
+  ArrayList<SearchItem<T>> parseSearchAnnotations(ArrayList<SearchItem<T>> searchSeq) {
     ArrayList<SearchItem<T>> ns = new ArrayList<>();
 
-    for (SearchItem<T> s : search_seq) {
+    for (SearchItem<T> s : searchSeq) {
       if ("restart_none".equals(s.search_type)) {
       } else if ("restart_constant".equals(s.search_type)
           || "restart_linear".equals(s.search_type)
@@ -376,13 +376,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println(solve + " : " + si);
     }
 
-    Var cost = null;
-    Var max_cost = null;
-
     label = null;
     optimization = false;
     list_seq_searches = new ArrayList<>();
 
+    Var cost = null;
+    Var max_cost = null;
     label = null;
     if (si != null) {
       if ("int_search".equals(si.type())) {
@@ -1219,11 +1218,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     result = false;
-    Var cost;
-    Var max_cost;
     optimization = false;
 
     final_search_seq = list_seq_searches.getLast();
+    Var cost;
+    Var max_cost;
 
     long currentTime = timer.getCPUTime();
     initTime = currentTime - startCPU;
@@ -1582,10 +1581,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return (double) initTime / (long) 1e+6;
   }
 
-  boolean anyTimeOutOccured(ArrayList<Search<T>> list_seq_searches) {
+  boolean anyTimeOutOccured(ArrayList<Search<T>> listSeqSearches) {
 
-    for (Search<T> list_seq_searche : list_seq_searches) {
-      if (((DepthFirstSearch<T>) list_seq_searche).timeOutOccured) {
+    for (Search<T> listSeqSearche : listSeqSearches) {
+      if (((DepthFirstSearch<T>) listSeqSearche).timeOutOccured) {
         return true;
       }
     }
@@ -2047,10 +2046,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  void lds_search(DepthFirstSearch<T> label, int lds_value) {
-    //      System.out.println("LDS("+lds_value+")");
+  void lds_search(DepthFirstSearch<T> label, int ldsValue) {
+    //      System.out.println("LDS("+ldsValue+")");
 
-    LDS<T> lds = new LDS<>(lds_value);
+    LDS<T> lds = new LDS<>(ldsValue);
     if (label.getExitChildListener() == null) {
       label.setExitChildListener(lds);
     } else {

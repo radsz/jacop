@@ -401,13 +401,10 @@ public class Nonogram extends ExampleFD {
    */
   public boolean searchAll() {
 
-    long T1;
-    long T2;
-
     // In case of nonograms, value ordering does not matter since we
     // a) search for all solutions
     // b) all variables have binary domain.
-    SelectChoicePoint<IntVar> select =
+    final SelectChoicePoint<IntVar> select =
         new InputOrderSelect<>(store, vars.toArray(new IntVar[1]), new IndomainMin<>());
 
     search = new DepthFirstSearch<>();
@@ -418,11 +415,11 @@ public class Nonogram extends ExampleFD {
 
     IO.println("Search has begun ...");
 
-    T1 = System.currentTimeMillis();
+    final long T1 = System.currentTimeMillis();
 
     boolean result = search.labeling(store, select);
 
-    T2 = System.currentTimeMillis();
+    long T2 = System.currentTimeMillis();
 
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());

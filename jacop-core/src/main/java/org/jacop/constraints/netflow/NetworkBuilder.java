@@ -110,15 +110,15 @@ public class NetworkBuilder {
     return arc;
   }
 
-  public Arc addArc(Node from, Node to, int weight, IntVar xVar) {
+  public Arc addArc(Node from, Node to, int weight, IntVar xvar) {
 
-    Arc arc = addArc(from, to, weight, xVar.min(), xVar.max());
+    Arc arc = addArc(from, to, weight, xvar.min(), xvar.max());
 
     if (arc.companion == null) {
       arc.companion = new ArcCompanion(arc, 0);
     }
 
-    arc.companion.xVar = xVar;
+    arc.companion.xVar = xvar;
     handlerList.add(arc.companion);
 
     return arc;
