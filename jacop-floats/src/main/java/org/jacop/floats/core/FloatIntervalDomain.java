@@ -141,61 +141,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
   }
 
-  /**
-   * It adds a value to the domain. It adds at the end without checks for the correctness of domain
-   * representation.
-   *
-   * @param i value to be added
-   */
-  public void addLastElement(double i) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (next(intervals[size - 1].max()) == i) {
-      intervals[size - 1] = new FloatInterval(intervals[size - 1].min(), i);
-    } else {
-      if (size == intervals.length) {
-        FloatInterval[] oldIntervals = intervals;
-        intervals = new FloatInterval[oldIntervals.length + 5];
-        System.arraycopy(oldIntervals, 0, intervals, 0, size);
-      }
-
-      intervals[size] = new FloatInterval(i, i);
-      size++;
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-  }
-
-  /**
-   * It adds values as specified by the parameter to the domain. The input parameter can not be an
-   * empty set.
-   */
-  @Override
-  public void addDom(FloatDomain domain) {
-
-    FloatIntervalDomain d = (FloatIntervalDomain) domain;
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (size == 0) {
-      if (intervals == null || intervals.length < d.intervals.length) {
-        intervals = new FloatInterval[d.intervals.length];
-      }
-
-      System.arraycopy(d.intervals, 0, intervals, 0, d.size);
-      size = d.size;
-
-    } else {
-      for (int i = 0; i < d.size; i++) {
-        // can not use function add(Interval)
-        unionAdapt(d.intervals[i].min(), d.intervals[i].max());
-      }
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-  }
-
   /** It adds all values between min and max to the domain. */
   @Override
   public void unionAdapt(double min, double max) {
@@ -305,6 +250,81 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
     assert contains(min) : "The minimum was not added";
     assert contains(max) : "The maximum was not added";
+  }
+
+  @Override
+  public void unionAdapt(double value) {
+    unionAdapt(value, value);
+  }
+
+  @Override
+  public int unionAdapt(FloatDomain union) {
+
+    // FIXME, implement this in more specialized manner.
+    FloatDomain result = union(union);
+
+    if (((FloatIntervalDomain) result).getSizeFloat() == getSizeFloat()) {
+      return IntDomain.NONE;
+    } else {
+      setDomain(result);
+      // FIXME, how to setup events for domain extending events?
+      return IntDomain.ANY;
+    }
+  }
+
+  /**
+   * It adds a value to the domain. It adds at the end without checks for the correctness of domain
+   * representation.
+   *
+   * @param i value to be added
+   */
+  public void addLastElement(double i) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    if (next(intervals[size - 1].max()) == i) {
+      intervals[size - 1] = new FloatInterval(intervals[size - 1].min(), i);
+    } else {
+      if (size == intervals.length) {
+        FloatInterval[] oldIntervals = intervals;
+        intervals = new FloatInterval[oldIntervals.length + 5];
+        System.arraycopy(oldIntervals, 0, intervals, 0, size);
+      }
+
+      intervals[size] = new FloatInterval(i, i);
+      size++;
+    }
+
+    assert checkInvariants() == null : checkInvariants();
+  }
+
+  /**
+   * It adds values as specified by the parameter to the domain. The input parameter can not be an
+   * empty set.
+   */
+  @Override
+  public void addDom(FloatDomain domain) {
+
+    FloatIntervalDomain d = (FloatIntervalDomain) domain;
+
+    assert checkInvariants() == null : checkInvariants();
+
+    if (size == 0) {
+      if (intervals == null || intervals.length < d.intervals.length) {
+        intervals = new FloatInterval[d.intervals.length];
+      }
+
+      System.arraycopy(d.intervals, 0, intervals, 0, d.size);
+      size = d.size;
+
+    } else {
+      for (int i = 0; i < d.size; i++) {
+        // can not use function add(Interval)
+        unionAdapt(d.intervals[i].min(), d.intervals[i].max());
+      }
+    }
+
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /** Checks if two domains intersect. */
@@ -483,6 +503,44 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     }
   }
 
+  /** It checks if value belongs to the domain. */
+  @Override
+  public boolean contains(int value) {
+    return contains((double) value);
+  }
+
+  public boolean contains(double value) {
+    assert checkInvariants() == null : checkInvariants();
+
+    for (int m = 0; m < size; m++) {
+      FloatInterval i = intervals[m];
+      if (i.max() >= value) {
+        if (value >= i.min()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  @Override
+  public boolean contains(double min, double max) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    for (int m = 0; m < size; m++) {
+      FloatInterval i = intervals[m];
+      if (i.max() >= max) {
+        if (min >= i.min()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   /** It creates a complement of a domain. */
   @Override
   public FloatDomain complement() {
@@ -510,27 +568,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
     assert result.checkInvariants() == null : result.checkInvariants();
     return result;
-  }
-
-  /** It checks if value belongs to the domain. */
-  @Override
-  public boolean contains(int value) {
-    return contains((double) value);
-  }
-
-  public boolean contains(double value) {
-    assert checkInvariants() == null : checkInvariants();
-
-    for (int m = 0; m < size; m++) {
-      FloatInterval i = intervals[m];
-      if (i.max() >= value) {
-        if (value >= i.min()) {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 
   public double nextValue(double value) {
@@ -792,64 +829,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return temp;
   }
 
-  @Override
-  public FloatDomain subtract(double value) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    FloatIntervalDomain result = cloneLight();
-
-    int pointer1 = 0;
-
-    if (size == 0) {
-      return result;
-    }
-
-    FloatInterval interval1 = intervals[pointer1];
-
-    while (true) {
-
-      if (interval1.max() < value) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1 = intervals[pointer1];
-          continue;
-        } else {
-          break;
-        }
-      }
-
-      if (!(interval1.min() > value)) {
-
-        if (interval1.min() != value) {
-
-          double oldMax = interval1.max();
-          // replace min..max with interval1.min..value-1
-          result.intervals[pointer1] = new FloatInterval(interval1.min(), previous(value));
-          pointer1++;
-
-          if (value != oldMax) {
-            // add domain value+1..oldMax
-            result.unionAdapt(next(value), oldMax);
-            pointer1++;
-          }
-
-        } else if (interval1.max() != value) {
-          // replace value..max with value+1..interval1.max
-          result.intervals[pointer1] = new FloatInterval(next(value), interval1.max());
-          pointer1++;
-        } else {
-          result.removeInterval(pointer1);
-        }
-      }
-      break;
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-    assert result.checkInvariants() == null : result.checkInvariants();
-    return result;
-  }
-
   /** It returns true if given domain is empty. */
   @Override
   public boolean isEmpty() {
@@ -937,6 +916,64 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         && intervals[0].singleton()
         && intervals[0].min() <= c
         && c <= intervals[0].max();
+  }
+
+  @Override
+  public FloatDomain subtract(double value) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    FloatIntervalDomain result = cloneLight();
+
+    int pointer1 = 0;
+
+    if (size == 0) {
+      return result;
+    }
+
+    FloatInterval interval1 = intervals[pointer1];
+
+    while (true) {
+
+      if (interval1.max() < value) {
+        pointer1++;
+        if (pointer1 < size) {
+          interval1 = intervals[pointer1];
+          continue;
+        } else {
+          break;
+        }
+      }
+
+      if (!(interval1.min() > value)) {
+
+        if (interval1.min() != value) {
+
+          double oldMax = interval1.max();
+          // replace min..max with interval1.min..value-1
+          result.intervals[pointer1] = new FloatInterval(interval1.min(), previous(value));
+          pointer1++;
+
+          if (value != oldMax) {
+            // add domain value+1..oldMax
+            result.unionAdapt(next(value), oldMax);
+            pointer1++;
+          }
+
+        } else if (interval1.max() != value) {
+          // replace value..max with value+1..interval1.max
+          result.intervals[pointer1] = new FloatInterval(next(value), interval1.max());
+          pointer1++;
+        } else {
+          result.removeInterval(pointer1);
+        }
+      }
+      break;
+    }
+
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+    return result;
   }
 
   /** It subtracts domain from current domain and returns the result. */
@@ -3063,11 +3100,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   }
 
   @Override
-  public void unionAdapt(double value) {
-    unionAdapt(value, value);
-  }
-
-  @Override
   public void subtractAdapt(double value) {
 
     int counter = intervalNo(value);
@@ -3421,21 +3453,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   }
 
   @Override
-  public int unionAdapt(FloatDomain union) {
-
-    // FIXME, implement this in more specialized manner.
-    FloatDomain result = union(union);
-
-    if (((FloatIntervalDomain) result).getSizeFloat() == getSizeFloat()) {
-      return IntDomain.NONE;
-    } else {
-      setDomain(result);
-      // FIXME, how to setup events for domain extending events?
-      return IntDomain.ANY;
-    }
-  }
-
-  @Override
   public int intersectAdapt(int min, int max) {
 
     assert checkInvariants() == null : checkInvariants();
@@ -3611,22 +3628,5 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     }
 
     return temp;
-  }
-
-  @Override
-  public boolean contains(double min, double max) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    for (int m = 0; m < size; m++) {
-      FloatInterval i = intervals[m];
-      if (i.max() >= max) {
-        if (min >= i.min()) {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 }

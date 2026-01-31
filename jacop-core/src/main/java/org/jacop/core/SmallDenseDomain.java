@@ -732,21 +732,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
-  private void adaptMin() {
-
-    assert (bits != 0) : "Empty domain, min can not be adapted.";
-
-    while ((bits & first8) == 0) {
-      min += 8;
-      bits = bits << 8;
-    }
-
-    while ((bits & TWO_N_ARRAY[63]) == 0) {
-      min++;
-      bits = bits << 1;
-    }
-  }
-
   @Override
   public void in(int storeLevel, Var var, IntDomain domain) {
 
@@ -845,6 +830,21 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // TODO: improve, it does not take yet holes in the domain.
     in(storeLevel, var, domain.min(), domain.max());
+  }
+
+  private void adaptMin() {
+
+    assert (bits != 0) : "Empty domain, min can not be adapted.";
+
+    while ((bits & first8) == 0) {
+      min += 8;
+      bits = bits << 8;
+    }
+
+    while ((bits & TWO_N_ARRAY[63]) == 0) {
+      min++;
+      bits = bits << 1;
+    }
   }
 
   @Override

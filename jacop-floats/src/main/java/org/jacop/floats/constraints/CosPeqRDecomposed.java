@@ -1,5 +1,5 @@
 /*
- * CosPeqR_decomposed.java
+ * CosPeqRDecomposed.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -46,7 +46,7 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
+public class CosPeqRDecomposed extends DecomposedConstraint<Constraint> {
 
   /** It contains variable p. */
   public final FloatVar p;
@@ -54,7 +54,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
   /** It contains variable q. */
   public final FloatVar q;
 
-  /** It contains constraints of the CosPeqR_decomposed constraint decomposition. */
+  /** It contains constraints of the CosPeqRDecomposed constraint decomposition. */
   List<Constraint> constraints;
 
   /**
@@ -63,7 +63,7 @@ public class CosPeqR_decomposed extends DecomposedConstraint<Constraint> {
    * @param p variable P
    * @param q variable Q
    */
-  public CosPeqR_decomposed(FloatVar p, FloatVar q) {
+  public CosPeqRDecomposed(FloatVar p, FloatVar q) {
 
     checkInputForNullness(new String[] {"p", "q"}, new Object[][] {{p}, {q}});
     this.p = p;

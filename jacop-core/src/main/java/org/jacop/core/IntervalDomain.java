@@ -154,110 +154,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
   }
 
-  /**
-   * It adds a value to the domain. It adds at the end without checks for the correctness of domain
-   * representation.
-   *
-   * @param i the element to be added as the lase element of the domain
-   */
-  public void addLastElement(int i) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (intervals[size - 1].max() + 1 == i) {
-      intervals[size - 1] = new Interval(intervals[size - 1].min(), i);
-    } else {
-      if (size == intervals.length) {
-        Interval[] oldIntervals = intervals;
-        intervals = new Interval[oldIntervals.length + 5];
-        System.arraycopy(oldIntervals, 0, intervals, 0, size);
-      }
-
-      intervals[size] = new Interval(i, i);
-      size++;
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The input parameter can not be an empty set.
-   */
-  @Override
-  public void addDom(IntDomain domain) {
-
-    if (domain.domainID() == IntervalDomainID) {
-
-      IntervalDomain d = (IntervalDomain) domain;
-
-      assert checkInvariants() == null : checkInvariants();
-
-      if (size == 0) {
-        if (intervals == null || intervals.length < d.intervals.length) {
-          intervals = new Interval[d.intervals.length];
-        }
-
-        System.arraycopy(d.intervals, 0, intervals, 0, d.size);
-        size = d.size;
-
-      } else {
-        for (int i = 0; i < d.size; i++) {
-          // can not use function add(Interval)
-          unionAdapt(d.intervals[i].min(), d.intervals[i].max());
-        }
-      }
-
-      assert checkInvariants() == null : checkInvariants();
-
-      return;
-    }
-
-    if (domain.domainID() == BoundDomainID) {
-
-      assert checkInvariants() == null : checkInvariants();
-
-      unionAdapt(domain.min(), domain.max());
-
-      assert checkInvariants() == null : checkInvariants();
-
-      return;
-    }
-
-    if (domain.domainID() == SmallDenseDomainID) {
-
-      // TODO: CRUCIAL, create special code to handle SmallDenseDomain.
-
-      this.addDom(((SmallDenseDomain) domain).toIntervalDomain());
-
-      return;
-    }
-
-    if (domain.isSparseRepresentation()) {
-
-      ValueEnumeration enumer = domain.valueEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        int next = enumer.nextElement();
-
-        unionAdapt(next, next);
-      }
-
-    } else {
-
-      IntervalEnumeration enumer = domain.intervalEnumeration();
-
-      while (enumer.hasMoreElements()) {
-
-        Interval next = enumer.nextElement();
-
-        unionAdapt(next.min(), next.max());
-      }
-    }
-  }
-
   @Override
   public void unionAdapt(int min, int max) {
 
@@ -365,6 +261,130 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
     assert contains(min) : "The minimum was not added";
     assert contains(max) : "The maximum was not added";
+  }
+
+  @Override
+  public void unionAdapt(int value) {
+    unionAdapt(value, value);
+  }
+
+  @Override
+  public int unionAdapt(IntDomain union) {
+
+    // FIXME, implement this in more specialized manner.
+    IntDomain result = union(union);
+
+    if (result.getSize() == getSize()) {
+      return Domain.NONE;
+    } else {
+      setDomain(result);
+      // FIXME, how to setup events for domain extending events?
+      return IntDomain.ANY;
+    }
+  }
+
+  /**
+   * It adds a value to the domain. It adds at the end without checks for the correctness of domain
+   * representation.
+   *
+   * @param i the element to be added as the lase element of the domain
+   */
+  public void addLastElement(int i) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    if (intervals[size - 1].max() + 1 == i) {
+      intervals[size - 1] = new Interval(intervals[size - 1].min(), i);
+    } else {
+      if (size == intervals.length) {
+        Interval[] oldIntervals = intervals;
+        intervals = new Interval[oldIntervals.length + 5];
+        System.arraycopy(oldIntervals, 0, intervals, 0, size);
+      }
+
+      intervals[size] = new Interval(i, i);
+      size++;
+    }
+
+    assert checkInvariants() == null : checkInvariants();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>The input parameter can not be an empty set.
+   */
+  @Override
+  public void addDom(IntDomain domain) {
+
+    if (domain.domainID() == IntervalDomainID) {
+
+      IntervalDomain d = (IntervalDomain) domain;
+
+      assert checkInvariants() == null : checkInvariants();
+
+      if (size == 0) {
+        if (intervals == null || intervals.length < d.intervals.length) {
+          intervals = new Interval[d.intervals.length];
+        }
+
+        System.arraycopy(d.intervals, 0, intervals, 0, d.size);
+        size = d.size;
+
+      } else {
+        for (int i = 0; i < d.size; i++) {
+          // can not use function add(Interval)
+          unionAdapt(d.intervals[i].min(), d.intervals[i].max());
+        }
+      }
+
+      assert checkInvariants() == null : checkInvariants();
+
+      return;
+    }
+
+    if (domain.domainID() == BoundDomainID) {
+
+      assert checkInvariants() == null : checkInvariants();
+
+      unionAdapt(domain.min(), domain.max());
+
+      assert checkInvariants() == null : checkInvariants();
+
+      return;
+    }
+
+    if (domain.domainID() == SmallDenseDomainID) {
+
+      // TODO: CRUCIAL, create special code to handle SmallDenseDomain.
+
+      this.addDom(((SmallDenseDomain) domain).toIntervalDomain());
+
+      return;
+    }
+
+    if (domain.isSparseRepresentation()) {
+
+      ValueEnumeration enumer = domain.valueEnumeration();
+
+      while (enumer.hasMoreElements()) {
+
+        int next = enumer.nextElement();
+
+        unionAdapt(next, next);
+      }
+
+    } else {
+
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+
+      while (enumer.hasMoreElements()) {
+
+        Interval next = enumer.nextElement();
+
+        unionAdapt(next.min(), next.max());
+      }
+    }
   }
 
   @Override
@@ -706,32 +726,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public IntDomain complement() {
-
-    if (size == 0) {
-      return new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt);
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-
-    IntervalDomain result = new IntervalDomain(size + 1);
-    if (min() != IntDomain.MinInt) {
-      result.unionAdapt(new Interval(IntDomain.MinInt, intervals[0].min() - 1));
-    }
-
-    for (int i = 0; i < size - 1; i++) {
-      result.unionAdapt(new Interval(intervals[i].max() + 1, intervals[i + 1].min() - 1));
-    }
-
-    if (max() != IntDomain.MaxInt) {
-      result.unionAdapt(new Interval(max() + 1, IntDomain.MaxInt));
-    }
-
-    assert result.checkInvariants() == null : result.checkInvariants();
-    return result;
-  }
-
-  @Override
   public boolean contains(int value) {
 
     assert checkInvariants() == null : checkInvariants();
@@ -756,6 +750,49 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
 
     return false;
+  }
+
+  @Override
+  public boolean contains(int min, int max) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    for (int m = 0; m < size; m++) {
+      Interval i = intervals[m];
+      if (i.max() >= max) {
+        if (min >= i.min()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  @Override
+  public IntDomain complement() {
+
+    if (size == 0) {
+      return new IntervalDomain(IntDomain.MinInt, IntDomain.MaxInt);
+    }
+
+    assert checkInvariants() == null : checkInvariants();
+
+    IntervalDomain result = new IntervalDomain(size + 1);
+    if (min() != IntDomain.MinInt) {
+      result.unionAdapt(new Interval(IntDomain.MinInt, intervals[0].min() - 1));
+    }
+
+    for (int i = 0; i < size - 1; i++) {
+      result.unionAdapt(new Interval(intervals[i].max() + 1, intervals[i + 1].min() - 1));
+    }
+
+    if (max() != IntDomain.MaxInt) {
+      result.unionAdapt(new Interval(max() + 1, IntDomain.MaxInt));
+    }
+
+    assert result.checkInvariants() == null : result.checkInvariants();
+    return result;
   }
 
   /**
@@ -1258,64 +1295,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public IntDomain subtract(int value) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    IntervalDomain result = cloneLight();
-
-    int pointer1 = 0;
-
-    if (size == 0) {
-      return result;
-    }
-
-    Interval interval1 = intervals[pointer1];
-
-    while (true) {
-
-      if (interval1.max() < value) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1 = intervals[pointer1];
-          continue;
-        } else {
-          break;
-        }
-      }
-
-      if (interval1.min() <= value) {
-
-        if (interval1.min() != value) {
-
-          int oldMax = interval1.max();
-          // replace min..max with interval1.min..value-1
-          result.intervals[pointer1] = new Interval(interval1.min(), value - 1);
-          pointer1++;
-
-          if (value != oldMax) {
-            // add domain value+1..oldMax
-            result.unionAdapt(value + 1, oldMax);
-            pointer1++;
-          }
-
-        } else if (interval1.max() != value) {
-          // replace value..max with value+1..interval1.max
-          result.intervals[pointer1] = new Interval(value + 1, interval1.max());
-          pointer1++;
-        } else {
-          result.removeInterval(pointer1);
-        }
-      }
-      break;
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-    assert result.checkInvariants() == null : result.checkInvariants();
-    return result;
-  }
-
-  @Override
   public boolean isEmpty() {
     return size == 0;
   }
@@ -1468,6 +1447,64 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   public boolean singleton(int c) {
     assert checkInvariants() == null : checkInvariants();
     return size == 1 && intervals[0].min() == c && c == intervals[0].max();
+  }
+
+  @Override
+  public IntDomain subtract(int value) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    IntervalDomain result = cloneLight();
+
+    int pointer1 = 0;
+
+    if (size == 0) {
+      return result;
+    }
+
+    Interval interval1 = intervals[pointer1];
+
+    while (true) {
+
+      if (interval1.max() < value) {
+        pointer1++;
+        if (pointer1 < size) {
+          interval1 = intervals[pointer1];
+          continue;
+        } else {
+          break;
+        }
+      }
+
+      if (interval1.min() <= value) {
+
+        if (interval1.min() != value) {
+
+          int oldMax = interval1.max();
+          // replace min..max with interval1.min..value-1
+          result.intervals[pointer1] = new Interval(interval1.min(), value - 1);
+          pointer1++;
+
+          if (value != oldMax) {
+            // add domain value+1..oldMax
+            result.unionAdapt(value + 1, oldMax);
+            pointer1++;
+          }
+
+        } else if (interval1.max() != value) {
+          // replace value..max with value+1..interval1.max
+          result.intervals[pointer1] = new Interval(value + 1, interval1.max());
+          pointer1++;
+        } else {
+          result.removeInterval(pointer1);
+        }
+      }
+      break;
+    }
+
+    assert checkInvariants() == null : checkInvariants();
+    assert result.checkInvariants() == null : result.checkInvariants();
+    return result;
   }
 
   @Override
@@ -2793,50 +2830,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public void inValue(int storeLevel, IntVar var, int value) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (singleton(value)) {
-      return;
-    }
-
-    if (!contains(value)) {
-      throw failException;
-    }
-
-    if (stamp == storeLevel) {
-
-      if (intervals.length > 0) {
-        intervals[0] = new Interval(value, value);
-      } else {
-        throw new RuntimeException("Internal error in InternalDomain.inValue");
-      }
-      size = 1;
-
-    } else {
-
-      assert stamp < storeLevel;
-
-      IntervalDomain result = new IntervalDomain(1);
-      result.intervals[0] = new Interval(value, value);
-      result.size = 1;
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      var.domain = result;
-    }
-
-    assert checkInvariants() == null : checkInvariants();
-
-    var.domainHasChanged(IntDomain.GROUND);
-  }
-
-  @Override
   public void in(int storeLevel, Var var, IntDomain domain) {
 
     // System.out.println(var.domain + " " + domain);
@@ -3519,6 +3512,50 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       var.domainHasChanged(returnedEvent);
     }
+  }
+
+  @Override
+  public void inValue(int storeLevel, IntVar var, int value) {
+
+    assert checkInvariants() == null : checkInvariants();
+
+    if (singleton(value)) {
+      return;
+    }
+
+    if (!contains(value)) {
+      throw failException;
+    }
+
+    if (stamp == storeLevel) {
+
+      if (intervals.length > 0) {
+        intervals[0] = new Interval(value, value);
+      } else {
+        throw new RuntimeException("Internal error in InternalDomain.inValue");
+      }
+      size = 1;
+
+    } else {
+
+      assert stamp < storeLevel;
+
+      IntervalDomain result = new IntervalDomain(1);
+      result.intervals[0] = new Interval(value, value);
+      result.size = 1;
+
+      result.modelConstraints = modelConstraints;
+      result.searchConstraints = searchConstraints;
+      result.stamp = storeLevel;
+      result.previousDomain = this;
+      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+      var.domain = result;
+    }
+
+    assert checkInvariants() == null : checkInvariants();
+
+    var.domainHasChanged(IntDomain.GROUND);
   }
 
   @Override
@@ -4918,11 +4955,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public void unionAdapt(int value) {
-    unionAdapt(value, value);
-  }
-
-  @Override
   public void subtractAdapt(int value) {
 
     int counter = intervalNo(value);
@@ -5375,21 +5407,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public int unionAdapt(IntDomain union) {
-
-    // FIXME, implement this in more specialized manner.
-    IntDomain result = union(union);
-
-    if (result.getSize() == getSize()) {
-      return Domain.NONE;
-    } else {
-      setDomain(result);
-      // FIXME, how to setup events for domain extending events?
-      return IntDomain.ANY;
-    }
-  }
-
-  @Override
   public int intersectAdapt(int min, int max) {
 
     assert checkInvariants() == null : checkInvariants();
@@ -5796,22 +5813,5 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert false : "Error in IndomainRandom. " + "Domain " + this + " value " + value;
     // Only to satisfy java compiler, should not be reached
     return Integer.MAX_VALUE;
-  }
-
-  @Override
-  public boolean contains(int min, int max) {
-
-    assert checkInvariants() == null : checkInvariants();
-
-    for (int m = 0; m < size; m++) {
-      Interval i = intervals[m];
-      if (i.max() >= max) {
-        if (min >= i.min()) {
-          return true;
-        }
-      }
-    }
-
-    return false;
   }
 }
