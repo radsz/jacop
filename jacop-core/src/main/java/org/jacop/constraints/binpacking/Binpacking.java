@@ -199,9 +199,9 @@ public class Binpacking extends Constraint
   }
 
   @Builder
-  public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean LBpruning) {
+  public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean lbPruning) {
     this(bin, load, w, minBin);
-    this.LBpruning = LBpruning;
+    this.LBpruning = lbPruning;
   }
 
   @Override
@@ -424,12 +424,12 @@ public class Binpacking extends Constraint
     return max - min + 1;
   }
 
-  private int[] merge(int[] a, int aLength, int[] b) {
-    int[] c = new int[aLength + b.length];
+  private int[] merge(int[] a, int arrLength, int[] b) {
+    int[] c = new int[arrLength + b.length];
     int i = 0;
     int j = b.length - 1;
     for (int k = 0; k < c.length; k++) {
-      if (i >= aLength) {
+      if (i >= arrLength) {
         c[k] = b[j--];
       } else if (j < 0) {
         c[k] = a[i++];

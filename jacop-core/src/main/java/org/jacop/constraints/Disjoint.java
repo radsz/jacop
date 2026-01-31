@@ -253,23 +253,23 @@ public class Disjoint extends Diff {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-        List<IntRectangle> UsedRect = new ArrayList<>();
-        List<Rectangle> ProfileCandidates = new ArrayList<>();
-        List<Rectangle> OverlappingRects = new ArrayList<>();
-        boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
+        List<IntRectangle> usedRect = new ArrayList<>();
+        List<Rectangle> profileCandidates = new ArrayList<>();
+        List<Rectangle> overlappingRects = new ArrayList<>();
+        boolean ntN = findRectangles(r, l, usedRect, profileCandidates, overlappingRects, fdvQueue);
 
         needToNarrow = needToNarrow || ntN;
 
         // Checking r against all s with minUse in the domain of r
         if (needToNarrow) {
 
-          if (OverlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).Rects.length) {
+          if (overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).Rects.length) {
             Diff2VarValue newRects = new Diff2VarValue();
-            newRects.setValue(OverlappingRects);
+            newRects.setValue(overlappingRects);
             evalRects[l].update(newRects);
           }
 
-          narrowRectangle(r, UsedRect, ProfileCandidates);
+          narrowRectangle(r, usedRect, profileCandidates);
         }
       }
     }
@@ -278,9 +278,9 @@ public class Disjoint extends Diff {
   private boolean findRectangles(
       Rectangle r,
       int index,
-      List<IntRectangle> UsedRect,
-      List<Rectangle> ProfileCandidates,
-      List<Rectangle> OverlappingRects,
+      List<IntRectangle> usedRect,
+      List<Rectangle> profileCandidates,
+      List<Rectangle> overlappingRects,
       Set<IntVar> fdvQueue) {
 
     boolean contains = false;
@@ -361,16 +361,16 @@ public class Disjoint extends Diff {
 
         if (overlap) {
 
-          OverlappingRects.add(s);
+          overlappingRects.add(s);
 
           if (use) { // rectangles taking space
-            UsedRect.add(Use);
+            usedRect.add(Use);
             contains = contains || sChanged;
           }
 
           if (!minLength0) { // profile candiates
             if (j > 0) {
-              ProfileCandidates.add(s);
+              profileCandidates.add(s);
               contains = contains || sChanged;
             }
 
@@ -487,27 +487,27 @@ public class Disjoint extends Diff {
   }
 
   @Override
-  void profileNarrowing(int i, Rectangle r, List<Rectangle> ProfileCandidates) {
+  void profileNarrowing(int i, Rectangle r, List<Rectangle> profileCandidates) {
     // check profile first
 
     IntDomain rOriginIdom = r.origin[i].dom();
     int rOriginIdomMin = rOriginIdom.min();
     int rOriginIdomMax = rOriginIdom.max();
-    DiffnProfile Profile = new DiffnProfile();
+    DiffnProfile profile = new DiffnProfile();
 
     for (int j = 0; j < r.dim; j++) {
       if (j != i && r.length[i].min() != 0) {
 
-        Profile.make(
-            j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), ProfileCandidates);
+        profile.make(
+            j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), profileCandidates);
 
-        if (!Profile.isEmpty()) {
+        if (!profile.isEmpty()) {
           if (trace) {
-            log.debug(" *** {}\n{}", r, ProfileCandidates);
-            log.debug("Profile in dimension {} and {}\n{}", i, j, Profile);
+            log.debug(" *** {}\n{}", r, profileCandidates);
+            log.debug("Profile in dimension {} and {}\n{}", i, j, profile);
           }
 
-          profileCheckRectangle(Profile, r, i, j);
+          profileCheckRectangle(profile, r, i, j);
         }
       }
     }

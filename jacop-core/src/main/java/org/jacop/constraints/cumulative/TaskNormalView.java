@@ -67,7 +67,7 @@ class TaskNormalView extends TaskView {
 
   // envelope
   long env(long c) {
-    return c * (long) est() + e();
+    return c * (long) est() + energy();
   }
 
   void updateEdgeFind(int storeLevel, int est) {

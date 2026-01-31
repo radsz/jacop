@@ -491,7 +491,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         if (after && between) {
           L.remove(indexOfl);
-          removeFromS_Lct(S);
+          removeFromSLct(S);
         } else {
           if (between) {
             // update upper bound of l
@@ -549,7 +549,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             if (before(l, S)) {
               L.remove(indexOfl);
             } else {
-              removeFromS_Lct(S);
+              removeFromSLct(S);
             }
           } else {
             if (after) {
@@ -690,7 +690,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         if (before && between) {
           L.remove(indexOfl);
-          removeFromS_Est(S);
+          removeFromSEst(S);
         } else {
           if (between) {
             // update lower bound of l
@@ -749,7 +749,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             if (after(l, S)) {
               L.remove(indexOfl);
             } else {
-              removeFromS_Est(S);
+              removeFromSEst(S);
             }
           } else {
             if (before) {
@@ -886,13 +886,13 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     return lctS;
   }
 
-  private int maxArea(List<Task> Ts) {
+  private int maxArea(List<Task> ts) {
     long area = 0;
     int index = 0;
 
     // Select task with the maximal area
     int i = 0;
-    for (Task t : Ts) {
+    for (Task t : ts) {
       long newArea = t.areaMin();
       if (area < newArea) {
         area = newArea;
@@ -1251,7 +1251,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void removeFromS_Est(List<Task> s) {
+  private void removeFromSEst(List<Task> s) {
 
     // s = s \ {t in s | est(t) = est(s)}
     int estS = est(s);
@@ -1268,7 +1268,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void removeFromS_Lct(List<Task> s) {
+  private void removeFromSLct(List<Task> s) {
 
     // s = s \ {t in s | lct(t) = lct(s)}
     int lctS = lct(s);

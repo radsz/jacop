@@ -366,23 +366,23 @@ public class Diff2 extends Diff {
 
         needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
 
-        List<IntRectangle> UsedRect = new ArrayList<>();
-        List<Rectangle> ProfileCandidates = new ArrayList<>();
-        List<Rectangle> OverlappingRects = new ArrayList<>();
-        boolean ntN = findRectangles(r, l, UsedRect, ProfileCandidates, OverlappingRects, fdvQueue);
+        List<IntRectangle> usedRect = new ArrayList<>();
+        List<Rectangle> profileCandidates = new ArrayList<>();
+        List<Rectangle> overlappingRects = new ArrayList<>();
+        boolean ntN = findRectangles(r, l, usedRect, profileCandidates, overlappingRects, fdvQueue);
 
         needToNarrow = needToNarrow || ntN;
 
         // Checking r against all s with minUse in the domain of r
         if (needToNarrow) {
 
-          if (OverlappingRects.size() != ((Diff2VarValue) EvalRects[l].value()).Rects.length) {
+          if (overlappingRects.size() != ((Diff2VarValue) EvalRects[l].value()).Rects.length) {
             Diff2VarValue newRects = new Diff2VarValue();
-            newRects.setValue(OverlappingRects);
+            newRects.setValue(overlappingRects);
             EvalRects[l].update(newRects);
           }
 
-          narrowRectangle(r, UsedRect, ProfileCandidates);
+          narrowRectangle(r, usedRect, profileCandidates);
         }
       }
     }
@@ -391,9 +391,9 @@ public class Diff2 extends Diff {
   boolean findRectangles(
       Rectangle r,
       int index,
-      List<IntRectangle> UsedRect,
-      List<Rectangle> ProfileCandidates,
-      List<Rectangle> OverlappingRects,
+      List<IntRectangle> usedRect,
+      List<Rectangle> profileCandidates,
+      List<Rectangle> overlappingRects,
       Set<IntVar> fdvQueue) {
 
     boolean contains = false;
@@ -474,16 +474,16 @@ public class Diff2 extends Diff {
 
         if (overlap) {
 
-          OverlappingRects.add(s);
+          overlappingRects.add(s);
 
           if (use) { // rectangles taking space
-            UsedRect.add(Use);
+            usedRect.add(Use);
             contains = contains || sChanged;
           }
 
           if (!minLength0) { // profile candiates
             if (j > 0) {
-              ProfileCandidates.add(s);
+              profileCandidates.add(s);
               contains = contains || sChanged;
             }
 

@@ -236,17 +236,17 @@ public class IntervalGaussSeidel {
     return x;
   }
 
-  void precondition(FloatInterval[][] AA, double[] bb) {
+  void precondition(FloatInterval[][] aa, double[] bb) {
 
     if (debug) {
       IO.println("Before preconditioning\n" + this);
     }
 
-    double[][] midPoint = new double[AA.length][AA[0].length];
+    double[][] midPoint = new double[aa.length][aa[0].length];
 
     for (int i = 0; i < midPoint.length; i++) {
       for (int j = 0; j < midPoint[i].length; j++) {
-        midPoint[i][j] = (AA[i][j].min() + AA[i][j].max()) / 2;
+        midPoint[i][j] = (aa[i][j].min() + aa[i][j].max()) / 2;
       }
     }
 
@@ -254,10 +254,10 @@ public class IntervalGaussSeidel {
 
     double[][] inv = m.inverse();
 
-    FloatInterval[][] F = new FloatInterval[AA.length][A[0].length];
+    FloatInterval[][] F = new FloatInterval[aa.length][A[0].length];
     for (int i = 0; i < F.length; i++) {
       for (int j = 0; j < F[0].length; j++) {
-        F[i][j] = new FloatInterval(AA[i][j].min(), AA[i][j].max());
+        F[i][j] = new FloatInterval(aa[i][j].min(), aa[i][j].max());
       }
     }
 

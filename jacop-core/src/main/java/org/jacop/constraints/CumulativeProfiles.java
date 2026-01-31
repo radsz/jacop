@@ -50,7 +50,7 @@ class CumulativeProfiles {
 
   CumulativeProfiles() {}
 
-  void make(Task[] Ts, boolean doMaxProfile) {
+  void make(Task[] ts, boolean doMaxProfile) {
     Task t;
     IntTask iTask = new IntTask();
     int strt;
@@ -61,7 +61,7 @@ class CumulativeProfiles {
 
     minProfile = new Profile();
     maxProfile = new Profile();
-    for (Task task : Ts) {
+    for (Task task : ts) {
       t = task;
 
       tDurMin = t.dur().min();

@@ -850,14 +850,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int maxYReachedFromS;
     int[] compReachesLeft = new int[ySize];
     int[] compReachesRight = new int[ySize];
-    int[] yReachesLeft = new int[ySize];
-    int[] yReachesRight = new int[ySize];
+    int[] yreachesLeft = new int[ySize];
+    int[] yreachesRight = new int[ySize];
 
     for (int i = 0; i < ySize; i++) {
       compOfY[i] = i;
     }
 
-    sccNb = SCCsWithoutS(compReachesLeft, compReachesRight, yReachesLeft, yReachesRight);
+    sccNb = SCCsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
     // now compReaches(Left, Right) and compOfY contain the left and right most y per comp and to
     // which comp a y belong
     if (debug) {
@@ -986,7 +986,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   }
 
   private int SCCsWithoutS(
-      int[] compReachesLeft, int[] compReachesRight, int[] yReachesLeft, int[] yReachesRight) {
+      int[] compReachesLeft, int[] compReachesRight, int[] yreachesLeft, int[] yreachesRight) {
 
     Component C;
     Component C1;
@@ -994,18 +994,18 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     S1.clear();
     S2.clear();
 
-    ReachedFromY(yReachesLeft, yReachesRight);
+    ReachedFromY(yreachesLeft, yreachesRight);
 
     // init all componant as containing only one y and set these component
     // reachesLeft and reachesRight to y reachesLeft and Right
     for (int y = 0; y < ySize; y++) {
-      compReachesLeft[y] = yReachesLeft[y];
-      compReachesRight[y] = yReachesRight[y];
+      compReachesLeft[y] = yreachesLeft[y];
+      compReachesRight[y] = yreachesRight[y];
     }
 
     for (int y = 0; y < ySize; y++) {
       // set comp to (root, rightmostY, maxX)
-      C = new Component(y, y, yReachesRight[y]);
+      C = new Component(y, y, yreachesRight[y]);
 
       if (S2.isEmpty()) {
         S1.push(y);
@@ -1028,8 +1028,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           int popY;
           popY = S1.pop();
           compOfY[popY] = sccNb;
-          compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yReachesLeft[popY]);
-          compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yReachesRight[popY]);
+          compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yreachesLeft[popY]);
+          compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yreachesRight[popY]);
         }
         sccNb++;
       }
@@ -1038,7 +1038,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       // this second part treat the case the new c1 is in fact attainable by the current component
 
-      while (!S2.isEmpty() && yReachesLeft[y] <= S2.peek().rightmostY) {
+      while (!S2.isEmpty() && yreachesLeft[y] <= S2.peek().rightmostY) {
         C1 = S2.pop();
         C.maxX = Math.max(C.maxX, C1.maxX);
         C.root =
@@ -1047,7 +1047,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
 
       assert (S2.isEmpty()
-          || ((yReachesLeft[y] > S2.peek().rightmostY) && (S2.peek().maxX >= C.root)));
+          || ((yreachesLeft[y] > S2.peek().rightmostY) && (S2.peek().maxX >= C.root)));
 
       S1.push(y);
       S2.push(C);
@@ -1064,8 +1064,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         int y;
         y = S1.pop();
         compOfY[y] = sccNb;
-        compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yReachesLeft[y]);
-        compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yReachesRight[y]);
+        compReachesLeft[sccNb] = Math.min(compReachesLeft[sccNb], yreachesLeft[y]);
+        compReachesRight[sccNb] = Math.max(compReachesRight[sccNb], yreachesRight[y]);
       }
       sccNb++;
     }
@@ -1074,11 +1074,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     return sccNb;
   }
 
-  private void ReachedFromY(int[] yReachesLeft, int[] yReachesRight) {
+  private void ReachedFromY(int[] yreachesLeft, int[] yreachesRight) {
 
     for (int i = 0; i < ySize; i++) {
-      yReachesLeft[i] = i;
-      yReachesRight[i] = i;
+      yreachesLeft[i] = i;
+      yreachesRight[i] = i;
     }
 
     int i;
@@ -1089,19 +1089,19 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       i = match3[j];
       assert (i >= 0);
       assert (i < ySize);
-      yReachesLeft[i] = Math.min(yReachesLeft[i], xDomain[j].min());
-      yReachesRight[i] = Math.max(yReachesRight[i], xDomain[j].max());
+      yreachesLeft[i] = Math.min(yreachesLeft[i], xDomain[j].min());
+      yreachesRight[i] = Math.max(yreachesRight[i], xDomain[j].max());
     }
     if (debug) {
-      StringBuilder sb = new StringBuilder("yReachesLeft ");
-      for (i = 0; i < yReachesLeft.length; i++) {
-        sb.append(yReachesLeft[i]).append(" ");
+      StringBuilder sb = new StringBuilder("yreachesLeft ");
+      for (i = 0; i < yreachesLeft.length; i++) {
+        sb.append(yreachesLeft[i]).append(" ");
       }
       log.debug("{}", sb);
 
-      sb = new StringBuilder("yReachesRight ");
-      for (i = 0; i < yReachesRight.length; i++) {
-        sb.append(yReachesRight[i]).append(" ");
+      sb = new StringBuilder("yreachesRight ");
+      for (i = 0; i < yreachesRight.length; i++) {
+        sb.append(yreachesRight[i]).append(" ");
       }
       log.debug("{}", sb);
     }
@@ -1186,7 +1186,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  private void upperCount(int[] max_u) {
+  private void upperCount(int[] maxU) {
 
     int xIndex;
     int x;
@@ -1202,7 +1202,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           break;
         }
       }
-      max_u[i] = Math.min(yDomain[1][i], pCount.size());
+      maxU[i] = Math.min(yDomain[1][i], pCount.size());
       for (int l = 0; l < yDomain[0][i]; l++) {
         assert (!pCount.isEmpty());
         pCount.remove();
@@ -1215,7 +1215,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  private void lowerCount(int[] min_l) {
+  private void lowerCount(int[] minL) {
     int xIndex;
     int count;
     int x;
@@ -1244,7 +1244,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         count++;
       }
 
-      min_l[i] = count;
+      minL[i] = count;
       while ((!pCount.isEmpty()) && (count < yDomain[1][i])) {
         pCount.remove();
         count++;

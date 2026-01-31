@@ -56,7 +56,7 @@ import org.jacop.core.ValueEnumeration;
  */
 public class SoftGCC extends DecomposedConstraint<Constraint> {
 
-  public final IntVar[] xVars;
+  public final IntVar[] xvars;
   public final int[] countedValue;
   public final IntVar costVar;
   public final ViolationMeasure violationMeasure;
@@ -71,7 +71,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   /**
    * It specifies soft-GCC constraint.
    *
-   * @param xVars variables over which counting takes place.
+   * @param xvars variables over which counting takes place.
    * @param hardCounters idNumber variables for different values being counted. Their domain specify
    *     hard constraints on the occurrences.
    * @param countedValue it specifies values which occurrence is being counted.
@@ -81,7 +81,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param violationMeasure it is only accepted to use Value_Based violation measure.
    */
   public SoftGCC(
-      IntVar[] xVars,
+      IntVar[] xvars,
       IntVar[] hardCounters,
       int[] countedValue,
       int[] softLowerBound,
@@ -91,7 +91,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     checkInputForNullness(
         new String[] {
-          "xVars",
+          "xvars",
           "hardCounters",
           "countedValue",
           "softLowerBound",
@@ -100,7 +100,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           "violationMeasure"
         },
         new Object[][] {
-          xVars,
+          xvars,
           hardCounters,
           {countedValue},
           {softLowerBound},
@@ -109,8 +109,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
           {violationMeasure}
         });
 
-    this.xVars = new IntVar[xVars.length];
-    System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+    this.xvars = new IntVar[xvars.length];
+    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
 
     this.hardCounters = new IntVar[hardCounters.length];
     System.arraycopy(hardCounters, 0, this.hardCounters, 0, hardCounters.length);
@@ -131,7 +131,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   /**
    * It specifies soft-GCC constraint.
    *
-   * @param xVars variables over which counting takes place.
+   * @param xvars variables over which counting takes place.
    * @param hardLowerBound it specifies constraint what is the minimal number of occurrences. (hard)
    * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
    * @param countedValue it specifies values which occurrence is being counted.
@@ -140,7 +140,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param violationMeasure it is only accepted to use Value_Based violation measure.
    */
   public SoftGCC(
-      IntVar[] xVars,
+      IntVar[] xvars,
       int[] hardLowerBound,
       int[] hardUpperBound,
       int[] countedValue,
@@ -148,8 +148,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    this.xVars = new IntVar[xVars.length];
-    System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+    this.xvars = new IntVar[xvars.length];
+    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
 
     this.softCounters = new IntVar[softCounters.length];
     System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
@@ -170,7 +170,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   /**
    * It specifies soft-GCC constraint.
    *
-   * @param xVars variables over which counting takes place.
+   * @param xvars variables over which counting takes place.
    * @param hardCounters idNumber variables for different values being counted. (hard)
    * @param countedValue it specifies values which occurrence is being counted.
    * @param softCounters idNumber variables for different values being counted. (soft)
@@ -178,15 +178,15 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param violationMeasure it is only accepted to use Value_Based violation measure.
    */
   public SoftGCC(
-      IntVar[] xVars,
+      IntVar[] xvars,
       IntVar[] hardCounters,
       int[] countedValue,
       IntVar[] softCounters,
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
-    this.xVars = new IntVar[xVars.length];
-    System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+    this.xvars = new IntVar[xvars.length];
+    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
 
     this.softCounters = new IntVar[softCounters.length];
     System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
@@ -204,7 +204,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   /**
    * It specifies soft-GCC constraint.
    *
-   * @param xVars variables over which counting takes place.
+   * @param xvars variables over which counting takes place.
    * @param hardCounters idNumber variables for different values being counted. (hard)
    * @param softLowerBound it specifies constraint what is the minimal number of occurrences. (soft)
    * @param softUpperBound it specifies constraint what is the maximal number of occurrences. (soft)
@@ -212,7 +212,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param violationMeasure it is only accepted to use Value_Based violation measure.
    */
   public SoftGCC(
-      IntVar[] xVars,
+      IntVar[] xvars,
       IntVar[] hardCounters,
       int[] softLowerBound,
       int[] softUpperBound,
@@ -220,7 +220,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       ViolationMeasure violationMeasure) {
 
     IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xVars) {
+    for (IntVar xVar : xvars) {
       sum.unionAdapt(xVar.domain);
     }
 
@@ -230,8 +230,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       countedValue[i++] = enumer.nextElement();
     }
 
-    this.xVars = new IntVar[xVars.length];
-    System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+    this.xvars = new IntVar[xvars.length];
+    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
 
     this.hardCounters = new IntVar[hardCounters.length];
     System.arraycopy(hardCounters, 0, this.hardCounters, 0, hardCounters.length);
@@ -249,7 +249,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   /**
    * It specifies soft-GCC constraint.
    *
-   * @param xVars variables over which counting takes place.
+   * @param xvars variables over which counting takes place.
    * @param hardLowerBound it specifies constraint what is the minimal number of occurrences. (hard)
    * @param hardUpperBound it specifies constraint what is the maximal number of occurrences. (hard)
    * @param softCounters idNumber variables for different values being counted. (soft)
@@ -257,7 +257,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
    * @param violationMeasure it is only accepted to use Value_Based violation measure.
    */
   public SoftGCC(
-      IntVar[] xVars,
+      IntVar[] xvars,
       int[] hardLowerBound,
       int[] hardUpperBound,
       IntVar[] softCounters,
@@ -265,7 +265,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       ViolationMeasure violationMeasure) {
 
     IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xVars) {
+    for (IntVar xVar : xvars) {
       sum.unionAdapt(xVar.domain);
     }
 
@@ -275,8 +275,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       countedValue[i++] = enumer.nextElement();
     }
 
-    this.xVars = new IntVar[xVars.length];
-    System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+    this.xvars = new IntVar[xvars.length];
+    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
 
     this.softCounters = new IntVar[softCounters.length];
     System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
@@ -294,21 +294,21 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
   /**
    * It specifies soft-GCC constraint.
    *
-   * @param xVars variables over which counting takes place.
+   * @param xvars variables over which counting takes place.
    * @param hardCounters idNumber variables for different values being counted. (hard)
    * @param softCounters idNumber variables that may be violated.
    * @param costVar a cost variable specifying the cost of violations.
    * @param violationMeasure it is only accepted to use Value_Based violation measure.
    */
   public SoftGCC(
-      IntVar[] xVars,
+      IntVar[] xvars,
       IntVar[] hardCounters,
       IntVar[] softCounters,
       IntVar costVar,
       ViolationMeasure violationMeasure) {
 
     IntDomain sum = new IntervalDomain();
-    for (IntVar xVar : xVars) {
+    for (IntVar xVar : xvars) {
       sum.unionAdapt(xVar.domain);
     }
 
@@ -318,8 +318,8 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
       countedValue[i++] = enumer.nextElement();
     }
 
-    this.xVars = new IntVar[xVars.length];
-    System.arraycopy(xVars, 0, this.xVars, 0, xVars.length);
+    this.xvars = new IntVar[xvars.length];
+    System.arraycopy(xvars, 0, this.xvars, 0, xvars.length);
 
     this.softCounters = new IntVar[softCounters.length];
     System.arraycopy(softCounters, 0, this.softCounters, 0, softCounters.length);
@@ -345,15 +345,15 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
           if (hardCounters != null && softLowerBound != null) {
 
-            decomposition.add(new Count(xVars, hardCounters[i], countedValue[i]));
+            decomposition.add(new Count(xvars, hardCounters[i], countedValue[i]));
 
-            assert (softLowerBound[i] >= 0 && softLowerBound[i] <= xVars.length)
+            assert (softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length)
                 : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-            assert (softUpperBound[i] >= 0 && softUpperBound[i] <= xVars.length)
+            assert (softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length)
                 : "UpperBound for " + i + "-th element must be between 0 and number of variables";
 
-            int[][] table = new int[xVars.length + 1][2];
-            for (int j = 0; j <= xVars.length; j++) {
+            int[][] table = new int[xvars.length + 1][2];
+            for (int j = 0; j <= xvars.length; j++) {
               table[j][0] = j;
               table[j][1] = 0;
               if (j < softLowerBound[i]) {
@@ -364,7 +364,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
               }
             }
 
-            IntVar v = new IntVar(store, 0, xVars.length);
+            IntVar v = new IntVar(store, 0, xvars.length);
             costs.add(v);
 
             IntVar[] list = {hardCounters[i], v};
@@ -383,7 +383,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
               hardCounter = hardCounters[i];
             }
 
-            decomposition.add(new Count(xVars, hardCounter, countedValue[i]));
+            decomposition.add(new Count(xvars, hardCounter, countedValue[i]));
 
             List<int[]> tuples = new ArrayList<>();
 
@@ -409,7 +409,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
               }
             }
 
-            IntVar v = new IntVar(store, 0, xVars.length);
+            IntVar v = new IntVar(store, 0, xvars.length);
             costs.add(v);
 
             IntVar[] list = {hardCounter, softCounters[i], v};
@@ -438,15 +438,15 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
           if (hardCounters != null && softLowerBound != null) {
 
-            result.add(new Count(xVars, hardCounters[i], countedValue[i]));
+            result.add(new Count(xvars, hardCounters[i], countedValue[i]));
 
-            assert (softLowerBound[i] >= 0 && softLowerBound[i] <= xVars.length)
+            assert (softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length)
                 : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-            assert (softUpperBound[i] >= 0 && softUpperBound[i] <= xVars.length)
+            assert (softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length)
                 : "UpperBound for " + i + "-th element must be between 0 and number of variables";
 
-            int[][] table = new int[xVars.length + 1][2];
-            for (int j = 0; j <= xVars.length; j++) {
+            int[][] table = new int[xvars.length + 1][2];
+            for (int j = 0; j <= xvars.length; j++) {
               table[j][0] = j;
               table[j][1] = 0;
               if (j < softLowerBound[i]) {
@@ -457,7 +457,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
               }
             }
 
-            IntVar v = new IntVar(store, 0, xVars.length);
+            IntVar v = new IntVar(store, 0, xvars.length);
             costs.add(v);
 
             IntVar[] list = {hardCounters[i], v};
@@ -476,7 +476,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
               hardCounter = hardCounters[i];
             }
 
-            result.add(new Count(xVars, hardCounter, countedValue[i]));
+            result.add(new Count(xvars, hardCounter, countedValue[i]));
 
             List<int[]> tuples = new ArrayList<>();
 
@@ -502,7 +502,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
               }
             }
 
-            IntVar v = new IntVar(store, 0, xVars.length);
+            IntVar v = new IntVar(store, 0, xvars.length);
             costs.add(v);
 
             IntVar[] list = {hardCounter, softCounters[i], v};
@@ -569,9 +569,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
     result.append(" : SoftGCC([");
 
-    for (int i = 0; i < xVars.length; i++) {
-      result.append(xVars[i]);
-      if (i < xVars.length - 1) {
+    for (int i = 0; i < xvars.length; i++) {
+      result.append(xvars[i]);
+      if (i < xvars.length - 1) {
         result.append(", ");
       }
     }
@@ -632,7 +632,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
       if (vm == ViolationMeasure.VALUE_BASED) {
 
-        int n = xVars.length;
+        int n = xvars.length;
         int m = doms.length;
 
         Node[] xNodes = new Node[n];
@@ -640,7 +640,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         Node[] countNodes = new Node[m];
 
         for (int i = 0; i < n; i++) {
-          xNodes[i] = addNode(xVars[i].id, 1);
+          xNodes[i] = addNode(xvars[i].id, 1);
         }
 
         for (int i = 0; i < m; i++) {
@@ -659,7 +659,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
         for (int i = 0; i < n; i++) {
 
           // Arcs between x and d nodes.
-          IntVar var = xVars[i];
+          IntVar var = xvars[i];
 
           List<Arc> arcs = new ArrayList<>();
           List<Domain> domains = new ArrayList<>();

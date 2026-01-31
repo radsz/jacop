@@ -56,8 +56,8 @@ class DisjointConditionalProfile extends ProfileConditional {
       Rectangle r,
       int begin,
       int end,
-      List<RectangleWithCondition> Rs,
-      ExclusiveList ExList) {
+      List<RectangleWithCondition> rs,
+      ExclusiveList exList) {
 
     clear();
     MaxProfile = 0;
@@ -66,27 +66,31 @@ class DisjointConditionalProfile extends ProfileConditional {
     int rOriginMin = rOrigin_i_Dom.min();
     int rOriginMax = rOrigin_i_Dom.max();
     int rLengthMax = rLength_i_Dom.max();
-    IntRectangle R = new IntRectangle(r.dim);
+    IntRectangle rect = new IntRectangle(r.dim);
 
-    for (RectangleWithCondition t : Rs) {
+    for (RectangleWithCondition t : rs) {
 
       IntDomain tOrigin_i_Dom = t.origin[i].dom();
       if (t != r
           && tOrigin_i_Dom.min() >= rOriginMin
           && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
-        R.dim = 0;
-        if (t.minUse(i, R)) {
+        rect.dim = 0;
+        if (t.minUse(i, rect)) {
           if (trace) {
             log.debug(
                 "Update profile [{}..{})={}",
-                R.origin[j],
-                R.origin[j] + R.length[j],
+                rect.origin[j],
+                rect.origin[j] + rect.length[j],
                 t.length(i).min());
           }
 
-          ExclusiveList tExclusive = ExList.listFor(t.index);
+          ExclusiveList tExclusive = exList.listFor(t.index);
           addToProfile(
-              t.index, R.origin[j], R.origin[j] + R.length[j], t.length[i].min(), tExclusive);
+              t.index,
+              rect.origin[j],
+              rect.origin[j] + rect.length[j],
+              t.length[i].min(),
+              tExclusive);
         }
       }
     }

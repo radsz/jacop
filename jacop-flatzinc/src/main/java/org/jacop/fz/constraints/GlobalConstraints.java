@@ -1550,7 +1550,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
     Constraint binPack =
-        Binpacking.builder().bin(bin).load(cc).w(w).minBin(min_bin).LBpruning(true).build();
+        Binpacking.builder().bin(bin).load(cc).w(w).minBin(min_bin).lbPruning(true).build();
     support.delayedConstraints.add(binPack);
   }
 
@@ -1566,7 +1566,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     Constraint binPack =
-        Binpacking.builder().bin(bin).load(load).w(w).minBin(min_bin).LBpruning(true).build();
+        Binpacking.builder().bin(bin).load(load).w(w).minBin(min_bin).lbPruning(true).build();
     support.delayedConstraints.add(binPack);
   }
 

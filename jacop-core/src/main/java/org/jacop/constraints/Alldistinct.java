@@ -1721,18 +1721,18 @@ public class Alldistinct extends Constraint
   }
 
   int estimatePruningRecursive(
-      IntVar xVar, Integer v, List<IntVar> exploredX, List<Integer> exploredV) {
+      IntVar xvar, Integer v, List<IntVar> exploredX, List<Integer> exploredV) {
 
-    if (exploredX.contains(xVar)) {
+    if (exploredX.contains(xvar)) {
       return 0;
     }
 
-    exploredX.add(xVar);
+    exploredX.add(xvar);
     exploredV.add(v);
 
     int pruning;
 
-    IntDomain xDom = xVar.dom();
+    IntDomain xDom = xvar.dom();
     pruning = xDom.getSize() - 1;
 
     TimeStamp<Integer> stamp;

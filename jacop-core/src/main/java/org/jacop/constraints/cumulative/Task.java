@@ -65,7 +65,7 @@ class Task {
     return start;
   }
 
-  long e() {
+  long energy() {
     return (long) dur.min() * (long) res.min();
   }
 

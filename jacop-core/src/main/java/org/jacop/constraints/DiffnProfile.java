@@ -50,7 +50,7 @@ class DiffnProfile extends Profile {
 
   DiffnProfile() {}
 
-  void make(int i, int j, Rectangle r, int begin, int end, List<Rectangle> Rs) {
+  void make(int i, int j, Rectangle r, int begin, int end, List<Rectangle> rs) {
 
     clear();
     maxProfileItemHeight = 0;
@@ -61,7 +61,7 @@ class DiffnProfile extends Profile {
     int rLengthMax = rLength_i_Dom.max();
     IntRectangle iR = new IntRectangle(r.dim);
 
-    for (Rectangle t : Rs) {
+    for (Rectangle t : rs) {
       IntDomain tOrigin_i_Dom = t.origin[i].dom();
       if (t != r
           && tOrigin_i_Dom.min() >= rOriginMin

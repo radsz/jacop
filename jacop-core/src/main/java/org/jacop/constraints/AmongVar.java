@@ -251,7 +251,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
    *
    * @param store a constraint store in which context all prunings are executed.
    */
-  public void consistencyWhen_LB0_EQ_UB0(Store store) {
+  public void consistencyWhenLb0EqUb0(Store store) {
 
     IntDomain futureDom = (IntDomain) ((MutableDomainValue) futureLbS.value()).domain;
     IntVar y;
@@ -1066,7 +1066,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       if (xGrounded.value() == listOfX.length) {
         consistencyForY(store);
       } else if (lb0 == ub0) {
-        consistencyWhen_LB0_EQ_UB0(store);
+        consistencyWhenLb0EqUb0(store);
       }
 
       if (satisfied()) {

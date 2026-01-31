@@ -46,13 +46,13 @@ class IntRectangle {
   final int[] origin;
   @Setter int dim;
 
-  public IntRectangle(List<Integer> R) {
-    dim = R.size() / 2;
+  public IntRectangle(List<Integer> r) {
+    dim = r.size() / 2;
     origin = new int[dim];
     length = new int[dim];
     for (int i = 0; i < dim; i++) {
-      origin[i] = R.get(i);
-      length[i] = R.get(i + dim);
+      origin[i] = r.get(i);
+      length[i] = r.get(i + dim);
     }
   }
 
@@ -61,13 +61,13 @@ class IntRectangle {
     length = new int[size];
   }
 
-  public IntRectangle(int[] R) {
-    dim = R.length / 2;
+  public IntRectangle(int[] r) {
+    dim = r.length / 2;
     origin = new int[dim];
     length = new int[dim];
     for (int i = 0; i < dim; i++) {
-      origin[i] = R[i];
-      length[i] = R[i + dim];
+      origin[i] = r[i];
+      length[i] = r[i + dim];
     }
   }
 
@@ -81,7 +81,7 @@ class IntRectangle {
     return dim;
   }
 
-  public boolean domOverlap(Rectangle R) {
+  public boolean domOverlap(Rectangle rect) {
     boolean overlap = true;
     int min1;
     int max1;
@@ -91,9 +91,9 @@ class IntRectangle {
     while (overlap && i < dim) {
       min1 = origin[i];
       max1 = origin[i] + length[i];
-      IntDomain RoriginIDom = R.origin[i].dom();
-      min2 = RoriginIDom.min();
-      max2 = RoriginIDom.max() + R.length[i].max();
+      IntDomain rectOriginIDom = rect.origin[i].dom();
+      min2 = rectOriginIDom.min();
+      max2 = rectOriginIDom.max() + rect.length[i].max();
       overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }
@@ -112,7 +112,7 @@ class IntRectangle {
     return origin[i];
   }
 
-  public boolean overlap(IntRectangle R) {
+  public boolean overlap(IntRectangle rect) {
     boolean overlap = true;
     int min1;
     int max1;
@@ -122,8 +122,8 @@ class IntRectangle {
     while (overlap && i < dim) {
       min1 = origin[i];
       max1 = min1 + length[i];
-      min2 = R.origin[i];
-      max2 = min2 + R.length[i];
+      min2 = rect.origin[i];
+      max2 = min2 + rect.length[i];
       overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }

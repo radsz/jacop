@@ -452,8 +452,8 @@ public class SGMPCSearch {
     this.e = e;
   }
 
-  public void setInitialSolutionsSize(int eInit) {
-    this.eInit = eInit;
+  public void setInitialSolutionsSize(int einit) {
+    this.eInit = einit;
   }
 
   public void setFailStrategy(int strategy) {

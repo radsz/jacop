@@ -92,18 +92,18 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
    * It constructs an Among constraint.
    *
    * @param list variables which are compared to Kset
-   * @param kSet set of integer values against which we check if variables are equal to.
+   * @param kset set of integer values against which we check if variables are equal to.
    * @param n number of possible variables equal to a value from Kset.
    */
-  public Among(IntVar[] list, IntervalDomain kSet, IntVar n) {
+  public Among(IntVar[] list, IntervalDomain kset, IntVar n) {
 
-    checkInputForNullness(new String[] {"list", "kSet", "n"}, new Object[][] {list, {kSet}, {n}});
+    checkInputForNullness(new String[] {"list", "kset", "n"}, new Object[][] {list, {kset}, {n}});
     checkInputForDuplication("list", list);
 
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
-    this.kSet = kSet.clone();
+    this.kSet = kset.clone();
     this.n = n;
 
     setScope(Stream.concat(Arrays.stream(list), Stream.of(n)));
@@ -113,11 +113,11 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
    * It constructs an Among constraint.
    *
    * @param list variables which are compared to Kset
-   * @param kSet set of integer values against which we check if variables are equal to.
+   * @param kset set of integer values against which we check if variables are equal to.
    * @param n number of possible variables equal to a value from Kset.
    */
-  public Among(List<? extends IntVar> list, IntervalDomain kSet, IntVar n) {
-    this(list.toArray(new IntVar[0]), kSet, n);
+  public Among(List<? extends IntVar> list, IntervalDomain kset, IntVar n) {
+    this(list.toArray(new IntVar[0]), kset, n);
   }
 
   @Override

@@ -90,7 +90,7 @@ public class Pruning extends Network {
     // checkCount();
   }
 
-  private void xVarInMax(ArcCompanion companion, int maxFlow) {
+  private void xvarInMax(ArcCompanion companion, int maxFlow) {
 
     IntVar xVar = companion.xVar;
     int sizeBefore;
@@ -111,7 +111,7 @@ public class Pruning extends Network {
     }
   }
 
-  private void xVarInMin(ArcCompanion companion, int minFlow) {
+  private void xvarInMin(ArcCompanion companion, int minFlow) {
 
     IntVar xVar = companion.xVar;
     int sizeBefore;
@@ -132,7 +132,7 @@ public class Pruning extends Network {
     }
   }
 
-  private void nVarIn(ArcCompanion companion, int minFlow, int maxFlow) {
+  private void nvarIn(ArcCompanion companion, int minFlow, int maxFlow) {
     IntVar nVar = companion.xVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
@@ -152,7 +152,7 @@ public class Pruning extends Network {
     }
   }
 
-  private void nVarInShift(ArcCompanion companion, IntDomain domain, int shift) {
+  private void nvarInShift(ArcCompanion companion, IntDomain domain, int shift) {
     IntVar nVar = companion.xVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
@@ -172,7 +172,7 @@ public class Pruning extends Network {
     }
   }
 
-  private void wVarIn(ArcCompanion companion, int maxCost) {
+  private void wvarIn(ArcCompanion companion, int maxCost) {
     IntVar wVar = companion.wVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
@@ -193,7 +193,7 @@ public class Pruning extends Network {
     }
   }
 
-  private void sVarInDom(ArcCompanion companion, Domain domain) {
+  private void svarInDom(ArcCompanion companion, Domain domain) {
     IntVar sVar = companion.structure.variable;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
@@ -229,7 +229,7 @@ public class Pruning extends Network {
           } else {
             assert (arc.sister.capacity == node.balance) : "\n" + node + "\n" + arc;
           }
-          nVarIn(companion, flow, flow);
+          nvarIn(companion, flow, flow);
         }
       } else if (node.degree == 2) {
 
@@ -263,8 +263,8 @@ public class Pruning extends Network {
           IntVar xVar1 = companion1.xVar;
           IntVar xVar2 = companion2.xVar;
           if (differentDir) {
-            nVarInShift(companion1, xVar2.domain, -shift);
-            nVarInShift(companion2, xVar1.domain, shift);
+            nvarInShift(companion1, xVar2.domain, -shift);
+            nvarInShift(companion2, xVar1.domain, shift);
           } else {
             // TODO: Double test this code.
 
@@ -275,7 +275,7 @@ public class Pruning extends Network {
                   new Interval(-shift - xDom.rightElement(i), -shift - xDom.leftElement(i)));
             }
 
-            nVarInShift(companion2, yDomIn, 0);
+            nvarInShift(companion2, yDomIn, 0);
 
             IntDomain yDom = xVar2.domain;
             IntervalDomain xDomIn = new IntervalDomain(yDom.noIntervals() + 1);
@@ -284,7 +284,7 @@ public class Pruning extends Network {
                   new Interval(-shift - yDom.rightElement(i), -shift - yDom.leftElement(i)));
             }
 
-            nVarInShift(companion1, xDomIn, 0);
+            nvarInShift(companion1, xDomIn, 0);
           }
         }
       }
@@ -328,7 +328,7 @@ public class Pruning extends Network {
 
       if (companion.wVar != null && companion.flowOffset > 0) {
         int maxCost = companion.wVar.min() + (costLimit / companion.flowOffset);
-        wVarIn(companion, maxCost);
+        wvarIn(companion, maxCost);
       }
 
       prev = companion;
@@ -482,7 +482,7 @@ public class Pruning extends Network {
       if (companion.xVar != null) {
         int maxFlow = companion.flowOffset + residual;
 
-        xVarInMax(companion, maxFlow);
+        xvarInMax(companion, maxFlow);
         companion.changeMaxCapacity(maxFlow);
         modified(companion);
       }
@@ -492,7 +492,7 @@ public class Pruning extends Network {
 
         if (structure.behavior != Behavior.PRUNE_INACTIVE) {
           Domain arcDomainC = structure.domains[arcID].complement();
-          sVarInDom(companion, arcDomainC);
+          svarInDom(companion, arcDomainC);
         }
       }
     } else {
@@ -500,7 +500,7 @@ public class Pruning extends Network {
       if (companion.xVar != null) {
         int minFlow = companion.flowOffset + capacity;
 
-        xVarInMin(companion, minFlow);
+        xvarInMin(companion, minFlow);
         companion.changeMinCapacity(minFlow);
         modified(companion);
       }
@@ -510,7 +510,7 @@ public class Pruning extends Network {
 
         if (structure.behavior != Behavior.PRUNE_ACTIVE) {
           Domain arcDomain = structure.domains[arcID];
-          sVarInDom(companion, arcDomain);
+          svarInDom(companion, arcDomain);
         }
       }
     }

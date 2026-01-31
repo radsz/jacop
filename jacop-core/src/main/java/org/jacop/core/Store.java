@@ -1020,9 +1020,9 @@ public class Store {
    * level. Before backtracking to earlier level all levels after earlier level must be removed. The
    * removal order must be reversed to the creation order.
    *
-   * @param rLevel Store level to be removed.
+   * @param level Store level to be removed.
    */
-  public void removeLevel(int rLevel) {
+  public void removeLevel(int level) {
 
     // Remove level is called so we clear flag isLastConsistencyFailure.
     isLastConsistencyFailure = false;
@@ -1035,12 +1035,12 @@ public class Store {
     // mutables variables, just before they get deleted.
 
     for (Stateful statefulConstraint : removeLevelListeners) {
-      statefulConstraint.removeLevel(rLevel);
+      statefulConstraint.removeLevel(level);
     }
 
     // It needs to be before as there is a timestamp for number of boolean variables.
     for (Stateful var : timeStamps) {
-      var.removeLevel(rLevel);
+      var.removeLevel(level);
     }
 
     // Boolean Variables.
@@ -1049,7 +1049,7 @@ public class Store {
 
       int previousPosition = pointer4GroundedBooleanVariables.value();
 
-      pointer4GroundedBooleanVariables.removeLevel(rLevel);
+      pointer4GroundedBooleanVariables.removeLevel(level);
 
       int currentPosition = pointer4GroundedBooleanVariables.value();
 
@@ -1062,23 +1062,23 @@ public class Store {
         // variable becomes grounded on the same
         // level. Without this condition a null point
         // exception will occur.
-        if (dom.stamp == rLevel) {
+        if (dom.stamp == level) {
 
           changeHistory4BooleanVariables[i].domain.removeLevel(
-              rLevel, changeHistory4BooleanVariables[i]);
+              level, changeHistory4BooleanVariables[i]);
         }
       }
     }
 
     // TODO: added functionality.
-    trailManager.removeLevel(rLevel);
+    trailManager.removeLevel(level);
 
     for (int i = mutableVariables.size() - 1; i >= 0; i--) {
-      mutableVariables.get(i).removeLevel(rLevel);
+      mutableVariables.get(i).removeLevel(level);
     }
 
     for (RemoveLevelLate c : removeLevelLateListeners) {
-      c.removeLevelLate(rLevel);
+      c.removeLevelLate(level);
     }
 
     assert checkInvariants() == null : checkInvariants();

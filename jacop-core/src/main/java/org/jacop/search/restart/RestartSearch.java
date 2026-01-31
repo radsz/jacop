@@ -239,14 +239,14 @@ public class RestartSearch<T extends Var> {
     return numberRestarts;
   }
 
-  public void setTimeOut(long tOut) {
+  public void setTimeOut(long timeout) {
     timeOutCheck = true;
-    timeOut = System.currentTimeMillis() + tOut * 1000;
+    timeOut = System.currentTimeMillis() + timeout * 1000;
   }
 
-  public void setTimeOutMilliseconds(long tOut) {
+  public void setTimeOutMilliseconds(long timeout) {
     timeOutCheck = true;
-    timeOut = System.currentTimeMillis() + tOut;
+    timeOut = System.currentTimeMillis() + timeout;
   }
 
   @SuppressWarnings("unchecked")
