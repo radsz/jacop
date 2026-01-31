@@ -34,16 +34,15 @@ import java.util.ArrayList;
 import java.util.Random;
 import org.jacop.constraints.Constraint;
 
-/*
+/**
  * Defines an integer domain and related operations on it.
- * <p>
- * IntDomain implementations can not assume that arguments to
- * any function can not be empty domains.
+ *
+ * <p>IntDomain implementations can not assume that arguments to any function can not be empty
+ * domains.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public abstract class IntDomain extends Domain {
 
   // FIXME, implement as much as possible in general (inefficient) manner, but

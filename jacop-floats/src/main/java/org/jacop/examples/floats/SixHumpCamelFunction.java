@@ -44,6 +44,7 @@ import org.jacop.floats.search.Optimize;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
+/** Example for six-hump camel function using float constraints. */
 public class SixHumpCamelFunction {
 
   final double MIN_FLOAT = -1e+20;
@@ -58,10 +59,10 @@ public class SixHumpCamelFunction {
 
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
-    example.six_hump_camel_function();
+    example.sixHumpCamelFunction();
   }
 
-  void six_hump_camel_function() {
+  void sixHumpCamelFunction() {
 
     long T1;
     T1 = System.currentTimeMillis();

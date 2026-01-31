@@ -43,14 +43,13 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
-/*
- * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable
- * is equal to zero. It restricts the domain of all x as well as result to be between 0 and 1.
+/**
+ * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable is equal
+ * to zero. It restricts the domain of all x as well as result to be between 0 and 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AndBoolVector extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

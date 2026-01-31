@@ -22,12 +22,9 @@
  * <p>You should have received a copy of the GNU Affero General Public License along with this
  * program. If not, see http://www.gnu.org/licenses/.
  *
- * <p>
- *
- * <p>
- *
  * <p>A simple model to solve Sudoku problem.
  */
+
 package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;

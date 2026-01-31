@@ -170,6 +170,7 @@ public class CPvizNetworkFlow {
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
+  /** Listener for network flow solutions. */
   public class NetListener<T extends Var> extends SimpleSolutionListener<T> {
 
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {

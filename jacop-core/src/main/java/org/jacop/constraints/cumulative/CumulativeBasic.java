@@ -43,14 +43,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
-/*
- * CumulativeBasic implements the cumulative constraint using time tabling
- * algorithm.
+/**
+ * CumulativeBasic implements the cumulative constraint using time tabling algorithm.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 @Slf4j
 public class CumulativeBasic extends Constraint {
 

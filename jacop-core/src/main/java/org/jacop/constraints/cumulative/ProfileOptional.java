@@ -42,14 +42,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
-/*
- * ProfileOptional implements the cumulative profile and propagation
- * for optional tasks.
+/**
+ * ProfileOptional implements the cumulative profile and propagation for optional tasks.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 @Slf4j
 public class ProfileOptional {
 

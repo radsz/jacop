@@ -36,13 +36,12 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
+/**
  * Constraints X #\= C
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XneqC extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

@@ -73,7 +73,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
     if (support.options.useSat()) {
-      sat.generate_and(a1, v);
+      sat.generateAnd(a1, v);
     } else if (allVarOne(a1)) {
       v.domain.inValue(store.level, v, 1);
     } else if (atLeastOneVarZero(a1)) {
@@ -107,7 +107,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar v3 = support.getVariable(p3);
 
     if (support.options.useSat()) {
-      sat.generate_and(new IntVar[] {v1, v2}, v3);
+      sat.generateAnd(new IntVar[] {v1, v2}, v3);
     } else {
       support.pose(new AndBoolSimple(v1, v2, v3));
     }
@@ -131,7 +131,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar v = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
 
     if (support.options.useSat()) {
-      sat.generate_or(a1, v);
+      sat.generateOr(a1, v);
     } else {
       if (v.singleton(1)) {
         if (a1.length == 2) {
@@ -174,7 +174,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar[] a1 = support.getVarArray(p1);
 
     if (support.options.useSat()) {
-      sat.generate_xor(a1, support.dictionary.getConstant(1));
+      sat.generateXor(a1, support.dictionary.getConstant(1));
     } else {
       support.pose(new XorBool(a1, support.dictionary.getConstant(1)));
     }
@@ -198,7 +198,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar v2 = support.getVariable(p2);
 
     if (support.options.useSat()) {
-      sat.generate_not(v1, v2);
+      sat.generateNot(v1, v2);
     } else {
       support.pose(new XneqY(v1, v2));
     }
@@ -211,7 +211,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar v3 = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     if (support.options.useSat()) {
-      sat.generate_or(new IntVar[] {v1, v2}, v3);
+      sat.generateOr(new IntVar[] {v1, v2}, v3);
     } else {
       support.poseDC(new OrBool(new IntVar[] {v1, v2}, v3));
     }
@@ -228,7 +228,7 @@ class BoolConstraints implements ParserTreeConstants {
     IntVar v3 = support.getVariable(p3);
 
     if (support.options.useSat()) {
-      sat.generate_neq_reif(v1, v2, v3);
+      sat.generateNeqReif(v1, v2, v3);
     } else if (v1.max() == 0) {
       support.pose(new XeqY(v2, v3));
     } else if (v2.max() == 0) {
@@ -299,9 +299,9 @@ class BoolConstraints implements ParserTreeConstants {
     if (support.options.useSat() && !implied) {
       if (reified) { // reified
         IntVar r = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-        sat.generate_clause_reif(a1, a2, r);
+        sat.generateClauseReif(a1, a2, r);
       } else {
-        sat.generate_clause(a1, a2);
+        sat.generateClause(a1, a2);
       }
     } else { // not SAT generation, use CP constraints
       ArrayList<IntVar> a1reduced = new ArrayList<>();

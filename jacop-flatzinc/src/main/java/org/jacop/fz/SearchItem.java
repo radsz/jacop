@@ -1115,6 +1115,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     return s.toString();
   }
 
+  /** Pair of comparator variables for tie-breaking. */
   public static class ComparatorsVar<T extends Var> {
     final ComparatorVariable<T> v1;
     final ComparatorVariable<T> v2;

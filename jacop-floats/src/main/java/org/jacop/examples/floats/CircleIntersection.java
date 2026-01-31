@@ -41,6 +41,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
+/** Example for circle intersection using float constraints. */
 public class CircleIntersection {
 
   final double MIN_FLOAT = -1e+150;
@@ -55,15 +56,15 @@ public class CircleIntersection {
 
     CircleIntersection example = new CircleIntersection();
 
-    example.circle_intersection();
+    example.circleIntersection();
   }
 
-  void circle_intersection() {
+  void circleIntersection() {
 
     long T1;
     T1 = System.currentTimeMillis();
 
-    IO.println("========= circle_intersection =========");
+    IO.println("========= circleIntersection =========");
 
     Store store = new Store();
 

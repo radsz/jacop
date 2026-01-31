@@ -41,15 +41,13 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
-/*
- * CountValues constraint implements the counting over numbers of occurrences of a given
- * vector of values in a list of variables. The number of occurrences is specified by
- * variable counter.
+/**
+ * CountValues constraint implements the counting over numbers of occurrences of a given vector of
+ * values in a list of variables. The number of occurrences is specified by variable counter.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class CountValues extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

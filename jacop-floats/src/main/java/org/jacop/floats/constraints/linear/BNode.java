@@ -33,6 +33,7 @@ package org.jacop.floats.constraints.linear;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
+/** Binary node for linear constraint tree. */
 public class BNode extends BinaryNode {
 
   // bounds for this node

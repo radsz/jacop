@@ -40,18 +40,16 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
- * SumBool constraint implements the summation over several
- * 0/1 variables.
- * <p>
- * sum(i in 1..N)(xi) = sum
- * <p>
- * It provides the sum from all variables on the list.
+/**
+ * SumBool constraint implements the summation over several 0/1 variables.
+ *
+ * <p>sum(i in 1..N)(xi) = sum
+ *
+ * <p>It provides the sum from all variables on the list.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 @Slf4j
 public class SumBool extends PrimitiveConstraint {
 

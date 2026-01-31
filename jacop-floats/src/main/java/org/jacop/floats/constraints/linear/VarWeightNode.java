@@ -35,6 +35,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
+/** Variable node with weight for linear constraint tree. */
 public class VarWeightNode extends VariableNode {
 
   final double weight;

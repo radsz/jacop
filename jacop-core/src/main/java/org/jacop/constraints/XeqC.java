@@ -36,15 +36,14 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
+/**
  * Constraints X #= C
- * <p>
- * Domain consistency is used.
+ *
+ * <p>Domain consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XeqC extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

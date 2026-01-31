@@ -36,14 +36,13 @@ import java.util.stream.Stream;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
- * CumulativeUnaryOptional implements the scheduling constraint for
- * unary resources for optional tasks.
+/**
+ * CumulativeUnaryOptional implements the scheduling constraint for unary resources for optional
+ * tasks.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class CumulativeUnaryOptional extends CumulativeUnary {
 
   final IntVar[] opt;

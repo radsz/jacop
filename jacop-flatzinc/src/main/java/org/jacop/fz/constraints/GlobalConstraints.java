@@ -1765,7 +1765,7 @@ class GlobalConstraints implements ParserTreeConstants {
           && x[1].min() >= 0
           && x[1].max() <= 1
           && y.singleton(1)) {
-        support.sat.generate_if_then_else_bool(b[0], x[0], x[1]);
+        support.sat.generateIfThenElseBool(b[0], x[0], x[1]);
       } else if (b[0].singleton(1)) {
         support.pose(new XeqY(x[0], y));
       } else if (b[0].singleton(0) && b[1].singleton(1)) {
@@ -1809,7 +1809,7 @@ class GlobalConstraints implements ParserTreeConstants {
           && x[1].min() >= 0
           && x[1].max() <= 1
           && y.singleton(1)) {
-        support.sat.generate_if_then_else_bool(b[0], x[0], x[1]);
+        support.sat.generateIfThenElseBool(b[0], x[0], x[1]);
         return;
       } else if (b[0].singleton(1)) {
         support.pose(new XeqY(x[0], y));

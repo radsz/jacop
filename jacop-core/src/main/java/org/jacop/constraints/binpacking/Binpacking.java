@@ -313,15 +313,15 @@ public class Binpacking extends Constraint
           Cj[l] = candidates[l].weight();
         }
 
-        // if (no_sum(Cj, load[i].min() - required, load[i].max() - required))
+        // if (noSum(Cj, load[i].min() - required, load[i].max() - required))
         //     throw Store.failException;
 
         // Rule 3.3 "Tighteing Bounds on Bin Load"
-        if (no_sum(Cj, load[i].min() - required, load[i].min() - required)) {
+        if (noSum(Cj, load[i].min() - required, load[i].min() - required)) {
           load[i].domain.inMin(store.level, load[i], required + betaP);
         }
 
-        if (no_sum(Cj, load[i].max() - required, load[i].max() - required)) {
+        if (noSum(Cj, load[i].max() - required, load[i].max() - required)) {
           load[i].domain.inMax(store.level, load[i], required + alphaP);
         }
 
@@ -331,14 +331,13 @@ public class Binpacking extends Constraint
           System.arraycopy(Cj, 0, CjMinusI, 0, j);
           System.arraycopy(Cj, j + 1, CjMinusI, j, Cj.length - j - 1);
 
-          if (no_sum(
-              CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) {
+          if (noSum(CjMinusI, load[i].min() - required - Cj[j], load[i].max() - required - Cj[j])) {
             candidates[j]
                 .bin()
                 .domain
                 .inComplement(store.level, candidates[j].bin(), i + minBinNumber);
           }
-          if (no_sum(CjMinusI, load[i].min() - required, load[i].max() - required)) {
+          if (noSum(CjMinusI, load[i].min() - required, load[i].max() - required)) {
             candidates[j].bin().domain.inValue(store.level, candidates[j].bin(), i + minBinNumber);
           }
         }
@@ -502,7 +501,7 @@ public class Binpacking extends Constraint
     return result.toString();
   }
 
-  private boolean no_sum(int[] x, int alpha, int beta) {
+  private boolean noSum(int[] x, int alpha, int beta) {
 
     if (alpha <= 0 || beta >= sum(x)) {
       return false;

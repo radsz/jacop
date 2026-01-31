@@ -44,13 +44,11 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 
-/*
- * SumWeight constraint implements the weighted summation over several
- * variables. It provides the weighted sum from all variables on the
- * list.  The weights are integers.
- * <p>
- * Use when number of variables is large (for example, greater than
- * 30), otherwise use LinearInt.
+/**
+ * SumWeight constraint implements the weighted summation over several variables. It provides the
+ * weighted sum from all variables on the list. The weights are integers.
+ *
+ * <p>Use when number of variables is large (for example, greater than 30), otherwise use LinearInt.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

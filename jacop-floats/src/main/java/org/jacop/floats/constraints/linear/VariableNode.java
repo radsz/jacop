@@ -33,6 +33,7 @@ package org.jacop.floats.constraints.linear;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
+/** Variable node for linear constraint tree. */
 public abstract class VariableNode extends BinaryNode {
 
   Store store;

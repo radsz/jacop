@@ -33,6 +33,7 @@ package org.jacop.fz;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 
+/** Timer using thread CPU time. */
 public class ThreadTimer implements Timer {
 
   final Thread thread;

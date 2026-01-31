@@ -467,6 +467,7 @@ public class Options {
     return restartLimit;
   }
 
+  /** Restart strategy types for search. */
   public enum RestartType {
     none,
     constant,

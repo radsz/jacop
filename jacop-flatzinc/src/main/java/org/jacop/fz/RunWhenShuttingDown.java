@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+/** Thread that runs when the parser is shutting down. */
 public class RunWhenShuttingDown extends Thread {
 
   final Parser parser;

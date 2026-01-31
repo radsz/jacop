@@ -41,6 +41,7 @@ import org.jacop.floats.search.SmallestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
+/** Example for min-cost flow using float constraints. */
 public class MinCostFlow {
 
   final double MIN_FLOAT = -1e+150;
@@ -55,12 +56,12 @@ public class MinCostFlow {
 
     MinCostFlow example = new MinCostFlow();
 
-    example.min_cost_flow();
+    example.minCostFlow();
   }
 
-  void min_cost_flow() {
+  void minCostFlow() {
 
-    IO.println("========= min_cost_flow =========");
+    IO.println("========= minCostFlow =========");
 
     Store store = new Store();
 

@@ -32,10 +32,10 @@ import java.util.Arrays;
 import java.util.BitSet;
 import lombok.extern.slf4j.Slf4j;
 
-/*
- * The implementation of the algorithm for finding dominators (simple version) in a directed graph based on
- * Lengauer and Tarjan algorithm based on paper "A Fast Algorithm for Finding Dominators in a Flowgraph",
- * ACM Trans. on Programming Languages and Systems, vol. 1, no. 1, July 1979.
+/**
+ * The implementation of the algorithm for finding dominators (simple version) in a directed graph
+ * based on Lengauer and Tarjan algorithm based on paper "A Fast Algorithm for Finding Dominators in
+ * a Flowgraph", ACM Trans. on Programming Languages and Systems, vol. 1, no. 1, July 1979.
  */
 @Slf4j
 public class LengauerTarjan {

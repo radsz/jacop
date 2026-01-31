@@ -34,8 +34,9 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
-/* Implementation of Hopcroft Karp algorithm for maximum matching (complexity O(e*sqrt(v)).
- * This algorithm is based on <https://en.wikipedia.org/wiki/Hopcroft–Karp_algorithm>
+/**
+ * Implementation of Hopcroft Karp algorithm for maximum matching (complexity O(e*sqrt(v)). This
+ * algorithm is based on https://en.wikipedia.org/wiki/Hopcroft–Karp_algorithm
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

@@ -41,6 +41,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
+/** Example for Wilkinson polynomial using float constraints. */
 public class Wilkinson {
 
   final double MIN_FLOAT = -1e+150;

@@ -43,23 +43,19 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
- * LinearInt constraint implements the weighted summation over several
- * variables .
- * <p>
- * sum(i in 1..N)(ai*xi) = b
- * <p>
- * It provides the weighted sum from all variables on the list.
- * The weights are integers.
- * <p>
- * This implementaiton is based on
- * "Bounds Consistency Techniques for Long Linear Constraints"
- * by Warwick Harvey and Joachim Schimpf
+/**
+ * LinearInt constraint implements the weighted summation over several variables .
+ *
+ * <p>sum(i in 1..N)(ai*xi) = b
+ *
+ * <p>It provides the weighted sum from all variables on the list. The weights are integers.
+ *
+ * <p>This implementaiton is based on "Bounds Consistency Techniques for Long Linear Constraints" by
+ * Warwick Harvey and Joachim Schimpf
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 @Slf4j
 public class LinearInt extends PrimitiveConstraint {
 

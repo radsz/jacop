@@ -37,14 +37,14 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
- * It defines Sequence Precedence Chain constraint for integers.  <p>
- * The constraint requires that i precedes i+1 in the array x for all
- * positive i (i > 0).
- * <p> The non-incremental algorithm is based on paper "Sequential
- * Precede Chain for value symmetry elimination " by Graeme Gange and
- * Peter J. Stuckey, Proc. International Conference on Principles and
- * Practice of Constraint Programming * (CP'2018).
+/**
+ * It defines Sequence Precedence Chain constraint for integers.
+ *
+ * <p>The constraint requires that i precedes i+1 in the array x for all positive i (i > 0).
+ *
+ * <p>The non-incremental algorithm is based on paper "Sequential Precede Chain for value symmetry
+ * elimination " by Graeme Gange and Peter J. Stuckey, Proc. International Conference on Principles
+ * and Practice of Constraint Programming * (CP'2018).
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10

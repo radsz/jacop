@@ -38,15 +38,14 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
-/*
+/**
  * Constraint X * Y #= Z
- * <p>
- * Boundary consistency is used.
+ *
+ * <p>Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XmulYeqZ extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

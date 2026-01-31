@@ -58,7 +58,7 @@ public class ExampleBasedTest {
   public void testMinCostFlow() {
     MinCostFlow example = new MinCostFlow();
 
-    example.min_cost_flow();
+    example.minCostFlow();
   }
 
   @Test
@@ -66,7 +66,7 @@ public class ExampleBasedTest {
   public void testCircleIntersection() {
     CircleIntersection example = new CircleIntersection();
 
-    example.circle_intersection();
+    example.circleIntersection();
   }
 
   @Test
@@ -82,7 +82,7 @@ public class ExampleBasedTest {
   public void testSixHumpCamelFunction() {
     SixHumpCamelFunction example = new SixHumpCamelFunction();
 
-    example.six_hump_camel_function();
+    example.sixHumpCamelFunction();
   }
 
   @Test
@@ -90,7 +90,7 @@ public class ExampleBasedTest {
   public void testCurveFitting() {
     CurveFitting example = new CurveFitting();
 
-    example.curve_fitting3();
+    example.curveFitting3();
   }
 
   @Test
@@ -98,7 +98,7 @@ public class ExampleBasedTest {
   public void testTinyTSP() {
     TinyTSP example = new TinyTSP();
 
-    example.tiny_tsp();
+    example.tinyTsp();
   }
 
   @Test
@@ -130,7 +130,7 @@ public class ExampleBasedTest {
   public void testMarkov() {
     Markov example = new Markov();
 
-    example.markov_chains_taha();
+    example.markovChainsTaha();
   }
 
   @Test

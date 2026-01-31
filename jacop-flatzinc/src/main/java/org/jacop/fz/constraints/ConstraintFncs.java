@@ -27,6 +27,7 @@ package org.jacop.fz.constraints;
 
 import org.jacop.fz.SimpleNode;
 
+/** Registry of constraint generation functions for flatzinc. */
 public final class ConstraintFncs {
 
   final BoolConstraints bc;

@@ -40,6 +40,7 @@ import org.jacop.floats.search.Optimize;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
+/** Example for Rosenbrock function using float constraints. */
 public class Rosenbrock {
 
   final double MIN_FLOAT = -1e+150;

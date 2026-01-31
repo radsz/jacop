@@ -37,6 +37,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
+/** Example for Markov chains using float constraints. */
 public class Markov {
 
   /**
@@ -48,15 +49,15 @@ public class Markov {
 
     Markov example = new Markov();
 
-    example.markov_chains_taha();
+    example.markovChainsTaha();
   }
 
-  void markov_chains_taha() {
+  void markovChainsTaha() {
 
     long T1;
     T1 = System.currentTimeMillis();
 
-    IO.println("========= markov_chains_taha =========");
+    IO.println("========= markovChainsTaha =========");
 
     Store store = new Store();
 

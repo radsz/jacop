@@ -173,6 +173,7 @@ public class Optimize<T extends Var> {
     return lastVarValues;
   }
 
+  /** Listener that captures the result of optimization search. */
   public class ResultListener extends SimpleSolutionListener<T> {
 
     final Var[] var;

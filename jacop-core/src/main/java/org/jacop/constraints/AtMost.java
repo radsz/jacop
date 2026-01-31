@@ -38,15 +38,13 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
-/*
- * AtMost constraint implements the counting over number of occurrences of
- * a given value in a list of variables. The number of occurrences is
- * specified by variable value.
+/**
+ * AtMost constraint implements the counting over number of occurrences of a given value in a list
+ * of variables. The number of occurrences is specified by variable value.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class AtMost extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

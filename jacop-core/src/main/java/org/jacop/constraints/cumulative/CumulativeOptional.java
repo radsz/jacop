@@ -36,14 +36,14 @@ import java.util.stream.Stream;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
+/**
  * CumulativeOptional implements the scheduling constraint for optional tasks.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
- * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
+ * @see <a
+ *     href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
-
 public class CumulativeOptional extends Cumulative {
 
   final IntVar[] opt;

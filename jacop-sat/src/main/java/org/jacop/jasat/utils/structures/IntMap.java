@@ -31,6 +31,7 @@
 
 package org.jacop.jasat.utils.structures;
 
+/** Map from int keys to values. */
 public final class IntMap<E> {
 
   // the inner trie

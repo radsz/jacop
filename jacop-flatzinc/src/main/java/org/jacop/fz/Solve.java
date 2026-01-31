@@ -74,12 +74,11 @@ import org.jacop.search.restart.RestartSearch;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
-/*
- * The parser part responsible for parsing the solve part of the flatzinc file,
- * building a related search and executing it.
- * <p>
- * Current implementation runs also final search on all variables to ensure
- * that they are ground.
+/**
+ * The parser part responsible for parsing the solve part of the flatzinc file, building a related
+ * search and executing it.
+ *
+ * <p>Current implementation runs also final search on all variables to ensure that they are ground.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
@@ -2130,6 +2129,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     startCPU = timer.getCPUTime();
   }
 
+  /** Sets floating point precision for the store. */
   public static class PrecisionSetting implements InitializeListener {
 
     final double precision;
@@ -2154,9 +2154,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  /*
-   * @author Krzysztof Kuchcinski
-   */
+  /** Listener that tracks cost during solve. */
   public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
 
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {

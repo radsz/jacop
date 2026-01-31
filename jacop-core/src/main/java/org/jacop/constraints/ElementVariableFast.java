@@ -42,20 +42,19 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 
-/*
- * ElementVariableFast constraint defines a relation
- * list[index - indexOffset] = value. This version uses bounds consistency.
- * <p>
- * The first element of the list corresponds to index - indexOffset = 1.
- * By default indexOffset is equal 0 so first value within a list corresponds to index equal 1.
- * <p>
- * If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to
- * make addressing of list array starting from 1.
+/**
+ * ElementVariableFast constraint defines a relation list[index - indexOffset] = value. This version
+ * uses bounds consistency.
+ *
+ * <p>The first element of the list corresponds to index - indexOffset = 1. By default indexOffset
+ * is equal 0 so first value within a list corresponds to index equal 1.
+ *
+ * <p>If index has a domain from 0 to list.length-1 then indexOffset has to be equal -1 to make
+ * addressing of list array starting from 1.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class ElementVariableFast extends Constraint implements Stateful, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

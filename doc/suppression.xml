@@ -6,4 +6,5 @@
 
 <suppressions>
     <suppress files="[\\/]AST" checks="[a-zA-Z0-9]*"/>
+    <suppress files="[\\/]jacop-flatzinc[\\/]" checks="MethodName"/>
 </suppressions>

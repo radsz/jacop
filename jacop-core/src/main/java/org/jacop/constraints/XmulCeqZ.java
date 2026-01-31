@@ -37,15 +37,14 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.Store;
 
-/*
+/**
  * Constraint X * C #= Z
- * <p>
- * Boundary consistency is used.
+ *
+ * <p>Boundary consistency is used.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XmulCeqZ extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

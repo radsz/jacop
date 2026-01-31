@@ -41,17 +41,15 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 
-/*
- * Sum constraint implements the summation over several Variable's . It provides
- * the sum from all Variable's on the list.
- * <p>
- * Use when number of variables is large (for example, greater than
- * 30), otherwise use SumInt.
+/**
+ * Sum constraint implements the summation over several Variable's . It provides the sum from all
+ * Variable's on the list.
+ *
+ * <p>Use when number of variables is large (for example, greater than 30), otherwise use SumInt.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class Sum extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

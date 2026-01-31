@@ -44,6 +44,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 
+/** Example for tiny TSP using float constraints. */
 public class TinyTSP {
 
   // double MIN_FLOAT = -1e+150;
@@ -58,15 +59,15 @@ public class TinyTSP {
 
     TinyTSP example = new TinyTSP();
 
-    example.tiny_tsp();
+    example.tinyTsp();
   }
 
-  void tiny_tsp() {
+  void tinyTsp() {
 
     long T1;
     T1 = System.currentTimeMillis();
 
-    IO.println("========= tiny_tsp =========");
+    IO.println("========= tinyTsp =========");
 
     Store store = new Store();
 

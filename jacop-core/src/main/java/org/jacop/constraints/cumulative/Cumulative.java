@@ -40,31 +40,33 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
+/**
  * Cumulative implements the scheduling constraint using
- * <p>
- * edge-finding (edgeFind) algorithms based on
- * <p>
- * Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative Resources in O(kn log n)",
- * Principles and Practice of Constraint Programming - CP 2009 Volume 5732 of the series Lecture
- * Notes in Computer Science pp 802-816.
- * <p>
- * and
- * <p>
- * Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
+ *
+ * <p>edge-finding (edgeFind) algorithms based on
+ *
+ * <p>Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative Resources in O(kn log
+ * n)", Principles and Practice of Constraint Programming - CP 2009 Volume 5732 of the series
+ * Lecture Notes in Computer Science pp 802-816.
+ *
+ * <p>and
+ *
+ * <p>Joseph Scott, "Filtering Algorithms for Discrete Cumulative Resources", MSc thesis, Uppsala
  * University, Department of Information Technology, 2010, no IT 10 048,
+ *
+ * <p>edge-finding algorithm with quadratic complexity (edgeFindQuad) is based on
+ *
+ * <p>Roger Kameugne, Laure Pauline Fotso, Joseph Scott, and Youcheu Ngo-Kateu, "A quadratic
+ * edge-finding filtering algorithm for cumulative resource constraints", Constraints, 2014, July,
+ * vol. 19, no. 3, pp. 243--269.
+ *
  * <p>
- * edge-finding algorithm with quadratic complexity (edgeFindQuad) is based on
- * <p>
- * Roger Kameugne, Laure Pauline Fotso, Joseph Scott, and Youcheu Ngo-Kateu,
- * "A quadratic edge-finding filtering algorithm for cumulative resource constraints",
- * Constraints, 2014, July, vol. 19, no. 3, pp. 243--269.
- * <p>
+ *
  * @author Krzysztof Kuchcinski
  * @version 4.10
- * @see <a href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
+ * @see <a
+ *     href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */
-
 @Slf4j
 public class Cumulative extends CumulativeBasic {
 

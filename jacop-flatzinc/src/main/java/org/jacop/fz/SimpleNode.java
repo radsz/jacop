@@ -4,6 +4,7 @@
 
 package org.jacop.fz;
 
+/** Simple AST node for flatzinc parser. */
 public class SimpleNode implements Node {
 
   protected final int id;

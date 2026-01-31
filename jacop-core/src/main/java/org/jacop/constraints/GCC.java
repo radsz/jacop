@@ -409,8 +409,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       sortXByDomainMin();
 
-      FindGeneralizedMatching();
-      SCCs();
+      findGeneralizedMatching();
+      sccs();
       // I do the countConcistancy before the x pruning so the
       // change in x variable doesn't affect the pruning of y variable
       countBoundConsistency(store);
@@ -605,7 +605,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   // -----------------------FIND_GENERALIZED_MATCHING--------------------------------//
 
-  private void FindGeneralizedMatching() {
+  private void findGeneralizedMatching() {
 
     Arrays.fill(nbOfMatchPerY, 0);
 
@@ -844,7 +844,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   // --------------------------------SCCs-------------------------------------//
 
-  private void SCCs() {
+  private void sccs() {
 
     int sccNb;
     int maxYReachedFromS;
@@ -857,7 +857,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       compOfY[i] = i;
     }
 
-    sccNb = SCCsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
+    sccNb = sccsWithoutS(compReachesLeft, compReachesRight, yreachesLeft, yreachesRight);
     // now compReaches(Left, Right) and compOfY contain the left and right most y per comp and to
     // which comp a y belong
     if (debug) {
@@ -985,7 +985,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  private int SCCsWithoutS(
+  private int sccsWithoutS(
       int[] compReachesLeft, int[] compReachesRight, int[] yreachesLeft, int[] yreachesRight) {
 
     Component C;
@@ -994,7 +994,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     S1.clear();
     S2.clear();
 
-    ReachedFromY(yreachesLeft, yreachesRight);
+    reachedFromY(yreachesLeft, yreachesRight);
 
     // init all componant as containing only one y and set these component
     // reachesLeft and reachesRight to y reachesLeft and Right
@@ -1074,7 +1074,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     return sccNb;
   }
 
-  private void ReachedFromY(int[] yreachesLeft, int[] yreachesRight) {
+  private void reachedFromY(int[] yreachesLeft, int[] yreachesRight) {
 
     for (int i = 0; i < ySize; i++) {
       yreachesLeft[i] = i;

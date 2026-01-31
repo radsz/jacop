@@ -37,6 +37,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
+/** Example for Laplace equation using float constraints. */
 public class Laplace {
 
   /**

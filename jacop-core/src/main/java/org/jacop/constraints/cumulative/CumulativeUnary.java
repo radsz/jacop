@@ -37,18 +37,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
-/*
+/**
  * CumulativeUnary implements the scheduling constraint for unary resources using
- * <p>
- * overload, not-first-not-last and detectable algorithms based on
- * <p>
- * Petr Vilim, "O(n log n) Filtering Algorithms for Unary Resource Constraints", Proceedings of
+ *
+ * <p>overload, not-first-not-last and detectable algorithms based on
+ *
+ * <p>Petr Vilim, "O(n log n) Filtering Algorithms for Unary Resource Constraints", Proceedings of
  * CP-AI-OR 2004,
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-
 @Slf4j
 public class CumulativeUnary extends Cumulative {
 

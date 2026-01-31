@@ -37,16 +37,15 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
-/*
+/**
  * Defines an integer domain and related operations on it.
- * <p>
- * FloatDomain implementations can not assume that arguments to
- * any function can not be empty domains.
+ *
+ * <p>FloatDomain implementations can not assume that arguments to any function can not be empty
+ * domains.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public abstract class FloatDomain extends Domain {
 
   /*

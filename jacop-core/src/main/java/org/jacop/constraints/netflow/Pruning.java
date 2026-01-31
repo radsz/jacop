@@ -525,6 +525,7 @@ public class Pruning extends Network {
     void close();
   }
 
+  /** Percentage-based pruning strategy. */
   public class PercentStrategy implements PruningStrategy {
 
     final double percentage;

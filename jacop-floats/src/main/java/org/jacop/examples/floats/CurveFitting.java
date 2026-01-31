@@ -41,6 +41,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
+/** Example for curve fitting using float constraints. */
 public class CurveFitting {
 
   final double MIN_FLOAT = -1e+150;
@@ -55,12 +56,12 @@ public class CurveFitting {
 
     CurveFitting example = new CurveFitting();
 
-    example.curve_fitting3();
+    example.curveFitting3();
   }
 
-  void curve_fitting3() {
+  void curveFitting3() {
 
-    IO.println("========= curve_fitting3 =========");
+    IO.println("========= curveFitting3 =========");
 
     Store store = new Store();
 

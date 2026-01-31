@@ -288,7 +288,7 @@ public class MineSweeper extends ExampleFD {
    *
    * @return description of the problem used by the function to create a constraint model.
    */
-  public static String[] problem_kaye_splitter() {
+  public static String[] problemKayeSplitter() {
     return new String[] {
       "...0...0...",
       "...01.10...",
@@ -426,7 +426,7 @@ public class MineSweeper extends ExampleFD {
     }
 
     if (minesweeper.problem == null) {
-      minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problem_kaye_splitter());
+      minesweeper.problem = MineSweeper.readFromArray(MineSweeper.problemKayeSplitter());
     }
 
     minesweeper.model();

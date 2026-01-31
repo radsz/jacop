@@ -57,7 +57,7 @@ public class SatTranslation {
     clauses.empty = true;
   }
 
-  public void generate_clause(IntVar[] a1, IntVar[] a2) {
+  public void generateClause(IntVar[] a1, IntVar[] a2) {
 
     List<IntVar> a1reduced = new ArrayList<>();
     for (IntVar var : a1) {
@@ -111,7 +111,7 @@ public class SatTranslation {
 
   }
 
-  public void generate_clause_reif(IntVar[] a, IntVar[] b, IntVar r) {
+  public void generateClauseReif(IntVar[] a, IntVar[] b, IntVar r) {
     // ((a1 \/ ...\/ an) \/ (-b1 \/ ... \/ -bn)) <=> r
     // a1 \/ ...\/ an \/ -b1 \/ ... \/ -bn \/ -r
     // for all i: -ai \/ r
@@ -119,16 +119,16 @@ public class SatTranslation {
     IntVar[] bs = new IntVar[b.length + 1];
     System.arraycopy(b, 0, bs, 0, b.length);
     bs[b.length] = r;
-    generate_clause(a, bs);
+    generateClause(a, bs);
     for (IntVar var : a) {
-      generate_clause(new IntVar[] {r}, new IntVar[] {var});
+      generateClause(new IntVar[] {r}, new IntVar[] {var});
     }
     for (IntVar intVar : b) {
-      generate_clause(new IntVar[] {intVar, r}, new IntVar[] {});
+      generateClause(new IntVar[] {intVar, r}, new IntVar[] {});
     }
   }
 
-  public void generate_or(IntVar[] a, IntVar c) {
+  public void generateOr(IntVar[] a, IntVar c) {
 
     // (a1 \/ a2 \/ ... \/ an \/ -c)
     // /\
@@ -140,13 +140,13 @@ public class SatTranslation {
       }
     }
 
-    generate_clause(a, new IntVar[] {c});
+    generateClause(a, new IntVar[] {c});
     for (IntVar intVar : a) {
-      generate_clause(new IntVar[] {c}, new IntVar[] {intVar});
+      generateClause(new IntVar[] {c}, new IntVar[] {intVar});
     }
   }
 
-  public void generate_and(IntVar[] a, IntVar c) {
+  public void generateAnd(IntVar[] a, IntVar c) {
 
     // -a1 \/ -a2 \/ ... \/ c
     // /\
@@ -158,9 +158,9 @@ public class SatTranslation {
       }
     }
 
-    generate_clause(new IntVar[] {c}, a);
+    generateClause(new IntVar[] {c}, a);
     for (IntVar intVar : a) {
-      generate_clause(new IntVar[] {intVar}, new IntVar[] {c});
+      generateClause(new IntVar[] {intVar}, new IntVar[] {c});
     }
   }
 
@@ -173,68 +173,68 @@ public class SatTranslation {
    * @param a parameters to be xor'ed
    * @param c result
    */
-  public void generate_xor(IntVar[] a, IntVar c) {
+  public void generateXor(IntVar[] a, IntVar c) {
 
     if (a.length == 3) {
-      generate_xor(a[0], a[1], a[2], c);
+      generateXor(a[0], a[1], a[2], c);
     } else if (a.length == 2) {
-      generate_xor(a[0], a[1], c);
+      generateXor(a[0], a[1], c);
     } else if (a.length == 1) {
       // this case should not normally happen;
       // the only case if the user specified this case
-      generate_eq(a[0], c);
+      generateEq(a[0], c);
     } else { // must be a.length > 3
       IntVar[] as = new IntVar[a.length - 2];
       BooleanVar t = new BooleanVar(store);
       System.arraycopy(a, 3, as, 0, a.length - 3);
       as[as.length - 1] = t;
-      generate_xor(a[0], a[1], a[2], t);
-      generate_xor(as, c);
+      generateXor(a[0], a[1], a[2], t);
+      generateXor(as, c);
     }
   }
 
-  public void generate_xor(IntVar a, IntVar b, IntVar c) {
+  public void generateXor(IntVar a, IntVar b, IntVar c) {
     // (a xor b) <=> c
-    generate_neq_reif(a, b, c);
+    generateNeqReif(a, b, c);
   }
 
-  public void generate_xor(IntVar a, IntVar b, IntVar c, IntVar d) {
+  public void generateXor(IntVar a, IntVar b, IntVar c, IntVar d) {
     // (a xor b xor c) <=> d
-    generate_clause(new IntVar[] {a}, new IntVar[] {b, c, d});
-    generate_clause(new IntVar[] {b}, new IntVar[] {a, c, d});
-    generate_clause(new IntVar[] {c}, new IntVar[] {a, b, d});
-    generate_clause(new IntVar[] {d}, new IntVar[] {a, b, c});
+    generateClause(new IntVar[] {a}, new IntVar[] {b, c, d});
+    generateClause(new IntVar[] {b}, new IntVar[] {a, c, d});
+    generateClause(new IntVar[] {c}, new IntVar[] {a, b, d});
+    generateClause(new IntVar[] {d}, new IntVar[] {a, b, c});
 
-    generate_clause(new IntVar[] {b, c, d}, new IntVar[] {a});
-    generate_clause(new IntVar[] {a, c, d}, new IntVar[] {b});
-    generate_clause(new IntVar[] {a, b, d}, new IntVar[] {c});
-    generate_clause(new IntVar[] {a, b, c}, new IntVar[] {d});
+    generateClause(new IntVar[] {b, c, d}, new IntVar[] {a});
+    generateClause(new IntVar[] {a, c, d}, new IntVar[] {b});
+    generateClause(new IntVar[] {a, b, d}, new IntVar[] {c});
+    generateClause(new IntVar[] {a, b, c}, new IntVar[] {d});
   }
 
-  public void generate_eq(IntVar a, IntVar b) {
+  public void generateEq(IntVar a, IntVar b) {
     // a = b
     // ===========
     // (-a \/ b) /\ ( a \/ -b)
-    generate_clause(new IntVar[] {b}, new IntVar[] {a});
-    generate_clause(new IntVar[] {a}, new IntVar[] {b});
+    generateClause(new IntVar[] {b}, new IntVar[] {a});
+    generateClause(new IntVar[] {a}, new IntVar[] {b});
   }
 
-  public void generate_le(IntVar a, IntVar b) {
+  public void generateLe(IntVar a, IntVar b) {
     // a =< b
     // ===========
     // -a \/ b
-    generate_clause(new IntVar[] {b}, new IntVar[] {a});
+    generateClause(new IntVar[] {b}, new IntVar[] {a});
   }
 
-  public void generate_lt(IntVar a, IntVar b) {
+  public void generateLt(IntVar a, IntVar b) {
     // a < b
     // ===========
     // -a /\ b
-    generate_clause(new IntVar[] {}, new IntVar[] {a});
-    generate_clause(new IntVar[] {b}, new IntVar[] {});
+    generateClause(new IntVar[] {}, new IntVar[] {a});
+    generateClause(new IntVar[] {b}, new IntVar[] {});
   }
 
-  public void generate_eq_reif(IntVar a, IntVar b, IntVar c) {
+  public void generateEqReif(IntVar a, IntVar b, IntVar c) {
     // a = b <=> c
     // ===========
     // (-a \/ b \/ -c) /\
@@ -242,13 +242,13 @@ public class SatTranslation {
     // (a \/ b \/ c) /\
     // (-a \/ -b \/ c)
 
-    generate_clause(new IntVar[] {b}, new IntVar[] {a, c});
-    generate_clause(new IntVar[] {a}, new IntVar[] {b, c});
-    generate_clause(new IntVar[] {a, b, c}, new IntVar[] {});
-    generate_clause(new IntVar[] {c}, new IntVar[] {a, b});
+    generateClause(new IntVar[] {b}, new IntVar[] {a, c});
+    generateClause(new IntVar[] {a}, new IntVar[] {b, c});
+    generateClause(new IntVar[] {a, b, c}, new IntVar[] {});
+    generateClause(new IntVar[] {c}, new IntVar[] {a, b});
   }
 
-  public void generate_neq_reif(IntVar a, IntVar b, IntVar c) {
+  public void generateNeqReif(IntVar a, IntVar b, IntVar c) {
     // a != b <=> c
     // ===========
     // (-a \/ b \/ c) /\
@@ -256,61 +256,61 @@ public class SatTranslation {
     // (a \/ b \/ -c) /\
     // (-a \/ -b \/ -c)
 
-    generate_clause(new IntVar[] {b, c}, new IntVar[] {a});
-    generate_clause(new IntVar[] {a, c}, new IntVar[] {b});
-    generate_clause(new IntVar[] {a, b}, new IntVar[] {c});
-    generate_clause(new IntVar[] {}, new IntVar[] {a, b, c});
+    generateClause(new IntVar[] {b, c}, new IntVar[] {a});
+    generateClause(new IntVar[] {a, c}, new IntVar[] {b});
+    generateClause(new IntVar[] {a, b}, new IntVar[] {c});
+    generateClause(new IntVar[] {}, new IntVar[] {a, b, c});
   }
 
-  public void generate_le_reif(IntVar a, IntVar b, IntVar c) {
+  public void generateLeReif(IntVar a, IntVar b, IntVar c) {
     // a =< b <=> c
     // ===========
     // (-a \/ b \/ -c) /\ (a \/ c) /\ (-b \/ c)
-    generate_clause(new IntVar[] {b}, new IntVar[] {a, c});
-    generate_clause(new IntVar[] {a, c}, new IntVar[] {});
-    generate_clause(new IntVar[] {c}, new IntVar[] {b});
+    generateClause(new IntVar[] {b}, new IntVar[] {a, c});
+    generateClause(new IntVar[] {a, c}, new IntVar[] {});
+    generateClause(new IntVar[] {c}, new IntVar[] {b});
   }
 
-  public void generate_lt_reif(IntVar a, IntVar b, IntVar c) {
+  public void generateLtReif(IntVar a, IntVar b, IntVar c) {
     // a < b <=> c
     // ===========
     // (a \/ -b \/ c) /\ (-a \/ -c) /\ (b \/ -c)
-    generate_clause(new IntVar[] {a, c}, new IntVar[] {b});
-    generate_clause(new IntVar[] {}, new IntVar[] {a, c});
-    generate_clause(new IntVar[] {b}, new IntVar[] {c});
+    generateClause(new IntVar[] {a, c}, new IntVar[] {b});
+    generateClause(new IntVar[] {}, new IntVar[] {a, c});
+    generateClause(new IntVar[] {b}, new IntVar[] {c});
   }
 
-  public void generate_not(IntVar a, IntVar b) {
+  public void generateNot(IntVar a, IntVar b) {
     // -a = b
     // ===========
     // (a \/ b) /\
     // (-a \/ -b)
 
-    generate_clause(new IntVar[] {a, b}, new IntVar[] {});
-    generate_clause(new IntVar[] {}, new IntVar[] {a, b});
+    generateClause(new IntVar[] {a, b}, new IntVar[] {});
+    generateClause(new IntVar[] {}, new IntVar[] {a, b});
   }
 
-  public void generate_implication(IntVar a, IntVar b) {
+  public void generateImplication(IntVar a, IntVar b) {
     // a => b
     // ===========
     // -a \/ b
 
-    generate_clause(new IntVar[] {b}, new IntVar[] {a});
+    generateClause(new IntVar[] {b}, new IntVar[] {a});
   }
 
-  public void generate_implication_reif(IntVar a, IntVar b, IntVar c) {
+  public void generateImplicationReif(IntVar a, IntVar b, IntVar c) {
     // (a => b) <=> c
     // ===========
     // (-a \/ b \/ -c) /\
     // (a \/ c) /\
     // (-b \/ c)
 
-    generate_clause(new IntVar[] {b}, new IntVar[] {a, c});
-    generate_clause(new IntVar[] {a, c}, new IntVar[] {});
-    generate_clause(new IntVar[] {c}, new IntVar[] {b});
+    generateClause(new IntVar[] {b}, new IntVar[] {a, c});
+    generateClause(new IntVar[] {a, c}, new IntVar[] {});
+    generateClause(new IntVar[] {c}, new IntVar[] {b});
   }
 
-  public void generate_allZero_reif(IntVar[] as, IntVar c) {
+  public void generateAllZeroReif(IntVar[] as, IntVar c) {
     // allZero(a) <=> c
     // - (a[0] \/ .. \/ a[n]) <=> c
     // ===========
@@ -327,17 +327,17 @@ public class SatTranslation {
     IntVar[] v = new IntVar[as.length + 1];
     for (int i = 0; i < as.length; i++) {
       v[i] = as[i];
-      generate_clause(new IntVar[] {}, new IntVar[] {as[i], c});
+      generateClause(new IntVar[] {}, new IntVar[] {as[i], c});
     }
     v[as.length] = c;
-    generate_clause(v, new IntVar[] {});
+    generateClause(v, new IntVar[] {});
   }
 
-  public void generate_if_then_else_bool(IntVar c, IntVar a, IntVar b) {
+  public void generateIfThenElseBool(IntVar c, IntVar a, IntVar b) {
     // case for if c then a = true else b = true
     // (-c \/ a) /\ (c \/ b)
-    generate_clause(new IntVar[] {a}, new IntVar[] {c});
-    generate_clause(new IntVar[] {c, b}, new IntVar[] {});
+    generateClause(new IntVar[] {a}, new IntVar[] {c});
+    generateClause(new IntVar[] {c, b}, new IntVar[] {});
   }
 
   public void impose() {

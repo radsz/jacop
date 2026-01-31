@@ -310,6 +310,7 @@ public class RestartSearch<T extends Var> {
     return atLeastOneSolution;
   }
 
+  /** Listener that tracks cost for optimization search. */
   public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
 
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {

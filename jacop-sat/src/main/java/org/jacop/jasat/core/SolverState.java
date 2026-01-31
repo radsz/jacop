@@ -31,6 +31,7 @@
 
 package org.jacop.jasat.core;
 
+/** Solver state constants for SAT solving. */
 public final class SolverState {
 
   public static final int CONFLICT = 0; // search reached a conflict

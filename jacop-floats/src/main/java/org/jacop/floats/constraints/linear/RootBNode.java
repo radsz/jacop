@@ -33,6 +33,7 @@ package org.jacop.floats.constraints.linear;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
+/** Root node for linear constraint tree. */
 public class RootBNode extends BNode {
 
   // right hand value

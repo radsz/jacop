@@ -55,16 +55,15 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.BipartiteGraphMatching;
 
-/*
+/**
  * Standard unified interface/abstract class for all constraints.
- * <p>
- * Defines how to construct a constraint, impose, check satisfiability,
- * notSatisfiability, enforce consistency.
+ *
+ * <p>Defines how to construct a constraint, impose, check satisfiability, notSatisfiability,
+ * enforce consistency.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class Constraint extends DecomposedConstraint<Constraint> {
 

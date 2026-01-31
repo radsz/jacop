@@ -378,7 +378,7 @@ class LinearConstraints implements ParserTreeConstants {
           // very special case: positive weighted sum of 0/1 variables <= 0 =>  (all p2's zero <=>
           // p4)
           if (support.options.useSat()) {
-            sat.generate_allZero_reif(support.unique(p2), p4);
+            sat.generateAllZeroReif(support.unique(p2), p4);
           } else {
             support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
           }
@@ -391,7 +391,7 @@ class LinearConstraints implements ParserTreeConstants {
             if (p3 == 0) {
               // all p2's zero <=> p4
               if (support.options.useSat()) {
-                sat.generate_allZero_reif(support.unique(p2), p4);
+                sat.generateAllZeroReif(support.unique(p2), p4);
               } else {
                 support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
               }

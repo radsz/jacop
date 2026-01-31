@@ -25,10 +25,11 @@
 
 package org.jacop.util;
 
-/*
- * The implementation of the algorithm for finding dominators (sophisticated version) in a directed graph based on
- * Lengauer and Tarjan algorithm based on paper "A Fast Algorithm for Finding Dominators in a Flowgraph",
- * ACM Trans. on Programming Languages and Systems, vol. 1, no. 1, July 1979.
+/**
+ * The implementation of the algorithm for finding dominators (sophisticated version) in a directed
+ * graph based on Lengauer and Tarjan algorithm based on paper "A Fast Algorithm for Finding
+ * Dominators in a Flowgraph", ACM Trans. on Programming Languages and Systems, vol. 1, no. 1, July
+ * 1979.
  */
 public class SophisticatedLengauerTarjan extends LengauerTarjan {
 

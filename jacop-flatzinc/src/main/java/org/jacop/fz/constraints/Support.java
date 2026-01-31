@@ -62,7 +62,7 @@ import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
-/*
+/**
  * Basic support for generation of constraints in flatzinc
  *
  * @author Krzysztof Kuchcinski

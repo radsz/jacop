@@ -38,6 +38,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 
+/** Example for tangent using float constraints. */
 public class TanExample {
 
   /**

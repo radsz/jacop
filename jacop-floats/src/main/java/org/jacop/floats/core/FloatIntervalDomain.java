@@ -41,14 +41,13 @@ import org.jacop.core.Var;
 // TODO: test default function which use sparse (dense) representation. Default code if
 // domain is neither Interval nor Bound domain.
 
-/*
- * Defines interval of numbers which is part of FDV definition which consist of
- * one or several intervals.
+/**
+ * Defines interval of numbers which is part of FDV definition which consist of one or several
+ * intervals.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-
 public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
   // FIXME, implement all already implemented functions from IntDomain

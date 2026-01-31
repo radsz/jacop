@@ -39,6 +39,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
+/** Example for loan calculation using float constraints. */
 public class Loan {
 
   /**

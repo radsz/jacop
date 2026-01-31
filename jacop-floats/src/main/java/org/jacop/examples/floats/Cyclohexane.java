@@ -40,6 +40,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.PrintOutListener;
 
+/** Example for cyclohexane molecule using float constraints. */
 public class Cyclohexane {
 
   final double MIN_FLOAT = -1e+150;

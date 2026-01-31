@@ -232,6 +232,7 @@ public class DomainStructure implements VarHandler {
     return IntDomain.ANY; // for S-variables
   }
 
+  /** Pruning behavior for arc variables. */
   public enum Behavior {
     PRUNE_ACTIVE,
     PRUNE_INACTIVE,

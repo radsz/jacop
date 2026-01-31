@@ -39,13 +39,12 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 
-/*
+/**
  * Constraint X mod Y = Z
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-
 public class XmodYeqZ extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
