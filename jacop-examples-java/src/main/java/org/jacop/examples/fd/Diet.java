@@ -65,7 +65,7 @@ import org.jacop.core.Store;
  * @version 4.10
  *     <p>Compare with my MiniZinc model: <a href="http://www.hakank.org/minizinc/diet1.mzn">...</a>
  */
-public class Diet extends ExampleFD {
+public class Diet extends ExampleFd {
 
   public final int n = 4; // number of ingredients
   public final int m = 4; // number of food types

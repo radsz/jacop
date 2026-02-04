@@ -292,7 +292,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    *
    * @param output it specifies the target to which the description will be written.
    */
-  public abstract void toCNF(BufferedWriter output) throws IOException;
+  public abstract void toCnf(BufferedWriter output) throws IOException;
 
   /**
    * swaps the two literals at position i and j in the clause

@@ -271,7 +271,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    * @return it returns an integer id of the domain.
    */
   @Override
-  public int domainID() {
+  public int domainId() {
     return SetDomainID;
   }
 
@@ -305,18 +305,18 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    *
    * @param storeLevel the level of the store at which the change occurrs.
    * @param var the set variable for which the domain may change.
-   * @param inGLB the greatest lower bound of the domain.
-   * @param inLUB the least upper bound of the domain.
+   * @param inGlb the greatest lower bound of the domain.
+   * @param inLub the least upper bound of the domain.
    */
-  public void in(int storeLevel, SetVar var, IntDomain inGLB, IntDomain inLUB) {
+  public void in(int storeLevel, SetVar var, IntDomain inGlb, IntDomain inLub) {
 
     // FIXME, this check should be done outside if it can be violated.
-    if (!inLUB.contains(inGLB)) {
+    if (!inLub.contains(inGlb)) {
       throw Store.failException;
     }
 
     // FIXME, do we need to do this expensive check in this manner, or at all here?
-    if (glb.contains(inGLB) && inLUB.contains(lub)) {
+    if (glb.contains(inGlb) && inLub.contains(lub)) {
       // New domain is the same or "larger" than the old one; do nothing,
       // do not re-evaluate constrained assigned to this variable
       return;
@@ -324,8 +324,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
     if (stamp == storeLevel) {
 
-      int eventGLB = glb.unionAdapt(inGLB);
-      int eventLUB = lub.intersectAdapt(inLUB);
+      int eventGlb = glb.unionAdapt(inGlb);
+      int eventLub = lub.intersectAdapt(inLub);
 
       if (lub.eq(glb)) {
         cardinality.intersectAdapt(glb.getSize(), lub.getSize());
@@ -363,11 +363,11 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
           }
         }
 
-        if (eventGLB != Domain.NONE && eventLUB != Domain.NONE) {
+        if (eventGlb != Domain.NONE && eventLub != Domain.NONE) {
           var.domainHasChanged(SetDomain.ANY);
-        } else if (eventGLB != Domain.NONE) {
+        } else if (eventGlb != Domain.NONE) {
           var.domainHasChanged(SetDomain.GLB);
-        } else if (eventLUB != Domain.NONE) {
+        } else if (eventLub != Domain.NONE) {
           var.domainHasChanged(SetDomain.LUB);
         }
       }
@@ -376,11 +376,11 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       assert stamp < storeLevel;
 
-      IntDomain resultGLB = glb.cloneLight();
-      int eventGLB = resultGLB.unionAdapt(inGLB);
+      IntDomain resultGlb = glb.cloneLight();
+      int eventGlb = resultGlb.unionAdapt(inGlb);
 
-      IntDomain resultLUB = lub.cloneLight();
-      int eventLUB = resultLUB.intersectAdapt(inLUB);
+      IntDomain resultLub = lub.cloneLight();
+      int eventLub = resultLub.intersectAdapt(inLub);
 
       IntDomain resultCardinality = cardinality.intersect(glb.getSize(), lub.getSize());
       if (resultCardinality.isEmpty()) {
@@ -390,21 +390,21 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       if (!resultCardinality.eq(cardinality)) {
 
         if (cardinality.min() == lub.getSize()) {
-          resultGLB = lub;
-          eventGLB = SetDomain.GLB;
+          resultGlb = lub;
+          eventGlb = SetDomain.GLB;
           resultCardinality.intersectAdapt(lub.getSize(), lub.getSize());
         }
 
         if (cardinality.max() == glb.getSize()) {
-          resultLUB = glb;
-          eventLUB = SetDomain.LUB;
+          resultLub = glb;
+          eventLub = SetDomain.LUB;
           resultCardinality.intersectAdapt(glb.getSize(), glb.getSize());
         }
       }
 
       BoundSetDomain result = new BoundSetDomain();
-      result.glb = resultGLB;
-      result.lub = resultLUB;
+      result.glb = resultGlb;
+      result.lub = resultLub;
       result.cardinality = resultCardinality;
 
       result.modelConstraints = modelConstraints;
@@ -418,11 +418,11 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       if (result.singleton()) {
         var.domainHasChanged(SetDomain.GROUND);
       } else {
-        if (eventGLB == SetDomain.GLB && eventLUB == SetDomain.LUB) {
+        if (eventGlb == SetDomain.GLB && eventLub == SetDomain.LUB) {
           var.domainHasChanged(SetDomain.BOUND);
-        } else if (eventGLB != Domain.NONE) {
+        } else if (eventGlb != Domain.NONE) {
           var.domainHasChanged(SetDomain.GLB);
-        } else if (eventLUB != Domain.NONE) {
+        } else if (eventLub != Domain.NONE) {
           var.domainHasChanged(SetDomain.LUB);
         }
       }
@@ -774,7 +774,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    * @param var set variable to which the change applies to.
    * @param element the element which must be in glb.
    */
-  public void inGLB(int level, SetVar var, int element) {
+  public void inGlb(int level, SetVar var, int element) {
 
     if (glb.contains(element)) {
       return;
@@ -809,18 +809,18 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       assert stamp < level;
 
       BoundSetDomain result = new BoundSetDomain();
-      IntDomain resultGLB = glb.union(element);
-      IntDomain resultCardinality = cardinality.intersect(resultGLB.getSize(), lub.getSize());
+      IntDomain resultGlb = glb.union(element);
+      IntDomain resultCardinality = cardinality.intersect(resultGlb.getSize(), lub.getSize());
 
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
-      result.glb = resultGLB;
+      result.glb = resultGlb;
 
-      if (resultCardinality.max() == resultGLB.getSize()) {
-        result.lub = resultGLB;
-        resultCardinality.intersectAdapt(resultGLB.getSize(), resultGLB.getSize());
+      if (resultCardinality.max() == resultGlb.getSize()) {
+        result.lub = resultGlb;
+        resultCardinality.intersectAdapt(resultGlb.getSize(), resultGlb.getSize());
       } else {
         result.lub = lub.cloneLight();
       }
@@ -843,7 +843,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   @Override
-  public void inGLB(int level, SetVar var, IntDomain intersect) {
+  public void inGlb(int level, SetVar var, IntDomain intersect) {
 
     if (glb.contains(intersect)) {
       return;
@@ -881,25 +881,25 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       assert stamp < level;
 
-      IntDomain resultGLB = glb.union(intersect);
+      IntDomain resultGlb = glb.union(intersect);
 
-      // TODO: CRUCIAL, if resultGLB is equal current glb then nothing should happen and the
+      // TODO: CRUCIAL, if resultGlb is equal current glb then nothing should happen and the
       // function
       // should return. Check that this addition is
       // correct.
       // Turn on the lines below after domains are stable to check for potential pruning bugs.
 
-      IntDomain resultCardinality = cardinality.intersect(resultGLB.getSize(), lub.getSize());
+      IntDomain resultCardinality = cardinality.intersect(resultGlb.getSize(), lub.getSize());
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
       BoundSetDomain result = new BoundSetDomain();
-      result.glb = resultGLB;
+      result.glb = resultGlb;
 
-      if (resultCardinality.max() == resultGLB.getSize()) {
-        result.lub = resultGLB;
-        resultCardinality.intersectAdapt(resultGLB.getSize(), resultGLB.getSize());
+      if (resultCardinality.max() == resultGlb.getSize()) {
+        result.lub = resultGlb;
+        resultCardinality.intersectAdapt(resultGlb.getSize(), resultGlb.getSize());
       } else {
         result.lub = lub.cloneLight();
       }
@@ -930,7 +930,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    * @param element the element which can not be in lub.
    */
   @Override
-  public void inLUBComplement(int level, SetVar var, int element) {
+  public void inLubComplement(int level, SetVar var, int element) {
 
     if (!lub.contains(element)) {
       return;
@@ -964,19 +964,19 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       assert stamp < level;
 
-      IntDomain resultLUB = lub.subtract(element);
-      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLUB.getSize());
+      IntDomain resultLub = lub.subtract(element);
+      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLub.getSize());
 
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
 
       BoundSetDomain result = new BoundSetDomain();
-      result.lub = resultLUB;
+      result.lub = resultLub;
 
-      if (resultCardinality.min() == resultLUB.getSize()) {
-        result.glb = resultLUB;
-        resultCardinality.intersectAdapt(resultLUB.getSize(), resultLUB.getSize());
+      if (resultCardinality.min() == resultLub.getSize()) {
+        result.glb = resultLub;
+        resultCardinality.intersectAdapt(resultLub.getSize(), resultLub.getSize());
       } else {
         result.glb = glb.cloneLight();
       }
@@ -1045,7 +1045,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   @Override
-  public void inLUB(int level, SetVar var, IntDomain intersect) {
+  public void inLub(int level, SetVar var, IntDomain intersect) {
 
     if (intersect.contains(lub)) {
       return;
@@ -1059,7 +1059,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       int event;
 
-      //     if (intersect.domainID() == IntDomain.SmallDenseDomainID && lub.domainID() ==
+      //     if (intersect.domainId() == IntDomain.SmallDenseDomainID && lub.domainId() ==
       // IntDomain.IntervalDomainID) {
       //       IntDomain replacement = intersect.cloneLight();
       //       event = replacement.intersectAdapt(lub);
@@ -1093,7 +1093,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       assert stamp < level;
 
-      IntDomain resultLUB = lub.intersect(intersect);
+      IntDomain resultLub = lub.intersect(intersect);
 
       // This check was generalized and moved to the beginning of the function.
       // TODO: Check that early exit is ok. For some reason it is NOT ok,
@@ -1102,7 +1102,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
       // propagation and only forced call of consistency function below recovers
       // the lost pruning.
 
-      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLUB.getSize());
+      IntDomain resultCardinality = cardinality.intersect(glb.getSize(), resultLub.getSize());
       if (resultCardinality.isEmpty()) {
         throw Store.failException;
       }
@@ -1111,14 +1111,14 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       BoundSetDomain result = new BoundSetDomain();
 
-      if (resultCardinality.min() == resultLUB.getSize()) {
-        result.glb = resultLUB;
-        resultCardinality.intersectAdapt(resultLUB.getSize(), resultLUB.getSize());
+      if (resultCardinality.min() == resultLub.getSize()) {
+        result.glb = resultLub;
+        resultCardinality.intersectAdapt(resultLub.getSize(), resultLub.getSize());
       } else {
         result.glb = glb.cloneLight();
       }
 
-      result.lub = resultLUB;
+      result.lub = resultLub;
       result.cardinality = resultCardinality;
 
       result.modelConstraints = modelConstraints;
@@ -1143,7 +1143,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    * @param level level of the store at which the change takes place.
    * @param var variable for which the domain is changing.
    */
-  public void inValueLUB(int level, SetVar var) {
+  public void inValueLub(int level, SetVar var) {
 
     if (lub.eq(glb)) {
       return;
@@ -1187,7 +1187,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
    * @param level level of the store at which the change takes place.
    * @param var variable for which the domain is changing.
    */
-  public void inValueGLB(int level, SetVar var) {
+  public void inValueGlb(int level, SetVar var) {
 
     if (lub.eq(glb)) {
       return;

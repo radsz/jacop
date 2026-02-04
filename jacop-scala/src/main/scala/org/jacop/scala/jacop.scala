@@ -1502,21 +1502,21 @@ class BoolVar(name: String, min1: Int, max1: Int) extends org.jacop.core.Boolean
 //}
 
 /**
-  * FSM specification for regular constraint.
+  * Fsm specification for regular constraint.
   *
-  * @constructor Creates a new FSM.
+  * @constructor Creates a new Fsm.
   */
-class fsm extends org.jacop.util.fsm.FSM {
+class fsm extends org.jacop.util.fsm.Fsm {
 
   import scala.collection.mutable.ArrayBuffer
 
   var states = ArrayBuffer[state]()
 
   /**
-    * FSM specification for regular constraint.
+    * Fsm specification for regular constraint.
     *
-    * @constructor Creates a new FSM.
-    * @param n number of states in this FSM.
+    * @constructor Creates a new Fsm.
+    * @param n number of states in this Fsm.
     */
   def this(n: Int) = {
     this()
@@ -1525,7 +1525,7 @@ class fsm extends org.jacop.util.fsm.FSM {
   }
 
   /**
-    * Defines initial state for this FSM.
+    * Defines initial state for this Fsm.
     *
     * @param s state.
     */
@@ -1536,7 +1536,7 @@ class fsm extends org.jacop.util.fsm.FSM {
   }
 
   /**
-    * Defines a list of final state for this FSM.
+    * Defines a list of final state for this Fsm.
     *
     * @param st array of states.
     */
@@ -1552,13 +1552,13 @@ class fsm extends org.jacop.util.fsm.FSM {
   }
 
   /**
-    * Number of states in this FSM.
+    * Number of states in this Fsm.
     *
     */
   def length = states.length
 
   /**
-    * Get state n of this FSM.
+    * Get state n of this Fsm.
     *
     * @param n index of state.
     * @return n-th state
@@ -1569,32 +1569,32 @@ class fsm extends org.jacop.util.fsm.FSM {
 }
 
 /**
-  * state specification for FSM for regular constraint.
+  * state specification for Fsm for regular constraint.
   *
-  * @constructor Creates a new state for FSM.
+  * @constructor Creates a new state for Fsm.
   */
-class state extends org.jacop.util.fsm.FSMState {
+class state extends org.jacop.util.fsm.FsmState {
 
   import org.jacop.util.fsm._
 
   /**
-    * Transition of FSM.
+    * Transition of Fsm.
     *
     * @param tran values for executing this transition.
     * @param that next state for this transition.
     */
   def ->(tran: IntSet, that: state) : Unit = {
-    transitions.add(new FSMTransition(tran, that))
+    transitions.add(new FsmTransition(tran, that))
   }
 
   /**
-    * Transition of FSM.
+    * Transition of Fsm.
     *
     * @param tran integer value for executing this transition.
     * @param that next state for this transition.
     */
   def ->(tran: Int, that: state) : Unit = {
-    transitions.add(new FSMTransition(new IntSet(tran, tran), that))
+    transitions.add(new FsmTransition(new IntSet(tran, tran), that))
   }
 }
 

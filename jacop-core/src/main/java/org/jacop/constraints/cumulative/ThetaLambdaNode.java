@@ -47,7 +47,7 @@ class ThetaLambdaNode extends TreeNode {
   // Lambda parameters
   long eLambda;
   long envLambda;
-  int responsibleELambda;
+  int responsibleElambda;
   int responsibleEnvLambda;
 
   ThetaLambdaNode() {}
@@ -69,7 +69,7 @@ class ThetaLambdaNode extends TreeNode {
         + "\nenvLambda = "
         + envLambda
         + "\nresponsibleELambda = "
-        + responsibleELambda
+        + responsibleElambda
         + "\nresponsibleEnvLambda = "
         + responsibleEnvLambda;
   }

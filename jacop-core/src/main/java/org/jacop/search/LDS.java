@@ -1,5 +1,5 @@
 /*
- * LDS.java
+ * Lds.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -41,7 +41,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-public class LDS<T extends Var> implements ExitChildListener<T> {
+public class Lds<T extends Var> implements ExitChildListener<T> {
 
   boolean timeOut;
 
@@ -61,7 +61,7 @@ public class LDS<T extends Var> implements ExitChildListener<T> {
    *
    * @param maxDiscrepancies maximal number of discrepancies allowed.
    */
-  public LDS(int maxDiscrepancies) {
+  public Lds(int maxDiscrepancies) {
 
     assert (maxDiscrepancies >= 0);
 

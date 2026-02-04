@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class Queens extends ExampleFD {
+public class Queens extends ExampleFd {
 
   // Place n queens on a chessboard of size nxn
   // so none queen checks another queen
@@ -117,7 +117,7 @@ public class Queens extends ExampleFD {
 
     example.modelBasic();
 
-    if (example.searchLDS(3)) {
+    if (example.searchLds(3)) {
       IO.println("Solution(s) found");
     }
 

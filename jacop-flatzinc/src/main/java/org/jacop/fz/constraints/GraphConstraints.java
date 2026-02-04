@@ -69,7 +69,7 @@ class GraphConstraints implements ParserTreeConstants {
     int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     String cName = "GraphIsomorphism";
 
-    // support.poseDC(new GraphIsomorphism(t, p, targetType, patternType, m, offset));
+    // support.poseDc(new GraphIsomorphism(t, p, targetType, patternType, m, offset));
 
     try {
       Class<?> c = Class.forName("org.jacop.graph." + cName);
@@ -82,7 +82,7 @@ class GraphConstraints implements ParserTreeConstants {
               IntVar[].class,
               int.class);
       Object constraint = cons.newInstance(t, p, targetType, patternType, m, offset);
-      support.poseDC((DecomposedConstraint<T>) constraint);
+      support.poseDc((DecomposedConstraint<T>) constraint);
 
     } catch (ClassNotFoundException
         | InvocationTargetException
@@ -300,7 +300,7 @@ class GraphConstraints implements ParserTreeConstants {
     // Graph graph = buildGraph(g, type, index_min);
 
     // // CliqueDecomposed ctr = new CliqueDecomposed(store, graph, cost);
-    // // support.poseDC(ctr);
+    // // support.poseDc(ctr);
     // Clique ctr = new Clique(store, graph, cost);
     // support.pose(ctr);
     // IntVar[] vars = ctr.variables();

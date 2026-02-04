@@ -38,20 +38,20 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
-import org.jacop.constraints.ExtensionalSupportMDD;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.examples.fd.ExampleFD;
+import org.jacop.examples.fd.ExampleFd;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InputOrderSelect;
 import org.jacop.search.SelectChoicePoint;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 
 /**
  * It solves a nonogram example problem, sometimes also called Paint by Numbers.
@@ -59,7 +59,7 @@ import org.jacop.util.fsm.FSMTransition;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class Nonogram extends ExampleFD {
+public class Nonogram extends ExampleFd {
 
   /** The value that represents a black dot. */
   public final int black = 1;
@@ -69,7 +69,7 @@ public class Nonogram extends ExampleFD {
 
   /**
    * It specifies if the slide based decomposition of the regular constraint should be applied. This
-   * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
+   * decomposition uses ternary extensional support constraints. It achieves GAC if Fsm is
    * deterministic.
    */
   public final boolean slideDecomposition = false;
@@ -78,10 +78,10 @@ public class Nonogram extends ExampleFD {
   public final boolean regular = true;
 
   /**
-   * It specifies if one extensional constraint based on MDD created from FSM should be used. The
-   * translation process works if FSM is deterministic.
+   * It specifies if one extensional constraint based on Mdd created from Fsm should be used. The
+   * translation process works if Fsm is deterministic.
    */
-  public final boolean extensionalMDD = false;
+  public final boolean extensionalMdd = false;
 
   /** A board to be painted in white/black dots. */
   public IntVar[][] board;
@@ -267,23 +267,23 @@ public class Nonogram extends ExampleFD {
   }
 
   /**
-   * It produces and FSM given a sequence representing a rule. e.g. [2, 3] specifies that there are
+   * It produces and Fsm given a sequence representing a rule. e.g. [2, 3] specifies that there are
    * two black dots followed by three black dots.
    *
    * @param sequence a sequence representing a rule. e.g. [2, 3]
    * @return Finite State Machine used by Regular automaton to enforce proper sequence.
    */
-  public FSM createAutomaton(int[] sequence) {
+  public Fsm createAutomaton(int[] sequence) {
 
-    FSM result = new FSM();
+    Fsm result = new Fsm();
 
-    FSMState currentState = new FSMState();
+    FsmState currentState = new FsmState();
 
     result.initState = currentState;
     IntDomain blackEncountered = new IntervalDomain(black, black);
     IntDomain whiteEncountered = new IntervalDomain(white, white);
 
-    FSMTransition white = new FSMTransition(whiteEncountered, currentState);
+    FsmTransition white = new FsmTransition(whiteEncountered, currentState);
     currentState.addTransition(white);
 
     for (int i = 0; i < sequence.length; i++) {
@@ -292,22 +292,22 @@ public class Nonogram extends ExampleFD {
       }
       for (int j = 0; j < sequence[i]; j++) {
         // Black transition
-        FSMState nextState = new FSMState();
-        FSMTransition black = new FSMTransition(blackEncountered, nextState);
+        FsmState nextState = new FsmState();
+        FsmTransition black = new FsmTransition(blackEncountered, nextState);
         currentState.addTransition(black);
         result.allStates.add(currentState);
         currentState = nextState;
       }
       // White transitions
       if (i + 1 != sequence.length) {
-        FSMState nextState = new FSMState();
-        white = new FSMTransition(whiteEncountered, nextState);
+        FsmState nextState = new FsmState();
+        white = new FsmTransition(whiteEncountered, nextState);
         currentState.addTransition(white);
         result.allStates.add(currentState);
         currentState = nextState;
       }
 
-      white = new FSMTransition(whiteEncountered, currentState);
+      white = new FsmTransition(whiteEncountered, currentState);
       currentState.addTransition(white);
     }
 
@@ -354,7 +354,7 @@ public class Nonogram extends ExampleFD {
     // Making sure that rows respect the rules.
     for (int i = 0; i < row_rules.length; i++) {
 
-      FSM result = this.createAutomaton(row_rules[i]);
+      Fsm result = this.createAutomaton(row_rules[i]);
 
       if (slideDecomposition) {
         store.imposeDecomposition(new Regular(result, board[i]));
@@ -364,15 +364,15 @@ public class Nonogram extends ExampleFD {
         store.impose(new Regular(result, board[i]));
       }
 
-      if (extensionalMDD) {
-        store.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board[i])));
+      if (extensionalMdd) {
+        store.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(board[i])));
       }
     }
 
     // Making sure that columns respect the rules.
     for (int i = 0; i < col_rules.length; i++) {
 
-      FSM result = createAutomaton(col_rules[i]);
+      Fsm result = createAutomaton(col_rules[i]);
       IntVar[] column = new IntVar[row_rules.length];
 
       for (int j = 0; j < column.length; j++) {
@@ -387,8 +387,8 @@ public class Nonogram extends ExampleFD {
         store.impose(new Regular(result, column));
       }
 
-      if (extensionalMDD) {
-        store.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column)));
+      if (extensionalMdd) {
+        store.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(column)));
       }
     }
   }

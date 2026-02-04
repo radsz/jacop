@@ -44,8 +44,8 @@ import org.jacop.search.PrintOutListener;
 /** Example for circle intersection using float constraints. */
 public class CircleIntersection {
 
-  final double MIN_FLOAT = -1e+150;
-  final double MAX_FLOAT = 1e+150;
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
 
   /**
    * It executes the program.
@@ -72,22 +72,22 @@ public class CircleIntersection {
     FloatDomain.intervalPrint(false);
 
     // x*x + y*y = 4.0 /\ (x-1.0)*(x-1.0) + (y-1.0)(y-1.0) = 4.0
-    FloatVar x = new FloatVar(store, "x", MIN_FLOAT, MAX_FLOAT);
-    FloatVar y = new FloatVar(store, "y", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x = new FloatVar(store, "x", minFloat, maxFloat);
+    FloatVar y = new FloatVar(store, "y", minFloat, maxFloat);
 
-    FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t1 = new FloatVar(store, "t1", minFloat, maxFloat);
     store.impose(new PmulQeqR(x, x, t1));
-    FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t2 = new FloatVar(store, "t2", minFloat, maxFloat);
     store.impose(new PmulQeqR(y, y, t2));
     store.impose(new PplusQeqR(t1, t2, new FloatVar(store, 4.0, 4.0)));
 
-    FloatVar s1 = new FloatVar(store, "s1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar s1 = new FloatVar(store, "s1", minFloat, maxFloat);
     store.impose(new PplusCeqR(x, -1.0, s1));
-    FloatVar s2 = new FloatVar(store, "s2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar s2 = new FloatVar(store, "s2", minFloat, maxFloat);
     store.impose(new PplusCeqR(y, -1.0, s2));
-    FloatVar r1 = new FloatVar(store, "r1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar r1 = new FloatVar(store, "r1", minFloat, maxFloat);
     store.impose(new PmulQeqR(s1, s1, r1));
-    FloatVar r2 = new FloatVar(store, "r2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar r2 = new FloatVar(store, "r2", minFloat, maxFloat);
     store.impose(new PmulQeqR(s2, s2, r2));
     store.impose(new PplusQeqR(r1, r2, new FloatVar(store, 4.0, 4.0)));
 

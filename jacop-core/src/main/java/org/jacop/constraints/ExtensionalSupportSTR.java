@@ -1,5 +1,5 @@
 /*
- * ExtensionalSupportSTR.java
+ * ExtensionalSupportStr.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -56,7 +56,7 @@ import org.jacop.util.TupleUtils;
  * @version 4.10
  */
 @Slf4j
-public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariable, Stateful {
+public class ExtensionalSupportStr extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -157,7 +157,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
    *     inserted at the beginning.
    * @param residuesBefore it specifies if the residue tuples are moved to the beginning.
    */
-  public ExtensionalSupportSTR(
+  public ExtensionalSupportStr(
       IntVar[] list, int[][] tuples, boolean reinsertBefore, boolean residuesBefore) {
 
     checkInputForNullness("list", list);
@@ -186,7 +186,7 @@ public class ExtensionalSupportSTR extends Constraint implements UsesQueueVariab
    * @param variables the variables in the scope of the constraint.
    * @param tuples the support tuples.
    */
-  public ExtensionalSupportSTR(IntVar[] variables, int[][] tuples) {
+  public ExtensionalSupportStr(IntVar[] variables, int[][] tuples) {
     this(variables, tuples, true, true);
   }
 

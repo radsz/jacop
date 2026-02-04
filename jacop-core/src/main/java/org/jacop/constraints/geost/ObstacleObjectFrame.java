@@ -82,19 +82,19 @@ public class ObstacleObjectFrame extends InternalConstraint {
    * the collection of holes that are included in all possible shapes, enlarged to include the whole
    * domain that can be covered for any feasible choice of the origin
    */
-  private final ArrayList<DBox> extendedHoles;
+  private final ArrayList<Dbox> extendedHoles;
 
   /**
    * the frame is the area that is ensured to be covered by the obstacle, given the domain of its
    * origin variables
    */
-  public LinkedList<DBox> frame;
+  public LinkedList<Dbox> frame;
 
   int timeSizeOrigin;
   int timeSizeMax;
 
   /** It specifies the bounding box of the frame. */
-  private DBox frameBoundingBox;
+  private Dbox frameBoundingBox;
 
   /** it computes the area/volume of the frame. */
   private int frameArea;
@@ -159,14 +159,14 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
     if (frame != null) {
 
-      for (DBox b : frame) {
-        DBox.dispatchBox(b);
+      for (Dbox b : frame) {
+        Dbox.dispatchBox(b);
       }
       frame.clear();
 
     } else {
       frame = new LinkedList<>();
-      frameBoundingBox = DBox.newBox(obstacle.dimension);
+      frameBoundingBox = Dbox.newBox(obstacle.dimension);
     }
 
     frameArea = 0;
@@ -202,15 +202,15 @@ public class ObstacleObjectFrame extends InternalConstraint {
     boolean holesExist = false;
 
     // define coverable domain
-    DBox domain = DBox.newBox(obstacle.dimension);
+    Dbox domain = Dbox.newBox(obstacle.dimension);
     int[] domOrigin = domain.origin;
     int[] domSize = domain.length;
     /*
      * in the polymorphic case, the domain that is covered in any case is the intersection
      * of the bounding boxes of each shape
      */
-    DBox boundingBox = null;
-    ValueEnumeration vals = obstacle.shapeID.domain.valueEnumeration();
+    Dbox boundingBox = null;
+    ValueEnumeration vals = obstacle.shapeId.domain.valueEnumeration();
     boolean firstIter = true;
     while (vals.hasMoreElements()) {
       int sid = vals.nextElement();
@@ -221,20 +221,20 @@ public class ObstacleObjectFrame extends InternalConstraint {
         holesExist = true;
       }
 
-      DBox shapeBoundingBox = shape.boundingBox();
+      Dbox shapeBoundingBox = shape.boundingBox();
       if (firstIter) {
-        boundingBox = shapeBoundingBox.copyInto(DBox.newBox(obstacle.dimension));
+        boundingBox = shapeBoundingBox.copyInto(Dbox.newBox(obstacle.dimension));
         firstIter = false;
       } else {
-        DBox inter = boundingBox.intersectWith(shapeBoundingBox);
+        Dbox inter = boundingBox.intersectWith(shapeBoundingBox);
         if (inter != null) {
           inter.copyInto(boundingBox);
         } else {
           // there is no box common to all bounding boxes, the frame is empty
           clearFrame();
           // release unused boxes
-          DBox.dispatchBox(domain);
-          DBox.dispatchBox(boundingBox);
+          Dbox.dispatchBox(domain);
+          Dbox.dispatchBox(boundingBox);
           return;
         }
       }
@@ -252,14 +252,14 @@ public class ObstacleObjectFrame extends InternalConstraint {
         // means that the bounding box itself does not have any space always covered
         clearFrame();
         // release the domain box
-        DBox.dispatchBox(domain);
-        DBox.dispatchBox(boundingBox);
+        Dbox.dispatchBox(domain);
+        Dbox.dispatchBox(boundingBox);
         return;
       }
     }
 
     // we will not need this one anymore
-    DBox.dispatchBox(boundingBox);
+    Dbox.dispatchBox(boundingBox);
 
     // if there are no holes, the frame is simply the domain that can be covered by the bounding box
     if (!holesExist) {
@@ -282,23 +282,23 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
       if (DISPLAY_FRAME) {
 
-        ValueEnumeration vals2 = obstacle.shapeID.domain.valueEnumeration();
+        ValueEnumeration vals2 = obstacle.shapeId.domain.valueEnumeration();
         while (vals2.hasMoreElements()) {
           int sid = vals.nextElement();
 
           Shape shape = geost.getShape(sid);
 
-          for (DBox sp : shape.holes()) {
-            display.display2DBox(sp, Color.orange);
+          for (Dbox sp : shape.holes()) {
+            display.display2dBox(sp, Color.orange);
           }
-          for (DBox b : shape.boxes) {
-            display.display2DBox(b, Color.black);
+          for (Dbox b : shape.boxes) {
+            display.display2dBox(b, Color.black);
           }
-          Collection<DBox> rescaledBoxes = new ArrayList<>(shape.boxes.size());
+          Collection<Dbox> rescaledBoxes = new ArrayList<>(shape.boxes.size());
 
-          for (DBox b : shape.boxes) {
+          for (Dbox b : shape.boxes) {
             int dim = b.origin.length;
-            DBox scaled = DBox.newBox(dim);
+            Dbox scaled = Dbox.newBox(dim);
             for (int i = 0; i < dim; i++) {
               scaled.origin[i] = b.origin[i] * 4;
               scaled.length[i] = b.length[i] * 4;
@@ -306,20 +306,20 @@ public class ObstacleObjectFrame extends InternalConstraint {
             rescaledBoxes.add(scaled);
           }
 
-          for (DBox sb : rescaledBoxes) {
-            display.display2DBox(sb, Color.magenta);
+          for (Dbox sb : rescaledBoxes) {
+            display.display2dBox(sb, Color.magenta);
           }
         }
 
-        for (DBox sp : extendedHoles) {
-          display.display2DBox(sp, Color.blue);
+        for (Dbox sp : extendedHoles) {
+          display.display2dBox(sp, Color.blue);
         }
-        display.display2DBox(domain, Color.green);
+        display.display2dBox(domain, Color.green);
       }
 
       domain.subtractAll(extendedHoles, frame);
 
-      ListIterator<DBox> iterator = frame.listIterator();
+      ListIterator<Dbox> iterator = frame.listIterator();
 
       /* now sweep through the obtained frame, and rescale the pieces.
        * A piece that has length 1 in some dimension must be discarded, because it was obtained
@@ -329,16 +329,16 @@ public class ObstacleObjectFrame extends InternalConstraint {
        */
       int dim = obstacle.dimension;
       while (iterator.hasNext()) {
-        DBox piece = iterator.next();
+        Dbox piece = iterator.next();
         if (DISPLAY_FRAME) {
-          display.display2DBox(piece, Color.gray);
+          display.display2dBox(piece, Color.gray);
         }
         boolean valid = true;
         for (int i = 0; valid && i < dim; i++) {
           if (piece.length[i] == 1) {
             // ignore this piece, and remove it from the frame
             valid = false;
-            DBox.dispatchBox(piece);
+            Dbox.dispatchBox(piece);
             iterator.remove();
           } else {
             // we need to retrieve the correct boundaries, given that the holes have one missing
@@ -366,29 +366,29 @@ public class ObstacleObjectFrame extends InternalConstraint {
       }
 
       // no need of the extended holes anymore, we can reuse the boxes
-      for (DBox b : extendedHoles) {
-        DBox.dispatchBox(b);
+      for (Dbox b : extendedHoles) {
+        Dbox.dispatchBox(b);
       }
 
       // release the domain box
-      DBox.dispatchBox(domain);
+      Dbox.dispatchBox(domain);
     }
 
     if (DISPLAY_FRAME) {
 
-      for (DBox framePiece : frame) {
-        display.display2DBox(framePiece, Color.red);
+      for (Dbox framePiece : frame) {
+        display.display2dBox(framePiece, Color.red);
       }
     }
 
     // update frame bounding box
     if (!frame.isEmpty()) {
-      DBox.boundingBox(frame).copyInto(frameBoundingBox);
+      Dbox.boundingBox(frame).copyInto(frameBoundingBox);
     }
 
     // update the frame area
     frameArea = 0;
-    for (DBox frameComponent : frame) {
+    for (Dbox frameComponent : frame) {
       frameArea += frameComponent.area();
     }
 
@@ -407,15 +407,15 @@ public class ObstacleObjectFrame extends InternalConstraint {
      */
     extendedHoles.clear(); // DBoxes are not collected anyway
 
-    final ValueEnumeration vals = obstacle.shapeID.domain.valueEnumeration();
+    final ValueEnumeration vals = obstacle.shapeId.domain.valueEnumeration();
     while (vals.hasMoreElements()) {
       int sid = vals.nextElement();
 
       Shape shape = geost.getShape(sid);
 
-      for (DBox hole : shape.holes()) {
+      for (Dbox hole : shape.holes()) {
         // define coverable domain
-        DBox extendedHole = DBox.newBox(obstacle.dimension);
+        Dbox extendedHole = Dbox.newBox(obstacle.dimension);
         int[] holeDomOrigin = extendedHole.origin;
         int[] holeDomSize = extendedHole.length;
 
@@ -434,7 +434,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
   @Override
   public int[] absInfeasible(Geost.SweepDirection minlex) {
     // reuse previously allocated array
-    int[] outPoint = DBox.getAllocatedInstance(obstacle.dimension + 1).origin;
+    int[] outPoint = Dbox.getAllocatedInstance(obstacle.dimension + 1).origin;
 
     final boolean consider_all = false;
 
@@ -525,7 +525,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
     variables.addAll(Arrays.asList(obstacle.coords).subList(0, obstacle.dimension));
 
-    variables.add(obstacle.shapeID);
+    variables.add(obstacle.shapeId);
     variables.add(obstacle.start);
     variables.add(obstacle.duration);
     variables.add(obstacle.end);
@@ -584,7 +584,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
   }
 
   @Override
-  public DBox isFeasible(
+  public Dbox isFeasible(
       Geost.SweepDirection min,
       LexicographicalOrder order,
       GeostObject o,
@@ -606,7 +606,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     }
 
     // intermediate check: use bounding boxes to skip test quickly
-    DBox otherBB = geost.getShape(currentShape).boundingBox;
+    Dbox otherBb = geost.getShape(currentShape).boundingBox;
 
     int outDimOrigin;
     int outDimLength;
@@ -619,9 +619,9 @@ public class ObstacleObjectFrame extends InternalConstraint {
         // the dimension is relevant
         selectedDimIndex++;
         // shift origin
-        outDimLength = frameBoundingBox.length[i] + otherBB.length[i] - 1;
+        outDimLength = frameBoundingBox.length[i] + otherBb.length[i] - 1;
         // adjust size
-        outDimOrigin = frameBoundingBox.origin[i] - (otherBB.length[i] - 1) - otherBB.origin[i];
+        outDimOrigin = frameBoundingBox.origin[i] - (otherBb.length[i] - 1) - otherBb.origin[i];
       } else {
         // the dimension is not relevant, outbox covers the whole space
         outDimOrigin = IntDomain.MinInt;
@@ -639,7 +639,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
      */
 
     // avoid allocating new object if possible
-    DBox outBox = DBox.getAllocatedInstance(obstacle.dimension + 1);
+    Dbox outBox = Dbox.getAllocatedInstance(obstacle.dimension + 1);
     int[] outOrigin = outBox.origin;
     int[] outLength = outBox.length;
 
@@ -647,8 +647,8 @@ public class ObstacleObjectFrame extends InternalConstraint {
     outOrigin[obstacle.dimension] = timeSizeOrigin;
     outLength[obstacle.dimension] = timeSizeMax - timeSizeOrigin;
 
-    for (DBox constrainedPiece : geost.getShape(currentShape).boxes) {
-      for (DBox framePiece : frame) {
+    for (Dbox constrainedPiece : geost.getShape(currentShape).boxes) {
+      for (Dbox framePiece : frame) {
         selectedDimIndex = 0;
         for (int i = 0; i < obstacle.dimension; i++) {
           if (selectedDimIndex < selectedDimensions.length

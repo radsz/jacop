@@ -242,14 +242,14 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
 
     boolean sat = maxIndex.singleton();
 
-    int MAX = list[maxIndex.value() - 1 - indexOffset].value();
+    int maxVal = list[maxIndex.value() - 1 - indexOffset].value();
     int i = 0;
     int eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() <= MAX) {
+      if (list[i].singleton() && list[i].value() <= maxVal) {
         eq++;
       }
-      sat = list[i].max() <= MAX;
+      sat = list[i].max() <= maxVal;
       i++;
     }
 

@@ -1,5 +1,5 @@
 /*
- * FSMState.java
+ * FsmState.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -39,28 +39,28 @@ import lombok.EqualsAndHashCode;
  * @version 4.10
  */
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class FSMState {
+public class FsmState {
 
   /** It specifies the list of transitions outgoing from this state. */
-  public final Set<FSMTransition> transitions;
+  public final Set<FsmTransition> transitions;
 
   /** Id of the state. There can be multiple copies of the same state with the same id. */
   @EqualsAndHashCode.Include public int id;
 
   /**
-   * It constructs a FSM state.
+   * It constructs a Fsm state.
    *
    * @param transitions it specifies transition
    * @param id state id
    */
-  public FSMState(HashSet<FSMTransition> transitions, int id) {
+  public FsmState(HashSet<FsmTransition> transitions, int id) {
     this.transitions = transitions;
     this.id = id;
   }
 
-  /** It creates a state with id equl to the number of instances FSMState created. */
-  public FSMState() {
-    this.id = FSM.idNumber.incrementAndGet();
+  /** It creates a state with id equl to the number of instances FsmState created. */
+  public FsmState() {
+    this.id = Fsm.idNumber.incrementAndGet();
     transitions = new HashSet<>();
   }
 
@@ -69,7 +69,7 @@ public class FSMState {
    *
    * @param a state from which id is taken while creating this state.
    */
-  public FSMState(FSMState a) {
+  public FsmState(FsmState a) {
     this.id = a.id;
     transitions = new HashSet<>();
   }
@@ -81,25 +81,25 @@ public class FSMState {
    * @param states it contains the states which do not need to be created, only reused.
    * @return a deep clone of the current state.
    */
-  public FSMState deepClone(Set<FSMState> states) {
+  public FsmState deepClone(Set<FsmState> states) {
 
     // replace by HashSet contains check.
-    FSMState newFSM = null;
-    for (FSMState s : states) {
+    FsmState newFsm = null;
+    for (FsmState s : states) {
       if (s.id == this.id) {
-        newFSM = s;
+        newFsm = s;
       }
     }
-    if (newFSM != null) {
-      return newFSM;
+    if (newFsm != null) {
+      return newFsm;
     }
 
-    newFSM = new FSMState(this);
-    states.add(newFSM);
-    for (FSMTransition t : this.transitions) {
-      newFSM.transitions.add(t.deepClone(states));
+    newFsm = new FsmState(this);
+    states.add(newFsm);
+    for (FsmTransition t : this.transitions) {
+      newFsm.transitions.add(t.deepClone(states));
     }
-    return newFSM;
+    return newFsm;
   }
 
   /**
@@ -107,7 +107,7 @@ public class FSMState {
    *
    * @param transition the transition being added.
    */
-  public void addTransition(FSMTransition transition) {
+  public void addTransition(FsmTransition transition) {
     transitions.add(transition);
   }
 

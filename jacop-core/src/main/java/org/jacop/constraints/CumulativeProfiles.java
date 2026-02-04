@@ -69,7 +69,7 @@ class CumulativeProfiles {
 
       if (doMaxProfile) {
         strt = t.est();
-        stp = t.lastCT();
+        stp = t.lastCt();
         value = t.res().max();
         if (trace) {
           log.debug("Update profile [{}..{})={}", strt, stp, value);

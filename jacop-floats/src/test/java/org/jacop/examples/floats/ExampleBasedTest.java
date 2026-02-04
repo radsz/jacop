@@ -96,7 +96,7 @@ public class ExampleBasedTest {
   @Test
   @Timeout(TIMEOUT_MS)
   public void testTinyTSP() {
-    TinyTSP example = new TinyTSP();
+    TinyTsp example = new TinyTsp();
 
     example.tinyTsp();
   }

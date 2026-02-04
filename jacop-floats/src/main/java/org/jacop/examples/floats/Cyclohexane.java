@@ -43,8 +43,8 @@ import org.jacop.search.PrintOutListener;
 /** Example for cyclohexane molecule using float constraints. */
 public class Cyclohexane {
 
-  final double MIN_FLOAT = -1e+150;
-  final double MAX_FLOAT = 1e+150;
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
 
   /**
    * It executes the program.
@@ -80,53 +80,53 @@ public class Cyclohexane {
     FloatVar z = new FloatVar(store, "z", -20.0, 20.0);
 
     // x*x
-    FloatVar xx = new FloatVar(store, "xx", MIN_FLOAT, MAX_FLOAT);
+    FloatVar xx = new FloatVar(store, "xx", minFloat, maxFloat);
     store.impose(new PmulQeqR(x, x, xx));
     // y*y
-    FloatVar yy = new FloatVar(store, "yy", MIN_FLOAT, MAX_FLOAT);
+    FloatVar yy = new FloatVar(store, "yy", minFloat, maxFloat);
     store.impose(new PmulQeqR(y, y, yy));
     // z*z
-    FloatVar zz = new FloatVar(store, "zz", MIN_FLOAT, MAX_FLOAT);
+    FloatVar zz = new FloatVar(store, "zz", minFloat, maxFloat);
     store.impose(new PmulQeqR(z, z, zz));
 
     // x*x + 1.0
-    FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t1 = new FloatVar(store, "t1", minFloat, maxFloat);
     store.impose(new PplusCeqR(xx, 1.0, t1));
     // y*y + 1.0
-    FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t2 = new FloatVar(store, "t2", minFloat, maxFloat);
     store.impose(new PplusCeqR(yy, 1.0, t2));
     // z*z + 1.0
-    FloatVar t3 = new FloatVar(store, "t3", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t3 = new FloatVar(store, "t3", minFloat, maxFloat);
     store.impose(new PplusCeqR(zz, 1.0, t3));
 
-    FloatVar t4 = new FloatVar(store, "t4", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t4 = new FloatVar(store, "t4", minFloat, maxFloat);
     store.impose(new PmulQeqR(yy, t3, t4));
-    FloatVar t5 = new FloatVar(store, "t5", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t5 = new FloatVar(store, "t5", minFloat, maxFloat);
     store.impose(new PmulQeqR(zz, t1, t5));
-    FloatVar t6 = new FloatVar(store, "t6", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t6 = new FloatVar(store, "t6", minFloat, maxFloat);
     store.impose(new PmulQeqR(xx, t2, t6));
 
     // z - 24.0*y
-    FloatVar t7 = new FloatVar(store, "t7", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t7 = new FloatVar(store, "t7", minFloat, maxFloat);
     store.impose(
         new LinearFloat(new FloatVar[] {z, y, t7}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
     // x - 24.0*z
-    FloatVar t8 = new FloatVar(store, "t8", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t8 = new FloatVar(store, "t8", minFloat, maxFloat);
     store.impose(
         new LinearFloat(new FloatVar[] {x, z, t8}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
     // y - 24.0*x
-    FloatVar t9 = new FloatVar(store, "t9", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t9 = new FloatVar(store, "t9", minFloat, maxFloat);
     store.impose(
         new LinearFloat(new FloatVar[] {y, x, t9}, new double[] {1.0, -24.0, -1.0}, "==", 0.0));
 
     // z*(z - 24.0*y)
-    FloatVar t10 = new FloatVar(store, "t10", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t10 = new FloatVar(store, "t10", minFloat, maxFloat);
     store.impose(new PmulQeqR(z, t7, t10));
     // x*(x - 24.0*z)
-    FloatVar t11 = new FloatVar(store, "t11", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t11 = new FloatVar(store, "t11", minFloat, maxFloat);
     store.impose(new PmulQeqR(x, t8, t11));
     // y*(y - 24.0*x)
-    FloatVar t12 = new FloatVar(store, "t12", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t12 = new FloatVar(store, "t12", minFloat, maxFloat);
     store.impose(new PmulQeqR(y, t9, t12));
 
     store.impose(new LinearFloat(new FloatVar[] {t4, t10}, new double[] {1.0, 1.0}, "==", -13.0));

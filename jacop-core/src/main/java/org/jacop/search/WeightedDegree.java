@@ -38,8 +38,8 @@ import org.jacop.core.Var;
  * all variables within the scope of that constraints have increased weight. The comparator will
  * choose the variable with the highest weight divided by its size.
  *
- * <p>This implementation is not equivalent to AFCMaxDeg since it takes all accumulated failures for
- * a variable while AFCMaxDeg sums up weights for still active constraints only!
+ * <p>This implementation is not equivalent to AfcMaxDeg since it takes all accumulated failures for
+ * a variable while AfcMaxDeg sums up weights for still active constraints only!
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski

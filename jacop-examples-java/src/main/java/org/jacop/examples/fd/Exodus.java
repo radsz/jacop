@@ -79,7 +79,7 @@ import org.jacop.core.Store;
  * @author Duda Wojciech and Radoslaw Szymanek
  * @version 4.10
  */
-public class Exodus extends ExampleFD {
+public class Exodus extends ExampleFd {
 
   /**
    * It executes the program to solve this simple puzzle.

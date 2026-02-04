@@ -81,7 +81,7 @@ import org.jacop.core.Store;
  *     against a sibling by hanging up on his or her best friend.
  *     <p>Determine: Sibling - Angry at - Reason - Retaliation - Chore
  */
-public class SiblingUproar extends ExampleFD {
+public class SiblingUproar extends ExampleFd {
 
   /**
    * It executes the program to solve this logic puzzle.

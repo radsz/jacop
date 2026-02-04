@@ -1,5 +1,5 @@
 /*
- * CPvizGardner.java
+ * CpvizGardner.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -53,14 +53,14 @@ import org.jacop.set.search.IndomainSetMin;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class CPvizGardner {
+public class CpvizGardner {
   Store store;
 
-  CPvizGardner() {}
+  CpvizGardner() {}
 
   static void main(String[] args) {
 
-    CPvizGardner run = new CPvizGardner();
+    CpvizGardner run = new CpvizGardner();
     run.examples();
   }
 
@@ -74,7 +74,7 @@ public class CPvizGardner {
     Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
-    final long startCPU = b.getThreadCpuTime(tread.threadId());
+    final long startCpu = b.getThreadCpuTime(tread.threadId());
     final long startUser = b.getThreadUserTime(tread.threadId());
 
     // int num_days = 35;
@@ -147,7 +147,7 @@ public class CPvizGardner {
 
     IO.println(
         "ThreadCpuTime = "
-            + (b.getThreadCpuTime(tread.threadId()) - startCPU) / (long) 1e+6
+            + (b.getThreadCpuTime(tread.threadId()) - startCpu) / (long) 1e+6
             + "ms");
     IO.println(
         "ThreadUserTime = "

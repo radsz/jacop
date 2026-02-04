@@ -214,7 +214,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     return currentIndex - numRemoved;
   }
 
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCnf(BufferedWriter output) throws IOException {
 
     for (int i = 0; i < currentIndex; i++) {
       int offset = i * 2;

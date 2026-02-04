@@ -52,7 +52,7 @@ import org.jacop.core.Store;
  *     can be computed to be equal to (n * (n^2 + 1)) / 2.
  */
 @SuppressWarnings("ManualArrayCopy")
-public class MagicSquares extends ExampleFD {
+public class MagicSquares extends ExampleFd {
 
   /** It specifies the number */
   public int number = 4;

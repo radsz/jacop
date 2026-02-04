@@ -51,10 +51,10 @@ import java.util.Set;
 public class InArea implements ExternalConstraint {
 
   /** It specifies the allowed area in which the objects can reside. */
-  public final DBox allowedArea;
+  public final Dbox allowedArea;
 
   /** It specifies the holes within the allowed area in which the objects can not be placed. */
-  public final Collection<DBox> holes;
+  public final Collection<Dbox> holes;
 
   /** It holds all the constraints which have been generated from this external constraints. */
   public Set<InternalConstraint> constraints;
@@ -66,7 +66,7 @@ public class InArea implements ExternalConstraint {
    * @param area the specification of the area within which the objects have to be placed.
    * @param holes the holes in which the objects can not be placed.
    */
-  public InArea(DBox area, Collection<DBox> holes) {
+  public InArea(Dbox area, Collection<Dbox> holes) {
 
     this.allowedArea = area;
     this.holes = Objects.requireNonNullElseGet(holes, () -> new ArrayList<>(0));
@@ -99,7 +99,7 @@ public class InArea implements ExternalConstraint {
 
     constraints.add(new AllowedArea(geost, allowedArea.origin, allowedArea.length));
 
-    for (DBox hole : holes) {
+    for (Dbox hole : holes) {
       constraints.add(new ForbiddenArea(geost, hole.origin, hole.length));
     }
 

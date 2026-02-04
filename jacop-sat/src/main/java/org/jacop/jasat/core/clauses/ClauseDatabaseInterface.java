@@ -107,5 +107,5 @@ public interface ClauseDatabaseInterface {
    * @param output the output writer to which all the clauses will be written to.
    * @throws java.io.IOException execption from java.io package
    */
-  void toCNF(BufferedWriter output) throws IOException;
+  void toCnf(BufferedWriter output) throws IOException;
 }

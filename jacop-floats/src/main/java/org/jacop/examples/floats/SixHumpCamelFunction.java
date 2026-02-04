@@ -47,8 +47,8 @@ import org.jacop.search.DepthFirstSearch;
 /** Example for six-hump camel function using float constraints. */
 public class SixHumpCamelFunction {
 
-  final double MIN_FLOAT = -1e+20;
-  final double MAX_FLOAT = 1e+20;
+  final double minFloat = -1e+20;
+  final double maxFloat = 1e+20;
 
   /**
    * It executes the program.
@@ -77,29 +77,29 @@ public class SixHumpCamelFunction {
     FloatVar x1 = new FloatVar(store, "x1", -2.5, 2.5);
     FloatVar x2 = new FloatVar(store, "x2", -2.5, 2.5);
 
-    FloatVar x1x1 = new FloatVar(store, "x1x1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1x1 = new FloatVar(store, "x1x1", minFloat, maxFloat);
     Constraint c0 = new PmulQeqR(x1, x1, x1x1);
     store.impose(c0);
 
-    FloatVar x2x2 = new FloatVar(store, "x2x2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x2x2 = new FloatVar(store, "x2x2", minFloat, maxFloat);
     Constraint c1 = new PmulQeqR(x2, x2, x2x2);
     store.impose(c1);
 
-    FloatVar x1x2 = new FloatVar(store, "x1x2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1x2 = new FloatVar(store, "x1x2", minFloat, maxFloat);
     store.impose(new PmulQeqR(x1, x2, x1x2));
 
-    FloatVar x1x1x1x1 = new FloatVar(store, "x1x1x1x1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1x1x1x1 = new FloatVar(store, "x1x1x1x1", minFloat, maxFloat);
     Constraint c2 = new PmulQeqR(x1x1, x1x1, x1x1x1x1);
     store.impose(c2);
 
-    FloatVar x2x2x2x2 = new FloatVar(store, "x2x2x2x2", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x2x2x2x2 = new FloatVar(store, "x2x2x2x2", minFloat, maxFloat);
     Constraint c3 = new PmulQeqR(x2x2, x2x2, x2x2x2x2);
     store.impose(c3);
 
-    FloatVar x1x1x1x1x1x1 = new FloatVar(store, "x1x1x1x1x1x1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1x1x1x1x1x1 = new FloatVar(store, "x1x1x1x1x1x1", minFloat, maxFloat);
     store.impose(new PmulQeqR(x1x1, x1x1x1x1, x1x1x1x1x1x1));
 
-    FloatVar f = new FloatVar(store, "f", MIN_FLOAT, MAX_FLOAT);
+    FloatVar f = new FloatVar(store, "f", minFloat, maxFloat);
     store.impose(
         new LinearFloat(
             new FloatVar[] {f, x1x1, x1x1x1x1, x1x1x1x1x1x1, x1x2, x2x2, x2x2x2x2},

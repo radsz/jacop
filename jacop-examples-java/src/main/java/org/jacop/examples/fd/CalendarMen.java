@@ -63,7 +63,7 @@ import org.jacop.core.Store;
  *     squash, tennis, and volleyball). Can you find the full name and sport of each month's
  *     athlete?
  */
-public class CalendarMen extends ExampleFD {
+public class CalendarMen extends ExampleFd {
 
   /**
    * It executes the program solving this puzzle using two different models.
@@ -493,7 +493,7 @@ public class CalendarMen extends ExampleFD {
 
     IO.println("This program solves logic puzzle Calendar Men");
 
-    String[] firstnameID = {
+    String[] firstnameId = {
       "Antonio",
       "Brett",
       "Cliff",
@@ -520,7 +520,7 @@ public class CalendarMen extends ExampleFD {
     final int iKarl = 10;
     final int iLorentzo = 11;
 
-    String[] surnameID = {
+    String[] surnameId = {
       "Moross",
       "Nelsen",
       "ORourke",
@@ -537,7 +537,7 @@ public class CalendarMen extends ExampleFD {
 
     final int iMoross = 0;
     final int iNelsen = 1;
-    final int iORourke = 2;
+    final int iOrourke = 2;
     final int iPaulos = 3;
     final int iQuarello = 4;
     final int iReede = 5;
@@ -547,7 +547,7 @@ public class CalendarMen extends ExampleFD {
     final int iWang = 10;
     final int iXiao = 11;
 
-    String[] sportID = {
+    String[] sportId = {
       "archery",
       "badmington",
       "croquet",
@@ -580,9 +580,9 @@ public class CalendarMen extends ExampleFD {
     IntVar[] sport = new IntVar[12];
 
     for (int i = 0; i < 12; i++) {
-      firstname[i] = new IntVar(store, firstnameID[i], 1, 12);
-      surname[i] = new IntVar(store, surnameID[i], 1, 12);
-      sport[i] = new IntVar(store, sportID[i], 1, 12);
+      firstname[i] = new IntVar(store, firstnameId[i], 1, 12);
+      surname[i] = new IntVar(store, surnameId[i], 1, 12);
+      sport[i] = new IntVar(store, sportId[i], 1, 12);
       vars.add(firstname[i]);
       vars.add(surname[i]);
       vars.add(sport[i]);
@@ -674,18 +674,18 @@ public class CalendarMen extends ExampleFD {
     // 4. Ivor, O'Rourke, and the tennis player were featured in June,
     // September, and December, in some order.
 
-    store.impose(new XneqY(firstname[iIvor], surname[iORourke]));
+    store.impose(new XneqY(firstname[iIvor], surname[iOrourke]));
     store.impose(new XneqY(firstname[iIvor], sport[itennis]));
-    store.impose(new XneqY(surname[iORourke], sport[itennis]));
+    store.impose(new XneqY(surname[iOrourke], sport[itennis]));
 
     PrimitiveConstraint[] v41 = {
       new XeqC(firstname[iIvor], 6), new XeqC(firstname[iIvor], 9), new XeqC(firstname[iIvor], 12)
     };
 
     PrimitiveConstraint[] v42 = {
-      new XeqC(surname[iORourke], 6),
-      new XeqC(surname[iORourke], 9),
-      new XeqC(surname[iORourke], 12)
+      new XeqC(surname[iOrourke], 6),
+      new XeqC(surname[iOrourke], 9),
+      new XeqC(surname[iOrourke], 12)
     };
 
     PrimitiveConstraint[] v43 = {

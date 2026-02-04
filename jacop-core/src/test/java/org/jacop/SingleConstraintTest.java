@@ -56,7 +56,7 @@ import org.jacop.constraints.DisjointConditional;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.EqBool;
-import org.jacop.constraints.ExtensionalConflictVA;
+import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenBool;
@@ -404,7 +404,7 @@ public class SingleConstraintTest extends TestHelper {
     IntVar[] x = getIntVars(store, "x", xLength, xSize);
 
     int[][] tuples = new int[][] {{0, 0}, {1, 1}};
-    ExtensionalConflictVA extensionalConflictVA = new ExtensionalConflictVA(x, tuples);
+    ExtensionalConflictVa extensionalConflictVA = new ExtensionalConflictVa(x, tuples);
 
     store.impose(extensionalConflictVA);
 

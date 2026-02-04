@@ -139,11 +139,11 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       IntervalDomain xDom;
 
-      if (x.domain.domainID() == IntDomain.IntervalDomainID) {
+      if (x.domain.domainId() == IntDomain.IntervalDomainID) {
         xDom = (IntervalDomain) x.domain;
       } else {
 
-        if (x.domain.domainID() == IntDomain.SmallDenseDomainID) {
+        if (x.domain.domainId() == IntDomain.SmallDenseDomainID) {
           xDom = ((SmallDenseDomain) x.domain).toIntervalDomain();
         } else {
 
@@ -203,11 +203,11 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       xDom = new IntervalDomain(xDom.size + 1);
 
-      if (y.domain.domainID() == IntDomain.IntervalDomainID) {
+      if (y.domain.domainId() == IntDomain.IntervalDomainID) {
         yDom = (IntervalDomain) y.domain;
       } else {
 
-        if (y.domain.domainID() == IntDomain.SmallDenseDomainID) {
+        if (y.domain.domainId() == IntDomain.SmallDenseDomainID) {
           yDom = ((SmallDenseDomain) y.domain).toIntervalDomain();
         } else {
 

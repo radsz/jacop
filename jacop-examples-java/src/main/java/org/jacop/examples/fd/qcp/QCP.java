@@ -1,5 +1,5 @@
 /*
- * QCP.java
+ * Qcp.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -43,7 +43,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.examples.fd.ExampleFD;
+import org.jacop.examples.fd.ExampleFd;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
@@ -54,12 +54,12 @@ import org.jacop.search.SmallestDomain;
 import org.jacop.search.TransformExtensional;
 
 /**
- * It solves QuasiGroup Completion Problem (QCP).
+ * It solves QuasiGroup Completion Problem (Qcp).
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class QCP extends ExampleFD {
+public class Qcp extends ExampleFd {
 
   // It uses correct InputOrder tie breaking (lex)
 
@@ -69,17 +69,17 @@ public class QCP extends ExampleFD {
   /** It specifies the file containing the description of the problem. */
   public String filename = "src/main/java/org/jacop/examples/fd/qcp/psqwh-25-235-0081.pls";
 
-  /** It contains the order of the QCP being solved. */
+  /** It contains the order of the Qcp being solved. */
   public int n;
 
   /**
-   * It executes the program which solves the QCP in multiple different ways.
+   * It executes the program which solves the Qcp in multiple different ways.
    *
    * @param args the first argument is the name of the file containing the problem.
    */
   public static void test(String[] args) {
 
-    QCP example = new QCP();
+    Qcp example = new Qcp();
 
     if (args.length > 0) {
       example.filename = args[0];
@@ -91,7 +91,7 @@ public class QCP extends ExampleFD {
       IO.print(" Solution(s) found ");
     }
 
-    example = new QCP();
+    example = new Qcp();
 
     if (args.length > 0) {
       example.filename = args[0];
@@ -103,7 +103,7 @@ public class QCP extends ExampleFD {
       IO.print(" Solution(s) found ");
     }
 
-    example = new QCP();
+    example = new Qcp();
 
     if (args.length > 0) {
       example.filename = args[0];
@@ -115,7 +115,7 @@ public class QCP extends ExampleFD {
       IO.print(" Solution(s) found ");
     }
 
-    example = new QCP();
+    example = new Qcp();
 
     if (args.length > 0) {
       example.filename = args[0];
@@ -130,19 +130,19 @@ public class QCP extends ExampleFD {
   }
 
   /**
-   * It executes the program which solves the QCP in multiple different ways.
+   * It executes the program which solves the Qcp in multiple different ways.
    *
    * @param args the first argument is the name of the file containing the problem.
    */
   void main(String[] args) {
 
-    QCP example = new QCP();
+    Qcp example = new Qcp();
 
     if (args.length > 0) {
       example.filename = args[0];
     }
 
-    IO.println("Solving QCP with restart search.");
+    IO.println("Solving Qcp with restart search.");
     example.model();
 
     if (example.searchWithRestarts()) {

@@ -47,7 +47,7 @@ import org.jacop.core.Store;
  *     <p>It solves a simple conference example problem, where different sessions must be scheduled
  *     according to the specified constraints.
  */
-public class Conference extends ExampleFD {
+public class Conference extends ExampleFd {
 
   /**
    * It executes the program which solves this simple problem.

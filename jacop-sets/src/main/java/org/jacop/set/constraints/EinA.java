@@ -89,7 +89,7 @@ public class EinA extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    a.domain.inGLB(store.level, a, element);
+    a.domain.inGlb(store.level, a, element);
 
     if (strict) {
       a.domain.inCardinality(store.level, a, 2, Integer.MAX_VALUE);
@@ -100,7 +100,7 @@ public class EinA extends PrimitiveConstraint {
   public void notConsistency(Store store) {
 
     // FIXME, TODO, check notConsistency() functions in other set constraints.
-    a.domain.inLUBComplement(store.level, a, element);
+    a.domain.inLubComplement(store.level, a, element);
   }
 
   @Override

@@ -54,7 +54,7 @@ import org.jacop.core.Store;
  *     <p>Algy order - FT, Guardian, Express, Sun Bertie order - Guardian, Express, FT, Sun Charlie
  *     order - Express, Guardian, FT, Sun Digby order - Sun, FT, Guardian, Express
  */
-public class Newspaper extends ExampleFD {
+public class Newspaper extends ExampleFd {
 
   /**
    * It executes the program which solves this newspaper problem.

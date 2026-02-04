@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -144,8 +144,8 @@ public class TransformExtensional implements InitializeListener {
 
       IntVar[] vars = search.getSolutionListener().getVariables();
 
-      ExtensionalSupportVA transformationIntoExtensionalConstraint =
-          new ExtensionalSupportVA(vars, solutions);
+      ExtensionalSupportVa transformationIntoExtensionalConstraint =
+          new ExtensionalSupportVa(vars, solutions);
       store.impose(transformationIntoExtensionalConstraint);
 
       if (debug) {

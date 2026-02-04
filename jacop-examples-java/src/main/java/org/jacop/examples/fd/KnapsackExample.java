@@ -50,7 +50,7 @@ import org.jacop.core.Store;
  *     <p>Each item is specified by its weight and profit. Find what objects should be put in the
  *     knapsack to maximize the profit without exceeding the knapsack capacity.
  */
-public class KnapsackExample extends ExampleFD {
+public class KnapsackExample extends ExampleFd {
 
   /** It stores the parameters of the main function to be used by the model functions. */
   public String[] args = new String[0];

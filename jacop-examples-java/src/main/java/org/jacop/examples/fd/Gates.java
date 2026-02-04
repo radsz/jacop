@@ -33,7 +33,7 @@ package org.jacop.examples.fd;
 import java.util.ArrayList;
 import java.util.function.BiFunction;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.ExtensionalSupportSTR;
+import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.Domain;
@@ -51,7 +51,7 @@ import org.jacop.search.SimpleSelect;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class Gates extends ExampleFD {
+public class Gates extends ExampleFd {
 
   /**
    * It executes a program to solve gates problems.
@@ -81,9 +81,9 @@ public class Gates extends ExampleFD {
     return new SimpleTable(vars, tuples);
   }
 
-  public static Constraint tableConstraintProviderUsingExtensionalSTR(
+  public static Constraint tableConstraintProviderUsingExtensionalStr(
       IntVar[] vars, int[][] tuples) {
-    return new ExtensionalSupportSTR(vars, tuples);
+    return new ExtensionalSupportStr(vars, tuples);
   }
 
   @Override

@@ -59,7 +59,7 @@ import org.jacop.search.SelectChoicePoint;
  *     optimal if the length of it (the last mark) has the smallest possible value The presented
  *     ruler with 4 marks of length 6 is optimal
  */
-public class Golomb extends ExampleFD {
+public class Golomb extends ExampleFd {
 
   /** It specifies the number of marks (number of natural numbers in the sequence). */
   public int noMarks = 10;

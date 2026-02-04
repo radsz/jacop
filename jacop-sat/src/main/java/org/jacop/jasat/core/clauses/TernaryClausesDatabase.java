@@ -221,7 +221,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
   }
 
   @Override
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCnf(BufferedWriter output) throws IOException {
 
     for (int i = 0; i < currentIndex; i++) {
       int offset = i * 3;

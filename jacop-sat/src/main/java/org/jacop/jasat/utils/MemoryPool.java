@@ -127,6 +127,6 @@ public final class MemoryPool implements SolverComponent {
   public void initialize(Core core) {
     core.pool = this;
     // create the pool matrix
-    setupPool(core.config.MEMORY_POOL_MAX_SIZE, core.config.MEMORY_POOL_STOCK_SIZE);
+    setupPool(core.config.memoryPoolMaxSize, core.config.memoryPoolStockSize);
   }
 }

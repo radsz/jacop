@@ -267,8 +267,8 @@ public class Knapsack extends Constraint
        It specifies how many removeLevel functions must be executed before the information about
        the constraint is being printed out.
       */
-      int REMOVE_INFO_FROM = 0;
-      if (countRemoveLevel >= REMOVE_INFO_FROM) {
+      int removeInfoFrom = 0;
+      if (countRemoveLevel >= removeInfoFrom) {
 
         log.debug("Removelevel for {} is called.", level);
         log.debug("{}", displayQuantitiesInEfficiencyOrder());
@@ -466,9 +466,9 @@ public class Knapsack extends Constraint
      It specifies how many consistency functions must be executed before the information about the
      constraint is being printed out.
     */
-    int CONSISTENCY_INFO_FROM = 0;
+    int consistencyInfoFrom = 0;
     if (debugAll) {
-      if (countConsistency >= CONSISTENCY_INFO_FROM) {
+      if (countConsistency >= consistencyInfoFrom) {
         log.debug("{}", displayQuantitiesInEfficiencyOrder());
       }
     }
@@ -527,7 +527,7 @@ public class Knapsack extends Constraint
     needForbidden = false;
 
     if (debugAll) {
-      if (countConsistency >= CONSISTENCY_INFO_FROM) {
+      if (countConsistency >= consistencyInfoFrom) {
         log.debug("{}", displayQuantitiesInEfficiencyOrder());
       }
     }
@@ -732,8 +732,8 @@ public class Knapsack extends Constraint
        It specifies how many queueVariable functions must be executed before the information about
        the constraint is being printed out.
       */
-      int QUEUE_INFO_FROM = 0;
-      if (countQueueVariable >= QUEUE_INFO_FROM) {
+      int queueInfoFrom = 0;
+      if (countQueueVariable >= queueInfoFrom) {
 
         log.debug("queueVariable is executed for the {}-th time", countQueueVariable);
         log.debug("{}", displayQuantitiesInEfficiencyOrder());

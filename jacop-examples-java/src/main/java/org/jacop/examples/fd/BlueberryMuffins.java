@@ -64,7 +64,7 @@ import org.jacop.core.Store;
  *     <p>Calla Oakley dogcatcher 1 muffin Bill Summers flautist 2 muffins Lynn Ingham secretary 3
  *     muffins Mark Ellis zookeeper 4 muffins
  */
-public class BlueberryMuffins extends ExampleFD {
+public class BlueberryMuffins extends ExampleFd {
 
   /**
    * It executes the program solving this puzzle.

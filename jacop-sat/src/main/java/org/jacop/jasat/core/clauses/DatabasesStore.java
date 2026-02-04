@@ -54,32 +54,32 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   // solver instance
   public Core core;
   // how many clausesDatabases can we have ? must be a power of 2
-  private int MAX_NUMBER_OF_DATABASES = 8;
+  private int maxNumberOfDatabases = 8;
   // the mask to get the database index part
-  private int DATABASES_MASK;
+  private int databasesMask;
   // the mask to get the clause index part
-  private int INDEX_MASK;
+  private int indexMask;
   // the number of bits to shift right a DATABASE_MASK to get a normal int
-  private int INDEX_MASK_NUM_BITS;
+  private int indexMaskNumBits;
   // log_2 of the number of databases
-  private int LOG_OF_NUM_DATABASES;
+  private int logOfNumDatabases;
 
   // compute values and check things
   private void initializeMasks() {
-    int i = MAX_NUMBER_OF_DATABASES >>> 1;
+    int i = maxNumberOfDatabases >>> 1;
     while (i > 0) {
-      LOG_OF_NUM_DATABASES++;
+      logOfNumDatabases++;
       i = i >>> 1; // divide by 2
     }
-    // check  2^{LOG_OF_NUM_DATABASES} == MAX_NUMBER_OF_DATABASES
-    assert 1 << LOG_OF_NUM_DATABASES == MAX_NUMBER_OF_DATABASES
+    // check  2^{logOfNumDatabases} == maxNumberOfDatabases
+    assert 1 << logOfNumDatabases == maxNumberOfDatabases
         : "number" + " of databases must be a power of 2";
 
-    INDEX_MASK = Integer.MAX_VALUE >>> LOG_OF_NUM_DATABASES;
-    DATABASES_MASK = Integer.MAX_VALUE ^ INDEX_MASK;
-    INDEX_MASK_NUM_BITS = Integer.bitCount(INDEX_MASK);
-    assert Integer.bitCount(INDEX_MASK) == Integer.SIZE - LOG_OF_NUM_DATABASES - 1;
-    assert Integer.bitCount(DATABASES_MASK ^ INDEX_MASK) == Integer.SIZE - 1;
+    indexMask = Integer.MAX_VALUE >>> logOfNumDatabases;
+    databasesMask = Integer.MAX_VALUE ^ indexMask;
+    indexMaskNumBits = Integer.bitCount(indexMask);
+    assert Integer.bitCount(indexMask) == Integer.SIZE - logOfNumDatabases - 1;
+    assert Integer.bitCount(databasesMask ^ indexMask) == Integer.SIZE - 1;
   }
 
   public int addClause(int[] clause, boolean isModelClause) {
@@ -144,7 +144,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param database the database to add
    */
   public void addDatabase(AbstractClausesDatabase database) {
-    assert currentIndex < MAX_NUMBER_OF_DATABASES;
+    assert currentIndex < maxNumberOfDatabases;
 
     databases[currentIndex] = database;
     database.setDatabaseIndex(currentIndex);
@@ -199,7 +199,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    */
   public int uniqueIdToDb(int clauseId) {
     // is this >>> or >> ?
-    int dbIndex = (clauseId & DATABASES_MASK) >>> INDEX_MASK_NUM_BITS;
+    int dbIndex = (clauseId & databasesMask) >>> indexMaskNumBits;
     assert dbIndex >= 0;
     assert dbIndex < currentIndex;
     int clauseIndex = uniqueIdToIndex(clauseId);
@@ -217,7 +217,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @return the clause index in the database
    */
   public int uniqueIdToIndex(int clauseId) {
-    int index = clauseId & INDEX_MASK;
+    int index = clauseId & indexMask;
     assert index >= 0;
 
     return index;
@@ -235,8 +235,8 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     assert clauseIndex >= 0;
     assert databaseIndex >= 0;
 
-    int clauseId = (databaseIndex << INDEX_MASK_NUM_BITS) | clauseIndex;
-    assert ((clauseId & DATABASES_MASK) >>> INDEX_MASK_NUM_BITS) == databaseIndex;
+    int clauseId = (databaseIndex << indexMaskNumBits) | clauseIndex;
+    assert ((clauseId & databasesMask) >>> indexMaskNumBits) == databaseIndex;
     assert uniqueIdToIndex(clauseId) == clauseIndex;
 
     return clauseId;
@@ -252,15 +252,15 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     this.core = core;
     core.dbStore = this;
 
-    MAX_NUMBER_OF_DATABASES = core.config.MAX_NUMBER_OF_DATABASES;
-    databases = new AbstractClausesDatabase[MAX_NUMBER_OF_DATABASES];
+    maxNumberOfDatabases = core.config.maxNumberOfDatabases;
+    databases = new AbstractClausesDatabase[maxNumberOfDatabases];
     currentIndex = 0;
 
     // computes bits sets and so on
     initializeMasks();
   }
 
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCnf(BufferedWriter output) throws IOException {
 
     int noOfVariables = core.getMaxVariable();
     int noOfClauses = 0;
@@ -279,7 +279,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
 
     for (AbstractClausesDatabase database : databases) {
       if (database != null) {
-        database.toCNF(output);
+        database.toCnf(output);
       }
     }
   }

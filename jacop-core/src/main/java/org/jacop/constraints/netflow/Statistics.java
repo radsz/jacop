@@ -38,10 +38,10 @@ package org.jacop.constraints.netflow;
  */
 public class Statistics extends StatisticsBase {
 
-  public final StatisticsBase NVARS = new StatisticsBase();
-  public final StatisticsBase XVARS = new StatisticsBase();
-  public final StatisticsBase WVARS = new StatisticsBase();
-  public final StatisticsBase SVARS = new StatisticsBase();
+  public final StatisticsBase Nvars = new StatisticsBase();
+  public final StatisticsBase Xvars = new StatisticsBase();
+  public final StatisticsBase Wvars = new StatisticsBase();
+  public final StatisticsBase Svars = new StatisticsBase();
 
   public String toString() {
 
@@ -56,21 +56,21 @@ public class Statistics extends StatisticsBase {
     str.append(StatisticsBase.DF.format((double) consistencyIterations / consistencyCalls));
     str.append(")");
 
-    if (NVARS.arcsExamined > 0) {
+    if (Nvars.arcsExamined > 0) {
       str.append("\nFor X-variables GAC-pruning (node with degree <= 2)\n");
-      NVARS.toString(str);
+      Nvars.toString(str);
     }
-    if (XVARS.arcsExamined > 0) {
+    if (Xvars.arcsExamined > 0) {
       str.append("\nFor X-variables\n");
-      XVARS.toString(str);
+      Xvars.toString(str);
     }
-    if (WVARS.arcsExamined > 0) {
+    if (Wvars.arcsExamined > 0) {
       str.append("\nFor W-variables\n");
-      WVARS.toString(str);
+      Wvars.toString(str);
     }
-    if (SVARS.arcsExamined > 0) {
+    if (Svars.arcsExamined > 0) {
       str.append("\nFor S-variables\n");
-      SVARS.toString(str);
+      Svars.toString(str);
     }
     return str.toString();
   }

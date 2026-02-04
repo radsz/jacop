@@ -35,7 +35,7 @@ import java.util.Collection;
 import org.jacop.core.Var;
 
 /**
- * The simplest possible internal constraint: DBox defining a set of points with which no object can
+ * The simplest possible internal constraint: Dbox defining a set of points with which no object can
  * overlap.
  *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
@@ -95,7 +95,7 @@ public class ForbiddenArea extends InternalConstraint {
   }
 
   @Override
-  public DBox isFeasible(
+  public Dbox isFeasible(
       Geost.SweepDirection min,
       LexicographicalOrder order,
       GeostObject o,
@@ -104,7 +104,7 @@ public class ForbiddenArea extends InternalConstraint {
 
     // avoid allocating new object if possible
     final int dimension = origin.length;
-    DBox outBox = DBox.getAllocatedInstance(dimension + 1);
+    Dbox outBox = Dbox.getAllocatedInstance(dimension + 1);
     int[] outOrigin = outBox.origin;
     int[] outLength = outBox.length;
 
@@ -120,7 +120,7 @@ public class ForbiddenArea extends InternalConstraint {
     // TODO: are the dboxes within geost objects ordered according to its area? It may be useful as
     // here we return
     // the first dbox which generates useful outbox.
-    for (DBox constrainedPiece : geost.getShape(currentShape).boxes) {
+    for (Dbox constrainedPiece : geost.getShape(currentShape).boxes) {
 
       for (int i = 0; i < dimension; i++) {
         // shift origin
@@ -149,7 +149,7 @@ public class ForbiddenArea extends InternalConstraint {
   public int[] absInfeasible(Geost.SweepDirection minlex) {
     // avoid allocating new object if possible
     final int dimension = origin.length;
-    DBox outBox = DBox.getAllocatedInstance(dimension + 1);
+    Dbox outBox = Dbox.getAllocatedInstance(dimension + 1);
     int[] outOrigin = outBox.origin;
 
     if (minlex == Geost.SweepDirection.PRUNEMIN) {

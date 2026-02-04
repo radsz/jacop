@@ -109,7 +109,7 @@ public class Rectangle {
     System.arraycopy(rect.origin, 0, this.origin, 0, rect.origin.length);
   }
 
-  public static Rectangle[] toArrayOf2DRectangles(
+  public static Rectangle[] toArrayOf2dRectangles(
       List<? extends List<? extends IntVar>> rectangles) {
 
     Rectangle[] result = new Rectangle[rectangles.size()];
@@ -131,7 +131,7 @@ public class Rectangle {
     return result;
   }
 
-  public static Rectangle[] toArrayOf2DRectangles(
+  public static Rectangle[] toArrayOf2dRectangles(
       IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
     assert (origin1 != null) : "o1 list is null";
@@ -158,7 +158,7 @@ public class Rectangle {
     }
   }
 
-  public static Rectangle[] toArrayOf2DRectangles(IntVar[][] rectangles) {
+  public static Rectangle[] toArrayOf2dRectangles(IntVar[][] rectangles) {
 
     assert (rectangles != null) : "Rectangles list is null";
 
@@ -208,11 +208,11 @@ public class Rectangle {
     int i = 0;
     while (overlap && i < dim) {
       IntDomain originIdom = origin[i].dom();
-      IntDomain ROriginIdom = r.origin[i].dom();
+      IntDomain rOriginidom = r.origin[i].dom();
       min1 = originIdom.min();
       max1 = originIdom.max() + length[i].max();
-      min2 = ROriginIdom.min();
-      max2 = ROriginIdom.max() + r.length[i].max();
+      min2 = rOriginidom.min();
+      max2 = rOriginidom.max() + r.length[i].max();
       overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }

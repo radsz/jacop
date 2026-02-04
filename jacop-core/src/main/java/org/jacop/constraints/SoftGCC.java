@@ -54,6 +54,8 @@ import org.jacop.core.ValueEnumeration;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
+@SuppressWarnings(
+    "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
 public class SoftGCC extends DecomposedConstraint<Constraint> {
 
   public final IntVar[] xvars;
@@ -368,7 +370,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             costs.add(v);
 
             IntVar[] list = {hardCounters[i], v};
-            decomposition.add(new ExtensionalSupportVA(list, table));
+            decomposition.add(new ExtensionalSupportVa(list, table));
 
             continue;
           }
@@ -414,7 +416,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             IntVar[] list = {hardCounter, softCounters[i], v};
             decomposition.add(
-                new ExtensionalSupportVA(list, tuples.toArray(new int[tuples.size()][3])));
+                new ExtensionalSupportVa(list, tuples.toArray(new int[tuples.size()][3])));
           }
         }
 
@@ -461,7 +463,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             costs.add(v);
 
             IntVar[] list = {hardCounters[i], v};
-            result.add(new ExtensionalSupportVA(list, table));
+            result.add(new ExtensionalSupportVa(list, table));
 
             continue;
           }
@@ -506,7 +508,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
             costs.add(v);
 
             IntVar[] list = {hardCounter, softCounters[i], v};
-            result.add(new ExtensionalSupportVA(list, tuples.toArray(new int[tuples.size()][3])));
+            result.add(new ExtensionalSupportVa(list, tuples.toArray(new int[tuples.size()][3])));
           }
         }
 
@@ -624,6 +626,7 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     return result.toString();
   }
 
+  @SuppressWarnings("checkstyle:AbbreviationAsWordInName") // GCC is standard terminology
   private class SoftGCCBuilder extends NetworkBuilder {
 
     private SoftGCCBuilder(IntDomain all, IntDomain[] doms, ViolationMeasure vm) {

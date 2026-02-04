@@ -98,7 +98,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.geost.DBox;
+import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -130,9 +130,9 @@ import org.jacop.set.constraints.AdisjointB;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AeqS;
 import org.jacop.set.core.SetVar;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 
 /**
  * Generation of global constraints in flatzinc.
@@ -427,7 +427,7 @@ class GlobalConstraints implements ParserTreeConstants {
         useDecomp == 0 ? ViolationMeasure.VARIABLE_BASED : ViolationMeasure.DECOMPOSITION_BASED;
     SoftAlldifferent sa = new SoftAlldifferent(x, s, usedMeasure);
     // sa.primitiveDecomposition(store);
-    support.poseDC(sa);
+    support.poseDc(sa);
   }
 
   void gen_jacop_softgcc(SimpleNode node) {
@@ -440,7 +440,7 @@ class GlobalConstraints implements ParserTreeConstants {
     SoftGCC sgcc =
         new SoftGCC(x, hard_counters, values, soft_counters, cost, ViolationMeasure.VALUE_BASED);
     // sgcc.primitiveDecomposition(store);
-    support.poseDC(sgcc);
+    support.poseDc(sgcc);
   }
 
   void gen_jacop_alldistinct(SimpleNode node) {
@@ -1254,10 +1254,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xx = removeDuplicates(x);
 
     // Build DFA
-    FSM dfa = new FSM();
-    FSMState[] s = new FSMState[Q];
+    Fsm dfa = new Fsm();
+    FsmState[] s = new FsmState[Q];
     for (int i = 0; i < s.length; i++) {
-      s[i] = new FSMState();
+      s[i] = new FsmState();
       dfa.allStates.add(s[i]);
     }
     dfa.initState = s[q0 - 1];
@@ -1288,7 +1288,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int nextState = e.getKey();
         IntDomain transition = e.getValue();
 
-        s[i].transitions.add(new FSMTransition(transition, s[nextState]));
+        s[i].transitions.add(new FsmTransition(transition, s[nextState]));
       }
     }
 
@@ -1311,10 +1311,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xx = removeDuplicates(x);
 
     // Build DFA
-    FSM dfa = new FSM();
-    FSMState[] s = new FSMState[Q];
+    Fsm dfa = new Fsm();
+    FsmState[] s = new FsmState[Q];
     for (int i = 0; i < s.length; i++) {
-      s[i] = new FSMState();
+      s[i] = new FsmState();
       dfa.allStates.add(s[i]);
     }
     dfa.initState = s[q0 - 1];
@@ -1348,7 +1348,7 @@ class GlobalConstraints implements ParserTreeConstants {
         int nextState = e.getKey();
         IntDomain transition = e.getValue();
 
-        s[i].transitions.add(new FSMTransition(transition, s[nextState]));
+        s[i].transitions.add(new FsmTransition(transition, s[nextState]));
       }
     }
 
@@ -1392,7 +1392,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     DecomposedConstraint<Constraint> c =
         Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
-    support.poseDC(c);
+    support.poseDc(c);
   }
 
   void gen_jacop_stretch(SimpleNode node) {
@@ -1402,7 +1402,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
     DecomposedConstraint<Constraint> c = new Stretch(values, min, max, x);
-    support.poseDC(c);
+    support.poseDc(c);
   }
 
   void gen_jacop_disjoint(SimpleNode node) {
@@ -1465,7 +1465,7 @@ class GlobalConstraints implements ParserTreeConstants {
       support.pose(new Increasing(x, strict));
     }
     // decompoistion possible
-    // support.poseDC(new Increasing(x, strict));
+    // support.poseDc(new Increasing(x, strict));
   }
 
   void gen_jacop_decreasing(SimpleNode node, boolean strict) {
@@ -1481,7 +1481,7 @@ class GlobalConstraints implements ParserTreeConstants {
       support.pose(new Decreasing(x, strict));
     }
     // decompoistion possible
-    // support.poseDC(new Decreasing(x, strict));
+    // support.poseDc(new Decreasing(x, strict));
   }
 
   void gen_jacop_value_precede_int(SimpleNode node) {
@@ -1601,19 +1601,19 @@ class GlobalConstraints implements ParserTreeConstants {
     ArrayList<Shape> shapes = new ArrayList<>();
 
     // dummy shape to have right indexes for kind (starting from 1)
-    ArrayList<DBox> dummy = new ArrayList<>();
+    ArrayList<Dbox> dummy = new ArrayList<>();
     int[] offsetDummy = new int[dim];
     int[] sizeDummy = new int[dim];
     for (int k = 0; k < dim; k++) {
       offsetDummy[k] = 0;
       sizeDummy[k] = 1;
     }
-    dummy.add(new DBox(offsetDummy, sizeDummy));
+    dummy.add(new Dbox(offsetDummy, sizeDummy));
     shapes.add(new Shape(0, dummy));
 
     // create all shapes (starting with id=1)
     for (int i = 0; i < shape.length; i++) {
-      ArrayList<DBox> shape_i = new ArrayList<>();
+      ArrayList<Dbox> shape_i = new ArrayList<>();
 
       for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements(); ) {
         int j = e.nextElement();
@@ -1625,7 +1625,7 @@ class GlobalConstraints implements ParserTreeConstants {
           offset[k] = rect_offset[(j - 1) * dim + k];
           size[k] = rect_size[(j - 1) * dim + k];
         }
-        shape_i.add(new DBox(offset, size));
+        shape_i.add(new Dbox(offset, size));
       }
       shapes.add(new Shape((i + 1), shape_i));
     }
@@ -1674,19 +1674,19 @@ class GlobalConstraints implements ParserTreeConstants {
     ArrayList<Shape> shapes = new ArrayList<>();
 
     // dummy shape to have right indexes for kind (starting from 1)
-    ArrayList<DBox> dummy = new ArrayList<>();
+    ArrayList<Dbox> dummy = new ArrayList<>();
     int[] offsetDummy = new int[dim];
     int[] sizeDummy = new int[dim];
     for (int k = 0; k < dim; k++) {
       offsetDummy[k] = 0;
       sizeDummy[k] = 1;
     }
-    dummy.add(new DBox(offsetDummy, sizeDummy));
+    dummy.add(new Dbox(offsetDummy, sizeDummy));
     shapes.add(new Shape(0, dummy));
 
     // create all shapes (starting with id=1)
     for (int i = 0; i < shape.length; i++) {
-      ArrayList<DBox> shape_i = new ArrayList<>();
+      ArrayList<Dbox> shape_i = new ArrayList<>();
 
       for (ValueEnumeration e = shape[i].valueEnumeration(); e.hasMoreElements(); ) {
         int j = e.nextElement();
@@ -1698,7 +1698,7 @@ class GlobalConstraints implements ParserTreeConstants {
           offset[k] = rect_offset[(j - 1) * dim + k];
           size[k] = rect_size[(j - 1) * dim + k];
         }
-        shape_i.add(new DBox(offset, size));
+        shape_i.add(new Dbox(offset, size));
       }
       shapes.add(new Shape((i + 1), shape_i));
     }
@@ -1733,7 +1733,7 @@ class GlobalConstraints implements ParserTreeConstants {
       int[] lb = support.getIntArray((SimpleNode) node.jjtGetChild(6));
       int[] ub = support.getIntArray((SimpleNode) node.jjtGetChild(7));
 
-      InArea constraint2 = new InArea(new DBox(lb, ub), null);
+      InArea constraint2 = new InArea(new Dbox(lb, ub), null);
       constraints.add(constraint2);
     }
 

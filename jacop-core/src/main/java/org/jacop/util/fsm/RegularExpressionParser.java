@@ -130,7 +130,7 @@ public class RegularExpressionParser {
 
           break;
 
-        case LexicalAnalyzer.DOT:
+        case LexicalAnalyzer.Dot:
           lexer.nextToken();
           if (token != LexicalAnalyzer.WORD && token != LexicalAnalyzer.LEFT_PAREN) {
             // print error message and throw SyntaxException
@@ -139,7 +139,7 @@ public class RegularExpressionParser {
 
           Expression c3 = parse(true);
           c = new Concatenation(c, c3);
-          while (token == LexicalAnalyzer.DOT) {
+          while (token == LexicalAnalyzer.Dot) {
             lexer.nextToken();
             c3 = parse(true);
             c = new Concatenation(c, c3);
@@ -172,7 +172,7 @@ public class RegularExpressionParser {
           c = new Literal(lexer.getString());
           lexer.nextToken();
           if (token != LexicalAnalyzer.RIGHT_PAREN && token != LexicalAnalyzer.EOF) {
-            if (token != LexicalAnalyzer.DOT
+            if (token != LexicalAnalyzer.Dot
                 && token != LexicalAnalyzer.STAR
                 && token != LexicalAnalyzer.PLUS) {
               // print error message and throw SyntaxException
@@ -268,7 +268,7 @@ public class RegularExpressionParser {
      *
      * @return Finite State Machine corresponding
      */
-    public abstract FSM parseToFSM();
+    public abstract Fsm parseToFsm();
   }
 
   static class Concatenation extends Expression {
@@ -293,8 +293,8 @@ public class RegularExpressionParser {
     }
 
     @Override
-    public FSM parseToFSM() {
-      return a.parseToFSM().concatenation(b.parseToFSM());
+    public Fsm parseToFsm() {
+      return a.parseToFsm().concatenation(b.parseToFsm());
     }
   }
 
@@ -318,8 +318,8 @@ public class RegularExpressionParser {
     }
 
     @Override
-    public FSM parseToFSM() {
-      return this.inStar.parseToFSM().star();
+    public Fsm parseToFsm() {
+      return this.inStar.parseToFsm().star();
     }
   }
 
@@ -379,16 +379,16 @@ public class RegularExpressionParser {
     }
 
     @Override
-    public FSM parseToFSM() {
+    public Fsm parseToFsm() {
 
       boolean first = true;
-      FSM tmp = null;
+      Fsm tmp = null;
 
       boolean isSimple = true;
 
       for (Expression e : this.disj) {
         if (first) {
-          tmp = e.parseToFSM();
+          tmp = e.parseToFsm();
           first = false;
           if (e.getType() != RegularExpressionParser.Literal) {
             isSimple = false;
@@ -401,7 +401,7 @@ public class RegularExpressionParser {
           tmp.initState.transitions.iterator().next().domain = dom.union(val);
 
         } else {
-          tmp = tmp.union(e.parseToFSM());
+          tmp = tmp.union(e.parseToFsm());
           isSimple = false;
         }
       }
@@ -441,12 +441,12 @@ public class RegularExpressionParser {
     }
 
     @Override
-    public FSM parseToFSM() {
+    public Fsm parseToFsm() {
 
-      FSM c = new FSM();
-      FSMState fin = new FSMState();
+      Fsm c = new Fsm();
+      FsmState fin = new FsmState();
 
-      c.initState = new FSMState();
+      c.initState = new FsmState();
 
       c.allStates.add(c.initState);
       c.allStates.add(fin);
@@ -455,7 +455,7 @@ public class RegularExpressionParser {
 
       int val = Integer.parseInt(lit);
       IntervalDomain dom = new IntervalDomain(val, val);
-      c.initState.addTransition(new FSMTransition(dom, fin));
+      c.initState.addTransition(new FsmTransition(dom, fin));
 
       return c;
     }

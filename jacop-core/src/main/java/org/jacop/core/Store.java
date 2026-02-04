@@ -225,10 +225,10 @@ public class Store {
   /** It stores integer variables created within a store. */
   public Var[] vars;
 
-  /** It is used by Extensional MDD constraints. It is to represent G_yes. */
+  /** It is used by Extensional Mdd constraints. It is to represent G_yes. */
   public SparseSet sparseSet;
 
-  /** It is used by Extensional MDD constraints. It is to represent the size of G_yes. */
+  /** It is used by Extensional Mdd constraints. It is to represent the size of G_yes. */
   public int sparseSetSize;
 
   /** It stores the number of constraints which were imposed to the store. */
@@ -241,10 +241,10 @@ public class Store {
   protected String variableIdPrefix = "_";
 
   /**
-   * Variables for accumulated failure count (AFC) for constraints. constraintAFCManagement- opens
+   * Variables for accumulated failure count (AFC) for constraints. constraintAfcManagement- opens
    * AFC menagement decay- decay factor allConstraints- all constraints in the store
    */
-  boolean constraintAFCManagement;
+  boolean constraintAfcManagement;
 
   Set<Constraint> allConstraints;
   double decay = 0.99d;
@@ -540,8 +540,8 @@ public class Store {
           currentConstraint.increaseWeight();
         }
 
-        if (constraintAFCManagement) {
-          currentConstraint.updateAFC(allConstraints, decay);
+        if (constraintAfcManagement) {
+          currentConstraint.updateAfc(allConstraints, decay);
         }
 
         if (variableActivityManagement) {
@@ -1089,7 +1089,7 @@ public class Store {
    *
    * @param id store id.
    */
-  public void setID(String id) {
+  public void setId(String id) {
     this.id = id;
   }
 
@@ -1219,7 +1219,7 @@ public class Store {
   }
 
   public void afcManagement(boolean m) {
-    constraintAFCManagement = m;
+    constraintAfcManagement = m;
   }
 
   public void activityManagement(boolean m) {

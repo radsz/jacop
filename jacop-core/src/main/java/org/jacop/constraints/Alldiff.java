@@ -158,8 +158,8 @@ public class Alldiff extends Alldifferent {
     // store.propagationHasOccurred = false;
 
     init();
-    updateLB();
-    updateUB();
+    updateLb();
+    updateUb();
 
     // } while (store.propagationHasOccurred);
   }
@@ -204,7 +204,7 @@ public class Alldiff extends Alldifferent {
     bounds[nb + 1] = bounds[nb] + 2;
   }
 
-  private void updateLB() {
+  private void updateLb() {
 
     for (int i = 1; i <= nb + 1; i++) {
       t[i] = h[i] = i - 1;
@@ -237,7 +237,7 @@ public class Alldiff extends Alldifferent {
     }
   }
 
-  private void updateUB() {
+  private void updateUb() {
 
     for (int i = 0; i <= nb; i++) {
       t[i] = h[i] = i + 1;

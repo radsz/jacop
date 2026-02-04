@@ -1,5 +1,5 @@
 /*
- * EWF.java
+ * Ewf.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * It specifies EWF benchmark.
+ * It specifies Ewf benchmark.
  *
  * <p>Source:
  *
@@ -43,26 +43,26 @@ import java.util.List;
  * @see "Michel, P. and Lauther U. and Duzy, P., The Synthesis Approach to Digital System Design,
  *     Kluwer Academic Publisher, 1992"
  */
-public class EWF extends Filter {
+public class Ewf extends Filter {
 
-  /** It constructs a simple EWF filter. */
-  public EWF() {
+  /** It constructs a simple Ewf filter. */
+  public Ewf() {
     this(1, 2);
   }
 
   /**
-   * It constructs a EWF filter with the specified delay for the addition and multiplication
+   * It constructs a Ewf filter with the specified delay for the addition and multiplication
    * operation.
    *
    * @param addDel the delay of the addition operation.
    * @param mulDel the delay of the multiplication operation.
    */
-  public EWF(int addDel, int mulDel) {
+  public Ewf(int addDel, int mulDel) {
 
     this.addDel = addDel;
     this.mulDel = mulDel;
 
-    name = "EWF";
+    name = "Ewf";
 
     this.dependencies =
         new int[][] {

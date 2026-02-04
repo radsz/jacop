@@ -62,6 +62,8 @@ import org.jacop.core.Var;
  * @version 4.10
  */
 @Slf4j
+@SuppressWarnings(
+    "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
 public class GCC extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -94,21 +96,21 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
    */
   private final int[] match3;
 
-  private final int[] match1XOrder;
-  private final int[] match2XOrder;
+  private final int[] match1xOrder;
+  private final int[] match2xOrder;
   private final int[] nbOfMatchPerY;
   private final int[] compOfY;
-  private final XDomain[] xDomain;
+  private final Xdomain[] xDomain;
   private final int[][] yDomain;
   private final int xSize;
   private final int ySize;
   private final ArrayDeque<Integer> S1;
   private final ArrayDeque<Component> S2;
-  private final PriorityQueue<XDomain> pFirst;
-  private final PriorityQueue<XDomain> pSecond;
+  private final PriorityQueue<Xdomain> pFirst;
+  private final PriorityQueue<Xdomain> pSecond;
   private final PriorityQueue<Integer> pCount;
   private final Map<IntVar, Integer> xNodesHash;
-  private final Comparator<XDomain> compareLowerBound =
+  private final Comparator<Xdomain> compareLowerBound =
       (o1, o2) -> {
         if (o1.min() < o2.min()) {
           return -1;
@@ -173,22 +175,22 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     System.arraycopy(x, 0, this.x, 0, xSize);
     System.arraycopy(counters, 0, this.counters, 0, ySize);
 
-    this.xDomain = new XDomain[xSize];
+    this.xDomain = new Xdomain[xSize];
     this.yDomain = new int[2][ySize];
 
     // rest of the init
     match1 = new int[xSize];
     match2 = new int[xSize];
     match3 = new int[xSize];
-    match1XOrder = new int[xSize];
-    match2XOrder = new int[xSize];
+    match1xOrder = new int[xSize];
+    match2xOrder = new int[xSize];
 
     nbOfMatchPerY = new int[ySize];
     compOfY = new int[ySize];
 
     S1 = new ArrayDeque<>();
     S2 = new ArrayDeque<>();
-    Comparator<XDomain> sortPriorityMinOrder =
+    Comparator<Xdomain> sortPriorityMinOrder =
         (o1, o2) -> {
           if (o1.max() < o2.max()) {
             return -1;
@@ -352,7 +354,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       if (debug) {
         log.debug("stamp after {}", stampValue);
-        log.debug("XDomain");
+        log.debug("Xdomain");
       }
       // put in the xDomain all xNodes that are not singleton
 
@@ -407,7 +409,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         }
       }
 
-      sortXByDomainMin();
+      sortXbyDomainMin();
 
       findGeneralizedMatching();
       sccs();
@@ -537,7 +539,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     for (i = 0; i < xSize; i++) {
       this.xDomain[i] =
-          new XDomain(
+          new Xdomain(
               x[i], findPosition(x[i].min(), domainHash), findPosition(x[i].max(), domainHash));
     }
 
@@ -610,7 +612,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     Arrays.fill(nbOfMatchPerY, 0);
 
     if (debug) {
-      log.debug("XDomain");
+      log.debug("Xdomain");
       for (int i = 0; i < stampValue; i++) {
         log.debug("{} [{}-{}]", i, xDomain[i].min(), xDomain[i].max());
       }
@@ -618,7 +620,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // first pass
     firstPass();
 
-    // check we are in the good ranges for match1 and match1XOrder
+    // check we are in the good ranges for match1 and match1xOrder
     assert (checkFirstPass());
 
     secondPass();
@@ -635,8 +637,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     for (int j = 0; j < stampValue; j++) {
       assert (match1[j] >= 0);
       assert (match1[j] < ySize);
-      assert (match1XOrder[j] >= 0);
-      assert (match1XOrder[j] < stampValue);
+      assert (match1xOrder[j] >= 0);
+      assert (match1xOrder[j] < stampValue);
     }
 
     return true;
@@ -645,7 +647,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private boolean checkSecondPass() {
 
     for (int j = 1; j < stampValue; j++) {
-      assert (match2[match2XOrder[j]] >= match2[match2XOrder[j - 1]]);
+      assert (match2[match2xOrder[j]] >= match2[match2xOrder[j - 1]]);
     }
 
     return true;
@@ -667,7 +669,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     //   int j = 0;
     int xIndex = 0;
     int maxY;
-    int match1XOrderIndex = 0;
+    int match1xOrderIndex = 0;
     int top;
 
     for (int i = 0; i < ySize; i++) {
@@ -686,11 +688,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         top = (pFirst.remove()).index; // index of the first element of pFirst
         match1[top] = i;
         u++;
-        // match1XOrder gives the order in which xs where in the priority queue
+        // match1xOrder gives the order in which xs where in the priority queue
         // that sorted them by domain max by group of domain min.
         // That is there are first sorted by domain min and after by domain max.
-        match1XOrder[match1XOrderIndex] = top;
-        match1XOrderIndex++;
+        match1xOrder[match1xOrderIndex] = top;
+        match1xOrderIndex++;
 
         if (xDomain[top].max() < i) {
           if (debug) {
@@ -719,7 +721,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     if (debug) {
       StringBuilder sb = new StringBuilder("match1Xorder : ");
-      for (int aMatch1XOrder : match1XOrder) {
+      for (int aMatch1XOrder : match1xOrder) {
         sb.append(aMatch1XOrder).append(" ");
       }
       log.debug("{}", sb);
@@ -739,14 +741,14 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int top;
     int xIndex = 0;
     int minY;
-    int match2XOrderIndex = 0;
+    int match2xOrderIndex = 0;
     int order;
 
     for (int i = 0; i < ySize; i++) {
-      // I should iterate on the match1XOrder instead of the normal order
+      // I should iterate on the match1xOrder instead of the normal order
       // we take all the xs that where matched with yi in the first pass.
-      while ((xIndex < stampValue) && (match1[match1XOrder[xIndex]] == i)) {
-        order = match1XOrder[xIndex];
+      while ((xIndex < stampValue) && (match1[match1xOrder[xIndex]] == i)) {
+        order = match1xOrder[xIndex];
         xDomain[order].index = order;
         pSecond.add(xDomain[order]);
         xIndex++;
@@ -765,8 +767,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         // change, check.
         match2[top] = i;
 
-        match2XOrder[match2XOrderIndex] = top;
-        match2XOrderIndex++;
+        match2xOrder[match2xOrderIndex] = top;
+        match2xOrderIndex++;
         nbOfMatchPerY[i]++;
         //       j++;
       }
@@ -774,8 +776,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         top = pSecond.remove().index;
         // change, check.
         match2[top] = i;
-        match2XOrder[match2XOrderIndex] = top;
-        match2XOrderIndex++;
+        match2xOrder[match2xOrderIndex] = top;
+        match2xOrderIndex++;
         nbOfMatchPerY[i]++;
         //       j++;
       }
@@ -783,7 +785,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     if (debug) {
       StringBuilder sb = new StringBuilder("match2Xorder : ");
-      for (int aMatch2XOrder : match2XOrder) {
+      for (int aMatch2XOrder : match2xOrder) {
         sb.append(aMatch2XOrder).append(" ");
       }
       log.debug("{}", sb);
@@ -805,17 +807,17 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     System.arraycopy(match2, 0, match3, 0, stampValue);
 
     for (int i = ySize - 1; i >= 0; i--) {
-      while ((xIndex >= 0) && (match2[match2XOrder[xIndex]] > i)) {
+      while ((xIndex >= 0) && (match2[match2xOrder[xIndex]] > i)) {
         xIndex--;
       }
 
       e = nbOfMatchPerY[i] - yDomain[1][i]; // excess of y mates
       while (e > 0) {
 
-        assert (match2[match2XOrder[xIndex]] == i);
+        assert (match2[match2xOrder[xIndex]] == i);
 
         while (xIndex >= 0) {
-          x = match2XOrder[xIndex];
+          x = match2xOrder[xIndex];
           if (match1[x] == i) {
             xIndex--;
           } else {
@@ -847,7 +849,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void sccs() {
 
     int sccNb;
-    int maxYReachedFromS;
+    int maxYreachedFromS;
     int[] compReachesLeft = new int[ySize];
     int[] compReachesRight = new int[ySize];
     int[] yreachesLeft = new int[ySize];
@@ -908,8 +910,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
 
-    maxYReachedFromS = -1;
-    int maxYReachesS = -1;
+    maxYreachedFromS = -1;
+    int maxYreachesS = -1;
 
     int C;
     for (int i = 0; i < ySize; i++) {
@@ -920,50 +922,50 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
       // if the max y that can be reached is greater than the current y,
       // that the comp it belongs to can be reached from s.
-      if (maxYReachedFromS >= i) {
+      if (maxYreachedFromS >= i) {
         reachedFromS[C] = true;
       }
 
       // if it's reached we can extand the max y reached to the compReachesRight of the component
       if (reachedFromS[C]) {
-        maxYReachedFromS = Math.max(maxYReachedFromS, compReachesRight[C]);
+        maxYreachedFromS = Math.max(maxYreachedFromS, compReachesRight[C]);
       }
 
       // same in the other way : if the ReachesLeft of the comp is under the max y that
       // reaches S this comp reaches S
-      if (compReachesLeft[C] <= maxYReachesS) {
+      if (compReachesLeft[C] <= maxYreachesS) {
         reachesS[C] = true;
       }
 
       // if it's reachesS we can extand the max Y that reaches it to the current y.
       if (reachesS[C]) {
-        maxYReachesS = Math.max(maxYReachesS, i);
+        maxYreachesS = Math.max(maxYreachesS, i);
       }
     }
 
     // same as before but for minimum
 
-    int minYReachedFromS = ySize;
-    int minYReachesS = ySize;
+    int minYreachedFromS = ySize;
+    int minYreachesS = ySize;
 
     for (int i = ySize - 1; i >= 0; i--) {
       C = compOfY[i];
       assert (C >= 0);
       assert (C <= sccNb);
-      if (minYReachedFromS <= i) {
+      if (minYreachedFromS <= i) {
         reachedFromS[C] = true;
       }
 
       if (reachedFromS[C]) {
-        minYReachedFromS = Math.min(minYReachedFromS, compReachesLeft[C]);
+        minYreachedFromS = Math.min(minYreachedFromS, compReachesLeft[C]);
       }
 
-      if (compReachesRight[C] >= minYReachesS) {
+      if (compReachesRight[C] >= minYreachesS) {
         reachesS[C] = true;
       }
 
       if (reachesS[C]) {
-        minYReachesS = Math.min(minYReachesS, i);
+        minYreachesS = Math.min(minYreachesS, i);
       }
     }
 
@@ -1194,7 +1196,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     xIndex = stampValue - 1;
     for (int i = ySize - 1; i >= 0; i--) {
       while (xIndex >= 0) {
-        x = match2XOrder[xIndex];
+        x = match2xOrder[xIndex];
         if (match2[x] == i) {
           pCount.add(match1[x]);
           xIndex--;
@@ -1224,7 +1226,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     for (int i = ySize - 1; i >= 0; i--) {
       count = 0;
       while (xIndex >= 0) {
-        x = match2XOrder[xIndex];
+        x = match2xOrder[xIndex];
         if (match2[x] == i) {
           pCount.add(match1[x]);
           xIndex--;
@@ -1254,7 +1256,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   // ----------------------------SORT_AND_COMPARATOR--------------------------//
 
-  private void sortXByDomainMin() {
+  private void sortXbyDomainMin() {
     // I need to sort only the part concern, otherwise old values still after
     // the stamp value will interfer with the sorting
     Arrays.sort(xDomain, 0, stampValue, compareLowerBound);
@@ -1315,11 +1317,11 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     }
   }
 
-  private static class XDomain extends IntervalDomain {
+  private static class Xdomain extends IntervalDomain {
     Var twin;
     int index;
 
-    XDomain(Var twin, int min, int max) {
+    Xdomain(Var twin, int min, int max) {
       super(min, max);
       this.twin = twin;
     }

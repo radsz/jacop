@@ -84,13 +84,13 @@ public class Binpacking extends Constraint
   private final LinkedHashSet<IntVar> binQueue = new LinkedHashSet<>();
   private final Map<IntVar, Integer> itemMap;
   private final Map<IntVar, Integer> binMap;
-  boolean LBpruning = true;
+  boolean lbPruning = true;
   private boolean firstConsistencyCheck = true;
   private int minBinNumber;
   private int sizeAllItems;
   private int alphaP;
   private int betaP;
-  private TimeStamp<Boolean> LBpruningStamp;
+  private TimeStamp<Boolean> lbPruningStamp;
 
   /**
    * It constructs the binpacking constraint for the supplied variable.
@@ -201,13 +201,13 @@ public class Binpacking extends Constraint
   @Builder
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean lbPruning) {
     this(bin, load, w, minBin);
-    this.LBpruning = lbPruning;
+    this.lbPruning = lbPruning;
   }
 
   @Override
   public void impose(Store store) {
     super.impose(store);
-    LBpruningStamp = new TimeStamp<>(store, true);
+    lbPruningStamp = new TimeStamp<>(store, true);
   }
 
   @Override
@@ -223,8 +223,8 @@ public class Binpacking extends Constraint
       firstConsistencyCheck = false;
     }
 
-    boolean pruneLB = LBpruning && LBpruningStamp.value();
-    if (pruneLB) {
+    boolean pruneLb = lbPruning && lbPruningStamp.value();
+    if (pruneLb) {
       BitSet binUsed = new BitSet(load.length + minBinNumber);
       for (BinItem itemEl : item) {
         if (itemEl.bin().singleton()) {
@@ -233,8 +233,8 @@ public class Binpacking extends Constraint
       }
       if (binUsed.cardinality() == load.length) {
         // do not prune number of bins when all of them are already used.
-        pruneLB = false;
-        LBpruningStamp.update(false);
+        pruneLb = false;
+        lbPruningStamp.update(false);
       }
     }
 
@@ -363,7 +363,7 @@ public class Binpacking extends Constraint
     // re-evaluation, if there was a changed in any of variables
     if (store.propagationHasOccurred) {
       store.addChanged(this);
-    } else if (LBpruning && pruneLB) {
+    } else if (lbPruning && pruneLb) {
       // when the constraint is fix-point check expensive LB computation
       lbNumberBins();
     }
@@ -496,7 +496,7 @@ public class Binpacking extends Constraint
         result.append(", ");
       }
     }
-    result.append("], ").append(LBpruning).append(")");
+    result.append("], ").append(lbPruning).append(")");
 
     return result.toString();
   }

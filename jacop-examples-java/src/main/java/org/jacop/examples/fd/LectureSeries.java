@@ -66,7 +66,7 @@ import org.jacop.core.Store;
  *     Wednesday, Eddie Garber, modern art Thursday, Charles Haller, physical hygiene Friday,
  *     Bernadette Jeffreys, nutrition
  */
-public class LectureSeries extends ExampleFD {
+public class LectureSeries extends ExampleFd {
 
   /**
    * It executes the program which solves this simple logic puzzle.

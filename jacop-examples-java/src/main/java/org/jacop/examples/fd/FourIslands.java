@@ -64,7 +64,7 @@ import org.jacop.core.Store;
  *     <p>ANSWER: Northwest, Pwana, durian fruit, ice skating rink Northeast, Skern, coconuts, hotel
  *     Southwest, Rayou, alabaster, koala preserve Southeast, Quero, bananas, jai alai stadium
  */
-public class FourIslands extends ExampleFD {
+public class FourIslands extends ExampleFd {
 
   /**
    * It executes a program to solve this simple logic puzzle.

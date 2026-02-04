@@ -44,8 +44,8 @@ import org.jacop.search.DepthFirstSearch;
 /** Example for min-cost flow using float constraints. */
 public class MinCostFlow {
 
-  final double MIN_FLOAT = -1e+150;
-  final double MAX_FLOAT = 1e+150;
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
 
   /**
    * It executes the program.
@@ -79,7 +79,7 @@ public class MinCostFlow {
 
     int[][] arcs = {{1, 2}, {1, 3}, {1, 4}, {1, 5}, {2, 3}, {2, 4}, {2, 5}, {3, 4}, {3, 5}, {4, 5}};
 
-    FloatVar cost = new FloatVar(store, "cost", 0.0, MAX_FLOAT);
+    FloatVar cost = new FloatVar(store, "cost", 0.0, maxFloat);
 
     FloatVar[] X = new FloatVar[m];
 
@@ -107,12 +107,12 @@ public class MinCostFlow {
         }
       }
 
-      FloatVar outResult = new FloatVar(store, "outResult_" + i, MIN_FLOAT, MAX_FLOAT);
+      FloatVar outResult = new FloatVar(store, "outResult_" + i, minFloat, maxFloat);
       outFlow.add(outResult);
       outFlowWeights.add(-1.0);
       store.impose(new LinearFloat(outFlow, outFlowWeights, "==", 0.0));
 
-      FloatVar inResult = new FloatVar(store, "inResult_" + i, MIN_FLOAT, MAX_FLOAT);
+      FloatVar inResult = new FloatVar(store, "inResult_" + i, minFloat, maxFloat);
       inFlow.add(inResult);
       inFlowWeights.add(-1.0);
       store.impose(new LinearFloat(inFlow, inFlowWeights, "==", 0.0));

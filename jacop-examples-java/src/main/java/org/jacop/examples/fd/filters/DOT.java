@@ -1,5 +1,5 @@
 /*
- * DOT.java
+ * Dot.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * It specifies DOT benchmark.
+ * It specifies Dot benchmark.
  *
  * <p>Source:
  *
@@ -44,27 +44,27 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class DOT extends Filter {
+public class Dot extends Filter {
 
-  /** It constructs a simple DOT filter. */
-  public DOT() {
+  /** It constructs a simple Dot filter. */
+  public Dot() {
     this(1, 2);
   }
 
   /**
-   * It constructs a DOT filter with the specified delay for the addition and multiplication
+   * It constructs a Dot filter with the specified delay for the addition and multiplication
    * operation.
    *
    * @param addDel the delay of the addition operation.
    * @param mulDel the delay of the multiplication operation.
    */
-  public DOT(int addDel, int mulDel) {
+  public Dot(int addDel, int mulDel) {
 
     this.addDel = addDel;
 
     this.mulDel = mulDel;
 
-    name = "DOT";
+    name = "Dot";
 
     this.dependencies =
         new int[][] {

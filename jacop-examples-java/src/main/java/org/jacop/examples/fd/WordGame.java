@@ -37,7 +37,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Scanner;
-import org.jacop.constraints.ExtensionalSupportMDD;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.XeqC;
@@ -52,7 +52,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
-import org.jacop.util.MDD;
+import org.jacop.util.Mdd;
 
 /**
  * Inspired by time spent together with Ralph Nemer. It was fun playing together. I also had fun
@@ -78,7 +78,7 @@ public class WordGame {
     }
 
     store.impose(
-        new ExtensionalSupportMDD(readDictionaryFor5LetterWords(defaultDictionary, unknownWord)));
+        new ExtensionalSupportMdd(readDictionaryFor5LetterWords(defaultDictionary, unknownWord)));
 
     for (int attempt = 1; attempt <= 8; attempt++) {
       IO.println("Attempt " + attempt);
@@ -131,18 +131,18 @@ public class WordGame {
   }
 
   /**
-   * It reads a dictionary for 5-letter words and creates an MDD representation of it for use by an
+   * It reads a dictionary for 5-letter words and creates an Mdd representation of it for use by an
    * extensional constraint.
    *
    * @param file filename containing dictionary
-   * @return the created MDD for 5-letter words
+   * @return the created Mdd for 5-letter words
    */
-  public static MDD readDictionaryFor5LetterWords(String file, IntVar[] list) {
+  public static Mdd readDictionaryFor5LetterWords(String file, IntVar[] list) {
 
     int wordSize = 5;
 
     int[] tupleForGivenWord = new int[wordSize];
-    MDD resultForWordSize = new MDD(list);
+    Mdd resultForWordSize = new Mdd(list);
 
     try (BufferedReader inr =
         new BufferedReader(

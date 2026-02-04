@@ -65,7 +65,7 @@ import org.jacop.core.Store;
  *     <p>8. The bass isn't named Robinson.
  *     <p>Determine: Order -- First name -- Last name -- Voice
  */
-public class MasterClass extends ExampleFD {
+public class MasterClass extends ExampleFd {
 
   /**
    * It executes the program to solve this simple logic puzzle.
@@ -106,7 +106,7 @@ public class MasterClass extends ExampleFD {
 
     // indexes for ease of referring
     final int iVal = 0;
-    final int iJP = 1;
+    final int iJp = 1;
     final int iChris = 2;
     final int iLee = 3;
     final int iPat = 4;
@@ -207,7 +207,7 @@ public class MasterClass extends ExampleFD {
 
     // 7. J.P. wasn't third, and Chris wasn't fifth.
 
-    store.impose(new XneqC(zimie[iJP], 3));
+    store.impose(new XneqC(zimie[iJp], 3));
     store.impose(new XneqC(zimie[iChris], 5));
 
     // 8. The bass isn't named Robinson.

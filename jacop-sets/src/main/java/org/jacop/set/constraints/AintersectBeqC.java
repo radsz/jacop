@@ -109,33 +109,33 @@ public class AintersectBeqC extends Constraint implements UsesQueueVariable, Sat
       this.cHasChanged = false;
 
       if (cHasChanged) {
-        a.domain.inGLB(store.level, a, c.domain.glb());
+        a.domain.inGlb(store.level, a, c.domain.glb());
       }
 
       if (bHasChanged || cHasChanged) {
         IntDomain temp = b.domain.glb().subtract(c.domain.lub());
         if (!temp.isEmpty()) {
-          a.domain.inLUB(store.level, a, a.domain.lub().subtract(temp));
+          a.domain.inLub(store.level, a, a.domain.lub().subtract(temp));
         }
       }
 
       if (cHasChanged) {
-        b.domain.inGLB(store.level, b, c.domain.glb());
+        b.domain.inGlb(store.level, b, c.domain.glb());
       }
 
       if (cHasChanged || aHasChanged) {
         IntDomain temp = a.domain.glb().subtract(c.domain.lub());
         if (!temp.isEmpty()) {
-          b.domain.inLUB(store.level, b, b.domain.lub().subtract(temp));
+          b.domain.inLub(store.level, b, b.domain.lub().subtract(temp));
         }
       }
 
       if (bHasChanged || aHasChanged) {
-        c.domain.inGLB(store.level, c, a.domain.glb().intersect(b.domain.glb()));
+        c.domain.inGlb(store.level, c, a.domain.glb().intersect(b.domain.glb()));
       }
 
       if (bHasChanged || aHasChanged) {
-        c.domain.inLUB(store.level, c, a.domain.lub().intersect(b.domain.lub()));
+        c.domain.inLub(store.level, c, a.domain.lub().intersect(b.domain.lub()));
       }
 
       if (performCardinalityReasoning) {

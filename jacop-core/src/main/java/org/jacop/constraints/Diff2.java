@@ -114,7 +114,7 @@ public class Diff2 extends Diff {
   public Diff2(List<? extends List<? extends IntVar>> rectangles) {
 
     queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
     numberId = idNumber.incrementAndGet();
 
     setScope(rectangles.stream().flatMap(Collection::stream));
@@ -170,7 +170,7 @@ public class Diff2 extends Diff {
         length2);
 
     queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2DRectangles(origin1, origin2, length1, length2);
+    this.rectangles = Rectangle.toArrayOf2dRectangles(origin1, origin2, length1, length2);
     numberId = idNumber.incrementAndGet();
 
     setScope(origin1, origin2, length1, length2);
@@ -201,7 +201,7 @@ public class Diff2 extends Diff {
     assert (rectangles != null) : "Rectangles list is null";
 
     queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
     numberId = idNumber.incrementAndGet();
 
     setScope(Rectangle.getStream(this.rectangles));
@@ -230,7 +230,7 @@ public class Diff2 extends Diff {
   public Diff2(List<List<? extends IntVar>> rectangles, List<List<Integer>> exclusiveList) {
 
     queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2DRectangles(rectangles);
+    this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);
     numberId = idNumber.incrementAndGet();
 
     exceptionListPresent = true;
@@ -261,7 +261,7 @@ public class Diff2 extends Diff {
   public Diff2(IntVar[][] rect, List<List<Integer>> exclusive) {
 
     queueIndex = 2;
-    this.rectangles = Rectangle.toArrayOf2DRectangles(rect);
+    this.rectangles = Rectangle.toArrayOf2dRectangles(rect);
     numberId = idNumber.incrementAndGet();
 
     exceptionListPresent = true;
@@ -446,20 +446,20 @@ public class Diff2 extends Diff {
           // check if domains of r and s overlap
           IntDomain sOriginIdom = s.origin[m].dom();
           IntDomain sLengthIdom = s.length[m].dom();
-          final int sLengthIMin = sLengthIdom.min();
-          int sOriginIMax = sOriginIdom.max();
+          final int sLengthiMin = sLengthIdom.min();
+          int sOriginiMax = sOriginIdom.max();
           s_min = sOriginIdom.min();
-          s_max = sOriginIMax + sLengthIdom.max();
+          s_max = sOriginiMax + sLengthIdom.max();
           overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
 
           // min start, max stop and min length
           sOriginMin[m] = s_min;
-          sOriginMax[m] = sOriginIMax + sLengthIMin;
-          sLengthMin[m] = sLengthIMin;
+          sOriginMax[m] = sOriginiMax + sLengthiMin;
+          sLengthMin[m] = sLengthiMin;
 
           // check if s occupies some space
-          start = sOriginIMax;
-          stop = s_min + sLengthIMin;
+          start = sOriginiMax;
+          stop = s_min + sLengthiMin;
           if (start < stop) {
             Use.add(start, stop - start);
             j++;
@@ -565,14 +565,14 @@ public class Diff2 extends Diff {
       for (int i = 0; i < startMin.length; i++) {
         IntDomain rOriginIdom = r.origin[i].dom();
         IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginIMin = rOriginIdom.min();
-        int rOriginIMax = rOriginIdom.max();
-        int rLengthIMin = rLengthIdom.min();
-        if (rOriginIMin < startMin[i]) {
-          startMin[i] = rOriginIMin;
+        int rOriginiMin = rOriginIdom.min();
+        int rOriginiMax = rOriginIdom.max();
+        int rLengthiMin = rLengthIdom.min();
+        if (rOriginiMin < startMin[i]) {
+          startMin[i] = rOriginiMin;
         }
-        if (rOriginIMax + rLengthIMin > stopMax[i]) {
-          stopMax[i] = rOriginIMax + rLengthIMin;
+        if (rOriginiMax + rLengthiMin > stopMax[i]) {
+          stopMax[i] = rOriginiMax + rLengthiMin;
         }
       }
       boolean checkRectNumber = true;

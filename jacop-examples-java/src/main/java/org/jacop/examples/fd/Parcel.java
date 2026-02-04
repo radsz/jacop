@@ -43,7 +43,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class Parcel extends ExampleFD {
+public class Parcel extends ExampleFd {
 
   /**
    * It executes the program to solve the parcel shipment problem.

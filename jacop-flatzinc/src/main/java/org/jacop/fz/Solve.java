@@ -51,15 +51,15 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.satwrapper.SatTranslation;
-import org.jacop.search.AFCMax;
-import org.jacop.search.AFCMaxDeg;
+import org.jacop.search.AfcMax;
+import org.jacop.search.AfcMaxDeg;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
-import org.jacop.search.LDS;
+import org.jacop.search.Lds;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
@@ -96,7 +96,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   Options options;
   int initNumberConstraints;
   Timer timer;
-  long startCPU;
+  long startCpu;
   long initTime;
   long searchTime;
   // ComparatorVariable tieBreaking=null;
@@ -121,7 +121,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // sequence search
   Search<T> final_search_seq;
   // Values for search created from flatzinc
-  DepthFirstSearch<T> flatzincDFS;
+  DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
   Var flatzincCost;
   int solveKind = -1;
@@ -532,7 +532,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     list_seq_searches.getLast();
 
-    // LDS & Credit heuristic search
+    // Lds & Credit heuristic search
     if ("lds".equals(si.exploration())) {
       lds_search(label, si.ldsValue);
       // Credit heuristic search
@@ -542,9 +542,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     result = false;
 
-    long currentTime = timer.getCPUTime();
-    initTime = currentTime - startCPU;
-    startCPU = currentTime;
+    long currentTime = timer.getCpuTime();
+    initTime = currentTime - startCpu;
+    startCpu = currentTime;
 
     if (si.exploration() == null
         || "complete".equals(si.exploration())
@@ -603,7 +603,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           } else {
             // storing flatiznc defined search
-            flatzincDFS = label;
+            flatzincDfs = label;
             flatzincVariableSelection = variable_selection;
             flatzincCost = null;
             return;
@@ -652,7 +652,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           } else {
             // storing flatiznc defined search
-            flatzincDFS = label;
+            flatzincDfs = label;
             flatzincVariableSelection = variable_selection;
             flatzincCost = cost;
             return;
@@ -702,7 +702,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           } else {
             // storing flatiznc defined search
-            flatzincDFS = label;
+            flatzincDfs = label;
             flatzincVariableSelection = variable_selection;
             flatzincCost = max_cost;
             return;
@@ -951,7 +951,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<SetVar> setSelect =
           options.freeSearch() || options.complementarySearch()
               ? new SimpleSelect<>(
-                  set_search_variables, new AFCMaxDeg<>(store), new IndomainSetMin<>())
+                  set_search_variables, new AfcMaxDeg<>(store), new IndomainSetMin<>())
               : new SimpleSelect<>(set_search_variables, null, new IndomainSetMin<>());
 
       if (variable_selection == null) {
@@ -992,7 +992,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<IntVar> intSelect =
           options.freeSearch() || options.complementarySearch()
               ? new SimpleSelect<>(
-                  int_search_variables, new AFCMaxDeg<>(store), new IndomainMin<>())
+                  int_search_variables, new AfcMaxDeg<>(store), new IndomainMin<>())
               : new SimpleSelect<>(int_search_variables, null, new IndomainMin<>());
 
       if (variable_selection == null) {
@@ -1032,7 +1032,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // add search containing boolean variables to be sure that they get a value
       SelectChoicePoint<BooleanVar> boolSelect =
           options.freeSearch() || options.complementarySearch()
-              ? new SimpleSelect<>(bool_search_variables, new AFCMax<>(store), new IndomainMin<>())
+              ? new SimpleSelect<>(bool_search_variables, new AfcMax<>(store), new IndomainMin<>())
               : new SimpleSelect<>(bool_search_variables, null, new IndomainMin<>());
 
       if (variable_selection == null) {
@@ -1224,9 +1224,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Var cost;
     Var max_cost;
 
-    long currentTime = timer.getCPUTime();
-    initTime = currentTime - startCPU;
-    startCPU = currentTime;
+    long currentTime = timer.getCpuTime();
+    initTime = currentTime - startCpu;
+    startCpu = currentTime;
 
     int to = options.getTimeOut();
     if (to > 0) {
@@ -1285,7 +1285,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           } else {
             // storing flatiznc defined search
-            flatzincDFS = masterLabel;
+            flatzincDfs = masterLabel;
             flatzincVariableSelection = masterSelect;
             flatzincCost = null;
             return;
@@ -1350,7 +1350,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           } else {
             // storing flatiznc defined search
-            flatzincDFS = masterLabel;
+            flatzincDfs = masterLabel;
             flatzincVariableSelection = masterSelect;
             flatzincCost = cost;
             return;
@@ -1424,7 +1424,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           } else {
             // storing flatiznc defined search
-            flatzincDFS = masterLabel;
+            flatzincDfs = masterLabel;
             flatzincVariableSelection = masterSelect;
             flatzincCost = max_cost;
             return;
@@ -1573,7 +1573,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   double getSearchTime_ms() {
-    searchTime = timer.getCPUTime() - startCPU;
+    searchTime = timer.getCpuTime() - startCpu;
     return (double) searchTime / (long) 1e+6;
   }
 
@@ -1602,7 +1602,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label.setSelectChoicePoint(variable_selection);
         }
 
-        // LDS heuristic search
+        // Lds heuristic search
         if ("lds".equals(si.exploration())) {
           lds_search(label, si.ldsValue);
           heuristicSeqSearch = true;
@@ -1621,7 +1621,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label.setSelectChoicePoint(variable_selection);
         }
 
-        // LDS heuristic search
+        // Lds heuristic search
         if ("lds".equals(si.exploration())) {
           lds_search(label, si.ldsValue);
           heuristicSeqSearch = true;
@@ -1667,7 +1667,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           label.setSelectChoicePoint(variable_selection);
         }
 
-        // LDS heuristic search
+        // Lds heuristic search
         if ("lds".equals(si.exploration())) {
           lds_search(label, si.ldsValue);
           heuristicSeqSearch = true;
@@ -2047,9 +2047,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   void lds_search(DepthFirstSearch<T> label, int ldsValue) {
-    //      System.out.println("LDS("+ldsValue+")");
+    //      System.out.println("Lds("+ldsValue+")");
 
-    LDS<T> lds = new LDS<>(ldsValue);
+    Lds<T> lds = new Lds<>(ldsValue);
     if (label.getExitChildListener() == null) {
       label.setExitChildListener(lds);
     } else {
@@ -2125,7 +2125,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       timer = new ThreadTimer();
     }
 
-    startCPU = timer.getCPUTime();
+    startCpu = timer.getCpuTime();
   }
 
   /** Sets floating point precision for the store. */

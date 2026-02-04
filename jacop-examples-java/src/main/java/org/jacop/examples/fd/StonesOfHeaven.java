@@ -63,7 +63,7 @@ import org.jacop.core.Store;
  *     <p>Belt buckle, red, Tang, U.S Dragon, white, Ching, Italy Grasshopper, light green, Ming,
  *     Japan Horse, dark green, Sung, Finland
  */
-public class StonesOfHeaven extends ExampleFD {
+public class StonesOfHeaven extends ExampleFd {
 
   /**
    * It executes a simple program to solve this logic puzzle.

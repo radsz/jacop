@@ -60,7 +60,7 @@ import org.jacop.core.Store;
  *     or both.
  *     <p>Determine: Reporter -- Location -- Story
  */
-public class BreakingNews extends ExampleFD {
+public class BreakingNews extends ExampleFd {
 
   /**
    * It executes the program to solve this logic puzzle.

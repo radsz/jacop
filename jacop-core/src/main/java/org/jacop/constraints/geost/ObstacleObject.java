@@ -49,7 +49,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
    * It shifts boxes of the given shape as required by the frame. It recomputed always when frame is
    * updated. It allows for faster execution in between frame updates.
    */
-  final ArrayList<DBox> preshiftedElems;
+  final ArrayList<Dbox> preshiftedElems;
 
   final int[] lowerAbsInsfeasible;
   final int[] upperAbsInsfeasible;
@@ -80,13 +80,13 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
     preshiftedElems = new ArrayList<>();
 
-    assert obstacle.shapeID.singleton()
+    assert obstacle.shapeId.singleton()
         : "Polymorphism not supperted by this simple internal constraint. Use ObstacleObjectFrame instead.";
 
-    shapeId = obstacle.shapeID.value();
+    shapeId = obstacle.shapeId.value();
 
-    for (DBox elem : geost.getShape(shapeId).boxes) {
-      preshiftedElems.add(elem.copyInto(DBox.newBox(obstacle.dimension)));
+    for (Dbox elem : geost.getShape(shapeId).boxes) {
+      preshiftedElems.add(elem.copyInto(Dbox.newBox(obstacle.dimension)));
     }
 
     upperAbsInsfeasible = new int[obstacle.dimension + 1];
@@ -154,7 +154,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
   }
 
   @Override
-  public DBox isFeasible(
+  public Dbox isFeasible(
       Geost.SweepDirection min,
       LexicographicalOrder order,
       GeostObject o,
@@ -162,7 +162,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       int[] c) {
 
     // TODO: Does it make sense from efficiency point of view to work on polymorphism?
-    assert obstacle.shapeID.singleton()
+    assert obstacle.shapeId.singleton()
         : "no support for polymorphism. Use ObstacleObjectFrame instead.";
 
     if (frameExists) {
@@ -179,8 +179,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
     }
 
     // intermediate check: use bounding boxes to skip test quickly
-    DBox obstacleBB = geost.getShape(shapeId).boundingBox;
-    DBox otherBB = geost.getShape(currentShape).boundingBox;
+    Dbox obstacleBb = geost.getShape(shapeId).boundingBox;
+    Dbox otherBb = geost.getShape(currentShape).boundingBox;
     int outDimOrigin;
     int outDimLength;
     int selectedDimIndex = 0;
@@ -193,17 +193,17 @@ public class ObstacleObject extends ObstacleObjectFrame {
 
         // shift origin
         outDimOrigin =
-            obstacleBB.origin[i]
+            obstacleBb.origin[i]
                 + obstacle.coords[i].max()
-                - otherBB.origin[i]
-                - otherBB.length[i]
+                - otherBb.origin[i]
+                - otherBb.length[i]
                 + 1;
 
         final int max =
-            obstacleBB.origin[i]
-                + obstacleBB.length[i]
+            obstacleBb.origin[i]
+                + obstacleBb.length[i]
                 + obstacle.coords[i].min()
-                - otherBB.origin[i];
+                - otherBb.origin[i];
 
         outDimLength = max - outDimOrigin;
 
@@ -228,7 +228,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
      */
 
     // avoid allocating new object if possible
-    DBox outBox = DBox.getAllocatedInstance(obstacle.dimension + 1);
+    Dbox outBox = Dbox.getAllocatedInstance(obstacle.dimension + 1);
     int[] outOrigin = outBox.origin;
     int[] outLength = outBox.length;
 
@@ -236,8 +236,8 @@ public class ObstacleObject extends ObstacleObjectFrame {
     outOrigin[obstacle.dimension] = timeSizeOrigin;
     outLength[obstacle.dimension] = timeSizeMax - timeSizeOrigin;
 
-    for (DBox constrainedPiece : geost.getShape(currentShape).boxes) {
-      for (DBox preshift : preshiftedElems) {
+    for (Dbox constrainedPiece : geost.getShape(currentShape).boxes) {
+      for (Dbox preshift : preshiftedElems) {
 
         boolean useless = false;
 
@@ -299,9 +299,9 @@ public class ObstacleObject extends ObstacleObjectFrame {
       frameExists = false;
       int currentIndex = 0;
 
-      for (DBox elem : geost.getShape(shapeId).boxes) {
+      for (Dbox elem : geost.getShape(shapeId).boxes) {
 
-        DBox preshift = preshiftedElems.get(currentIndex);
+        Dbox preshift = preshiftedElems.get(currentIndex);
 
         for (int i = 0; i < obstacle.dimension; i++) {
           preshift.origin[i] = elem.origin[i] + obstacle.coords[i].max();
@@ -312,7 +312,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
       }
 
       // update absolute infeasible points
-      DBox bb = geost.getShape(shapeId).boundingBox;
+      Dbox bb = geost.getShape(shapeId).boundingBox;
 
       for (int i = 0; i < obstacle.dimension; i++) {
         // TODO: Are the max and min functions here, put correctly?

@@ -115,12 +115,12 @@ public class NonOverlapping implements ExternalConstraint {
     if (objectConstraintMap == null) {
 
       // find largest object ID
-      int largestID = 0;
+      int largestId = 0;
       for (GeostObject o : objects) {
-        largestID = Math.max(largestID, o.no);
+        largestId = Math.max(largestId, o.no);
       }
 
-      objectConstraintMap = new ObstacleObjectFrame[largestID + 1];
+      objectConstraintMap = new ObstacleObjectFrame[largestId + 1];
       Arrays.fill(objectConstraintMap, null);
 
       constraints = new HashSet<>();
@@ -129,7 +129,7 @@ public class NonOverlapping implements ExternalConstraint {
 
         ObstacleObjectFrame c;
 
-        if (geost.alwaysUseFrames || !o.shapeID.singleton()) {
+        if (geost.alwaysUseFrames || !o.shapeId.singleton()) {
           c = new ObstacleObjectFrame(geost, o, selectedDimensions);
         } else {
           c = new ObstacleObject(geost, o, selectedDimensions);

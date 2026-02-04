@@ -180,7 +180,7 @@ public abstract class SetDomain extends Domain {
    * @return it returns an integer id of the domain.
    */
   @Override
-  public abstract int domainID();
+  public abstract int domainId();
 
   /**
    * It checks if the domain is equal to the supplied domain.
@@ -710,7 +710,7 @@ public abstract class SetDomain extends Domain {
 
     SetDomain domain = this;
 
-    while (domain.domainID() == SetDomainID) {
+    while (domain.domainId() == SetDomainID) {
 
       if (domain.previousDomain != null) {
         domain = domain.previousDomain;
@@ -822,7 +822,7 @@ public abstract class SetDomain extends Domain {
    * @param var variable which domain is being restricted.
    * @param domain the domain specifying the allowed values the domain of the set variable.
    */
-  public abstract void inLUB(int level, SetVar var, IntDomain domain);
+  public abstract void inLub(int level, SetVar var, IntDomain domain);
 
   /**
    * It specifies the element which can *NOT* be used as an element within a set assign to a set
@@ -832,7 +832,7 @@ public abstract class SetDomain extends Domain {
    * @param var variable which domain is being restricted.
    * @param element the value being removed from the domain of the set variable.
    */
-  public abstract void inLUBComplement(int level, SetVar var, int element);
+  public abstract void inLubComplement(int level, SetVar var, int element);
 
   /**
    * It specifies what elements must be in GLB. It will add new elements if they are not already in
@@ -842,7 +842,7 @@ public abstract class SetDomain extends Domain {
    * @param var variable which domain is being restricted.
    * @param domain the domain specifying the required values of the set variable.
    */
-  public abstract void inGLB(int level, SetVar var, IntDomain domain);
+  public abstract void inGlb(int level, SetVar var, IntDomain domain);
 
   /**
    * It adds if necessary an element to glb.
@@ -851,7 +851,7 @@ public abstract class SetDomain extends Domain {
    * @param var set variable to which the change applies to.
    * @param element the element which must be in glb.
    */
-  public abstract void inGLB(int level, SetVar var, int element);
+  public abstract void inGlb(int level, SetVar var, int element);
 
   /**
    * It assigns a set variable to the specified value.

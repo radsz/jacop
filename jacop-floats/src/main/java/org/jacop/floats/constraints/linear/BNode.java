@@ -1,5 +1,5 @@
 /*
- * BNode.java
+ * Bnode.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,22 +34,22 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
 /** Binary node for linear constraint tree. */
-public class BNode extends BinaryNode {
+public class Bnode extends BinaryNode {
 
   // bounds for this node
   final BoundsVar bound;
 
-  public BNode(Store store) {
+  public Bnode(Store store) {
     id = n.incrementAndGet();
     bound = new BoundsVar(store);
   }
 
-  public BNode(Store store, double min, double max) {
+  public Bnode(Store store, double min, double max) {
     id = n.incrementAndGet();
     bound = new BoundsVar(store, min, max);
   }
 
-  public BNode(Store store, double min, double max, double lb, double ub) {
+  public Bnode(Store store, double min, double max, double lb, double ub) {
     id = n.incrementAndGet();
     bound = new BoundsVar(store, min, max, lb, ub);
   }

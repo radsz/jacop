@@ -1,5 +1,5 @@
 /*
- * DFQ.java
+ * Dfq.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,33 +34,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * It specifies DFQ filter benchmark.
+ * It specifies Dfq filter benchmark.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class DFQ extends Filter {
+public class Dfq extends Filter {
 
   /**
-   * It creates a standard DFQ filter problem with addition delay equal 1 and multiplication delay
+   * It creates a standard Dfq filter problem with addition delay equal 1 and multiplication delay
    * equal 2.
    */
-  public DFQ() {
+  public Dfq() {
     this(1, 2);
   }
 
   /**
-   * It creates DFQ filter problem with specified delays.
+   * It creates Dfq filter problem with specified delays.
    *
    * @param addDel addition delay.
    * @param mulDel multiplication delay.
    */
-  public DFQ(int addDel, int mulDel) {
+  public Dfq(int addDel, int mulDel) {
 
     this.addDel = addDel;
     this.mulDel = mulDel;
 
-    name = "DFQ";
+    name = "Dfq";
 
     this.dependencies =
         new int[][] {{0, 5}, {1, 5}, {2, 6}, {3, 7}, {4, 8}, {5, 9}, {6, 10}, {9, 10}};

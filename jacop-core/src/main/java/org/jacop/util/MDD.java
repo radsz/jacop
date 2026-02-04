@@ -1,5 +1,5 @@
 /*
- * MDD.java
+ * Mdd.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 
 /**
- * Defines an MDD as used in the following paper.
+ * Defines an Mdd as used in the following paper.
  *
  * <p>K.C. Cheng and R.H. Yap, "Maintaining generalized arc consistency on ad-hoc n-ary
  * constraints.", CP 2008.
@@ -50,26 +50,26 @@ import org.jacop.core.IntVar;
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class MDD {
+public class Mdd {
 
   /** It specifies an identifier which denotes a terminal node. */
   public static final int TERMINAL = -1;
 
   /**
    * It specifies an identifier which denotes lack of the edge for a given value (in the context of
-   * the current level (variable) of an MDD.
+   * the current level (variable) of an Mdd.
    */
   public static final int NOEDGE = 0;
 
-  /** The initial size of the array representing an MDD. */
+  /** The initial size of the array representing an Mdd. */
   public static final int START_SIZE = 1000;
 
   private static final boolean debugAll = false;
 
-  /** The ordered list of variables participating in MDD. */
+  /** The ordered list of variables participating in Mdd. */
   public IntVar[] vars;
 
-  /** The initial domain limits used to create an MDD array representation. */
+  /** The initial domain limits used to create an Mdd array representation. */
   public int[] domainLimits;
 
   /**
@@ -95,22 +95,22 @@ public class MDD {
   int memorySavings;
 
   /**
-   * It creates and MDD representation given the list of variables. Tuples must be added manually
-   * (addTuple function). After all tuples are added reduce function can be called to reduce MDD.
-   * After reducing MDD adding tuples is not allowed to maintain cannonic and minimal
+   * It creates and Mdd representation given the list of variables. Tuples must be added manually
+   * (addTuple function). After all tuples are added reduce function can be called to reduce Mdd.
+   * After reducing Mdd adding tuples is not allowed to maintain cannonic and minimal
    * representation.
    */
   private boolean extendable;
 
   /**
-   * It creates an MDD. Please note that diagram argument which is potentially a very large array
+   * It creates an Mdd. Please note that diagram argument which is potentially a very large array
    * and can be used across many constraints is not copied by the constructor but used directly.
    *
    * @param vars variables involved in this multiple-value decision diagram.
    * @param diagram an int array representation of the diagram.
    * @param domainLimits the limits on the number of values imposed on each variable.
    */
-  public MDD(IntVar[] vars, int[] diagram, int[] domainLimits) {
+  public Mdd(IntVar[] vars, int[] diagram, int[] domainLimits) {
 
     this.vars = new IntVar[vars.length];
     System.arraycopy(vars, 0, vars, 0, vars.length);
@@ -135,23 +135,23 @@ public class MDD {
   }
 
   /**
-   * It creates and MDD representation given the list of variables and (dis)allowed tuples. Minimum
+   * It creates and Mdd representation given the list of variables and (dis)allowed tuples. Minimum
    * domain limits allows artificially increase the size of the variable domain to make reuse of the
    * same mdd across multiple constraints possible.
    *
-   * @param vars variables and their order used in the MDD.
+   * @param vars variables and their order used in the Mdd.
    * @param minimumDomainLimits it specifies the minimal number of values used for each of the
    *     variables.
-   * @param table it specifies the allowed tuples which are being converted into an MDD.
+   * @param table it specifies the allowed tuples which are being converted into an Mdd.
    */
-  public MDD(IntVar[] vars, int[] minimumDomainLimits, int[][] table) {
+  public Mdd(IntVar[] vars, int[] minimumDomainLimits, int[][] table) {
 
     // it needs to transform tuples based on actual values into
     // tuples based on indexes of these values in variables
     // domains.
 
     // it needs to transform table into Trie, which later will
-    // be transformed into MDD representation. Trie is stored in
+    // be transformed into Mdd representation. Trie is stored in
     // diagram array.
 
     this.vars = new IntVar[vars.length];
@@ -174,27 +174,27 @@ public class MDD {
 
     mtree(table);
 
-    // Mtree stored in diagram array is being transformed into MDD.
+    // Mtree stored in diagram array is being transformed into Mdd.
     // diagram array is being resized to save on memory.
     reduce();
   }
 
   /**
-   * It creates and MDD representation given the list of variables and (dis)allowed tuples. Minimum
+   * It creates and Mdd representation given the list of variables and (dis)allowed tuples. Minimum
    * domain limits allows artificially increase the size of the variable domain to make reuse of the
    * same mdd across multiple constraints possible.
    *
-   * @param vars variables and their order used in the MDD.
-   * @param table it specifies the allowed tuples which are being converted into an MDD.
+   * @param vars variables and their order used in the Mdd.
+   * @param table it specifies the allowed tuples which are being converted into an Mdd.
    */
-  public MDD(IntVar[] vars, int[][] table) {
+  public Mdd(IntVar[] vars, int[][] table) {
 
     // it needs to transform tuples based on actual values into
     // tuples based on indexes of these values in variables
     // domains.
 
     // it needs to transform table into Trie, which later will
-    // be transformed into MDD representation. Trie is stored in
+    // be transformed into Mdd representation. Trie is stored in
     // diagram array.
 
     this.vars = new IntVar[vars.length];
@@ -221,7 +221,7 @@ public class MDD {
 
     mtree(table);
 
-    // Mtree stored in diagram array is being transformed into MDD.
+    // Mtree stored in diagram array is being transformed into Mdd.
     // diagram array is being resized to save on memory.
     reduce();
   }
@@ -233,19 +233,19 @@ public class MDD {
    */
 
   /**
-   * It creates and MDD representation given the list of variables. The domain limits are set to be
+   * It creates and Mdd representation given the list of variables. The domain limits are set to be
    * equal to the size of the variables domains. The tuples are being added separately one by one.
    *
-   * @param vars variables and their order used in the MDD.
+   * @param vars variables and their order used in the Mdd.
    */
-  public MDD(IntVar[] vars) {
+  public Mdd(IntVar[] vars) {
 
     // it needs to transform tuples based on actual values into
     // tuples based on indexes of these values in variables
     // domains.
 
     // it needs to transform table into Trie, which later will
-    // be transformed into MDD representation. Trie is stored in
+    // be transformed into Mdd representation. Trie is stored in
     // diagram array.
 
     this.vars = new IntVar[vars.length];
@@ -265,22 +265,22 @@ public class MDD {
 
     extendable = true;
 
-    // Adding tuples and MDD reduction must be performed separetely.
+    // Adding tuples and Mdd reduction must be performed separetely.
 
   }
 
   /**
-   * If possible it will return an MDD which reuse an array representation of the current MDD. It
+   * If possible it will return an Mdd which reuse an array representation of the current Mdd. It
    * returns null if one of the variables supplied has a larger domain then assumed by respective
-   * variable from this MDD. In order to make reuse possible first create MDD for largest size
+   * variable from this Mdd. In order to make reuse possible first create Mdd for largest size
    * variables.
    *
-   * @param vars array of new variables for which this MDD is being reused for.
-   * @return an MDD with parts of it reused for new variables.
+   * @param vars array of new variables for which this Mdd is being reused for.
+   * @return an Mdd with parts of it reused for new variables.
    */
-  public MDD reuse(IntVar[] vars) {
+  public Mdd reuse(IntVar[] vars) {
 
-    MDD result = new MDD();
+    Mdd result = new Mdd();
 
     result.vars = new IntVar[vars.length];
     System.arraycopy(vars, 0, result.vars, 0, vars.length);
@@ -304,13 +304,13 @@ public class MDD {
   }
 
   /**
-   * It allows to add one by one tuple before the reduction of the initial MDD takes place.
+   * It allows to add one by one tuple before the reduction of the initial Mdd takes place.
    *
-   * @param tuple an allowed tuple being added to MDD.
+   * @param tuple an allowed tuple being added to Mdd.
    */
   public void addTuple(int[] tuple) {
 
-    assert extendable : "MDD can not be extended after shrinking operation was performed";
+    assert extendable : "Mdd can not be extended after shrinking operation was performed";
 
     int nodePosition = 0;
     int varNo = 0;
@@ -560,7 +560,7 @@ public class MDD {
     }
   }
 
-  /** It reduces MDD to minimal size. */
+  /** It reduces Mdd to minimal size. */
   @SuppressWarnings("unchecked")
   public void reduce() {
 
@@ -589,7 +589,7 @@ public class MDD {
 
     // Recursive function which going back from bottom to top
     // discovers equal nodes and only keeps one in the representation.
-    // This technique allows to reduce MDD cheaply.
+    // This technique allows to reduce Mdd cheaply.
 
     // The first key ingredient is to find if there is already a node with the
     // same children.
@@ -681,7 +681,7 @@ public class MDD {
 
   /**
    * @return true only if all variables are grounded and the values assigned to variables are
-   *     allowed by a MDD.
+   *     allowed by a Mdd.
    */
   public boolean checkIfAllowed() {
 

@@ -91,9 +91,9 @@ class IntRectangle {
     while (overlap && i < dim) {
       min1 = origin[i];
       max1 = origin[i] + length[i];
-      IntDomain rectOriginIDom = rect.origin[i].dom();
-      min2 = rectOriginIDom.min();
-      max2 = rectOriginIDom.max() + rect.length[i].max();
+      IntDomain rectOriginiDom = rect.origin[i].dom();
+      min2 = rectOriginiDom.min();
+      max2 = rectOriginiDom.max() + rect.length[i].max();
       overlap = intervalOverlap(min1, max1, min2, max2);
       i++;
     }

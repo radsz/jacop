@@ -57,7 +57,7 @@ import org.jacop.core.Store;
  *     <p>This (swedish) blog post explains the program: "de Bruijn-sekvenser av godtycklig längd"
  *     <a href="http://www.hakank.org/webblogg/archives/001114.html">...</a>
  */
-public class DeBruijn extends ExampleFD {
+public class DeBruijn extends ExampleFd {
 
   // These parameters may be set by the user:
   //  - base

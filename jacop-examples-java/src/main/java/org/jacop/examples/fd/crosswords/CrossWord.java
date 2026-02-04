@@ -40,12 +40,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.jacop.constraints.ExtensionalSupportMDD;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.examples.fd.ExampleFD;
+import org.jacop.examples.fd.ExampleFd;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.Search;
@@ -53,17 +53,17 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
-import org.jacop.util.MDD;
+import org.jacop.util.Mdd;
 
 /**
- * It is an example of the power of ExtensionalSupportMDD constraint which can be used to
+ * It is an example of the power of ExtensionalSupportMdd constraint which can be used to
  * efficiently model and solve CrossWord puzzles.
  *
  * @author : Radoslaw Szymanek
  * @version 4.10
  *     <p>This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  */
-public class CrossWord extends ExampleFD {
+public class CrossWord extends ExampleFd {
 
   final int r = 5; // number of rows
   final int c = 5; // number of column
@@ -72,7 +72,7 @@ public class CrossWord extends ExampleFD {
   // letter - letter which must be in crossword
   // _ - unknown letter, any letter is accepted.
   final List<Integer> wordSizes = new ArrayList<>();
-  final Map<Integer, MDD> mdds = new HashMap<>();
+  final Map<Integer, Mdd> mdds = new HashMap<>();
   final char[][] crosswordTemplate = {
     {'*', '_', '_', '_', '_'},
     {'_', '_', '_', 'l', '_'},
@@ -153,8 +153,8 @@ public class CrossWord extends ExampleFD {
 
         if (crosswordTemplate[i][j] == '*') {
           if (wordSizes.contains(word.size())) {
-            MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-            store.impose(new ExtensionalSupportMDD(mdd4word));
+            Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
+            store.impose(new ExtensionalSupportMdd(mdd4word));
           }
           // System.out.println(word);
           word.clear();
@@ -165,8 +165,8 @@ public class CrossWord extends ExampleFD {
 
       if (!word.isEmpty()) {
         if (wordSizes.contains(word.size())) {
-          MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-          store.impose(new ExtensionalSupportMDD(mdd4word));
+          Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
+          store.impose(new ExtensionalSupportMdd(mdd4word));
           // System.out.println(word);
         }
         // System.out.println(word);
@@ -182,8 +182,8 @@ public class CrossWord extends ExampleFD {
 
         if (crosswordTemplate[i][j] == '*') {
           if (wordSizes.contains(word.size())) {
-            MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-            store.impose(new ExtensionalSupportMDD(mdd4word));
+            Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
+            store.impose(new ExtensionalSupportMdd(mdd4word));
             // System.out.println(word);
           }
           word.clear();
@@ -194,8 +194,8 @@ public class CrossWord extends ExampleFD {
 
       if (!word.isEmpty()) {
         if (wordSizes.contains(word.size())) {
-          MDD mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
-          store.impose(new ExtensionalSupportMDD(mdd4word));
+          Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
+          store.impose(new ExtensionalSupportMdd(mdd4word));
           // System.out.println(word);
         }
         word.clear();
@@ -234,7 +234,7 @@ public class CrossWord extends ExampleFD {
   }
 
   /**
-   * It reads a dictionary. For every word length specified it reads a dictionary and creates an MDD
+   * It reads a dictionary. For every word length specified it reads a dictionary and creates an Mdd
    * representation of it for use by an extensional constraint.
    *
    * @param file filename containing dictionary
@@ -250,7 +250,7 @@ public class CrossWord extends ExampleFD {
       Arrays.fill(list, blank);
 
       int[] tupleForGivenWord = new int[wordSize];
-      MDD resultForWordSize = new MDD(list);
+      Mdd resultForWordSize = new Mdd(list);
 
       try (BufferedReader inr =
           new BufferedReader(

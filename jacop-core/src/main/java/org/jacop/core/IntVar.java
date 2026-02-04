@@ -45,7 +45,7 @@ public class IntVar extends Var {
   public IntDomain domain;
 
   /*
-  public SatCPBridge satBridge;
+  public SatCpBridge satBridge;
   */
 
   /**

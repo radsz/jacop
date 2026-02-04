@@ -106,7 +106,7 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
 
     var.min();
     int value;
-    if (var.domain.getSize() == 2 && var.dom().domainID() == IntDomain.BoundDomainID) {
+    if (var.domain.getSize() == 2 && var.dom().domainId() == IntDomain.BoundDomainID) {
       value = var.min();
     } else {
       value = super.getChoiceValue();

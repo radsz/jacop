@@ -79,7 +79,7 @@ class BoolConstraints implements ParserTreeConstants {
     } else if (atLeastOneVarZero(a1)) {
       v.domain.inValue(store.level, v, 0);
     } else {
-      support.poseDC(new AndBool(a1, v));
+      support.poseDc(new AndBool(a1, v));
     }
   }
 
@@ -144,7 +144,7 @@ class BoolConstraints implements ParserTreeConstants {
       } else if (atLeastOneVarOne(a1)) {
         v.domain.inValue(store.level, v, 1);
       } else {
-        support.poseDC(new OrBool(a1, v));
+        support.poseDc(new OrBool(a1, v));
       }
     }
   }
@@ -213,7 +213,7 @@ class BoolConstraints implements ParserTreeConstants {
     if (support.options.useSat()) {
       sat.generateOr(new IntVar[] {v1, v2}, v3);
     } else {
-      support.poseDC(new OrBool(new IntVar[] {v1, v2}, v3));
+      support.poseDc(new OrBool(new IntVar[] {v1, v2}, v3));
     }
   }
 
@@ -346,7 +346,7 @@ class BoolConstraints implements ParserTreeConstants {
       } else if (a2reduced.isEmpty()) {
         if (reified) {
           IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
-          support.poseDC(new OrBool(a1reduced, b));
+          support.poseDc(new OrBool(a1reduced, b));
           return;
         } else {
           IntVar r = support.dictionary.getConstant(1);

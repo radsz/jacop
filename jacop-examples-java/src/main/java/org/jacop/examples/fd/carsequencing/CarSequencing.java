@@ -41,17 +41,17 @@ import java.util.regex.Pattern;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.DecomposedConstraint;
-import org.jacop.constraints.ExtensionalSupportMDD;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.examples.fd.ExampleFD;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
+import org.jacop.examples.fd.ExampleFd;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 
 /**
  * It is program to model and solve simple problems of car sequencing problem (CSPLIB-p1).
@@ -59,11 +59,11 @@ import org.jacop.util.fsm.FSMTransition;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class CarSequencing extends ExampleFD {
+public class CarSequencing extends ExampleFd {
 
   /**
    * It specifies if the slide based decomposition of the regular constraint should be applied. This
-   * decomposition uses ternary extensional support constraints. It achieves GAC if FSM is
+   * decomposition uses ternary extensional support constraints. It achieves GAC if Fsm is
    * deterministic.
    */
   public final boolean slideDecomposition = false;
@@ -72,10 +72,10 @@ public class CarSequencing extends ExampleFD {
   public final boolean regular = true;
 
   /**
-   * It specifies if one extensional constraint based on MDD created from FSM should be used. The
-   * translation process works if FSM is deterministic.
+   * It specifies if one extensional constraint based on Mdd created from Fsm should be used. The
+   * translation process works if Fsm is deterministic.
    */
-  public final boolean extensionalMDD = false;
+  public final boolean extensionalMdd = false;
 
   /** It specifies number of cars. */
   public int noCar;
@@ -227,28 +227,28 @@ public class CarSequencing extends ExampleFD {
    * @param count The number of times a value from yes domain needs to be encountered.
    * @param yes the values which are counted.
    * @param no the values which are not counted.
-   * @return FSM for simple count constraint.
+   * @return Fsm for simple count constraint.
    */
-  public static FSM createFSM(int count, IntervalDomain yes, IntervalDomain no) {
+  public static Fsm createFsm(int count, IntervalDomain yes, IntervalDomain no) {
 
-    FSM result = new FSM();
+    Fsm result = new Fsm();
 
-    result.initState = new FSMState();
-    FSMState currentState = result.initState;
+    result.initState = new FsmState();
+    FsmState currentState = result.initState;
 
     int current = 0;
     while (current <= count) {
 
-      FSMState nextStateYes = new FSMState();
+      FsmState nextStateYes = new FsmState();
 
       if (current < count) {
-        currentState.transitions.add(new FSMTransition(yes, nextStateYes));
+        currentState.transitions.add(new FsmTransition(yes, nextStateYes));
       }
 
       for (ValueEnumeration enumer = no.valueEnumeration(); enumer.hasMoreElements(); ) {
         int value = enumer.nextElement();
         IntervalDomain transitionCondition = new IntervalDomain(value, value);
-        currentState.transitions.add(new FSMTransition(transitionCondition, currentState));
+        currentState.transitions.add(new FsmTransition(transitionCondition, currentState));
       }
 
       result.allStates.add(currentState);
@@ -265,7 +265,7 @@ public class CarSequencing extends ExampleFD {
     return result;
   }
 
-  /* @TODO: Add functionality to FSM to be able to do intersections and use the model below.
+  /* @TODO: Add functionality to Fsm to be able to do intersections and use the model below.
    public void modelIntersection() {
 
     store = new FDstore();
@@ -303,7 +303,7 @@ public class CarSequencing extends ExampleFD {
         store.imposeDecomposition(regular);
     }
 
-    FSM union = null;
+    Fsm union = null;
 
     for (Constraint constraint : regulars)
       if (union == null)
@@ -321,7 +321,7 @@ public class CarSequencing extends ExampleFD {
       IntervalDomain no = new IntervalDomain(0, noClass);
       no = (IntervalDomain) no.subtract(i);
 
-      FSM counter = createFSM(noOfCarsPerClass[i], yes, no);
+      Fsm counter = createFsm(noOfCarsPerClass[i], yes, no);
 
       System.out.println( counter );
 
@@ -433,7 +433,7 @@ public class CarSequencing extends ExampleFD {
     readFromArray(problemDescription, example);
     example.model();
 
-    example.searchLDS(3);
+    example.searchLds(3);
   }
 
   @Override
@@ -489,7 +489,7 @@ public class CarSequencing extends ExampleFD {
 
       // It uses replacement for Regular, namely one extensional support constraint
       // based on MDDs.
-      if (extensionalMDD) {
+      if (extensionalMdd) {
         DecomposedConstraint<Constraint> c =
             Sequence.builder()
                 .list(cars)
@@ -503,7 +503,7 @@ public class CarSequencing extends ExampleFD {
         for (Constraint constraint : decomposition) {
           Regular regular = (Regular) constraint;
           store.impose(
-              new ExtensionalSupportMDD(regular.fsm.transformDirectlyIntoMDD(regular.list)));
+              new ExtensionalSupportMdd(regular.fsm.transformDirectlyIntoMdd(regular.list)));
         }
       }
     }

@@ -260,7 +260,7 @@ public class SocialGolfer extends ExampleSet {
     Thread tread = Thread.currentThread();
     java.lang.management.ThreadMXBean b = java.lang.management.ManagementFactory.getThreadMXBean();
 
-    final long startCPU = b.getThreadCpuTime(tread.threadId());
+    final long startCpu = b.getThreadCpuTime(tread.threadId());
     final long startUser = b.getThreadUserTime(tread.threadId());
 
     boolean result = store.consistency();
@@ -295,7 +295,7 @@ public class SocialGolfer extends ExampleSet {
 
     IO.println(
         "ThreadCpuTime = "
-            + (b.getThreadCpuTime(tread.threadId()) - startCPU) / (long) 1e+6
+            + (b.getThreadCpuTime(tread.threadId()) - startCpu) / (long) 1e+6
             + "ms");
     IO.println(
         "ThreadUserTime = "

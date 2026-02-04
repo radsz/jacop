@@ -64,7 +64,7 @@ import org.jacop.search.SimpleSelect;
  *     <p>c) no two dices which are matched against each other can result in draw. default approach
  *     to satisfy this condition is to require all sides of all dices to be assigned unique values.
  */
-public class NonTransitiveDice extends ExampleFD {
+public class NonTransitiveDice extends ExampleFd {
 
   /** It contains constraints which can be used for shaving guidance. */
   public final List<Constraint> shavingConstraints = new ArrayList<>();

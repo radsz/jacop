@@ -1,5 +1,5 @@
 /*
- * SatCPBridge.java
+ * SatCpBridge.java
  * <p>
  * This file is part of JaCoP.
  * <p>
@@ -48,7 +48,7 @@ import org.jacop.satwrapper.WrapperComponent;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
-public abstract class SatCPBridge implements WrapperComponent {
+public abstract class SatCpBridge implements WrapperComponent {
 
   // the variable this object represents the range of
   public final IntVar variable;
@@ -67,7 +67,7 @@ public abstract class SatCPBridge implements WrapperComponent {
    *
    * @param variable the variable of which this is the range
    */
-  public SatCPBridge(IntVar variable) {
+  public SatCpBridge(IntVar variable) {
     this.variable = variable;
     this.initialDomain = variable.domain;
     // Note: satBridge registration is now done via SatWrapper.setSatBridge()

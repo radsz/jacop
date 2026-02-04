@@ -1,5 +1,5 @@
 /*
- * FlatzincSGMPCS.java
+ * FlatzincSgmpcs.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -33,7 +33,7 @@ package org.jacop.fz.examples;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.FlatzincLoader;
-import org.jacop.search.sgmpcs.SGMPCSearch;
+import org.jacop.search.sgmpcs.SgmpcsSearch;
 
 /**
  * The class Run is used to run test programs for JaCoP package. It is used for test purpose only.
@@ -41,13 +41,13 @@ import org.jacop.search.sgmpcs.SGMPCSearch;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class FlatzincSGMPCS {
+public class FlatzincSgmpcs {
 
-  FlatzincSGMPCS() {}
+  FlatzincSgmpcs() {}
 
   static void main(String[] args) {
 
-    FlatzincSGMPCS run = new FlatzincSGMPCS();
+    FlatzincSgmpcs run = new FlatzincSgmpcs();
 
     run.ex(args);
   }
@@ -90,8 +90,8 @@ public class FlatzincSGMPCS {
     IntVar[] vars = (IntVar[]) fl.getSearch().vars();
     IntVar cost = (IntVar) fl.getCost();
 
-    SGMPCSearch label = new SGMPCSearch(store, vars, cost);
-    label.setFailStrategy(SGMPCSearch.luby); // luby or poly
+    SgmpcsSearch label = new SgmpcsSearch(store, vars, cost);
+    label.setFailStrategy(SgmpcsSearch.luby); // luby or poly
     label.setProbability(0.25); // limit for probability of selecting search from empty
     label.setEliteSize(4); // size of the set of reference solutions
     label.setTimeOut(timeOut); // time-out in seconds

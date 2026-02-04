@@ -1,5 +1,5 @@
 /*
- * DCT.java
+ * Dct.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * It specifies DCT benchmark.
+ * It specifies Dct benchmark.
  *
  * <p>Source:
  *
@@ -45,25 +45,25 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class DCT extends Filter {
+public class Dct extends Filter {
 
-  /** It constructs a DCT filter problem with default delays for */
-  public DCT() {
+  /** It constructs a Dct filter problem with default delays for */
+  public Dct() {
     this(1, 2);
   }
 
   /**
-   * It constructs a DCT filter with specific delays for addition and multiplication operation.
+   * It constructs a Dct filter with specific delays for addition and multiplication operation.
    *
    * @param addDel delay of the addition operation.
    * @param mulDel delay of the multiplication operation.
    */
-  public DCT(int addDel, int mulDel) {
+  public Dct(int addDel, int mulDel) {
 
     this.addDel = addDel;
     this.mulDel = mulDel;
 
-    name = "DCT";
+    name = "Dct";
 
     this.dependencies =
         new int[][] {

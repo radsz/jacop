@@ -50,9 +50,9 @@ public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {
   /** Compares the cardinality of the variables lub to the float value. */
   public int compare(double left, T var) {
 
-    SetDomain SD = var.dom();
+    SetDomain setDom = var.dom();
 
-    int right = SD.lub().getSize();
+    int right = setDom.lub().getSize();
 
     if (left > right) {
       return 1;
@@ -66,11 +66,11 @@ public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {
   /** Compares the cardinality of the variables lubs. */
   public int compare(T leftVar, T rightVar) {
 
-    SetDomain leftSD = leftVar.dom();
-    SetDomain rightSD = rightVar.dom();
+    SetDomain leftSetDom = leftVar.dom();
+    SetDomain rightSetDom = rightVar.dom();
 
-    int left = leftSD.lub().getSize();
-    int right = rightSD.lub().getSize();
+    int left = leftSetDom.lub().getSize();
+    int right = rightSetDom.lub().getSize();
 
     return Integer.compare(left, right);
   }
@@ -78,7 +78,7 @@ public class MaxLubCard<T extends SetVar> implements ComparatorVariable<T> {
   /** Returns the cardinality of the lub. */
   public double metric(T var) {
 
-    SetDomain SD = var.dom();
-    return SD.lub().getSize();
+    SetDomain setDom = var.dom();
+    return setDom.lub().getSize();
   }
 }

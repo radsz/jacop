@@ -1,5 +1,5 @@
 /*
- * FIR.java
+ * Fir.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * FIR benchmark (16-point FIR filter).
+ * Fir benchmark (16-point Fir filter).
  *
  * <p>Source: Ramesh Karri, Karin Hogstedt and Alex Orailoglu "Computer-Aided Design of
  * Fault-Tolerant VLSI Design Systems" IEEE Design {@literal &} Test, Fall 1996 (Vol. 13, No. 3),
@@ -43,25 +43,25 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class FIR extends Filter {
+public class Fir extends Filter {
 
-  /** It constructs a simple FIR filter. */
-  public FIR() {
+  /** It constructs a simple Fir filter. */
+  public Fir() {
     this(1, 2);
   }
 
   /**
-   * It constructs a FIR filter with the specified delay for the addition and multiplication
+   * It constructs a Fir filter with the specified delay for the addition and multiplication
    * operation.
    *
    * @param addDel the delay of the addition operation.
    * @param mulDel the delay of the multiplication operation.
    */
-  public FIR(int addDel, int mulDel) {
+  public Fir(int addDel, int mulDel) {
     this.addDel = addDel;
     this.mulDel = mulDel;
 
-    name = "FIR";
+    name = "Fir";
 
     this.dependencies =
         new int[][] {

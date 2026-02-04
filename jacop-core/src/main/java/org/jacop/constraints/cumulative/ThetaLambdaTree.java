@@ -98,7 +98,7 @@ class ThetaLambdaTree extends Tree {
     addToThetaInit(i);
     node.envLambda = Long.MIN_VALUE;
     node.eLambda = 0L;
-    node.responsibleELambda = i;
+    node.responsibleElambda = i;
     node.responsibleEnvLambda = i;
   }
 
@@ -126,10 +126,10 @@ class ThetaLambdaTree extends Tree {
 
       if (l.eLambda + r.e > l.e + r.eLambda) {
         node.eLambda = l.eLambda + r.e;
-        node.responsibleELambda = l.responsibleELambda;
+        node.responsibleElambda = l.responsibleElambda;
       } else {
         node.eLambda = l.e + r.eLambda;
-        node.responsibleELambda = r.responsibleELambda;
+        node.responsibleElambda = r.responsibleElambda;
       }
 
       if (plus(l.envLambda, r.e) > plus(l.env, r.eLambda)) {
@@ -143,7 +143,7 @@ class ThetaLambdaTree extends Tree {
       } else {
         if (plus(l.env, r.eLambda) > r.envLambda) {
           node.envLambda = plus(l.env, r.eLambda);
-          node.responsibleEnvLambda = r.responsibleELambda;
+          node.responsibleEnvLambda = r.responsibleElambda;
         } else {
           node.envLambda = r.envLambda;
           node.responsibleEnvLambda = r.responsibleEnvLambda;

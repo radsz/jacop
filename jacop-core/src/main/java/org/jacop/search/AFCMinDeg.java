@@ -1,5 +1,5 @@
 /*
- * AFCMinDeg.java
+ * AfcMinDeg.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -44,15 +44,15 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class AFCMinDeg<T extends Var> implements ComparatorVariable<T> {
+public class AfcMinDeg<T extends Var> implements ComparatorVariable<T> {
 
-  private AFCMinDeg() {}
+  private AfcMinDeg() {}
 
-  public AFCMinDeg(Store store) {
+  public AfcMinDeg(Store store) {
     this(store, store.getDecay());
   }
 
-  public AFCMinDeg(Store store, double decay) {
+  public AfcMinDeg(Store store, double decay) {
     store.setAllConstraints();
     store.afcManagement(true);
     store.setDecay(decay);

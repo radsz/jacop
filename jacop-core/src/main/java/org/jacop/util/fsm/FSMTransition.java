@@ -1,5 +1,5 @@
 /*
- * FSMTransition.java
+ * FsmTransition.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -37,13 +37,13 @@ import org.jacop.core.IntDomain;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-public class FSMTransition {
+public class FsmTransition {
 
   /** It specifies the domain associated with the transition. */
   public IntDomain domain;
 
   /** It specifies the successor state we arrive to after taking the transition. */
-  public FSMState successor;
+  public FsmState successor;
 
   /**
    * It constructs a finite machine state transition.
@@ -51,7 +51,7 @@ public class FSMTransition {
    * @param domain the domain which triggers the transition.
    * @param state the successor state reached by a transition.
    */
-  public FSMTransition(IntDomain domain, FSMState state) {
+  public FsmTransition(IntDomain domain, FsmState state) {
     this.domain = domain;
     this.successor = state;
   }
@@ -62,9 +62,9 @@ public class FSMTransition {
    * @param states a list of states which have been already copied.
    * @return the transition clone.
    */
-  public FSMTransition deepClone(Set<FSMState> states) {
+  public FsmTransition deepClone(Set<FsmState> states) {
 
-    return new FSMTransition(domain, successor.deepClone(states));
+    return new FsmTransition(domain, successor.deepClone(states));
   }
 
   @Override
@@ -83,7 +83,7 @@ public class FSMTransition {
       return true;
     }
 
-    FSMTransition compareTo = (FSMTransition) o;
+    FsmTransition compareTo = (FsmTransition) o;
 
     return compareTo.successor.equals(successor) && compareTo.domain.eq(domain);
   }

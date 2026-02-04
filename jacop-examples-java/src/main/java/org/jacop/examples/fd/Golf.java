@@ -66,7 +66,7 @@ import org.jacop.core.Store;
  *     strokes.
  *     <p>Solution Bill Sands Cook 71 Jack Clubb Maint 85 Paul Carter Caddy 78 Frank Green Clerk 75
  */
-public class Golf extends ExampleFD {
+public class Golf extends ExampleFd {
 
   /**
    * It executes a simple program to solve this logic puzzle.
@@ -93,7 +93,7 @@ public class Golf extends ExampleFD {
     IO.println("Program to solve Golf problem ");
 
     // First names of golf players.
-    String[] FNNames = {"Bill", "Paul", "Frank", "Jack"};
+    String[] FnNames = {"Bill", "Paul", "Frank", "Jack"};
     // Creation of indexes for ease of referring.
     final int iBill = 0;
     final int iPaul = 1;
@@ -101,7 +101,7 @@ public class Golf extends ExampleFD {
     final int iJack = 3;
 
     // Last names of golf players.
-    String[] LNNames = {"Clubb", "Carter", "Sands", "Green"};
+    String[] LnNames = {"Clubb", "Carter", "Sands", "Green"};
     // Creation of indexes for ease of referring.
     final int /* iGreen = 0, */ iClubb = 1;
     final int iCarter = 2;
@@ -115,8 +115,8 @@ public class Golf extends ExampleFD {
     final int iClerk = 2; /*, iCook = 3 */
 
     // FDV's arrays
-    IntVar[] FN = new IntVar[4];
-    IntVar[] LN = new IntVar[4];
+    IntVar[] Fn = new IntVar[4];
+    IntVar[] Ln = new IntVar[4];
     IntVar[] Jobs = new IntVar[4];
 
     // Creating all FDVs.
@@ -124,50 +124,50 @@ public class Golf extends ExampleFD {
       // Domains are given through use of the function addDom.
       // Value 81 is not included due to clue no. 5.
       // Bounds 70 and 85 are derived from the problem description.
-      FN[i] = new IntVar(store, FNNames[i]);
-      FN[i].addDom(70, 80);
-      FN[i].addDom(82, 85);
+      Fn[i] = new IntVar(store, FnNames[i]);
+      Fn[i].addDom(70, 80);
+      Fn[i].addDom(82, 85);
 
-      LN[i] = new IntVar(store, LNNames[i]);
-      LN[i].addDom(70, 80);
-      LN[i].addDom(82, 85);
+      Ln[i] = new IntVar(store, LnNames[i]);
+      Ln[i].addDom(70, 80);
+      Ln[i].addDom(82, 85);
 
       Jobs[i] = new IntVar(store, JobsNames[i]);
       Jobs[i].addDom(70, 80);
       Jobs[i].addDom(82, 85);
 
-      vars.add(FN[i]);
-      vars.add(LN[i]);
+      vars.add(Fn[i]);
+      vars.add(Ln[i]);
       vars.add(Jobs[i]);
     }
 
     // Each player (firstname, lastname, job) has a different score.
-    store.impose(new Alldifferent(FN));
-    store.impose(new Alldifferent(LN));
+    store.impose(new Alldifferent(Fn));
+    store.impose(new Alldifferent(Ln));
     store.impose(new Alldifferent(Jobs));
 
     // 1. Bill, who is not the maintenance man, plays golf often and had the
     // lowest score of the foursome.
 
-    store.impose(new XneqY(FN[iBill], Jobs[iMaint]));
-    store.impose(new XltY(FN[iBill], FN[iPaul]));
-    store.impose(new XltY(FN[iBill], FN[iFrank]));
-    store.impose(new XltY(FN[iBill], FN[iJack]));
+    store.impose(new XneqY(Fn[iBill], Jobs[iMaint]));
+    store.impose(new XltY(Fn[iBill], Fn[iPaul]));
+    store.impose(new XltY(Fn[iBill], Fn[iFrank]));
+    store.impose(new XltY(Fn[iBill], Fn[iJack]));
 
     // 2. Mr. Clubb, who isn't Paul, hit several balls into the woods and
     // scored ten strokes
     // more than the pro-shop clerk.
 
-    store.impose(new XneqY(LN[iClubb], FN[iPaul]));
-    store.impose(new XplusCeqZ(Jobs[iClerk], 10, LN[iClubb]));
+    store.impose(new XneqY(Ln[iClubb], Fn[iPaul]));
+    store.impose(new XplusCeqZ(Jobs[iClerk], 10, Ln[iClubb]));
 
     // 3. In some order, Frank and the caddy scored four and seven more
     // strokes than Mr. Sands.
     PrimitiveConstraint[] c1 = {
-      new XplusCeqZ(LN[iSands], 4, FN[iFrank]), new XplusCeqZ(LN[iSands], 7, Jobs[iCaddy])
+      new XplusCeqZ(Ln[iSands], 4, Fn[iFrank]), new XplusCeqZ(Ln[iSands], 7, Jobs[iCaddy])
     };
     PrimitiveConstraint[] c2 = {
-      new XplusCeqZ(LN[iSands], 7, FN[iFrank]), new XplusCeqZ(LN[iSands], 4, Jobs[iCaddy])
+      new XplusCeqZ(Ln[iSands], 7, Fn[iFrank]), new XplusCeqZ(Ln[iSands], 4, Jobs[iCaddy])
     };
 
     store.impose(new Or(new And(c1), new And(c2)));
@@ -175,31 +175,31 @@ public class Golf extends ExampleFD {
     // 4. Mr. Carter thought his score of 78 was one of his better games,
     // even though Frank's score was lower.
 
-    store.impose(new XeqC(LN[iCarter], 78));
-    store.impose(new XltY(FN[iFrank], LN[iCarter]));
-    store.impose(new XltC(FN[iFrank], 78));
+    store.impose(new XeqC(Ln[iCarter], 78));
+    store.impose(new XltY(Fn[iFrank], Ln[iCarter]));
+    store.impose(new XltC(Fn[iFrank], 78));
 
     // 5. None of the four scored exactly 81 strokes.
     // It is redundant as these unary constraints have been already taken
     // into account during
     // domain creation process.
-    store.impose(new XneqC(FN[iBill], 81));
-    store.impose(new XneqC(FN[iPaul], 81));
-    store.impose(new XneqC(FN[iFrank], 81));
-    store.impose(new XneqC(FN[iJack], 81));
-    store.impose(new XneqY(FN[iPaul], LN[iClubb]));
+    store.impose(new XneqC(Fn[iBill], 81));
+    store.impose(new XneqC(Fn[iPaul], 81));
+    store.impose(new XneqC(Fn[iFrank], 81));
+    store.impose(new XneqC(Fn[iJack], 81));
+    store.impose(new XneqY(Fn[iPaul], Ln[iClubb]));
 
-    // Every ith variable in LN must have a coresponding variable in FN.
-    // Every ith variable in Jobs must have a coresponding variable in FN.
+    // Every ith variable in Ln must have a coresponding variable in Fn.
+    // Every ith variable in Jobs must have a coresponding variable in Fn.
     // Important as size of the domain variables is larger than the number
     // of variables
     // and Alldifferent is not sufficient.
     for (int i = 0; i < 4; i++) {
-      IntVar el1 = new IntVar(store, "i" + i + "LN", 1, 4);
+      IntVar el1 = new IntVar(store, "i" + i + "Ln", 1, 4);
       IntVar el2 = new IntVar(store, "i" + i + "Jobs", 1, 4);
 
-      store.impose(Element.choose(el1, LN, FN[i]));
-      store.impose(Element.choose(el2, Jobs, FN[i]));
+      store.impose(Element.choose(el1, Ln, Fn[i]));
+      store.impose(Element.choose(el2, Jobs, Fn[i]));
     }
   }
 }

@@ -32,5 +32,5 @@ package org.jacop.fz;
 
 interface Timer {
 
-  long getCPUTime();
+  long getCpuTime();
 }

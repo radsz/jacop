@@ -69,7 +69,7 @@ import org.jacop.core.Store;
  *     Motion 3 received twice as many yes votes as motion 4 did.
  *     <p>Determine: fill in the chart (Yes/No) for each motion
  */
-public class ProAndCon extends ExampleFD {
+public class ProAndCon extends ExampleFd {
 
   /**
    * It executes the program which solves this logic puzzle.

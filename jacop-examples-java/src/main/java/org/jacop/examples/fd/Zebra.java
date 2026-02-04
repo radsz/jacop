@@ -60,7 +60,7 @@ import org.jacop.core.Store;
  *     <p>They sometimes smoke different brands of cigarettes too, but that's apparently no longer
  *     politically correct, so they all quit.
  */
-public class Zebra extends ExampleFD {
+public class Zebra extends ExampleFd {
 
   /**
    * It executes the program to solve this simple logic puzzle.

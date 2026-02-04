@@ -54,14 +54,14 @@ public final class HeuristicForgetModule
     implements ForgetListener, ExplanationListener, BackjumpListener {
 
   // after how many learnt clauses can we try to forget() ?
-  public final int LEARNT_CLAUSES_NUMBER_THRESHOLD = 1000;
+  public final int learntClausesNumberThreshold = 1000;
 
   // lists of learnt clauses, indexed by their LBD
   @SuppressWarnings("unchecked")
   private final LinkedList<Integer>[] learntClauses = (LinkedList<Integer>[]) new LinkedList[6];
 
   /** threshold of activity under which a clause is removed */
-  public double FORGET_THRESHOLD = 10;
+  public double forgetThreshold = 10;
 
   // solver instance
   private Core core;
@@ -112,7 +112,7 @@ public final class HeuristicForgetModule
     if (explanation.size() > 2) {
       // only try to remember clauses longer than 2
 
-      int lbd = Math.min(computeLBD(explanation), learntClauses.length - 1);
+      int lbd = Math.min(computeLbd(explanation), learntClauses.length - 1);
 
       assert lbd > 0 && lbd < learntClauses.length;
 
@@ -128,7 +128,7 @@ public final class HeuristicForgetModule
    * @return true if the heuristic advises to forget AND the level is 0
    */
   public boolean shouldTriggerForget() {
-    return core.currentLevel == 0 && numberOfLearntClauses() > LEARNT_CLAUSES_NUMBER_THRESHOLD;
+    return core.currentLevel == 0 && numberOfLearntClauses() > learntClausesNumberThreshold;
   }
 
   /**
@@ -148,7 +148,7 @@ public final class HeuristicForgetModule
    * @param clause the clause
    * @return the LBD of this clause
    */
-  private int computeLBD(MapClause clause) {
+  private int computeLbd(MapClause clause) {
     // TODO: compute the number
 
     return 0;

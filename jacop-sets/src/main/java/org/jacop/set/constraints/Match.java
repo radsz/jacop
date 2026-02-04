@@ -98,7 +98,7 @@ public class Match extends Constraint implements SatisfiedPresent {
         el = ve.nextElement();
         intVar.domain.in(store.level, intVar, el, el);
       }
-      a.domain.inLUB(store.level, a, a.domain.glb());
+      a.domain.inLub(store.level, a, a.domain.glb());
 
     } else if (a.domain.lub().getSize() == list.length) {
 
@@ -108,15 +108,15 @@ public class Match extends Constraint implements SatisfiedPresent {
         el = ve.nextElement();
         intVar.domain.in(store.level, intVar, el, el);
       }
-      a.domain.inGLB(store.level, a, a.domain.lub());
+      a.domain.inGlb(store.level, a, a.domain.lub());
 
     } else {
 
       IntDomain glbA = a.domain.glb();
       IntDomain lubA = a.domain.lub();
 
-      int sizeOfaGLB = glbA.getSize();
-      int sizeOfaLUB = lubA.getSize();
+      int sizeOfaGlb = glbA.getSize();
+      int sizeOfaLub = lubA.getSize();
 
       // glbA, lubA => list[i]
       for (int i = 0; i < list.length; i++) {
@@ -125,22 +125,22 @@ public class Match extends Constraint implements SatisfiedPresent {
 
         int minValue = lubA.getElementAt(i);
 
-        if (i >= list.length - sizeOfaGLB) {
+        if (i >= list.length - sizeOfaGlb) {
           // -1 since indexing of arrays starts from 0.
-          int minValueFromGLB = glbA.getElementAt(sizeOfaGLB - list.length + i);
-          if (minValueFromGLB > minValue) {
-            minValue = minValueFromGLB;
+          int minValueFromGlb = glbA.getElementAt(sizeOfaGlb - list.length + i);
+          if (minValueFromGlb > minValue) {
+            minValue = minValueFromGlb;
           }
         }
 
         list[i].domain.inMin(store.level, list[i], minValue);
 
-        int maxValue = lubA.getElementAt(sizeOfaLUB - list.length + i);
+        int maxValue = lubA.getElementAt(sizeOfaLub - list.length + i);
 
-        if (i < sizeOfaGLB) {
-          int maxValueFromGLB = glbA.getElementAt(i);
-          if (maxValueFromGLB < maxValue) {
-            maxValue = maxValueFromGLB;
+        if (i < sizeOfaGlb) {
+          int maxValueFromGlb = glbA.getElementAt(i);
+          if (maxValueFromGlb < maxValue) {
+            maxValue = maxValueFromGlb;
           }
         }
 
@@ -150,13 +150,13 @@ public class Match extends Constraint implements SatisfiedPresent {
       IntDomain lubFromList = list[0].domain.cloneLight();
       for (int i = 0; i < list.length; i++) {
         if (list[i].singleton()) {
-          a.domain.inGLB(store.level, a, list[i].value());
+          a.domain.inGlb(store.level, a, list[i].value());
         }
         if (i > 0) {
           lubFromList.unionAdapt(list[i].domain);
         }
       }
-      a.domain.inLUB(store.level, a, lubFromList);
+      a.domain.inLub(store.level, a, lubFromList);
     }
   }
 

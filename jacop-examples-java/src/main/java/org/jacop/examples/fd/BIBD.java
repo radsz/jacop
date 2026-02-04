@@ -1,5 +1,5 @@
 /*
- * BIBD.java
+ * Bibd.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -39,12 +39,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * It models and solves Balanced Incomplete Block Design (BIBD) problem (CSPLIB-P28).
+ * It models and solves Balanced Incomplete Block Design (Bibd) problem (CSPLIB-P28).
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class BIBD extends ExampleFD {
+public class Bibd extends ExampleFd {
 
   /** It specifies number of rows in the incidence matrix. */
   public int v = 7;
@@ -71,7 +71,7 @@ public class BIBD extends ExampleFD {
    */
   static void main(String[] args) {
 
-    BIBD example = new BIBD();
+    Bibd example = new Bibd();
 
     if (args.length > 1) {
       try {
@@ -90,7 +90,7 @@ public class BIBD extends ExampleFD {
     if (example.searchAllAtOnce()) {
       IO.println("Solution(s) found");
 
-      ExampleFD.printMatrix(example.x, example.v, example.b);
+      ExampleFd.printMatrix(example.x, example.v, example.b);
     }
   }
 

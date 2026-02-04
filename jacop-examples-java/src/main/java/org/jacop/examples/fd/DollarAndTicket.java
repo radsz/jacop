@@ -57,7 +57,7 @@ import org.jacop.core.Store;
  *     exactly three times as many books as Diane. 6. Greg isn't Borecki or Ott. 7. Kevin isn't on
  *     the Bobcats.
  */
-public class DollarAndTicket extends ExampleFD {
+public class DollarAndTicket extends ExampleFd {
 
   /**
    * It executes the program to solve this simple puzzle.

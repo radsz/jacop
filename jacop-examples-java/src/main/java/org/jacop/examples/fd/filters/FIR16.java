@@ -1,5 +1,5 @@
 /*
- * FIR16.java
+ * Fir16.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * FIR benchmark (16-point FIR filter)
+ * Fir benchmark (16-point Fir filter)
  *
  * <p>Source: Kaijie Wu and Ramesh Karri, "Algorithm-Level Recomputing with Shifted Operands -- A
  * Register Transfer Level Concurrent Error Detection Technique" IEEE Trans. on CAD, vol. 25, no. 3,
@@ -43,25 +43,25 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class FIR16 extends Filter {
+public class Fir16 extends Filter {
 
-  /** It constructs a simple FIR16 filter. */
-  public FIR16() {
+  /** It constructs a simple Fir16 filter. */
+  public Fir16() {
     this(1, 2);
   }
 
   /**
-   * It constructs a FIR16 filter with the specified delay for the addition and multiplication
+   * It constructs a Fir16 filter with the specified delay for the addition and multiplication
    * operation.
    *
    * @param addDel the delay of the addition operation.
    * @param mulDel the delay of the multiplication operation.
    */
-  public FIR16(int addDel, int mulDel) {
+  public Fir16(int addDel, int mulDel) {
     this.addDel = addDel;
     this.mulDel = mulDel;
 
-    name = "FIR16";
+    name = "Fir16";
 
     this.dependencies =
         new int[][] {

@@ -55,7 +55,7 @@ import org.jacop.search.SmallestDomain;
  *     <p>Feature: testing cumulative.
  *     <p>Also see <a href="http://www.hakank.org/JaCoP/">...</a>
  */
-public class FurnitureMoving extends ExampleFD {
+public class FurnitureMoving extends ExampleFd {
 
   private static final boolean generateAll = true;
 

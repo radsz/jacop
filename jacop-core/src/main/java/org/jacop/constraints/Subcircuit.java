@@ -62,7 +62,7 @@ public class Subcircuit extends Alldiff {
   final Random random = new Random(0);
   Store store;
   boolean firstConsistencyCheck = true;
-  boolean useSCC = true;
+  boolean useScc = true;
   boolean useDominance = true;
   int idd;
   int sccLength;
@@ -100,12 +100,12 @@ public class Subcircuit extends Alldiff {
     String scc = System.getProperty("sub_circuit_scc_pruning");
     String dominance = System.getProperty("sub_circuit_dominance_pruning");
     if (scc != null) {
-      useSCC = Boolean.parseBoolean(scc);
+      useScc = Boolean.parseBoolean(scc);
     }
     if (dominance != null) {
       useDominance = Boolean.parseBoolean(dominance);
     }
-    if (!useSCC && !useDominance) {
+    if (!useScc && !useDominance) {
       throw new java.lang.IllegalArgumentException("Wrong property configuration for Subcircuit");
     }
 
@@ -144,7 +144,7 @@ public class Subcircuit extends Alldiff {
 
     } while (store.propagationHasOccurred);
 
-    if (useSCC) {
+    if (useScc) {
       sccsBasedPruning(store); // strongly connected components
 
       if (store.propagationHasOccurred) {

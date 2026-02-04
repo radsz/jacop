@@ -624,7 +624,7 @@ public class Support implements ParserTreeConstants {
     }
   }
 
-  <T extends Constraint> void poseDC(DecomposedConstraint<T> c) throws FailException {
+  <T extends Constraint> void poseDc(DecomposedConstraint<T> c) throws FailException {
 
     store.imposeDecompositionWithConsistency(c);
     if (options.debug()) {
@@ -663,7 +663,7 @@ public class Support implements ParserTreeConstants {
     imply.pose();
   }
 
-  Constraint fzXeqCReified(IntVar x, int c, IntVar b) {
+  Constraint fzXeqCreified(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
 
@@ -692,16 +692,16 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public String toString() {
-        return "fzXeqCReified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+        return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
       }
 
       public String id() {
-        return "fzXeqCReified" + numberId;
+        return "fzXeqCreified" + numberId;
       }
     };
   }
 
-  Constraint fzXeqCImplied(IntVar x, int c, IntVar b) {
+  Constraint fzXeqCimplied(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
 
@@ -729,16 +729,16 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public String toString() {
-        return "fzXeqCImplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+        return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
 
       public String id() {
-        return "fzXeqCImplied" + numberId;
+        return "fzXeqCimplied" + numberId;
       }
     };
   }
 
-  Constraint fzXneqCReified(IntVar x, int c, IntVar b) {
+  Constraint fzXneqCreified(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
 
@@ -768,16 +768,16 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public String toString() {
-        return "fzXneqCReified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+        return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
       }
 
       public String id() {
-        return "fzXneqCReified" + numberId;
+        return "fzXneqCreified" + numberId;
       }
     };
   }
 
-  Constraint fzXneqCImplied(IntVar x, int c, IntVar b) {
+  Constraint fzXneqCimplied(IntVar x, int c, IntVar b) {
 
     return new Constraint(new IntVar[] {x, b}) {
 
@@ -808,12 +808,12 @@ public class Support implements ParserTreeConstants {
       }
 
       public String id() {
-        return "fzXneqCImplied" + numberId;
+        return "fzXneqCimplied" + numberId;
       }
     };
   }
 
-  Constraint fzXeqYReified(IntVar x, IntVar y, IntVar b) {
+  Constraint fzXeqYreified(IntVar x, IntVar y, IntVar b) {
 
     return new Constraint(new IntVar[] {x, y, b}) {
 
@@ -861,12 +861,12 @@ public class Support implements ParserTreeConstants {
       }
 
       public String id() {
-        return "fzXeqYReified" + numberId;
+        return "fzXeqYreified" + numberId;
       }
     };
   }
 
-  Constraint fzXeqYImplied(IntVar x, IntVar y, IntVar b) {
+  Constraint fzXeqYimplied(IntVar x, IntVar y, IntVar b) {
 
     return new Constraint(new IntVar[] {x, y, b}) {
 
@@ -903,11 +903,11 @@ public class Support implements ParserTreeConstants {
 
       @Override
       public String toString() {
-        return "fzXeqYImplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
+        return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
       }
 
       public String id() {
-        return "fzXeqYImplied" + numberId;
+        return "fzXeqYimplied" + numberId;
       }
     };
   }

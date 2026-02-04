@@ -70,7 +70,7 @@ import org.jacop.search.SmallestDomain;
  *     <p>Some Minesweeper Configurations: <a
  *     href="http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf">...</a>
  */
-public class MineSweeper extends ExampleFD {
+public class MineSweeper extends ExampleFd {
 
   /** It represents the unknown value in the problem matrix. */
   public static final int X = -1;

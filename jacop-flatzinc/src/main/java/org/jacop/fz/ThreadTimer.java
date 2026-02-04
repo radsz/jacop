@@ -44,7 +44,7 @@ public class ThreadTimer implements Timer {
     timer = ManagementFactory.getThreadMXBean();
   }
 
-  public long getCPUTime() {
+  public long getCpuTime() {
     return timer.getThreadCpuTime(thread.threadId());
   }
 }

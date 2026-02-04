@@ -70,7 +70,7 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
   private long threshold;
 
   // factor to increase the threshold by
-  private double THRESHOLD_INCREASE_RATE;
+  private double thresholdIncreaseRate;
 
   public void onConflict(MapClause clause, int level) {
     conflictCount++;
@@ -84,7 +84,7 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
 
   public void onRestart(int oldLevel) {
     // increase the number of conflicts needed to restart
-    threshold = Math.round(threshold * THRESHOLD_INCREASE_RATE);
+    threshold = Math.round(threshold * thresholdIncreaseRate);
 
     // reset counter
     conflictCount = 0;
@@ -93,8 +93,8 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
 
   public void initialize(Core core) {
     conflictCount = 0;
-    threshold = core.config.RESTART_CONFLICT_THRESHOLD;
-    THRESHOLD_INCREASE_RATE = core.config.RESTART_THRESHOLD_INCREASE_RATE;
+    threshold = core.config.restartConflictThreshold;
+    thresholdIncreaseRate = core.config.restartThresholdIncreaseRate;
 
     // register
     core.conflictModules[core.numConflictModules++] = this;

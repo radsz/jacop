@@ -44,7 +44,7 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.diffn.Diffn;
-import org.jacop.constraints.geost.DBox;
+import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -67,7 +67,7 @@ import org.jacop.search.SmallestMin;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class PerfectSquare extends ExampleFD {
+public class PerfectSquare extends ExampleFd {
 
   /** It specifies which of the pre-defined problems should be solved. */
   // public static int problemNo = 0;
@@ -1749,7 +1749,7 @@ public class PerfectSquare extends ExampleFD {
       int[] origin = {0, 0};
       int[] length = {sqSize, sqSize};
 
-      Shape shape = new Shape(j, new DBox(origin, length));
+      Shape shape = new Shape(j, new Dbox(origin, length));
       shapes.add(shape);
     }
 

@@ -1,5 +1,5 @@
 /*
- * SGMPCSearch.java
+ * SgmpcsSearch.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -46,8 +46,8 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 
 /**
- * SGMPCSearch - implements Solution-Guided Multi-Point Constructive Search. This search starts with
- * several elite solutions and tries to impove (minimizing cost variable) them by doing either
+ * SgmpcsSearch - implements Solution-Guided Multi-Point Constructive Search. This search starts
+ * with several elite solutions and tries to impove (minimizing cost variable) them by doing either
  * search assuming an elite solution or staring with an empty solution.
  *
  * <p>This implementation is based on paper "Solution-guided Multi-point Constructive Search for Job
@@ -58,7 +58,7 @@ import org.jacop.search.SimpleSelect;
  * @version 4.10
  */
 @Slf4j
-public class SGMPCSearch {
+public class SgmpcsSearch {
 
   // strategy to get limit l on fails
   public static final int luby = 1;
@@ -110,7 +110,7 @@ public class SGMPCSearch {
   // time-out value in miliseconds (default 10 second)
   long timeOut = 10000;
 
-  public SGMPCSearch(Store store, IntVar[] vars, IntVar cost) {
+  public SgmpcsSearch(Store store, IntVar[] vars, IntVar cost) {
 
     this.store = store;
     this.vars = new IntVar[vars.length];
@@ -120,7 +120,7 @@ public class SGMPCSearch {
     search = new SimpleImprovementSearch<>(store, vars, cost);
   }
 
-  public SGMPCSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
+  public SgmpcsSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
 
     this.store = store;
     this.vars = new IntVar[vars.length];

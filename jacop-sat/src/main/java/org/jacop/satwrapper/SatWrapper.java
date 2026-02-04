@@ -63,7 +63,7 @@ import org.jacop.jasat.utils.Utils;
 import org.jacop.jasat.utils.structures.IntQueue;
 import org.jacop.satwrapper.translation.DomainClausesDatabase;
 import org.jacop.satwrapper.translation.DomainTranslator;
-import org.jacop.satwrapper.translation.SatCPBridge;
+import org.jacop.satwrapper.translation.SatCpBridge;
 import org.jacop.satwrapper.translation.SimpleCpVarDomain;
 
 /*
@@ -101,7 +101,7 @@ public final class SatWrapper extends Constraint
   // level of verbosity (the higher, the more verbose)
   public final int verbosity = 0;
   // association from CP variables to their SAT bridge (replaces IntVar.satBridge field)
-  private final Map<IntVar, SatCPBridge> varToSatBridge = new HashMap<>();
+  private final Map<IntVar, SatCpBridge> varToSatBridge = new HashMap<>();
   // model clauses waiting to be added to the SAT solver
   private final ArrayDeque<int[]> modelClausesToAdd = new ArrayDeque<>();
   // sat solver instance
@@ -116,7 +116,7 @@ public final class SatWrapper extends Constraint
   // keep track of literals activity, and give search advices (optional)
   public ActivityModule activity;
   // association (boolean variable) -> LiteralRange (and so, IntVar)
-  public SatCPBridge[] boolVarToDomains = new SatCPBridge[50];
+  public SatCpBridge[] boolVarToDomains = new SatCpBridge[50];
   // the change listene to plug in the SAT solver
   public SatChangesListener satChangesListener;
   // store this constraint belongs to
@@ -181,9 +181,9 @@ public final class SatWrapper extends Constraint
    * Gets the SAT bridge for the given variable. Replaces direct access to IntVar.satBridge field.
    *
    * @param variable the IntVar
-   * @return the SatCPBridge associated with the variable, or null if not set
+   * @return the SatCpBridge associated with the variable, or null if not set
    */
-  public SatCPBridge getSatBridge(IntVar variable) {
+  public SatCpBridge getSatBridge(IntVar variable) {
     return varToSatBridge.get(variable);
   }
 
@@ -192,9 +192,9 @@ public final class SatWrapper extends Constraint
    * field.
    *
    * @param variable the IntVar
-   * @param bridge the SatCPBridge to associate with the variable
+   * @param bridge the SatCpBridge to associate with the variable
    */
-  public void setSatBridge(IntVar variable, SatCPBridge bridge) {
+  public void setSatBridge(IntVar variable, SatCpBridge bridge) {
     varToSatBridge.put(variable, bridge);
   }
 
@@ -221,7 +221,7 @@ public final class SatWrapper extends Constraint
       // tell the store we watch this variable
       variable.putModelConstraint(this, IntDomain.BOUND);
 
-      SatCPBridge bridge = new SimpleCpVarDomain(this, variable, translate);
+      SatCpBridge bridge = new SimpleCpVarDomain(this, variable, translate);
       setSatBridge(variable, bridge);
       assert log(this, "create default domain", bridge);
     }
@@ -685,7 +685,7 @@ public final class SatWrapper extends Constraint
    */
   public int cpVarToBoolVar(IntVar variable, int value, boolean isEquality) {
 
-    SatCPBridge range = getSatBridge(variable);
+    SatCpBridge range = getSatBridge(variable);
 
     assert range != null;
 
@@ -702,7 +702,7 @@ public final class SatWrapper extends Constraint
    * @param literal the boolean literal
    * @return a range
    */
-  public SatCPBridge boolVarToDomain(int literal) {
+  public SatCpBridge boolVarToDomain(int literal) {
     int var = Math.abs(literal);
     return boolVarToDomains[var];
   }
@@ -717,7 +717,7 @@ public final class SatWrapper extends Constraint
     assert isVarLiteral(literal);
 
     int var = Math.abs(literal);
-    SatCPBridge range = boolVarToDomains[var];
+    SatCpBridge range = boolVarToDomains[var];
     return range.variable;
   }
 
@@ -732,7 +732,7 @@ public final class SatWrapper extends Constraint
 
     int var = Math.abs(literal);
     // find which range this literal belongs to
-    SatCPBridge range = boolVarToDomains[var];
+    SatCpBridge range = boolVarToDomains[var];
     return range.boolVarToCpValue(var);
   }
 
@@ -747,7 +747,7 @@ public final class SatWrapper extends Constraint
     assert isVarLiteral(literal);
     int var = Math.abs(literal);
     IntVar variable = boolVarToCpVar(literal);
-    SatCPBridge range = getSatBridge(variable);
+    SatCpBridge range = getSatBridge(variable);
     return range.isEqualityBoolVar(var);
   }
 
@@ -813,8 +813,8 @@ public final class SatWrapper extends Constraint
     domainTranslator.initialize(this);
   }
 
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCnf(BufferedWriter output) throws IOException {
 
-    core.dbStore.toCNF(output);
+    core.dbStore.toCnf(output);
   }
 }

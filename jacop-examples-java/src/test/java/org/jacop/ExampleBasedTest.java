@@ -35,9 +35,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.HashSet;
 import java.util.Set;
 import org.jacop.examples.fd.ArchFriends;
-import org.jacop.examples.fd.BIBD;
 import org.jacop.examples.fd.BabySitting;
 import org.jacop.examples.fd.BasicLogicPascal;
+import org.jacop.examples.fd.Bibd;
 import org.jacop.examples.fd.BlueberryMuffins;
 import org.jacop.examples.fd.BreakingNews;
 import org.jacop.examples.fd.BuildingBlocks;
@@ -77,16 +77,16 @@ import org.jacop.examples.fd.SleepingArrangements;
 import org.jacop.examples.fd.StonesOfHeaven;
 import org.jacop.examples.fd.Sudoku;
 import org.jacop.examples.fd.SurvoPuzzle;
-import org.jacop.examples.fd.TSP;
+import org.jacop.examples.fd.Tsp;
 import org.jacop.examples.fd.Tunapalooza;
 import org.jacop.examples.fd.WhoKilledAgatha;
 import org.jacop.examples.fd.WolfGoatCabbage;
 import org.jacop.examples.fd.Zebra;
 import org.jacop.examples.fd.carsequencing.CarSequencing;
 import org.jacop.examples.fd.crosswords.CrossWord;
-import org.jacop.examples.fd.muca.MUCA;
+import org.jacop.examples.fd.muca.Muca;
 import org.jacop.examples.fd.nonogram.Nonogram;
-import org.jacop.examples.fd.qcp.QCP;
+import org.jacop.examples.fd.qcp.Qcp;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -132,7 +132,7 @@ public class ExampleBasedTest {
   @Test
   public void testMUCA() {
 
-    MUCA problem = new MUCA();
+    Muca problem = new Muca();
     problem.filename = "src/test/resources/testset3.auct";
     problem.model();
     problem.searchSpecial();
@@ -140,7 +140,7 @@ public class ExampleBasedTest {
         .isEqualTo(
             "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,0of-g3 = 0,0of-g4 = 0,0of-g5 = 0,0of-g6 = 0,0of-g7 = 0,bidCost1 = -477,bidCost2 = -630,bidCost3 = -540,bidCost4 = -78,bidCost5 = 0,cost = -1725,deltaI_g0t0 = 0,deltaI_g0t1 = 0,deltaI_g0t10 = 0,deltaI_g0t11 = 0,deltaI_g0t12 = 0,deltaI_g0t13 = 0,deltaI_g0t14 = 0,deltaI_g0t2 = 0,deltaI_g0t3 = 0,deltaI_g0t4 = 0,deltaI_g0t5 = -6,deltaI_g0t6 = 0,deltaI_g0t7 = 0,deltaI_g0t8 = 0,deltaI_g0t9 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -6,deltaI_g1t10 = 0,deltaI_g1t11 = 0,deltaI_g1t12 = 0,deltaI_g1t13 = 0,deltaI_g1t14 = 0,deltaI_g1t2 = 0,deltaI_g1t3 = 0,deltaI_g1t4 = -3,deltaI_g1t5 = -4,deltaI_g1t6 = 0,deltaI_g1t7 = 0,deltaI_g1t8 = -10,deltaI_g1t9 = 0,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t10 = 0,deltaI_g2t11 = 0,deltaI_g2t12 = 0,deltaI_g2t13 = 0,deltaI_g2t14 = 0,deltaI_g2t2 = 0,deltaI_g2t3 = 0,deltaI_g2t4 = -5,deltaI_g2t5 = -7,deltaI_g2t6 = 0,deltaI_g2t7 = -4,deltaI_g2t8 = 0,deltaI_g2t9 = 0,deltaI_g3t0 = 0,deltaI_g3t1 = 0,deltaI_g3t10 = 0,deltaI_g3t11 = 0,deltaI_g3t12 = 0,deltaI_g3t13 = 0,deltaI_g3t14 = 0,deltaI_g3t2 = 0,deltaI_g3t3 = 0,deltaI_g3t4 = 0,deltaI_g3t5 = -6,deltaI_g3t6 = -5,deltaI_g3t7 = 0,deltaI_g3t8 = 0,deltaI_g3t9 = 0,deltaI_g4t0 = 0,deltaI_g4t1 = 0,deltaI_g4t10 = 0,deltaI_g4t11 = 0,deltaI_g4t12 = 0,deltaI_g4t13 = 0,deltaI_g4t14 = 0,deltaI_g4t2 = 0,deltaI_g4t3 = 0,deltaI_g4t4 = -6,deltaI_g4t5 = -5,deltaI_g4t6 = 0,deltaI_g4t7 = -4,deltaI_g4t8 = 0,deltaI_g4t9 = 0,deltaI_g5t0 = 0,deltaI_g5t1 = -7,deltaI_g5t10 = 0,deltaI_g5t11 = 0,deltaI_g5t12 = 0,deltaI_g5t13 = 0,deltaI_g5t14 = 0,deltaI_g5t2 = 0,deltaI_g5t3 = 0,deltaI_g5t4 = 0,deltaI_g5t5 = 0,deltaI_g5t6 = 0,deltaI_g5t7 = 0,deltaI_g5t8 = 0,deltaI_g5t9 = 0,deltaI_g6t0 = 0,deltaI_g6t1 = 0,deltaI_g6t10 = 0,deltaI_g6t11 = 0,deltaI_g6t12 = 0,deltaI_g6t13 = 0,deltaI_g6t14 = 0,deltaI_g6t2 = 0,deltaI_g6t3 = 0,deltaI_g6t4 = 0,deltaI_g6t5 = -5,deltaI_g6t6 = -4,deltaI_g6t7 = 0,deltaI_g6t8 = 0,deltaI_g6t9 = 0,deltaI_g7t0 = 0,deltaI_g7t1 = 0,deltaI_g7t10 = 0,deltaI_g7t11 = 0,deltaI_g7t12 = 0,deltaI_g7t13 = 0,deltaI_g7t14 = 0,deltaI_g7t2 = 0,deltaI_g7t3 = 0,deltaI_g7t4 = -5,deltaI_g7t5 = 0,deltaI_g7t6 = 0,deltaI_g7t7 = 0,deltaI_g7t8 = 0,deltaI_g7t9 = 0,deltaO_g0t0 = 0,deltaO_g0t1 = 0,deltaO_g0t10 = 0,deltaO_g0t11 = 0,deltaO_g0t12 = 0,deltaO_g0t13 = 0,deltaO_g0t14 = 0,deltaO_g0t2 = 0,deltaO_g0t3 = 6,deltaO_g0t4 = 0,deltaO_g0t5 = 0,deltaO_g0t6 = 6,deltaO_g0t7 = 0,deltaO_g0t8 = 5,deltaO_g0t9 = 0,deltaO_g1t0 = 7,deltaO_g1t1 = 0,deltaO_g1t10 = 0,deltaO_g1t11 = 0,deltaO_g1t12 = 0,deltaO_g1t13 = 0,deltaO_g1t14 = 0,deltaO_g1t2 = 0,deltaO_g1t3 = 6,deltaO_g1t4 = 7,deltaO_g1t5 = 0,deltaO_g1t6 = 0,deltaO_g1t7 = 6,deltaO_g1t8 = 0,deltaO_g1t9 = 0,deltaO_g2t0 = 7,deltaO_g2t1 = 0,deltaO_g2t10 = 0,deltaO_g2t11 = 0,deltaO_g2t12 = 0,deltaO_g2t13 = 0,deltaO_g2t14 = 0,deltaO_g2t2 = 4,deltaO_g2t3 = 0,deltaO_g2t4 = 6,deltaO_g2t5 = 0,deltaO_g2t6 = 0,deltaO_g2t7 = 7,deltaO_g2t8 = 0,deltaO_g2t9 = 0,deltaO_g3t0 = 0,deltaO_g3t1 = 4,deltaO_g3t10 = 0,deltaO_g3t11 = 0,deltaO_g3t12 = 0,deltaO_g3t13 = 0,deltaO_g3t14 = 0,deltaO_g3t2 = 0,deltaO_g3t3 = 0,deltaO_g3t4 = 5,deltaO_g3t5 = 7,deltaO_g3t6 = 6,deltaO_g3t7 = 5,deltaO_g3t8 = 5,deltaO_g3t9 = 6,deltaO_g4t0 = 7,deltaO_g4t1 = 6,deltaO_g4t10 = 0,deltaO_g4t11 = 0,deltaO_g4t12 = 0,deltaO_g4t13 = 0,deltaO_g4t14 = 0,deltaO_g4t2 = 4,deltaO_g4t3 = 6,deltaO_g4t4 = 6,deltaO_g4t5 = 0,deltaO_g4t6 = 0,deltaO_g4t7 = 0,deltaO_g4t8 = 5,deltaO_g4t9 = 0,deltaO_g5t0 = 7,deltaO_g5t1 = 0,deltaO_g5t10 = 0,deltaO_g5t11 = 0,deltaO_g5t12 = 0,deltaO_g5t13 = 0,deltaO_g5t14 = 0,deltaO_g5t2 = 4,deltaO_g5t3 = 6,deltaO_g5t4 = 5,deltaO_g5t5 = 5,deltaO_g5t6 = 0,deltaO_g5t7 = 0,deltaO_g5t8 = 5,deltaO_g5t9 = 0,deltaO_g6t0 = 7,deltaO_g6t1 = 0,deltaO_g6t10 = 0,deltaO_g6t11 = 0,deltaO_g6t12 = 0,deltaO_g6t13 = 0,deltaO_g6t14 = 0,deltaO_g6t2 = 4,deltaO_g6t3 = 6,deltaO_g6t4 = 0,deltaO_g6t5 = 0,deltaO_g6t6 = 0,deltaO_g6t7 = 5,deltaO_g6t8 = 5,deltaO_g6t9 = 0,deltaO_g7t0 = 7,deltaO_g7t1 = 5,deltaO_g7t10 = 0,deltaO_g7t11 = 0,deltaO_g7t12 = 0,deltaO_g7t13 = 0,deltaO_g7t14 = 0,deltaO_g7t2 = 4,deltaO_g7t3 = 6,deltaO_g7t4 = 0,deltaO_g7t5 = 5,deltaO_g7t6 = 6,deltaO_g7t7 = 5,deltaO_g7t8 = 5,deltaO_g7t9 = 0,delta_t10_g1 = -10,delta_t11_g6 = -4,delta_t12_g3 = 0,delta_t14_g1 = 0,delta_t17_g0 = 0,delta_t17_g5 = 0,delta_t1_g1 = -6,delta_t1_g5 = -7,delta_t20_g1 = 0,delta_t21_g1 = 0,delta_t21_g3 = 0,delta_t21_g6 = 0,delta_t22_g0 = 0,delta_t22_g3 = 0,delta_t22_g5 = 0,delta_t23_g4 = -4,delta_t25_g7 = 0,delta_t26_g1 = 0,delta_t27_g1 = 0,delta_t28_g2 = 0,delta_t28_g6 = 0,delta_t2_g0 = -6,delta_t2_g1 = -4,delta_t2_g2 = -7,delta_t2_g4 = -5,delta_t2_g6 = -5,delta_t5_g4 = 0,delta_t6_g1 = 0,delta_t6_g7 = 0,delta_t7_g1 = 0,delta_t8_g6 = 0,delta_t8_g7 = 0,delta_t9_g7 = -5,delta_tid_10_g0 = 5,delta_tid_10_g2 = 0,delta_tid_10_g3 = 5,delta_tid_10_g4 = 5,delta_tid_10_g5 = 5,delta_tid_10_g6 = 5,delta_tid_10_g7 = 5,delta_tid_11_g0 = 6,delta_tid_11_g1 = 0,delta_tid_11_g2 = 0,delta_tid_11_g3 = 1,delta_tid_11_g4 = 0,delta_tid_11_g5 = 0,delta_tid_11_g7 = 6,delta_tid_12_g0 = 0,delta_tid_12_g1 = 0,delta_tid_12_g2 = 0,delta_tid_12_g4 = 0,delta_tid_12_g5 = 0,delta_tid_12_g6 = 0,delta_tid_12_g7 = 0,delta_tid_13_g0 = 0,delta_tid_13_g1 = 0,delta_tid_13_g2 = 0,delta_tid_13_g3 = 0,delta_tid_13_g4 = 0,delta_tid_13_g5 = 0,delta_tid_13_g6 = 0,delta_tid_13_g7 = 0,delta_tid_14_g0 = 0,delta_tid_14_g2 = 0,delta_tid_14_g3 = 0,delta_tid_14_g4 = 0,delta_tid_14_g5 = 0,delta_tid_14_g6 = 0,delta_tid_14_g7 = 0,delta_tid_15_g0 = 0,delta_tid_15_g1 = 0,delta_tid_15_g2 = 0,delta_tid_15_g3 = 0,delta_tid_15_g4 = 0,delta_tid_15_g5 = 0,delta_tid_15_g6 = 0,delta_tid_15_g7 = 0,delta_tid_16_g0 = 0,delta_tid_16_g1 = 0,delta_tid_16_g2 = 0,delta_tid_16_g3 = 0,delta_tid_16_g4 = 0,delta_tid_16_g5 = 0,delta_tid_16_g6 = 0,delta_tid_16_g7 = 0,delta_tid_17_g1 = 0,delta_tid_17_g2 = 0,delta_tid_17_g3 = 0,delta_tid_17_g4 = 0,delta_tid_17_g6 = 0,delta_tid_17_g7 = 0,delta_tid_18_g0 = 0,delta_tid_18_g1 = 0,delta_tid_18_g2 = 4,delta_tid_18_g3 = 0,delta_tid_18_g4 = 4,delta_tid_18_g5 = 4,delta_tid_18_g6 = 4,delta_tid_18_g7 = 4,delta_tid_19_g0 = 6,delta_tid_19_g1 = 6,delta_tid_19_g2 = 0,delta_tid_19_g3 = 0,delta_tid_19_g4 = 6,delta_tid_19_g5 = 6,delta_tid_19_g6 = 6,delta_tid_19_g7 = 6,delta_tid_1_g0 = 0,delta_tid_1_g2 = 0,delta_tid_1_g3 = 4,delta_tid_1_g4 = 6,delta_tid_1_g6 = 0,delta_tid_1_g7 = 5,delta_tid_20_g0 = 0,delta_tid_20_g2 = 0,delta_tid_20_g3 = 0,delta_tid_20_g4 = 0,delta_tid_20_g5 = 0,delta_tid_20_g6 = 0,delta_tid_20_g7 = 0,delta_tid_21_g0 = 0,delta_tid_21_g2 = 0,delta_tid_21_g4 = 0,delta_tid_21_g5 = 0,delta_tid_21_g7 = 0,delta_tid_22_g1 = 0,delta_tid_22_g2 = 0,delta_tid_22_g4 = 0,delta_tid_22_g6 = 0,delta_tid_22_g7 = 0,delta_tid_23_g0 = 0,delta_tid_23_g1 = 6,delta_tid_23_g2 = 3,delta_tid_23_g3 = 5,delta_tid_23_g5 = 0,delta_tid_23_g6 = 5,delta_tid_23_g7 = 5,delta_tid_24_g0 = 0,delta_tid_24_g1 = 0,delta_tid_24_g2 = 0,delta_tid_24_g3 = 6,delta_tid_24_g4 = 0,delta_tid_24_g5 = 0,delta_tid_24_g6 = 0,delta_tid_24_g7 = 0,delta_tid_25_g0 = 0,delta_tid_25_g1 = 0,delta_tid_25_g2 = 0,delta_tid_25_g3 = 0,delta_tid_25_g4 = 0,delta_tid_25_g5 = 0,delta_tid_25_g6 = 0,delta_tid_26_g0 = 0,delta_tid_26_g2 = 0,delta_tid_26_g3 = 0,delta_tid_26_g4 = 0,delta_tid_26_g5 = 0,delta_tid_26_g6 = 0,delta_tid_26_g7 = 0,delta_tid_27_g0 = 0,delta_tid_27_g2 = 0,delta_tid_27_g3 = 0,delta_tid_27_g4 = 0,delta_tid_27_g5 = 0,delta_tid_27_g6 = 0,delta_tid_27_g7 = 0,delta_tid_28_g0 = 0,delta_tid_28_g1 = 0,delta_tid_28_g3 = 0,delta_tid_28_g4 = 0,delta_tid_28_g5 = 0,delta_tid_28_g7 = 0,delta_tid_2_g3 = 1,delta_tid_2_g5 = 5,delta_tid_2_g7 = 5,delta_tid_3_g0 = 0,delta_tid_3_g1 = 7,delta_tid_3_g2 = 7,delta_tid_3_g3 = 0,delta_tid_3_g4 = 7,delta_tid_3_g5 = 7,delta_tid_3_g6 = 7,delta_tid_3_g7 = 7,delta_tid_4_g0 = 0,delta_tid_4_g1 = 0,delta_tid_4_g2 = 0,delta_tid_4_g3 = 0,delta_tid_4_g4 = 0,delta_tid_4_g5 = 0,delta_tid_4_g6 = 0,delta_tid_4_g7 = 0,delta_tid_5_g0 = 0,delta_tid_5_g1 = 0,delta_tid_5_g2 = 0,delta_tid_5_g3 = 0,delta_tid_5_g5 = 0,delta_tid_5_g6 = 0,delta_tid_5_g7 = 0,delta_tid_6_g0 = 0,delta_tid_6_g2 = 0,delta_tid_6_g3 = 0,delta_tid_6_g4 = 0,delta_tid_6_g5 = 0,delta_tid_6_g6 = 0,delta_tid_7_g0 = 0,delta_tid_7_g2 = 0,delta_tid_7_g3 = 0,delta_tid_7_g4 = 0,delta_tid_7_g5 = 0,delta_tid_7_g6 = 0,delta_tid_7_g7 = 0,delta_tid_8_g0 = 0,delta_tid_8_g1 = 0,delta_tid_8_g2 = 0,delta_tid_8_g3 = 0,delta_tid_8_g4 = 0,delta_tid_8_g5 = 0,delta_tid_9_g0 = 0,delta_tid_9_g1 = 4,delta_tid_9_g2 = 1,delta_tid_9_g3 = 5,delta_tid_9_g4 = 0,delta_tid_9_g5 = 5,delta_tid_9_g6 = 0,ind_0_0 = 3,ind_0_1 = 0,ind_1_0 = 0,ind_1_1 = 3,ind_1_2 = 0,ind_2_0 = 0,ind_2_1 = 2,ind_2_2 = 0,ind_3_0 = 0,ind_3_1 = 2,ind_4_0 = 0,ind_4_1 = 0,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,initialQuantity_3 = 0,initialQuantity_4 = 0,initialQuantity_5 = 0,initialQuantity_6 = 0,initialQuantity_7 = 0,isUsed_1 = 1,isUsed_10 = 1,isUsed_11 = 1,isUsed_12 = 0,isUsed_13 = 0,isUsed_14 = 0,isUsed_15 = 0,isUsed_16 = 0,isUsed_17 = 0,isUsed_18 = 1,isUsed_19 = 1,isUsed_2 = 1,isUsed_20 = 0,isUsed_21 = 0,isUsed_22 = 0,isUsed_23 = 1,isUsed_24 = 1,isUsed_25 = 0,isUsed_26 = 0,isUsed_27 = 0,isUsed_28 = 0,isUsed_3 = 1,isUsed_4 = 0,isUsed_5 = 0,isUsed_6 = 0,isUsed_7 = 0,isUsed_8 = 0,isUsed_9 = 1,partialSum_0_0 = 0,partialSum_0_1 = 0,partialSum_0_10 = 11,partialSum_0_11 = 11,partialSum_0_12 = 11,partialSum_0_13 = 11,partialSum_0_14 = 11,partialSum_0_2 = 0,partialSum_0_3 = 6,partialSum_0_4 = 6,partialSum_0_5 = 0,partialSum_0_6 = 6,partialSum_0_7 = 6,partialSum_0_8 = 11,partialSum_0_9 = 11,partialSum_1_0 = 7,partialSum_1_1 = 1,partialSum_1_10 = 3,partialSum_1_11 = 3,partialSum_1_12 = 3,partialSum_1_13 = 3,partialSum_1_14 = 3,partialSum_1_2 = 1,partialSum_1_3 = 7,partialSum_1_4 = 11,partialSum_1_5 = 7,partialSum_1_6 = 7,partialSum_1_7 = 13,partialSum_1_8 = 3,partialSum_1_9 = 3,partialSum_2_0 = 7,partialSum_2_1 = 7,partialSum_2_10 = 8,partialSum_2_11 = 8,partialSum_2_12 = 8,partialSum_2_13 = 8,partialSum_2_14 = 8,partialSum_2_2 = 11,partialSum_2_3 = 11,partialSum_2_4 = 12,partialSum_2_5 = 5,partialSum_2_6 = 5,partialSum_2_7 = 8,partialSum_2_8 = 8,partialSum_2_9 = 8,partialSum_3_0 = 0,partialSum_3_1 = 4,partialSum_3_10 = 27,partialSum_3_11 = 27,partialSum_3_12 = 27,partialSum_3_13 = 27,partialSum_3_14 = 27,partialSum_3_2 = 4,partialSum_3_3 = 4,partialSum_3_4 = 9,partialSum_3_5 = 10,partialSum_3_6 = 11,partialSum_3_7 = 16,partialSum_3_8 = 21,partialSum_3_9 = 27,partialSum_4_0 = 7,partialSum_4_1 = 13,partialSum_4_10 = 19,partialSum_4_11 = 19,partialSum_4_12 = 19,partialSum_4_13 = 19,partialSum_4_14 = 19,partialSum_4_2 = 17,partialSum_4_3 = 23,partialSum_4_4 = 23,partialSum_4_5 = 18,partialSum_4_6 = 18,partialSum_4_7 = 14,partialSum_4_8 = 19,partialSum_4_9 = 19,partialSum_5_0 = 7,partialSum_5_1 = 0,partialSum_5_10 = 25,partialSum_5_11 = 25,partialSum_5_12 = 25,partialSum_5_13 = 25,partialSum_5_14 = 25,partialSum_5_2 = 4,partialSum_5_3 = 10,partialSum_5_4 = 15,partialSum_5_5 = 20,partialSum_5_6 = 20,partialSum_5_7 = 20,partialSum_5_8 = 25,partialSum_5_9 = 25,partialSum_6_0 = 7,partialSum_6_1 = 7,partialSum_6_10 = 18,partialSum_6_11 = 18,partialSum_6_12 = 18,partialSum_6_13 = 18,partialSum_6_14 = 18,partialSum_6_2 = 11,partialSum_6_3 = 17,partialSum_6_4 = 17,partialSum_6_5 = 12,partialSum_6_6 = 8,partialSum_6_7 = 13,partialSum_6_8 = 18,partialSum_6_9 = 18,partialSum_7_0 = 7,partialSum_7_1 = 12,partialSum_7_10 = 38,partialSum_7_11 = 38,partialSum_7_12 = 38,partialSum_7_13 = 38,partialSum_7_14 = 38,partialSum_7_2 = 16,partialSum_7_3 = 22,partialSum_7_4 = 17,partialSum_7_5 = 22,partialSum_7_6 = 28,partialSum_7_7 = 33,partialSum_7_8 = 38,partialSum_7_9 = 38,t1 = 3,t10 = 24,t11 = 0,t12 = 0,t13 = 0,t14 = 0,t15 = 0,t2 = 1,t3 = 18,t4 = 19,t5 = 9,t6 = 2,t7 = 11,t8 = 23,t9 = 10]");
 
-    problem = new MUCA();
+    problem = new Muca();
     problem.filename = "src/test/resources/testset1.auct";
     problem.model();
     problem.searchSpecial();
@@ -148,7 +148,7 @@ public class ExampleBasedTest {
         .isEqualTo(
             "[0of-g0 = 0,0of-g1 = 0,0of-g2 = 0,bidCost1 = -100,cost = -100,deltaI_g0t0 = 0,deltaI_g0t1 = -1,deltaI_g0t2 = 0,deltaI_g1t0 = 0,deltaI_g1t1 = -1,deltaI_g1t2 = -1,deltaI_g2t0 = 0,deltaI_g2t1 = 0,deltaI_g2t2 = -1,deltaO_g0t0 = 1,deltaO_g0t1 = 0,deltaO_g0t2 = 0,deltaO_g1t0 = 1,deltaO_g1t1 = 1,deltaO_g1t2 = 0,deltaO_g2t0 = 0,deltaO_g2t1 = 1,deltaO_g2t2 = 2,delta_t2_g0 = -1,delta_t3_g1 = -1,delta_tid_1_g0 = 1,delta_tid_1_g1 = 1,delta_tid_1_g2 = 0,delta_tid_2_g1 = 0,delta_tid_2_g2 = 1,delta_tid_3_g0 = 0,delta_tid_3_g2 = 1,ind_0_0 = 3,initialQuantity_0 = 0,initialQuantity_1 = 0,initialQuantity_2 = 0,isUsed_1 = 1,isUsed_2 = 1,isUsed_3 = 1,partialSum_0_0 = 1,partialSum_0_1 = 0,partialSum_0_2 = 0,partialSum_1_0 = 1,partialSum_1_1 = 1,partialSum_1_2 = 0,partialSum_2_0 = 0,partialSum_2_1 = 1,partialSum_2_2 = 2,t1 = 1,t2 = 2,t3 = 3]");
 
-    problem = new MUCA();
+    problem = new Muca();
     problem.filename = "src/test/resources/testset2.auct";
     problem.model();
     problem.searchSpecial();
@@ -204,8 +204,8 @@ public class ExampleBasedTest {
   @Test
   public void testQCP() {
 
-    IO.println("Solving QCP with restart search.");
-    QCP example = new QCP();
+    IO.println("Solving Qcp with restart search.");
+    Qcp example = new Qcp();
     example.filename = "src/test/resources/psqwh-25-235-0081.pls";
     example.model();
 
@@ -256,7 +256,7 @@ public class ExampleBasedTest {
   @Test
   public void testBIBD() {
 
-    BIBD example = new BIBD();
+    Bibd example = new Bibd();
 
     example.v = 7;
     example.b = 7;
@@ -536,7 +536,7 @@ public class ExampleBasedTest {
   public void testGatesUsingExtensionalSTR() {
 
     Gates example = new Gates();
-    example.model(Gates::tableConstraintProviderUsingExtensionalSTR);
+    example.model(Gates::tableConstraintProviderUsingExtensionalStr);
 
     assertThat(example.searchSpecific()).isTrue();
     assertThat(example.search.getSolutionListener().solutionsNo()).isEqualTo(8);
@@ -1008,7 +1008,7 @@ public class ExampleBasedTest {
   @Test
   public void testTSP() {
 
-    TSP example = new TSP();
+    Tsp example = new Tsp();
 
     example.model();
 

@@ -107,9 +107,9 @@ public class MaxSimple extends Constraint implements SatisfiedPresent {
   @Override
   public boolean satisfied() {
 
-    int MAX = max.min();
+    int maxVal = max.min();
 
-    return x1.max() <= MAX && x2.max() <= MAX;
+    return x1.max() <= maxVal && x2.max() <= maxVal;
   }
 
   @Override

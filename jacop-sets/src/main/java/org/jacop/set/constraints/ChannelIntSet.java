@@ -108,7 +108,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
       }
 
       for (int i = 0; i < ns; i++) {
-        s[i].domain.inLUB(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
+        s[i].domain.inLub(store.level, s[i], new IntervalDomain(offsetSet, ni - 1 + offsetInt));
       }
 
       firstConsistencyCheck = false;
@@ -128,7 +128,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
 
       if (x[i].singleton()) {
         IntDomain glb = new IntervalDomain(i + offsetInt, i + offsetInt);
-        s[x[i].value() - offsetInt].dom().inGLB(store.level, s[x[i].value() - offsetInt], glb);
+        s[x[i].value() - offsetInt].dom().inGlb(store.level, s[x[i].value() - offsetInt], glb);
       }
     }
 
@@ -145,7 +145,7 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent {
         }
       }
 
-      s[i].domain.inLUB(store.level, s[i], vs);
+      s[i].domain.inLub(store.level, s[i], vs);
 
       IntDomain glb = s[i].dom().glb();
       for (ValueEnumeration e = glb.valueEnumeration(); e.hasMoreElements(); ) {

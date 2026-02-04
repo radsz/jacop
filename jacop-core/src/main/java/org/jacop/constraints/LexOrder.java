@@ -69,16 +69,16 @@ public class LexOrder extends Constraint
   public final IntVar[] x;
 
   public final IntVar[] y;
-  public final boolean originalLexLT;
+  public final boolean originalLexLt;
 
   /** size of the longest vector. */
   final int n;
 
-  final Map<IntVar, int[]> varXToIndex = Var.createEmptyPositioning();
-  final Map<IntVar, int[]> varYToIndex = Var.createEmptyPositioning();
+  final Map<IntVar, int[]> varxToIndex = Var.createEmptyPositioning();
+  final Map<IntVar, int[]> varyToIndex = Var.createEmptyPositioning();
 
   /** Lex enforcing "{@literal <}" relationship (true). */
-  public boolean lexLT;
+  public boolean lexLt;
 
   boolean satisfied;
   boolean firstConsistencyCheck = true;
@@ -113,8 +113,8 @@ public class LexOrder extends Constraint
     queueIndex = 2;
     numberId = idNumber.incrementAndGet();
 
-    lexLT = lt;
-    originalLexLT = lt;
+    lexLt = lt;
+    originalLexLt = lt;
 
     this.x = Arrays.copyOf(x, x.length);
     this.y = Arrays.copyOf(y, y.length);
@@ -123,20 +123,20 @@ public class LexOrder extends Constraint
 
     // special cases; mostly on different sizes of vectors
     if (x.length > 0 && y.length == 0) {
-      lexLT =
+      lexLt =
           true; // changing relation to "<" to generate non-satisfiablity; empty is not greater than
       // any non-empty vector
     }
     if (x.length == 0 && y.length > 0) {
-      lexLT = false; // changing relation to "<=" to generate always satisfiablity; empty vector is
+      lexLt = false; // changing relation to "<=" to generate always satisfiablity; empty vector is
       // always smaller
     }
     if (x.length > 1 && y.length >= 1 && x.length > y.length) {
-      lexLT = true; // changing relation to "<" to generate correct pruning; x is longer therefore y
+      lexLt = true; // changing relation to "<" to generate correct pruning; x is longer therefore y
       // must be always lexicographically greater
     }
     if (x.length >= 1 && y.length > 1 && x.length < y.length) {
-      lexLT = false; // changing relation to "<=" to generate correct pruning;
+      lexLt = false; // changing relation to "<=" to generate correct pruning;
       // x is shorter therefore y must be always lexicographically greater or equal
 
     }
@@ -152,30 +152,30 @@ public class LexOrder extends Constraint
     beta = new TimeStamp<>(store, 0);
 
     for (int i = 0; i < n; i++) {
-      int[] varPositions = varXToIndex.get(x[i]);
+      int[] varPositions = varxToIndex.get(x[i]);
       if (varPositions == null) {
         int[] p = new int[1];
         p[0] = i;
-        varXToIndex.put(x[i], p);
+        varxToIndex.put(x[i], p);
       } else {
         int[] newPos = new int[varPositions.length + 1];
         System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
         newPos[varPositions.length] = i;
-        varXToIndex.put(x[i], varPositions);
+        varxToIndex.put(x[i], varPositions);
       }
     }
 
     for (int i = 0; i < n; i++) {
-      int[] varPositions = varYToIndex.get(y[i]);
+      int[] varPositions = varyToIndex.get(y[i]);
       if (varPositions == null) {
         int[] p = new int[1];
         p[0] = i;
-        varYToIndex.put(y[i], p);
+        varyToIndex.put(y[i], p);
       } else {
         int[] newPos = new int[varPositions.length + 1];
         System.arraycopy(varPositions, 0, newPos, 0, varPositions.length);
         newPos[varPositions.length] = i;
-        varYToIndex.put(y[i], varPositions);
+        varyToIndex.put(y[i], varPositions);
       }
     }
 
@@ -196,7 +196,7 @@ public class LexOrder extends Constraint
 
     if (firstConsistencyCheck) {
 
-      establishGACInit();
+      establishGacInit();
 
       firstConsistencyCheck = false;
       firstConsistencyLevel = store.level;
@@ -218,7 +218,7 @@ public class LexOrder extends Constraint
         it.remove();
 
         if (!(i >= betaValue)) {
-          reestablishGAC(i);
+          reestablishGac(i);
         }
       }
 
@@ -237,7 +237,7 @@ public class LexOrder extends Constraint
       } else if (x[i].max() > y[i].min()) {
         return false;
       } else if (eqSingletons(x[i], y[i])) {
-        if (lexLT) { // <
+        if (lexLt) { // <
           return false;
         } else // <=
         if (i == n - 1) {
@@ -255,8 +255,8 @@ public class LexOrder extends Constraint
   @Override
   public void queueVariable(int level, Var var) {
 
-    int[] iValX = varXToIndex.get((IntVar) var);
-    int[] iValY = varYToIndex.get((IntVar) var);
+    int[] iValX = varxToIndex.get((IntVar) var);
+    int[] iValY = varyToIndex.get((IntVar) var);
 
     if (iValX != null) {
       for (int i : iValX) {
@@ -307,7 +307,7 @@ public class LexOrder extends Constraint
         result.append(", ");
       }
     }
-    if (originalLexLT) {
+    if (originalLexLt) {
       result.append("], <");
     } else {
       result.append("], <=");
@@ -318,7 +318,7 @@ public class LexOrder extends Constraint
     return result.toString();
   }
 
-  protected void establishGACInit() {
+  protected void establishGacInit() {
 
     satisfied = false;
     int a = 0;
@@ -333,7 +333,7 @@ public class LexOrder extends Constraint
     }
 
     if (a == n) {
-      if (!lexLT) {
+      if (!lexLt) {
         satisfied = true;
         removeConstraint();
         return; // satisfied already for le
@@ -355,7 +355,7 @@ public class LexOrder extends Constraint
         i++;
       }
 
-      if (!lexLT) {
+      if (!lexLt) {
         if (i == n) {
           b = n + 1; // IntDomain.MaxInt;
         } else if (b == -1) {
@@ -373,7 +373,7 @@ public class LexOrder extends Constraint
       alphaValue = a;
       betaValue = b;
 
-      reestablishGAC(a);
+      reestablishGac(a);
     }
 
     if (debug) {
@@ -381,13 +381,13 @@ public class LexOrder extends Constraint
     }
   }
 
-  void reestablishGAC(int i) {
+  void reestablishGac(int i) {
 
     int a = alphaValue;
     int b = betaValue;
 
     if (debug) {
-      log.debug("reestablishGAC entry for {}, alpha = {}, beta = {}", i, a, b);
+      log.debug("reestablishGac entry for {}, alpha = {}, beta = {}", i, a, b);
       log.debug("{}", this);
     }
 
@@ -397,11 +397,11 @@ public class LexOrder extends Constraint
     }
 
     if (i == a && (i + 1) == b) {
-      forceLT(i);
+      forceLt(i);
     }
 
     if (i == a && (i + 1) < b) {
-      forceLE(i);
+      forceLe(i);
       if (eqSingletons(x[i], y[i])) {
         updateAlpha();
       }
@@ -414,7 +414,7 @@ public class LexOrder extends Constraint
     }
 
     if (debug) {
-      log.debug("reestablishGAC exit for {}, alpha = {}, beta = {}", i, a, b);
+      log.debug("reestablishGac exit for {}, alpha = {}, beta = {}", i, a, b);
       log.debug("{}", this);
     }
   }
@@ -429,7 +429,7 @@ public class LexOrder extends Constraint
     }
 
     if (a == n) {
-      if (lexLT) {
+      if (lexLt) {
         throw Store.failException; // fail
       } else {
         // alpha.update(a);
@@ -444,7 +444,7 @@ public class LexOrder extends Constraint
     }
     if (!eqSingletons(x[a], y[a])) {
       alphaValue = a;
-      reestablishGAC(a);
+      reestablishGac(a);
     } else {
       alphaValue = a;
       updateAlpha();
@@ -470,7 +470,7 @@ public class LexOrder extends Constraint
     }
     if (x[i].min() < y[i].max()) {
       if (i == a) {
-        forceLT(i);
+        forceLt(i);
       }
     } else { // if (x[i].min() == y[i].max()) // ???
       updateBeta(i - 1);
@@ -485,13 +485,13 @@ public class LexOrder extends Constraint
     return x.singleton() && y.singleton() && x.value() == y.value();
   }
 
-  private void forceLT(int i) {
+  private void forceLt(int i) {
 
     x[i].domain.inMax(store.level, x[i], y[i].max() - 1);
     y[i].domain.inMin(store.level, y[i], x[i].min() + 1);
   }
 
-  private void forceLE(int i) {
+  private void forceLe(int i) {
 
     x[i].domain.inMax(store.level, x[i], y[i].max());
     y[i].domain.inMin(store.level, y[i], x[i].min());

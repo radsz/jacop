@@ -254,7 +254,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public int domainID() {
+  public int domainId() {
     return BoundDomainID;
   }
 
@@ -811,7 +811,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void setDomain(IntDomain domain) {
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       BoundDomain boundDomain = (BoundDomain) domain;
 
@@ -848,7 +848,7 @@ class BoundDomain extends IntDomain implements Cloneable {
 
     IntDomain domain = this;
 
-    while (domain.domainID() == BoundDomainID) {
+    while (domain.domainId() == BoundDomainID) {
 
       BoundDomain dom = (BoundDomain) domain;
 
@@ -859,7 +859,7 @@ class BoundDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
       return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
           + domain.modelConstraintsToEvaluate[2];
@@ -915,12 +915,12 @@ class BoundDomain extends IntDomain implements Cloneable {
         result.append(searchConstraint);
       }
 
-      if (domain.domainID() == IntervalDomainID) {
+      if (domain.domainId() == IntervalDomainID) {
 
         IntervalDomain dom = (IntervalDomain) domain;
         domain = dom.previousDomain;
 
-      } else if (domain.domainID() == BoundDomainID) {
+      } else if (domain.domainId() == BoundDomainID) {
 
         BoundDomain dom = (BoundDomain) domain;
         domain = dom.previousDomain;

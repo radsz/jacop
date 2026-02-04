@@ -121,8 +121,8 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
     IntDomain indexDom = index.domain;
     IntDomain newIndex = new IntervalDomain();
 
-    IntDomain newValueGLB = valueDom.lub().cloneLight();
-    IntDomain newValueLUB = new IntervalDomain();
+    IntDomain newValueGlb = valueDom.lub().cloneLight();
+    IntDomain newValueLub = new IntervalDomain();
 
     ValueEnumeration enumer = indexDom.valueEnumeration();
     int el;
@@ -141,15 +141,15 @@ public class ElementSet extends Constraint implements SatisfiedPresent {
         // Similarly for each value not present in valueGLB we keep support
         // that removes the need of having this value. As soon as no element
         // in the list supports removing it from glb then we put it in glb.
-        newValueGLB = newValueGLB.intersect(list[el]);
-        newValueLUB.addDom(list[el]);
+        newValueGlb = newValueGlb.intersect(list[el]);
+        newValueLub.addDom(list[el]);
         if (valueDom.lub().contains(list[el]) && list[el].contains(valueDom.glb())) {
           newIndex.unionAdapt(el + 1 + indexOffset, el + 1 + indexOffset);
         }
       }
     }
 
-    value.domain.in(store.level, value, newValueGLB, newValueLUB);
+    value.domain.in(store.level, value, newValueGlb, newValueLub);
     index.domain.in(store.level, index, newIndex);
   }
 

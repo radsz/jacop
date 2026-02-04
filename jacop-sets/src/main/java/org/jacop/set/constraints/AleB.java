@@ -60,7 +60,7 @@ public class AleB extends PrimitiveConstraint {
   public final SetVar b;
 
   /** Negated constraint */
-  AltB aGTb;
+  AltB aGtb;
 
   /**
    * It constructs an Lexical ordering constraint to restrict the domain of the variables a and b.
@@ -76,7 +76,7 @@ public class AleB extends PrimitiveConstraint {
 
     this.a = a;
     this.b = b;
-    aGTb = new AltB(b, a, true);
+    aGtb = new AltB(b, a, true);
 
     setScope(a, b);
   }
@@ -99,7 +99,7 @@ public class AleB extends PrimitiveConstraint {
   public void consistency(Store store) {
 
     if (a.domain.card().min() > 0) {
-      b.domain.inLUB(
+      b.domain.inLub(
           store.level,
           b,
           new IntervalDomain(
@@ -113,7 +113,7 @@ public class AleB extends PrimitiveConstraint {
       // case for ground domains; check for <= domains
     }
     if (a.domain.singleton() && b.domain.singleton()) {
-      if (!setLexLE(a.domain.glb(), b.domain.glb())) {
+      if (!setLexLe(a.domain.glb(), b.domain.glb())) {
         throw Store.failException;
       }
     }
@@ -148,7 +148,7 @@ public class AleB extends PrimitiveConstraint {
     }
   }
 
-  boolean setLexLE(IntDomain x, IntDomain y) {
+  boolean setLexLe(IntDomain x, IntDomain y) {
 
     if (x.getSize() == 0 && y.getSize() >= 0) {
       return true;
@@ -178,20 +178,20 @@ public class AleB extends PrimitiveConstraint {
 
   @Override
   public void notConsistency(Store store) {
-    aGTb.consistency(store);
+    aGtb.consistency(store);
   }
 
   @Override
   public boolean satisfied() {
     if (a.domain.singleton() && b.domain.singleton()) {
-      return setLexLE(a.domain.glb(), b.domain.glb());
+      return setLexLe(a.domain.glb(), b.domain.glb());
     }
     return false;
   }
 
   @Override
   public boolean notSatisfied() {
-    return aGTb.satisfied();
+    return aGtb.satisfied();
   }
 
   @Override

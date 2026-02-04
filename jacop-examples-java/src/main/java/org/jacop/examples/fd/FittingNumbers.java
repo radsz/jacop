@@ -45,7 +45,7 @@ import org.jacop.core.Store;
  *     domain. 520, 247, 2626, 2119, 520, 2054, 1976, 1209, 1118, 1287, 1040, 741, 390, 2691, 2717,
  *     -1000
  */
-public class FittingNumbers extends ExampleFD {
+public class FittingNumbers extends ExampleFd {
 
   final int[] elements = {520, 247, 2626, 2119, 2054, 1976, 1209, 1118, 1287, 741, 2691, 2717};
 

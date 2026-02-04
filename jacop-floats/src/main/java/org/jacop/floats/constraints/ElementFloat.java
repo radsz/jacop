@@ -128,12 +128,12 @@ public class ElementFloat extends Constraint
       Double listElement = list[i];
       this.list[i] = list[i];
 
-      IntDomain oldFD = mappingValuesToIndex.get(listElement);
-      if (oldFD == null) {
+      IntDomain oldFd = mappingValuesToIndex.get(listElement);
+      if (oldFd == null) {
         mappingValuesToIndex.put(
             listElement, new IntervalDomain(i + 1 + indexOffset, i + 1 + indexOffset));
       } else {
-        ((IntervalDomain) oldFD).addLastElement(i + 1 + indexOffset);
+        ((IntervalDomain) oldFd).addLastElement(i + 1 + indexOffset);
       }
     }
 

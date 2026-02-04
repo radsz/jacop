@@ -1,5 +1,5 @@
 /*
- * CPvizNetworkFlow.java
+ * CpvizNetworkFlow.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -50,16 +50,16 @@ import org.jacop.search.TraceGenerator;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class CPvizNetworkFlow {
+public class CpvizNetworkFlow {
   Store store;
   IntVar[] vars;
-  IntVar COST;
+  IntVar costVar;
 
-  CPvizNetworkFlow() {}
+  CpvizNetworkFlow() {}
 
   static void main(String[] args) {
 
-    CPvizNetworkFlow run = new CPvizNetworkFlow();
+    CpvizNetworkFlow run = new CpvizNetworkFlow();
 
     run.transportationProblem();
   }
@@ -120,7 +120,7 @@ public class CPvizNetworkFlow {
     net.setCostVariable(cost);
 
     vars = x;
-    COST = cost;
+    costVar = cost;
 
     store.impose(new NetworkFlow(net));
 
@@ -173,7 +173,7 @@ public class CPvizNetworkFlow {
 
       boolean returnCode = super.executeAfterSolution(search, select);
 
-      IO.println("Solution cost cost = " + COST.value());
+      IO.println("Solution cost cost = " + costVar.value());
 
       IO.print("[");
 

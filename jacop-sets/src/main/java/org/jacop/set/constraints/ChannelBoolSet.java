@@ -104,7 +104,7 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      s.domain.inLUB(store.level, s, new IntervalDomain(offset, n - 1 + offset));
+      s.domain.inLub(store.level, s, new IntervalDomain(offset, n - 1 + offset));
 
       firstConsistencyCheck = false;
     }
@@ -120,8 +120,8 @@ public class ChannelBoolSet extends Constraint implements SatisfiedPresent {
         lb.unionAdapt(i + offset);
       }
     }
-    s.domain.inLUB(store.level, s, ub);
-    s.domain.inGLB(store.level, s, lb);
+    s.domain.inLub(store.level, s, ub);
+    s.domain.inGlb(store.level, s, lb);
 
     // check set variable's GLB
     IntDomain glb = s.dom().glb();

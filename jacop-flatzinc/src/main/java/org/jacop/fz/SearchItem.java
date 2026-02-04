@@ -46,14 +46,14 @@ import org.jacop.floats.search.SmallestDomainFloat;
 import org.jacop.floats.search.SmallestMinFloat;
 import org.jacop.floats.search.SplitRandomSelectFloat;
 import org.jacop.floats.search.SplitSelectFloat;
-import org.jacop.search.AFCMax;
-import org.jacop.search.AFCMaxDeg;
-import org.jacop.search.AFCMin;
-import org.jacop.search.AFCMinDeg;
 import org.jacop.search.ActivityMax;
 import org.jacop.search.ActivityMaxDeg;
 import org.jacop.search.ActivityMin;
 import org.jacop.search.ActivityMinDeg;
+import org.jacop.search.AfcMax;
+import org.jacop.search.AfcMaxDeg;
+import org.jacop.search.AfcMin;
+import org.jacop.search.AfcMinDeg;
 import org.jacop.search.ComparatorVariable;
 import org.jacop.search.Indomain;
 import org.jacop.search.IndomainDefaultValue;
@@ -641,16 +641,16 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             new ComparatorsVar<>(new SmallestMin<>(), new SmallestDomain<>());
         case "afc_max" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMax<>(store));
+            new ComparatorsVar<>(new AfcMax<>(store));
         case "afc_min" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMin<>(store));
+            new ComparatorsVar<>(new AfcMin<>(store));
         case "afc_max_deg" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMaxDeg<>(store));
+            new ComparatorsVar<>(new AfcMaxDeg<>(store));
         case "afc_min_deg" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMinDeg<>(store));
+            new ComparatorsVar<>(new AfcMinDeg<>(store));
         case "activity_max" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMax<>(store));
@@ -695,16 +695,16 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             new ComparatorsVar<>(new ActivityMax<>(store), new MostConstrainedStatic<>());
         case "afc_max" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMax<>(store));
+            new ComparatorsVar<>(new AfcMax<>(store));
         case "afc_max_deg" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMaxDeg<>(store));
+            new ComparatorsVar<>(new AfcMaxDeg<>(store));
         case "afc_min" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMin<>(store));
+            new ComparatorsVar<>(new AfcMin<>(store));
         case "afc_min_deg" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMinDeg<>(store));
+            new ComparatorsVar<>(new AfcMinDeg<>(store));
         case "activity_max" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMax<>(store));
@@ -748,16 +748,16 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
             new ComparatorsVar<>(new ActivityMax<>(store), new MostConstrainedStatic<>());
         case "afc_max" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMax<>(store));
+            new ComparatorsVar<>(new AfcMax<>(store));
         case "afc_min" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMin<>(store));
+            new ComparatorsVar<>(new AfcMin<>(store));
         case "afc_max_deg" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMaxDeg<>(store));
+            new ComparatorsVar<>(new AfcMaxDeg<>(store));
         case "afc_min_deg" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
-            new ComparatorsVar<>(new AFCMinDeg<>(store));
+            new ComparatorsVar<>(new AfcMinDeg<>(store));
         case "activity_max" ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMax<>(store));

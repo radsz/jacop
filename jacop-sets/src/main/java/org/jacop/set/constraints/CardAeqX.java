@@ -107,9 +107,9 @@ public class CardAeqX extends Constraint implements SatisfiedPresent {
 
     // T13 else //T14
     if (aDom.glb().getSize() == card.max()) {
-      a.domain.inLUB(store.level, a, aDom.glb());
+      a.domain.inLub(store.level, a, aDom.glb());
     } else if (aDom.lub().getSize() == card.min()) {
-      a.domain.inGLB(store.level, a, aDom.lub());
+      a.domain.inGlb(store.level, a, aDom.lub());
     }
   }
 

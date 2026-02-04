@@ -221,7 +221,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    *
    * @param name the id of the store object.
    */
-  public void setID(String name) {
+  public void setId(String name) {
     id = name;
   }
 

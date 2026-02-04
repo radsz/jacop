@@ -126,7 +126,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     if (arc.companion != null) {
       //     ((Pruning)this).numActiveArcs++;
       if (arc.companion.structure != null) {
-        arc.companion.structure.ungroundArc(arc.companion.arcID);
+        arc.companion.structure.ungroundArc(arc.companion.arcId);
       }
     }
   }

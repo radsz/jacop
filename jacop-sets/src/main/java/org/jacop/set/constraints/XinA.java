@@ -102,7 +102,7 @@ public class XinA extends PrimitiveConstraint {
     }
 
     if (x.singleton()) {
-      a.domain.inGLB(store.level, a, x.value());
+      a.domain.inGlb(store.level, a, x.value());
     }
 
     if (!x.domain.isIntersecting(a.domain.lub())) {
@@ -155,7 +155,7 @@ public class XinA extends PrimitiveConstraint {
   public void notConsistency(Store store) {
 
     if (x.singleton()) {
-      a.domain.inLUBComplement(store.level, a, x.value());
+      a.domain.inLubComplement(store.level, a, x.value());
     }
 
     IntDomain xDom = x.domain.subtract(a.domain.glb());

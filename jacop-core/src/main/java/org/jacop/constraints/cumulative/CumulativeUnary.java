@@ -279,9 +279,9 @@ public class CumulativeUnary extends Cumulative {
   private void notLast(Store store, ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] tc) {
 
     int n = t.length;
-    int[] updateLCT = new int[n];
+    int[] updateLct = new int[n];
     for (int i = 0; i < n; i++) {
-      updateLCT[i] = t[i].lct();
+      updateLct[i] = t[i].lct();
     }
 
     int indexQ = 0;
@@ -291,7 +291,7 @@ public class CumulativeUnary extends Cumulative {
       while (indexQ < n && t[i].lct() > q[indexQ].lst()) {
 
         if (tree.ect(t[i].treeIndex) > t[i].lst()) {
-          updateLCT[i] = Math.min(q[indexQ - 1].lst(), updateLCT[i]);
+          updateLct[i] = Math.min(q[indexQ - 1].lst(), updateLct[i]);
         }
 
         j = tc[q[indexQ].index].treeIndex;
@@ -300,13 +300,13 @@ public class CumulativeUnary extends Cumulative {
       }
 
       if (j >= 0 && tree.ect(t[i].treeIndex) > t[i].lst()) {
-        updateLCT[i] = Math.min(q[indexQ - 1].lst(), updateLCT[i]);
-        // updateLCT[i] = Math.min(to[tree.get(j).task.index].lst(), updateLCT[i]);
+        updateLct[i] = Math.min(q[indexQ - 1].lst(), updateLct[i]);
+        // updateLct[i] = Math.min(to[tree.get(j).task.index].lst(), updateLct[i]);
       }
     }
 
     for (int i = 0; i < n; i++) {
-      t[i].updateNotFirstNotLast(store.level, updateLCT[i]);
+      t[i].updateNotFirstNotLast(store.level, updateLct[i]);
     }
   }
 
@@ -318,7 +318,7 @@ public class CumulativeUnary extends Cumulative {
   private void detectable(Store store, ThetaTree tree, TaskView[] t, TaskView[] q, TaskView[] to) {
 
     int n = t.length;
-    int[] updateEST = new int[n];
+    int[] updateEst = new int[n];
 
     int indexQ = 0;
     for (int i = 0; i < n; i++) {
@@ -329,11 +329,11 @@ public class CumulativeUnary extends Cumulative {
         tree.enableNode(j);
         indexQ++;
       }
-      updateEST[i] = Math.max(t[i].est(), tree.ect(t[i].treeIndex));
+      updateEst[i] = Math.max(t[i].est(), tree.ect(t[i].treeIndex));
     }
 
     for (int i = 0; i < n; i++) {
-      t[i].updateDetectable(store.level, updateEST[i]);
+      t[i].updateDetectable(store.level, updateEst[i]);
     }
   }
 

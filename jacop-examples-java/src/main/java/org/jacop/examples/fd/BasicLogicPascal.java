@@ -48,7 +48,7 @@ import org.jacop.core.Store;
  *     letters represent different digits
  *     <p>BASIC 9567 +LOGIC{@literal =======>} +1085 PASCAL 10652
  */
-public class BasicLogicPascal extends ExampleFD {
+public class BasicLogicPascal extends ExampleFd {
 
   /**
    * It executes the program to solve this puzzle.
@@ -84,9 +84,9 @@ public class BasicLogicPascal extends ExampleFD {
     IntVar c = new IntVar(store, "C", 0, 9);
     IntVar p = new IntVar(store, "P", 0, 9);
 
-    IntVar valueBASIC = new IntVar(store, "v(BASIC)", 0, 99999);
-    IntVar valueLOGIC = new IntVar(store, "v(LOGIC)", 0, 99999);
-    IntVar valuePASCAL = new IntVar(store, "v(PASCAL)", 0, 999999);
+    IntVar valueBasic = new IntVar(store, "v(BASIC)", 0, 99999);
+    IntVar valueLogic = new IntVar(store, "v(LOGIC)", 0, 99999);
+    IntVar valuePascal = new IntVar(store, "v(PASCAL)", 0, 999999);
 
     // Creating arrays for FDVs
     IntVar[] digits = {b, a, s, i, l, o, g, c, p};
@@ -107,15 +107,15 @@ public class BasicLogicPascal extends ExampleFD {
     // BASIC = 10000 * B + 1000 * A + 100 * S + I * 10 + C * 1
     // LOGIC = 10000 * L + 1000 * O + 100 * G + I * 10 + C * 1
     // PASCAL = 100000 * P + 10000 * A + 1000 * S + 100 * C + 10 * A + L * 1
-    store.impose(new LinearInt(basic, weights5, "==", valueBASIC));
-    // store.impose(new SumWeight(basic, weights5, valueBASIC));
-    store.impose(new LinearInt(logic, weights5, "==", valueLOGIC));
-    // store.impose(new SumWeight(logic, weights5, valueLOGIC));
-    store.impose(new LinearInt(pascal, weights6, "==", valuePASCAL));
-    // store.impose(new SumWeight(pascal, weights6, valuePASCAL));
+    store.impose(new LinearInt(basic, weights5, "==", valueBasic));
+    // store.impose(new SumWeight(basic, weights5, valueBasic));
+    store.impose(new LinearInt(logic, weights5, "==", valueLogic));
+    // store.impose(new SumWeight(logic, weights5, valueLogic));
+    store.impose(new LinearInt(pascal, weights6, "==", valuePascal));
+    // store.impose(new SumWeight(pascal, weights6, valuePascal));
 
     // Main equation of the problem BASIC+ LOGIC = PASCAL
-    store.impose(new XplusYeqZ(valueBASIC, valueLOGIC, valuePASCAL));
+    store.impose(new XplusYeqZ(valueBasic, valueLogic, valuePascal));
     // Since B is the first digit of BASIC
     // and L is the first digit of LOGIC or PASCAL
     // both letters can not be equal to zero

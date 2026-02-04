@@ -41,7 +41,7 @@ import org.jacop.search.IndomainMedian;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainSimpleRandom;
-import org.jacop.search.LDS;
+import org.jacop.search.Lds;
 import org.jacop.search.MaxRegret;
 import org.jacop.search.MostConstrainedStatic;
 import org.jacop.search.NoGoodsCollector;
@@ -59,7 +59,7 @@ import org.jacop.search.WeightedDegree;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */
-public abstract class ExampleFD {
+public abstract class ExampleFd {
 
   /** It contains all variables used within a specific example. */
   public List<IntVar> vars;
@@ -536,7 +536,7 @@ public abstract class ExampleFD {
    * @param noDiscrepancy maximal number of discrepancies
    * @return true if the solution was found, false otherwise.
    */
-  public boolean searchLDS(int noDiscrepancy) {
+  public boolean searchLds(int noDiscrepancy) {
 
     search = new DepthFirstSearch<>();
 
@@ -546,7 +546,7 @@ public abstract class ExampleFD {
         new SimpleSelect<>(
             vars.toArray(new IntVar[1]), new SmallestDomain<>(), new IndomainMiddle<>());
 
-    LDS<IntVar> lds = new LDS<>(noDiscrepancy);
+    Lds<IntVar> lds = new Lds<>(noDiscrepancy);
 
     if (search.getExitChildListener() == null) {
       search.setExitChildListener(lds);

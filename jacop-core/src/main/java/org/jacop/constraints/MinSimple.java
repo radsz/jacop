@@ -106,8 +106,8 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
 
   public boolean satisfied() {
 
-    int MIN = min.max();
-    return x1.min() >= MIN && x2.min() >= MIN;
+    int minVal = min.max();
+    return x1.min() >= minVal && x2.min() >= minVal;
   }
 
   @Override

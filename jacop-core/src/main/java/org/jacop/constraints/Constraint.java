@@ -90,7 +90,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It specifies if the constraint consistency function can be prematurely terminated through other
    * than FailureException exception.
    */
-  public boolean earlyTerminationOK;
+  public boolean earlyTerminationOk;
 
   /**
    * It specifies if the constraint consistency function requires consistency function executed in
@@ -452,7 +452,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     return afcWeight;
   }
 
-  public void updateAFC(Set<Constraint> allConstraints, double decay) {
+  public void updateAfc(Set<Constraint> allConstraints, double decay) {
     afcWeight = (afcWeight + 1.0d) / decay;
 
     if (afcWeight > Double.MAX_VALUE * 1e-50) {

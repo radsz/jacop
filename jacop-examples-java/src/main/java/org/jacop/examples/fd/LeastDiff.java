@@ -52,7 +52,7 @@ import org.jacop.core.Store;
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.10
  */
-public class LeastDiff extends ExampleFD {
+public class LeastDiff extends ExampleFd {
 
   /**
    * It executes the program which solves this simple optimization problem.

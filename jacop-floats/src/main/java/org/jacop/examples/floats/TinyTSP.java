@@ -1,5 +1,5 @@
 /*
- * TinyTSP.java
+ * TinyTsp.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -44,11 +44,11 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 
-/** Example for tiny TSP using float constraints. */
-public class TinyTSP {
+/** Example for tiny Tsp using float constraints. */
+public class TinyTsp {
 
   // double MIN_FLOAT = -1e+150;
-  final double MAX_FLOAT = 1e+150;
+  final double maxFloat = 1e+150;
 
   /**
    * It executes the program.
@@ -57,7 +57,7 @@ public class TinyTSP {
    */
   static void main(String[] args) {
 
-    TinyTSP example = new TinyTSP();
+    TinyTsp example = new TinyTsp();
 
     example.tinyTsp();
   }
@@ -95,7 +95,7 @@ public class TinyTSP {
       store.impose(new ElementFloat(visit[i], d[i], dist[i]));
     }
 
-    FloatVar route = new FloatVar(store, "route", 0.0, MAX_FLOAT);
+    FloatVar route = new FloatVar(store, "route", 0.0, maxFloat);
     FloatVar[] var = new FloatVar[N + 1];
     System.arraycopy(dist, 0, var, 0, N);
     var[N] = route;

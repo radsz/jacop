@@ -111,7 +111,7 @@ public class FilterBenchmark {
       int a = dfqEx1[0];
       int m = dfqEx1[1];
       Store store = new Store();
-      DFQ dfq = new DFQ();
+      Dfq dfq = new Dfq();
       experiment1(store, dfq, a, m);
     }
 
@@ -119,7 +119,7 @@ public class FilterBenchmark {
     for (int[] element : firEx) {
       int a = element[0];
       int m = element[1];
-      FIR fir = new FIR();
+      Fir fir = new Fir();
       Store store = new Store();
       experiment1(store, fir, a, m);
     }
@@ -128,7 +128,7 @@ public class FilterBenchmark {
     for (int[] item : arEx) {
       int a = item[0];
       int m = item[1];
-      AR ar = new AR(1, 1);
+      Ar ar = new Ar(1, 1);
       Store store = new Store();
       experiment2(store, ar, a, m);
     }
@@ -137,7 +137,7 @@ public class FilterBenchmark {
     for (int[] value : ewfEx) {
       int a = value[0];
       int m = value[1];
-      EWF ewf = new EWF();
+      Ewf ewf = new Ewf();
       Store store = new Store();
       experiment1(store, ewf, a, m);
     }
@@ -146,7 +146,7 @@ public class FilterBenchmark {
     for (int[] ints : ewfEx2) {
       int a = ints[0];
       int m = ints[1];
-      EWF ewf = new EWF(1, 1);
+      Ewf ewf = new Ewf(1, 1);
       Store store = new Store();
       experiment1(store, ewf, a, m);
     }
@@ -155,7 +155,7 @@ public class FilterBenchmark {
     for (int[] ex : dctEx) {
       int a = ex[0];
       int m = ex[1];
-      DCT dct = new DCT();
+      Dct dct = new Dct();
       Store store = new Store();
       experiment1(store, dct, a, m);
     }
@@ -172,44 +172,44 @@ public class FilterBenchmark {
       int a = element[0];
       int m = element[1];
       Store store = new Store();
-      DFQ dfq = new DFQ();
-      experiment1PM(store, dfq, a, m);
+      Dfq dfq = new Dfq();
+      experiment1Pm(store, dfq, a, m);
     }
 
     int[][] firEx = {{1, 1}, {2, 1}, {2, 2}};
     for (int[] item : firEx) {
       int a = item[0];
       int m = item[1];
-      FIR fir = new FIR();
+      Fir fir = new Fir();
       Store store = new Store();
-      experiment1PM(store, fir, a, m);
+      experiment1Pm(store, fir, a, m);
     }
 
     int[][] arEx = {{1, 1}, {1, 2}, {2, 2}, {2, 4}};
     for (int[] value : arEx) {
       int a = value[0];
       int m = value[1];
-      AR ar = new AR();
+      Ar ar = new Ar();
       Store store = new Store();
-      experiment2PM(store, ar, a, m);
+      experiment2Pm(store, ar, a, m);
     }
 
     int[][] ewfEx = {{2, 1}, {3, 1}, {3, 2}};
     for (int[] ints : ewfEx) {
       int a = ints[0];
       int m = ints[1];
-      EWF ewf = new EWF();
+      Ewf ewf = new Ewf();
       Store store = new Store();
-      experiment1PM(store, ewf, a, m);
+      experiment1Pm(store, ewf, a, m);
     }
 
     int[][] dctEx = {{1, 1}, {2, 1}, {2, 2}, {3, 2}, {4, 3}, {5, 4}, {6, 5}};
     for (int[] ex : dctEx) {
       int a = ex[0];
       int m = ex[1];
-      DCT dct = new DCT();
+      Dct dct = new Dct();
       Store store = new Store();
-      experiment1PM(store, dct, a, m);
+      experiment1Pm(store, dct, a, m);
     }
   }
 
@@ -225,7 +225,7 @@ public class FilterBenchmark {
       int m = element[1];
       int s = element[2];
       Store store = new Store();
-      DFQ dfq = new DFQ();
+      Dfq dfq = new Dfq();
       experiment1C(store, dfq, a, m, s);
     }
 
@@ -234,7 +234,7 @@ public class FilterBenchmark {
       int a = item[0];
       int m = item[1];
       int s = item[2];
-      FIR fir = new FIR();
+      Fir fir = new Fir();
       Store store = new Store();
       experiment1C(store, fir, a, m, s);
     }
@@ -247,7 +247,7 @@ public class FilterBenchmark {
       int a = value[0];
       int m = value[1];
       int s = value[2];
-      AR ar = new AR();
+      Ar ar = new Ar();
       Store store = new Store();
       experiment1C(store, ar, a, m, s);
     }
@@ -259,7 +259,7 @@ public class FilterBenchmark {
       int a = ints[0];
       int m = ints[1];
       int s = ints[2];
-      EWF ewf = new EWF();
+      Ewf ewf = new Ewf();
       Store store = new Store();
       experiment1C(store, ewf, a, m, s);
     }
@@ -272,7 +272,7 @@ public class FilterBenchmark {
       int a = ex[0];
       int m = ex[1];
       int s = ex[2];
-      DCT dct = new DCT();
+      Dct dct = new Dct();
       Store store = new Store();
       experiment1C(store, dct, a, m, s);
     }
@@ -291,7 +291,7 @@ public class FilterBenchmark {
       int a = dfqEx1[0];
       int m = dfqEx1[1];
       Store store = new Store();
-      DFQ dfqP = new DFQ();
+      Dfq dfqP = new Dfq();
       experiment1P(store, dfqP, a, m);
     }
 
@@ -299,7 +299,7 @@ public class FilterBenchmark {
     for (int[] element : firEx) {
       int a = element[0];
       int m = element[1];
-      FIR firP = new FIR();
+      Fir firP = new Fir();
       Store store = new Store();
       experiment1P(store, firP, a, m);
     }
@@ -308,7 +308,7 @@ public class FilterBenchmark {
     for (int[] item : arEx) {
       int a = item[0];
       int m = item[1];
-      AR arP = new AR();
+      Ar arP = new Ar();
       Store store = new Store();
       experiment1P(store, arP, a, m);
     }
@@ -317,7 +317,7 @@ public class FilterBenchmark {
     for (int[] value : ewfEx) {
       int a = value[0];
       int m = value[1];
-      EWF ewfP = new EWF();
+      Ewf ewfP = new Ewf();
       Store store = new Store();
       experiment1P(store, ewfP, a, m);
     }
@@ -326,7 +326,7 @@ public class FilterBenchmark {
     for (int[] ints : dctEx) {
       int a = ints[0];
       int m = ints[1];
-      DCT dctP = new DCT();
+      Dct dctP = new Dct();
       Store store = new Store();
       experiment1P(store, dctP, a, m);
     }
@@ -335,7 +335,7 @@ public class FilterBenchmark {
     for (int[] ex : fftEx) {
       int a = ex[0];
       int m = ex[1];
-      FFT fftP = new FFT();
+      Fft fftP = new Fft();
       Store store = new Store();
       experiment1P(store, fftP, a, m);
     }
@@ -359,13 +359,13 @@ public class FilterBenchmark {
     IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-    List<List<IntVar>> TR = makeConstraints(store, filter, addNum, mulNum);
+    List<List<IntVar>> taskVars = makeConstraints(store, filter, addNum, mulNum);
 
-    IntVar[][] vars = new IntVar[TR.size()][];
+    IntVar[][] vars = new IntVar[taskVars.size()][];
     for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[TR.get(i).size()];
+      vars[i] = new IntVar[taskVars.get(i).size()];
       for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = TR.get(i).get(j);
+        vars[i][j] = taskVars.get(i).get(j);
       }
     }
 
@@ -422,13 +422,13 @@ public class FilterBenchmark {
         "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-    List<List<IntVar>> TR = makeConstraintsChain(store, filter, addNum, mulNum, clock);
+    List<List<IntVar>> taskVars = makeConstraintsChain(store, filter, addNum, mulNum, clock);
 
-    IntVar[][] vars = new IntVar[TR.size()][];
+    IntVar[][] vars = new IntVar[taskVars.size()][];
     for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[TR.get(i).size()];
+      vars[i] = new IntVar[taskVars.get(i).size()];
       for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = TR.get(i).get(j);
+        vars[i][j] = taskVars.get(i).get(j);
       }
     }
 
@@ -487,7 +487,7 @@ public class FilterBenchmark {
    * @param mulNum number of multipliers available.
    * @return cost of the solution or -1 if no solution found.
    */
-  public static int experiment1PM(Store store, Filter filter, int addNum, int mulNum) {
+  public static int experiment1Pm(Store store, Filter filter, int addNum, int mulNum) {
 
     IO.println(
         "\n\nTest of scheduling for "
@@ -497,13 +497,13 @@ public class FilterBenchmark {
     IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-    List<List<IntVar>> TR = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
+    List<List<IntVar>> taskVars = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
 
-    IntVar[][] vars = new IntVar[TR.size()][];
+    IntVar[][] vars = new IntVar[taskVars.size()][];
     for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[TR.get(i).size()];
+      vars[i] = new IntVar[taskVars.get(i).size()];
       for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = TR.get(i).get(j);
+        vars[i][j] = taskVars.get(i).get(j);
       }
     }
 
@@ -552,7 +552,7 @@ public class FilterBenchmark {
    * @param mulNum number of multipliers available.
    * @return cost of the solution or -1 if no solution found.
    */
-  public static int experiment2PM(Store store, Filter filter, int addNum, int mulNum) {
+  public static int experiment2Pm(Store store, Filter filter, int addNum, int mulNum) {
 
     IO.println(
         "\n\nTest of scheduling for "
@@ -574,10 +574,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    final SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
-    final SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
@@ -594,11 +594,11 @@ public class FilterBenchmark {
 
     Search<IntVar> label = new DepthFirstSearch<>();
 
-    result = label.labeling(store, selectMC, cost);
+    result = label.labeling(store, selectMc, cost);
 
     if (result) {
       label = new DepthFirstSearch<>();
-      result = label.labeling(store, selectIO);
+      result = label.labeling(store, selectIo);
     }
 
     long T2 = System.currentTimeMillis();
@@ -634,27 +634,27 @@ public class FilterBenchmark {
     IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-    List<List<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
+    List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
     int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
     int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
-    int addLB = rAdd == 0 ? tAdd : tAdd + 1;
+    int addLb = rAdd == 0 ? tAdd : tAdd + 1;
     int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
-    int mulLB = rMul == 0 ? tMul : tMul + 1;
-    int pipeLB = Math.max(addLB, mulLB);
-    IO.println("Lower bound = " + pipeLB);
+    int mulLb = rMul == 0 ? tMul : tMul + 1;
+    int pipeLb = Math.max(addLb, mulLb);
+    IO.println("Lower bound = " + pipeLb);
 
     List<IntVar> cc = new ArrayList<>();
     cc.add(new IntVar(store, 10000, 10000));
     cc.add(cost);
-    TR.add(cc);
+    taskVars.add(cc);
 
-    IntVar[][] vars = new IntVar[TR.size()][];
+    IntVar[][] vars = new IntVar[taskVars.size()][];
     for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[TR.get(i).size()];
+      vars[i] = new IntVar[taskVars.get(i).size()];
       for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = TR.get(i).get(j);
+        vars[i][j] = taskVars.get(i).get(j);
       }
     }
 
@@ -662,7 +662,7 @@ public class FilterBenchmark {
         new SimpleMatrixSelect<>(
             vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
-    CreditCalculator<IntVar> credit = new CreditCalculator<>(TR.size(), 20, 10);
+    CreditCalculator<IntVar> credit = new CreditCalculator<>(taskVars.size(), 20, 10);
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
@@ -690,7 +690,7 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    store.impose(new XgteqC(cost, pipeLB));
+    store.impose(new XgteqC(cost, pipeLb));
     boolean result = store.consistency();
 
     IO.println("6. Constraints consistent = " + result);
@@ -732,16 +732,16 @@ public class FilterBenchmark {
     IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
-    List<List<IntVar>> TR = makeConstraintsPipeline(store, filter, addNum, mulNum);
+    List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
     int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
     int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
-    int addLB = rAdd == 0 ? tAdd : tAdd + 1;
+    int addLb = rAdd == 0 ? tAdd : tAdd + 1;
     int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
     int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
-    int mulLB = rMul == 0 ? tMul : tMul + 1;
-    int pipeLB = Math.max(addLB, mulLB);
-    IO.println("Lower bound = " + pipeLB);
+    int mulLb = rMul == 0 ? tMul : tMul + 1;
+    int pipeLb = Math.max(addLb, mulLb);
+    IO.println("Lower bound = " + pipeLb);
 
     IntVar[] varsTs = new IntVar[Ts.size()];
     for (int j = 0; j < varsTs.length; j++) {
@@ -753,13 +753,13 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    final SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
-    final SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
-    CreditCalculator<IntVar> credit = new CreditCalculator<>(TR.size() / 2, 5, 10);
+    CreditCalculator<IntVar> credit = new CreditCalculator<>(taskVars.size() / 2, 5, 10);
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
@@ -778,17 +778,17 @@ public class FilterBenchmark {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    store.impose(new XgteqC(cost, pipeLB));
+    store.impose(new XgteqC(cost, pipeLb));
 
     boolean result = store.consistency();
 
     IO.println("7. Constraints consistent = " + result);
 
-    result = search.labeling(store, selectMC, cost);
+    result = search.labeling(store, selectMc, cost);
 
     if (result) {
       search = new DepthFirstSearch<>();
-      result = search.labeling(store, selectIO);
+      result = search.labeling(store, selectIo);
     }
 
     if (result) {
@@ -832,10 +832,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    final SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
-    final SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
@@ -852,11 +852,11 @@ public class FilterBenchmark {
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
-    result = search.labeling(store, selectMC, cost);
+    result = search.labeling(store, selectMc, cost);
 
     if (result) {
       search = new DepthFirstSearch<>();
-      result = search.labeling(store, selectIO);
+      result = search.labeling(store, selectIo);
     }
 
     long T2 = System.currentTimeMillis();
@@ -907,10 +907,10 @@ public class FilterBenchmark {
       varsRs[j] = Rs.get(j);
     }
 
-    final SelectChoicePoint<IntVar> selectMC =
+    final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
             varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
-    final SelectChoicePoint<IntVar> selectIO =
+    final SelectChoicePoint<IntVar> selectIo =
         new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
 
     IO.println(
@@ -927,11 +927,11 @@ public class FilterBenchmark {
 
     Search<IntVar> search = new DepthFirstSearch<>();
 
-    result = search.labeling(store, selectMC, cost);
+    result = search.labeling(store, selectMc, cost);
 
     if (result) {
       search = new DepthFirstSearch<>();
-      result = search.labeling(store, selectIO);
+      result = search.labeling(store, selectIo);
     }
 
     long T2 = System.currentTimeMillis();

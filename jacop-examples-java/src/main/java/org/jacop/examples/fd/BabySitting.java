@@ -55,7 +55,7 @@ import org.jacop.core.Store;
  *     <p>Keith Fell, five years old Libby Jule, six years old Margo Hall, two years old Nora Grant,
  *     three years old Otto Ivey, four years old
  */
-public class BabySitting extends ExampleFD {
+public class BabySitting extends ExampleFd {
 
   /**
    * It runs the program solving this puzzle.

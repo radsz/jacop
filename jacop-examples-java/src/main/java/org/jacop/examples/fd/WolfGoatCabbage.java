@@ -31,7 +31,7 @@
 package org.jacop.examples.fd;
 
 import java.util.ArrayList;
-import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XeqC;
@@ -50,7 +50,7 @@ import org.jacop.core.Store;
  *     goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving, the
  *     wolf will eat the goat !
  */
-public class WolfGoatCabbage extends ExampleFD {
+public class WolfGoatCabbage extends ExampleFd {
 
   /** It specifies number of moves allowed (one move is from one river bank to the other) */
   public int numberInnerMoves = 1;
@@ -128,17 +128,17 @@ public class WolfGoatCabbage extends ExampleFD {
         temp[2] = right;
       }
 
-      store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
+      store.impose(new ExtensionalSupportVa(temp, allowedTransitions));
 
       temp[0] = goat[i];
       temp[1] = goat[i + 1];
 
-      store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
+      store.impose(new ExtensionalSupportVa(temp, allowedTransitions));
 
       temp[0] = cabbage[i];
       temp[1] = cabbage[i + 1];
 
-      store.impose(new ExtensionalSupportVA(temp, allowedTransitions));
+      store.impose(new ExtensionalSupportVa(temp, allowedTransitions));
     }
 
     IntVar[] bw = new IntVar[numberInnerMoves];

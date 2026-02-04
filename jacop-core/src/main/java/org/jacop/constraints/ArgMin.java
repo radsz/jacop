@@ -245,14 +245,14 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
       return false;
     }
 
-    int MIN = list[minIndex.value() - 1 - indexOffset].value();
+    int minVal = list[minIndex.value() - 1 - indexOffset].value();
     int i = 0;
     int eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() >= MIN) {
+      if (list[i].singleton() && list[i].value() >= minVal) {
         eq++;
       }
-      sat = list[i].min() >= MIN;
+      sat = list[i].min() >= minVal;
       i++;
     }
 

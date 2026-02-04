@@ -41,9 +41,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 
 /**
  * It constructs a Sequence constraint. The sequence constraint establishes the following
@@ -100,36 +100,36 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     }
     setComplement = setComplement.subtract(sequence.set);
 
-    FSM fsm = new FSM();
+    Fsm fsm = new Fsm();
 
-    fsm.initState = new FSMState();
+    fsm.initState = new FsmState();
     fsm.allStates.add(fsm.initState);
 
-    Map<FSMState, Integer> mappingQuantity = new HashMap<>();
-    Map<String, FSMState> mappingString = new HashMap<>();
+    Map<FsmState, Integer> mappingQuantity = new HashMap<>();
+    Map<String, FsmState> mappingString = new HashMap<>();
 
     mappingQuantity.put(fsm.initState, 0);
     mappingString.put("", fsm.initState);
 
     for (int i = 0; i < sequence.q; i++) {
-      Map<String, FSMState> mappingStringNext = new HashMap<>();
+      Map<String, FsmState> mappingStringNext = new HashMap<>();
 
-      for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+      for (Map.Entry<String, FsmState> entry : mappingString.entrySet()) {
         String stateString = entry.getKey();
-        FSMState state = entry.getValue();
+        FsmState state = entry.getValue();
 
         if (mappingQuantity.get(state) < sequence.max) {
           // transition 1 (within a set) is allowed
-          FSMState nextState = new FSMState();
-          state.addTransition(new FSMTransition(sequence.set, nextState));
+          FsmState nextState = new FsmState();
+          state.addTransition(new FsmTransition(sequence.set, nextState));
           mappingStringNext.put(stateString + "1", nextState);
           mappingQuantity.put(nextState, mappingQuantity.get(state) + 1);
         }
 
         if (mappingQuantity.get(state) + (sequence.q - i) > sequence.min) {
           // transition 0 (outside set) is allowed
-          FSMState nextState = new FSMState();
-          state.addTransition(new FSMTransition(setComplement, nextState));
+          FsmState nextState = new FsmState();
+          state.addTransition(new FsmTransition(setComplement, nextState));
           mappingStringNext.put(stateString + "0", nextState);
           mappingQuantity.put(nextState, mappingQuantity.get(state));
         }
@@ -142,21 +142,21 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     fsm.allStates.addAll(mappingString.values());
     fsm.finalStates.addAll(mappingString.values());
 
-    for (Map.Entry<String, FSMState> entry : mappingString.entrySet()) {
+    for (Map.Entry<String, FsmState> entry : mappingString.entrySet()) {
       String description = entry.getKey();
-      FSMState state = entry.getValue();
+      FsmState state = entry.getValue();
 
       String one = description.substring(1) + "1";
 
-      FSMState successor = mappingString.get(one);
+      FsmState successor = mappingString.get(one);
       if (successor != null) {
-        state.addTransition(new FSMTransition(sequence.set, successor));
+        state.addTransition(new FsmTransition(sequence.set, successor));
       }
 
       String zero = description.substring(1) + "0";
       successor = mappingString.get(zero);
       if (successor != null) {
-        state.addTransition(new FSMTransition(setComplement, successor));
+        state.addTransition(new FsmTransition(setComplement, successor));
       }
     }
 

@@ -107,14 +107,14 @@ public abstract class InternalConstraint {
 
   /**
    * It determines whether the given point is a feasible origin of object o, considering this
-   * constraint only. If it is not, returns a DBox corresponding to the largest infeasible domain,
+   * constraint only. If it is not, returns a Dbox corresponding to the largest infeasible domain,
    * considering a sweep which uses the given ordering.
    *
    * <p>The boundaries of the forbidden area must have the following properties: the lower extremum
    * has to be infeasible, but the upper extremum has to be feasible (with respect to this
    * constraint only).
    *
-   * <p>The dimension of the DBox returned is k+1, where k is the object dimension. The last
+   * <p>The dimension of the Dbox returned is k+1, where k is the object dimension. The last
    * dimension is time.
    *
    * @param min the direction of the sweep
@@ -122,9 +122,9 @@ public abstract class InternalConstraint {
    * @param o the object the constraint is applied to
    * @param currentShape the shape id that is currently considered for o
    * @param c the current position of the sweep.
-   * @return a DBox representing the forbidden region
+   * @return a Dbox representing the forbidden region
    */
-  public abstract DBox isFeasible(
+  public abstract Dbox isFeasible(
       Geost.SweepDirection min,
       LexicographicalOrder order,
       GeostObject o,

@@ -59,7 +59,7 @@ import org.jacop.core.Store;
  *     before the one built in 1900.
  *     <p>Determine: Order -- Street -- Year
  */
-public class HistoricHomes extends ExampleFD {
+public class HistoricHomes extends ExampleFd {
 
   /**
    * It executes the program to solve this simple logic puzzle.

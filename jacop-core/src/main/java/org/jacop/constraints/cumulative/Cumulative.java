@@ -152,8 +152,8 @@ public class Cumulative extends CumulativeBasic {
         limit);
   }
 
-  public void doQuadraticEdgeFind(boolean doQEF) {
-    doQuadraticEdgeFind = doQEF;
+  public void doQuadraticEdgeFind(boolean doQef) {
+    doQuadraticEdgeFind = doQef;
   }
 
   @Override
@@ -352,14 +352,14 @@ public class Cumulative extends CumulativeBasic {
     // sorted by non-decreasing deadline (lct)
     Arrays.sort(ts, Comparator.comparingInt(TaskView::lct));
 
-    int[] LB = new int[n];
+    int[] lb = new int[n];
     int[] Dupd = new int[n];
-    int[] SLupd = new int[n];
+    int[] SlUpd = new int[n];
     for (int i = 0; i < n; i++) {
-      LB[i] = ts[i].est();
+      lb[i] = ts[i].est();
     }
     Arrays.fill(Dupd, Integer.MIN_VALUE);
-    Arrays.fill(SLupd, Integer.MIN_VALUE);
+    Arrays.fill(SlUpd, Integer.MIN_VALUE);
     final long[] E = new long[n];
 
     Integer[] t1 = new Integer[n];
@@ -399,31 +399,31 @@ public class Cumulative extends CumulativeBasic {
           }
 
           if (maxEnergy + (long) t.res.min() * (t.ect() - rr) > C * (u.lct() - rr)) {
-            LB[i] = Math.max(LB[i], Dupd[i]);
+            lb[i] = Math.max(lb[i], Dupd[i]);
           }
         }
         E[i] = Energy;
       }
 
-      long minSL = Integer.MAX_VALUE;
+      long minSl = Integer.MAX_VALUE;
       int rt = u.lct();
       for (int i : t2) {
         TaskView t = ts[i];
 
-        if (C * (u.lct() - t.est()) - E[i] < minSL) {
+        if (C * (u.lct() - t.est()) - E[i] < minSl) {
           rt = t.est();
-          minSL = C * (u.lct() - rt) - E[i];
+          minSl = C * (u.lct() - rt) - E[i];
         }
 
         if (t.lct() > u.lct()) {
 
-          long rest = (long) t.res().min() * (u.lct() - rt) - minSL;
+          long rest = (long) t.res().min() * (u.lct() - rt) - minSl;
           if (rt <= u.lct() && rest > 0) {
-            SLupd[i] = (int) Math.max(SLupd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
+            SlUpd[i] = (int) Math.max(SlUpd[i], rt + IntDomain.divRoundUp(rest, t.res().max()));
           }
 
-          if (t.ect() >= u.lct() || minSL - t.energy() < 0) {
-            LB[i] = Math.max(Math.max(LB[i], Dupd[i]), SLupd[i]);
+          if (t.ect() >= u.lct() || minSl - t.energy() < 0) {
+            lb[i] = Math.max(Math.max(lb[i], Dupd[i]), SlUpd[i]);
           }
         }
       }
@@ -431,7 +431,7 @@ public class Cumulative extends CumulativeBasic {
 
     // update LB's
     for (int i = 0; i < n; i++) {
-      ts[i].updateEdgeFind(store.level, LB[i]);
+      ts[i].updateEdgeFind(store.level, lb[i]);
     }
   }
 

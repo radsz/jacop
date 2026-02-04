@@ -92,10 +92,10 @@ public class AinS extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    a.domain.inLUB(store.level, a, set);
+    a.domain.inLub(store.level, a, set);
 
     if (strict && set.getSize() - 1 == a.domain.glb().getSize()) {
-      a.domain.inLUBComplement(store.level, a, set.subtract(a.domain.glb()).value());
+      a.domain.inLubComplement(store.level, a, set.subtract(a.domain.glb()).value());
     }
   }
 
@@ -150,7 +150,7 @@ public class AinS extends PrimitiveConstraint {
         if (a.domain.lub().getSize() < set.getSize()) {
           throw Store.failException;
         } else {
-          a.domain.inGLB(store.level, a, a.domain.lub());
+          a.domain.inGlb(store.level, a, a.domain.lub());
         }
       } else {
         throw Store.failException;
@@ -160,11 +160,11 @@ public class AinS extends PrimitiveConstraint {
     if (!strict && result.getSize() == 1) {
       // to remain inconsistency the last value which can make this constraint
       // inconsistent must be added to GLB so it becomes notSatisfied.
-      a.domain.inGLB(store.level, a, result.value());
+      a.domain.inGlb(store.level, a, result.value());
     }
 
     if (strict && result.getSize() == 1 && a.domain.lub().getSize() - 1 < set.getSize()) {
-      a.domain.inGLB(store.level, a, result.value());
+      a.domain.inGlb(store.level, a, result.value());
     }
   }
 

@@ -107,20 +107,20 @@ public class AdiffBeqC extends Constraint implements UsesQueueVariable, Satisfie
       this.cHasChanged = false;
 
       if (cHasChanged) {
-        a.domain.inGLB(store.level, a, c.domain.glb());
+        a.domain.inGlb(store.level, a, c.domain.glb());
       }
 
       if (bHasChanged || cHasChanged) {
-        a.domain.inLUB(store.level, a, b.domain.lub().union(c.domain.lub()));
+        a.domain.inLub(store.level, a, b.domain.lub().union(c.domain.lub()));
       }
 
       if (cHasChanged) {
-        b.domain.inLUB(store.level, b, b.domain.lub().subtract(c.domain.glb()));
+        b.domain.inLub(store.level, b, b.domain.lub().subtract(c.domain.glb()));
       }
 
       if (aHasChanged || bHasChanged) {
-        c.domain.inGLB(store.level, c, a.domain.glb().subtract(b.domain.lub()));
-        c.domain.inLUB(store.level, c, a.domain.lub().subtract(b.domain.glb()));
+        c.domain.inGlb(store.level, c, a.domain.glb().subtract(b.domain.lub()));
+        c.domain.inLub(store.level, c, a.domain.lub().subtract(b.domain.glb()));
       }
 
       // FIXME, TODO, implement cardinality based reasoning.

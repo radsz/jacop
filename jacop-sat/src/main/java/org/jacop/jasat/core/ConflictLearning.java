@@ -98,7 +98,7 @@ public final class ConflictLearning implements SolverComponent {
    *
    * @param explanationClause the SetClause we use, which must be initialized to the conflict clause
    */
-  public void applyExplainUIP(MapClause explanationClause) {
+  public void applyExplainUip(MapClause explanationClause) {
 
     assert !explanationClause.isEmpty();
     assert explanationClause.isUnsatisfiableIn(trail);

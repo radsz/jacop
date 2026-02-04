@@ -59,7 +59,7 @@ public class GeostObject {
   public final IntVar[] coords;
 
   /** It specifies the possible shape ids to be taken by this object. */
-  public final IntVar shapeID;
+  public final IntVar shapeId;
 
   /** It specifies the start time of this object in time dimension. */
   public final IntVar start;
@@ -83,7 +83,7 @@ public class GeostObject {
    * For each dimension, the shape ID that provided the minimal lower bound or the maximal
    * upperBound
    */
-  final int[] bestShapeID;
+  final int[] bestShapeId;
 
   /** It specifies the number of variables currently grounded. */
   int groundCount;
@@ -93,19 +93,19 @@ public class GeostObject {
    *
    * @param no nonnegative unique id of this object.
    * @param coords an array of variables representing the origin (start) of the objects.
-   * @param shapeID the variable specifying the shape finite domain variable.
+   * @param shapeId the variable specifying the shape finite domain variable.
    * @param start it determines the start time of the geost object in terms of time.
    * @param duration finite domain variable specifying the duration of the geost object in terms of
    *     time.
    * @param end finite domain variable specifying the end of the geost object in terms of time.
    */
   public GeostObject(
-      int no, IntVar[] coords, IntVar shapeID, IntVar start, IntVar duration, IntVar end) {
+      int no, IntVar[] coords, IntVar shapeId, IntVar start, IntVar duration, IntVar end) {
 
     dimension = coords.length;
     this.no = no;
     this.coords = coords;
-    this.shapeID = shapeID;
+    this.shapeId = shapeId;
     this.start = start;
     this.duration = duration;
     this.end = end;
@@ -114,16 +114,16 @@ public class GeostObject {
 
     variables.addAll(Arrays.asList(coords).subList(0, dimension));
 
-    variables.add(shapeID);
+    variables.add(shapeId);
     variables.add(start);
     variables.add(duration);
     variables.add(end);
 
     this.timeConstraint = new TimeBoundConstraint();
 
-    bestShapeID = new int[dimension + 1]; // +1 because of time
+    bestShapeId = new int[dimension + 1]; // +1 because of time
     for (int i = 0; i < dimension + 1; i++) {
-      bestShapeID[i] = shapeID.min();
+      bestShapeId[i] = shapeId.min();
     }
 
     groundCount = 0;
@@ -166,7 +166,7 @@ public class GeostObject {
   public String toString() {
 
     return "Object("
-        + shapeID
+        + shapeId
         + ", "
         + Arrays.toString(coords)
         + ", "

@@ -1,6 +1,6 @@
 package org.jacop;
 
-import org.jacop.constraints.ExtensionalConflictVA;
+import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -38,8 +38,8 @@ public class ConstraintStatusKnownAtImposition {
     IntVar v1 = new IntVar(store, "v1", 0, 0);
     IntVar v2 = new IntVar(store, "v2", 1, 1);
 
-    ExtensionalConflictVA cons =
-        new ExtensionalConflictVA(
+    ExtensionalConflictVa cons =
+        new ExtensionalConflictVa(
             new IntVar[] {v1, v2}, new int[][] {new int[] {0, 0}, new int[] {1, 1}});
 
     store.impose(cons);

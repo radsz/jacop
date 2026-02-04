@@ -59,10 +59,10 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
     SetDomain setDomain = setVar.dom();
     if (leftBranch) {
       // Left branch: add element to GLB (Greatest Lower Bound)
-      setDomain.inGLB(store.level, setVar, value);
+      setDomain.inGlb(store.level, setVar, value);
     } else {
       // Right branch: remove element from LUB (add to LUB complement)
-      setDomain.inLUBComplement(store.level, setVar, value);
+      setDomain.inLubComplement(store.level, setVar, value);
     }
   }
 
@@ -74,10 +74,10 @@ public class SetDomainOperationHandler implements DomainOperationHandler {
     SetDomain setDomain = setVar.dom();
     if (leftBranch) {
       // Left branch: remove from GLB (add to LUB complement)
-      setDomain.inLUBComplement(store.level, setVar, value);
+      setDomain.inLubComplement(store.level, setVar, value);
     } else {
       // Right branch: add to GLB
-      setDomain.inGLB(store.level, setVar, value);
+      setDomain.inGlb(store.level, setVar, value);
     }
   }
 

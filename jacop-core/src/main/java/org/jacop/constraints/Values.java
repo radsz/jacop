@@ -65,7 +65,7 @@ public class Values extends Constraint implements SatisfiedPresent {
   /** It specifies the idNumber of different values among variables on a given list. */
   protected final IntVar count;
 
-  final Comparator<IntVar> minFDV = Comparator.comparingInt(IntVar::min);
+  final Comparator<IntVar> minFdv = Comparator.comparingInt(IntVar::min);
 
   /**
    * It constructs Values constraint.
@@ -104,7 +104,7 @@ public class Values extends Constraint implements SatisfiedPresent {
 
       store.propagationHasOccurred = false;
 
-      Arrays.sort(list, minFDV);
+      Arrays.sort(list, minFdv);
 
       if (debug) {
         log.debug("Sorted : \n{}", this);

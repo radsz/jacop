@@ -1,5 +1,5 @@
 /*
- * CPvizSendMoreMoney.java
+ * CpvizSendMoreMoney.java
  * This file is part of org.jacop.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -54,7 +54,7 @@ import org.jacop.search.TraceGenerator;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class CPvizSendMoreMoney {
+public class CpvizSendMoreMoney {
 
   Store store = new Store();
   List<IntVar> vars;
@@ -74,7 +74,7 @@ public class CPvizSendMoreMoney {
 
   static void main(String[] args) {
 
-    CPvizSendMoreMoney exampleGlobal = new CPvizSendMoreMoney();
+    CpvizSendMoreMoney exampleGlobal = new CpvizSendMoreMoney();
 
     exampleGlobal.modelGlobal();
   }
@@ -121,7 +121,7 @@ public class CPvizSendMoreMoney {
     }
 
     //     // Main equation of the problem SEND + MORE = MONEY
-    //     store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
+    //     store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     // Since S is the first digit of SEND
     // and M is the first digit of MORE or MONEY
@@ -207,15 +207,15 @@ public class CPvizSendMoreMoney {
     IntVar r = new IntVar(store, "R", 0, 9);
     IntVar y = new IntVar(store, "Y", 0, 9);
 
-    IntVar valueSEND = new IntVar(store, "v(SEND)", 0, 9999);
-    IntVar valueMORE = new IntVar(store, "v(MORE)", 0, 9999);
-    IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
+    IntVar valueSend = new IntVar(store, "v(SEND)", 0, 9999);
+    IntVar valueMore = new IntVar(store, "v(MORE)", 0, 9999);
+    IntVar valueMoney = new IntVar(store, "v(MONEY)", 0, 99999);
 
     // Creating arrays for IntVars
     IntVar[] digits = {s, e, n, d, m, o, r, y};
-    IntVar[] send = {s, e, n, d, valueSEND};
-    IntVar[] more = {m, o, r, e, valueMORE};
-    IntVar[] money = {m, o, n, e, y, valueMONEY};
+    IntVar[] send = {s, e, n, d, valueSend};
+    IntVar[] more = {m, o, r, e, valueMore};
+    IntVar[] money = {m, o, n, e, y, valueMoney};
 
     vars.addAll(Arrays.asList(digits));
 
@@ -232,11 +232,11 @@ public class CPvizSendMoreMoney {
     // MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
     store.impose(new LinearInt(send, weights4, "==", 0));
     store.impose(new LinearInt(more, weights4, "==", 0));
-    // store.impose(new SumWeight(money, weights5, valueMONEY));
+    // store.impose(new SumWeight(money, weights5, valueMoney));
     store.impose(new LinearInt(money, weights5, "==", 0));
 
     // Main equation of the problem SEND + MORE = MONEY
-    store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
+    store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     //     // 1000*S + 91*E - 90*N + D - 9000*M - 900*O + 10*R = Y
     //     int[] w = {1000, 91, -90, 1, -9000, -900, 10};

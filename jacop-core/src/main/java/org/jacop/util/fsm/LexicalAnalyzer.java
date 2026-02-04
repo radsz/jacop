@@ -44,7 +44,7 @@ class LexicalAnalyzer {
   static final int INVALID_CHAR = -1; // unexpected character found.
   static final int NO_TOKEN = 0; // No tokens recognized yet.
   static final int PLUS = 3;
-  static final int DOT = 4;
+  static final int Dot = 4;
   static final int WORD = 5;
   static final int LEFT_PAREN = 6;
   static final int RIGHT_PAREN = 7;
@@ -95,7 +95,7 @@ class LexicalAnalyzer {
             case ')' -> RIGHT_PAREN;
             case '*' -> STAR;
             case '+' -> PLUS;
-            case '.' -> DOT;
+            case '.' -> Dot;
             default -> INVALID_CHAR;
           }; // switch
     } catch (IOException _) {

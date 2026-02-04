@@ -1,5 +1,5 @@
 /*
- * AR.java
+ * Ar.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * It specifies AR benchmark.
+ * It specifies Ar benchmark.
  *
  * <p>Source:
  *
@@ -46,10 +46,10 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class AR extends Filter {
+public class Ar extends Filter {
 
-  /** It creates a default AR filter with defaul delays for the operations. */
-  public AR() {
+  /** It creates a default Ar filter with defaul delays for the operations. */
+  public Ar() {
     this(1, 2);
   }
 
@@ -59,11 +59,11 @@ public class AR extends Filter {
    * @param addDel the delay of the addition operation.
    * @param mulDel the delay of the multiplication operation.
    */
-  public AR(int addDel, int mulDel) {
+  public Ar(int addDel, int mulDel) {
 
     this.addDel = addDel;
     this.mulDel = mulDel;
-    name = "AR";
+    name = "Ar";
 
     this.dependencies =
         new int[][] {

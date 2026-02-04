@@ -37,9 +37,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 
 /**
  * It constructs a Stretch constraint based on Regular constraint. An example of a Stretch
@@ -96,21 +96,21 @@ public class Stretch extends DecomposedConstraint<Constraint> {
       return constraints;
     }
 
-    FSM fsm = new FSM();
+    Fsm fsm = new Fsm();
 
-    fsm.initState = new FSMState();
+    fsm.initState = new FsmState();
 
     fsm.allStates.add(fsm.initState);
 
-    FSMState[] oneStep = new FSMState[this.values.length];
+    FsmState[] oneStep = new FsmState[this.values.length];
 
     for (int k = 0; k < this.values.length; k++) {
 
       IntDomain d = new IntervalDomain(this.values[k], this.values[k]);
 
-      FSMState current = new FSMState();
+      FsmState current = new FsmState();
 
-      fsm.initState.addTransition(new FSMTransition(d, current));
+      fsm.initState.addTransition(new FsmTransition(d, current));
 
       fsm.allStates.add(current);
 
@@ -126,23 +126,23 @@ public class Stretch extends DecomposedConstraint<Constraint> {
         for (int other = 0; other < this.values.length; other++) {
           if (other != vk) {
             oneStep[vk].addTransition(
-                new FSMTransition(
+                new FsmTransition(
                     new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
           }
         }
       }
     }
 
-    FSMState prev;
+    FsmState prev;
 
     for (int vk = 0; vk < this.values.length; vk++) {
       prev = oneStep[vk];
       IntDomain d = new IntervalDomain(this.values[vk], this.values[vk]);
       for (int step = 2; step <= max[vk]; step++) {
 
-        FSMState cur1 = new FSMState();
+        FsmState cur1 = new FsmState();
 
-        prev.addTransition(new FSMTransition(d, cur1));
+        prev.addTransition(new FsmTransition(d, cur1));
 
         fsm.allStates.add(cur1);
 
@@ -152,7 +152,7 @@ public class Stretch extends DecomposedConstraint<Constraint> {
           for (int other = 0; other < this.values.length; other++) {
             if (other != vk) {
               cur1.addTransition(
-                  new FSMTransition(
+                  new FsmTransition(
                       new IntervalDomain(this.values[other], this.values[other]), oneStep[other]));
             }
           }

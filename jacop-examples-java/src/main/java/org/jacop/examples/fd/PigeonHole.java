@@ -46,7 +46,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class PigeonHole extends ExampleFD {
+public class PigeonHole extends ExampleFd {
 
   /** */
   public int noPigeons = 5;

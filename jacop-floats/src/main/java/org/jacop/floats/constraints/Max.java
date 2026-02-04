@@ -150,14 +150,14 @@ public class Max extends Constraint implements SatisfiedPresent {
   public boolean satisfied() {
 
     boolean sat = max.singleton();
-    double MAX = max.min();
+    double maxVal = max.min();
     int i = 0;
     int eq = 0;
     while (sat && i < list.length) {
-      if (list[i].singleton() && list[i].value() == MAX) {
+      if (list[i].singleton() && list[i].value() == maxVal) {
         eq++;
       }
-      sat = list[i].max() <= MAX;
+      sat = list[i].max() <= maxVal;
       i++;
     }
     return sat && eq > 0;

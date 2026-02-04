@@ -1,5 +1,5 @@
 /*
- * RootBNode.java
+ * RootBnode.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,18 +34,18 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
 /** Root node for linear constraint tree. */
-public class RootBNode extends BNode {
+public class RootBnode extends Bnode {
 
   // right hand value
   double val;
   // relation
   byte rel;
 
-  public RootBNode(Store store) {
+  public RootBnode(Store store) {
     super(store);
   }
 
-  public RootBNode(Store store, double min, double max) {
+  public RootBnode(Store store, double min, double max) {
     super(store, min, max);
   }
 

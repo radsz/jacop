@@ -57,7 +57,7 @@ import org.jacop.search.SmallestDomain;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class SendMoreMoney extends ExampleFD {
+public class SendMoreMoney extends ExampleFd {
 
   /*
    * This creates a standard model using simple basic constraints.
@@ -139,99 +139,99 @@ public class SendMoreMoney extends ExampleFD {
     // Each letter is SEND number has a different value
     // which depends on the position of this letter
     // SEND = 1000 * S + 100 * E + N * 10 + D * 1
-    IntVar[] numbersSEND = new IntVar[4];
-    final IntVar valueSEND = new IntVar(store, "SEND", 0, 9999);
+    IntVar[] numbersSend = new IntVar[4];
+    final IntVar valueSend = new IntVar(store, "SEND", 0, 9999);
 
     // Creates FDV for each position in SEND with
     // appropriate domain, they all start with zero
     // since a letter could be zero and the position
     // value is also zero
-    numbersSEND[0] = new IntVar(store, "v(SinSEND)", 0, 9000);
-    numbersSEND[1] = new IntVar(store, "v(EinSEND)", 0, 900);
-    numbersSEND[2] = new IntVar(store, "v(NinSEND)", 0, 90);
-    numbersSEND[3] = new IntVar(store, "v(DinSEND)", 0, 9);
+    numbersSend[0] = new IntVar(store, "v(SinSEND)", 0, 9000);
+    numbersSend[1] = new IntVar(store, "v(EinSEND)", 0, 900);
+    numbersSend[2] = new IntVar(store, "v(NinSEND)", 0, 90);
+    numbersSend[3] = new IntVar(store, "v(DinSEND)", 0, 9);
 
     // Creates and imposes constraints which enforce
     // relationship between letter and value of its position
     // in the number SEND
-    store.impose(new XmulCeqZ(letters[iS], 1000, numbersSEND[0]));
-    store.impose(new XmulCeqZ(letters[iE], 100, numbersSEND[1]));
-    store.impose(new XmulCeqZ(letters[iN], 10, numbersSEND[2]));
-    store.impose(new XmulCeqZ(letters[iD], 1, numbersSEND[3]));
+    store.impose(new XmulCeqZ(letters[iS], 1000, numbersSend[0]));
+    store.impose(new XmulCeqZ(letters[iE], 100, numbersSend[1]));
+    store.impose(new XmulCeqZ(letters[iN], 10, numbersSend[2]));
+    store.impose(new XmulCeqZ(letters[iD], 1, numbersSend[3]));
 
     // Succesively adds position to get value of the number SEND
-    IntVar valueSEinSEND = new IntVar(store, "v(SEinSEND)", 0, 9900);
-    IntVar valueNDinSEND = new IntVar(store, "v(NDinSEND)", 0, 99);
+    IntVar valueSeInSend = new IntVar(store, "v(SEinSEND)", 0, 9900);
+    IntVar valueNdInSend = new IntVar(store, "v(NDinSEND)", 0, 99);
 
-    store.impose(new XplusYeqZ(numbersSEND[0], numbersSEND[1], valueSEinSEND));
-    store.impose(new XplusYeqZ(numbersSEND[2], numbersSEND[3], valueNDinSEND));
-    store.impose(new XplusYeqZ(valueSEinSEND, valueNDinSEND, valueSEND));
+    store.impose(new XplusYeqZ(numbersSend[0], numbersSend[1], valueSeInSend));
+    store.impose(new XplusYeqZ(numbersSend[2], numbersSend[3], valueNdInSend));
+    store.impose(new XplusYeqZ(valueSeInSend, valueNdInSend, valueSend));
 
     // Each letter in MORE number has a different value
     // which depends on the position of this letter
     // MORE = 1000 * M + 100 * O + R * 10 + E * 1
-    IntVar[] numbersMORE = new IntVar[4];
-    final IntVar valueMORE = new IntVar(store, "MORE", 0, 9999);
+    IntVar[] numbersMore = new IntVar[4];
+    final IntVar valueMore = new IntVar(store, "MORE", 0, 9999);
 
     // Creates FDV for each position in MORE with
     // appropriate domain, they all start with zero
     // since a letter could be zero and the position
     // value is also zero
-    numbersMORE[0] = new IntVar(store, "v(MinMORE)", 0, 9000);
-    numbersMORE[1] = new IntVar(store, "v(OinMORE)", 0, 900);
-    numbersMORE[2] = new IntVar(store, "v(RinMORE)", 0, 90);
-    numbersMORE[3] = new IntVar(store, "v(EinMORE)", 0, 9);
+    numbersMore[0] = new IntVar(store, "v(MinMORE)", 0, 9000);
+    numbersMore[1] = new IntVar(store, "v(OinMORE)", 0, 900);
+    numbersMore[2] = new IntVar(store, "v(RinMORE)", 0, 90);
+    numbersMore[3] = new IntVar(store, "v(EinMORE)", 0, 9);
 
     // Creates and imposes constraints which enforce
     // relationship between letter and value of its position
     // in the number MORE
-    store.impose(new XmulCeqZ(letters[iM], 1000, numbersMORE[0]));
-    store.impose(new XmulCeqZ(letters[iO], 100, numbersMORE[1]));
-    store.impose(new XmulCeqZ(letters[iR], 10, numbersMORE[2]));
-    store.impose(new XmulCeqZ(letters[iE], 1, numbersMORE[3]));
+    store.impose(new XmulCeqZ(letters[iM], 1000, numbersMore[0]));
+    store.impose(new XmulCeqZ(letters[iO], 100, numbersMore[1]));
+    store.impose(new XmulCeqZ(letters[iR], 10, numbersMore[2]));
+    store.impose(new XmulCeqZ(letters[iE], 1, numbersMore[3]));
 
     // Successively adds position to get value of the number MORE
-    IntVar valueMOinMORE = new IntVar(store, "v(MOinMORE)", 0, 9900);
-    IntVar valueREinMORE = new IntVar(store, "v(REinMORE)", 0, 99);
+    IntVar valueMoInMore = new IntVar(store, "v(MOinMORE)", 0, 9900);
+    IntVar valueReInMore = new IntVar(store, "v(REinMORE)", 0, 99);
 
-    store.impose(new XplusYeqZ(numbersMORE[0], numbersMORE[1], valueMOinMORE));
-    store.impose(new XplusYeqZ(numbersMORE[2], numbersMORE[3], valueREinMORE));
-    store.impose(new XplusYeqZ(valueMOinMORE, valueREinMORE, valueMORE));
+    store.impose(new XplusYeqZ(numbersMore[0], numbersMore[1], valueMoInMore));
+    store.impose(new XplusYeqZ(numbersMore[2], numbersMore[3], valueReInMore));
+    store.impose(new XplusYeqZ(valueMoInMore, valueReInMore, valueMore));
 
     // Each letter in MONEY number has a different value
     // which depends on the position of this letter
     // MONEY = 10000 * M + 1000 * O + N * 100 + E * 10 + Y * 1
-    IntVar[] numbersMONEY = new IntVar[5];
-    final IntVar valueMONEY = new IntVar(store, "MONEY", 0, 99999);
+    IntVar[] numbersMoney = new IntVar[5];
+    final IntVar valueMoney = new IntVar(store, "MONEY", 0, 99999);
 
     // Creates FDV for each position in MONEY with
     // appropriate domain, they all start with zero
     // since a letter could be zero and the position
     // value is also zero
-    numbersMONEY[0] = new IntVar(store, "v(MinMONEY)", 0, 90000);
-    numbersMONEY[1] = new IntVar(store, "v(OinMONEY)", 0, 9000);
-    numbersMONEY[2] = new IntVar(store, "v(NinMONEY)", 0, 900);
-    numbersMONEY[3] = new IntVar(store, "v(EinMONEY)", 0, 90);
-    numbersMONEY[4] = new IntVar(store, "v(YinMONEY)", 0, 9);
+    numbersMoney[0] = new IntVar(store, "v(MinMONEY)", 0, 90000);
+    numbersMoney[1] = new IntVar(store, "v(OinMONEY)", 0, 9000);
+    numbersMoney[2] = new IntVar(store, "v(NinMONEY)", 0, 900);
+    numbersMoney[3] = new IntVar(store, "v(EinMONEY)", 0, 90);
+    numbersMoney[4] = new IntVar(store, "v(YinMONEY)", 0, 9);
 
-    store.impose(new XmulCeqZ(letters[iM], 10000, numbersMONEY[0]));
-    store.impose(new XmulCeqZ(letters[iO], 1000, numbersMONEY[1]));
-    store.impose(new XmulCeqZ(letters[iN], 100, numbersMONEY[2]));
-    store.impose(new XmulCeqZ(letters[iE], 10, numbersMONEY[3]));
-    store.impose(new XmulCeqZ(letters[iY], 1, numbersMONEY[4]));
+    store.impose(new XmulCeqZ(letters[iM], 10000, numbersMoney[0]));
+    store.impose(new XmulCeqZ(letters[iO], 1000, numbersMoney[1]));
+    store.impose(new XmulCeqZ(letters[iN], 100, numbersMoney[2]));
+    store.impose(new XmulCeqZ(letters[iE], 10, numbersMoney[3]));
+    store.impose(new XmulCeqZ(letters[iY], 1, numbersMoney[4]));
 
     // Successively adds position to get value of the number MONEY
-    IntVar valueMOinMONEY = new IntVar(store, "v(MOinMONEY)", 0, 99000);
-    IntVar valueNEinMONEY = new IntVar(store, "v(NEinMONEY)", 0, 990);
-    IntVar valueMONEinMONEY = new IntVar(store, "v(MONEinMONEY)", 0, 99990);
+    IntVar valueMoInMoney = new IntVar(store, "v(MOinMONEY)", 0, 99000);
+    IntVar valueNeInMoney = new IntVar(store, "v(NEinMONEY)", 0, 990);
+    IntVar valueMoneInMoney = new IntVar(store, "v(MONEinMONEY)", 0, 99990);
 
-    store.impose(new XplusYeqZ(numbersMONEY[0], numbersMONEY[1], valueMOinMONEY));
-    store.impose(new XplusYeqZ(numbersMONEY[2], numbersMONEY[3], valueNEinMONEY));
-    store.impose(new XplusYeqZ(valueMOinMONEY, valueNEinMONEY, valueMONEinMONEY));
-    store.impose(new XplusYeqZ(valueMONEinMONEY, numbersMONEY[4], valueMONEY));
+    store.impose(new XplusYeqZ(numbersMoney[0], numbersMoney[1], valueMoInMoney));
+    store.impose(new XplusYeqZ(numbersMoney[2], numbersMoney[3], valueNeInMoney));
+    store.impose(new XplusYeqZ(valueMoInMoney, valueNeInMoney, valueMoneInMoney));
+    store.impose(new XplusYeqZ(valueMoneInMoney, numbersMoney[4], valueMoney));
 
     // Main equation of the problem SEND + MORE = MONEY
-    store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
+    store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     // Since S is the first digit of SEND
     // and M is the first digit of MORE or MONEY
@@ -274,9 +274,9 @@ public class SendMoreMoney extends ExampleFD {
     IntVar r = new IntVar(store, "R", 0, 9);
     IntVar y = new IntVar(store, "Y", 0, 9);
 
-    IntVar valueSEND = new IntVar(store, "v(SEND)", 0, 9999);
-    IntVar valueMORE = new IntVar(store, "v(MORE)", 0, 9999);
-    IntVar valueMONEY = new IntVar(store, "v(MONEY)", 0, 99999);
+    IntVar valueSend = new IntVar(store, "v(SEND)", 0, 9999);
+    IntVar valueMore = new IntVar(store, "v(MORE)", 0, 9999);
+    IntVar valueMoney = new IntVar(store, "v(MONEY)", 0, 99999);
 
     // Creating arrays for FDVs
     IntVar[] digits = {s, e, n, d, m, o, r, y};
@@ -291,14 +291,14 @@ public class SendMoreMoney extends ExampleFD {
     int[] weights5 = {10000, 1000, 100, 10, 1};
     int[] weights4 = {1000, 100, 10, 1};
 
-    store.impose(new LinearInt(send, weights4, "==", valueSEND));
-    // store.impose(new SumWeight(send, weights4, valueSEND));
-    store.impose(new LinearInt(more, weights4, "==", valueMORE));
-    // store.impose(new SumWeight(more, weights4, wvalueMORE));
-    store.impose(new LinearInt(money, weights5, "==", valueMONEY));
-    // store.impose(new SumWeight(money, weights5, valueMONEY));
+    store.impose(new LinearInt(send, weights4, "==", valueSend));
+    // store.impose(new SumWeight(send, weights4, valueSend));
+    store.impose(new LinearInt(more, weights4, "==", valueMore));
+    // store.impose(new SumWeight(more, weights4, wvalueMore));
+    store.impose(new LinearInt(money, weights5, "==", valueMoney));
+    // store.impose(new SumWeight(money, weights5, valueMoney));
 
-    store.impose(new XplusYeqZ(valueSEND, valueMORE, valueMONEY));
+    store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     int[] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90};
     IntVar[] varsImplied = {s, e, r, d, m, o, n};

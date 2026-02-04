@@ -41,7 +41,7 @@ class ThetaLambdaUnaryNode extends ThetaNode {
   // Lambda parameters
   int pLambda;
   int ectLambda;
-  int responsiblePLambda;
+  int responsiblePlambda;
   int responsibleEctLambda;
 
   ThetaLambdaUnaryNode() {}
@@ -60,7 +60,7 @@ class ThetaLambdaUnaryNode extends ThetaNode {
         + "\nectLambda = "
         + ectLambda
         + "\nresponsiblePLambda = "
-        + responsiblePLambda
+        + responsiblePlambda
         + "\nresponsibleEctLambda = "
         + responsibleEctLambda;
   }

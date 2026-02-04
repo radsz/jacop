@@ -1,5 +1,5 @@
 /*
- * MUCA.java
+ * Muca.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -40,7 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 import org.jacop.constraints.Among;
-import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
@@ -49,7 +49,7 @@ import org.jacop.constraints.XplusYgtC;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.examples.fd.ExampleFD;
+import org.jacop.examples.fd.ExampleFd;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.MaxRegret;
@@ -71,9 +71,9 @@ import org.slf4j.LoggerFactory;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class MUCA extends ExampleFD {
+public class Muca extends ExampleFd {
 
-  private static final Logger log = LoggerFactory.getLogger(MUCA.class);
+  private static final Logger log = LoggerFactory.getLogger(Muca.class);
 
   /** It specifies the minimal value for the cost. */
   public final int minCost = -100000;
@@ -144,7 +144,7 @@ public class MUCA extends ExampleFD {
    */
   void main(String[] args) {
 
-    MUCA problem = new MUCA();
+    Muca problem = new Muca();
 
     if (args.length > 0) {
       problem.filename = args[0];
@@ -159,12 +159,12 @@ public class MUCA extends ExampleFD {
     problem.model();
     problem.searchSpecial();
 
-    problem = new MUCA();
+    problem = new Muca();
     problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset1.auct";
     problem.model();
     problem.searchSpecial();
 
-    problem = new MUCA();
+    problem = new Muca();
     problem.filename = "src/main/java/org/jacop/examples/fd/muca/testset2.auct";
     problem.model();
     problem.searchSpecial();
@@ -969,7 +969,7 @@ public class MUCA extends ExampleFD {
       IntVar bidCost = new IntVar(store, "bidCost" + (bidCosts.size() + 1), minCost, maxCost);
       nVars[0] = bidCost;
 
-      store.impose(new ExtensionalSupportVA(nVars, tuples));
+      store.impose(new ExtensionalSupportVa(nVars, tuples));
       bidCosts.add(bidCost);
 
       no++;
@@ -1016,7 +1016,7 @@ public class MUCA extends ExampleFD {
         deltasO[i][g] = new IntVar(store, "deltaO_g" + g + "t" + i, minDelta, maxDelta);
         vars.add(deltasO[i][g]);
 
-        store.impose(new ExtensionalSupportVA(vars, tuples));
+        store.impose(new ExtensionalSupportVa(vars, tuples));
 
         store.impose(new XplusYgtC(previousPartialSum, deltasI[i][g], -1));
 
@@ -1063,7 +1063,7 @@ public class MUCA extends ExampleFD {
             tuples[1][1] = t.getDelta(g);
 
             IntVar[] vars = {usedTransformation[t.id - 1], weights[t.id]};
-            store.impose(new ExtensionalSupportVA(vars, tuples));
+            store.impose(new ExtensionalSupportVa(vars, tuples));
           }
         }
       }

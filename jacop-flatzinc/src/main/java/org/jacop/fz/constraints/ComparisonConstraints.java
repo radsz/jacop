@@ -485,7 +485,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             // }
             // else
             // c = new XeqC(v1, i2);
-            support.pose(support.fzXeqCReified(v1, i2, v3));
+            support.pose(support.fzXeqCreified(v1, i2, v3));
             return;
           }
         // break;
@@ -513,7 +513,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             // }
             // else
             // c = new XneqC(v1, i2);
-            support.pose(support.fzXneqCReified(v1, i2, v3));
+            support.pose(support.fzXneqCreified(v1, i2, v3));
             return;
           }
         // break;
@@ -600,7 +600,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
           } else {
             //     c = new XeqC(v2, i1);
-            support.pose(support.fzXeqCReified(v2, i1, v3));
+            support.pose(support.fzXeqCreified(v2, i1, v3));
             return;
           }
         // break;
@@ -616,7 +616,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
           } else {
             // c = new XneqC(v2, i1);
-            support.pose(support.fzXneqCReified(v2, i1, v3));
+            support.pose(support.fzXneqCreified(v2, i1, v3));
             return;
           }
         // break;
@@ -693,15 +693,15 @@ class ComparisonConstraints implements ParserTreeConstants {
           }
           if (v2.singleton()) {
             // c = new XeqC(v1, v2.value());
-            support.pose(support.fzXeqCReified(v1, v2.value(), v3));
+            support.pose(support.fzXeqCreified(v1, v2.value(), v3));
             return;
           } else if (v1.singleton()) {
             // c = new XeqC(v2, v1.value());
-            support.pose(support.fzXeqCReified(v2, v1.value(), v3));
+            support.pose(support.fzXeqCreified(v2, v1.value(), v3));
             return;
           } else {
             // c = new XeqY(v1, v2);
-            support.pose(support.fzXeqYReified(v1, v2, v3));
+            support.pose(support.fzXeqYreified(v1, v2, v3));
             return;
           }
         // break;
@@ -781,7 +781,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
           } else {
             // c = new XeqC(v1, i2);
-            support.pose(support.fzXeqCImplied(v1, i2, v3)); // specialized version of Implies...
+            support.pose(support.fzXeqCimplied(v1, i2, v3)); // specialized version of Implies...
             return;
           }
         // break;
@@ -799,7 +799,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
           } else {
             // c = new XneqC(v1, i2);
-            support.pose(support.fzXneqCImplied(v1, i2, v3)); // specialized version of Implies...
+            support.pose(support.fzXneqCimplied(v1, i2, v3)); // specialized version of Implies...
             return;
           }
         // break;
@@ -895,7 +895,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
           } else {
             //     c = new XeqC(v2, i1);
-            support.pose(support.fzXeqCImplied(v2, i1, v3));
+            support.pose(support.fzXeqCimplied(v2, i1, v3));
             return;
           }
         // break;
@@ -909,7 +909,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
           } else {
             // c = new XneqC(v2, i1);
-            support.pose(support.fzXneqCImplied(v2, i1, v3)); // specialized version of Implies...
+            support.pose(support.fzXneqCimplied(v2, i1, v3)); // specialized version of Implies...
             return;
           }
         // break;
@@ -969,15 +969,15 @@ class ComparisonConstraints implements ParserTreeConstants {
           if (v2.singleton()) {
             // c = new XeqC(v1, v2.value());
             support.pose(
-                support.fzXeqCImplied(v1, v2.value(), v3)); // specialized version of Implies...
+                support.fzXeqCimplied(v1, v2.value(), v3)); // specialized version of Implies...
             return;
           } else if (v1.singleton()) {
             // c = new XeqC(v2, v1.value());
             support.pose(
-                support.fzXeqCImplied(v2, v1.value(), v3)); // specialized version of Implies...
+                support.fzXeqCimplied(v2, v1.value(), v3)); // specialized version of Implies...
             return;
           } else {
-            support.pose(support.fzXeqYImplied(v1, v2, v3));
+            support.pose(support.fzXeqYimplied(v1, v2, v3));
             return;
             // c = new XeqY(v1, v2);
           }
@@ -986,12 +986,12 @@ class ComparisonConstraints implements ParserTreeConstants {
           if (v2.singleton()) {
             // c = new XneqC(v1, v2.value());
             support.pose(
-                support.fzXneqCImplied(v1, v2.value(), v3)); // specialized version of Implies...
+                support.fzXneqCimplied(v1, v2.value(), v3)); // specialized version of Implies...
             return;
           } else if (v1.singleton()) {
             // c = new XneqC(v2, v1.value());
             support.pose(
-                support.fzXneqCImplied(v2, v1.value(), v3)); // specialized version of Implies...
+                support.fzXneqCimplied(v2, v1.value(), v3)); // specialized version of Implies...
             return;
           } else {
             c = new XneqY(v1, v2);

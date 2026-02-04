@@ -245,7 +245,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -260,7 +260,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
 
     /* TODO: implement special code,
-       if (domain.domainID() == IntDomain.IntervalDomainID) {
+       if (domain.domainId() == IntDomain.IntervalDomainID) {
 
        IntervalDomain input = (IntervalDomain) domain;
 
@@ -318,14 +318,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       return input.min == this.min && input.bits == this.bits;
     }
 
-    if (domain.domainID() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntDomain.IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -740,7 +740,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -766,7 +766,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntDomain.IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1122,7 +1122,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1150,7 +1150,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // TODO: create proper assert check for this case.
 
-    if (domain.domainID() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntDomain.IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1283,7 +1283,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain intersect(IntDomain domain) {
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1316,7 +1316,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return result;
     }
 
-    if (domain.domainID() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntDomain.IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1327,7 +1327,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return result;
     }
 
-    if (domain.domainID() == IntDomain.BoundDomainID) {
+    if (domain.domainId() == IntDomain.BoundDomainID) {
 
       IntervalDomain input = new IntervalDomain(domain.min(), domain.max());
 
@@ -1360,7 +1360,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     //      System.out.println("i>" + this  + "(" + domain + ")");
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1430,7 +1430,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainID() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntDomain.IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1462,7 +1462,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainID() == IntDomain.BoundDomainID) {
+    if (domain.domainId() == IntDomain.BoundDomainID) {
 
       // TODO: test this special case.
       BoundDomain input = (BoundDomain) domain;
@@ -1547,7 +1547,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1771,14 +1771,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     IntDomain previous = this.previousDomain;
     while (previous.stamp > storeLevel) {
-      if (previous.domainID() == SmallDenseDomainID) {
+      if (previous.domainId() == SmallDenseDomainID) {
         previous = previous.previousDomain;
-      } else if (previous.domainID() == IntervalDomainID) {
+      } else if (previous.domainId() == IntervalDomainID) {
         previous = previous.previousDomain;
       }
     }
 
-    if (previous.domainID() == SmallDenseDomainID) {
+    if (previous.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain _previous = (SmallDenseDomain) previous;
       long result = _previous.bits;
@@ -1813,7 +1813,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain smallDomain = (SmallDenseDomain) domain;
 
@@ -1908,7 +1908,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain subtract(IntDomain domain) {
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -2078,7 +2078,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // TODO: test it.
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -2247,7 +2247,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public int domainID() {
+  public int domainId() {
 
     return SmallDenseDomainID;
   }
@@ -2304,7 +2304,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     IntDomain domain = this;
 
-    while (domain.domainID() == SmallDenseDomainID) {
+    while (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain dom = (SmallDenseDomain) domain;
 
@@ -2315,7 +2315,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
       return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
           + domain.modelConstraintsToEvaluate[2];

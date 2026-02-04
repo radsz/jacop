@@ -95,15 +95,15 @@ public class Pruning extends Network {
     IntVar xVar = companion.xVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
-      statistics.XVARS.arcsExamined++;
+      statistics.Xvars.arcsExamined++;
       sizeBefore = xVar.domain.getSize();
     }
     xVar.domain.inMax(store.level, xVar, maxFlow);
     if (DO_INSTRUMENTATION) {
       int sizeAfter = xVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
-        statistics.XVARS.arcsPruned++;
-        statistics.XVARS.amountPruned += sizeBefore - sizeAfter;
+        statistics.Xvars.arcsPruned++;
+        statistics.Xvars.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -116,15 +116,15 @@ public class Pruning extends Network {
     IntVar xVar = companion.xVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
-      statistics.XVARS.arcsExamined++;
+      statistics.Xvars.arcsExamined++;
       sizeBefore = xVar.domain.getSize();
     }
     xVar.domain.inMin(store.level, xVar, minFlow);
     if (DO_INSTRUMENTATION) {
       int sizeAfter = xVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
-        statistics.XVARS.arcsPruned++;
-        statistics.XVARS.amountPruned += sizeBefore - sizeAfter;
+        statistics.Xvars.arcsPruned++;
+        statistics.Xvars.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -136,15 +136,15 @@ public class Pruning extends Network {
     IntVar nVar = companion.xVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
-      statistics.NVARS.arcsExamined++;
+      statistics.Nvars.arcsExamined++;
       sizeBefore = nVar.domain.getSize();
     }
     nVar.domain.in(store.level, nVar, minFlow, maxFlow);
     if (DO_INSTRUMENTATION) {
       int sizeAfter = nVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
-        statistics.NVARS.arcsPruned++;
-        statistics.NVARS.amountPruned += sizeBefore - sizeAfter;
+        statistics.Nvars.arcsPruned++;
+        statistics.Nvars.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -156,15 +156,15 @@ public class Pruning extends Network {
     IntVar nVar = companion.xVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
-      statistics.NVARS.arcsExamined++;
+      statistics.Nvars.arcsExamined++;
       sizeBefore = nVar.domain.getSize();
     }
     nVar.domain.inShift(store.level, nVar, domain, shift);
     if (DO_INSTRUMENTATION) {
       int sizeAfter = nVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
-        statistics.NVARS.arcsPruned++;
-        statistics.NVARS.amountPruned += sizeBefore - sizeAfter;
+        statistics.Nvars.arcsPruned++;
+        statistics.Nvars.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -176,7 +176,7 @@ public class Pruning extends Network {
     IntVar wVar = companion.wVar;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
-      statistics.WVARS.arcsExamined++;
+      statistics.Wvars.arcsExamined++;
       sizeBefore = wVar.domain.getSize();
     }
     wVar.domain.inMax(store.level, wVar, maxCost);
@@ -184,8 +184,8 @@ public class Pruning extends Network {
     if (DO_INSTRUMENTATION) {
       int sizeAfter = wVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
-        statistics.WVARS.arcsPruned++;
-        statistics.WVARS.amountPruned += sizeBefore - sizeAfter;
+        statistics.Wvars.arcsPruned++;
+        statistics.Wvars.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -197,15 +197,15 @@ public class Pruning extends Network {
     IntVar sVar = companion.structure.variable;
     int sizeBefore;
     if (DO_INSTRUMENTATION) {
-      statistics.SVARS.arcsExamined++;
+      statistics.Svars.arcsExamined++;
       sizeBefore = sVar.domain.getSize();
     }
     sVar.domain.in(store.level, sVar, domain);
     if (DO_INSTRUMENTATION) {
       int sizeAfter = sVar.domain.getSize();
       if (sizeAfter < sizeBefore) {
-        statistics.SVARS.arcsPruned++;
-        statistics.SVARS.amountPruned += sizeBefore - sizeAfter;
+        statistics.Svars.arcsPruned++;
+        statistics.Svars.amountPruned += sizeBefore - sizeAfter;
         companion.pruningScore += SUCCESS_SCORE;
       } else {
         companion.pruningScore -= FAIL_SCORE;
@@ -301,9 +301,9 @@ public class Pruning extends Network {
 
     if (DO_INSTRUMENTATION) {
       if (companion != null) {
-        statistics.XVARS.maxScoreSum += companion.pruningScore;
-        statistics.WVARS.maxScoreSum += companion.pruningScore;
-        statistics.SVARS.maxScoreSum += companion.pruningScore;
+        statistics.Xvars.maxScoreSum += companion.pruningScore;
+        statistics.Wvars.maxScoreSum += companion.pruningScore;
+        statistics.Svars.maxScoreSum += companion.pruningScore;
       }
     }
 
@@ -336,9 +336,9 @@ public class Pruning extends Network {
     }
     if (DO_INSTRUMENTATION) {
       if (prev != null) {
-        statistics.XVARS.minScoreSum += prev.pruningScore;
-        statistics.WVARS.minScoreSum += prev.pruningScore;
-        statistics.SVARS.minScoreSum += prev.pruningScore;
+        statistics.Xvars.minScoreSum += prev.pruningScore;
+        statistics.Wvars.minScoreSum += prev.pruningScore;
+        statistics.Svars.minScoreSum += prev.pruningScore;
       }
     }
     strategy.close();
@@ -366,13 +366,13 @@ public class Pruning extends Network {
 
     if (DO_INSTRUMENTATION) {
       if (_companion.xVar != null) {
-        statistics.XVARS.arcsExamined++;
+        statistics.Xvars.arcsExamined++;
       }
       if (_companion.wVar != null) {
-        statistics.WVARS.arcsExamined++;
+        statistics.Wvars.arcsExamined++;
       }
       if (_companion.structure != null) {
-        statistics.SVARS.arcsExamined++;
+        statistics.Svars.arcsExamined++;
       }
     }
 
@@ -487,11 +487,11 @@ public class Pruning extends Network {
         modified(companion);
       }
       DomainStructure structure = companion.structure;
-      if (companion.structure != null && !structure.isGrounded(companion.arcID)) {
-        int arcID = companion.arcID;
+      if (companion.structure != null && !structure.isGrounded(companion.arcId)) {
+        int arcId = companion.arcId;
 
         if (structure.behavior != Behavior.PRUNE_INACTIVE) {
-          Domain arcDomainC = structure.domains[arcID].complement();
+          Domain arcDomainC = structure.domains[arcId].complement();
           svarInDom(companion, arcDomainC);
         }
       }
@@ -505,11 +505,11 @@ public class Pruning extends Network {
         modified(companion);
       }
       DomainStructure structure = companion.structure;
-      if (companion.structure != null && !structure.isGrounded(companion.arcID)) {
-        int arcID = companion.arcID;
+      if (companion.structure != null && !structure.isGrounded(companion.arcId)) {
+        int arcId = companion.arcId;
 
         if (structure.behavior != Behavior.PRUNE_ACTIVE) {
-          Domain arcDomain = structure.domains[arcID];
+          Domain arcDomain = structure.domains[arcId];
           svarInDom(companion, arcDomain);
         }
       }

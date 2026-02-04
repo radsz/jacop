@@ -317,7 +317,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   @Override
   public void addDom(IntDomain domain) {
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain d = (IntervalDomain) domain;
 
@@ -343,7 +343,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -354,7 +354,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       // TODO: CRUCIAL, create special code to handle SmallDenseDomain.
 
@@ -394,7 +394,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       assert checkInvariants() == null : checkInvariants();
 
@@ -435,14 +435,14 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       assert checkInvariants() == null : checkInvariants();
 
       return max() >= domain.min() && domain.max() >= min();
     }
 
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -610,7 +610,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return true;
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain dom2 = (IntervalDomain) domain;
 
@@ -655,7 +655,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       int i = 0;
       int min = domain.min();
@@ -843,7 +843,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -864,7 +864,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return equal;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       if (size == 0 && domain.isEmpty()) {
         return true;
@@ -877,7 +877,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return intervals[0].min() == domain.min() && intervals[0].max() == domain.max();
     }
 
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       // TODO: CRUCIAL, create special code for SmallDenseDomain.
 
@@ -946,7 +946,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return emptyDomain;
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1041,7 +1041,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return temp;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       int min = domain.min();
       int max = domain.max();
@@ -1107,7 +1107,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return temp;
     }
 
-    if (domain.domainID() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
 
       // TODO: CRUCIAL implement proper SmallDenseDomain case.
 
@@ -1382,7 +1382,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -1395,7 +1395,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       size = 1;
 
@@ -1516,7 +1516,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return IntDomain.emptyIntDomain;
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -1671,7 +1671,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return result;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       if (domain.isEmpty()) {
         return cloneLight();
@@ -2014,7 +2014,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain intervalDomain = (IntervalDomain) domain;
 
@@ -2163,7 +2163,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return result;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       if (domain.isEmpty()) {
         return cloneLight();
@@ -2625,7 +2625,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
         result.append(searchConstraint);
       }
 
-      if (domain.domainID() == IntervalDomainID) {
+      if (domain.domainId() == IntervalDomainID) {
 
         IntervalDomain dom = (IntervalDomain) domain;
         domain = dom.previousDomain;
@@ -2838,7 +2838,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     assert this.stamp <= storeLevel;
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -3006,7 +3006,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       if (domain.isEmpty()) {
         throw failException;
@@ -3020,7 +3020,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
 
     // TODO: test special code for SmallDenseDomain.
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -4124,7 +4124,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
     assert this.stamp <= storeLevel;
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -4315,7 +4315,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       if (domain.isEmpty()) {
         throw failException;
@@ -4326,7 +4326,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
 
     // TODO: Test SmallDenseDomain input.
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -4808,7 +4808,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public int domainID() {
+  public int domainId() {
     return IntervalDomainID;
   }
 
@@ -4873,7 +4873,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   public int sizeConstraintsOriginal() {
     IntDomain domain = this;
 
-    while (domain.domainID() == IntervalDomainID) {
+    while (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain dom = (IntervalDomain) domain;
 
@@ -4884,7 +4884,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
       return domain.modelConstraintsToEvaluate[0]
           + domain.modelConstraintsToEvaluate[1]
           + domain.modelConstraintsToEvaluate[2];
@@ -5135,7 +5135,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return Domain.NONE;
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -5307,7 +5307,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return returnedEvent;
     }
 
-    if (domain.domainID() == SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -5498,7 +5498,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return 0;
     }
 
-    if (domain.domainID() == IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -5586,7 +5586,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       return temp;
     }
 
-    if (domain.domainID() == BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       int min = domain.min();
       int max = domain.max();

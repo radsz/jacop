@@ -45,10 +45,10 @@ import java.util.LinkedList;
 public class Shape {
 
   /** It specifies the smallest bounding box which encapsulates all boxes constituting the shape. */
-  public final DBox boundingBox;
+  public final Dbox boundingBox;
 
   /** The collection of DBoxes that constitute the shape. */
-  public final Collection<DBox> boxes;
+  public final Collection<Dbox> boxes;
 
   /** It defines unique shape id which is used by geost objects to define their shapes. */
   public final int no;
@@ -56,7 +56,7 @@ public class Shape {
   /** It defines the area (2D) or volume (3D) of the shape. */
   private int area;
 
-  private ArrayList<DBox> holes;
+  private ArrayList<Dbox> holes;
 
   /**
    * It constructs a shape with a given id based on a specified collection of Dboxes.
@@ -64,7 +64,7 @@ public class Shape {
    * @param no the unique identifier of the created shape.
    * @param boxes the collection of boxes constituting the shape.
    */
-  public Shape(int no, Collection<DBox> boxes) {
+  public Shape(int no, Collection<Dbox> boxes) {
 
     this.no = no;
     this.boxes = boxes;
@@ -78,12 +78,12 @@ public class Shape {
   }
 
   /**
-   * It constructs a shape from only one DBox.
+   * It constructs a shape from only one Dbox.
    *
    * @param id shape unique identifier.
    * @param box the single dbox specifying the shape.
    */
-  public Shape(int id, DBox box) {
+  public Shape(int id, Dbox box) {
     this.no = id;
 
     this.boxes = new ArrayList<>(1);
@@ -106,7 +106,7 @@ public class Shape {
 
     this.no = id;
 
-    boundingBox = new DBox(origin, length);
+    boundingBox = new Dbox(origin, length);
     boxes = new ArrayList<>(1);
     boxes.add(boundingBox);
 
@@ -125,7 +125,7 @@ public class Shape {
       return "uninitialized shifted box set";
     }
 
-    for (DBox b : boxes) {
+    for (Dbox b : boxes) {
       if (b == null) {
         return "shape contains a null box";
       }
@@ -139,7 +139,7 @@ public class Shape {
    *
    * @return the collection of dboxes defining the shape.
    */
-  public Collection<DBox> components() {
+  public Collection<Dbox> components() {
     return boxes;
   }
 
@@ -148,13 +148,13 @@ public class Shape {
    *
    * @return the bounding box covering all boxes constituting the shape.
    */
-  private DBox computeBoundingBox() {
+  private Dbox computeBoundingBox() {
 
     int[] mins = null;
     int[] maxes = null;
     int dim = 0;
 
-    for (DBox b : boxes) {
+    for (Dbox b : boxes) {
 
       if (mins == null) {
         dim = b.origin.length;
@@ -175,7 +175,7 @@ public class Shape {
       maxes[i] = maxes[i] - mins[i];
     }
 
-    return new DBox(mins, maxes);
+    return new Dbox(mins, maxes);
   }
 
   /**
@@ -183,7 +183,7 @@ public class Shape {
    *
    * @return the bounding box of the shape.
    */
-  public final DBox boundingBox() {
+  public final Dbox boundingBox() {
     return boundingBox;
   }
 
@@ -195,7 +195,7 @@ public class Shape {
    */
   public boolean containsPoint(int[] point) {
 
-    Iterator<DBox> i = boxes.iterator();
+    Iterator<Dbox> i = boxes.iterator();
 
     boolean inside = false;
 
@@ -216,8 +216,8 @@ public class Shape {
       holes = new ArrayList<>();
     } else {
       if (!holes.isEmpty()) {
-        for (DBox hole : holes) {
-          DBox.dispatchBox(hole);
+        for (Dbox hole : holes) {
+          Dbox.dispatchBox(hole);
         }
         holes.clear();
       }
@@ -229,9 +229,9 @@ public class Shape {
      * and add an extra unit to the boxes, which thus corresponds to a quarter unit
      */
     final int dimension = boundingBox.origin.length;
-    Collection<DBox> rescaledBoxes = new ArrayList<>(boxes.size());
-    for (DBox b : boxes) {
-      DBox scaled = DBox.newBox(dimension);
+    Collection<Dbox> rescaledBoxes = new ArrayList<>(boxes.size());
+    for (Dbox b : boxes) {
+      Dbox scaled = Dbox.newBox(dimension);
       for (int i = 0; i < dimension; i++) {
         scaled.origin[i] = b.origin[i] * 4 - 1; // 1 extra quarter unit
         scaled.length[i] =
@@ -240,7 +240,7 @@ public class Shape {
       rescaledBoxes.add(scaled);
     }
 
-    DBox scaledBoundingBox = DBox.newBox(dimension);
+    Dbox scaledBoundingBox = Dbox.newBox(dimension);
 
     for (int i = 0; i < dimension; i++) {
       scaledBoundingBox.origin[i] = boundingBox.origin[i] * 4;
@@ -250,10 +250,10 @@ public class Shape {
     scaledBoundingBox.subtractAll(rescaledBoxes, holes);
 
     // release boxes
-    for (DBox b : rescaledBoxes) {
-      DBox.dispatchBox(b);
+    for (Dbox b : rescaledBoxes) {
+      Dbox.dispatchBox(b);
     }
-    DBox.dispatchBox(scaledBoundingBox);
+    Dbox.dispatchBox(scaledBoundingBox);
   }
 
   /**
@@ -264,7 +264,7 @@ public class Shape {
    *
    * @return the set of holes of this shape.
    */
-  public Collection<DBox> holes() {
+  public Collection<Dbox> holes() {
     if (holes == null) {
       initHoles();
     }
@@ -275,7 +275,7 @@ public class Shape {
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("Shape(").append(no).append(",");
-    for (DBox b : boxes) {
+    for (Dbox b : boxes) {
       builder.append(b).append(", ");
     }
     builder.deleteCharAt(builder.length() - 1);
@@ -294,11 +294,11 @@ public class Shape {
 
     if (area < 0) {
       int holeArea = 0;
-      Collection<DBox> actualHoles = new LinkedList<>();
+      Collection<Dbox> actualHoles = new LinkedList<>();
       actualHoles = boundingBox.subtractAll(boxes, actualHoles);
-      for (DBox hole : actualHoles) {
+      for (Dbox hole : actualHoles) {
         holeArea += hole.area();
-        DBox.dispatchBox(hole);
+        Dbox.dispatchBox(hole);
       }
 
       assert boundingBox.area() - holeArea > 0 : "negative area";
@@ -316,8 +316,8 @@ public class Shape {
    *
    * @return non overlapping representation of the shape.
    */
-  public Collection<DBox> noOverlapRepresentation() {
-    Collection<DBox> actualHoles = new ArrayList<>();
+  public Collection<Dbox> noOverlapRepresentation() {
+    Collection<Dbox> actualHoles = new ArrayList<>();
     actualHoles = boundingBox.subtractAll(boxes, actualHoles);
     return boundingBox.subtractAll(actualHoles, new ArrayList<>());
   }

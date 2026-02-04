@@ -100,7 +100,7 @@ public class DomainStructure implements VarHandler {
         arcs[id].companion = new ArcCompanion(arcs[id], 0);
       }
       arcs[id].companion.structure = this;
-      arcs[id].companion.arcID = id;
+      arcs[id].companion.arcId = id;
       // supports[id] = domains[id].min();
     }
   }
@@ -143,13 +143,13 @@ public class DomainStructure implements VarHandler {
     }
   }
 
-  private void groundArc(int arcID, boolean active, MutableNetwork network) {
+  private void groundArc(int arcId, boolean active, MutableNetwork network) {
 
-    assert (arcID < notGrounded);
+    assert (arcId < notGrounded);
 
     // prune domain of x variable
 
-    Arc arc = arcs[arcID];
+    Arc arc = arcs[arcId];
     ArcCompanion companion = arc.companion;
     IntVar xVar = companion.xVar;
 
@@ -188,10 +188,10 @@ public class DomainStructure implements VarHandler {
     }
 
     // remove arc from graph
-    network.remove(arcs[arcID]);
+    network.remove(arcs[arcId]);
 
     // remove domain/arc pair
-    swap(arcID, --notGrounded);
+    swap(arcId, --notGrounded);
   }
 
   private void swap(int i, int j) {
@@ -207,16 +207,16 @@ public class DomainStructure implements VarHandler {
     arcs[i] = arcs[j];
     arcs[j] = temp2;
 
-    arcs[j].companion.arcID = j;
-    arcs[i].companion.arcID = i;
+    arcs[j].companion.arcId = j;
+    arcs[i].companion.arcId = i;
   }
 
-  public void ungroundArc(int arcID) {
-    assert (arcID >= notGrounded);
+  public void ungroundArc(int arcId) {
+    assert (arcId >= notGrounded);
 
     // add domain/arc pair
-    // swap(arcID, notGrounded++);
-    assert (arcID == notGrounded);
+    // swap(arcId, notGrounded++);
+    assert (arcId == notGrounded);
     notGrounded++;
   }
 
@@ -224,8 +224,8 @@ public class DomainStructure implements VarHandler {
     return Collections.singletonList(variable);
   }
 
-  public boolean isGrounded(int arcID) {
-    return arcID >= notGrounded;
+  public boolean isGrounded(int arcId) {
+    return arcId >= notGrounded;
   }
 
   public int getPruningEvent(Var var) {

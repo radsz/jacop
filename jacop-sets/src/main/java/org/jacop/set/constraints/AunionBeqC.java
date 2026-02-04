@@ -114,36 +114,36 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
         if (cDom.lub().getSize() > 0) {
           IntDomain glbA = cDom.glb().subtract(bDom.lub());
           if (glbA.getSize() > 0) {
-            a.domain.inGLB(store.level, a, glbA);
+            a.domain.inGlb(store.level, a, glbA);
           }
         }
       }
 
       if (cHasChanged) {
-        a.domain.inLUB(store.level, a, cDom.lub());
+        a.domain.inLub(store.level, a, cDom.lub());
       }
 
       if (aHasChanged || cHasChanged) {
         if (cDom.lub().getSize() > 0) {
           IntDomain glbB = cDom.glb().subtract(aDom.lub());
           if (glbB.getSize() > 0) {
-            b.domain.inGLB(store.level, b, glbB);
+            b.domain.inGlb(store.level, b, glbB);
           }
         }
       }
 
       if (cHasChanged) {
-        b.domain.inLUB(store.level, b, cDom.lub());
+        b.domain.inLub(store.level, b, cDom.lub());
       }
 
       if (aHasChanged) {
-        c.domain.inGLB(store.level, c, aDom.glb());
+        c.domain.inGlb(store.level, c, aDom.glb());
       }
       if (bHasChanged) {
-        c.domain.inGLB(store.level, c, bDom.glb());
+        c.domain.inGlb(store.level, c, bDom.glb());
       }
       if (aHasChanged || bHasChanged) {
-        c.domain.inLUB(store.level, c, aDom.lub().union(bDom.lub()));
+        c.domain.inLub(store.level, c, aDom.lub().union(bDom.lub()));
       }
 
       if (performCardinalityReasoning) {

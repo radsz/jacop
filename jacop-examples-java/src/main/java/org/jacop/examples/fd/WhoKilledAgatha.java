@@ -74,7 +74,7 @@ import org.jacop.search.SmallestDomain;
  * @author Hakan Kjellerstrand and Radoslaw Szymanek
  * @version 4.10
  */
-public class WhoKilledAgatha extends ExampleFD {
+public class WhoKilledAgatha extends ExampleFd {
 
   /**
    * It runs the program which solves the logic puzzle "Who killed Agatha".

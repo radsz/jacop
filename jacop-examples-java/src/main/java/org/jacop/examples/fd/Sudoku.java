@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class Sudoku extends ExampleFD {
+public class Sudoku extends ExampleFd {
 
   IntVar[][] elements;
 
@@ -63,7 +63,7 @@ public class Sudoku extends ExampleFD {
       IO.println("Solution(s) found");
     }
 
-    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+    ExampleFd.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
 
   /**
@@ -81,7 +81,7 @@ public class Sudoku extends ExampleFD {
       IO.println("Solution(s) found");
     }
 
-    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+    ExampleFd.printMatrix(example.elements, example.elements.length, example.elements[0].length);
 
     example = new Sudoku();
 
@@ -91,7 +91,7 @@ public class Sudoku extends ExampleFD {
       IO.println("Solution(s) found");
     }
 
-    ExampleFD.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+    ExampleFd.printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
 
   @Override

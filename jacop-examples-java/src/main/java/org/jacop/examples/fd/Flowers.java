@@ -78,7 +78,7 @@ import org.jacop.core.Store;
  *     <p>10. Shane's wife received flowers during the second week of the month.
  *     <p>Determine: woman, husband, date, occasion, type of flowers
  */
-public class Flowers extends ExampleFD {
+public class Flowers extends ExampleFd {
 
   /**
    * It executes the program which solves this logic puzzle.

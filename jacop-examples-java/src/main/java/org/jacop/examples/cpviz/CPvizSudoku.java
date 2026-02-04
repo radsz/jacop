@@ -1,5 +1,5 @@
 /*
- * CPvizSudoku.java This file is part of org.jacop.
+ * CpvizSudoku.java This file is part of org.jacop.
  *
  * <p>JaCoP is a Java Constraint Programming solver.
  *
@@ -47,7 +47,7 @@ import org.jacop.search.TraceGenerator;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class CPvizSudoku {
+public class CpvizSudoku {
 
   IntVar[][] elements;
 
@@ -58,7 +58,7 @@ public class CPvizSudoku {
    */
   static void main(String[] args) {
 
-    CPvizSudoku example = new CPvizSudoku();
+    CpvizSudoku example = new CpvizSudoku();
 
     example.modelBasic();
   }

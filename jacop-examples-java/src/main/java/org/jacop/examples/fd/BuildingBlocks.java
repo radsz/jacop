@@ -50,7 +50,7 @@ import org.jacop.core.Store;
  *     <p>GIRD SMUG JUMP TORN
  *     <p>LUCK VINY LUSH WRAP
  */
-public class BuildingBlocks extends ExampleFD {
+public class BuildingBlocks extends ExampleFd {
 
   /**
    * It executes the program to solve this logic puzzle.

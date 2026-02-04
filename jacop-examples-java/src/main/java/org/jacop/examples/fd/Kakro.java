@@ -46,7 +46,7 @@ import org.jacop.core.Store;
  *     puzzle. For a moment the problem representation does not allow to model the problems with
  *     fields which are both origins of the row and column word.
  */
-public class Kakro extends ExampleFD {
+public class Kakro extends ExampleFd {
 
   public final int noRows = 4;
   public final int noColumns = 4;
@@ -72,7 +72,7 @@ public class Kakro extends ExampleFD {
     if (example.search()) {
       IO.println("Solution(s) found");
 
-      ExampleFD.printMatrix(example.elements, example.noRows, example.noColumns);
+      ExampleFd.printMatrix(example.elements, example.noRows, example.noColumns);
     }
   }
 

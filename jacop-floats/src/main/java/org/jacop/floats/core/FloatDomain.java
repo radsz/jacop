@@ -175,13 +175,13 @@ public abstract class FloatDomain extends Domain {
   }
 
   // Unit in the last place for minimal value
-  public static double minULP(FloatVar f) {
+  public static double minUlp(FloatVar f) {
 
     return Math.ulp(f.min());
   }
 
   // Unit in the last place for maximal value
-  public static double maxULP(FloatVar f) {
+  public static double maxUlp(FloatVar f) {
 
     return Math.ulp(f.max());
   }

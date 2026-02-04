@@ -248,7 +248,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * bounding box whatever the shape of the object. It is made as a member of the geost constraint
    * to avoid multiple memory allocations.
    */
-  final ArrayList<DBox> workingList;
+  final ArrayList<Dbox> workingList;
 
   /** It specifies the number of dimensions of each object given to the geost constraint. */
   final int dimension;
@@ -323,7 +323,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    * condition (var grounded, and not in the queue) can only be safely used if no shape id field was
    * pruned. Indeed, if some shape ID was pruned, feasibility can change, thus a check is needed.
    */
-  boolean changedShapeID;
+  boolean changedShapeId;
 
   /**
    * It remembers if it is the first time the consistency check is being performed. If not, then the
@@ -480,9 +480,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       }
 
       // make sure that the shapes used are defined
-      ValueEnumeration shapeIDVals = o.shapeID.domain.valueEnumeration();
-      while (shapeIDVals.hasMoreElements()) {
-        int sid = shapeIDVals.nextElement();
+      ValueEnumeration shapeIdVals = o.shapeId.domain.valueEnumeration();
+      while (shapeIdVals.hasMoreElements()) {
+        int sid = shapeIdVals.nextElement();
         if (!idShapeMap.containsKey(sid)) {
           throw new IllegalArgumentException(
               "shape id " + sid + " does not correspond to any shape");
@@ -512,9 +512,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       fullyPruned = null;
     }
 
-    // make sure the DBox pool is correctly initialized
-    DBox.supportDimension(dimension);
-    DBox.supportDimension(dimension + 1); // one more slot for time
+    // make sure the Dbox pool is correctly initialized
+    Dbox.supportDimension(dimension);
+    Dbox.supportDimension(dimension + 1); // one more slot for time
 
     shapeIdsToPrune = new int[shapeRegister.length];
 
@@ -534,7 +534,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     Arrays.fill(shapeNb, 0);
 
     for (GeostObject o : objects) {
-      ValueEnumeration vals = o.shapeID.domain.valueEnumeration();
+      ValueEnumeration vals = o.shapeId.domain.valueEnumeration();
       while (vals.hasMoreElements()) {
         shapeNb[vals.nextElement()]++;
         totShapes++;
@@ -791,7 +791,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     boolean feasiblePointFound = true;
     Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMIN;
-    DBox f;
+    Dbox f;
 
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
@@ -901,7 +901,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     boolean feasiblePointFound = true;
     Geost.SweepDirection dir = Geost.SweepDirection.PRUNEMAX;
-    DBox f;
+    Dbox f;
     while (feasiblePointFound
         && (f = findForbiddenDomain(o, currentShape, c, dir, order)) != null) {
 
@@ -960,7 +960,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
   }
 
-  protected DBox findForbiddenDomain(
+  protected Dbox findForbiddenDomain(
       GeostObject o,
       int currentShape,
       int[] point,
@@ -993,7 +993,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         isFeasibleCount++;
       }
 
-      DBox f = holeConstraint.isFeasible(dir, order, o, currentShape, point);
+      Dbox f = holeConstraint.isFeasible(dir, order, o, currentShape, point);
 
       if (f != null) {
         return f;
@@ -1017,7 +1017,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         isFeasibleCount++;
       }
 
-      DBox f = c.isFeasible(dir, order, o, currentShape, point);
+      Dbox f = c.isFeasible(dir, order, o, currentShape, point);
 
       if (f != null) {
         return f;
@@ -1034,7 +1034,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     try {
 
       inConsistency = true;
-      changedShapeID = false;
+      changedShapeId = false;
 
       if (DEBUG_MAIN || DEBUG_SHAPE_SKIP || DEBUG_VAR_SKIP || DEBUG_OBJECT_GROUNDING) {
         log.debug("consistency({})", store.level);
@@ -1113,7 +1113,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           log.debug("pruning {}", o);
 
           if (DEBUG_SHAPE_SKIP) {
-            log.debug("o.bestShapeID = {}", Arrays.toString(o.bestShapeID));
+            log.debug("o.bestShapeId = {}", Arrays.toString(o.bestShapeId));
           }
         }
 
@@ -1133,12 +1133,12 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
            * it means that it has been either grounded or checked by geost.
            * If no shape was removed, result would not change, therefore there is
            * no need to run the pruning for that variable
-           * Another exception is if shapeID is not a singleton. Indeed, in this case,
+           * Another exception is if shapeId is not a singleton. Indeed, in this case,
            * we may be able to remove a shape that is not useful.
            */
           boolean needPruning = true;
-          // if no shape ID changed and o.shapeID is a singleton, consider skipping variable
-          if (!changedShapeID && o.shapeID.singleton()) {
+          // if no shape ID changed and o.shapeId is a singleton, consider skipping variable
+          if (!changedShapeId && o.shapeId.singleton()) {
             if (d != dimension) {
               final Var prunedVar = o.coords[d];
               needPruning = !(prunedVar.singleton() && !variableQueue.contains(prunedVar));
@@ -1165,9 +1165,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
             int lastSidIndex = 0;
             boolean bestShapeIDFound = false;
-            int bestSidLastPrune = o.bestShapeID[d];
+            int bestSidLastPrune = o.bestShapeId[d];
 
-            final ValueEnumeration vals = o.shapeID.domain.valueEnumeration();
+            final ValueEnumeration vals = o.shapeId.domain.valueEnumeration();
             while (vals.hasMoreElements()) {
 
               int sid = vals.nextElement();
@@ -1182,7 +1182,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
             }
 
             if (!bestShapeIDFound) {
-              // best shape ID was removed from o.shapeID
+              // best shape ID was removed from o.shapeId
               shapeIdsToPrune[0] = shapeIdsToPrune[lastSidIndex];
               assert lastSidIndex >= 1;
               lastSidIndex--;
@@ -1216,17 +1216,17 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
                 // remove shape ID, it is infeasible
                 if (DEBUG_DOUBLE_LAYER) {
-                  log.debug("geost {} changing {}, removing {}", id(), o.shapeID, sid);
+                  log.debug("geost {} changing {}, removing {}", id(), o.shapeId, sid);
                 }
 
-                changedShapeID = true;
+                changedShapeId = true;
 
                 // don't skip objects again if some shape ID changed
                 Arrays.fill(pruneIfGrounded, true);
 
-                // o.shapeID.domain.in(store.level, o.shapeID, o.shapeID.domain.subtract(sid));
+                // o.shapeId.domain.in(store.level, o.shapeId, o.shapeId.domain.subtract(sid));
                 // CHANGED. replaced the above with the line below.
-                o.shapeID.domain.inComplement(store.level, o.shapeID, sid);
+                o.shapeId.domain.inComplement(store.level, o.shapeId, sid);
 
               } else {
 
@@ -1250,26 +1250,26 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
                   // remove shape ID, it is infeasible
                   if (DEBUG_DOUBLE_LAYER) {
-                    log.debug("geost {} changing {}, removing {}", id(), o.shapeID, sid);
+                    log.debug("geost {} changing {}, removing {}", id(), o.shapeId, sid);
                   }
 
-                  changedShapeID = true;
+                  changedShapeId = true;
 
                   // don't skip objects if some shape ID changed
                   Arrays.fill(pruneIfGrounded, true);
 
-                  // o.shapeID.domain.in(store.level, o.shapeID, o.shapeID.domain.subtract(sid));
+                  // o.shapeId.domain.in(store.level, o.shapeId, o.shapeId.domain.subtract(sid));
                   // CHANGED. replaced the above with the line below.
-                  o.shapeID.domain.inComplement(store.level, o.shapeID, sid);
+                  o.shapeId.domain.inComplement(store.level, o.shapeId, sid);
 
                 } else {
                   maxUpperBound = Math.max(maxUpperBound, upperBound);
 
-                  // update bestShapeID if better than previous one
+                  // update bestShapeId if better than previous one
                   if (lowerBound <= bestLowerBound && upperBound >= bestUpperBound) {
                     bestLowerBound = lowerBound;
                     bestUpperBound = upperBound;
-                    o.bestShapeID[d] = sid;
+                    o.bestShapeId[d] = sid;
                   }
                 }
               }
@@ -1384,17 +1384,17 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       // maximal possible size of the object
       workingList.clear();
-      ValueEnumeration sids = o.shapeID.domain.valueEnumeration();
+      ValueEnumeration sids = o.shapeId.domain.valueEnumeration();
 
       while (sids.hasMoreElements()) {
         workingList.add(getShape(sids.nextElement()).boundingBox);
       }
 
       // bb - boundingBox over all shapes.
-      DBox bb = DBox.boundingBox(workingList).copyInto(DBox.newBox(dimension));
+      Dbox bb = Dbox.boundingBox(workingList).copyInto(Dbox.newBox(dimension));
 
       // bounds of the domain and the bounding box over all possible shapes counted above.
-      DBox domainBox = DBox.newBox(dimension + 1);
+      Dbox domainBox = Dbox.newBox(dimension + 1);
       int[] domainBoxOriginShifted = domainBox.origin;
       int[] domainBoxLengthShifted = domainBox.length;
 
@@ -1409,7 +1409,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       domainBoxLengthShifted[dimension] = IntDomain.MaxInt * 2;
 
       // it finds the box within which the constraint can propagate.
-      DBox constraintBox = DBox.newBox(dimension + 1);
+      Dbox constraintBox = Dbox.newBox(dimension + 1);
       int[] constraintBoxOrigin = constraintBox.origin;
       int[] constraintBoxLength = constraintBox.length;
 
@@ -1439,9 +1439,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         }
       }
 
-      DBox.dispatchBox(bb);
-      DBox.dispatchBox(constraintBox);
-      DBox.dispatchBox(domainBox);
+      Dbox.dispatchBox(bb);
+      Dbox.dispatchBox(constraintBox);
+      Dbox.dispatchBox(domainBox);
 
     } else {
 
@@ -1481,9 +1481,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       // if it is a time variable, run time constraint
       if (v == o.start || v == o.end || v == o.duration) {
         o.timeConstraint.consistencyStartPlusDurationEqEnd(store);
-      } else if (v == o.shapeID) {
+      } else if (v == o.shapeId) {
         // some shape ID was changed by some external source, remember it
-        changedShapeID = true;
+        changedShapeId = true;
       }
 
       objectList4Flush.add(o);
@@ -1600,7 +1600,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       return Domain.NONE;
     }
 
-    if (o.shapeID == var) {
+    if (o.shapeId == var) {
       return IntDomain.ANY;
     }
 

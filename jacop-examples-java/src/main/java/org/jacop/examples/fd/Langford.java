@@ -44,7 +44,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class Langford extends ExampleFD {
+public class Langford extends ExampleFd {
 
   public int n = 3;
   public int m = 17;

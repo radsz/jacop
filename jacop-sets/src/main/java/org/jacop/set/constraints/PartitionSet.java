@@ -97,7 +97,7 @@ public class PartitionSet extends Constraint {
     if (firstConsistencyCheck) {
 
       for (int i = 0; i < n; i++) {
-        s[i].domain.inLUB(store.level, s[i], u);
+        s[i].domain.inLub(store.level, s[i], u);
       }
 
       firstConsistencyCheck = false;
@@ -120,8 +120,8 @@ public class PartitionSet extends Constraint {
         }
       }
 
-      s[i].dom().inLUB(store.level, s[i], lb);
-      s[i].dom().inGLB(store.level, s[i], ub);
+      s[i].dom().inLub(store.level, s[i], lb);
+      s[i].dom().inGlb(store.level, s[i], ub);
 
       if (cardMax < cardMin || cardMax < 0) {
         throw Store.failException;
@@ -140,11 +140,11 @@ public class PartitionSet extends Constraint {
         if (s[i].dom().glb().getSize() == s[i].dom().card().max()) {
           IO.println("% 1" + s[i] + " in " + s[i].dom().glb());
 
-          s[i].domain.inLUB(store.level, s[i], s[i].dom().glb());
+          s[i].domain.inLub(store.level, s[i], s[i].dom().glb());
         } else if (s[i].dom().lub().getSize() == s[i].dom().card().min()) {
           IO.println("% 2");
 
-          s[i].domain.inGLB(store.level, s[i], s[i].dom().lub());
+          s[i].domain.inGlb(store.level, s[i], s[i].dom().lub());
         }
       }
     }

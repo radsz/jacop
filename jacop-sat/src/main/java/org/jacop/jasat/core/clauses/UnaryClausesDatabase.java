@@ -163,7 +163,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
   }
 
   @Override
-  public void toCNF(BufferedWriter output) throws IOException {
+  public void toCnf(BufferedWriter output) throws IOException {
 
     for (int i = 0; i < currentIndex; i++) {
       if (clauses[i] != 0) {

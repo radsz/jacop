@@ -487,7 +487,7 @@ public final class Core implements SolverComponent {
     toPropagate.clear();
 
     if (currentLevel > 0) {
-      conflictLearning.applyExplainUIP(explanationClause);
+      conflictLearning.applyExplainUip(explanationClause);
 
       // notify modules
       for (int i = 0; i < numExplanationModules; i++) {

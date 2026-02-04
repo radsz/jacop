@@ -43,8 +43,8 @@ import org.jacop.search.DepthFirstSearch;
 /** Example for Rosenbrock function using float constraints. */
 public class Rosenbrock {
 
-  final double MIN_FLOAT = -1e+150;
-  final double MAX_FLOAT = 1e+150;
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
 
   /**
    * It executes the program.
@@ -72,14 +72,14 @@ public class Rosenbrock {
 
     FloatVar x1 = new FloatVar(store, "x1", -1.0, 8.0);
     FloatVar x2 = new FloatVar(store, "x2", -1.0, 8.0);
-    FloatVar z = new FloatVar(store, "z", MIN_FLOAT, MAX_FLOAT);
+    FloatVar z = new FloatVar(store, "z", minFloat, maxFloat);
 
-    FloatVar x1x1 = new FloatVar(store, "x1x1", MIN_FLOAT, MAX_FLOAT);
+    FloatVar x1x1 = new FloatVar(store, "x1x1", minFloat, maxFloat);
     FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
-    FloatVar t1 = new FloatVar(store, "t1", MIN_FLOAT, MAX_FLOAT);
-    FloatVar t2 = new FloatVar(store, "t2", MIN_FLOAT, MAX_FLOAT);
-    FloatVar t3 = new FloatVar(store, "t3", MIN_FLOAT, MAX_FLOAT);
-    FloatVar t4 = new FloatVar(store, "t4", MIN_FLOAT, MAX_FLOAT);
+    FloatVar t1 = new FloatVar(store, "t1", minFloat, maxFloat);
+    FloatVar t2 = new FloatVar(store, "t2", minFloat, maxFloat);
+    FloatVar t3 = new FloatVar(store, "t3", minFloat, maxFloat);
+    FloatVar t4 = new FloatVar(store, "t4", minFloat, maxFloat);
 
     // var float: z =   100.0*(x2-x1*x1)*(x2-x1*x1)+(1.0-x1)*(1.0-x1);
     store.impose(new PmulQeqR(x1, x1, x1x1)); // x1*x1

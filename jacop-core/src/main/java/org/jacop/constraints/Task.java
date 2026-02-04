@@ -70,7 +70,7 @@ record Task(IntVar start, IntVar dur, IntVar res) {
     return start.min();
   }
 
-  int lastCT() {
+  int lastCt() {
     return start.max() + dur.max();
   }
 

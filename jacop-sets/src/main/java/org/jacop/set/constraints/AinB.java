@@ -102,10 +102,10 @@ public class AinB extends PrimitiveConstraint {
     }
 
     // if (bHasChanged)
-    a.domain.inLUB(store.level, a, b.domain.lub());
+    a.domain.inLub(store.level, a, b.domain.lub());
 
     // if (aHasChanged)
-    b.domain.inGLB(store.level, b, a.domain.glb());
+    b.domain.inGlb(store.level, b, a.domain.glb());
 
     if (strict) {
       a.domain.inCardinality(store.level, a, Integer.MIN_VALUE, b.domain.card().max() - 1);

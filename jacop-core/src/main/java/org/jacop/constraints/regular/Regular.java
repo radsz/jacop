@@ -45,7 +45,7 @@ import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.ExtensionalSupportSTR;
+import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.In;
 import org.jacop.constraints.XeqC;
 import org.jacop.core.IntDomain;
@@ -55,10 +55,10 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.MDD;
-import org.jacop.util.fsm.FSM;
-import org.jacop.util.fsm.FSMState;
-import org.jacop.util.fsm.FSMTransition;
+import org.jacop.util.Mdd;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 
 /**
  * Regular constraint accepts only the assignment to variables which is accepted by an automaton.
@@ -78,12 +78,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
-   * It specifies if the translation of FSM into optimized MDD should take place so minimal layered
+   * It specifies if the translation of Fsm into optimized Mdd should take place so minimal layered
    * graph can be obtained. This option most of the time causes out of memory exception as it
-   * requires finding and storing all solutions in mtrie before translation to an optimized MDD can
-   * take place. FSM also has to be a deterministic one.
+   * requires finding and storing all solutions in mtrie before translation to an optimized Mdd can
+   * take place. Fsm also has to be a deterministic one.
    */
-  public final boolean optimizedMDD = false;
+  public final boolean optimizedMdd = false;
 
   /** It specifies if the edges should have a list of values associated with them. */
   public final boolean listRepresentation = true;
@@ -92,7 +92,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   public final boolean oneSupport = true;
 
   /** It specifies finite state machine used by this regular. */
-  public final FSM fsm;
+  public final Fsm fsm;
 
   /** Array of the variables of the graph levels. */
   public final IntVar[] list;
@@ -168,7 +168,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * @param fsm (deterministic) finite automaton
    * @param list variables which values have to be accepted by the automaton.
    */
-  public Regular(FSM fsm, IntVar[] list) {
+  public Regular(Fsm fsm, IntVar[] list) {
 
     checkInputForNullness("list", list);
     checkInputForDuplicationSkipSingletons("list", list);
@@ -193,7 +193,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    *
    * @param dfa specification of deterministic finite automaton.
    */
-  private void initializeARRAY(FSM dfa) {
+  private void initializeArray(Fsm dfa) {
 
     int levels = this.list.length;
     stateNumber = dfa.allStates.size();
@@ -204,18 +204,18 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     final int[][] outdeg = new int[levels + 1][stateNumber];
 
     // Reachable region of the graph
-    final Set<FSMState> reachable = new HashSet<>();
+    final Set<FsmState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    final Set<FSMState> tmp = new HashSet<>();
+    final Set<FsmState> tmp = new HashSet<>();
 
     // Initialization of the future state array
     // and the time-stamps with the number of active states
     this.stateLevels = new RegState[levels + 1][];
 
-    FSMState[] array = new FSMState[stateNumber];
+    FsmState[] array = new FsmState[stateNumber];
 
     dfa.resize();
-    for (FSMState s : dfa.allStates) {
+    for (FsmState s : dfa.allStates) {
       array[s.id] = s;
     }
 
@@ -229,9 +229,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable) {
+      for (FsmState s : reachable) {
         // watch it's edges
-        for (FSMTransition t : s.transitions) {
+        for (FsmTransition t : s.transitions) {
           // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(list[level].dom());
 
@@ -393,7 +393,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    * into a final array (which is ugly)
    */
   @SuppressWarnings("unchecked")
-  private void initializeARRAY(MDD mdd) {
+  private void initializeArray(Mdd mdd) {
 
     int levels = this.list.length;
 
@@ -417,7 +417,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     int noNeighbours = 0;
 
     for (int i = 0; i < list[0].getSize(); i++) {
-      if (mdd.diagram[i] != MDD.NOEDGE) {
+      if (mdd.diagram[i] != Mdd.NOEDGE) {
         noNeighbours++;
       }
     }
@@ -447,12 +447,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           mdd.diagram[currentPosition[currentLevel] + currentOffset[currentLevel]];
 
       // no path with a given value from a current node.
-      if (nextNodePosition == MDD.NOEDGE) {
+      if (nextNodePosition == Mdd.NOEDGE) {
         currentOffset[currentLevel]++;
         continue;
       }
 
-      if (nextNodePosition == MDD.TERMINAL) {
+      if (nextNodePosition == Mdd.TERMINAL) {
         currentState[currentLevel].addTransition(
             currentState[list.length],
             mdd.views[currentLevel].indexToValue[currentOffset[currentLevel]]);
@@ -477,7 +477,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           for (int j = nextNodePosition;
               j < nextNodePosition + list[currentLevel + 1].getSize();
               j++) {
-            if (mdd.diagram[j] != MDD.NOEDGE) {
+            if (mdd.diagram[j] != Mdd.NOEDGE) {
               noNeighbours++;
             }
           }
@@ -1080,10 +1080,10 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @SuppressWarnings("unchecked")
   public void impose(Store store) {
 
-    if (optimizedMDD) {
-      initializeARRAY(fsm.transformIntoMDD(list));
+    if (optimizedMdd) {
+      initializeArray(fsm.transformIntoMdd(list));
     } else {
-      initializeARRAY(fsm);
+      initializeArray(fsm);
     }
 
     super.impose(store);
@@ -1136,7 +1136,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
     for (IntVar intVar : list) {
       result.append(intVar.id()).append(" ");
     }
-    result.append(" ], FSM \n");
+    result.append(" ], Fsm \n");
     result.append(fsm.toString());
     result.append(")");
 
@@ -1164,9 +1164,9 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     // tuples for transitions from not-intial states.
 
-    for (FSMState state : fsm.allStates) {
+    for (FsmState state : fsm.allStates) {
 
-      for (FSMTransition transition : state.transitions) {
+      for (FsmTransition transition : state.transitions) {
 
         for (ValueEnumeration enumer = transition.domain.valueEnumeration();
             enumer.hasMoreElements(); ) {
@@ -1191,13 +1191,13 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     for (int i = 0; i < q.length - 1; i++) {
       IntVar[] scope = {q[i], list[i], q[i + 1]};
-      constraints.add(new ExtensionalSupportSTR(scope, tuples));
+      constraints.add(new ExtensionalSupportStr(scope, tuples));
     }
 
     constraints.add(new XeqC(q[0], fsm.initState.id));
 
     IntervalDomain finalQ = new IntervalDomain();
-    for (FSMState finalState : fsm.finalStates) {
+    for (FsmState finalState : fsm.finalStates) {
       finalQ.unionAdapt(finalState.id, finalState.id);
     }
 

@@ -474,21 +474,21 @@ public class DisjointConditional extends Diff {
         // check if domains of r and s overlap
         IntDomain sOriginIdom = s.origin[m].dom();
         IntDomain sLengthIdom = s.length[m].dom();
-        final int sLengthIMin = sLengthIdom.min();
-        int sOriginIMax = sOriginIdom.max();
+        final int sLengthiMin = sLengthIdom.min();
+        int sOriginiMax = sOriginIdom.max();
         s_min = sOriginIdom.min();
-        s_max = sOriginIMax + sLengthIdom.max();
+        s_max = sOriginiMax + sLengthIdom.max();
 
         overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
 
         // min start, max stop and min length
         sOriginMin[m] = s_min;
-        sOriginMax[m] = sOriginIMax + sLengthIMin;
-        sLengthMin[m] = sLengthIMin;
+        sOriginMax[m] = sOriginiMax + sLengthiMin;
+        sLengthMin[m] = sLengthiMin;
 
         // check if s occupies some space
-        start = sOriginIMax;
-        stop = s_min + sLengthIMin;
+        start = sOriginiMax;
+        stop = s_min + sLengthiMin;
         if (start <= stop) { // we allow length=0 for rectangles
           // to occupy o length space !!!
           Use.add(start, stop - start);
@@ -555,14 +555,14 @@ public class DisjointConditional extends Diff {
       for (int i = 0; i < startMin.length; i++) {
         IntDomain rOriginIdom = r.origin[i].dom();
         IntDomain rLengthIdom = r.length[i].dom();
-        int rOriginIMin = rOriginIdom.min();
-        int rOriginIMax = rOriginIdom.max();
-        int rLengthIMin = rLengthIdom.min();
-        if (rOriginIMin < startMin[i]) {
-          startMin[i] = rOriginIMin;
+        int rOriginiMin = rOriginIdom.min();
+        int rOriginiMax = rOriginIdom.max();
+        int rLengthiMin = rLengthIdom.min();
+        if (rOriginiMin < startMin[i]) {
+          startMin[i] = rOriginiMin;
         }
-        if (rOriginIMax + rLengthIMin > stopMax[i]) {
-          stopMax[i] = rOriginIMax + rLengthIMin;
+        if (rOriginiMax + rLengthiMin > stopMax[i]) {
+          stopMax[i] = rOriginiMax + rLengthiMin;
         }
       }
       boolean minEqZero = false;
@@ -644,8 +644,8 @@ public class DisjointConditional extends Diff {
     int s;
     int j = i == 0 ? 1 : 0;
     int rSize = r.origin[j].max() - r.origin[j].min();
-    int rLengthJMin = r.length[j].min();
-    int rLengthIMin = r.length[i].min();
+    int rLengthjMin = r.length[j].min();
+    int rLengthiMin = r.length[i].min();
     int barierSize = 0;
 
     if (!profileCandidates.isEmpty() && doProfile) {
@@ -685,7 +685,7 @@ public class DisjointConditional extends Diff {
         for (IntRectangle t : usedRectArray) {
           int tempMin = t.origin[i] + t.length[i];
 
-          if (t.origin[i] - s < rLengthIMin && s < tempMin) {
+          if (t.origin[i] - s < rLengthiMin && s < tempMin) {
             consideredRect.add(t);
             rectSize += t.length[j];
             // Determine minimum length in direction i
@@ -697,7 +697,7 @@ public class DisjointConditional extends Diff {
         }
 
         if (!consideredRect.isEmpty()
-            && rSize < (rectSize + (long) (rLengthJMin - 1) * consideredRect.size())) {
+            && rSize < (rectSize + (long) (rLengthjMin - 1) * consideredRect.size())) {
 
           IntDomain rOriginDom = r.origin[i].dom();
           int m = 0;
@@ -749,21 +749,21 @@ public class DisjointConditional extends Diff {
       }
 
       if (!consideredRectDur.isEmpty()
-          && rSize < (barierSize + (rLengthJMin - 1) * consideredRectDur.size())) {
+          && rSize < (barierSize + (rLengthjMin - 1) * consideredRectDur.size())) {
 
         IntRectangle[] rects = new IntRectangle[consideredRectDur.size()];
         rects = consideredRectDur.toArray(rects);
         Arrays.sort(rects, dimIthMinComparator.apply(i));
 
         Profile barrier = new Profile();
-        boolean lengthOK = true;
+        boolean lengthOk = true;
         int newMaxLength = 0;
         int n = 0;
-        while (n < rects.length && lengthOK) {
+        while (n < rects.length && lengthOk) {
           IntRectangle hinder = rects[n];
           barrier.addToProfile(hinder.origin[j], hinder.origin[j] + hinder.length[j], 1);
           if (doesNotFit(j, r, barrier)) {
-            lengthOK = false;
+            lengthOk = false;
             newMaxLength =
                 hinder.origin[i]
                     // ((Interval)r.origin[i].dom().lastElement()).Min;
@@ -772,7 +772,7 @@ public class DisjointConditional extends Diff {
           }
           n++;
         }
-        if (!lengthOK) {
+        if (!lengthOk) {
           // update length in dimension j
           int maxLength = findMaxLength(i, newMaxLength, r);
 

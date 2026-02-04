@@ -304,7 +304,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   }
 
   @Override
-  public void toCNF(BufferedWriter output) {
+  public void toCnf(BufferedWriter output) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 }

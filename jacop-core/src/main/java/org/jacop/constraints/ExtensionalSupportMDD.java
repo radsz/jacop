@@ -1,5 +1,5 @@
 /*
- * ExtensionalSupportMDD.java
+ * ExtensionalSupportMdd.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.util.IndexDomainView;
-import org.jacop.util.MDD;
+import org.jacop.util.Mdd;
 import org.jacop.util.SparseSet;
 
 /**
@@ -47,14 +47,14 @@ import org.jacop.util.SparseSet;
  * presented at CP2008. We would like to thank Roland for answering our detailed questions about the
  * implementation. It is a slightly improved version to what was presented at the conference.
  *
- * <p>This constraint uses a lot of memory, despite using an MDD. However, if the constraint is
+ * <p>This constraint uses a lot of memory, despite using an Mdd. However, if the constraint is
  * imposed multiple times (50+) its overall usage of memory maybe advantageous. Always test against
  * STR version.
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresent {
+public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresent {
 
   /** It specifies if the debugging information is printed. */
   public static final boolean debugAll = false;
@@ -62,7 +62,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a multiple value decision diagram used by this constraint. */
-  public final MDD mdd;
+  public final Mdd mdd;
 
   final SparseSet G_no;
   final IndexDomainView[] views;
@@ -74,7 +74,7 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
    *
    * @param diagram multiple-valued decision diagram describing allowed tuples.
    */
-  public ExtensionalSupportMDD(MDD diagram) {
+  public ExtensionalSupportMdd(Mdd diagram) {
 
     checkInputForNullness("diagram", new Object[] {diagram});
     checkInputForNullness("diagram.vars", diagram.vars);
@@ -98,8 +98,8 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
    * @param vars the variables in the scope of the constraint.
    * @param table list of tuples which are allowed.
    */
-  public ExtensionalSupportMDD(IntVar[] vars, int[][] table) {
-    this(new MDD(vars, table));
+  public ExtensionalSupportMdd(IntVar[] vars, int[][] table) {
+    this(new Mdd(vars, table));
   }
 
   @Override
@@ -143,9 +143,9 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
   }
 
   /**
-   * It checks if the node at a given level of MDD has a support.
+   * It checks if the node at a given level of Mdd has a support.
    *
-   * @param nodeId the position of the node in the MDD.
+   * @param nodeId the position of the node in the Mdd.
    * @param level number of variable associated with the node.
    * @return true if node is supported by current domains of variables.
    */
@@ -165,9 +165,9 @@ public class ExtensionalSupportMDD extends Constraint implements SatisfiedPresen
 
     for (int i = 0; i < mdd.domainLimits[level]; i++) {
       int shift = nodeId + i;
-      if (mdd.diagram[shift] != MDD.NOEDGE) {
+      if (mdd.diagram[shift] != Mdd.NOEDGE) {
         if (views[level].contains(i)) {
-          if (mdd.diagram[shift] == MDD.TERMINAL || seekSupport(mdd.diagram[shift], level + 1)) {
+          if (mdd.diagram[shift] == Mdd.TERMINAL || seekSupport(mdd.diagram[shift], level + 1)) {
 
             // ith-value has a support
             // returns true is new support was found

@@ -1,5 +1,5 @@
 /*
- * AFCMax.java
+ * AfcMax.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -44,15 +44,15 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class AFCMax<T extends Var> implements ComparatorVariable<T> {
+public class AfcMax<T extends Var> implements ComparatorVariable<T> {
 
-  private AFCMax() {}
+  private AfcMax() {}
 
-  public AFCMax(Store store) {
+  public AfcMax(Store store) {
     this(store, store.getDecay());
   }
 
-  public AFCMax(Store store, double decay) {
+  public AfcMax(Store store, double decay) {
     store.setAllConstraints();
     store.afcManagement(true);
     store.setDecay(decay);

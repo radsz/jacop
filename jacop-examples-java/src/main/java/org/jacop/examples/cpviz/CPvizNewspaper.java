@@ -1,5 +1,5 @@
 /*
- * CPvizNewspaper.java
+ * CpvizNewspaper.java
  * This file is part of org.jacop.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -61,7 +61,7 @@ import org.jacop.search.TraceGenerator;
  *     <p>Algy order - FT, Guardian, Express, Sun Bertie order - Guardian, Express, FT, Sun Charlie
  *     order - Express, Guardian, FT, Sun Digby order - Sun, FT, Guardian, Express
  */
-public class CPvizNewspaper {
+public class CpvizNewspaper {
 
   List<Var> vars;
   Store store;
@@ -74,7 +74,7 @@ public class CPvizNewspaper {
    */
   static void main(String[] args) {
 
-    CPvizNewspaper example = new CPvizNewspaper();
+    CpvizNewspaper example = new CpvizNewspaper();
 
     example.model();
   }

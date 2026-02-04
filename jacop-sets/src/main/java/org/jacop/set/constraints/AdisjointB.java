@@ -87,12 +87,12 @@ public class AdisjointB extends Constraint implements UsesQueueVariable, Satisfi
 
     // A.lub = 1+2+4+5, A.glb = 4+5
     if (bHasChanged) {
-      a.domain.inLUB(store.level, a, a.domain.lub().subtract(b.domain.glb()));
+      a.domain.inLub(store.level, a, a.domain.lub().subtract(b.domain.glb()));
     }
 
     // B.lub = 2+3+7+8, B.glb = 7+8
     if (aHasChanged) {
-      b.domain.inLUB(store.level, b, b.domain.lub().subtract(a.domain.glb()));
+      b.domain.inLub(store.level, b, b.domain.lub().subtract(a.domain.glb()));
     }
 
     if (performCardinalityReasoning) {

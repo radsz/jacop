@@ -213,7 +213,7 @@ class LinearConstraints implements ParserTreeConstants {
                 return;
               }
             } else {
-              support.pose(support.fzXeqCReified(p2[0], p3, p4));
+              support.pose(support.fzXeqCreified(p2[0], p3, p4));
             }
           } else {
             support.pose(
@@ -279,9 +279,9 @@ class LinearConstraints implements ParserTreeConstants {
               // (x != y) <=> b == x xor y = b
               support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
             } else if (p2[0].singleton()) {
-              support.pose(support.fzXneqCReified(p2[1], p2[0].value(), p4));
+              support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
             } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCReified(p2[0], p2[1].value(), p4));
+              support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
             } else {
               support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
             }
@@ -294,9 +294,9 @@ class LinearConstraints implements ParserTreeConstants {
               // (x != y) <=> b == x xor y = b
               support.pose(new XorBool(new IntVar[] {p2[0], p2[1]}, p4));
             } else if (p2[0].singleton()) {
-              support.pose(support.fzXneqCReified(p2[1], p2[0].value(), p4));
+              support.pose(support.fzXneqCreified(p2[1], p2[0].value(), p4));
             } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCReified(p2[0], p2[1].value(), p4));
+              support.pose(support.fzXneqCreified(p2[0], p2[1].value(), p4));
             } else {
               support.pose(new Reified(new XneqY(p2[0], p2[1]), p4));
             }
@@ -310,7 +310,7 @@ class LinearConstraints implements ParserTreeConstants {
         } else if (allWeightsOne(p1)) {
           if (p1.length == 1) {
             if (p2[0].domain.isIntersecting(p3, p3)) {
-              support.pose(support.fzXneqCReified(p2[0], p3, p4));
+              support.pose(support.fzXneqCreified(p2[0], p3, p4));
             } else {
               p4.domain.inValue(store.level, p4, 1);
             }
@@ -325,7 +325,7 @@ class LinearConstraints implements ParserTreeConstants {
         } else if (allWeightsMinusOne(p1)) {
           if (p1.length == 1) {
             if (p2[0].domain.isIntersecting(-p3, -p3)) {
-              support.pose(support.fzXneqCReified(p2[0], -p3, p4));
+              support.pose(support.fzXneqCreified(p2[0], -p3, p4));
             } else {
               p4.domain.inValue(store.level, p4, 1);
             }
@@ -482,7 +482,7 @@ class LinearConstraints implements ParserTreeConstants {
 
         if (p1.length == 1) {
           if (p1[0] == 1) {
-            support.pose(support.fzXeqCImplied(p2[0], p3, p4));
+            support.pose(support.fzXeqCimplied(p2[0], p3, p4));
           } else {
             support.pose(
                 new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
@@ -532,15 +532,15 @@ class LinearConstraints implements ParserTreeConstants {
         break;
       case Support.ne:
         if (p1.length == 1 && p1[0] == 1) {
-          support.pose(support.fzXneqCImplied(p2[0], p3, p4));
+          support.pose(support.fzXneqCimplied(p2[0], p3, p4));
         } else if (p1.length == 1 && p1[0] == -1) {
-          support.pose(support.fzXneqCImplied(p2[0], -p3, p4));
+          support.pose(support.fzXneqCimplied(p2[0], -p3, p4));
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           if (p3 == 0) {
             if (p2[0].singleton()) {
-              support.pose(support.fzXneqCImplied(p2[1], p2[0].value(), p4));
+              support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
             } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCImplied(p2[0], p2[1].value(), p4));
+              support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
             } else {
               support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
             }
@@ -550,9 +550,9 @@ class LinearConstraints implements ParserTreeConstants {
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
           if (p3 == 0) {
             if (p2[0].singleton()) {
-              support.pose(support.fzXneqCImplied(p2[1], p2[0].value(), p4));
+              support.pose(support.fzXneqCimplied(p2[1], p2[0].value(), p4));
             } else if (p2[1].singleton()) {
-              support.pose(support.fzXneqCImplied(p2[0], p2[1].value(), p4));
+              support.pose(support.fzXneqCimplied(p2[0], p2[1].value(), p4));
             } else {
               support.pose(new Implies(p4, new XneqY(p2[0], p2[1])));
             }

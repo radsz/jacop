@@ -93,7 +93,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     }
 
     // get the value this literal corresponds to
-    SatCPBridge domain = wrapper.boolVarToDomain(assertedLiteral);
+    SatCpBridge domain = wrapper.boolVarToDomain(assertedLiteral);
     if (domain.isTranslated()) {
       assert wrapper.log(this, "variable %s is ignored because translated", domain.variable);
       return;
@@ -250,7 +250,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   }
 
   @Override
-  public void toCNF(BufferedWriter output) {
+  public void toCnf(BufferedWriter output) {
 
     if (!wrapper.registeredVars.equals(wrapper.domainTranslator.translatedVars)) {
       throw new UnsupportedOperationException("Not supported yet.");

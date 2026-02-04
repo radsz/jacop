@@ -70,7 +70,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   public DomainStructure structure;
 
   /** Identifier for this arc in the structure variable */
-  public int arcID;
+  public int arcId;
 
   /** The pruningScore */
   public int pruningScore;
@@ -194,8 +194,8 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
       boolean updated = false;
 
-      if (structure != null && !structure.isGrounded(arcID)) {
-        updated = updateSVar(network.getStoreLevel());
+      if (structure != null && !structure.isGrounded(arcId)) {
+        updated = updateSvar(network.getStoreLevel());
       }
 
       // since we listen only to bound events, capacity changes for sure
@@ -302,7 +302,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    * @param level current store level
    * @return whether the domain of the s-variable has been updated
    */
-  private boolean updateSVar(int level) {
+  private boolean updateSvar(int level) {
     // lower and upper capacity bounds
     // they are assumed to be unchanged since the begin of the search
     int lower = flowOffset;
@@ -321,7 +321,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // (x > l) => (d_i inter S = S)
       if (structure.behavior != Behavior.PRUNE_ACTIVE) {
         IntVar sVar = structure.variable;
-        Domain arcDomain = structure.domains[arcID];
+        Domain arcDomain = structure.domains[arcId];
         sVar.domain.in(level, sVar, arcDomain);
         updated = true;
       }
@@ -338,7 +338,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // (x < u) => (d_i inter S = empty)
       if (structure.behavior != Behavior.PRUNE_INACTIVE) {
         IntVar sVar = structure.variable;
-        Domain arcDomainC = structure.domains[arcID].complement();
+        Domain arcDomainC = structure.domains[arcId].complement();
         sVar.domain.in(level, sVar, arcDomainC);
         updated = true;
       }

@@ -463,7 +463,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // Select task l from L with the maximal area
         int indexOfl = maxArea(L);
         Task l = L.get(indexOfl);
-        int l_LCT = l.lct();
+        int lLct = l.lct();
         final int limitMax = limit.max();
         // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and after S
@@ -483,7 +483,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
         final long totalArea = area1;
         final int estS = startOfS;
-        boolean after = (long) (l_LCT - startOfS) * limitMax - area1 >= l.areaMin();
+        boolean after = (long) (lLct - startOfS) * limitMax - area1 >= l.areaMin();
 
         // larea = l.dur.min()*l.res.min();
         long larea = minOverlap(l, startOfS, completionOfS);
@@ -491,7 +491,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         if (after && between) {
           L.remove(indexOfl);
-          removeFromSLct(S);
+          removeFromSlct(S);
         } else {
           if (between) {
             // update upper bound of l
@@ -502,7 +502,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
             a = totalArea;
             startS = estS;
-            slack = (long) (l_LCT - startS) * limitMax - a - l.areaMin();
+            slack = (long) (lLct - startS) * limitMax - a - l.areaMin();
 
             int j = 0;
             Task[] tasks = new Task[S.size()];
@@ -510,7 +510,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             while (slack < 0 && j < S.size()) {
               Task t = S.get(j);
 
-              if (t.res().min() <= maxuse || l_LCT <= t.lst()) {
+              if (t.res().min() <= maxuse || lLct <= t.lst()) {
                 slack += t.areaMin();
               } else {
                 tasks[tasksLength++] = t;
@@ -519,7 +519,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             }
 
             if (slack < 0 && tasksLength != 0) {
-              int compl = l_LCT;
+              int compl = lLct;
               int newCompl;
               Arrays.sort(tasks, 0, tasksLength, taskDescLstComparator);
               j = 0;
@@ -549,7 +549,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             if (before(l, S)) {
               L.remove(indexOfl);
             } else {
-              removeFromSLct(S);
+              removeFromSlct(S);
             }
           } else {
             if (after) {
@@ -647,7 +647,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         // Select task l from L with the maximal area
         int indexOfl = maxArea(L);
         Task l = L.get(indexOfl);
-        int l_EST = l.est();
+        int lEst = l.est();
         final int limitMax = limit.max();
         // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and before S
@@ -669,7 +669,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         final long totalArea = area1;
         final int lctS = completionOfS;
-        boolean before = (long) (completionOfS - l_EST) * limitMax >= area1 + l.areaMin();
+        boolean before = (long) (completionOfS - lEst) * limitMax >= area1 + l.areaMin();
 
         // larea = l.dur.min()*l.res.min();
         long larea = minOverlap(l, startOfS, completionOfS);
@@ -690,7 +690,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         if (before && between) {
           L.remove(indexOfl);
-          removeFromSEst(S);
+          removeFromSest(S);
         } else {
           if (between) {
             // update lower bound of l
@@ -702,7 +702,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
             a = totalArea;
             completionS = lctS;
-            slack = (long) (completionS - l_EST) * limitMax - a - l.areaMin();
+            slack = (long) (completionS - lEst) * limitMax - a - l.areaMin();
 
             int j = 0;
             Task[] tasks = new Task[S.size()];
@@ -710,7 +710,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             while (slack < 0 && j < S.size()) {
               Task t = S.get(j);
 
-              if (t.res().min() <= maxuse || l_EST >= t.ect()) {
+              if (t.res().min() <= maxuse || lEst >= t.ect()) {
                 slack += t.areaMin();
               } else {
                 tasks[tasksLength++] = t;
@@ -719,7 +719,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             }
 
             int newStartl = IntDomain.MinInt;
-            int startl = l_EST;
+            int startl = lEst;
             if (slack < 0 && tasksLength != 0) {
               Arrays.sort(tasks, 0, tasksLength, taskAscEctComparator);
 
@@ -734,7 +734,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               }
             }
 
-            if (newStartl > l_EST) {
+            if (newStartl > lEst) {
               if (debugNarr) {
                 log.debug(
                     ">>> Cumulative EF <<< 0. Narrowed {} in {}..{}",
@@ -749,7 +749,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             if (after(l, S)) {
               L.remove(indexOfl);
             } else {
-              removeFromSEst(S);
+              removeFromSest(S);
             }
           } else {
             if (before) {
@@ -793,9 +793,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int estS = IntDomain.MaxInt;
 
     for (Task t : tasks) {
-      int tEST = t.est();
-      if (tEST < estS) {
-        estS = tEST;
+      int tEst = t.est();
+      if (tEst < estS) {
+        estS = tEst;
       }
     }
     return estS;
@@ -948,10 +948,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void notFirst(Store store, Task s, List<Task> tasks) {
-    int sEST = s.est(); // sLCT = s.LCT();
+    int sEst = s.est(); // sLct = s.LCT();
     int completionS = IntDomain.MinInt;
     int newStartl = IntDomain.MinInt;
-    int startl = sEST;
+    int startl = sEst;
     long a = 0;
     long slack;
     long maxuse = limit.max() - s.res().min();
@@ -967,12 +967,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           a += t.areaMin();
         }
       }
-      slack = (long) (completionS - sEST) * limit.max() - a - s.areaMin();
+      slack = (long) (completionS - sEst) * limit.max() - a - s.areaMin();
       // System.out.println("slack = "+ slack);
       if (debug) {
         boolean notBeforeS = slack < 0;
         log.debug(
-            "s(l)= {},  c(S')= {},  a(S)= {},  notBeforeS= {}", sEST, completionS, a, notBeforeS);
+            "s(l)= {},  c(S')= {},  a(S)= {},  notBeforeS= {}", sEst, completionS, a, notBeforeS);
       }
 
       // Upadate LB for task s
@@ -984,7 +984,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         Task t = tasks.get(j);
 
         if (t != s) {
-          if (t.res().min() <= maxuse || sEST >= t.ect()) {
+          if (t.res().min() <= maxuse || sEst >= t.ect()) {
             slack += t.areaMin();
           } else {
             taskArray[tasksLength++] = t;
@@ -1006,7 +1006,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           startl = newStartl;
         }
 
-        if (newStartl > sEST) {
+        if (newStartl > sEst) {
           if (debugNarr) {
             log.debug(
                 ">>> Cumulative EF <<< 4. Narrowed {} in {}..{}",
@@ -1022,8 +1022,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   private void notLast(Store store, Task s, List<Task> tasks) {
-    int sLCT = s.lct();
-    int compl = sLCT;
+    int sLct = s.lct();
+    int compl = sLct;
 
     int startS = IntDomain.MaxInt;
     int newCompl;
@@ -1043,11 +1043,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           a += t.areaMin();
         }
       }
-      slack = (long) (sLCT - startS) * limit.max() - a - s.areaMin();
+      slack = (long) (sLct - startS) * limit.max() - a - s.areaMin();
 
       if (debug) {
         boolean notLastInS = slack < 0;
-        log.debug("s(S')= {},  c(l)= {},  a(S)= {},  notLastInS= {}", startS, sLCT, a, notLastInS);
+        log.debug("s(S')= {},  c(l)= {},  a(S)= {},  notLastInS= {}", startS, sLct, a, notLastInS);
       }
 
       // Upadate UB for task s
@@ -1059,7 +1059,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         Task t = tasks.get(j);
         if (t != s) {
 
-          if (t.res().min() <= maxuse || sLCT <= t.lst()) {
+          if (t.res().min() <= maxuse || sLct <= t.lst()) {
             slack += t.areaMin();
           } else {
             taskArray[tasksLength++] = t;
@@ -1251,7 +1251,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void removeFromSEst(List<Task> s) {
+  private void removeFromSest(List<Task> s) {
 
     // s = s \ {t in s | est(t) = est(s)}
     int estS = est(s);
@@ -1268,7 +1268,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     }
   }
 
-  private void removeFromSLct(List<Task> s) {
+  private void removeFromSlct(List<Task> s) {
 
     // s = s \ {t in s | lct(t) = lct(s)}
     int lctS = lct(s);

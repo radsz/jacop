@@ -47,7 +47,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class LatinSquare extends ExampleFD {
+public class LatinSquare extends ExampleFd {
 
   /** The size of the latin square. */
   public int n = 20;

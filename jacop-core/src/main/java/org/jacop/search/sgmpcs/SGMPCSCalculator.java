@@ -1,5 +1,5 @@
 /*
- * SGMPCSCalculator.java
+ * SgmpcsCalculator.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -41,13 +41,13 @@ import org.jacop.search.ConsistencyListener;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class SGMPCSCalculator<T extends Var> implements ConsistencyListener {
+public class SgmpcsCalculator<T extends Var> implements ConsistencyListener {
 
   @Getter int numberFails;
 
   @Getter @Setter int failLimit;
 
-  public SGMPCSCalculator(int limit) {
+  public SgmpcsCalculator(int limit) {
     failLimit = limit;
   }
 

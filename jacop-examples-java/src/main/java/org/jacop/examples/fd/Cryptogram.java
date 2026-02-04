@@ -55,7 +55,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class Cryptogram extends ExampleFD {
+public class Cryptogram extends ExampleFd {
 
   /** It specifies how many lines of expressions can be inputed in one execution. */
   public final int maxInputLines = 100;

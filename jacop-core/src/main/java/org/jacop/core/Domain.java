@@ -227,7 +227,7 @@ public abstract class Domain {
    *
    * @return it returns an integer id of the domain.
    */
-  public abstract int domainID();
+  public abstract int domainId();
 
   /**
    * It specifies if the domain type is more suited to representing sparse domain.

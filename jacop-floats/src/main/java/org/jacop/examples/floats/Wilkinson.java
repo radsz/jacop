@@ -44,8 +44,8 @@ import org.jacop.search.PrintOutListener;
 /** Example for Wilkinson polynomial using float constraints. */
 public class Wilkinson {
 
-  final double MIN_FLOAT = -1e+150;
-  final double MAX_FLOAT = 1e+150;
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
 
   /**
    * It executes the program.
@@ -81,21 +81,21 @@ public class Wilkinson {
 
     FloatVar[] temp = new FloatVar[20];
     for (int i = 0; i < 20; i++) {
-      temp[i] = new FloatVar(store, "temp[" + i + "]", MIN_FLOAT, MAX_FLOAT);
+      temp[i] = new FloatVar(store, "temp[" + i + "]", minFloat, maxFloat);
       FloatVar c = new FloatVar(store, i + 1, i + 1);
       store.impose(new PplusQeqR(x, c, temp[i]));
     }
 
     FloatVar t1 = x;
     for (int i = 0; i < 18; i++) {
-      FloatVar t2 = new FloatVar(store, MIN_FLOAT, MAX_FLOAT);
+      FloatVar t2 = new FloatVar(store, minFloat, maxFloat);
       store.impose(new PmulQeqR(x, t1, t2));
       t1 = t2;
     }
 
     FloatVar s1 = temp[0];
     for (int i = 1; i < 20; i++) {
-      FloatVar s2 = new FloatVar(store, MIN_FLOAT, MAX_FLOAT);
+      FloatVar s2 = new FloatVar(store, minFloat, maxFloat);
       store.impose(new PmulQeqR(s1, temp[i], s2));
       s1 = s2;
     }

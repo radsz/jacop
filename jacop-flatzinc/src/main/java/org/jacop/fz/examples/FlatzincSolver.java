@@ -74,7 +74,7 @@ public class FlatzincSolver {
             + "\nNumber of constraints: "
             + store.numberConstraints());
 
-    DepthFirstSearch<Var> label = fl.getDFS();
+    DepthFirstSearch<Var> label = fl.getDfs();
     SelectChoicePoint<Var> select = fl.getSelectChoicePoint();
     Var cost = fl.getCost();
 

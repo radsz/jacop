@@ -1,5 +1,5 @@
 /*
- * TSP.java
+ * Tsp.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -43,12 +43,12 @@ import org.jacop.search.SimpleMatrixSelect;
 import org.jacop.search.SmallestDomain;
 
 /**
- * It models Travelling Salesman Problem (TSP).
+ * It models Travelling Salesman Problem (Tsp).
  *
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class TSP extends ExampleFD {
+public class Tsp extends ExampleFd {
 
   IntVar[][] varsMatrix;
 
@@ -59,7 +59,7 @@ public class TSP extends ExampleFD {
    */
   static void main(String[] args) {
 
-    TSP example = new TSP();
+    Tsp example = new Tsp();
 
     example.model();
 

@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.Element;
-import org.jacop.constraints.ExtensionalSupportVA;
+import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
@@ -64,7 +64,7 @@ import org.jacop.core.Store;
  *     <p>Mellie, 16, green room Nellie, 14, white room Ollie, 13, yellow room Pollie, 17, white
  *     room Rollie, 15, yellow room
  */
-public class SleepingArrangements extends ExampleFD {
+public class SleepingArrangements extends ExampleFd {
 
   /**
    * It executes a program to solve this simple logic puzzle.
@@ -88,14 +88,14 @@ public class SleepingArrangements extends ExampleFD {
     store = new Store();
     vars = new ArrayList<>();
 
-    String[] nameID = {"Ollie", "Rollie", "Mellie", "Nellie", "Pollie"};
+    String[] nameId = {"Ollie", "Rollie", "Mellie", "Nellie", "Pollie"};
     final int iOllie = 0;
     final int iRollie = 1;
     final int iMellie = 2;
     final int iNellie = 3;
     final int iPollie = 4;
 
-    String[] roomID = {"Yellow1", "Yellow2", "White1", "White2", "Green"};
+    String[] roomId = {"Yellow1", "Yellow2", "White1", "White2", "Green"};
     final int iYellow1 = 0;
     final int iYellow2 = 1;
     final int iWhite1 = 2;
@@ -109,8 +109,8 @@ public class SleepingArrangements extends ExampleFD {
       // The most complex clue to express will be clue no. 1 since the
       // domains of name and room variables denote the age of the person.
       // However, we gain by making other clues easier to express.
-      name[i] = new IntVar(store, nameID[i], 13, 17);
-      room[i] = new IntVar(store, roomID[i], 13, 17);
+      name[i] = new IntVar(store, nameId[i], 13, 17);
+      room[i] = new IntVar(store, roomId[i], 13, 17);
       vars.add(name[i]);
       vars.add(room[i]);
     }
@@ -130,31 +130,31 @@ public class SleepingArrangements extends ExampleFD {
     IntVar ollieRoomNo = new IntVar(store, "ollieRoomNo", 1, 3);
     IntVar[] ollie = {ollieRoomNo, olliePos};
     // ollie room number is obtained based on ollie position
-    store.impose(new ExtensionalSupportVA(ollie, roomNoGivenPosition));
+    store.impose(new ExtensionalSupportVa(ollie, roomNoGivenPosition));
 
     IntVar rolliePos = new IntVar(store, "rollieRoomPosition", 1, 5);
     store.impose(Element.choose(rolliePos, room, name[iRollie]));
     IntVar rollieRoomNo = new IntVar(store, "rollieRoomNo", 1, 3);
     IntVar[] rollie = {rollieRoomNo, rolliePos};
-    store.impose(new ExtensionalSupportVA(rollie, roomNoGivenPosition));
+    store.impose(new ExtensionalSupportVa(rollie, roomNoGivenPosition));
 
     IntVar melliePos = new IntVar(store, "mellieRoomPosition", 1, 5);
     store.impose(Element.choose(melliePos, room, name[iMellie]));
     IntVar mellieRoomNo = new IntVar(store, "mellieRoomNo", 1, 3);
     IntVar[] mellie = {mellieRoomNo, melliePos};
-    store.impose(new ExtensionalSupportVA(mellie, roomNoGivenPosition));
+    store.impose(new ExtensionalSupportVa(mellie, roomNoGivenPosition));
 
     IntVar nelliePos = new IntVar(store, "nellieRoomPosition", 1, 5);
     store.impose(Element.choose(nelliePos, room, name[iNellie]));
     IntVar nellieRoomNo = new IntVar(store, "nellieRoomNo", 1, 3);
     IntVar[] nellie = {nellieRoomNo, nelliePos};
-    store.impose(new ExtensionalSupportVA(nellie, roomNoGivenPosition));
+    store.impose(new ExtensionalSupportVa(nellie, roomNoGivenPosition));
 
     IntVar polliePos = new IntVar(store, "pollieRoomPosition", 1, 5);
     store.impose(Element.choose(polliePos, room, name[iPollie]));
     IntVar pollieRoomNo = new IntVar(store, "pollieRoomNo", 1, 3);
     IntVar[] pollie = {pollieRoomNo, polliePos};
-    store.impose(new ExtensionalSupportVA(pollie, roomNoGivenPosition));
+    store.impose(new ExtensionalSupportVa(pollie, roomNoGivenPosition));
 
     store.impose(new XneqY(ollieRoomNo, mellieRoomNo));
     store.impose(new XneqY(ollieRoomNo, nellieRoomNo));

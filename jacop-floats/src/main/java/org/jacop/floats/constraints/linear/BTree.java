@@ -1,5 +1,5 @@
 /*
- * BTree.java
+ * Btree.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -36,12 +36,12 @@ package org.jacop.floats.constraints.linear;
  * @author Krzysztof Kuchcinski
  * @version 4.10
  */
-public class BTree {
+public class Btree {
 
   // tree structure
-  final RootBNode root;
+  final RootBnode root;
 
-  public BTree(RootBNode root) {
+  public Btree(RootBnode root) {
     this.root = root;
   }
 

@@ -43,7 +43,7 @@ import org.jacop.satwrapper.SatWrapper;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
-public class SimpleCpVarDomain extends SatCPBridge {
+public class SimpleCpVarDomain extends SatCpBridge {
 
   public boolean isTranslated = true;
   // first boolean variable representing this

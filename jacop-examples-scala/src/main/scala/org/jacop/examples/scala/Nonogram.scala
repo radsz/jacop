@@ -236,7 +236,7 @@ object Nonogram extends jacop {
 
   def model(): Unit = {
 
-    import org.jacop.constraints.ExtensionalSupportMDD
+    import org.jacop.constraints.ExtensionalSupportMdd
     import org.jacop.constraints.regular.Regular
 
     var vars = new ArrayBuffer[IntVar]()
@@ -271,7 +271,7 @@ object Nonogram extends jacop {
         regular(result, board(i).toList)
 
       if (extensionalMDD)
-        getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])))
+        getModel.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(board(i).asInstanceOf[Array[org.jacop.core.IntVar]])))
 
     }
 
@@ -288,7 +288,7 @@ object Nonogram extends jacop {
         regular(result, column.toList)
 
       if (extensionalMDD)
-        getModel.impose(new ExtensionalSupportMDD(result.transformDirectlyIntoMDD(column.asInstanceOf[Array[org.jacop.core.IntVar]])))
+        getModel.impose(new ExtensionalSupportMdd(result.transformDirectlyIntoMdd(column.asInstanceOf[Array[org.jacop.core.IntVar]])))
 
     }
 

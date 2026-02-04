@@ -1,5 +1,5 @@
 /*
- * FFT.java
+ * Fft.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * It specifies FFT benchmark.
+ * It specifies Fft benchmark.
  *
  * <p>Source: Naotaka Ohsawa, Masanori Hariyama and Michitaka Kameyama "High-Performance Field
  * Programmable VLSI Processor Based on a Direct Allocation of a Control/Data Flow Graph" IEEE
@@ -43,26 +43,26 @@ import java.util.List;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
-public class FFT extends Filter {
+public class Fft extends Filter {
 
-  /** It constructs a simple FFT filter. */
-  public FFT() {
+  /** It constructs a simple Fft filter. */
+  public Fft() {
     this(1, 2);
   }
 
   /**
-   * It constructs a FFT filter with the specified delay for the addition and multiplication
+   * It constructs a Fft filter with the specified delay for the addition and multiplication
    * operation.
    *
    * @param addDel the delay of the addition operation.
    * @param mulDel the delay of the multiplication operation.
    */
-  public FFT(int addDel, int mulDel) {
+  public Fft(int addDel, int mulDel) {
 
     this.addDel = addDel;
     this.mulDel = mulDel;
 
-    name = "FFT";
+    name = "Fft";
 
     this.dependencies =
         new int[][] {{0, 4}, {1, 4}, {2, 5}, {3, 5}, {4, 6}, {4, 7}, {5, 8}, {5, 9}};

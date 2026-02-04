@@ -72,7 +72,7 @@ import org.jacop.core.Store;
  *     <p>1 Ellyfish, grunge, vendor 2 Korrupt, metal, mosh 3 Retread, country, information 4 Yellow
  *     , reggae, carnival
  */
-public class Tunapalooza extends ExampleFD {
+public class Tunapalooza extends ExampleFd {
 
   /**
    * It executes the program to solve this simple logic puzzle.

@@ -50,7 +50,7 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 4.10
  */
-public class DonaldGeraldRobert extends ExampleFD {
+public class DonaldGeraldRobert extends ExampleFd {
 
   /**
    * It executes the program to solve cryptogram puzzle DONALD+GERALD=ROBERT.

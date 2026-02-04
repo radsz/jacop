@@ -41,7 +41,7 @@ import org.jacop.jasat.core.Core;
 import org.jacop.jasat.modules.interfaces.AssertionListener;
 import org.jacop.jasat.modules.interfaces.BackjumpListener;
 import org.jacop.jasat.modules.interfaces.PropagateListener;
-import org.jacop.satwrapper.translation.SatCPBridge;
+import org.jacop.satwrapper.translation.SatCpBridge;
 
 /*
  * TODO: many efficiency improvements!!!
@@ -128,7 +128,7 @@ public final class SatChangesListener
     // what variable and value does it concern
     int cpValue = wrapper.boolVarToCpValue(literal);
     IntVar cpVar = wrapper.boolVarToCpVar(literal);
-    SatCPBridge range = wrapper.boolVarToDomain(literal);
+    SatCpBridge range = wrapper.boolVarToDomain(literal);
 
     if (cpVar instanceof BooleanVar cpBoolVar) {
       // boolean variable, only remember something happened

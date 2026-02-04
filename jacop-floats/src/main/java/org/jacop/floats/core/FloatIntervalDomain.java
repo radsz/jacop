@@ -112,7 +112,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
 
   /** It returns an unique identifier of the domain. */
   @Override
-  public int domainID() {
+  public int domainId() {
     return FloatIntervalDomainID;
   }
 
@@ -1619,7 +1619,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         result.append(searchConstraint);
       }
 
-      // if (domain.domainID() == FloatIntervalDomainID) {
+      // if (domain.domainId() == FloatIntervalDomainID) {
 
       FloatIntervalDomain dom = (FloatIntervalDomain) domain;
       domain = dom.previousDomain;
@@ -3280,7 +3280,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
       return IntDomain.NONE;
     }
 
-    // if (domain.domainID() == FloatIntervalDomainID) {
+    // if (domain.domainId() == FloatIntervalDomainID) {
 
     FloatIntervalDomain input = (FloatIntervalDomain) domain;
 

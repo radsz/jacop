@@ -83,7 +83,7 @@ public class XeqA extends PrimitiveConstraint {
     // if (aHasChanged)
     x.domain.in(store.level, x, a.domain.lub());
     // if (xHasChanged)
-    a.domain.inLUB(store.level, a, x.domain);
+    a.domain.inLub(store.level, a, x.domain);
 
     a.domain.inCardinality(store.level, a, 1, 1);
   }
@@ -135,7 +135,7 @@ public class XeqA extends PrimitiveConstraint {
     if (a.domain.card().min() == 1 && a.domain.card().max() == 1) {
 
       if (x.singleton()) {
-        a.domain.inLUBComplement(store.level, a, x.value());
+        a.domain.inLubComplement(store.level, a, x.value());
       }
 
       if (a.domain.singleton()) {

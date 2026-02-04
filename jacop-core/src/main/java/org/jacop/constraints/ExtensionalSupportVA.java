@@ -1,5 +1,5 @@
 /*
- * ExtensionalSupportVA.java
+ * ExtensionalSupportVa.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -61,7 +61,7 @@ import org.jacop.util.TupleUtils;
  * @version 4.10
  */
 @Slf4j
-public class ExtensionalSupportVA extends Constraint implements UsesQueueVariable, Stateful {
+public class ExtensionalSupportVa extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
 
@@ -94,7 +94,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    *
    * @param list list of variables for the constraint
    */
-  public ExtensionalSupportVA(IntVar[] list) {
+  public ExtensionalSupportVa(IntVar[] list) {
 
     this.list = new IntVar[list.length];
 
@@ -113,7 +113,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    * @param variables the constraint scope.
    * @param tuples the tuples which are supports for the constraint.
    */
-  public ExtensionalSupportVA(List<? extends IntVar> variables, int[][] tuples) {
+  public ExtensionalSupportVa(List<? extends IntVar> variables, int[][] tuples) {
 
     this(variables.toArray(new IntVar[0]), tuples);
   }
@@ -126,7 +126,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    * @param list the constraint scope.
    * @param tuples the tuples which are supports for the constraint.
    */
-  public ExtensionalSupportVA(IntVar[] list, int[][] tuples) {
+  public ExtensionalSupportVa(IntVar[] list, int[][] tuples) {
 
     checkInputForNullness("list", list);
     checkInputForNullness("tuples", tuples);
@@ -199,7 +199,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
           if (debugAll) {
             log.debug("Seeking support for {} and value {}", list[varPosition], value);
           }
-          int[] t = seekSupportVA(varPosition, value);
+          int[] t = seekSupportVa(varPosition, value);
 
           if (debugAll) {
             log.debug("Found support? {}", t != null);
@@ -458,7 +458,7 @@ public class ExtensionalSupportVA extends Constraint implements UsesQueueVariabl
    * @param value value for which the support is seek.
    * @return support tuple.
    */
-  public int[] seekSupportVA(int varPosition, int value) {
+  public int[] seekSupportVa(int varPosition, int value) {
 
     if (debugAll) {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);

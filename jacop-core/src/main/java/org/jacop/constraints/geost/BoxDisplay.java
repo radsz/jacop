@@ -118,7 +118,7 @@ public class BoxDisplay extends JFrame {
     Color color = Color.black;
 
     for (GeostObject o : geost.objects) {
-      display2DGeostObject(geost, o, color);
+      display2dGeostObject(geost, o, color);
       color = color.brighter();
     }
 
@@ -141,8 +141,8 @@ public class BoxDisplay extends JFrame {
       for (InternalConstraint c : geost.internalConstraints) {
         if (c instanceof ObstacleObjectFrame frame) {
           Color frameColor = Color.GRAY; // new Color(c.hashCode());
-          for (DBox fp : frame.frame) {
-            display2DBox(fp, frameColor, true);
+          for (Dbox fp : frame.frame) {
+            display2dBox(fp, frameColor, true);
           }
         }
       }
@@ -154,7 +154,7 @@ public class BoxDisplay extends JFrame {
         int heightMin = 0;
         int heightMax = 0;
         if (o.coords.length > 2) {
-          DBox bb = geost.shapeRegister[o.shapeID.min()].boundingBox;
+          Dbox bb = geost.shapeRegister[o.shapeId.min()].boundingBox;
           heightMin = o.coords[2].min() + bb.origin[2];
           heightMax = o.coords[2].max() + bb.length[2] + bb.origin[2] - 1;
         }
@@ -164,7 +164,7 @@ public class BoxDisplay extends JFrame {
             xCellsShift = timeVal * (domainWidth + 1);
             yCellsShift = height * (domainWidth + 1);
 
-            display3DGeostObjectSlice(geost, o, color, height);
+            display3dGeostObjectSlice(geost, o, color, height);
           }
         }
       }
@@ -176,8 +176,8 @@ public class BoxDisplay extends JFrame {
    *
    * @param b dbox to be displayed.
    */
-  public void display2DBox(DBox b) {
-    display2DBox(b, Color.BLACK);
+  public void display2dBox(Dbox b) {
+    display2dBox(b, Color.BLACK);
   }
 
   /**
@@ -186,8 +186,8 @@ public class BoxDisplay extends JFrame {
    * @param b dbox to be displayed.
    * @param color color to be used to draw dbox.
    */
-  public void display2DBox(DBox b, Color color) {
-    display2DBox(b, color, false);
+  public void display2dBox(Dbox b, Color color) {
+    display2dBox(b, color, false);
   }
 
   /**
@@ -198,7 +198,7 @@ public class BoxDisplay extends JFrame {
    * @param color color to be used.
    * @param fill should the object be filled.
    */
-  public void display2DBox(DBox b, Color color, boolean fill) {
+  public void display2dBox(Dbox b, Color color, boolean fill) {
     // a box that has dimension more than 2 should only be drawn if it cuts the plane
     boolean shouldDraw = true;
     if (b.origin.length > 2) {
@@ -261,11 +261,11 @@ public class BoxDisplay extends JFrame {
    * @param o geost object to be drawn.
    * @param c color in which the remaining units should be painted with.
    */
-  public void display2DGeostObject(Geost geost, GeostObject o, Color c) {
-    Shape shape = geost.getShape(o.shapeID.min());
-    DBox area = DBox.newBox(o.dimension);
+  public void display2dGeostObject(Geost geost, GeostObject o, Color c) {
+    Shape shape = geost.getShape(o.shapeId.min());
+    Dbox area = Dbox.newBox(o.dimension);
 
-    for (DBox piece : shape.boxes) {
+    for (Dbox piece : shape.boxes) {
       for (int i = 0; i < o.dimension; i++) {
         IntVar coordVar = o.coords[i];
         area.origin[i] = coordVar.min() + piece.origin[i];
@@ -274,7 +274,7 @@ public class BoxDisplay extends JFrame {
                 + piece.length[i]
                 - coordVar.min() /*-hole.origin[i]*/;
       }
-      display2DBox(area, c, true);
+      display2dBox(area, c, true);
     }
 
     // draw bounding box
@@ -290,11 +290,11 @@ public class BoxDisplay extends JFrame {
    * @param c color the object should be painted with.
    * @param sliceHeight the slice position in the third dimension.
    */
-  public void display3DGeostObjectSlice(Geost geost, GeostObject o, Color c, int sliceHeight) {
-    Shape shape = geost.getShape(o.shapeID.min());
-    DBox area = DBox.newBox(2);
+  public void display3dGeostObjectSlice(Geost geost, GeostObject o, Color c, int sliceHeight) {
+    Shape shape = geost.getShape(o.shapeId.min());
+    Dbox area = Dbox.newBox(2);
 
-    for (DBox piece : shape.boxes) {
+    for (Dbox piece : shape.boxes) {
       if (piece.length.length < 3
           || piece.origin[2] <= sliceHeight && piece.origin[2] + piece.length[2] > sliceHeight) {
         for (int i = 0; i < 2; i++) {
@@ -305,7 +305,7 @@ public class BoxDisplay extends JFrame {
                   + piece.length[i]
                   - coordVar.min() /*-hole.origin[i]*/;
         }
-        display2DBox(area, c, true);
+        display2dBox(area, c, true);
       }
     }
     // draw bounding box
@@ -318,7 +318,7 @@ public class BoxDisplay extends JFrame {
    * @param point point coordinates.
    * @param color color the point should be painted with.
    */
-  public void display2DPoint(int[] point, Color color) {
+  public void display2dPoint(int[] point, Color color) {
     Graphics g = bufferImage.getGraphics();
     int height = this.getContentPane().getHeight() - 10;
     g.setColor(color);
@@ -337,10 +337,10 @@ public class BoxDisplay extends JFrame {
    * @param o geost object to be displayed.
    * @param s the shape of the object to be displayed.
    */
-  public void display2DObject(GeostObject o, Shape s) {
+  public void display2dObject(GeostObject o, Shape s) {
     Graphics g = bufferImage.getGraphics();
     int height = this.getContentPane().getHeight() - 10;
-    DBox bb = s.boundingBox();
+    Dbox bb = s.boundingBox();
     int ox = o.coords[0].min() * pixelsPerUnit;
     int oy = o.coords[1].min() * pixelsPerUnit;
     g.setColor(Color.BLUE);
@@ -357,8 +357,8 @@ public class BoxDisplay extends JFrame {
     g.drawRect(10 + ox, height - dh - oy, dw, dh);
     g.fillRect(10 + ox, height - oy - pixelsPerUnit / 2, pixelsPerUnit / 2, pixelsPerUnit / 2);
 
-    for (DBox b : s.components()) {
-      display2DBox(b, Color.black);
+    for (Dbox b : s.components()) {
+      display2dBox(b, Color.black);
     }
 
     repaint();

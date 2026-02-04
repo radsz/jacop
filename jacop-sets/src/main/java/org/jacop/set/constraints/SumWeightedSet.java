@@ -184,7 +184,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
         weight = elementWeights.get(el);
 
         if (totalWeight.max() < glbSum + weight) {
-          a.domain.inLUBComplement(store.level, a, el);
+          a.domain.inLubComplement(store.level, a, el);
           change = true;
         }
       }
@@ -225,7 +225,7 @@ public class SumWeightedSet extends Constraint implements SatisfiedPresent {
         weight = elementWeights.get(el);
 
         if (totalWeight.min() > lubSum + weightOfLastSkippedItem - weight) {
-          a.domain.inGLB(store.level, a, el);
+          a.domain.inGlb(store.level, a, el);
           change = true;
         }
       }

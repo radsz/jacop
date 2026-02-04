@@ -98,8 +98,8 @@ public class FlatzincLoader {
   }
 
   @SuppressWarnings("unchecked")
-  public DepthFirstSearch<Var> getDFS() {
-    return parser.solver.flatzincDFS;
+  public DepthFirstSearch<Var> getDfs() {
+    return parser.solver.flatzincDfs;
   }
 
   @SuppressWarnings("unchecked")

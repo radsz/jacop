@@ -52,13 +52,13 @@ import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
 public class Config extends Properties {
 
   /** how many clausesDatabases can we have ? must be a power of 2 */
-  public final int MAX_NUMBER_OF_DATABASES = 8;
+  public final int maxNumberOfDatabases = 8;
 
   /** number of int[] of each size in the memory pool */
-  public final int MEMORY_POOL_STOCK_SIZE = 500;
+  public final int memoryPoolStockSize = 500;
 
   /** the maximum size of int[] to store in the memory pool */
-  public final int MEMORY_POOL_MAX_SIZE = 60;
+  public final int memoryPoolMaxSize = 60;
 
   /** threshold above which a rebase is performed for activity counters */
   public final int rebase_threshold = Integer.MAX_VALUE / 10;
@@ -70,10 +70,10 @@ public class Config extends Properties {
   public final int trail_size = 100;
 
   /** factor by which restart threshold is increased */
-  public final double RESTART_THRESHOLD_INCREASE_RATE = 1.5;
+  public final double restartThresholdIncreaseRate = 1.5;
 
   /** initial threshold (number of conflicts needed) for restarts */
-  public final long RESTART_CONFLICT_THRESHOLD = 100;
+  public final long restartConflictThreshold = 100;
 
   /** the list of components the solver must add */
   public final List<SolverComponent> mainComponents = new ArrayList<>();
@@ -145,6 +145,6 @@ public class Config extends Properties {
   public boolean check() {
 
     // check it is a power of 2
-    return Integer.bitCount(MAX_NUMBER_OF_DATABASES) == 1;
+    return Integer.bitCount(maxNumberOfDatabases) == 1;
   }
 }

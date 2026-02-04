@@ -1,5 +1,5 @@
 /*
- * ExtensionalConflictVA.java
+ * ExtensionalConflictVa.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -61,7 +61,7 @@ import org.jacop.util.TupleUtils;
  * @version 4.10
  */
 @Slf4j
-public class ExtensionalConflictVA extends Constraint implements UsesQueueVariable, Stateful {
+public class ExtensionalConflictVa extends Constraint implements UsesQueueVariable, Stateful {
 
   static final boolean debugAll = false;
 
@@ -102,7 +102,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    * @param list list of variables for the conflict constraint
    * @param tuples list of forbidden tuples
    */
-  public ExtensionalConflictVA(IntVar[] list, int[][] tuples) {
+  public ExtensionalConflictVa(IntVar[] list, int[][] tuples) {
 
     checkInputForNullness("list", list);
 
@@ -123,7 +123,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    * @param variables the scope of the extensional conflict constraint.
    * @param tuples the conflict (forbidden) tuples for that constraint.
    */
-  public ExtensionalConflictVA(List<? extends IntVar> variables, int[][] tuples) {
+  public ExtensionalConflictVa(List<? extends IntVar> variables, int[][] tuples) {
     this(variables.toArray(new IntVar[0]), tuples);
   }
 
@@ -134,7 +134,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
    * @param value value of the variable for which support is seeked.
    * @return support tuple supporting varPosition-value pair.
    */
-  public int[] seekSupportVA(int varPosition, int value) {
+  public int[] seekSupportVa(int varPosition, int value) {
 
     if (debugAll) {
       log.debug("Seeking support for {} and value {}", list[varPosition], value);
@@ -358,7 +358,7 @@ public class ExtensionalConflictVA extends Constraint implements UsesQueueVariab
           if (debugAll) {
             log.debug("Seeking support for {} and value {}", list[varPosition], value);
           }
-          int[] t = seekSupportVA(varPosition, value);
+          int[] t = seekSupportVa(varPosition, value);
 
           if (debugAll) {
             log.debug("Found support? {}", t != null);

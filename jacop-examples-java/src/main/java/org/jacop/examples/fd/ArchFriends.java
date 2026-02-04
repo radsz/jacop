@@ -56,7 +56,7 @@ import org.jacop.core.Store;
  *     got each pair. Can you help these two figure out the order in which Harriet bought each pair
  *     of shoes, and where she bought each?
  */
-public class ArchFriends extends ExampleFD {
+public class ArchFriends extends ExampleFd {
   /**
    * It executes the program to solve the logic puzzle.
    *
@@ -92,7 +92,7 @@ public class ArchFriends extends ExampleFD {
     String[] shopNames = {"FootFarm", "HeelsInAHandcart", "TheShoePalace", "Tootsies"};
 
     final int iFootFarm = 0;
-    final int iHeelsInAHandcart = 1;
+    final int iHeelsInaHandcart = 1;
     final int iTheShoePalace = 2;
     final int iTootsies = 3;
 
@@ -120,7 +120,7 @@ public class ArchFriends extends ExampleFD {
     // Constraints given in the problem description.
 
     // 1. Harriet bought fuchsia flats at Heels in a Handcart.
-    store.impose(new XeqY(shoe[iFuchsiaFlats], shop[iHeelsInAHandcart]));
+    store.impose(new XeqY(shoe[iFuchsiaFlats], shop[iHeelsInaHandcart]));
 
     // 2.The store she visited just after buying her purple pumps
     // was not Tootsies.

@@ -72,7 +72,7 @@ public class DomainHoles extends InternalConstraint {
   public int[] absInfeasible(Geost.SweepDirection minlex) {
 
     // don't allocate array for transient data
-    int[] outPoint = DBox.getAllocatedInstance(object.dimension).origin;
+    int[] outPoint = Dbox.getAllocatedInstance(object.dimension).origin;
 
     /*
      * if for some dimension there is a hole, the hole will slice the
@@ -184,7 +184,7 @@ public class DomainHoles extends InternalConstraint {
   }
 
   @Override
-  public DBox isFeasible(
+  public Dbox isFeasible(
       Geost.SweepDirection min,
       LexicographicalOrder order,
       GeostObject o,
@@ -194,7 +194,7 @@ public class DomainHoles extends InternalConstraint {
     if (o != object) {
       return null; // only need to work if this is the same object
     }
-    DBox forbiddenRegion = DBox.getAllocatedInstance(o.dimension + 1);
+    Dbox forbiddenRegion = Dbox.getAllocatedInstance(o.dimension + 1);
 
     int[] forbiddenOrigin = forbiddenRegion.origin;
     int[] forbiddenLength = forbiddenRegion.length;

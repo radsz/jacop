@@ -134,10 +134,10 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     }
     // ----------------------------------------------------------
 
-    int currentLB = lowerBorder.value();
+    int currentLb = lowerBorder.value();
     // Refer to the algorithm where ubS = n - |{ x | dom(x) intersect S =
     // empty set } |
-    int currentUB = upperBorder.value();
+    int currentUb = upperBorder.value();
 
     // For the variable that signaled the change of domain
     // Count those that entered lbS, or ubS
@@ -145,19 +145,19 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
       int posVar = position.get(var);
 
-      if (posVar < currentLB || posVar > currentUB) {
+      if (posVar < currentLb || posVar > currentUb) {
         continue;
       }
 
       if (kSet.contains(var.domain)) {
 
-        if (posVar != currentLB) {
-          list[posVar] = list[currentLB];
-          list[currentLB] = var;
-          position.put(var, currentLB);
+        if (posVar != currentLb) {
+          list[posVar] = list[currentLb];
+          list[currentLb] = var;
+          position.put(var, currentLb);
           position.put(list[posVar], posVar);
         }
-        currentLB++;
+        currentLb++;
 
         // If variable entered lb then it would stay there
         // and we can detach the constrain from it
@@ -165,13 +165,13 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       }
       if (!kSet.isIntersecting(var.domain)) {
 
-        if (posVar != currentUB) {
-          list[posVar] = list[currentUB - 1];
-          list[currentUB - 1] = var;
-          position.put(var, currentUB - 1);
+        if (posVar != currentUb) {
+          list[posVar] = list[currentUb - 1];
+          list[currentUb - 1] = var;
+          position.put(var, currentUb - 1);
           position.put(list[posVar], posVar);
         }
-        currentUB--;
+        currentUb--;
 
         // If the variable entered not ub then it will stay there
         // and we can detach the constrain from it
@@ -183,27 +183,27 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
 
     // ----------------------------------------------------------
     if (debugAll) {
-      log.debug("lbS = {}", currentLB);
-      log.debug("ubS = {}", currentUB);
-      log.debug(" domain of N {} is in [ {}, {} ]", n.domain, currentLB, currentUB);
+      log.debug("lbS = {}", currentLb);
+      log.debug("ubS = {}", currentUb);
+      log.debug(" domain of N {} is in [ {}, {} ]", n.domain, currentLb, currentUb);
     }
     // ----------------------------------------------------------
 
-    if (currentLB > currentUB) {
+    if (currentLb > currentUb) {
       throw Store.failException;
     }
 
-    n.domain.in(store.level, n, currentLB, currentUB);
+    n.domain.in(store.level, n, currentLb, currentUb);
 
     // Just in case LB or UB have changed.
-    upperBorder.update(currentUB);
-    lowerBorder.update(currentLB);
+    upperBorder.update(currentUb);
+    lowerBorder.update(currentLb);
 
-    if (currentLB == n.min() && n.domain.singleton()) {
+    if (currentLb == n.min() && n.domain.singleton()) {
       // If the number of X that belong to S is equal to N.value than we
       // have to subtract
       // the K set from the rest of x that do not belong to S
-      for (int i = currentLB; i < currentUB; i++) {
+      for (int i = currentLb; i < currentUb; i++) {
         IntVar var = list[i];
         if (!kSet.contains(var.domain)) {
           if (debugAll) {
@@ -220,7 +220,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       }
 
       // since the constraint is satisfied UB is equal to LB.
-      upperBorder.update(currentLB);
+      upperBorder.update(currentLb);
 
       // The constraint became satisfied
       if (debugAll) {
@@ -228,18 +228,18 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
       }
     }
 
-    if (currentUB == n.min() && n.domain.singleton()) {
+    if (currentUb == n.min() && n.domain.singleton()) {
       // If the number intersecting X is equal to desired number N than we
       // have
       // to intersect the domains of X with K set.
-      for (int i = currentLB; i < currentUB; i++) {
+      for (int i = currentLb; i < currentUb; i++) {
         IntVar var = list[i];
         var.domain.in(store.level, var, kSet);
         var.removeConstraint(this);
       }
 
       // since the constraint is satisfied LB is equal to UB.
-      lowerBorder.update(currentUB);
+      lowerBorder.update(currentUb);
 
       // The constrain became satisfied
       if (debugAll) {

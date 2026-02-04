@@ -101,7 +101,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   Store store;
   boolean reified = true;
 
-  BTree linearTree;
+  Btree linearTree;
 
   TimeStamp<Boolean> noSat;
 
@@ -258,15 +258,15 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     Arrays.sort(leafNodes, new VarWeightComparator<>());
     // System.out.println (java.util.Arrays.asList(leafNodes));
 
-    RootBNode root = buildBinaryTree(leafNodes);
-    linearTree = new BTree(root);
+    RootBnode root = buildBinaryTree(leafNodes);
+    linearTree = new Btree(root);
 
     setScope(this.list);
 
     checkForOverflow();
   }
 
-  RootBNode buildBinaryTree(BinaryNode[] nodes) {
+  RootBnode buildBinaryTree(BinaryNode[] nodes) {
 
     BinaryNode[] nextLevelNodes = new BinaryNode[nodes.length / 2 + nodes.length % 2];
     // System.out.println ("next level length = " + nextLevelNodes.length);
@@ -276,9 +276,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
         BinaryNode parent;
 
         if (nodes.length == 2) {
-          parent = new RootBNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+          parent = new RootBnode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
         } else {
-          parent = new BNode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
+          parent = new Bnode(store, FloatDomain.MinFloat, FloatDomain.MaxFloat);
         }
 
         parent.left = nodes[i];
@@ -299,10 +299,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       return buildBinaryTree(nextLevelNodes);
     } else {
       // root node
-      ((RootBNode) nodes[0]).val = this.sum;
-      ((RootBNode) nodes[0]).rel = relationType;
+      ((RootBnode) nodes[0]).val = this.sum;
+      ((RootBnode) nodes[0]).rel = relationType;
 
-      return (RootBNode) nodes[0];
+      return (RootBnode) nodes[0];
     }
   }
 

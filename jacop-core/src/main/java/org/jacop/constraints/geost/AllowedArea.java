@@ -98,7 +98,7 @@ public class AllowedArea extends InternalConstraint {
   }
 
   @Override
-  public DBox isFeasible(
+  public Dbox isFeasible(
       Geost.SweepDirection min,
       LexicographicalOrder order,
       GeostObject o,
@@ -134,10 +134,10 @@ public class AllowedArea extends InternalConstraint {
     /* we can use the bounding box in this case, since the allowed area
      * is a non complex box
      */
-    DBox constrainedBox = geost.getShape(currentShape).boundingBox();
+    Dbox constrainedBox = geost.getShape(currentShape).boundingBox();
 
     final int dimension = origin.length;
-    DBox outbox = DBox.getAllocatedInstance(dimension + 1);
+    Dbox outbox = Dbox.getAllocatedInstance(dimension + 1);
 
     // counter for the number of times the point is in the allowed domain
     int inCount = 0;
@@ -194,7 +194,7 @@ public class AllowedArea extends InternalConstraint {
 
     // the point is at either extremum of the space, depending on the minlex parameter
     // avoid allocating space
-    DBox dataBox = DBox.getAllocatedInstance(origin.length + 1);
+    Dbox dataBox = Dbox.getAllocatedInstance(origin.length + 1);
 
     switch (minlex) {
       case PRUNEMAX:

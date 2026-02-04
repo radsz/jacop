@@ -110,7 +110,7 @@ public class AeqS extends PrimitiveConstraint {
         && set.contains(a.domain.glb())) {
       int value = a.domain.lub().subtract(a.domain.glb()).value();
       if (set.contains(value)) {
-        a.domain.inLUBComplement(store.level, a, value);
+        a.domain.inLubComplement(store.level, a, value);
       } else {
         a.domain.inValue(store.level, a, a.domain.lub());
       }

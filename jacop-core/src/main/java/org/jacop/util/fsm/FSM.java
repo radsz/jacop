@@ -1,5 +1,5 @@
 /*
- * FSM.java
+ * Fsm.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -40,7 +40,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.util.MDD;
+import org.jacop.util.Mdd;
 
 /**
  * Deterministic Finite Acyclic graph.
@@ -48,19 +48,19 @@ import org.jacop.util.MDD;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 4.10
  */
-public class FSM {
+public class Fsm {
 
   /** It specifies number of states created in DFA class. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies the intial state of DFA. */
-  public FSMState initState;
+  public FsmState initState;
 
   /** It specifies final states of DFA. */
-  public Set<FSMState> finalStates;
+  public Set<FsmState> finalStates;
 
   /** It specifies all states including the initial one and final ones. */
-  public Set<FSMState> allStates;
+  public Set<FsmState> allStates;
 
   /**
    * It creates a Finite State Machine.
@@ -69,7 +69,7 @@ public class FSM {
    * @param allStates it specifies all the states.
    * @param finalStates it specifies the final states.
    */
-  public FSM(FSMState initState, Set<FSMState> finalStates, Set<FSMState> allStates) {
+  public Fsm(FsmState initState, Set<FsmState> finalStates, Set<FsmState> allStates) {
 
     this.initState = initState;
     this.allStates = allStates;
@@ -77,7 +77,7 @@ public class FSM {
   }
 
   /** It creates a Finite State Machine used by Regular constraint constructor. */
-  public FSM() {
+  public Fsm() {
 
     finalStates = new HashSet<>();
     allStates = new HashSet<>();
@@ -86,34 +86,34 @@ public class FSM {
   /**
    * It computes a union of two Finite State Machines.
    *
-   * @param other the other FSM which is used in the union computation.
-   * @return the resulting FSM.
+   * @param other the other Fsm which is used in the union computation.
+   * @return the resulting Fsm.
    */
-  public FSM union(FSM other) {
+  public Fsm union(Fsm other) {
 
-    FSM result = new FSM();
+    Fsm result = new Fsm();
 
-    result.initState = new FSMState();
+    result.initState = new FsmState();
 
     result.allStates.add(result.initState);
 
-    for (FSMTransition t : initState.transitions) {
+    for (FsmTransition t : initState.transitions) {
 
-      FSMState addState = t.successor.deepClone(result.allStates);
+      FsmState addState = t.successor.deepClone(result.allStates);
 
-      result.initState.addTransition(new FSMTransition(t.domain, addState));
+      result.initState.addTransition(new FsmTransition(t.domain, addState));
     }
 
-    for (FSMState f : finalStates) {
+    for (FsmState f : finalStates) {
       result.finalStates.add(f.deepClone(result.allStates));
     }
 
-    for (FSMTransition t : other.initState.transitions) {
-      FSMState addState = t.successor.deepClone(result.allStates);
-      result.initState.addTransition(new FSMTransition(t.domain, addState));
+    for (FsmTransition t : other.initState.transitions) {
+      FsmState addState = t.successor.deepClone(result.allStates);
+      result.initState.addTransition(new FsmTransition(t.domain, addState));
     }
 
-    for (FSMState f : other.finalStates) {
+    for (FsmState f : other.finalStates) {
       result.finalStates.add(f.deepClone(result.allStates));
     }
 
@@ -121,32 +121,32 @@ public class FSM {
   }
 
   /**
-   * It does concatenation of two FSM.
+   * It does concatenation of two Fsm.
    *
-   * @param other the FSM with which the concatenation takes place.
-   * @return the resulting FSM.
+   * @param other the Fsm with which the concatenation takes place.
+   * @return the resulting Fsm.
    */
-  public FSM concatenation(FSM other) {
+  public Fsm concatenation(Fsm other) {
 
-    FSM result = new FSM();
+    Fsm result = new Fsm();
 
     boolean otherIsStar =
         other.finalStates.size() == 1 && other.finalStates.contains(other.initState);
 
     result.initState = initState.deepClone(result.allStates);
 
-    for (FSMState f : finalStates) {
+    for (FsmState f : finalStates) {
 
-      FSMState ff = f.deepClone(result.allStates);
+      FsmState ff = f.deepClone(result.allStates);
 
-      for (FSMTransition t : other.initState.transitions) {
+      for (FsmTransition t : other.initState.transitions) {
 
-        FSMState addState = t.successor.deepClone(result.allStates);
-        ff.addTransition(new FSMTransition(t.domain, addState));
+        FsmState addState = t.successor.deepClone(result.allStates);
+        ff.addTransition(new FsmTransition(t.domain, addState));
 
         if (otherIsStar) {
-          for (FSMState s : result.allStates) {
-            for (FSMTransition ts : s.transitions) {
+          for (FsmState s : result.allStates) {
+            for (FsmTransition ts : s.transitions) {
               if (ts.successor.id == other.initState.id) {
                 ts.successor = ff;
               }
@@ -158,11 +158,11 @@ public class FSM {
     }
 
     if (!otherIsStar) {
-      for (FSMState f : other.finalStates) {
+      for (FsmState f : other.finalStates) {
         result.finalStates.add(f.deepClone(result.allStates));
       }
     } else {
-      for (FSMState f : finalStates) {
+      for (FsmState f : finalStates) {
         result.finalStates.add(f.deepClone(result.allStates));
       }
     }
@@ -171,40 +171,40 @@ public class FSM {
   }
 
   /**
-   * It performs star operation on this FSM.
+   * It performs star operation on this Fsm.
    *
-   * @return the resulting FSM.
+   * @return the resulting Fsm.
    */
-  public FSM star() {
+  public Fsm star() {
 
-    FSM result = new FSM();
+    Fsm result = new Fsm();
 
-    result.initState = new FSMState(initState);
+    result.initState = new FsmState(initState);
 
     result.allStates.add(result.initState);
 
-    List<FSMState> set = new ArrayList<>();
+    List<FsmState> set = new ArrayList<>();
 
     set.add(result.initState);
 
     int length = 1;
-    FSMState s;
+    FsmState s;
 
     for (int i = 0; i < length; i++) {
       s = set.get(i);
-      FSMState orgS = getState(s.id);
-      for (FSMTransition t : orgS.transitions) {
+      FsmState orgS = getState(s.id);
+      for (FsmTransition t : orgS.transitions) {
         if (!finalStates.contains(t.successor)) {
-          FSMState suc = result.getState(t.successor.id);
+          FsmState suc = result.getState(t.successor.id);
           if (suc == null) {
-            suc = new FSMState(t.successor);
+            suc = new FsmState(t.successor);
             result.allStates.add(suc);
             set.add(suc);
             length = length + 1;
           }
-          s.addTransition(new FSMTransition(t.domain, suc));
+          s.addTransition(new FsmTransition(t.domain, suc));
         } else {
-          s.addTransition(new FSMTransition(t.domain, result.initState));
+          s.addTransition(new FsmTransition(t.domain, result.initState));
         }
       }
     }
@@ -217,11 +217,11 @@ public class FSM {
    * It gets state of a given id.
    *
    * @param id the id of the searched state.
-   * @return the state of FSM with a given id.
+   * @return the state of Fsm with a given id.
    */
-  public FSMState getState(int id) {
+  public FsmState getState(int id) {
 
-    for (FSMState s : this.allStates) {
+    for (FsmState s : this.allStates) {
       if (s.id == id) {
         return s;
       }
@@ -233,23 +233,23 @@ public class FSM {
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder("digraph FSM {\nnode [shape = doublecircle]; ");
+    StringBuilder result = new StringBuilder("digraph Fsm {\nnode [shape = doublecircle]; ");
 
     result.append(initState.id).append("; /* Init state */\n");
 
     result.append("node [shape = doubleoctagon]; ");
 
-    for (FSMState s : finalStates) {
+    for (FsmState s : finalStates) {
       result.append(s.id).append(" ");
     }
 
     result.append(";  /* Final states */\nnode [shape = circle];\n\n");
 
-    for (FSMState s : allStates) {
+    for (FsmState s : allStates) {
 
       //       result.append( s.id ).append("\n");
 
-      for (FSMTransition t : s.transitions) {
+      for (FsmTransition t : s.transitions) {
         result
             .append(s.id)
             .append(" -> ")
@@ -273,12 +273,12 @@ public class FSM {
 
     int id = 0;
 
-    for (FSMState s : this.allStates) {
+    for (FsmState s : this.allStates) {
       s.id = id++;
     }
 
-    Set<FSMState> finalStates = new HashSet<>(this.finalStates);
-    Set<FSMState> states = new HashSet<>(this.allStates);
+    Set<FsmState> finalStates = new HashSet<>(this.finalStates);
+    Set<FsmState> states = new HashSet<>(this.allStates);
 
     this.finalStates = finalStates;
     this.allStates = states;
@@ -301,16 +301,16 @@ public class FSM {
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<>();
+    Set<FsmState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<>();
+    Set<FsmState> tmp = new HashSet<>();
 
     // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
-    FSMState[] array = new FSMState[stateNumber];
-    for (FSMState s : this.allStates) {
+    FsmState[] array = new FsmState[stateNumber];
+    for (FsmState s : this.allStates) {
       array[s.id] = s;
     }
 
@@ -323,9 +323,9 @@ public class FSM {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable) {
+      for (FsmState s : reachable) {
         // watch it's edges
-        for (FSMTransition t : s.transitions) {
+        for (FsmTransition t : s.transitions) {
           // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(vars[level].dom());
           outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
@@ -449,10 +449,10 @@ public class FSM {
       int stateNumber,
       IntervalDomain[][][] outarc,
       int[] tuple,
-      MDD result) {
+      Mdd result) {
 
     if (level == tuple.length) {
-      // it adds a tuple to an MDD.
+      // it adds a tuple to an Mdd.
       result.addTuple(tuple);
       return;
     }
@@ -481,15 +481,15 @@ public class FSM {
   }
 
   /**
-   * It generates one by one tuples allowed by a Regular constraint, which are added to the MDD
-   * being built. After all tuples are added MDD is being reduced. The standard MDD creating
-   * procedure employed in paper presenting MDD based extensional constraint. It generates only the
+   * It generates one by one tuples allowed by a Regular constraint, which are added to the Mdd
+   * being built. After all tuples are added Mdd is being reduced. The standard Mdd creating
+   * procedure employed in paper presenting Mdd based extensional constraint. It generates only the
    * tuples which are allowed in the current context of the store.
    *
-   * @param vars variables in which context MDD is being created from Regular constraint.
-   * @return MDD representing the same constraint as Regular.
+   * @param vars variables in which context Mdd is being created from Regular constraint.
+   * @return Mdd representing the same constraint as Regular.
    */
-  public MDD transformIntoMDD(IntVar[] vars) {
+  public Mdd transformIntoMdd(IntVar[] vars) {
 
     int levels = vars.length;
     int stateNumber = this.allStates.size();
@@ -499,16 +499,16 @@ public class FSM {
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<>();
+    Set<FsmState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<>();
+    Set<FsmState> tmp = new HashSet<>();
 
     // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
-    FSMState[] array = new FSMState[stateNumber];
-    for (FSMState s : this.allStates) {
+    FsmState[] array = new FsmState[stateNumber];
+    for (FsmState s : this.allStates) {
       array[s.id] = s;
     }
 
@@ -521,9 +521,9 @@ public class FSM {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable) {
+      for (FsmState s : reachable) {
         // watch it's edges
-        for (FSMTransition t : s.transitions) {
+        for (FsmTransition t : s.transitions) {
           // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(vars[level].dom());
           outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
@@ -583,8 +583,8 @@ public class FSM {
     IntervalDomain dom;
     int[] tuple = new int[levels];
 
-    MDD result = new MDD(vars);
-    // Part exploring all tuples and adding one by one to MDD.
+    Mdd result = new Mdd(vars);
+    // Part exploring all tuples and adding one by one to Mdd.
     for (int i = 0; i < stateNumber; i++) {
       for (int j = 0; j < stateNumber; j++) {
         // for level 0 (first variable in the tuple)
@@ -610,15 +610,15 @@ public class FSM {
   }
 
   /**
-   * It generates one by one tuples allowed by a Regular constraint, which are added to the MDD
-   * being built. After all tuples are added MDD is being reduced. The standard MDD creating
-   * procedure employed in paper presenting MDD based extensional constraint. It generates only the
+   * It generates one by one tuples allowed by a Regular constraint, which are added to the Mdd
+   * being built. After all tuples are added Mdd is being reduced. The standard Mdd creating
+   * procedure employed in paper presenting Mdd based extensional constraint. It generates only the
    * tuples which are allowed in the current context of the store.
    *
-   * @param vars variables in which context MDD is being created from Regular constraint.
-   * @return MDD representing the same constraint as Regular.
+   * @param vars variables in which context Mdd is being created from Regular constraint.
+   * @return Mdd representing the same constraint as Regular.
    */
-  public MDD transformDirectlyIntoMDD(IntVar[] vars) {
+  public Mdd transformDirectlyIntoMdd(IntVar[] vars) {
 
     int levels = vars.length;
     int stateNumber = this.allStates.size();
@@ -628,16 +628,16 @@ public class FSM {
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
     // Reachable region of the graph
-    Set<FSMState> reachable = new HashSet<>();
+    Set<FsmState> reachable = new HashSet<>();
     // Temporal variable for reachable region
-    Set<FSMState> tmp = new HashSet<>();
+    Set<FsmState> tmp = new HashSet<>();
 
     // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
-    FSMState[] array = new FSMState[stateNumber];
-    for (FSMState s : this.allStates) {
+    FsmState[] array = new FsmState[stateNumber];
+    for (FsmState s : this.allStates) {
       array[s.id] = s;
     }
 
@@ -651,9 +651,9 @@ public class FSM {
       // prepare tmp set of reachable states in the next level
       tmp.clear();
       // For each state reached until now
-      for (FSMState s : reachable) {
+      for (FsmState s : reachable) {
         // watch it's edges
-        for (FSMTransition t : s.transitions) {
+        for (FsmTransition t : s.transitions) {
           // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(vars[level].dom());
           outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
@@ -712,12 +712,12 @@ public class FSM {
 
     int[] positions = new int[(vars.length + 1) * stateNumber];
 
-    MDD result = new MDD(vars);
+    Mdd result = new Mdd(vars);
     positions[initState.id] = 0;
     // not needed as constructor is already doing it.
     // result.freePosition += vars[0].getSize();
 
-    // Part exploring all tuples and adding one by one to MDD.
+    // Part exploring all tuples and adding one by one to Mdd.
     for (int l = 0; l < vars.length; l++) {
       for (int i = 0; i < stateNumber; i++) {
         for (int j = 0; j < stateNumber; j++) {
@@ -752,7 +752,7 @@ public class FSM {
                     positions[(l + 1) * stateNumber + j];
               } else {
                 result.ensureSize(positions[l * stateNumber + i] + indexOfValue + 1);
-                result.diagram[positions[l * stateNumber + i] + indexOfValue] = MDD.TERMINAL;
+                result.diagram[positions[l * stateNumber + i] + indexOfValue] = Mdd.TERMINAL;
               }
             }
           }
