@@ -51,24 +51,33 @@ import org.jacop.search.SmallestDomain;
 /**
  * It models and solves Minesweeper problem.
  *
+ * <p>This is a port of Hakan's MiniZinc model <a
+ * href="http://www.hakank.org/minizinc/minesweeper.mzn">...</a>
+ *
+ * <p>which is commented in the (swedish) blog post "Fler constraint programming-modeller i
+ * MiniZinc, t.ex. Minesweeper och Game of Life" <a
+ * href="http://www.hakank.org/webblogg/archives/001231.html">...</a>
+ *
+ * <p>See also
+ *
+ * <p>The first 10 examples are from gecode/examples/minesweeper.cc <a
+ * href="http://www.gecode.org/gecode-doc-latest/minesweeper_8cc-source.html">...</a>
+ *
+ * <p><a href="http://www.janko.at/Raetsel/Minesweeper/index.htm">...</a>
+ *
+ * <p><a href="http://en.wikipedia.org/wiki/Minesweeper_(computer_game)">...</a>
+ *
+ * <p>Ian Stewart on Minesweeper: <a
+ * href="http://www.claymath.org/Popular_Lectures/Minesweeper/">...</a>
+ *
+ * <p>Richard Kaye's Minesweeper Pages: <a
+ * href="http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.htm">...</a>
+ *
+ * <p>Some Minesweeper Configurations: <a
+ * href="http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf">...</a>
+ *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *     <p>This is a port of Hakan's MiniZinc model <a
- *     href="http://www.hakank.org/minizinc/minesweeper.mzn">...</a>
- *     <p>which is commented in the (swedish) blog post "Fler constraint programming-modeller i
- *     MiniZinc, t.ex. Minesweeper och Game of Life" <a
- *     href="http://www.hakank.org/webblogg/archives/001231.html">...</a>
- *     <p>See also
- *     <p>The first 10 examples are from gecode/examples/minesweeper.cc <a
- *     href="http://www.gecode.org/gecode-doc-latest/minesweeper_8cc-source.html">...</a>
- *     <p><a href="http://www.janko.at/Raetsel/Minesweeper/index.htm">...</a>
- *     <p><a href="http://en.wikipedia.org/wiki/Minesweeper_(computer_game)">...</a>
- *     <p>Ian Stewart on Minesweeper: <a
- *     href="http://www.claymath.org/Popular_Lectures/Minesweeper/">...</a>
- *     <p>Richard Kaye's Minesweeper Pages: <a
- *     href="http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.htm">...</a>
- *     <p>Some Minesweeper Configurations: <a
- *     href="http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf">...</a>
  */
 public class MineSweeper extends ExampleFd {
 

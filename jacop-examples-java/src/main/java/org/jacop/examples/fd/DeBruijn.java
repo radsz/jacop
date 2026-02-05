@@ -41,21 +41,27 @@ import org.jacop.core.Store;
 /**
  * A program solving problem of finding de Bruijn sequences.
  *
+ * <p>It finds both "normal" and "arbitrary" de Bruijn sequences.
+ *
+ * <p>This is a port from my MiniZinc model <a
+ * href="http://www.hakank.org/minizinc/debruijn_binary.mzn">...</a>
+ *
+ * <p>and is explained somewhat in the swedish blog post "Constraint Programming: Minizinc,
+ * Gecode/flatzinc och ECLiPSe/minizinc" <a
+ * href="http://www.hakank.org/webblogg/archives/001209.html">...</a>
+ *
+ * <p>Related programs: - "Normal" de Bruijn sequences CGI program for calculating the sequences <a
+ * href="http://www.hakank.org/comb/debruijn.cgi">...</a> <a
+ * href="http://www.hakank.org/comb/deBruijnApplet.html">...</a> (as Java applet)
+ *
+ * <p>- "Arbitrary" de Bruijn sequences Program "de Bruijn arbitrary sequences" <a
+ * href="http://www.hakank.org/comb/debruijn_arb.cgi">...</a>
+ *
+ * <p>This (swedish) blog post explains the program: "de Bruijn-sekvenser av godtycklig längd" <a
+ * href="http://www.hakank.org/webblogg/archives/001114.html">...</a>
+ *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *     <p>It finds both "normal" and "arbitrary" de Bruijn sequences.
- *     <p>This is a port from my MiniZinc model <a
- *     href="http://www.hakank.org/minizinc/debruijn_binary.mzn">...</a>
- *     <p>and is explained somewhat in the swedish blog post "Constraint Programming: Minizinc,
- *     Gecode/flatzinc och ECLiPSe/minizinc" <a
- *     href="http://www.hakank.org/webblogg/archives/001209.html">...</a>
- *     <p>Related programs: - "Normal" de Bruijn sequences CGI program for calculating the sequences
- *     <a href="http://www.hakank.org/comb/debruijn.cgi">...</a> <a
- *     href="http://www.hakank.org/comb/deBruijnApplet.html">...</a> (as Java applet)
- *     <p>- "Arbitrary" de Bruijn sequences Program "de Bruijn arbitrary sequences" <a
- *     href="http://www.hakank.org/comb/debruijn_arb.cgi">...</a>
- *     <p>This (swedish) blog post explains the program: "de Bruijn-sekvenser av godtycklig längd"
- *     <a href="http://www.hakank.org/webblogg/archives/001114.html">...</a>
  */
 public class DeBruijn extends ExampleFd {
 

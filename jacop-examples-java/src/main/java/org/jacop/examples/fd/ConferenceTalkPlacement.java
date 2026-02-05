@@ -58,10 +58,11 @@ import org.jacop.search.SmallestDomain;
 /**
  * It solves a simple conference talk placement problem.
  *
+ * <p>It solves a simple conference example problem, where different sessions must be scheduled
+ * according to the specified constraints.
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>It solves a simple conference example problem, where different sessions must be scheduled
- *     according to the specified constraints.
  */
 public class ConferenceTalkPlacement {
 

@@ -42,13 +42,14 @@ import org.jacop.core.Store;
 /**
  * It shows the capabilities and usage of Knapsack constraint.
  *
+ * <p>It models and solves a simple knapsack problem. There are two different models. The first one
+ * uses quantity from 0 to n, where the second model is allowed to use only binary variables.
+ *
+ * <p>Each item is specified by its weight and profit. Find what objects should be put in the
+ * knapsack to maximize the profit without exceeding the knapsack capacity.
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>It models and solves a simple knapsack problem. There are two different models. The first
- *     one uses quantity from 0 to n, where the second model is allowed to use only binary
- *     variables.
- *     <p>Each item is specified by its weight and profit. Find what objects should be put in the
- *     knapsack to maximize the profit without exceeding the knapsack capacity.
  */
 public class KnapsackExample extends ExampleFd {
 

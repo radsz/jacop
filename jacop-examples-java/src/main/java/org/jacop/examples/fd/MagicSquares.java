@@ -45,11 +45,12 @@ import org.jacop.core.Store;
 /**
  * It solves a Magic squares problem.
  *
+ * <p>MagicSquare problem consists of filling the square of size n with numbers from 1 to n^2 in
+ * such a way that all rows, all columns, and main diagonals are equal to the same number K. K can
+ * be computed to be equal to (n * (n^2 + 1)) / 2.
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>MagicSquare problem consists of filling the square of size n with numbers from 1 to n^2 in
- *     such a way that all rows, all columns, and main diagonals are equal to the same number K. K
- *     can be computed to be equal to (n * (n^2 + 1)) / 2.
  */
 @SuppressWarnings("ManualArrayCopy")
 public class MagicSquares extends ExampleFd {

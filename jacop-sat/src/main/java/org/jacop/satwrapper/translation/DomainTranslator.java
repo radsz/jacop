@@ -52,12 +52,13 @@ public final class DomainTranslator implements WrapperComponent {
   private SatWrapper wrapper;
 
   /**
-   * translates the variable to clauses, if not already done, and add those clauses to the wrapper
+   * Translates the variable to clauses, if not already done, and add those clauses to the wrapper
    * queue.
    *
+   * <p>See Propagation via Lazy Clause Generation, Olga Ohrimenko, Peter J. Stuckey, and Michael
+   * Codish.
+   *
    * @param variable the variable to translate
-   *     <p>see Propagation via Lazy Clause Generation, Olga Ohrimenko1 , Peter J. Stuckey , and
-   *     Michael Codish
    */
   public void translate(IntVar variable) {
 

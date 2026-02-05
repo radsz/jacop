@@ -42,10 +42,11 @@ import org.jacop.core.Store;
 /**
  * It solves a simple conference session placement problem.
  *
+ * <p>It solves a simple conference example problem, where different sessions must be scheduled
+ * according to the specified constraints.
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>It solves a simple conference example problem, where different sessions must be scheduled
- *     according to the specified constraints.
  */
 public class Conference extends ExampleFd {
 

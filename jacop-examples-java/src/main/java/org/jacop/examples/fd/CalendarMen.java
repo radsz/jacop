@@ -50,18 +50,19 @@ import org.jacop.core.Store;
 /**
  * It solves a simple logic puzzle about sport calendar.
  *
+ * <p>Title: Calendar Men Author of a logic puzzle: Alex Knight Publication: Dell Logic Puzzles
+ * Issue: December, 1998 Page: 52 Stars: 5
+ *
+ * <p>To raise some money for college sports programs, students at a local junior college produced
+ * and sold an "Athlete of the Month" calendar. Each month of the year featured a photograph of a
+ * different man (first names are Antonio, Brett, Cliff, Dabney, Ed, Francisco, Griff, Harry, Ivor,
+ * John, Karl, and Lorenzo; last names are Moross, Nelsen, O'Rourke, Paulos, Quarello, Reede,
+ * Sheldon, Taylor, Uhler, Vickers, Wang and Xiao) engaged in a different sport (archery, badminton,
+ * croquet, football, golf, hockey, lacrosse, pole vaulting, rowing, squash, tennis, and
+ * volleyball). Can you find the full name and sport of each month's athlete?
+ *
  * @author Michal Tonderski, Szymon Sieklucki, and Radoslaw Szymanek
  * @version 4.10
- *     <p>Title: Calendar Men Author of a logic puzzle: Alex Knight Publication: Dell Logic Puzzles
- *     Issue: December, 1998 Page: 52 Stars: 5
- *     <p>To raise some money for college sports programs, students at a local junior college
- *     produced and sold an "Athlete of the Month" calendar. Each month of the year featured a
- *     photograph of a different man (first names are Antonio, Brett, Cliff, Dabney, Ed, Francisco,
- *     Griff, Harry, Ivor, John, Karl, and Lorenzo; last names are Moross, Nelsen, O'Rourke, Paulos,
- *     Quarello, Reede, Sheldon, Taylor, Uhler, Vickers, Wang and Xiao) engaged in a different sport
- *     (archery, badminton, croquet, football, golf, hockey, lacrosse, pole vaulting, rowing,
- *     squash, tennis, and volleyball). Can you find the full name and sport of each month's
- *     athlete?
  */
 public class CalendarMen extends ExampleFd {
 

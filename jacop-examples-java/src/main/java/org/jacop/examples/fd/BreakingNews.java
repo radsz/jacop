@@ -43,22 +43,30 @@ import org.jacop.core.Store;
 /**
  * It solves a simple logic puzzle about reporters breaking news stories.
  *
+ * <p>Logic Puzzle: Breaking News.
+ *
+ * <p>The Daily Galaxy sent its four best reporters (Corey, Jimmy, Lois, and Perry) to different
+ * locations (Bayonne, New Hope, Port Charles, and South Amboy) to cover four breaking news events
+ * (30-pound baby, blimp launching, skyscraper dedication, and beached whale). Their editor is
+ * trying to remember where each of the reporters is. Can you match the name of each reporter with
+ * the place he or she was sent, and the event that each covered?
+ *
+ * <p>1. The 30-pound baby wasn't born in South Amboy or New Hope.
+ *
+ * <p>2. Jimmy didn't go to Port Charles.
+ *
+ * <p>3. The blimp launching and the skyscraper dedication were covered, in some order, by Lois and
+ * the reporter who was sent to Port Charles.
+ *
+ * <p>4. South Amboy was not the site of either the beached whale or the skyscraper dedication.
+ *
+ * <p>5. Bayonne is either the place that Corey went or the place where the whale was beached, or
+ * both.
+ *
+ * <p>Determine: Reporter -- Location -- Story
+ *
  * @author Marcin Chrapek, Miroslaw Klos, and Radoslaw Szymanek
  * @version 4.10
- *     <p>Logic Puzzle : Breaking News.
- *     <p>The Daily Galaxy sent its four best reporters (Corey, Jimmy, Lois, and Perry) to different
- *     locations (Bayonne, New Hope, Port Charles, and South Amboy) to cover four breaking news
- *     events (30-pound baby, blimp launching, skyscraper dedication, and beached whale). Their
- *     editor is trying to remember where each of the reporters is. Can you match the name of each
- *     reporter with the place he or she was sent, and the event that each covered?
- *     <p>1. The 30-pound baby wasn't born in South Amboy or New Hope.
- *     <p>2. Jimmy didn't go to Port Charles.
- *     <p>3. The blimp launching and the skyscraper dedication were covered, in some order, by Lois
- *     and the reporter who was sent to Port Charles.
- *     <p>4. South Amboy was not the site of either the beached whale or the skyscraper dedication.
- *     <p>5. Bayonne is either the place that Corey went or the place where the whale was beached,
- *     or both.
- *     <p>Determine: Reporter -- Location -- Story
  */
 public class BreakingNews extends ExampleFd {
 

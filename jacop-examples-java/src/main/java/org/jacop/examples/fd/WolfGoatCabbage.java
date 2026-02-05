@@ -42,13 +42,15 @@ import org.jacop.core.Store;
 /**
  * A simple logic problem of transporting wolf, goat, and cabbage over the river.
  *
+ * <p>We need to transfer the cabbage, the goat and the wolf from one bank of the river to the other
+ * bank. But there is only one seat available on his boat!
+ *
+ * <p>Furthermore, if the goat and the cabbage stay together as we are leaving on a boat, the goat
+ * will eat the cabbage. And if the wolf and the goat stay together as we are leaving, the wolf will
+ * eat the goat!
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>We need to transfer the cabbage, the goat and the wolf from one bank of the river to the
- *     other bank. But there is only one seat available on his boat !
- *     <p>Furthermore, if the goat and the cabbage stay together as we are leaving on a boat, the
- *     goat will eat the cabbage. And if the wolf and the goat stay together as we are leaving, the
- *     wolf will eat the goat !
  */
 public class WolfGoatCabbage extends ExampleFd {
 

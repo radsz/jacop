@@ -40,28 +40,34 @@ import org.jacop.core.Store;
 /**
  * It solves a simple logic puzzle about artifacts.
  *
+ * <p>Title: Stones of Heaven Author: Jo Mason Publication: Dell Logic Puzzles Issue: April, 1998
+ * Page: 13
+ *
+ * <p>Wan Li, a dealer in Chinese antiques and artifacts, had an excellent month recently when he
+ * made sales to four customers from around the world -- Finland, Italy, Japan, and the United
+ * States -- who were willing and able to pay very good prices. The four items were rare jade
+ * figurines (a belt buckle, dragon, grasshopper, and horse), each carved from a different color of
+ * jade (dark green, light green, red, and white). Each piece dates from a different Chinese dynasty
+ * (Ching, Ming, Sung, and Tang). Can you match each figurine with its color and dynasty, and give
+ * the home country of each buyer?
+ *
+ * <p>1. The rare white dragon (which the American didn't buy) didn't come from the Sung dynasty.
+ *
+ * <p>2. The exquisite belt buckle (which wasn't any shade of green) was created in 618 A.D. for an
+ * emperor of the Tang dynasty.
+ *
+ * <p>3. Three of the figurines were the one bought by the Finn (which wasn't the dragon), the one
+ * from the Ching dynasty (which didn't go to the buyer from Japan), and the light green object
+ * (which wasn't the horse).
+ *
+ * <p>4. The American decided against both the grasshopper and the piece from the Sung dynasty,
+ * neither of which she felt would match her home decor.
+ *
+ * <p>Belt buckle, red, Tang, U.S Dragon, white, Ching, Italy Grasshopper, light green, Ming, Japan
+ * Horse, dark green, Sung, Finland
+ *
  * @author Janusz Kociolek, Sebastian Czypek, and Radoslaw Szymanek
  * @version 4.10
- *     <p>Title: Stones of Heaven Author: Jo Mason Publication: Dell Logic Puzzles Issue: April,
- *     1998 Page: 13
- *     <p>Wan Li, a dealer in Chinese antiques and artifacts, had an excellent month recently when
- *     he made sales to four customers from around the world -- Finland, Italy, Japan, and the
- *     United States -- who were willing and able to pay very good prices. The four items were rare
- *     jade figurines (a belt buckle, dragon, grasshopper, and horse), each carved from a different
- *     color of jade (dark green, light green, red, and white). Each piece dates from a different
- *     Chinese dynasty (Ching, Ming, Sung, and Tang). Can you match each figurine with its color and
- *     dynasty, and give the home country of each buyer?
- *     <p>1. The rare white dragon (which the American didn't buy) didn't come from the Sung
- *     dynasty.
- *     <p>2. The exquisite belt buckle (which wasn't any shade of green) was created in 618 A.D. for
- *     an emperor of the Tang dynasty.
- *     <p>3. Three of the figurines were the one bought by the Finn (which wasn't the dragon), the
- *     one from the Ching dynasty (which didn't go to the buyer from Japan), and the light green
- *     object (which wasn't the horse).
- *     <p>4. The American decided against both the grasshopper and the piece from the Sung dynasty,
- *     neither of which she felt would match her home decor.
- *     <p>Belt buckle, red, Tang, U.S Dragon, white, Ching, Italy Grasshopper, light green, Ming,
- *     Japan Horse, dark green, Sung, Finland
  */
 public class StonesOfHeaven extends ExampleFd {
 

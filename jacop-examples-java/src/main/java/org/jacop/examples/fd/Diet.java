@@ -61,9 +61,10 @@ import org.jacop.core.Store;
  *
  * <p>"""
  *
+ * <p>Compare with my MiniZinc model: <a href="http://www.hakank.org/minizinc/diet1.mzn">...</a>
+ *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *     <p>Compare with my MiniZinc model: <a href="http://www.hakank.org/minizinc/diet1.mzn">...</a>
  */
 public class Diet extends ExampleFd {
 

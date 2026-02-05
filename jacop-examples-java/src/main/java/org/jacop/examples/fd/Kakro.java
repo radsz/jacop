@@ -40,11 +40,12 @@ import org.jacop.core.Store;
 /**
  * It is program to solve Kakro puzzles.
  *
+ * <p>This is a program which uses Constraint Programming to find the solution to a simple Kakro
+ * puzzle. For a moment the problem representation does not allow to model the problems with fields
+ * which are both origins of the row and column word.
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>This is a program which uses Constraint Programming to find the solution to a simple Kakro
- *     puzzle. For a moment the problem representation does not allow to model the problems with
- *     fields which are both origins of the row and column word.
  */
 public class Kakro extends ExampleFd {
 

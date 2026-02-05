@@ -59,9 +59,10 @@ import org.jacop.util.Mdd;
  * It is an example of the power of ExtensionalSupportMdd constraint which can be used to
  * efficiently model and solve CrossWord puzzles.
  *
- * @author : Radoslaw Szymanek
+ * <p>This program uses problem instances and dictionary obtained from Hadrien Cambazard.
+ *
+ * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>This program uses problem instances and dictionary obtained from Hadrien Cambazard.
  */
 public class CrossWord extends ExampleFd {
 

@@ -41,8 +41,6 @@ import org.jacop.floats.core.FloatVar;
 /**
  * Constraints ceil(P) #= X for integer variable X and float variable P.
  *
- * <p>
- *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */

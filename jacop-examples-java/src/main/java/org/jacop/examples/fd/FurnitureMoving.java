@@ -49,11 +49,14 @@ import org.jacop.search.SmallestDomain;
 /**
  * It is a simple logic puzzle about furniture moving.
  *
+ * <p>Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
+ *
+ * <p>Feature: testing cumulative.
+ *
+ * <p>Also see <a href="http://www.hakank.org/JaCoP/">...</a>
+ *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
  * @version 4.10
- *     <p>Problem from Marriott {@literal &} Stuckey: 'Programming with constraints', page 112f
- *     <p>Feature: testing cumulative.
- *     <p>Also see <a href="http://www.hakank.org/JaCoP/">...</a>
  */
 public class FurnitureMoving extends ExampleFd {
 

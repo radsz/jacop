@@ -60,8 +60,6 @@ import org.jacop.core.Store;
  * edge-finding filtering algorithm for cumulative resource constraints", Constraints, 2014, July,
  * vol. 19, no. 3, pp. 243--269.
  *
- * <p>
- *
  * @author Krzysztof Kuchcinski
  * @version 4.10
  * @see <a

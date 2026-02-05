@@ -652,8 +652,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
    *
    * @param sucPrevLimit previous number of states at a given level.
    * @param level level for which the backward sweep is computed.
-   * @return level at which the sweep has ended.
-   *     <p>TODO return value is not used.
+   * @return level at which the sweep has ended. TODO return value is not used.
    */
   public int unreachBackwardLoop(int sucPrevLimit, int level) {
 

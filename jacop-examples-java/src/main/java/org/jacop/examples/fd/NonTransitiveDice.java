@@ -54,15 +54,19 @@ import org.jacop.search.SimpleSelect;
 /**
  * It models and solves Nontransitive Dice Problem.
  *
+ * <p>Nontransitive Dice problem is to assign to given number of dices a number to each side of the
+ * dice in such a way that
+ *
+ * <p>a) given cyclic order of dices, each dice wins with the next one with probability p larger
+ * than 0.5.
+ *
+ * <p>b) maximize minimum p.
+ *
+ * <p>c) no two dices which are matched against each other can result in draw. default approach to
+ * satisfy this condition is to require all sides of all dices to be assigned unique values.
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>Nontransitive Dice problem is to assign to given number of dices a number to each side of
- *     the dice in such a way that
- *     <p>a) given cyclic order of dices, each dice wins with the next one with probability p larger
- *     than 0.5.
- *     <p>b) maximize minimum p.
- *     <p>c) no two dices which are matched against each other can result in draw. default approach
- *     to satisfy this condition is to require all sides of all dices to be assigned unique values.
  */
 public class NonTransitiveDice extends ExampleFd {
 

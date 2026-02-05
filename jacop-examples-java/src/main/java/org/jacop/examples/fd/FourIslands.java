@@ -42,27 +42,39 @@ import org.jacop.core.Store;
 /**
  * It is a very simple puzzle about islands and bridges.
  *
+ * <p>A tiny nation in the South Pacific contains four islands connected by bridges as shown (see
+ * below). Each of the four islands (Pwana, Quero, Rayou, and Skern) boasts a different primary
+ * export (alabaster, bananas, coconuts, and durian fruit) and a different tourist attraction
+ * (hotel, ice skating rink, jai alai stadium, and koala preserve). Can you find the name, export,
+ * and tourist attraction of each island on the map?
+ *
+ * <p>N W E *compass directions S
+ *
+ * <p>A, B, C, D are the islands
+ *
+ * <p>(A) -- (B) | | | | (C) -- (D)
+ *
+ * <p>(view with non-proportional font) 1. The island noted for its koala preserve is due south of
+ * Pwana.
+ *
+ * <p>2. The island with the largest alabaster quarry is due west of Quero.
+ *
+ * <p>3. The island with the resort hotel is due east of the one that exports durian fruit.
+ *
+ * <p>4. Skern and the island with the jai alai stadium are connected by a north-south bridge.
+ *
+ * <p>5. Rayou and the island that exports bananas are connected by an east-west bridge.
+ *
+ * <p>6. The islands noted for the South Pacific's largest ice skating rink and for the jai alai
+ * stadium are not connected by a bridge.
+ *
+ * <p>Determine: Island location -- Island name -- Export -- Tourist Attraction
+ *
+ * <p>ANSWER: Northwest, Pwana, durian fruit, ice skating rink Northeast, Skern, coconuts, hotel
+ * Southwest, Rayou, alabaster, koala preserve Southeast, Quero, bananas, jai alai stadium
+ *
  * @author Waldemar Sliwinski, Zdzislaw Zawada, and Radoslaw Szymanek
  * @version 4.10
- *     <p>A tiny nation in the South Pacific contains four islands connected by bridges as shown
- *     (see below). Each of the four islands (Pwana, Quero, Rayou, and Skern) boasts a different
- *     primary export (alabaster, bananas, coconuts, and durian fruit) and a different tourist
- *     attraction (hotel, ice skating rink, jai alai stadium, and koala preserve). Can you find the
- *     name, export, and tourist attraction of each island on the map?
- *     <p>N W E *compass directions S
- *     <p>A, B, C, D are the islands
- *     <p>(A) -- (B) | | | | (C) -- (D)
- *     <p>(view with non-proportional font) 1. The island noted for its koala preserve is due south
- *     of Pwana.
- *     <p>2. The island with the largest alabaster quarry is due west of Quero.
- *     <p>3. The island with the resort hotel is due east of the one that exports durian fruit.
- *     <p>4. Skern and the island with the jai alai stadium are connected by a north-south bridge.
- *     <p>5. Rayou and the island that exports bananas are connected by an east-west bridge.
- *     <p>6. The islands noted for the South Pacific's largest ice skating rink and for the jai alai
- *     stadium are not connected by a bridge.
- *     <p>Determine: Island location -- Island name -- Export -- Tourist Attraction
- *     <p>ANSWER: Northwest, Pwana, durian fruit, ice skating rink Northeast, Skern, coconuts, hotel
- *     Southwest, Rayou, alabaster, koala preserve Southeast, Quero, bananas, jai alai stadium
  */
 public class FourIslands extends ExampleFd {
 

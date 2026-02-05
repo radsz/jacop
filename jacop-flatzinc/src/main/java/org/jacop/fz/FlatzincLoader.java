@@ -49,12 +49,12 @@ public class FlatzincLoader {
   Parser parser;
 
   /**
-   * It parses the provided file and parsing parameters and creates the JaCoP model..
+   * It parses the provided file and parsing parameters and creates the JaCoP model.
+   *
+   * <p>TODO what are the conditions for different exceptions being thrown? Write little info below.
    *
    * @param args parameters describing the flatzinc file containing the problem to be solved as well
    *     as options for problem solving.
-   *     <p>TODO what are the conditions for different exceptions being thrown? Write little info
-   *     below.
    */
   public FlatzincLoader(String[] args) {
 

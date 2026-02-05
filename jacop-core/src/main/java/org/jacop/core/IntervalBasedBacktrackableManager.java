@@ -36,12 +36,13 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
+ * This manager works as simple manager to the point when cutoff value for a list is reached. The
+ * objects indexes are continously stored in a list, but they are stored in the trail only as a list
+ * of holes. There is a possibility to express the maximum number of holes being registered as well
+ * as minimum size requirement for hole.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
- *     <p>This manager works as simple manager to the point when cutoff value for a list is reached.
- *     The objects indexes are continously stored in a list, but they are stored in the trail only
- *     as a list of holes. There is a possibility to express the maximum number of holes being
- *     registered as well as minimum size requirement for hole.
  */
 @Slf4j
 public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManager {

@@ -46,23 +46,32 @@ import org.jacop.core.Store;
 /**
  * It is a simple logic puzzle about sleeping arrangements.
  *
+ * <p>The Dillies have five teenaged children, two boys named Ollie and Rollie, and three girls
+ * named Mellie, Nellie, and Pollie. Each is a different number of years old, from 13 to 17. There
+ * are three bedrooms for the children in the Dillie house, so two share the yellow room, two share
+ * the white room, and one alone has the smaller green room. Can you match each one's name and age,
+ * and tell who sleeps where?
+ *
+ * <p>1. No one shares a room with a sibling of the opposite sex.
+ *
+ * <p>2. Pollie is exactly one year older than Mellie.
+ *
+ * <p>3. The two teenagers who share the yellow room are two years apart in age.
+ *
+ * <p>4. The two who share the white room are three years apart in age.
+ *
+ * <p>5. Rollie is somewhat older than Ollie, but somewhat younger than the sibling who has the
+ * green room.
+ *
+ * <p>Determine: Child -- Age -- Room
+ *
+ * <p>Given solution:
+ *
+ * <p>Mellie, 16, green room Nellie, 14, white room Ollie, 13, yellow room Pollie, 17, white room
+ * Rollie, 15, yellow room
+ *
  * @author Radoslaw Szymanek
  * @version 4.10
- *     <p>The Dillies have five teenaged children, two boys named Ollie and Rollie, and three girls
- *     named Mellie, Nellie, and Pollie. Each is a different number of years old, from 13 to 17.
- *     There are three bedrooms for the children in the Dillie house, so two share the yellow room,
- *     two share the white room, and one alone has the smaller green room. Can you match each one's
- *     name and age, and tell who sleeps where?
- *     <p>1. No one shares a room with a sibling of the opposite sex.
- *     <p>2. Pollie is exactly one year older than Mellie.
- *     <p>3. The two teenagers who share the yellow room are two years apart in age.
- *     <p>4. The two who share the white room are three years apart in age.
- *     <p>5. Rollie is somewhat older than Ollie, but somewhat younger than the sibling who has the
- *     green room.
- *     <p>Determine: Child -- Age -- Room
- *     <p>Given solution :
- *     <p>Mellie, 16, green room Nellie, 14, white room Ollie, 13, yellow room Pollie, 17, white
- *     room Rollie, 15, yellow room
  */
 public class SleepingArrangements extends ExampleFd {
 

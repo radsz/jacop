@@ -51,13 +51,15 @@ import org.jacop.search.SelectChoicePoint;
 /**
  * It models a Golomb ruler problem.
  *
+ * <p>Golomb ruler is a special sequence of natural numbers an example is 0 1 4 6
+ *
+ * <p>a sequence is a Golomb ruler if all differences are different (1-0), (4-0), (6-0), (4-1),
+ * (6-1), (6-4) 1 4 6 3 5 2 All differences above have different values A Golomb ruler is optimal if
+ * the length of it (the last mark) has the smallest possible value The presented ruler with 4 marks
+ * of length 6 is optimal
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
- *     <p>Golomb ruler is a special sequence of natural numbers an example is 0 1 4 6
- *     <p>a sequence is a Golomb ruler if all differences are different (1-0), (4-0), (6-0), (4-1),
- *     (6-1), (6-4) 1 4 6 3 5 2 All differences above have different values A Golomb ruler is
- *     optimal if the length of it (the last mark) has the smallest possible value The presented
- *     ruler with 4 marks of length 6 is optimal
  */
 public class Golomb extends ExampleFd {
 
