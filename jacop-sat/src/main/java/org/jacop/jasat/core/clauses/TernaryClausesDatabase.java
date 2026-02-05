@@ -164,7 +164,7 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
   }
 
   /**
-   * when something changed, find the status of the clause
+   * When something changed, find the status of the clause.
    *
    * @param clauseIndex index of the clause
    * @return the state of the clause

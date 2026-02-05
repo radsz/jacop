@@ -258,7 +258,7 @@ public abstract class SetDomain extends Domain {
   public abstract boolean isIntersecting(int min, int max);
 
   /**
-   * A set is never numeric
+   * A set is never numeric.
    *
    * @return false
    */
@@ -266,7 +266,7 @@ public abstract class SetDomain extends Domain {
   public abstract boolean isNumeric();
 
   /**
-   * A set is not sparse
+   * A set is not sparse.
    *
    * @return false
    */
@@ -769,7 +769,7 @@ public abstract class SetDomain extends Domain {
     return S.toString();
   }
 
-  /** not implemented. */
+  /** Not implemented. */
   @Override
   public String toStringFull() {
     throw new RuntimeException("This function is not used for setDomain.");
@@ -863,7 +863,7 @@ public abstract class SetDomain extends Domain {
   public abstract void inValue(int level, SetVar var, IntDomain set);
 
   /**
-   * It returns the number of constraints
+   * It returns the number of constraints.
    *
    * @return the number of constraints attached to this domain.
    */

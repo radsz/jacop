@@ -33,7 +33,7 @@ package org.jacop.constraints;
 import org.jacop.core.IntVar;
 
 /**
- * Defines a basic structure for exsclusive rectangles used in DisjointConditional
+ * Defines a basic structure for exsclusive rectangles used in DisjointConditional.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

@@ -116,7 +116,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * gets an unique ID from a clause index in this clause database
+   * Gets an unique ID from a clause index in this clause database.
    *
    * @param clauseIndex a local clause index
    * @return an unique ID
@@ -126,7 +126,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * gets a local index from the unique ID
+   * Gets a local index from the unique ID.
    *
    * @param clauseId the unique Id
    * @return the index of the clause it corresponds to
@@ -159,7 +159,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * ensures that varWatches.get(var) will succeed with a correct content.
+   * Ensures that varWatches.get(var) will succeed with a correct content.
    *
    * @param var the var we want to be able to add clauses to watch to
    */
@@ -187,7 +187,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * adds a watch (var {@literal =>} clause), ie make var watch clause
+   * Adds a watch (var {@literal =>} clause), ie make var watch clause.
    *
    * @param literal the watching literal
    * @param clauseIndex the index of clause to watch. Not a unique ID.
@@ -219,7 +219,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * removes the clause from the list of clauses that literal watches
+   * Removes the clause from the list of clauses that literal watches.
    *
    * @param literal the literal
    * @param clauseIndex the clause to remove
@@ -255,14 +255,14 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
-   * number of clauses in the database
+   * Number of clauses in the database.
    *
    * @return the number of clauses in the database
    */
   public abstract int size();
 
   /**
-   * prints the content of the database in a nice way, each line being prefixed with
+   * Prints the content of the database in a nice way, each line being prefixed with.
    *
    * @param prefix prefix for printed line
    * @return a String representation of the database
@@ -271,7 +271,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     return prefix + this;
   }
 
-  /** print the content of the Database in a nice way */
+  /** Print the content of the Database in a nice way. */
   @Override
   public final String toString() {
     return getClass().getSimpleName() + " (with " + size() + ')';
@@ -295,7 +295,7 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   public abstract void toCnf(BufferedWriter output) throws IOException;
 
   /**
-   * swaps the two literals at position i and j in the clause
+   * Swaps the two literals at position i and j in the clause.
    *
    * @param clause the clause
    * @param i the position (index) of the first literal

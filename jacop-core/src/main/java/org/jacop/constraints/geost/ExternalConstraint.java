@@ -109,7 +109,7 @@ public interface ExternalConstraint {
   boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o);
 
   /**
-   * Provides the collection of objects that this constraint applies to
+   * Provides the collection of objects that this constraint applies to.
    *
    * @return the collection of objects, or null if the constraint applies to all objects
    */

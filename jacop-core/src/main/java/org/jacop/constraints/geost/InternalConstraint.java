@@ -50,7 +50,7 @@ public abstract class InternalConstraint {
   /** The ordering of constraints requires to maintain a reverse mapping. */
   int constraintListIndex;
 
-  /** the current applicability of the constraint. */
+  /** The current applicability of the constraint. */
   Applicability applicability;
 
   /**

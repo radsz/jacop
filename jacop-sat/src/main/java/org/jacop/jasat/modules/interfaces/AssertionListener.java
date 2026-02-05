@@ -43,7 +43,7 @@ import org.jacop.jasat.core.SolverComponent;
 public interface AssertionListener extends SolverComponent {
 
   /**
-   * Called when a variable is set
+   * Called when a variable is set.
    *
    * @param literal the literal that is set propagation, false otherwise
    * @param level the search level

@@ -38,7 +38,7 @@ import org.jacop.core.Interval;
 import org.jacop.core.Store;
 
 /**
- * Constraint X div Y #= Z
+ * Constraint X div Y #= Z.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

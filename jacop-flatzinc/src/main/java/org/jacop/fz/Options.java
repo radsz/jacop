@@ -409,7 +409,7 @@ public class Options {
     return use_sat;
   }
 
-  /** sat is used. */
+  /** Sat is used. */
   public void setSat() {
     use_sat = true;
   }

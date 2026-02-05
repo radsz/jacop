@@ -114,7 +114,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   }
 
   /**
-   * removes this clause from the database it belongs to.
+   * Removes this clause from the database it belongs to.
    *
    * @param clauseId the id of the clause to be deleted
    */
@@ -139,7 +139,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   }
 
   /**
-   * Adds a ClausesDatabase to the Store
+   * Adds a ClausesDatabase to the Store.
    *
    * @param database the database to add
    */
@@ -152,7 +152,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     currentIndex++;
   }
 
-  /** the number of clauses in all databases */
+  /** The number of clauses in all databases. */
   public int size() {
     int sum = 0;
     for (int i = 0; i < currentIndex; i++) {
@@ -163,7 +163,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   }
 
   /**
-   * tells all databases to backjump at this level
+   * Tells all databases to backjump at this level.
    *
    * @param level the level to backjump to
    */
@@ -175,7 +175,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   }
 
   /**
-   * tells all databases that the literal is set, for unit propagation. Stops when all databases are
+   * Tells all databases that the literal is set, for unit propagation. Stops when all databases are
    * informed, or the solver has reached a stop-state
    *
    * @param literal the literal
@@ -192,7 +192,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   }
 
   /**
-   * returns the ClausesDatabase associated with this clauseId
+   * Returns the ClausesDatabase associated with this clauseId.
    *
    * @param clauseId a unique clause Id
    * @return the index of the ClausesDatabase that contains the clause

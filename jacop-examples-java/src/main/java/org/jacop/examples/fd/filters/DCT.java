@@ -47,7 +47,7 @@ import java.util.List;
  */
 public class Dct extends Filter {
 
-  /** It constructs a Dct filter problem with default delays for */
+  /** It constructs a Dct filter problem with default delays for. */
   public Dct() {
     this(1, 2);
   }

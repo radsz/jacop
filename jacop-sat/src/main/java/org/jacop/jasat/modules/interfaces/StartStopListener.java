@@ -34,16 +34,16 @@ package org.jacop.jasat.modules.interfaces;
 import org.jacop.jasat.core.SolverComponent;
 
 /**
- * called when the solver starts or stops.
+ * Called when the solver starts or stops.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
  */
 public interface StartStopListener extends SolverComponent {
 
-  /** called when the solver starts search. It will be called only once. */
+  /** Called when the solver starts search. It will be called only once. */
   void onStart();
 
-  /** called when the solver stop search, for any reason */
+  /** Called when the solver stop search, for any reason. */
   void onStop();
 }

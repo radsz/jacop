@@ -44,7 +44,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.InternalException;
 
 /**
- * Constraints sin(P) = R
+ * Constraints sin(P) = R.
  *
  * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *

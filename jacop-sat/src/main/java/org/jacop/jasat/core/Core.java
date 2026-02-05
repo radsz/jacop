@@ -124,7 +124,7 @@ public final class Core implements SolverComponent {
   private int maxVariable;
 
   /**
-   * creates the solver, which in turn creates all inner components and connect them together.
+   * Creates the solver, which in turn creates all inner components and connect them together.
    *
    * @param config configuration for the solver
    */
@@ -153,14 +153,14 @@ public final class Core implements SolverComponent {
     }
   }
 
-  /** initializes the solver with a default configuration. */
+  /** Initializes the solver with a default configuration. */
   public Core() {
     this(Config.defaultConfig()); // use a default config
     logc("solver initializes with default config");
   }
 
   /**
-   * adds a clause to the solver
+   * Adds a clause to the solver.
    *
    * @param clause the clause to add
    * @return the unique ID of the clause
@@ -171,7 +171,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * same as previous, add the clause as a model clause
+   * Same as previous, add the clause as a model clause.
    *
    * @param clause the clause to add
    * @return the unique ID of this clause, or -1 if it is trivial
@@ -180,7 +180,7 @@ public final class Core implements SolverComponent {
     return addClause(clause, true);
   }
 
-  /** add @param clause to the pool of clauses */
+  /** Add @param clause to the pool of clauses. */
   private int addClause(int[] clause, boolean isModelClause) {
     int clauseId = dbStore.addClause(clause, isModelClause);
 
@@ -193,7 +193,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * predicate : can we remove the clause without breaking the correctness of the solver ?
+   * Checks if the clause can be removed without breaking solver correctness.
    *
    * @param clauseId the unique Id of the clause
    * @return true if removing the clause is allowed
@@ -203,7 +203,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * removes the clause with unique Id, if possible
+   * Removes the clause with unique Id, if possible.
    *
    * @param clauseId the unique Id of the clause to remove
    * @return true if success, false if failure
@@ -226,7 +226,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * decides a single step of search by setting the value of a variable
+   * Decides a single step of search by setting the value of a variable.
    *
    * @param literal the literal to set true
    * @param newLevel the current search level
@@ -239,7 +239,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * tells the SAT-solver to backtrack to the given level. The level must be lower or equal to the
+   * Tells the SAT-solver to backtrack to the given level. The level must be lower or equal to the
    * solver's current level.
    *
    * @param level the level to return to
@@ -250,12 +250,12 @@ public final class Core implements SolverComponent {
     triggerBackjumpEvent(level);
   }
 
-  /** make a restart, that is, restart search from level 0. */
+  /** Make a restart, that is, restart search from level 0. */
   public void restart() {
     triggerRestartEvent();
   }
 
-  /** notify all modules that we start */
+  /** Notify all modules that we start. */
   public void start() {
     if (isStopped) {
       throw new AssertionError("should not start when already stopped");
@@ -273,7 +273,7 @@ public final class Core implements SolverComponent {
     }
   }
 
-  /** notify all modules that we stop */
+  /** Notify all modules that we stop. */
   public void stop() {
 
     if (!isStopped) {
@@ -291,7 +291,7 @@ public final class Core implements SolverComponent {
     }
   }
 
-  /** removes the less useful learnt clauses to free memory */
+  /** Removes the less useful learnt clauses to free memory. */
   public void forget() {
     mustForget = true;
   }
@@ -314,7 +314,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * gets a fresh variable that one can use for example for lazy clause generation. If used, every
+   * Gets a fresh variable that one can use for example for lazy clause generation. If used, every
    * clause added must use only the variables get by this way, or a variable collision could occur.
    *
    * @return a fresh variable
@@ -326,7 +326,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * get several new variables at once, more efficiently than running getFreshVariable() @param
+   * Get several new variables at once, more efficiently than running getFreshVariable() @param
    * number times. The variables range from the returned int to the returned int + @param number - 1
    *
    * @param number the number of fresh variables we want
@@ -346,7 +346,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * Tells the solver what is the greatest variable in the problem
+   * Tells the solver what is the greatest variable in the problem.
    *
    * @param maxVariable the new maximum variable. Must not be lower than solver.getMaxVariable().
    */
@@ -362,7 +362,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * give the module access to the whole class, even if the solver is only known as a ISatSolver
+   * Give the module access to the whole class, even if the solver is only known as a ISatSolver.
    *
    * @param module the module to add to the solver
    */
@@ -371,8 +371,8 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * performs propagation on all unit clauses until either : - no unit clause remains - a conflict
-   * occurs
+   * Performs propagation on all unit clauses until either : - no unit clause remains - a conflict
+   * occurs.
    */
   public void unitPropagate() {
     // propagate until there remain no unit clauses or a conflict occurs
@@ -392,7 +392,7 @@ public final class Core implements SolverComponent {
     // search can continue.
   }
 
-  /** triggers an event of forget() */
+  /** Triggers an event of forget(). */
   private void triggerForgetEvent() {
     assert currentState == SolverState.UNKNOWN;
 
@@ -402,7 +402,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * triggers an event for assertion of a literal
+   * Triggers an event for assertion of a literal.
    *
    * @param literal the literal asserted
    * @param newLevel the new level, after assertion. It must be strictly greater than currentLevel.
@@ -430,8 +430,8 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * tells the SAT-solver to return to a normal state after a conflict has been solved (backjump or
-   * restart)
+   * Tells the SAT-solver to return to a normal state after a conflict has been solved (backjump or
+   * restart).
    */
   public void triggerIdleEvent() {
 
@@ -444,7 +444,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * triggers an event of learning
+   * Triggers an event of learning.
    *
    * @param clauseToLearn the clause which is learnt
    */
@@ -465,7 +465,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * triggers a conflict. The next step of the research should be conflict learning and then
+   * Triggers a conflict. The next step of the research should be conflict learning and then
    * backjumping.
    *
    * @param clause an unsatisfiable clause.
@@ -503,7 +503,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * triggers a unit propagation event. This keeps the same level.
+   * Triggers a unit propagation event. This keeps the same level.
    *
    * @param literal the unique unset literal, which must be true for the clause to be satisfied
    * @param unitClauseId the unique id of the unit clause that propagates
@@ -526,7 +526,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * triggers an event to backjump
+   * Triggers an event to backjump.
    *
    * @param level the level to backjump to
    */
@@ -546,7 +546,7 @@ public final class Core implements SolverComponent {
     currentLevel = level;
   }
 
-  /** triggers an event of restart */
+  /** Triggers an event of restart. */
   public void triggerRestartEvent() {
     assert currentLevel > 0;
     int level = currentLevel;
@@ -567,7 +567,7 @@ public final class Core implements SolverComponent {
     triggerIdleEvent();
   }
 
-  /** to trigger if the problem is found to be satisfiable */
+  /** To trigger if the problem is found to be satisfiable. */
   public void triggerSatEvent() {
     currentState = SolverState.SATISFIABLE;
 
@@ -580,7 +580,7 @@ public final class Core implements SolverComponent {
     stop();
   }
 
-  /** to trigger if the problem is found to be not satisfiable */
+  /** To trigger if the problem is found to be not satisfiable. */
   public void triggerUnsatEvent() {
     currentState = SolverState.UNSATISFIABLE;
 
@@ -594,7 +594,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * remembers that @param s is associated with the current time (in ms)
+   * Remembers that @param s is associated with the current time (in ms).
    *
    * @param s the mark of current time
    */
@@ -603,7 +603,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * get the time associated with given mark, or 0 if none
+   * Get the time associated with given mark, or 0 if none.
    *
    * @param s the mark
    * @return the time associated with given mark, or 0 if none
@@ -616,7 +616,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * gets the time difference (in ms) between now and the mark
+   * Gets the time difference (in ms) between now and the mark.
    *
    * @param s the mark
    * @return the time elapsed since mark, in ms
@@ -634,7 +634,7 @@ public final class Core implements SolverComponent {
    */
 
   /**
-   * logs important messages in comments
+   * Logs important messages in comments.
    *
    * @param s the message
    * @param args the arguments for the message
@@ -648,7 +648,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * logs less important messages, in comments
+   * Logs less important messages, in comments.
    *
    * @param level verbosity level
    * @param s the message
@@ -669,7 +669,7 @@ public final class Core implements SolverComponent {
     return currentState == SolverState.SATISFIABLE || currentState == SolverState.UNSATISFIABLE;
   }
 
-  /** prints the current solution on standard output */
+  /** Prints the current solution on standard output. */
   public void printSolution() {
     // TODO: clean it (factor code, avoid repetition)
 
@@ -699,7 +699,7 @@ public final class Core implements SolverComponent {
   }
 
   /**
-   * before exiting, we must know which return code we must give
+   * Before exiting, we must know which return code we must give.
    *
    * @return the return code to exit with
    */

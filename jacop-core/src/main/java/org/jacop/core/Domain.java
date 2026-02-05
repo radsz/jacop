@@ -56,7 +56,7 @@ public abstract class Domain {
    */
   public static final int NONE = -1;
 
-  /** An exception used if failure encountered in functions in(); */
+  /** An exception used if failure encountered in functions in();. */
   public static final FailException failException = new FailException();
 
   /**
@@ -171,7 +171,7 @@ public abstract class Domain {
   public abstract boolean singleton(Domain value);
 
   /**
-   * It returns the number of constraints
+   * It returns the number of constraints.
    *
    * @return the number of constraints attached to this domain.
    */

@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * SatTranslation defines SAT clauses for typical logical constraints
+ * SatTranslation defines SAT clauses for typical logical constraints.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10

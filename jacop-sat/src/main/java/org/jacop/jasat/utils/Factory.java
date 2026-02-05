@@ -32,7 +32,7 @@
 package org.jacop.jasat.utils;
 
 /**
- * a factory for type E
+ * A factory for type E.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -40,7 +40,7 @@ package org.jacop.jasat.utils;
 public interface Factory<E> {
 
   /**
-   * method to call to get a new instance of the type E
+   * Method to call to get a new instance of the type E.
    *
    * @return a new instance of E
    */

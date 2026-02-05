@@ -1402,7 +1402,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return result;
   }
 
-  /** It computes union of current domain and an interval min..max; */
+  /** It computes union of current domain and an interval min..max;. */
   @Override
   public FloatDomain union(double min, double max) {
 

@@ -54,7 +54,7 @@ import org.jacop.core.Store;
  */
 public class WolfGoatCabbage extends ExampleFd {
 
-  /** It specifies number of moves allowed (one move is from one river bank to the other) */
+  /** It specifies number of moves allowed (one move is from one river bank to the other). */
   public int numberInnerMoves = 1;
 
   /**

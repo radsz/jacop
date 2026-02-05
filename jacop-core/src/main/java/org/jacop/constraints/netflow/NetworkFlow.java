@@ -63,7 +63,7 @@ import org.jacop.core.Var;
 public class NetworkFlow extends Constraint
     implements UsesQueueVariable, Stateful, RemoveLevelLate {
 
-  /** Instance counter */
+  /** Instance counter. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   private static final int QUEUE_INDEX = 2;
@@ -75,22 +75,22 @@ public class NetworkFlow extends Constraint
     // asserts.Assert.forceAsserts();
   }
 
-  /** The network */
+  /** The network. */
   // public final Network network;
   public final Pruning network;
 
-  /** The variables and their handlers */
+  /** The variables and their handlers. */
   public final Map<IntVar, VarHandler> map;
 
-  /** The set of queued variables */
+  /** The set of queued variables. */
   public final Set<IntVar> queue;
 
   final Statistics statistics = new Statistics();
 
-  /** The cost variable */
+  /** The cost variable. */
   public IntVar costVariable;
 
-  /** Disables the queue variable function during consistency */
+  /** Disables the queue variable function during consistency. */
   public boolean disableQueueVariable;
 
   public int previousLevel = -1;

@@ -38,7 +38,7 @@ import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
 /**
- * Constraint "constraint1"{@literal #<=>} "constraint2"
+ * Constraint "constraint1"{@literal #<=>} "constraint2".
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

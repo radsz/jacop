@@ -44,7 +44,7 @@ import org.jacop.jasat.utils.Utils;
 public final class UnaryClausesDatabase extends AbstractClausesDatabase {
 
   /**
-   * TODO: Radek, just curious
+   * TODO: Radek, just curious.
    *
    * <p>how is the conflict raised by this database? how is the propagation done? After clauses are
    * added, how is the unit propagation taking place?
@@ -69,7 +69,7 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
   private int numRemoved;
 
   /**
-   * TODO: Radek,
+   * TODO: Radek,.
    *
    * <p>why would you bother with having any code for removal when nothing is being actually
    * removed. Why not disallow removal altogether and call it StaticUnaryClausesDatabase?

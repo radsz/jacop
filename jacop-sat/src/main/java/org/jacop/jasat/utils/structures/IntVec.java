@@ -39,7 +39,7 @@ import org.jacop.jasat.utils.MemoryPool;
 import org.jacop.jasat.utils.Utils;
 
 /**
- * low level, efficient int vector
+ * Low level, efficient int vector.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -54,7 +54,7 @@ public final class IntVec implements Iterable<Integer> {
   public int numElem;
 
   /**
-   * initializes the array with a memory pool
+   * Initializes the array with a memory pool.
    *
    * @param pool the pool to use for memory allocation
    */
@@ -64,7 +64,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * initialize from pool and some integers
+   * Initialize from pool and some integers.
    *
    * @param pool the pool to use
    * @param clause the elements to add
@@ -78,7 +78,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * add an element at the end of the array
+   * Add an element at the end of the array.
    *
    * @param i the element to add
    */
@@ -90,13 +90,13 @@ public final class IntVec implements Iterable<Integer> {
     array[numElem++] = i;
   }
 
-  /** clears all elements in the array */
+  /** Clears all elements in the array. */
   public void clear() {
     numElem = 0;
   }
 
   /**
-   * checks if the array contains elements
+   * Checks if the array contains elements.
    *
    * @return true if the array is empty
    */
@@ -112,7 +112,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * set the element at index index to i
+   * Set the element at index index to i.
    *
    * @param index the index to modify
    * @param i the new value
@@ -125,7 +125,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * number of elements
+   * Number of elements.
    *
    * @return number of elements in the vector
    */
@@ -134,7 +134,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * remove the element at index index
+   * Remove the element at index index.
    *
    * @param index the index of the element to remove
    */
@@ -150,7 +150,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * this removes the element at given index. This operation does *NOT* keep the order in the array
+   * This removes the element at given index. This operation does *NOT* keep the order in the array
    * (the last element may change of position)
    *
    * @param index the index to remove
@@ -170,7 +170,7 @@ public final class IntVec implements Iterable<Integer> {
   }
 
   /**
-   * get a new array from the clause
+   * Get a new array from the clause.
    *
    * @return a new array
    */

@@ -39,7 +39,7 @@ import org.jacop.satwrapper.SatWrapper;
 import org.jacop.satwrapper.WrapperComponent;
 
 /**
- * A component that translates CP variables ranges to boolean clauses to be added to the SAT solver
+ * A component that translates CP variables ranges to boolean clauses to be added to the SAT solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10

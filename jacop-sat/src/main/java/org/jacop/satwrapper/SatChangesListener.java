@@ -48,8 +48,8 @@ import org.jacop.satwrapper.translation.SatCpBridge;
  */
 
 /**
- * this class listens to changes in literals in SAT solver, and reminds what changes this implies
- * for CP variables
+ * This class listens to changes in literals in SAT solver, and reminds what changes this implies
+ * for CP variables.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -81,7 +81,7 @@ public final class SatChangesListener
   // set of literals (false) representing 'x>v' assertions
   private Integer[] lowerBounds = new Integer[40];
 
-  /** clears all sets, so that elements occurring in them later result only from later events */
+  /** Clears all sets, so that elements occurring in them later result only from later events. */
   public void clear() {
     assert lowerBounds.length == upperBounds.length;
 
@@ -108,9 +108,9 @@ public final class SatChangesListener
   }
 
   /**
-   * this should be called every time a new boolean variable representing a CP proposition is
+   * This should be called every time a new boolean variable representing a CP proposition is
    * asserted, but preferably only once per variable, so that it can later update the CP variables
-   * domains
+   * domains.
    *
    * @param literal the boolean literal that has been asserted
    */
@@ -184,7 +184,7 @@ public final class SatChangesListener
     }
   }
 
-  /** clear on backjump */
+  /** Clear on backjump. */
   public void onBackjump(int oldLevel, int newLevel) {
     clear();
   }
@@ -194,7 +194,7 @@ public final class SatChangesListener
   }
 
   /**
-   * Using all data accumulated since last clear(), update the domain of the given CP variable
+   * Using all data accumulated since last clear(), update the domain of the given CP variable.
    *
    * @param storeLevel the current level of the store
    */
@@ -265,7 +265,7 @@ public final class SatChangesListener
   }
 
   /**
-   * gets sure we won't have a NullPointerException
+   * Gets sure we won't have a NullPointerException.
    *
    * @param cpVar the CP variable we are about to access
    */

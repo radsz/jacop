@@ -31,7 +31,7 @@
 package org.jacop.core;
 
 /**
- * Standard mutable variable's value definition
+ * Standard mutable variable's value definition.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

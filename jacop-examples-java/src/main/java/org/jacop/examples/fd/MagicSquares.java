@@ -55,7 +55,7 @@ import org.jacop.core.Store;
 @SuppressWarnings("ManualArrayCopy")
 public class MagicSquares extends ExampleFd {
 
-  /** It specifies the number */
+  /** It specifies the number. */
   public int number = 4;
 
   /** It specifies the list of constraints which can be used for guiding shaving. */

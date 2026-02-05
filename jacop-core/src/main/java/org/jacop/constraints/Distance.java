@@ -39,7 +39,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
 /**
- * Constraint |X - Y| #= Z
+ * Constraint |X - Y| #= Z.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
@@ -61,7 +61,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   int firstConsistencyLevel;
 
   /**
-   * Distance between x and y |x-y| = z
+   * Distance between x and y |x-y| = z.
    *
    * @param x first parameter
    * @param y second parameter

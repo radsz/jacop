@@ -32,7 +32,7 @@
 package org.jacop.jasat.core.clauses;
 
 /**
- * constants that represent the state of a clause at some point in the search
+ * Constants that represent the state of a clause at some point in the search.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10

@@ -38,7 +38,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints P #= C
+ * Constraints P #= C.
  *
  * <p>Domain consistency is used.
  *

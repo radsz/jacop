@@ -49,13 +49,13 @@ public final class Arc {
   /** The flow of an arc is the residual capacity of its sister arc. */
   public final Arc sister;
 
-  /** The cost of the Arc cost */
+  /** The cost of the Arc cost. */
   public int cost;
 
   /** The unused (i.e. residual) capacity of the arc */
   public int capacity;
 
-  /** Index in lower arcs array */
+  /** Index in lower arcs array. */
   public int index;
 
   /**
@@ -63,7 +63,7 @@ public final class Arc {
    */
   public ArcCompanion companion;
 
-  /** whether this arc is a forward arc or a residual arc */
+  /** Whether this arc is a forward arc or a residual arc. */
   public boolean forward;
 
   /**
@@ -152,7 +152,7 @@ public final class Arc {
   }
 
   /**
-   * Initializes an artificial arc
+   * Initializes an artificial arc.
    *
    * @param newCost new cost for the arc
    * @param newCapacity new capacity for the arc
@@ -172,7 +172,7 @@ public final class Arc {
     sister.forward = true;
   }
 
-  /** Clears an artificial arc */
+  /** Clears an artificial arc. */
   public void clear() {
 
     cost = 0;

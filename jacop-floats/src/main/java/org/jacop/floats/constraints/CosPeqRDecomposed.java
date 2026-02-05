@@ -39,7 +39,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints cos(P) = R
+ * Constraints cos(P) = R.
  *
  * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *

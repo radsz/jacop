@@ -71,7 +71,7 @@ public class LexOrder extends Constraint
   public final IntVar[] y;
   public final boolean originalLexLt;
 
-  /** size of the longest vector. */
+  /** Size of the longest vector. */
   final int n;
 
   final Map<IntVar, int[]> varxToIndex = Var.createEmptyPositioning();
@@ -91,7 +91,7 @@ public class LexOrder extends Constraint
   private int betaValue;
 
   /**
-   * It creates a lexicographical order for vectors x and y,
+   * It creates a lexicographical order for vectors x and y,.
    *
    * <p>vectors x and y does not need to be of the same size. boolean lt defines if we require
    * strict order, Lex_{{@literal <}} (lt = true) or Lex_{{@literal =<}} (lt = false).

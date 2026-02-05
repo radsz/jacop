@@ -70,7 +70,7 @@ public interface ClauseDatabaseInterface {
   void removeClause(int clauseId);
 
   /**
-   * It tells if the implementation of ClausesDatabase can remove clauses or not
+   * It tells if the implementation of ClausesDatabase can remove clauses or not.
    *
    * @param clauseId the unique Id of the clause
    * @return true iff removal of clauses is possible
@@ -95,7 +95,7 @@ public interface ClauseDatabaseInterface {
   void backjump(int level);
 
   /**
-   * size of the database
+   * Size of the database.
    *
    * @return the number of clauses in the database
    */

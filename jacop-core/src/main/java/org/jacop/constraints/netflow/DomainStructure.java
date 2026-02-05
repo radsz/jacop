@@ -61,7 +61,7 @@ public class DomainStructure implements VarHandler {
   public int notGrounded;
 
   /**
-   * Creates an S-variable
+   * Creates an S-variable.
    *
    * @param variable variable to create for
    * @param domList list of domains

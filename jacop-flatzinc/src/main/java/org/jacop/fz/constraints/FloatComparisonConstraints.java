@@ -48,7 +48,7 @@ import org.jacop.fz.SimpleNode;
 import org.jacop.fz.VariablesParameters;
 
 /**
- * Generation of set constraints in flatzinc
+ * Generation of set constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
  */

@@ -113,7 +113,7 @@ public class CrossWord extends ExampleFd {
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
   } // end main
 
-  /** model() */
+  /** Model(). */
   @Override
   public void model() {
 

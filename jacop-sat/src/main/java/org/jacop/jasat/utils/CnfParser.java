@@ -61,7 +61,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   private boolean hasGivenIterator;
 
   /**
-   * creates an instance of the parser for some input stream
+   * Creates an instance of the parser for some input stream.
    *
    * @param pool the memory pool to use
    * @param stream the stream from which to read clauses
@@ -86,7 +86,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   }
 
   /**
-   * reads an int from the stream
+   * Reads an int from the stream.
    *
    * @return the parsed int
    * @throws IOException if an I/O error occurs
@@ -114,7 +114,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   }
 
   /**
-   * skips comment lines from the current position
+   * Skips comment lines from the current position.
    *
    * @throws IOException if an I/O error occurs
    */
@@ -130,7 +130,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   }
 
   /**
-   * skip the rest of the line (\n included)
+   * Skip the rest of the line (\n included).
    *
    * @throws IOException if an I/O error occurs
    */
@@ -145,7 +145,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   }
 
   /**
-   * skips white spaces and carriage returns
+   * Skips white spaces and carriage returns.
    *
    * @throws IOException if an I/O error occurs
    */
@@ -156,7 +156,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   }
 
   /**
-   * reads number of clauses and number of vars
+   * Reads number of clauses and number of vars.
    *
    * @throws IOException if an I/O error occurs
    */
@@ -180,7 +180,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     numClauses = parseInt();
   }
 
-  /** parses the next clause from the stream */
+  /** Parses the next clause from the stream. */
   private void parseNextClause() {
     IntVec answer = new IntVec(pool);
 
@@ -232,7 +232,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     throw new UnsupportedOperationException();
   }
 
-  /** to be called only once! */
+  /** Returns an iterator; should be called only once. */
   public Iterator<IntVec> iterator() {
     if (hasGivenIterator) {
       throw new AssertionError("should only iterate once on Parser");
@@ -242,7 +242,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
   }
 
   /**
-   * exception occurring during parse
+   * Exception occurring during parse.
    *
    * @author simon
    */

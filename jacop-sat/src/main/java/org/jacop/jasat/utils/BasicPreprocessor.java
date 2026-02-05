@@ -36,7 +36,7 @@ import org.jacop.jasat.core.clauses.MapClause;
 import org.jacop.jasat.utils.structures.IntVec;
 
 /**
- * a basic preprocessor. It aims at removing trivial clauses
+ * A basic preprocessor. It aims at removing trivial clauses
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -59,7 +59,7 @@ public class BasicPreprocessor {
   }
 
   /**
-   * add a clause (just parsed from a file, e.g.) to the solver, after processing
+   * Add a clause (just parsed from a file, e.g.) to the solver, after processing.
    *
    * @param clause clause to be added
    */
@@ -81,7 +81,7 @@ public class BasicPreprocessor {
   }
 
   /**
-   * simplify the clause by removing duplicates and checking for triviality.
+   * Simplify the clause by removing duplicates and checking for triviality.
    *
    * @param clause the clause to simplify
    * @return the status of the clause (see at beginning)

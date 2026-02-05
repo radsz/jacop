@@ -54,7 +54,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   Store store;
 
   /**
-   * It constructs trace daemon for variable v
+   * It constructs trace daemon for variable v.
    *
    * @param v variable to be traced
    */
@@ -63,7 +63,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /**
-   * It constructs trace daemon for variables vs
+   * It constructs trace daemon for variables vs.
    *
    * @param vs variables to be traced
    */
@@ -78,7 +78,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   }
 
   /**
-   * It constructs trace daemon for variables vs
+   * It constructs trace daemon for variables vs.
    *
    * @param vs variables to be traced
    */

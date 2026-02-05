@@ -33,7 +33,7 @@ package org.jacop.floats.constraints;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint P / Q = R for floats
+ * Constraint P / Q = R for floats.
  *
  * <p>Boundary consistency is used.
  *

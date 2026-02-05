@@ -36,7 +36,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * Constraints X #= Y
+ * Constraints X #= Y.
  *
  * <p>Domain consistency is used.
  *

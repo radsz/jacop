@@ -56,7 +56,7 @@ import org.jacop.core.Var;
 @Slf4j
 public class SumInt extends PrimitiveConstraint {
 
-  /** Defines relations */
+  /** Defines relations. */
   static final byte eq = 0;
 
   static final byte le = 1;
@@ -65,7 +65,7 @@ public class SumInt extends PrimitiveConstraint {
   static final byte gt = 4;
   static final byte ge = 5;
 
-  /** Defines negated relations */
+  /** Defines negated relations. */
   static final byte[] negRel = {
     ne, // eq=0,
     gt, // le=1,
@@ -77,7 +77,7 @@ public class SumInt extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies what relations is used by this constraint */
+  /** It specifies what relations is used by this constraint. */
   public final byte relationType;
 
   final Store store;
@@ -91,12 +91,12 @@ public class SumInt extends PrimitiveConstraint {
   /** It specifies the number of variables. */
   final int l;
 
-  /** It specifies "variability" of each variable */
+  /** It specifies "variability" of each variable. */
   final long[] I;
 
   boolean reified = true;
 
-  /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values) */
+  /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values). */
   long sumXmin;
 
   long sumXmax;

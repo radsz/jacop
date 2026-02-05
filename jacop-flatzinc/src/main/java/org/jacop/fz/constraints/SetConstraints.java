@@ -54,7 +54,7 @@ import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
- * Generation of set constraints in flatzinc
+ * Generation of set constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
  */

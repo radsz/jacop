@@ -44,7 +44,7 @@ import org.jacop.jasat.modules.interfaces.PropagateListener;
 import org.jacop.jasat.modules.interfaces.StartStopListener;
 
 /**
- * collects statistics about the solver
+ * Collects statistics about the solver.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -143,7 +143,7 @@ public final class StatModule
     }
   }
 
-  /** print current stats with solver's logc2 method */
+  /** Print current stats with solver's logc2 method. */
   public void logStats() {
     printBlank();
     printLine(true);
@@ -174,12 +174,12 @@ public final class StatModule
     printBlank();
   }
 
-  /** logs one line of stat (for one parameter) */
+  /** Logs one line of stat (for one parameter). */
   private void logStat(String stat, long num, long timeDiff) {
     core.logc(2, "%-20s: %-10s (%d/s)", stat, num, num * 1000 / timeDiff);
   }
 
-  /** prints a line, starting a block if @param start is true, ending the block otherwise */
+  /** Prints a line, starting a block if @param start is true, ending the block otherwise. */
   private void printLine(boolean start) {
     if (start) {
       core.logc(2, "/==================================");

@@ -35,7 +35,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 
 /**
- * Represents tasks for cumulative constraint
+ * Represents tasks for cumulative constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

@@ -45,7 +45,7 @@ import org.jacop.jasat.modules.interfaces.StartStopListener;
 import org.jacop.jasat.utils.Utils;
 
 /**
- * module used for debug : it logs every event it is informed of
+ * Module used for debug : it logs every event it is informed of.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10

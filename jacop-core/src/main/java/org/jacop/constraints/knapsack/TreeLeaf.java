@@ -42,7 +42,7 @@ import org.jacop.core.IntVar;
 @Getter
 public final class TreeLeaf extends TreeNode {
 
-  /** It specifies the finite domain variable denoting the allowed quantity of the item, */
+  /** It specifies the finite domain variable denoting the allowed quantity of the item,. */
   public final IntVar quantity;
 
   /** It specifies the efficiency of the item in the leaf. */
@@ -101,7 +101,7 @@ public final class TreeLeaf extends TreeNode {
   }
 
   /**
-   * Used to know the changes that occurred
+   * Used to know the changes that occurred.
    *
    * @return If the minimum has changed
    */
@@ -110,7 +110,7 @@ public final class TreeLeaf extends TreeNode {
   }
 
   /**
-   * Used to know the changes that occurred
+   * Used to know the changes that occurred.
    *
    * @return The last change of the minimum
    */
@@ -119,7 +119,7 @@ public final class TreeLeaf extends TreeNode {
   }
 
   /**
-   * Used to know the changes that occurred
+   * Used to know the changes that occurred.
    *
    * @return If the maximum has changed
    */

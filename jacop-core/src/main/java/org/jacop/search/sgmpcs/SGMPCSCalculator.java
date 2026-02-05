@@ -36,7 +36,7 @@ import org.jacop.core.Var;
 import org.jacop.search.ConsistencyListener;
 
 /**
- * Defines functionality for SGMPCS search
+ * Defines functionality for SGMPCS search.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10

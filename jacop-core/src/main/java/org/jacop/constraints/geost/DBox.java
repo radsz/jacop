@@ -43,7 +43,7 @@ import lombok.EqualsAndHashCode;
 public class Dbox {
 
   /**
-   * static store of available boxes, accessible by dimension. This makes it possible to reuse
+   * Static store of available boxes, accessible by dimension. This makes it possible to reuse
    * previously used boxes that are not used anymore. The user should use dispatchBox() to get rid
    * of a box that is not needed anymore, and newBox(dimension) to get a new one.
    */
@@ -58,7 +58,7 @@ public class Dbox {
   // private static final ArrayList<Dbox> workingList = new ArrayList<>();
 
   /**
-   * constructs a new Box. The parameter arrays are not copied.
+   * Constructs a new Box. The parameter arrays are not copied.
    *
    * @param origin it specifies the origin of the Dbox in the n-dimensional space.
    * @param length it specifies the length of the Dbox in the n-dimensional space.
@@ -72,7 +72,7 @@ public class Dbox {
   }
 
   /**
-   * constructs a new Box. The parameter arrays are not copied.
+   * Constructs a new Box. The parameter arrays are not copied.
    *
    * @param dimension it specifies the dimension of the createed Dbox.
    */
@@ -133,7 +133,7 @@ public class Dbox {
 
   /**
    * It returns an instance of Dbox of the corresponding dimension, using a previously allocated one
-   * if possible
+   * if possible.
    *
    * @param dimension the number of dimensions
    * @return it returns a preallocated Dbox of a given dimensions.
@@ -159,7 +159,7 @@ public class Dbox {
   }
 
   /**
-   * computes the bounding box of the given collection of boxes
+   * Computes the bounding box of the given collection of boxes.
    *
    * @param boxes collection of boxes
    * @return a temporary Dbox that represents the bounding box of the given boxes. clone it if you
@@ -508,7 +508,7 @@ public class Dbox {
   }
 
   /**
-   * computes the difference between this box and the given box. The difference is returned under
+   * Computes the difference between this box and the given box. The difference is returned under
    * the form of a collection of boxes.
    *
    * <p>NOTE: the collection of DBoxes returned is not minimal (in some cases, some boxes can be

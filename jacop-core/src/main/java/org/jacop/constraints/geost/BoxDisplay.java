@@ -371,19 +371,19 @@ public class BoxDisplay extends JFrame {
     g.clearRect(0, 0, getWidth(), getHeight());
   }
 
-  /** paints all objects, repaint only if requested to */
+  /** Paints all objects, repaint only if requested to. */
   public void paint(Graphics g) {
     super.paint(g);
     g.drawImage(displayImgae, 0, 0, null);
   }
 
-  /** same as paint */
+  /** Same as paint. */
   public void update(Graphics g) {
     super.update(g);
     g.drawImage(displayImgae, 0, 0, null);
   }
 
-  /** flips images, making previous operations visible */
+  /** Flips images, making previous operations visible. */
   public void flip() {
     Image i = displayImgae;
     displayImgae = bufferImage;

@@ -35,7 +35,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Contains utils for arrays manipulation
+ * Contains utils for arrays manipulation.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -48,7 +48,7 @@ public final class Utils {
   private Utils() {}
 
   /**
-   * Resize the array to newSize, using the given memory pool
+   * Resize the array to newSize, using the given memory pool.
    *
    * @param array the array to resize
    * @param newSize the size of the new array
@@ -83,7 +83,7 @@ public final class Utils {
   }
 
   /**
-   * resize for int[][]
+   * Resize for int[][].
    *
    * @param array the array to resize
    * @param newSize the size of the array we want
@@ -96,7 +96,7 @@ public final class Utils {
   }
 
   /**
-   * the same, but with the number of elements to copy from old list
+   * The same, but with the number of elements to copy from old list.
    *
    * @param array array to be extended
    * @param newSize new size for the array
@@ -137,7 +137,7 @@ public final class Utils {
   }
 
   /**
-   * facility to print a clause to a string
+   * Facility to print a clause to a string.
    *
    * @param clause the clause to print
    * @return a nice representation of the clause
@@ -154,8 +154,8 @@ public final class Utils {
   }
 
   /**
-   * get the "absolute value" of the int (the variable that corresponds to the literal) literal
-   * {@literal ->} variable
+   * Get the "absolute value" of the int (the variable that corresponds to the literal) literal
+   * {@literal ->} variable.
    *
    * @param i the literal
    * @return the variable
@@ -165,8 +165,8 @@ public final class Utils {
   }
 
   /**
-   * given a positive var, returns the literal that represents the negation of the variable variable
-   * {@literal ->} literal
+   * Given a positive var, returns the literal that represents the negation of the variable variable
+   * {@literal ->} literal.
    *
    * @param i the variable
    * @return the negated variable

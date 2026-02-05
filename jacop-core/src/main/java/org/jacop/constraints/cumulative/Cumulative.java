@@ -41,7 +41,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * Cumulative implements the scheduling constraint using
+ * Cumulative implements the scheduling constraint using.
  *
  * <p>edge-finding (edgeFind) algorithms based on
  *

@@ -269,7 +269,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   }
 
   /**
-   * be sure that the database can contain numberOfClauses clauses
+   * Be sure that the database can contain numberOfClauses clauses.
    *
    * @param size the size of the database to be ensured
    */
@@ -285,19 +285,34 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     }
   }
 
-  /** is the literal at position @param literalPos satisfied in current trail ? */
+  /**
+   * Checks if the literal is satisfied in the current trail.
+   *
+   * @param literal the literal to check
+   * @return true if satisfied
+   */
   private boolean isSatisfied(int literal) {
     return trail.values[literal < 0 ? -literal : literal] == literal;
   }
 
-  /** is the literal at position @param literalPos satisfied or active ? */
+  /**
+   * Checks if the literal is satisfied or active.
+   *
+   * @param literal the literal to check
+   * @return true if satisfied or active
+   */
   private boolean isActiveOrSatisfied(int literal) {
 
     int value = trail.values[literal < 0 ? -literal : literal];
     return value == 0 || value == literal;
   }
 
-  /** is the literal at position @param literalPos satisfied or active ? */
+  /**
+   * Checks if the literal is active.
+   *
+   * @param literal the literal to check
+   * @return true if active
+   */
   private boolean isActive(int literal) {
 
     return trail.values[literal < 0 ? -literal : literal] == 0;

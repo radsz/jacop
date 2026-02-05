@@ -42,7 +42,7 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 
 /**
- * Constraints |X| #= Y
+ * Constraints |X| #= Y.
  *
  * <p>Domain and bounds consistency can be used; third parameter of constructor controls this.
  *

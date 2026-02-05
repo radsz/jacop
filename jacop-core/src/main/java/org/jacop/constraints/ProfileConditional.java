@@ -36,7 +36,7 @@ import java.util.Iterator;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Defines a basic data structure to keep the profile for the disjointConditonal/2
+ * Defines a basic data structure to keep the profile for the disjointConditonal/2.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

@@ -34,7 +34,7 @@ package org.jacop.jasat.utils.structures;
 import org.jacop.jasat.utils.MemoryPool;
 
 /**
- * Special class for unboxed int stack
+ * Special class for unboxed int stack.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -71,7 +71,7 @@ public final class IntStack {
   }
 
   /**
-   * pushes the int on the stack
+   * Pushes the int on the stack.
    *
    * @param n the element to push
    */
@@ -85,7 +85,7 @@ public final class IntStack {
   }
 
   /**
-   * returns the top of the stack and removes it from the stack
+   * Returns the top of the stack and removes it from the stack.
    *
    * @return the top element
    */
@@ -97,7 +97,7 @@ public final class IntStack {
   }
 
   /**
-   * returns, without removing, the top element
+   * Returns, without removing, the top element.
    *
    * @return the top element
    */
@@ -109,7 +109,7 @@ public final class IntStack {
   }
 
   /**
-   * ensure the stack can contains at least n elements
+   * Ensure the stack can contains at least n elements.
    *
    * @param n the number of elements
    */

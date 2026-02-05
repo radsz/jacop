@@ -37,7 +37,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint P {@literal <} Q for floats
+ * Constraint P {@literal <} Q for floats.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
@@ -49,7 +49,7 @@ public class PltQ extends PrimitiveConstraint {
   /** It specifies variable p to be lower than q. */
   public final FloatVar p;
 
-  /** It specifies the second parameter */
+  /** It specifies the second parameter. */
   public final FloatVar q;
 
   /**

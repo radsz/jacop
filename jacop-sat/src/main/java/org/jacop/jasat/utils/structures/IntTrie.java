@@ -53,7 +53,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   private int size;
 
   /**
-   * initializes the Trie with a root node
+   * Initializes the Trie with a root node.
    *
    * @param root the root node.
    */
@@ -62,7 +62,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
-   * add i to the Trie
+   * Add i to the Trie.
    *
    * @param i the int to add to the Trie
    * @return the node corresponding to i
@@ -112,7 +112,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
-   * does the Trie contains i ?
+   * Checks if the Trie contains the given integer.
    *
    * @param i the int
    * @return true if the Trie contains i, false otherwise
@@ -130,8 +130,8 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
-   * get the node associated with i, or maybe the node that would be associated with i if i was in
-   * the Trie (*optional* feature)
+   * Get the node associated with i, or maybe the node that would be associated with i if i was in
+   * the Trie (*optional* feature).
    *
    * @param i the int
    * @return the node associated with i if it exists, null otherwise
@@ -175,7 +175,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
-   * remove the int i.
+   * Remove the int i.
    *
    * @param i the int to remove from the Trie
    * @return true if i was in the Trie (and has been removed), false if it was not
@@ -263,7 +263,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     return answer;
   }
 
-  /** empty the Trie, removing all elements from it */
+  /** Empty the Trie, removing all elements from it. */
   public final void clear() {
     root.son0 = root.son1 = null;
     root.posMember = false;
@@ -293,7 +293,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
-   * class of nodes of the Trie. One can subclass this class to add any payload he wants to the
+   * Class of nodes of the Trie. One can subclass this class to add any payload he wants to the
    * nodes.
    *
    * @author simon
@@ -306,7 +306,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
     boolean negMember; // is this node a leaf with sign -
 
     /**
-     * allocate a new value of type E
+     * Allocate a new value of type E.
      *
      * @return the value of type E
      */
@@ -314,7 +314,7 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
-   * The most simple node possible
+   * The most simple node possible.
    *
    * @author simon
    */

@@ -60,7 +60,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
   public final boolean roundRobin = true;
   final TimeStamp<Integer> currentIndex;
 
-  /** Select parameters are kept here sicne we use floats ansd Simple select uses int */
+  /** Select parameters are kept here sicne we use floats ansd Simple select uses int. */
   private final Random generator;
 
   /**

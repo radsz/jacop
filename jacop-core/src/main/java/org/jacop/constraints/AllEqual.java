@@ -38,7 +38,7 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 
 /**
- * Constraints forall i != j: x[i] #= x[j]
+ * Constraints forall i != j: x[i] #= x[j].
  *
  * <p>Domain consistency is used.
  *

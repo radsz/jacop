@@ -38,7 +38,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints P #= Q for P and Q floats
+ * Constraints P #= Q for P and Q floats.
  *
  * <p>Domain consistency is used.
  *

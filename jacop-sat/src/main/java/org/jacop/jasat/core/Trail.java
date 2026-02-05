@@ -73,7 +73,7 @@ public final class Trail implements SolverComponent {
   }
 
   /**
-   * It ensures the trail can contain @param numVar variables
+   * It ensures the trail can contain @param numVar variables.
    *
    * @param numVar the number of variables the trail must be able to contain
    */
@@ -136,7 +136,7 @@ public final class Trail implements SolverComponent {
     assertionStack.push(var);
   }
 
-  /** real assignment of literal at level */
+  /** Real assignment of literal at level. */
   private void assertLit(int var, int literal, int level, boolean asserted) {
     assert values.length > var;
     assert values[var] == 0;
@@ -213,7 +213,7 @@ public final class Trail implements SolverComponent {
   }
 
   /**
-   * It returns the index of the clause that caused this variable to be set
+   * It returns the index of the clause that caused this variable to be set.
    *
    * @param var the literal. Must be set.
    * @return an index if there was an explanation, 0 otherwise
@@ -246,7 +246,7 @@ public final class Trail implements SolverComponent {
   }
 
   /**
-   * predicate which meaning is : is this variable set or unknown ?
+   * Checks if this variable is set or unknown.
    *
    * @param var the variable, must be positive
    * @return true if the variable is set.
@@ -260,7 +260,7 @@ public final class Trail implements SolverComponent {
   }
 
   /**
-   * returns the number of currently set variables
+   * Returns the number of currently set variables.
    *
    * @return the number of currently set variables
    */
@@ -284,7 +284,7 @@ public final class Trail implements SolverComponent {
   }
 
   /**
-   * to be called before any use of the trail
+   * To be called before any use of the trail.
    *
    * @param core the Solver instance
    */

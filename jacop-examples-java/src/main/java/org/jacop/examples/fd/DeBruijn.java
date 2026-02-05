@@ -81,7 +81,7 @@ public class DeBruijn extends ExampleFd {
   // the model
 
   /**
-   * Running the program java DeBruijn base n java DeBruijn base n m
+   * Running the program java DeBruijn base n java DeBruijn base n m.
    *
    * @param args between 2 and 3 arguments are used.
    */

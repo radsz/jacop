@@ -51,50 +51,50 @@ import org.jacop.jasat.core.clauses.UnaryClausesDatabase;
 @SuppressWarnings("serial")
 public class Config extends Properties {
 
-  /** how many clausesDatabases can we have ? must be a power of 2 */
+  /** How many clausesDatabases can we have ? must be a power of 2. */
   public final int maxNumberOfDatabases = 8;
 
-  /** number of int[] of each size in the memory pool */
+  /** Number of int[] of each size in the memory pool. */
   public final int memoryPoolStockSize = 500;
 
-  /** the maximum size of int[] to store in the memory pool */
+  /** The maximum size of int[] to store in the memory pool. */
   public final int memoryPoolMaxSize = 60;
 
-  /** threshold above which a rebase is performed for activity counters */
+  /** Threshold above which a rebase is performed for activity counters. */
   public final int rebase_threshold = Integer.MAX_VALUE / 10;
 
-  /** the default bump rate. It is added to activity at each bump() */
+  /** The default bump rate. It is added to activity at each bump() */
   public final int bump_rate = 4;
 
-  /** initial number of variables in the trail */
+  /** Initial number of variables in the trail. */
   public final int trail_size = 100;
 
-  /** factor by which restart threshold is increased */
+  /** Factor by which restart threshold is increased. */
   public final double restartThresholdIncreaseRate = 1.5;
 
-  /** initial threshold (number of conflicts needed) for restarts */
+  /** Initial threshold (number of conflicts needed) for restarts. */
   public final long restartConflictThreshold = 100;
 
-  /** the list of components the solver must add */
+  /** The list of components the solver must add. */
   public final List<SolverComponent> mainComponents = new ArrayList<>();
 
-  /** the list of databases the solver must add */
+  /** The list of databases the solver must add. */
   public final List<AbstractClausesDatabase> clausesDatabases = new ArrayList<>();
 
-  /** controls default solver verbosity */
+  /** Controls default solver verbosity. */
   public int verbosity;
 
-  /** the default timeout, in seconds, for searches. */
+  /** The default timeout, in seconds, for searches. */
   public long timeout;
 
-  /** switch for debug mode */
+  /** Switch for debug mode. */
   public boolean debug;
 
-  /** random seed, to be changed if we want to redo the same run */
+  /** Random seed, to be changed if we want to redo the same run. */
   public long seed = System.currentTimeMillis();
 
   /**
-   * constructor for config, that adds some default components. If you want to choose all
+   * Constructor for config, that adds some default components. If you want to choose all
    * components, just components.clear() (if you know what you do)
    */
   public Config() {
@@ -113,7 +113,7 @@ public class Config extends Properties {
   }
 
   /**
-   * static access to the default config
+   * Static access to the default config.
    *
    * @return default config
    */
@@ -138,7 +138,7 @@ public class Config extends Properties {
   }
 
   /**
-   * check some properties of the config
+   * Check some properties of the config.
    *
    * @return true if the config passes check, false if there is a problem
    */

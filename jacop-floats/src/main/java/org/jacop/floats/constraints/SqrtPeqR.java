@@ -35,7 +35,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint sqrt(P) = R for floats
+ * Constraint sqrt(P) = R for floats.
  *
  * <p>Boundary consistency is used.
  *

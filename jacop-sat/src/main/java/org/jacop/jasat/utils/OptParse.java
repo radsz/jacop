@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * util to parse command-line arguments
+ * Util to parse command-line arguments.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -53,7 +53,7 @@ public class OptParse<E> {
   private String mainHelp = "";
 
   /**
-   * add a handler for some option
+   * Add a handler for some option.
    *
    * @param handler the handler
    */
@@ -67,7 +67,7 @@ public class OptParse<E> {
   }
 
   /**
-   * change the main help string, which will be printed if asked, or if a wrong option is given
+   * Change the main help string, which will be printed if asked, or if a wrong option is given.
    *
    * @param helpString the help string
    */
@@ -109,7 +109,7 @@ public class OptParse<E> {
     return current;
   }
 
-  /** print help of all options */
+  /** Print help of all options. */
   public void printHelp() {
     // print the main help message
     IO.println(mainHelp);
@@ -130,13 +130,13 @@ public class OptParse<E> {
     }
   }
 
-  /** a handler can call this to interrupt the parsing */
+  /** A handler can call this to interrupt the parsing. */
   public void exitParsing() {
     throw new RuntimeException("stop parsing");
   }
 
   /**
-   * a class to handle one option
+   * A class to handle one option.
    *
    * @author simon
    */
@@ -149,7 +149,7 @@ public class OptParse<E> {
     public String help;
 
     /**
-     * handler for the option
+     * Handler for the option.
      *
      * @param parser the parser object that called this handler
      * @param e the object to modify according to the option

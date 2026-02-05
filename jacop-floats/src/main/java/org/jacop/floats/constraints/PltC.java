@@ -37,7 +37,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint P {@literal <} C for floats
+ * Constraint P {@literal <} C for floats.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
@@ -49,7 +49,7 @@ public class PltC extends PrimitiveConstraint {
   /** It specifies variable x to be lower than a given constant. */
   public final FloatVar p;
 
-  /** It specifies constant */
+  /** It specifies constant. */
   public final double c;
 
   /**

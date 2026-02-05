@@ -37,7 +37,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint P {@literal <=} Q for floats
+ * Constraint P {@literal <=} Q for floats.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

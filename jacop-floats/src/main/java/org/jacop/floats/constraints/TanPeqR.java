@@ -41,7 +41,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints sin(P) = R
+ * Constraints sin(P) = R.
  *
  * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *

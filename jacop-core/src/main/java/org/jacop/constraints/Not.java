@@ -37,7 +37,7 @@ import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
 /**
- * Constraint "not costraint"
+ * Constraint "not costraint".
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

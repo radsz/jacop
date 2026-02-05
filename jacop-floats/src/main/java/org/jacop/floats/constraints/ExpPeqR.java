@@ -41,7 +41,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.core.InternalException;
 
 /**
- * Constraints exp(P) #= Q for P and Q floats
+ * Constraints exp(P) #= Q for P and Q floats.
  *
  * <p>Domain consistency is used.
  *

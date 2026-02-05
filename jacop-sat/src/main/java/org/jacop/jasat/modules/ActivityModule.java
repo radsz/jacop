@@ -46,7 +46,7 @@ import org.jacop.jasat.modules.interfaces.ConflictListener;
  */
 
 /**
- * counts the activity of literals
+ * Counts the activity of literals.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -69,7 +69,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   private int[] negActivities;
 
   /**
-   * compares literals according to their activity. This stands for i > j and not i < j, because we
+   * Compares literals according to their activity. This stands for i > j and not i < j, because we
    * want activities to be sorted in decreasing order
    *
    * @author simon
@@ -116,7 +116,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     }
   }
 
-  /** sort the priorities array (useful after adding a lot of clauses) */
+  /** Sort the priorities array (useful after adding a lot of clauses). */
   public void sortArray() {
     Arrays.sort(priorities, 0, prioritiesIndex, comparator);
   }
@@ -158,7 +158,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   }
 
   /**
-   * returns the non-set literal with highest activity, if any
+   * Returns the non-set literal with highest activity, if any.
    *
    * @return a non set literal, or 0 if all known literals are set
    */
@@ -180,7 +180,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   }
 
   /**
-   * gives activity of a (signed) literal
+   * Gives activity of a (signed) literal.
    *
    * @return the activity of this (variable, polarity)
    */
@@ -195,7 +195,7 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   }
 
   /**
-   * code that really performs variable and polarity activity bumping.
+   * Code that really performs variable and polarity activity bumping.
    *
    * @return the new activity of the variable
    */
@@ -238,13 +238,13 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     }
   }
 
-  /** increases the bump rate, so that recent activity is more important than old activity */
+  /** Increases the bump rate, so that recent activity is more important than old activity. */
   private void increaseBumpRate() {
     currentBumpRate = currentBumpRate * BUMP_INCREASE_FACTOR;
   }
 
   /**
-   * rebases all values
+   * Rebases all values.
    *
    * @param value the value that just overflowed
    */

@@ -45,7 +45,7 @@ import org.jacop.jasat.modules.interfaces.StartStopListener;
 import org.jacop.jasat.utils.Utils;
 
 /**
- * a class used to debug, but with additional data
+ * A class used to debug, but with additional data.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10

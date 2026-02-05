@@ -146,7 +146,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   /**
    * Fix suggested by Radek: a set that keeps track of the variables that have changed and need to
-   * be revisited in the consistency method
+   * be revisited in the consistency method.
    */
   private Set<IntVar> changedVariables = new HashSet<>();
 
@@ -471,7 +471,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
   /**
    * A method to be called in asserts that checks whether all grounded X variables are correctly put
-   * at the end of the list
+   * at the end of the list.
    *
    * @return false if the X variable order is inconsistent
    */

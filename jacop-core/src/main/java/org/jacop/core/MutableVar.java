@@ -33,7 +33,7 @@ package org.jacop.core;
 import org.jacop.api.Stateful;
 
 /**
- * Standard mutable variable definition
+ * Standard mutable variable definition.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

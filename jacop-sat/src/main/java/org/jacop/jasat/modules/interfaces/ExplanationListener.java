@@ -35,7 +35,7 @@ import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.clauses.MapClause;
 
 /**
- * module used when an explanation is found
+ * Module used when an explanation is found.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -43,7 +43,7 @@ import org.jacop.jasat.core.clauses.MapClause;
 public interface ExplanationListener extends SolverComponent {
 
   /**
-   * called when the conflict clause is explained
+   * Called when the conflict clause is explained.
    *
    * @param explanation the explanation clause
    */

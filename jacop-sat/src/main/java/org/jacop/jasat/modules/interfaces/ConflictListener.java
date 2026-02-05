@@ -35,7 +35,7 @@ import org.jacop.jasat.core.SolverComponent;
 import org.jacop.jasat.core.clauses.MapClause;
 
 /**
- * module that listens to conflicts that are discovered.
+ * Module that listens to conflicts that are discovered.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -43,7 +43,7 @@ import org.jacop.jasat.core.clauses.MapClause;
 public interface ConflictListener extends SolverComponent {
 
   /**
-   * called when a conflict occurs
+   * Called when a conflict occurs.
    *
    * @param conflictclause the conflict (unsatisfiable) clause
    * @param level the level at which the conflict occurred

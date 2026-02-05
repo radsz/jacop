@@ -35,7 +35,7 @@ import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
 
 /**
- * Defines a variable for Linear constraints to keep intermediate bounds values
+ * Defines a variable for Linear constraints to keep intermediate bounds values.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10

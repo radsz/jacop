@@ -39,7 +39,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints |P| #= R
+ * Constraints |P| #= R.
  *
  * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *

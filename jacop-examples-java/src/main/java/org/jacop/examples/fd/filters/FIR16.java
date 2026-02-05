@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fir benchmark (16-point Fir filter)
+ * Fir benchmark (16-point Fir filter).
  *
  * <p>Source: Kaijie Wu and Ramesh Karri, "Algorithm-Level Recomputing with Shifted Operands -- A
  * Register Transfer Level Concurrent Error Detection Technique" IEEE Trans. on CAD, vol. 25, no. 3,

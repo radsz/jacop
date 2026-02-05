@@ -34,7 +34,7 @@ package org.jacop.jasat.modules.interfaces;
 import org.jacop.jasat.core.SolverComponent;
 
 /**
- * module called when a propagate event is called
+ * Module called when a propagate event is called.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -42,7 +42,7 @@ import org.jacop.jasat.core.SolverComponent;
 public interface PropagateListener extends SolverComponent {
 
   /**
-   * called when a propagation occurs
+   * Called when a propagation occurs.
    *
    * @param clauseId the unique ID of the unit clause
    * @param literal the literal propagated

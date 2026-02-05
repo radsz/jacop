@@ -49,7 +49,7 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
 /**
- * SimpleTable implements the table constraint using a method presented in
+ * SimpleTable implements the table constraint using a method presented in.
  *
  * <p>"Compact-Table: Efficient Filtering Table Constraints with Reversible Sparse Bit-Sets" Jordan
  * Demeulenaere, Renaud Hartert, Christophe Lecoutre, Guillaume Perez, Laurent Perron, Jean-Charles
@@ -65,15 +65,15 @@ public class SimpleTable extends Constraint
   static final boolean debug = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** Variables within the scope of table constraint */
+  /** Variables within the scope of table constraint. */
   public IntVar[] x;
 
-  /** Tuples specifying the allowed values */
+  /** Tuples specifying the allowed values. */
   public int[][] tuple;
 
   Store store;
 
-  /** Main data structure for the constraint */
+  /** Main data structure for the constraint. */
   TimeStamp<Long> words;
 
   long mask;

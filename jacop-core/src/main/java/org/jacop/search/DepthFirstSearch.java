@@ -104,7 +104,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** It represents store within which a search is performed. */
   @Setter public Store store;
 
-  /** It specifies that the time-out has occured */
+  /** It specifies that the time-out has occured. */
   public boolean timeOutOccured;
 
   /** It specifies the id of the search. */

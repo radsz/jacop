@@ -206,7 +206,7 @@ public class Shape {
     return inside;
   }
 
-  /** It (re)initializes the holes */
+  /** It (re)initializes the holes. */
   private void initHoles() {
     /*
      * the holes are the result of the subtraction to the bounding
@@ -310,7 +310,7 @@ public class Shape {
 
   /**
    * It computes a collection of DBoxes that form the same shape, but that are certain to not
-   * overlap
+   * overlap.
    *
    * <p>This implementation is probably not the most efficient possible representation.
    *

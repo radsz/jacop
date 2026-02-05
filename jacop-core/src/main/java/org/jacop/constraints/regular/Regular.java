@@ -106,12 +106,12 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
   /**
    * Name of the file to store the latex output after consistency call The output will be :
-   * file_name + "call number" + ".tex"
+   * file_name + "call number" + ".tex".
    */
   public String latexFile = "/home/radek/";
 
   /**
-   * dNames contain a "name" for each value from the union of all variabl's domains. If Hashmap -
+   * DNames contain a "name" for each value from the union of all variabl's domains. If Hashmap -
    * dNames - is not null then upon saving the latex graph the values on the edges will be replaced
    * with their "names".
    */

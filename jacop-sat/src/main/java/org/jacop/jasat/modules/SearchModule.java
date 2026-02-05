@@ -40,7 +40,7 @@ import org.jacop.jasat.modules.interfaces.SolutionListener;
 import org.jacop.jasat.modules.interfaces.StartStopListener;
 
 /**
- * A basic searching component, which controls the solver to solve the problem
+ * A basic searching component, which controls the solver to solve the problem.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -76,7 +76,7 @@ public final class SearchModule
   // next clause to learn
   private MapClause clauseToLearn;
 
-  /** search implementation, without timeout (search until solution is found) */
+  /** Search implementation, without timeout (search until solution is found). */
   public SearchModule() {}
 
   public void onExplain(MapClause explanation) {
@@ -88,7 +88,7 @@ public final class SearchModule
   }
 
   /**
-   * perform search on the given solver, without limit of time. Must be called at most once after
+   * Perform search on the given solver, without limit of time. Must be called at most once after
    * initialize() was called.
    */
   public void onStart() {
@@ -108,7 +108,7 @@ public final class SearchModule
     core.logc("end solving");
   }
 
-  /** stops search */
+  /** Stops search. */
   public void onStop() {
     // cancel task
     if (task != null) {
@@ -117,7 +117,7 @@ public final class SearchModule
     mustStop = true;
   }
 
-  /** main search loop */
+  /** Main search loop. */
   private void search() {
     int currentLevel = 0;
 
@@ -176,7 +176,7 @@ public final class SearchModule
     }
   }
 
-  /** creates a thread and runs it */
+  /** Creates a thread and runs it. */
   private void initializeTask() {
 
     // after a while, stop search

@@ -176,11 +176,11 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
    */
   public final Shape[] shapeRegister;
 
-  /** if set to true, a variable will never be skipped, even if grounded and not in queue */
+  /** If set to true, a variable will never be skipped, even if grounded and not in queue. */
   public final boolean enforceNoSkip =
       true; // setting to false is causing a bug that allows incorrect solution to be accepted.
 
-  /** set to false to disable relaxed shape pruning */
+  /** Set to false to disable relaxed shape pruning. */
   public final boolean partialShapeSweep = true;
 
   /**
@@ -359,7 +359,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   Set<GeostObject> updatedObjectSet;
 
   /**
-   * it stores the index of the first object which have changed at current level. It allows to
+   * It stores the index of the first object which have changed at current level. It allows to
    * inform the external constraints about objects being changed due to backtracking.
    */
   TimeStamp<Integer> setStart;
@@ -742,7 +742,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   }
 
   /**
-   * the sweeping routine for minimal bounds. Since in the polymorphic case, it is run for each
+   * The sweeping routine for minimal bounds. Since in the polymorphic case, it is run for each
    * possible shape, and only the weakest result is used, it cannot have side-effects. In
    * particular, it cannot directly update domain values. If any data structure is updated here,
    * make sure that it is done carefully enough.
@@ -852,7 +852,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   }
 
   /**
-   * the sweeping routine for minimal bounds. Since in the polymorphic case, it is run for each
+   * The sweeping routine for minimal bounds. Since in the polymorphic case, it is run for each
    * possible shape, and only the weakest result is used, it cannot have side-effects. In
    * particular, it cannot directly update domain values. If any data structure is updated here,
    * make sure that it is done carefully enough.

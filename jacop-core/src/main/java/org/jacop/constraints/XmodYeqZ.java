@@ -40,7 +40,7 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 
 /**
- * Constraint X mod Y = Z
+ * Constraint X mod Y = Z.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

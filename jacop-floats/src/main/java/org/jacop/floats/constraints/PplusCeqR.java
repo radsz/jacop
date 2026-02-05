@@ -40,7 +40,7 @@ import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint P + C #= R
+ * Constraint P + C #= R.
  *
  * <p>Bound consistency is used.
  *

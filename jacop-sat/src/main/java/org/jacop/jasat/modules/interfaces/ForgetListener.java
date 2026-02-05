@@ -34,7 +34,7 @@ package org.jacop.jasat.modules.interfaces;
 import org.jacop.jasat.core.SolverComponent;
 
 /**
- * called when the solver forget() method is called. Those modules are intended to do the real work
+ * Called when the solver forget() method is called. Those modules are intended to do the real work
  * concerning forgetting clauses. Such modules typically register to other kinds of events, to get
  * informations about which clauses appear in conflicts or propagations
  *
@@ -43,6 +43,6 @@ import org.jacop.jasat.core.SolverComponent;
  */
 public interface ForgetListener extends SolverComponent {
 
-  /** called when the solver's forget() method is applied. */
+  /** Called when the solver's forget() method is applied. */
   void onForget();
 }

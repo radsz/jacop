@@ -34,7 +34,7 @@ import org.jacop.core.IntVar;
 
 /**
  * IndomainMin - implements enumeration method based on the selection of the minimal value in the
- * domain of variable
+ * domain of variable.
  *
  * @param <T> type of variable being used in search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek

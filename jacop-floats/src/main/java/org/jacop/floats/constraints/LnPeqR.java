@@ -33,7 +33,7 @@ package org.jacop.floats.constraints;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints Ln(P) #= Q for P and Q floats
+ * Constraints Ln(P) #= Q for P and Q floats.
  *
  * <p>Domain consistency is used.
  *

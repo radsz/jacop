@@ -51,7 +51,7 @@ public final class ConflictLearning implements SolverComponent {
 
   /**
    * It computes to which level we should backjump to solve the conflict explained by @param
-   * explanationClause
+   * explanationClause.
    *
    * @param explanationClause used for backjumping computation
    * @return a level
@@ -94,7 +94,7 @@ public final class ConflictLearning implements SolverComponent {
   /**
    * It builds the explanation clause made of all literals that were involved in a conflict (ie
    * which are in the clause and were asserted, or were asserted and triggered, in another clause,
-   * the propagation of a literal present in the current clause)
+   * the propagation of a literal present in the current clause).
    *
    * @param explanationClause the SetClause we use, which must be initialized to the conflict clause
    */
@@ -169,7 +169,7 @@ public final class ConflictLearning implements SolverComponent {
   }
 
   /**
-   * performs one step of resolution for conflict explanation on given explanation clause.
+   * Performs one step of resolution for conflict explanation on given explanation clause.
    *
    * @param explanationClause the explanation clause
    * @param literal the literal that must be resolved

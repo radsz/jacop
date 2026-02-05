@@ -32,7 +32,7 @@
 package org.jacop.jasat.utils.structures;
 
 /**
- * an efficient Set for unboxed int. It is just a subclass for the IntTrie, with a more convenient
+ * An efficient Set for unboxed int. It is just a subclass for the IntTrie, with a more convenient
  * interface (no generics, simpler constructor). It also provides a part of the interface of BitSet.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
@@ -40,13 +40,13 @@ package org.jacop.jasat.utils.structures;
  */
 public final class IntSet extends IntTrie<IntTrie.SimpleNode> {
 
-  /** simple initialization of a Set */
+  /** Simple initialization of a Set. */
   public IntSet() {
     super(new IntTrie.SimpleNode());
   }
 
   /**
-   * initializes the set with the given integers
+   * Initializes the set with the given integers.
    *
    * @param toAdd the collection of integers to add
    */

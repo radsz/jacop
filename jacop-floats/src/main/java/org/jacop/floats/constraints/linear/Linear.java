@@ -63,7 +63,7 @@ import org.jacop.floats.core.FloatVar;
 @SuppressWarnings("serial")
 public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
-  /** Defines relations */
+  /** Defines relations. */
   public static final byte eq = 0;
 
   public static final byte lt = 1;
@@ -72,7 +72,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   public static final byte gt = 4;
   public static final byte ge = 5;
 
-  /** Defines negated relations */
+  /** Defines negated relations. */
   static final byte[] negRel = {
     ne, // eq=0,
     ge, // lt=1,
@@ -86,7 +86,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   final Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
   final LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<>();
 
-  /** It specifies what relations is used by this constraint */
+  /** It specifies what relations is used by this constraint. */
   public byte relationType;
 
   /** It specifies a list of variables being summed. */

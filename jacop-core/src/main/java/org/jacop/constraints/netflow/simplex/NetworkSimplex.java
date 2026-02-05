@@ -462,7 +462,7 @@ public class NetworkSimplex {
   }
 
   /**
-   * TODO prove (or disprove) correctness (and efficiency)
+   * TODO prove (or disprove) correctness (and efficiency).
    *
    * <p>Both arcs must form a cycle in the tree and point in the same direction on that cycle.
    *
@@ -528,7 +528,7 @@ public class NetworkSimplex {
   }
 
   /**
-   * TODO prove (or disprove) correctness
+   * TODO prove (or disprove) correctness.
    *
    * <p>TODO can be 'inlined' in updateTree (but that would decrease readability)
    *
@@ -676,7 +676,7 @@ public class NetworkSimplex {
     return cost;
   }
 
-  /** Debug */
+  /** Debug. */
 
   // displays the state of the spanning tree and the flow
   public void print() {

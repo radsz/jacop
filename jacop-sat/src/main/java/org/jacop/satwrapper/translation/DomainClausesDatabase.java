@@ -52,7 +52,7 @@ import org.jacop.satwrapper.WrapperComponent;
  */
 
 /**
- * clause database designed to handle efficiently CP domain constraints, with the interface of
+ * Clause database designed to handle efficiently CP domain constraints, with the interface of
  * boolean clauses databases.
  *
  * <p>This database must be added in the SAT solver (ideally at first position) and linked to the
@@ -76,7 +76,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   private int[] propagationCauses = new int[40];
 
   /**
-   * this is responsible for propagating literals within the SAT solver to keep domain constraints
+   * This is responsible for propagating literals within the SAT solver to keep domain constraints
    * coherent. It is informed by the SAT solver that some literal has been set, and propagate other
    * variable literals.
    */
@@ -104,7 +104,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   }
 
   /**
-   * propagates the literal directly in the SAT solver
+   * Propagates the literal directly in the SAT solver.
    *
    * @param literal the literal to propagate
    * @param assertedLiteral the literal that has been the origin of the propagation
@@ -168,13 +168,13 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     }
   }
 
-  /** clear everything (no more propagations or ignored literals) */
+  /** Clear everything (no more propagations or ignored literals). */
   private void clear() {
     // ignoreCache.clear();
   }
 
   /**
-   * to get a real clause to resolve with, we seek for the clause at the origin of the propagation.
+   * To get a real clause to resolve with, we seek for the clause at the origin of the propagation.
    */
   public MapClause resolutionWith(int clauseIndex, MapClause clause) {
     assert uniqueIdToIndex(clauseIndex) == clauseIndex;

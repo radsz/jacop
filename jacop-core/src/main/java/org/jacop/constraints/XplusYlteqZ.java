@@ -36,7 +36,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * Constraint X + Y{@literal =<} Z
+ * Constraint X + Y{@literal =<} Z.
  *
  * <p>Bound consistency is used.
  *

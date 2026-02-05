@@ -58,7 +58,7 @@ public interface LexicographicalOrder {
   int precedenceOf(int dimension);
 
   /**
-   * It provides the dimension corresponding to the given precedence level
+   * It provides the dimension corresponding to the given precedence level.
    *
    * @param precedenceLevel the given precedence level
    * @return an integer value of the dimension.

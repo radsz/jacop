@@ -46,7 +46,7 @@ public class NonOverlapping implements ExternalConstraint {
   public final GeostObject[] objects;
 
   /**
-   * the dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
+   * The dimensions (from 0 to dimension-1) on which the constraint applies. To consider time,
    * include dimension in the array
    */
   public final int[] selectedDimensions;

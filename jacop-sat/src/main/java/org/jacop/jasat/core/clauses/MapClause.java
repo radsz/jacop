@@ -48,20 +48,20 @@ import org.jacop.jasat.utils.MemoryPool;
  */
 public final class MapClause implements Iterable<Integer> {
 
-  /** the literals of the clause */
+  /** The literals of the clause. */
   public final Map<Integer, Boolean> literals = new HashMap<>();
 
-  /** the literal that will be asserted due to unit propagation of the conflict clause. */
+  /** The literal that will be asserted due to unit propagation of the conflict clause. */
   public int assertedLiteral;
 
-  /** the level at which backjumping should go due to the explanation clause. */
+  /** The level at which backjumping should go due to the explanation clause. */
   public int backjumpLevel;
 
-  /** creates an empty clause */
+  /** Creates an empty clause. */
   public MapClause() {}
 
   /**
-   * initializes the SetClause with given int[] clause
+   * Initializes the SetClause with given int[] clause.
    *
    * @param clause the clause
    */
@@ -150,7 +150,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
-   * Predicate which is true iff the variable or its opposite is present
+   * Predicate which is true iff the variable or its opposite is present.
    *
    * @param var a variable ({@literal >} 0)
    * @return true if the literal or its opposite is in the clause
@@ -227,7 +227,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
-   * returns the number of literals in the clause
+   * Returns the number of literals in the clause.
    *
    * @return the number of literals in the clause
    */
@@ -236,7 +236,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
-   * converts the clause to an int[] suitable for the efficient clauses pool implementations. The
+   * Converts the clause to an int[] suitable for the efficient clauses pool implementations. The
    * clause must not be empty.
    *
    * @param pool the pool for clause implementation
@@ -257,7 +257,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
-   * allocates an int[] and dumps the clause in
+   * Allocates an int[] and dumps the clause in.
    *
    * @return a new int[] representing this clause
    */
@@ -266,7 +266,7 @@ public final class MapClause implements Iterable<Integer> {
     return toIntArray(answer);
   }
 
-  /** returns a nice representation of the clause */
+  /** Returns a nice representation of the clause. */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder().append('[');
@@ -280,14 +280,14 @@ public final class MapClause implements Iterable<Integer> {
     return sb.append(']').toString();
   }
 
-  /** clear the clause, ie. removes all literals */
+  /** Clear the clause, ie. removes all literals */
   public void clear() {
     literals.clear();
     assert isEmpty();
   }
 
   /**
-   * adds all elements of clause to the SetClause, performing resolution.
+   * Adds all elements of clause to the SetClause, performing resolution.
    *
    * @param clause the literals to add
    * @return true if the resulting SetClause is trivial (tautology), false otherwise
@@ -301,7 +301,7 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
-   * same as previous
+   * Same as previous.
    *
    * @param clause clause the literals to add
    * @return true if the resulting SetClause is trivial (tautology), false otherwise
@@ -314,7 +314,7 @@ public final class MapClause implements Iterable<Integer> {
     return answer;
   }
 
-  /** (slow) iterate over literals of the clause */
+  /** (slow) iterate over literals of the clause. */
   public Iterator<Integer> iterator() {
     return new ClauseIterator();
   }

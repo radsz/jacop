@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * an efficient map with ints as keys. This is a hashtable with arrays.
+ * An efficient map with ints as keys. This is a hashtable with arrays.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -63,7 +63,7 @@ public final class IntHashMap<E> {
   private int cardinal;
 
   /**
-   * builds a new map with given size
+   * Builds a new map with given size.
    *
    * @param size the size
    */
@@ -79,12 +79,12 @@ public final class IntHashMap<E> {
     }
   }
 
-  /** public constructor */
+  /** Public constructor. */
   public IntHashMap() {
     this(INITIAL_SIZE);
   }
 
-  /** clear the table, removing all elements */
+  /** Clear the table, removing all elements. */
   public void clear() {
     cardinal = 0;
 
@@ -94,7 +94,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * check if the key is in the table
+   * Check if the key is in the table.
    *
    * @param key the key
    * @return true if the key is in the table
@@ -113,7 +113,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * get the value associated with key, or null otherwise
+   * Get the value associated with key, or null otherwise.
    *
    * @param key the key
    * @return the value associated with key, or null otherwise
@@ -138,7 +138,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * put the value associated with the key
+   * Put the value associated with the key.
    *
    * @param key the key
    * @param value the value
@@ -176,7 +176,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * remove the key from the table
+   * Remove the key from the table.
    *
    * @param key the key to remove
    * @return true if the key was in the table
@@ -216,7 +216,7 @@ public final class IntHashMap<E> {
     return cardinal;
   }
 
-  /** double the size of the table */
+  /** Double the size of the table. */
   private void doubleSize() {
     assert tableValue.length == tableKey.length;
 
@@ -242,7 +242,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * try to find the key in the table. On success, will return the index of the key in its bucket;
+   * Try to find the key in the table. On success, will return the index of the key in its bucket;
    * otherwise, will return -1
    *
    * @param key the key to search
@@ -265,7 +265,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * hash an integer and returns the result modulo length
+   * Hash an integer and returns the result modulo length.
    *
    * @param key the int to hash
    * @param length the length (space of keys)
@@ -358,7 +358,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * iterates over all entries in the map
+   * Iterates over all entries in the map.
    *
    * @return iterator for enumeration of elements in this map
    */
@@ -367,7 +367,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * class used to iterate on the keys of the map
+   * Class used to iterate on the keys of the map.
    *
    * @author simon
    */
@@ -400,7 +400,7 @@ public final class IntHashMap<E> {
       IntHashMap.this.remove(current);
     }
 
-    /** find the next key */
+    /** Find the next key. */
     private void findNext() {
       while (true) {
         int[] bucket = tableKey[index];
@@ -423,7 +423,7 @@ public final class IntHashMap<E> {
   }
 
   /**
-   * iterator over values
+   * Iterator over values.
    *
    * @author simon
    */
@@ -472,7 +472,7 @@ public final class IntHashMap<E> {
       IntHashMap.this.remove(current);
     }
 
-    /** find the next key */
+    /** Find the next key. */
     private void findNext() {
       while (true) {
         int[] bucket = tableKey[index];

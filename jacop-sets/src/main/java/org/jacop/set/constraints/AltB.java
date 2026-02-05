@@ -53,13 +53,13 @@ public class AltB extends PrimitiveConstraint {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies the first variable of the constraint */
+  /** It specifies the first variable of the constraint. */
   public final SetVar a;
 
-  /** It specifies the second variable of the constraint */
+  /** It specifies the second variable of the constraint. */
   public final SetVar b;
 
-  /** Negated constraint */
+  /** Negated constraint. */
   AleB aGeb;
 
   /**

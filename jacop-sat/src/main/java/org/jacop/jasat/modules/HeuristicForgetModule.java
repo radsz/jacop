@@ -60,7 +60,7 @@ public final class HeuristicForgetModule
   @SuppressWarnings("unchecked")
   private final LinkedList<Integer>[] learntClauses = (LinkedList<Integer>[]) new LinkedList[6];
 
-  /** threshold of activity under which a clause is removed */
+  /** Threshold of activity under which a clause is removed. */
   public double forgetThreshold = 10;
 
   // solver instance
@@ -97,7 +97,7 @@ public final class HeuristicForgetModule
     }
   }
 
-  /** when a restart occurs, it may be a good occasion to forget clauses */
+  /** When a restart occurs, it may be a good occasion to forget clauses. */
   public void onRestart(int level) {
     if (shouldTriggerForget()) {
       core.forget();
@@ -123,7 +123,7 @@ public final class HeuristicForgetModule
   }
 
   /**
-   * should we forget now ? Will always return false if the current level is not 0
+   * Should we forget now ? Will always return false if the current level is not 0.
    *
    * @return true if the heuristic advises to forget AND the level is 0
    */
@@ -143,7 +143,7 @@ public final class HeuristicForgetModule
   }
 
   /**
-   * compute the LBD (Literal Block Distance) of a clause
+   * Compute the LBD (Literal Block Distance) of a clause.
    *
    * @param clause the clause
    * @return the LBD of this clause

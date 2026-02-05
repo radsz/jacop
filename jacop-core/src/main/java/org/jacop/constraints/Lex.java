@@ -50,7 +50,7 @@ import org.jacop.util.fsm.FsmTransition;
  */
 public class Lex extends DecomposedConstraint<Constraint> {
 
-  /** Is the lex enforcing lower then relationship? */
+  /** Indicates if the lex enforces a lower-than relationship. */
   public final boolean lexLt;
 
   /** A two dimensional array containing arrays which have to be lexicographically ordered. */

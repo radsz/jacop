@@ -36,7 +36,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 
 /**
- * Constraint if condVar = 1 then thenVar = 1 else elseVar = 1 *
+ * Constraint if condVar = 1 then thenVar = 1 else elseVar = 1 *.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

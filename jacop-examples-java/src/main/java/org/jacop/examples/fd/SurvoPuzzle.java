@@ -131,7 +131,7 @@ public class SurvoPuzzle extends ExampleFd {
     IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
   } // end main
 
-  /** model() */
+  /** Model(). */
   @Override
   public void model() {
 
@@ -200,7 +200,7 @@ public class SurvoPuzzle extends ExampleFd {
   }
 
   /**
-   * readFile()
+   * ReadFile().
    *
    * <p>Reads a Survo puzzle in the following format
    *

@@ -62,10 +62,10 @@ public class LinearIntDom extends LinearInt {
   /** Limit on the product of sizes of domains when domain consistency is carried out. */
   final double limitDomainPruning = 1e+7;
 
-  /** Defines support (valid values) for each variable */
+  /** Defines support (valid values) for each variable. */
   IntervalDomain[] support;
 
-  /** Collects support (valid assignments) for variables */
+  /** Collects support (valid assignments) for variables. */
   int[] assignments;
 
   // ================ constructors ===================

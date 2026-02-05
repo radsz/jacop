@@ -261,7 +261,7 @@ public class Tree {
   }
 
   /**
-   * A merge method for trees, it added a new root from the ancients
+   * A merge method for trees, it added a new root from the ancients.
    *
    * @param that A tree that is being merged with this tree.
    * @return The tree resulting of the merge of <i>this</i> and <i>that</i>
@@ -376,7 +376,7 @@ public class Tree {
   }
 
   /**
-   * Used to search for mandatory
+   * Used to search for mandatory.
    *
    * @return The first item
    */

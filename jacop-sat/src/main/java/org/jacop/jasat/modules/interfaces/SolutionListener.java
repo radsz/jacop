@@ -34,7 +34,7 @@ package org.jacop.jasat.modules.interfaces;
 import org.jacop.jasat.core.SolverComponent;
 
 /**
- * module called when solution is found.
+ * Module called when solution is found.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -42,7 +42,7 @@ import org.jacop.jasat.core.SolverComponent;
 public interface SolutionListener extends SolverComponent {
 
   /**
-   * a handler called when a solution is found.
+   * A handler called when a solution is found.
    *
    * @param satisfiable true when the solution is Satisfiable, false if it is Unsatisfiable.
    */

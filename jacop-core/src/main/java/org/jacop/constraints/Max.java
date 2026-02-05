@@ -62,7 +62,7 @@ public class Max extends Constraint implements SatisfiedPresent {
   /** It specifies length of the list. */
   final int l;
 
-  /** Defines first position of the variable that needs to be considered */
+  /** Defines first position of the variable that needs to be considered. */
   private TimeStamp<Integer> position;
 
   /**

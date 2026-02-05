@@ -37,7 +37,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * Constraint X {@literal <} C
+ * Constraint X {@literal <} C.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
@@ -49,7 +49,7 @@ public class XltC extends PrimitiveConstraint {
   /** It specifies variable x to be lower than a given constant. */
   public final IntVar x;
 
-  /** It specifies constant */
+  /** It specifies constant. */
   public final int c;
 
   /**

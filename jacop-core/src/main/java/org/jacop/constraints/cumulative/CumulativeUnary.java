@@ -38,7 +38,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * CumulativeUnary implements the scheduling constraint for unary resources using
+ * CumulativeUnary implements the scheduling constraint for unary resources using.
  *
  * <p>overload, not-first-not-last and detectable algorithms based on
  *

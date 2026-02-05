@@ -32,7 +32,7 @@
 package org.jacop.satwrapper;
 
 /**
- * a component that is aware of the existence of a SatWrapper
+ * A component that is aware of the existence of a SatWrapper.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -40,7 +40,7 @@ package org.jacop.satwrapper;
 public interface WrapperComponent {
 
   /**
-   * connect the component to the wrapper
+   * Connect the component to the wrapper.
    *
    * @param wrapper the wrapper
    */

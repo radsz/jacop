@@ -49,7 +49,7 @@ import org.jacop.fz.SimpleNode;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
- * Generation of boolean constraints in flatzinc
+ * Generation of boolean constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
  */

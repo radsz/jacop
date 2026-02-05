@@ -47,7 +47,7 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
- * Generation of linear constraints in flatzinc
+ * Generation of linear constraints in flatzinc.
  *
  * @author Krzysztof Kuchcinski
  */

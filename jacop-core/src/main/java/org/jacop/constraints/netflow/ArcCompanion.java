@@ -54,25 +54,25 @@ import org.jacop.core.Var;
  */
 public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> {
 
-  /** The (forward) arc */
+  /** The (forward) arc. */
   public final Arc arc;
 
-  /** Current lower capacity of the arc */
+  /** Current lower capacity of the arc. */
   public int flowOffset;
 
-  /** The FDV for lower and upper capacity */
+  /** The FDV for lower and upper capacity. */
   public IntVar xVar;
 
-  /** The FDV for lower and upper cost */
+  /** The FDV for lower and upper cost. */
   public IntVar wVar;
 
-  /** The associated structure variable */
+  /** The associated structure variable. */
   public DomainStructure structure;
 
-  /** Identifier for this arc in the structure variable */
+  /** Identifier for this arc in the structure variable. */
   public int arcId;
 
-  /** The pruningScore */
+  /** The pruningScore. */
   public int pruningScore;
 
   public ArcCompanion(Arc arc, int offset) {
@@ -297,7 +297,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   }
 
   /**
-   * interaction with structure variable
+   * Interaction with structure variable.
    *
    * @param level current store level
    * @return whether the domain of the s-variable has been updated

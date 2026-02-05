@@ -41,7 +41,7 @@ import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
 /**
- * Constraint b {@literal =>} c (implication or half-reification)
+ * Constraint b {@literal =>} c (implication or half-reification).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

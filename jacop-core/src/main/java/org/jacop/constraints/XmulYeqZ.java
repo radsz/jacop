@@ -39,7 +39,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 
 /**
- * Constraint X * Y #= Z
+ * Constraint X * Y #= Z.
  *
  * <p>Boundary consistency is used.
  *

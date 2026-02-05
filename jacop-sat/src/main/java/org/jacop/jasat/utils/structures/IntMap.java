@@ -37,13 +37,13 @@ public final class IntMap<E> {
   // the inner trie
   private final IntTrie<MapNode> map;
 
-  /** initializes the map */
+  /** Initializes the map. */
   public IntMap() {
     map = new IntTrie<>(new MapNode());
   }
 
   /**
-   * predicate to check if the key is associated to any value
+   * Predicate to check if the key is associated to any value.
    *
    * @param key the key
    * @return true if the key is associated to some value
@@ -53,7 +53,7 @@ public final class IntMap<E> {
   }
 
   /**
-   * get the value associated with the key, or null
+   * Get the value associated with the key, or null.
    *
    * @param key the key
    * @return the value or null
@@ -74,7 +74,7 @@ public final class IntMap<E> {
   }
 
   /**
-   * associates key with value
+   * Associates key with value.
    *
    * @param key the key
    * @param value the value
@@ -100,7 +100,7 @@ public final class IntMap<E> {
   }
 
   /**
-   * remove the association key/value (if any)
+   * Remove the association key/value (if any).
    *
    * @param key the key to remove from the Map
    * @return true if key was associated with some value
@@ -117,7 +117,7 @@ public final class IntMap<E> {
   }
 
   /**
-   * predicate to check if the map is empty
+   * Predicate to check if the map is empty.
    *
    * @return true if the map is empty, false otherwise
    */
@@ -125,13 +125,13 @@ public final class IntMap<E> {
     return map.isEmpty();
   }
 
-  /** clear the map (removes everything inside) */
+  /** Clear the map (removes everything inside). */
   public void clear() {
     map.clear();
   }
 
   /**
-   * Node that carries the data needed for a map
+   * Node that carries the data needed for a map.
    *
    * @author simon
    */

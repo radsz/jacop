@@ -33,7 +33,7 @@ package org.jacop.floats.constraints;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraint P - C = R
+ * Constraint P - C = R.
  *
  * <p>Bound consistency is used.
  *

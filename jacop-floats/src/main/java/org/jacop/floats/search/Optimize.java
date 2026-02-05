@@ -44,7 +44,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSolutionListener;
 
 /**
- * Implements optimization for floating point varibales
+ * Implements optimization for floating point varibales.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

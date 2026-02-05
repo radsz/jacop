@@ -81,7 +81,7 @@ public class GeostObject {
 
   /**
    * For each dimension, the shape ID that provided the minimal lower bound or the maximal
-   * upperBound
+   * upperBound.
    */
   final int[] bestShapeId;
 
@@ -187,7 +187,7 @@ public class GeostObject {
   public class TimeBoundConstraint {
 
     /**
-     * It evaluates part of the constraint that ensures that start + duration = end
+     * It evaluates part of the constraint that ensures that start + duration = end.
      *
      * @param store current store
      * @return true if some variable was changed, false otherwise
@@ -232,7 +232,7 @@ public class GeostObject {
     }
 
     /**
-     * It applies constraint enforcing that duration {@literal >} 0
+     * It applies constraint enforcing that duration {@literal >} 0.
      *
      * @param store constraint store in which the geost constraint is imposed at.
      * @return true if a variable was updated, false otherwise

@@ -33,7 +33,7 @@ package org.jacop.floats.constraints;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints atan(P) = R
+ * Constraints atan(P) = R.
  *
  * <p>Bounds consistency can be used; third parameter of constructor controls this.
  *

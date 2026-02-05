@@ -34,7 +34,7 @@ package org.jacop.jasat.modules.interfaces;
 import org.jacop.jasat.core.SolverComponent;
 
 /**
- * module that listens to add/removal of clauses
+ * Module that listens to add/removal of clauses.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -42,7 +42,7 @@ import org.jacop.jasat.core.SolverComponent;
 public interface ClauseListener extends SolverComponent {
 
   /**
-   * called when the given clause is added.
+   * Called when the given clause is added.
    *
    * @param clause the clause
    * @param clauseId the clause's unique Id
@@ -51,7 +51,7 @@ public interface ClauseListener extends SolverComponent {
   void onClauseAdd(int[] clause, int clauseId, boolean isModelClause);
 
   /**
-   * called when the clause with unique Id @param clauseId is removed
+   * Called when the clause with unique Id @param clauseId is removed.
    *
    * @param clauseId the id
    */

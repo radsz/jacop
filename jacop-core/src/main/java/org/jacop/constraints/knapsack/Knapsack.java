@@ -100,7 +100,7 @@ public class Knapsack extends Constraint
   /** It specifies mapping from variables into the leaf of the knapsack tree. */
   private Map<IntVar, TreeLeaf> variableLeafMapping;
 
-  /** The current position of the critical item in the tree */
+  /** The current position of the critical item in the tree. */
   private TimeStamp<Integer> positionOfCriticalItem;
 
   /**

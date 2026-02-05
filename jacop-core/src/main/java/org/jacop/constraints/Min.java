@@ -60,7 +60,7 @@ public class Min extends Constraint implements SatisfiedPresent {
   /** It specifies the length of the list. */
   final int l;
 
-  /** Defines first position of the variable that needs to be considered */
+  /** Defines first position of the variable that needs to be considered. */
   private TimeStamp<Integer> position;
 
   /**

@@ -38,7 +38,7 @@ import org.jacop.core.Interval;
 import org.jacop.core.Store;
 
 /**
- * Constraint X * C #= Z
+ * Constraint X * C #= Z.
  *
  * <p>Boundary consistency is used.
  *

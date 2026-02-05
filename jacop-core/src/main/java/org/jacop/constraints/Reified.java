@@ -41,7 +41,7 @@ import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
 
 /**
- * Reified constraints "constraint" {@literal <=>} B
+ * Reified constraints "constraint" {@literal <=>} B.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

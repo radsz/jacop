@@ -76,7 +76,7 @@ import org.jacop.satwrapper.translation.SimpleCpVarDomain;
  */
 
 /**
- * wrapper to communicate between SAT solver and CP solver. It listens for SAT conflicts, so that it
+ * Wrapper to communicate between SAT solver and CP solver. It listens for SAT conflicts, so that it
  * can force the CP solver to backtrack until the conflict is resolved in SAT. It listens to
  * propagations, to know which literals are asserted in SAT, to report those assertions on CP
  * variables domains.
@@ -150,7 +150,7 @@ public final class SatWrapper extends Constraint
   // did the solver reach a solution?
   private boolean hasSolution;
 
-  /** creates everything in the right order */
+  /** Creates everything in the right order. */
   public SatWrapper() {
     queueIndex = 1;
 
@@ -203,7 +203,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * registers the variable so that we can use it in SAT solver
+   * Registers the variable so that we can use it in SAT solver.
    *
    * @param variable the CP IntVar variable
    * @param translate indicate whether to use == or {@literal <=}
@@ -229,7 +229,7 @@ public final class SatWrapper extends Constraint
 
   /**
    * The point where all operations are effectively done in the SAT solver, until no operation
-   * remains or a conflict occurs
+   * remains or a conflict occurs.
    */
   @Override
   public void consistency(Store store) {
@@ -318,7 +318,7 @@ public final class SatWrapper extends Constraint
     }
   }
 
-  /** assert the next literal from toAssertLiterals */
+  /** Assert the next literal from toAssertLiterals. */
   private void processOneLiteral() {
     assert !toAssertLiterals.isEmpty();
 
@@ -351,7 +351,7 @@ public final class SatWrapper extends Constraint
     core.assertLiteral(literal, currentSatLevel);
   }
 
-  /** adds one level for SAT side, and remembers the association between CP and SAT levels */
+  /** Adds one level for SAT side, and remembers the association between CP and SAT levels. */
   private void addSatLevel() {
     currentSatLevel++;
 
@@ -364,7 +364,7 @@ public final class SatWrapper extends Constraint
     satToCpLevels[currentSatLevel] = store.level;
   }
 
-  /** wrapper listens for conflicts. */
+  /** Wrapper listens for conflicts. */
   public void onConflict(MapClause clause, int level) {
     satChangesListener.clear();
     toAssertLiterals.clear();
@@ -376,7 +376,7 @@ public final class SatWrapper extends Constraint
     // wait for the explanation
   }
 
-  /** wrapper listens for explanations, to know how deep to backtrack */
+  /** Wrapper listens for explanations, to know how deep to backtrack. */
   public void onExplain(MapClause explanation) {
     assert mustBacktrack;
     assert core.explanationClause == explanation;
@@ -400,7 +400,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * when the CP solver decides to remove a level, the wrapper must force the SAT solver to
+   * When the CP solver decides to remove a level, the wrapper must force the SAT solver to
    * backtrack accordingly, to keep mappings between the two search trees consistent. This is also
    * the place where the wrapper can decide that a conflict in the SAT solver has been solved.
    */
@@ -509,7 +509,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * called when a boolean variable is set to some boolean value
+   * Called when a boolean variable is set to some boolean value.
    *
    * @param variable the boolean variable
    * @param value the value (true or false) of this variable
@@ -533,7 +533,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * asks the solver for which literal is the most active. It will return a literal, which can be
+   * Asks the solver for which literal is the most active. It will return a literal, which can be
    * transformed into a variable and a value from the variable domain. Useful when the CP solver
    * does not know which variable to set to continue research
    *
@@ -544,7 +544,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * (for debug) show what a literal means
+   * (for debug) show what a literal means.
    *
    * @param literal literal for showing its meaning
    * @return literal meaning
@@ -601,7 +601,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * to add some module to the solver
+   * To add some module to the solver.
    *
    * @param module the module to add
    */
@@ -610,7 +610,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * add a component
+   * Add a component.
    *
    * @param module the component
    */
@@ -618,13 +618,13 @@ public final class SatWrapper extends Constraint
     module.initialize(this);
   }
 
-  /** asks the solver to forget useless clauses, to free memory */
+  /** Asks the solver to forget useless clauses, to free memory. */
   public void forget() {
     core.forget();
   }
 
   /**
-   * add model (globally valid) clause to solver, in a delayed fashion
+   * Add model (globally valid) clause to solver, in a delayed fashion.
    *
    * @param clause the clause to add
    */
@@ -645,7 +645,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * add the constraint to the wrapper (ie, constraint.imposeToSat(this))
+   * Add the constraint to the wrapper (ie, constraint.imposeToSat(this)).
    *
    * @param constraint the constraint to add
    */
@@ -674,8 +674,8 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * given a CP variable and a value, retrieve the associated boolean literal for either 'variable =
-   * value' or either 'variable {@literal <=} value'
+   * Given a CP variable and a value, retrieve the associated boolean literal for either 'variable =
+   * value' or either 'variable {@literal <=} value'.
    *
    * @param variable the CP variable
    * @param value a value in the range of this variable
@@ -697,7 +697,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * returns the CpVarDomain associated with this literal
+   * Returns the CpVarDomain associated with this literal.
    *
    * @param literal the boolean literal
    * @return a range
@@ -708,7 +708,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * get the IntVar back from a literal
+   * Get the IntVar back from a literal.
    *
    * @param literal the literal
    * @return IntVar represented by the literal
@@ -722,7 +722,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * transform a literal 'x=v' into a value 'v' for some CP variable
+   * Transform a literal 'x=v' into a value 'v' for some CP variable.
    *
    * @param literal literal to be transformed to value it represents
    * @return the value represented by this literal
@@ -737,7 +737,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * checks if the boolean variable represents an assertion 'x=v' or 'x{@literal <=}v'
+   * Checks if the boolean variable represents an assertion 'x=v' or 'x{@literal <=}v'.
    *
    * @param literal the boolean literal
    * @return true if the literal represents a proposition 'x=v', false if it represents 'x{@literal
@@ -752,7 +752,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * checks if this literal corresponds to some CP variable
+   * Checks if this literal corresponds to some CP variable.
    *
    * @param literal the literal
    * @return true if this literal stands for some 'x=v' or 'x{@literal <=}v' proposition
@@ -769,7 +769,7 @@ public final class SatWrapper extends Constraint
   }
 
   /**
-   * log method, similar to printf. Example: wrapper.log(this, "%s is %d", "foo", 42);
+   * Log method, similar to printf. Example: wrapper.log(this, "%s is %d", "foo", 42);
    *
    * @param o the object that logs something (use <code>this</code>)
    * @param format the format string (the message, if no formatting)

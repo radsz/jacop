@@ -36,7 +36,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 
 /**
- * TableMill generates tables for different constraint to be used in Table constraint
+ * TableMill generates tables for different constraint to be used in Table constraint.
  *
  * @author Krzysztof Kuchcinski
  * @version 4.10

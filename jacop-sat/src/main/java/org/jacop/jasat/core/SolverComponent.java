@@ -40,7 +40,7 @@ package org.jacop.jasat.core;
 public interface SolverComponent {
 
   /**
-   * initializes the component with the given solver. May be called only once. This method must
+   * Initializes the component with the given solver. May be called only once. This method must
    * register the component to the solver for the run.
    *
    * @param core core component to initialize

@@ -128,7 +128,7 @@ public class SimpleCpVarDomain extends SatCpBridge {
     }
   }
 
-  /** given some literal has a value, what other literals should be asserted ? */
+  /** Propagates other literals that should be asserted given a literal value. */
   @Override
   public void propagate(int literal) {
 

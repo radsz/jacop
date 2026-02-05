@@ -52,7 +52,7 @@ public final class MemoryPool implements SolverComponent {
   private int stockSize;
 
   /**
-   * returns an array, from the pool if one is available, allocating it otherwise
+   * Returns an array, from the pool if one is available, allocating it otherwise.
    *
    * @param size the size of the array we need
    * @return an int[size] array
@@ -85,7 +85,7 @@ public final class MemoryPool implements SolverComponent {
   }
 
   /**
-   * save this array for a future usage, when not needed anymore
+   * Save this array for a future usage, when not needed anymore.
    *
    * @param array the array to store
    */

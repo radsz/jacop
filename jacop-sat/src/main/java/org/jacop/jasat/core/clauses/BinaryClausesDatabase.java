@@ -55,7 +55,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   private int numRemoved;
 
   /**
-   * TODO Efficiency,
+   * TODO Efficiency,.
    *
    * <p>Watches require a very large array, but there maybe not so many binary clauses. Maybe a
    * hashmap, connecting variable and list of watched clauses is more appropriate.
@@ -158,7 +158,7 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   }
 
   /**
-   * when something changed, find the status of the clause
+   * When something changed, find the status of the clause.
    *
    * @param clauseIndex index of the clause
    * @return the state of the clause

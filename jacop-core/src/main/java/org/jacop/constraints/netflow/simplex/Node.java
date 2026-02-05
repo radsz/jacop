@@ -38,25 +38,25 @@ package org.jacop.constraints.netflow.simplex;
  */
 public final class Node {
 
-  /** for debug only */
+  /** For debug only. */
   public final int initialBalance;
 
-  /** a label, great for debugging */
+  /** A label, great for debugging. */
   public final String name;
 
-  /** adjacency list (recorded when degree reaches 2) */
+  /** Adjacency list (recorded when degree reaches 2). */
   public final Arc[] adjacencyList;
 
-  /** the potential (or dual variable) of the network simplex */
+  /** The potential (or dual variable) of the network simplex. */
   public int potential;
 
-  /** balance of the last feasible flow */
+  /** Balance of the last feasible flow. */
   public int balance;
 
-  /** change in balance for the next flow computation */
+  /** Change in balance for the next flow computation. */
   public int deltaBalance;
 
-  /** connects this node to the root */
+  /** Connects this node to the root. */
   public Arc artificial;
 
   // we use the parent-thread-depth data structure to store the spanning tree
@@ -65,10 +65,10 @@ public final class Node {
   public Node thread;
   public int depth;
 
-  /** number of connected arcs */
+  /** Number of connected arcs. */
   public int degree;
 
-  /** marks the cut (S,T) for dual pivot */
+  /** Marks the cut (S,T) for dual pivot. */
   boolean marked;
 
   public Node(String name, int balance) {
@@ -130,7 +130,7 @@ public final class Node {
   }
 
   /**
-   * Sets or clears a mark on a subtree rooted at this node
+   * Sets or clears a mark on a subtree rooted at this node.
    *
    * @param setMark whether to set or clear the mark
    */

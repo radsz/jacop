@@ -468,14 +468,14 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     return currentIndex - numRemoved;
   }
 
-  /** returns to the given level */
+  /** Returns to the given level. */
   public void backjump(int level) {
     // nothing to do
   }
 
   /**
    * (used for debug) checks if the 2 first literals of the clauses are exactly the set of literals
-   * that watch this clause
+   * that watch this clause.
    *
    * @param clauseIndex the index of the clause
    */
@@ -492,7 +492,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
   /**
    * (used for debug) checks if the 2 first literals of the clauses are exactly the set of literals
-   * that watch this clause
+   * that watch this clause.
    */
   @SuppressWarnings("unused")
   private String checkWatches4var(int var) {
@@ -535,7 +535,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
    */
 
   /**
-   * assuming i != j, this modifies clause so that the elements that were at position i and j will
+   * Assuming i != j, this modifies clause so that the elements that were at position i and j will
    * now be at position 0 and 1 (i.e. clause[i] becomes clause[0] and clause[j] becomes clause[1])
    *
    * @param clause the clause to modify
@@ -580,7 +580,7 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
   }
 
   /**
-   * be sure that the database can contain @param size clauses
+   * Be sure that the database can contain @param size clauses.
    *
    * @param size the number of clauses
    */

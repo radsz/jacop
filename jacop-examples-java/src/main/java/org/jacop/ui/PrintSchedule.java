@@ -38,7 +38,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
- * Prints the computed schedule
+ * Prints the computed schedule.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

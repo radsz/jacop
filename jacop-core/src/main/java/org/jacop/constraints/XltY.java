@@ -36,7 +36,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
- * Constraint X {@literal <} Y
+ * Constraint X {@literal <} Y.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

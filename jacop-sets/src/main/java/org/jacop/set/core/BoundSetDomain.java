@@ -516,7 +516,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   /**
-   * A set is never numeric
+   * A set is never numeric.
    *
    * @return false
    */
@@ -526,7 +526,7 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   /**
-   * A set is not sparse
+   * A set is not sparse.
    *
    * @return false
    */

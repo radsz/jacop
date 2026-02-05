@@ -31,7 +31,7 @@
 package org.jacop.constraints;
 
 /**
- * Represents tasks with integer start, duration and resource valurs for cumulative constraint
+ * Represents tasks with integer start, duration and resource valurs for cumulative constraint.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10

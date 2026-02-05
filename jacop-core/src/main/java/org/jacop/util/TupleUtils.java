@@ -219,7 +219,7 @@ public class TupleUtils {
   }
 
   /**
-   * searches for the position of the tuple in the tuple list.
+   * Searches for the position of the tuple in the tuple list.
    *
    * @param tuple to be compared to.
    * @return position at which the tuple is stored in tuple list array.

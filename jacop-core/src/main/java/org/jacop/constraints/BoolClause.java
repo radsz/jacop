@@ -147,7 +147,7 @@ public class BoolClause extends PrimitiveConstraint {
     positionY = new TimeStamp<>(store, 0);
   }
 
-  /** computes consistency for x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n */
+  /** Computes consistency for x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n */
   @Override
   public void consistency(Store store) {
 
@@ -201,7 +201,7 @@ public class BoolClause extends PrimitiveConstraint {
   }
 
   /**
-   * computes consistency for not (x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n) implies not x_0
+   * Computes consistency for not (x_0 \/ ... \/ x_n \/ not y_0 \/ ... \/ not y_n) implies not x_0
    * /\ ... /\ not x_n /\ y_0 /\ ... /\ y_n taht is all x_i = 0 /\ all y_i = 1
    */
   @Override

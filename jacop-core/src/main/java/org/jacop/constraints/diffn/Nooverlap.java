@@ -51,8 +51,8 @@ public class Nooverlap extends Constraint {
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /**
-   * defines how to treat rectangles with width zero strict = true means they still need to be
-   * between other rectangles strict = false these rectangles can be anywhere
+   * Defines how to treat rectangles with width zero strict = true means they still need to be
+   * between other rectangles strict = false these rectangles can be anywhere.
    */
   boolean strict = true;
 
@@ -61,10 +61,10 @@ public class Nooverlap extends Constraint {
   /** It specifies the list of rectangles which are of interest for this diff constraint. */
   Rectangle[] rectangle;
 
-  /** Defines first position of the variable that is not ground to 1 */
+  /** Defines first position of the variable that is not ground to 1. */
   TimeStamp<BitSet>[] overlapping;
 
-  /** current stamp */
+  /** Current stamp. */
   int stamp;
 
   boolean doAreaCheck = true;

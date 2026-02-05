@@ -172,7 +172,7 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
   }
 
   /**
-   * Saves the cost produced by a given search
+   * Saves the cost produced by a given search.
    *
    * @author Krzysztof Kuchcinski
    */

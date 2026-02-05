@@ -79,14 +79,14 @@ public class ObstacleObjectFrame extends InternalConstraint {
   final boolean useTime;
 
   /**
-   * the collection of holes that are included in all possible shapes, enlarged to include the whole
-   * domain that can be covered for any feasible choice of the origin
+   * The collection of holes that are included in all possible shapes, enlarged to include the whole
+   * domain that can be covered for any feasible choice of the origin.
    */
   private final ArrayList<Dbox> extendedHoles;
 
   /**
-   * the frame is the area that is ensured to be covered by the obstacle, given the domain of its
-   * origin variables
+   * The frame is the area that is ensured to be covered by the obstacle, given the domain of its
+   * origin variables.
    */
   public LinkedList<Dbox> frame;
 
@@ -96,7 +96,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
   /** It specifies the bounding box of the frame. */
   private Dbox frameBoundingBox;
 
-  /** it computes the area/volume of the frame. */
+  /** It computes the area/volume of the frame. */
   private int frameArea;
 
   /**
@@ -173,7 +173,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
   }
 
   /**
-   * updates the frame given the current values of the object coordinate variables. This method
+   * Updates the frame given the current values of the object coordinate variables. This method
    * should be called whenever some of the coordinate variables of the associated object change.
    */
   public void updateFrame() {

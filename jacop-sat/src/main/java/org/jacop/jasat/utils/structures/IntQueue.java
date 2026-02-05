@@ -35,7 +35,7 @@ import java.util.Iterator;
 import org.jacop.jasat.utils.MemoryPool;
 
 /**
- * Special class for unboxed int FIFO
+ * Special class for unboxed int FIFO.
  *
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 4.10
@@ -68,7 +68,7 @@ public final class IntQueue implements Iterable<Integer> {
   }
 
   /**
-   * adds an int at the end of the FIFO
+   * Adds an int at the end of the FIFO.
    *
    * @param element the element to add
    */
@@ -87,7 +87,7 @@ public final class IntQueue implements Iterable<Integer> {
   }
 
   /**
-   * inspection of the first element, without removal
+   * Inspection of the first element, without removal.
    *
    * @return the first element of the array
    */
@@ -98,7 +98,7 @@ public final class IntQueue implements Iterable<Integer> {
   }
 
   /**
-   * takes the first element, removes it from the FIFO and returns it
+   * Takes the first element, removes it from the FIFO and returns it.
    *
    * @return the first element from the FIFO queue
    */
@@ -123,7 +123,7 @@ public final class IntQueue implements Iterable<Integer> {
     }
   }
 
-  /** increase the size of the queue */
+  /** Increase the size of the queue. */
   private void resize() {
     assert start == stop;
 
@@ -189,7 +189,7 @@ public final class IntQueue implements Iterable<Integer> {
       throw new AssertionError("not implemented");
     }
 
-    /** find the next index */
+    /** Find the next index. */
     private void findNext() {
       index++;
       if (index == array.length) {

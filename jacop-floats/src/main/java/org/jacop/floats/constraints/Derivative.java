@@ -42,7 +42,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Derivative for float constraints
+ * Derivative for float constraints.
  *
  * <p>The derivative of f with respect to x
  *
