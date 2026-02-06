@@ -103,7 +103,7 @@ public class ShiftOrder implements LexicographicalOrder {
 
   public int compare(int[] p1, int[] p2) {
 
-    assert (p1.length == p2.length) : "dimension mismatch";
+    assert p1.length == p2.length : "dimension mismatch";
 
     for (int i = 0; i < noOfDimensions; i++) {
 

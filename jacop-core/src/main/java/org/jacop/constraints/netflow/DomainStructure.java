@@ -145,7 +145,7 @@ public class DomainStructure implements VarHandler {
 
   private void groundArc(int arcId, boolean active, MutableNetwork network) {
 
-    assert (arcId < notGrounded);
+    assert arcId < notGrounded;
 
     // prune domain of x variable
 
@@ -212,11 +212,11 @@ public class DomainStructure implements VarHandler {
   }
 
   public void ungroundArc(int arcId) {
-    assert (arcId >= notGrounded);
+    assert arcId >= notGrounded;
 
     // add domain/arc pair
     // swap(arcId, notGrounded++);
-    assert (arcId == notGrounded);
+    assert arcId == notGrounded;
     notGrounded++;
   }
 

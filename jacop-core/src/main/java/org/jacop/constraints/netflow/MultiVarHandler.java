@@ -55,12 +55,12 @@ public class MultiVarHandler implements VarHandler {
   }
 
   public void add(VarHandler handler) {
-    assert (handler.listVariables().contains(variable));
+    assert handler.listVariables().contains(variable);
     handlers.add(handler);
   }
 
   public int getPruningEvent(Var variable) {
-    assert (this.variable == variable);
+    assert this.variable == variable;
     int max = IntDomain.GROUND;
     for (VarHandler handler : handlers) {
       int event = handler.getPruningEvent(variable);
@@ -76,7 +76,7 @@ public class MultiVarHandler implements VarHandler {
   }
 
   public void processEvent(IntVar variable, MutableNetwork network) {
-    assert (this.variable == variable);
+    assert this.variable == variable;
     for (VarHandler handler : handlers) {
       handler.processEvent(variable, network);
     }

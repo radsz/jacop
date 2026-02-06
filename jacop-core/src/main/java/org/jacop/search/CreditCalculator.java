@@ -79,7 +79,7 @@ public class CreditCalculator<T extends Var>
    */
   public CreditCalculator(int credit, int backtracks, int maxDepth) {
 
-    assert (maxDepth >= 1);
+    assert maxDepth >= 1;
 
     this.backtracks = backtracks;
     currentBacktracks = backtracks;

@@ -166,7 +166,7 @@ public class Tree {
       TreeLeaf[] leaves,
       IntVar zero) {
 
-    assert (items.length > 1) : "Number of items must be greater than 1";
+    assert items.length > 1 : "Number of items must be greater than 1";
 
     TreeLeaf nullLeaf = new TreeLeaf(zero, 1, 0, items.length);
 
@@ -325,12 +325,13 @@ public class Tree {
     availableWeightOfCriticalItem = criticalLeaf.getWSum() - takenWeightOfCriticalItem;
 
     obtainedProfit +=
-        ((double) criticalLeaf.getPSum() * (double) takenWeightOfCriticalItem)
+        (double) criticalLeaf.getPSum()
+            * (double) takenWeightOfCriticalItem
             / (double) criticalLeaf.getWSum();
 
     optimalProfit = obtainedProfit;
 
-    assert (optimalProfit >= 0) : "The optimal profit is negative. ";
+    assert optimalProfit >= 0 : "The optimal profit is negative. ";
 
     criticalLeftLeaf = getCriticalPosition(capacity - root.getWMax());
     criticalRightLeaf = getCriticalPosition(capacity + root.getWMax());
@@ -442,7 +443,8 @@ public class Tree {
     currentWeight = 0;
     currentProfit = 0;
     profitFromCriticalLeft =
-        (criticalLeaf.profitOfOne * availableWeightOfCriticalItem)
+        criticalLeaf.profitOfOne
+            * availableWeightOfCriticalItem
             / (double) criticalLeaf.weightOfOne;
     currentNode = criticalLeaf;
     exhaustedRightItems = false;
@@ -589,7 +591,9 @@ public class Tree {
     // profit.
 
     double lastWeight =
-        (profitSlack + currentProfit + profitFromCriticalLeft)
+        profitSlack
+            + currentProfit
+            + profitFromCriticalLeft
             - currentWeight * profitOfItemChecked / (double) weightOfItemChecked;
 
     if (!exhaustedRightItems) {

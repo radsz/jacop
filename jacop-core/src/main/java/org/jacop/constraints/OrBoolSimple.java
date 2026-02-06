@@ -74,7 +74,7 @@ public class OrBoolSimple extends PrimitiveConstraint {
     this.b = b;
     this.result = result;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     queueIndex = 0;
 

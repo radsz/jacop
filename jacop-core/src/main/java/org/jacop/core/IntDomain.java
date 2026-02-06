@@ -161,8 +161,8 @@ public abstract class IntDomain extends Domain {
     Interval result;
 
     if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-      min = IntDomain.MinInt;
-      max = IntDomain.MaxInt;
+      min = MinInt;
+      max = MaxInt;
       result = new Interval(min, max);
     } else if (c == 0 && d == 0) { // case 2
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
@@ -201,8 +201,8 @@ public abstract class IntDomain extends Domain {
     Interval result;
 
     if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
-      min = IntDomain.MinInt;
-      max = IntDomain.MaxInt;
+      min = MinInt;
+      max = MaxInt;
       result = new Interval(min, max);
     } else if (c == 0 && d == 0) { // case 2
       throw Store.failException; // can happen if a..b or c..d are not proper intervals
@@ -291,7 +291,7 @@ public abstract class IntDomain extends Domain {
   public static int multiplyInt(int x, int y) {
     long r = (long) x * (long) y;
     if ((int) r != r) {
-      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
+      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MaxInt : MinInt;
     }
     return (int) r;
   }
@@ -307,9 +307,7 @@ public abstract class IntDomain extends Domain {
     int r = x + y;
     // HD 2-12 Overflow iff both arguments have the opposite sign of the result
     if (((x ^ r) & (y ^ r)) < 0) {
-      return (long) x + (long) y > 0
-          ? Integer.MAX_VALUE
-          : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
+      return (long) x + (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MaxInt : MinInt;
     }
     return r;
   }
@@ -326,9 +324,7 @@ public abstract class IntDomain extends Domain {
     // HD 2-12 Overflow iff the arguments have different signs and
     // the sign of the result is different than the sign of x
     if (((x ^ y) & (x ^ r)) < 0) {
-      return (long) x - (long) y > 0
-          ? Integer.MAX_VALUE
-          : Integer.MIN_VALUE; // IntDomain.MaxInt : IntDomain.MinInt;
+      return (long) x - (long) y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MaxInt : MinInt;
     }
     return r;
   }
@@ -382,11 +378,11 @@ public abstract class IntDomain extends Domain {
     IntDomain result = union(union);
 
     if (result.getSize() == getSize()) {
-      return Domain.NONE;
+      return NONE;
     } else {
       setDomain(result);
       // FIXME, how to setup events for domain extending events?
-      return IntDomain.ANY;
+      return ANY;
     }
   }
 
@@ -681,8 +677,7 @@ public abstract class IntDomain extends Domain {
       throw new IllegalArgumentException("An argument should be a singleton domain");
     }
 
-    assert (value instanceof IntDomain)
-        : "Can not compare int domains with other types of domains.";
+    assert value instanceof IntDomain : "Can not compare int domains with other types of domains.";
 
     IntDomain domain = (IntDomain) value;
 
@@ -1062,7 +1057,7 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    int pruningEvent = IntDomain.GROUND;
+    int pruningEvent = GROUND;
 
     Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -1103,7 +1098,7 @@ public abstract class IntDomain extends Domain {
       }
     }
 
-    pruningEvent = IntDomain.BOUND;
+    pruningEvent = BOUND;
 
     pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -1144,7 +1139,7 @@ public abstract class IntDomain extends Domain {
       }
     }
 
-    pruningEvent = IntDomain.ANY;
+    pruningEvent = ANY;
 
     pruningEventConstraints = modelConstraints[pruningEvent];
 
@@ -1248,7 +1243,7 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    assert (stamp == storeLevel);
+    assert stamp == storeLevel;
 
     int i = 0;
 
@@ -1286,9 +1281,9 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    assert (stamp == storeLevel);
+    assert stamp == storeLevel;
 
-    assert (searchConstraints.get(position) == c)
+    assert searchConstraints.get(position) == c
         : "Position of the removed constraint not specified properly";
 
     if (position < searchConstraintsToEvaluate) {
@@ -1429,7 +1424,7 @@ public abstract class IntDomain extends Domain {
    */
   public int value() {
 
-    assert (singleton()) : "function value() called when domain is not a singleton domain.";
+    assert singleton() : "function value() called when domain is not a singleton domain.";
 
     return min();
   }

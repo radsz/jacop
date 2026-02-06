@@ -84,7 +84,7 @@ public class XorBool extends PrimitiveConstraint {
     this.x = Arrays.copyOf(x, x.length);
     this.y = y;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     if (x.length > 2) {
       queueIndex = 1;

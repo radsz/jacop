@@ -75,18 +75,18 @@ public class Lex extends DecomposedConstraint<Constraint> {
 
   public Lex(IntVar[][] x, boolean lt) {
 
-    assert (x != null) : "x list is null.";
+    assert x != null : "x list is null.";
     this.x = new IntVar[x.length][];
 
     lexLt = lt;
 
     for (int i = 0; i < x.length; i++) {
 
-      assert (x[i] != null) : i + "-th vector in x is null";
+      assert x[i] != null : i + "-th vector in x is null";
       this.x[i] = new IntVar[x[i].length];
 
       for (int j = 0; j < x[i].length; j++) {
-        assert (x[i][j] != null) : j + "-th element of " + i + "-th vector in x is null";
+        assert x[i][j] != null : j + "-th element of " + i + "-th vector in x is null";
         this.x[i][j] = x[i][j];
       }
     }

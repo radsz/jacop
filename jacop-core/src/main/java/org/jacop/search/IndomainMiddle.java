@@ -50,9 +50,9 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
   /** It requires IntVar variable. */
   public int indomain(IntVar var) {
 
-    assert (!var.singleton()) : "indomain does not work with singleton variables.";
+    assert !var.singleton() : "indomain does not work with singleton variables.";
 
-    assert (var.dom().domainId() != IntDomain.BoundDomainID)
+    assert var.dom().domainId() != IntDomain.BoundDomainID
         : "It is not possible to use BoundDomain";
 
     if (var.domain.domainId() == IntDomain.IntervalDomainID) {

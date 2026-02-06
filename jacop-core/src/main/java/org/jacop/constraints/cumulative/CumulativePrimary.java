@@ -343,7 +343,7 @@ class CumulativePrimary extends Constraint {
               log.debug(
                   ">>> CumulativePrimary Profile 2. Narrowed {} inMax {} => {}",
                   start[ti],
-                  (startExcluded[ti] - 1),
+                  startExcluded[ti] - 1,
                   start[ti]);
             }
 

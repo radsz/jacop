@@ -335,7 +335,7 @@ public class CumulativeBasic extends Constraint {
                     log.debug(
                         ">>> CumulativeBasic Profile 1. Narrowed {} \\ {} => {}",
                         t.start,
-                        new IntervalDomain(startExcluded[ti], (e.date() - 1)),
+                        new IntervalDomain(startExcluded[ti], e.date() - 1),
                         t.start);
                   }
 

@@ -87,6 +87,7 @@
         <maven.compiler.version>3.14.1</maven.compiler.version>
         <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
         <maven.checkstyle.tool.version>13.0.0</maven.checkstyle.tool.version>
+        <maven.pmd.version>3.28.0</maven.pmd.version>
         <checkstyle.suppressions.file>${maven.multiModuleProjectDirectory}/doc/suppression.xml
         </checkstyle.suppressions.file>
         <jacoco.version>0.8.14</jacoco.version>
@@ -367,6 +368,25 @@ setup to run configuration. -->
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jdeps-plugin</artifactId>
                     <version>3.2.0</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-pmd-plugin</artifactId>
+                    <version>${maven.pmd.version}</version>
+                    <configuration>
+                        <linkXRef>true</linkXRef>
+                        <targetJdk>${maven.compiler.target}</targetJdk>
+                        <!-- Exclude automatically generated files from jjtree and javacc -->
+                        <excludes>
+                            <exclude>**/fz/Parser.java</exclude>
+                            <exclude>**/fz/ParserTreeConstants.java</exclude>
+                            <exclude>**/fz/Node.java</exclude>
+                            <exclude>**/fz/TokenMgrError.java</exclude>
+                            <exclude>**/fz/ParserTokenManager.java</exclude>
+                            <exclude>**/fz/SimpleCharStream.java</exclude>
+                        </excludes>
+                    </configuration>
                 </plugin>
 
                 <plugin>
@@ -755,7 +775,7 @@ setup to run configuration. -->
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
                     <linkXRef>true</linkXRef>
-                    <targetJdk>1.8</targetJdk>
+                    <targetJdk>${maven.compiler.target}</targetJdk>
                     <!-- Exclude automatically generated files from jjtree and javacc -->
                     <excludes>
                         <exclude>**/fz/Parser.java</exclude>
@@ -766,7 +786,7 @@ setup to run configuration. -->
                         <exclude>**/fz/SimpleCharStream.java</exclude>
                     </excludes>
                 </configuration>
-                <version>3.21.0</version>
+                <version>${maven.pmd.version}</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

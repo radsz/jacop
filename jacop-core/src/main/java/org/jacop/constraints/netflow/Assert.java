@@ -56,8 +56,8 @@ public class Assert {
       sum += n.balance;
     }
 
-    assert (sum == 0) : "sum != 0";
-    assert (g.root.balance == 0) : "root balance != 0";
+    assert sum == 0 : "sum != 0";
+    assert g.root.balance == 0 : "root balance != 0";
 
     for (Node n : g.nodes) {
       int del_out = 0;
@@ -99,7 +99,7 @@ public class Assert {
         //       System.out.println("  " + a);
       }
 
-      assert (n.balance == out - in)
+      assert n.balance == out - in
           : "Balance on node\n"
               + "out = "
               + out
@@ -111,7 +111,7 @@ public class Assert {
               + n
               + "\n";
 
-      assert (n.initialBalance - n.balance - n.deltaBalance == del_out - del_in)
+      assert n.initialBalance - n.balance - n.deltaBalance == del_out - del_in
           : "Balance on deleted node\n"
               + "out = "
               + del_out
@@ -148,7 +148,7 @@ public class Assert {
         }
       }
 
-      assert (0 == out - in)
+      assert 0 == out - in
           : "Balance on node (root)\n"
               + "in = "
               + out
@@ -166,17 +166,17 @@ public class Assert {
 
   public static boolean checkBeforeUpdate(Arc leaving, Arc entering) {
 
-    assert (leaving.index == -1);
-    assert (entering.index >= 0);
+    assert leaving.index == -1;
+    assert entering.index >= 0;
 
     Node k = entering.sister.head;
     Node l = entering.head;
     Node p = leaving.sister.head;
     Node q = leaving.head;
 
-    assert (q == p.parent) : "\nexpected: q is the parent of p\n";
-    assert (p == p.lca(k)) : "\nexpected: {p,k} are in the same subtree\n";
-    assert (p != p.lca(l)) : "\nexpected: {p,l} are not in the same subtree\n";
+    assert q == p.parent : "\nexpected: q is the parent of p\n";
+    assert p == p.lca(k) : "\nexpected: {p,k} are in the same subtree\n";
+    assert p != p.lca(l) : "\nexpected: {p,l} are not in the same subtree\n";
 
     return true;
   }
@@ -197,66 +197,66 @@ public class Assert {
         Node i = arc.sister.head;
 
         if (i.toParent == arc) {
-          assert (j == i.parent) : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
+          assert j == i.parent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
         } else {
-          assert (arc.sister == j.toParent) : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
-          assert (i == j.parent) : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
+          assert arc.sister == j.toParent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
+          assert i == j.parent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
         }
       } else if (arc.index != -3) { // non-tree arc
         //       String s = arc.toString();
 
-        assert (arc.index == arc.sister.index);
-        assert (0 <= arc.index && arc.index < g.numArcs) : g.numArcs + ", " + arc;
+        assert arc.index == arc.sister.index;
+        assert 0 <= arc.index && arc.index < g.numArcs : g.numArcs + ", " + arc;
 
         if (arc.capacity > 0) {
-          assert (0 == arc.sister.capacity) : "\n" + arc;
-          assert (arc == g.lower[arc.index]) : "\n" + arc;
+          assert 0 == arc.sister.capacity : "\n" + arc;
+          assert arc == g.lower[arc.index] : "\n" + arc;
         } else if (arc.sister.capacity > 0) {
-          assert (0 == arc.capacity);
-          assert (arc.sister == g.lower[arc.index]);
+          assert 0 == arc.capacity;
+          assert arc.sister == g.lower[arc.index];
         } else {
           // degenerate arc
-          assert (arc.capacity == 0);
-          assert (arc.sister.capacity == 0);
+          assert arc.capacity == 0;
+          assert arc.sister.capacity == 0;
           boolean b1 = arc.sister == g.lower[arc.index];
           boolean b2 = arc == g.lower[arc.index];
-          assert (b1 ^ b2);
+          assert b1 ^ b2;
           // assertTrue(s, b1 ^ b2);
         }
       } else { // deleted arc
         del_cost += arc.longCost();
       }
     }
-    assert (N - 1 == tree.size());
-    assert (N - 1 == allArcsForDebug.size() - g.lower.length);
-    assert (((Network) g).costOffset == del_cost);
+    assert N - 1 == tree.size();
+    assert N - 1 == allArcsForDebug.size() - g.lower.length;
+    assert ((Network) g).costOffset == del_cost;
 
     for (int i = 0; i < g.numArcs; i++) {
       Arc arc = g.lower[i];
-      assert (arc.sister.capacity == 0);
+      assert arc.sister.capacity == 0;
     }
 
-    assert (g.root.parent == null);
-    assert (g.root.toParent == null);
-    assert (0 == g.root.balance);
-    assert (0 == g.root.potential);
-    assert (0 == g.root.depth);
+    assert g.root.parent == null;
+    assert g.root.toParent == null;
+    assert 0 == g.root.balance;
+    assert 0 == g.root.potential;
+    assert 0 == g.root.depth;
     int x = 1;
     for (Node i = g.root.thread; i != g.root; i = i.thread) {
       x++;
 
       Node p = i.parent;
 
-      assert (p.depth + 1 == i.depth) : "\ni = " + i + "\np = " + p + "\n";
-      assert (i == i.toParent.sister.head) : "\ni = " + i + "\np = " + p + "\n";
-      assert (p == i.toParent.head) : "\ni = " + i + "\np = " + p + "\n";
-      assert (0 == i.toParent.reducedCost()) : "\ni = " + i + "\np = " + p + "\n";
+      assert p.depth + 1 == i.depth : "\ni = " + i + "\np = " + p + "\n";
+      assert i == i.toParent.sister.head : "\ni = " + i + "\np = " + p + "\n";
+      assert p == i.toParent.head : "\ni = " + i + "\np = " + p + "\n";
+      assert 0 == i.toParent.reducedCost() : "\ni = " + i + "\np = " + p + "\n";
       boolean b1 = tree.contains(i.toParent);
       boolean b2 = tree.contains(i.toParent.sister);
-      assert (b1 ^ b2) : "\ni = " + i + "\np = " + p + "\n";
+      assert b1 ^ b2 : "\ni = " + i + "\np = " + p + "\n";
     }
 
-    assert (N == x);
+    assert N == x;
 
     for (Node node : g.nodes) {
       List<Arc> adjArcs = new ArrayList<>();
@@ -267,23 +267,21 @@ public class Assert {
           adjArcs.add(arc);
         }
       }
-      assert (
-      /*node.toString() + "\n" + adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */ count
-          == node.degree);
+      assert /*node.toString() + "\n" + adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */ count
+          == node.degree;
       if (node.degree <= 2) {
         int count2 = 0;
         for (Arc arc : node.adjacencyList) {
           if (arc != null) {
             // TODO: CRUCIAL, BUG?, assert removed.
             //         assertTrue(arc.forward);
-            assert ((arc.head == node) ^ (arc.tail() == node));
-            assert (arc.index != NetworkSimplex.DELETED_ARC);
+            assert (arc.head == node) ^ (arc.tail() == node);
+            assert arc.index != NetworkSimplex.DELETED_ARC;
             count2++;
           }
         }
-        assert (
-        /*node.toString() + "\n" +adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */ count
-            == count2);
+        assert /*node.toString() + "\n" +adjArcs.toString() + "\n" + Arrays.toString(node.adjacencyList) + "\n", */ count
+            == count2;
       }
     }
 
@@ -317,9 +315,9 @@ public class Assert {
 
     for (Node node : g.nodes) {
       if (node.deltaBalance == 0) {
-        assert (!g.infeasibleNodes.contains(node)) : "" + node;
+        assert !g.infeasibleNodes.contains(node) : "" + node;
       } else {
-        assert (g.infeasibleNodes.contains(node)) : "" + node;
+        assert g.infeasibleNodes.contains(node) : "" + node;
       }
     }
 
@@ -329,7 +327,7 @@ public class Assert {
   public static void forceAsserts() {
 
     boolean asserts = false;
-    assert (asserts = true);
+    assert asserts = true;
   }
 
   public static List<Arc> allArcsForDebug(NetworkSimplex g) {

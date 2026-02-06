@@ -70,7 +70,7 @@ public class ForbiddenArea extends InternalConstraint {
     }
     area = total;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**
@@ -135,7 +135,7 @@ public class ForbiddenArea extends InternalConstraint {
       outOrigin[dimension] = -Integer.MAX_VALUE / 2;
       outLength[dimension] = Integer.MAX_VALUE;
 
-      assert (outBox.checkInvariants() == null) : outBox.checkInvariants();
+      assert outBox.checkInvariants() == null : outBox.checkInvariants();
 
       if (outBox.containsPoint(c)) {
         return outBox;

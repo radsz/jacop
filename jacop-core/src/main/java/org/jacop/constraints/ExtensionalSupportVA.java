@@ -255,7 +255,7 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
       int j = 0;
 
       if (debugAll) {
-        log.debug("support for analysis{}", java.util.Arrays.toString(t));
+        log.debug("support for analysis{}", Arrays.toString(t));
       }
 
       for (int val : t) {
@@ -274,7 +274,7 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
 
       if (debugAll) {
         if (!stillSupport[i]) {
-          log.debug("Not support {}", java.util.Arrays.toString(t));
+          log.debug("Not support {}", Arrays.toString(t));
         }
       }
 
@@ -297,7 +297,7 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
         i++;
 
         if (debugAll) {
-          log.debug("Still support {}", java.util.Arrays.toString(t));
+          log.debug("Still support {}", Arrays.toString(t));
         }
       }
 

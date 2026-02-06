@@ -420,8 +420,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // do the pruning
       for (int j = 0; j < stampValue; j++) {
 
-        assert ((match3[j] >= 0) && (match3[j] < ySize));
-        assert ((compOfY[match3[j]] >= 0) && (compOfY[match3[j]] <= ySize));
+        assert match3[j] >= 0 && match3[j] < ySize;
+        assert compOfY[match3[j]] >= 0 && compOfY[match3[j]] <= ySize;
 
         int cutMin = xDomain[j].min();
         int cutMax = xDomain[j].max();
@@ -571,7 +571,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       int xValue = xVar.value();
       int position = 0;
       for (; position < count.length && domainHash[position] != xValue; position++) {}
-      assert (position < count.length);
+      assert position < count.length;
       count[position]++;
     }
 
@@ -621,24 +621,24 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     firstPass();
 
     // check we are in the good ranges for match1 and match1xOrder
-    assert (checkFirstPass());
+    assert checkFirstPass();
 
     secondPass();
 
-    assert (checkSecondPass());
+    assert checkSecondPass();
 
     thirdPass();
 
-    assert (checkThirdPass());
+    assert checkThirdPass();
   }
 
   private boolean checkFirstPass() {
 
     for (int j = 0; j < stampValue; j++) {
-      assert (match1[j] >= 0);
-      assert (match1[j] < ySize);
-      assert (match1xOrder[j] >= 0);
-      assert (match1xOrder[j] < stampValue);
+      assert match1[j] >= 0;
+      assert match1[j] < ySize;
+      assert match1xOrder[j] >= 0;
+      assert match1xOrder[j] < stampValue;
     }
 
     return true;
@@ -647,7 +647,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private boolean checkSecondPass() {
 
     for (int j = 1; j < stampValue; j++) {
-      assert (match2[match2xOrder[j]] >= match2[match2xOrder[j - 1]]);
+      assert match2[match2xOrder[j]] >= match2[match2xOrder[j - 1]];
     }
 
     return true;
@@ -656,8 +656,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private boolean checkThirdPass() {
 
     for (int j = 0; j < stampValue; j++) {
-      assert (xDomain[j].min() <= match3[j]);
-      assert (xDomain[j].max() >= match3[j]);
+      assert xDomain[j].min() <= match3[j];
+      assert xDomain[j].max() >= match3[j];
     }
 
     return true;
@@ -685,7 +685,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // second we add the maximum of these xs possible to the current y
       maxY = yDomain[1][i];
       while (!pFirst.isEmpty() && u < maxY) {
-        top = (pFirst.remove()).index; // index of the first element of pFirst
+        top = pFirst.remove().index; // index of the first element of pFirst
         match1[top] = i;
         u++;
         // match1xOrder gives the order in which xs where in the priority queue
@@ -772,7 +772,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         nbOfMatchPerY[i]++;
         //       j++;
       }
-      while (!pSecond.isEmpty() && ((pSecond.element().max()) < i + 1)) {
+      while (!pSecond.isEmpty() && pSecond.element().max() < i + 1) {
         top = pSecond.remove().index;
         // change, check.
         match2[top] = i;
@@ -814,7 +814,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       e = nbOfMatchPerY[i] - yDomain[1][i]; // excess of y mates
       while (e > 0) {
 
-        assert (match2[match2xOrder[xIndex]] == i);
+        assert match2[match2xOrder[xIndex]] == i;
 
         while (xIndex >= 0) {
           x = match2xOrder[xIndex];
@@ -825,8 +825,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
           }
         }
 
-        assert (match1[x] < i);
-        assert (match2[x] == i);
+        assert match1[x] < i;
+        assert match2[x] == i;
 
         match3[x] = match1[x];
         nbOfMatchPerY[i]--;
@@ -894,8 +894,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     int comp;
     for (int i = 0; i < ySize; i++) {
       comp = compOfY[i];
-      assert (comp >= 0);
-      assert (comp <= sccNb);
+      assert comp >= 0;
+      assert comp <= sccNb;
 
       // if there are stictly more match to y than the minimum required
       // an edge exist from s to y
@@ -917,8 +917,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     for (int i = 0; i < ySize; i++) {
       C = compOfY[i];
 
-      assert (C >= 0);
-      assert (C <= sccNb);
+      assert C >= 0;
+      assert C <= sccNb;
 
       // if the max y that can be reached is greater than the current y,
       // that the comp it belongs to can be reached from s.
@@ -950,8 +950,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     for (int i = ySize - 1; i >= 0; i--) {
       C = compOfY[i];
-      assert (C >= 0);
-      assert (C <= sccNb);
+      assert C >= 0;
+      assert C <= sccNb;
       if (minYreachedFromS <= i) {
         reachedFromS[C] = true;
       }
@@ -1023,7 +1023,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         compReachesLeft[sccNb] = ySize;
         compReachesRight[sccNb] = -1;
 
-        assert (!S1.isEmpty());
+        assert !S1.isEmpty();
 
         C1 = S2.pop();
         while (!S1.isEmpty() && S1.peek() >= C1.root && S1.peek() <= C1.rightmostY) {
@@ -1036,7 +1036,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         sccNb++;
       }
 
-      assert (S2.isEmpty() || S2.peek().maxX >= C.root);
+      assert S2.isEmpty() || S2.peek().maxX >= C.root;
 
       // this second part treat the case the new c1 is in fact attainable by the current component
 
@@ -1048,8 +1048,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
         C.rightmostY = y; // same remark
       }
 
-      assert (S2.isEmpty()
-          || ((yreachesLeft[y] > S2.peek().rightmostY) && (S2.peek().maxX >= C.root)));
+      assert S2.isEmpty() || yreachesLeft[y] > S2.peek().rightmostY && S2.peek().maxX >= C.root;
 
       S1.push(y);
       S2.push(C);
@@ -1057,7 +1056,7 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     // for every component still on the pile update compOfY, compReachesLeft and Right, and sccNb
     while (!S2.isEmpty()) {
-      assert (!S1.isEmpty());
+      assert !S1.isEmpty();
       C = S2.pop();
       compReachesLeft[sccNb] = ySize;
       compReachesRight[sccNb] = -1;
@@ -1089,8 +1088,8 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     // bondaries of these xs.
     for (int j = 0; j < stampValue; j++) {
       i = match3[j];
-      assert (i >= 0);
-      assert (i < ySize);
+      assert i >= 0;
+      assert i < ySize;
       yreachesLeft[i] = Math.min(yreachesLeft[i], xDomain[j].min());
       yreachesRight[i] = Math.max(yreachesRight[i], xDomain[j].max());
     }
@@ -1206,12 +1205,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
       maxU[i] = Math.min(yDomain[1][i], pCount.size());
       for (int l = 0; l < yDomain[0][i]; l++) {
-        assert (!pCount.isEmpty());
+        assert !pCount.isEmpty();
         pCount.remove();
       }
 
       // well see how it works for the second part of the condition
-      while (!pCount.isEmpty() && (pCount.peek() == i)) {
+      while (!pCount.isEmpty() && pCount.peek() == i) {
         pCount.remove();
       }
     }
@@ -1236,12 +1235,12 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
 
       for (int l = 0; l < yDomain[0][i]; l++) {
-        assert (!pCount.isEmpty());
+        assert !pCount.isEmpty();
         pCount.remove();
         count++;
       }
 
-      while ((!pCount.isEmpty()) && (pCount.peek() == i)) {
+      while (!pCount.isEmpty() && pCount.peek() == i) {
         pCount.remove();
         count++;
       }

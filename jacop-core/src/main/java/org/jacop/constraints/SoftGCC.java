@@ -349,9 +349,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             decomposition.add(new Count(xvars, hardCounters[i], countedValue[i]));
 
-            assert (softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length)
+            assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
                 : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-            assert (softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length)
+            assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
                 : "UpperBound for " + i + "-th element must be between 0 and number of variables";
 
             int[][] table = new int[xvars.length + 1][2];
@@ -442,9 +442,9 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
 
             result.add(new Count(xvars, hardCounters[i], countedValue[i]));
 
-            assert (softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length)
+            assert softLowerBound[i] >= 0 && softLowerBound[i] <= xvars.length
                 : "LowerBound for " + i + "-th element must be between 0 and number of variables";
-            assert (softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length)
+            assert softUpperBound[i] >= 0 && softUpperBound[i] <= xvars.length
                 : "UpperBound for " + i + "-th element must be between 0 and number of variables";
 
             int[][] table = new int[xvars.length + 1][2];

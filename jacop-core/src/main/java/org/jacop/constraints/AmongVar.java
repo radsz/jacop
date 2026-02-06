@@ -571,7 +571,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
               }
             }
-            if ((y.domain.getPreviousDomain()) != null) {
+            if (y.domain.getPreviousDomain() != null) {
               mustBeCoveredNow =
                   (IntervalDomain) mustBeCoveredNow.union(y.domain.getPreviousDomain());
             }

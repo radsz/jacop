@@ -306,7 +306,7 @@ public class DisjointConditional extends Diff {
       List<List<Integer>> exceptionIndices,
       List<? extends IntVar> exceptionCondition) {
 
-    assert (rectangles != null) : "Rectangles list is null";
+    assert rectangles != null : "Rectangles list is null";
 
     queueIndex = 2;
     IntVar[] R;
@@ -315,7 +315,7 @@ public class DisjointConditional extends Diff {
     this.rectangles = new Rectangle[rectangles.length];
 
     for (int i = 0; i < rectangles.length; i++) {
-      assert (rectangles[i] != null) : i + "-th list within rectangles list is null";
+      assert rectangles[i] != null : i + "-th list within rectangles list is null";
       R = rectangles[i];
       if (R.length == size) {
         Rectangle rect = new Rectangle(R);

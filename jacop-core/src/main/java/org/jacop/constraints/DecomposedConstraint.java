@@ -87,7 +87,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    */
   public void imposeDecomposition(Store store, int queueIndex) {
 
-    assert (queueIndex < store.queueNo) : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < store.queueNo : "Constraint queue number larger than permitted by store.";
 
     this.queueIndex = queueIndex;
 

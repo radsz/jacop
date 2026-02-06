@@ -270,7 +270,7 @@ public class ObstacleObject extends ObstacleObjectFrame {
           }
         }
 
-        assert (useless || outBox.checkInvariants() == null) : outBox.checkInvariants();
+        assert useless || outBox.checkInvariants() == null : outBox.checkInvariants();
 
         if (!useless && outBox.containsPoint(c)) {
           return outBox;

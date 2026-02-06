@@ -68,10 +68,10 @@ public class Conditional extends Constraint implements SatisfiedPresent {
   public Conditional(IntVar[] b, PrimitiveConstraint[] c) {
 
     checkInputForNullness(new String[] {"b", "c"}, b, c);
-    assert (b.length == c.length)
+    assert b.length == c.length
         : "The length of the two lists in Conditional constraints must be equal";
     for (IntVar be : b) {
-      assert (be.min() >= 0 && be.max() <= 1)
+      assert be.min() >= 0 && be.max() <= 1
           : "The elements of condition list must be 0/1 variables";
     }
     if (b[b.length - 1].min() != 1) {

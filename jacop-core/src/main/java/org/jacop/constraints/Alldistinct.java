@@ -1770,7 +1770,7 @@ public class Alldistinct extends Constraint
 
             if (single && singleVar == null) {
               log.debug("{}", this);
-              log.debug("StampValues - 1 {}", (stampValues.value() - 1));
+              log.debug("StampValues - 1 {}", stampValues.value() - 1);
               log.debug("Not grounded Var {}", stampNotGroundedVariables.value());
 
               int lastNotGroundedVariable = stampNotGroundedVariables.value();

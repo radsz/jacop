@@ -423,7 +423,7 @@ public class Diffn extends Nooverlap {
                           ">>> Diffn ({}) Profile 1. Narrowed {} \\ {}",
                           dim,
                           r.origin(dim),
-                          new IntervalDomain(startExcluded, (e.date() - 1)));
+                          new IntervalDomain(startExcluded, e.date() - 1));
                     }
 
                     IntervalDomain update = new IntervalDomain(IntDomain.MinInt, startExcluded - 1);
@@ -643,7 +643,7 @@ public class Diffn extends Nooverlap {
     IntVar[] ly = new IntVar[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      assert (rectangle[i] != null) : i + "-th rectangle in the list is null";
+      assert rectangle[i] != null : i + "-th rectangle in the list is null";
 
       x[i] = rectangle[i].origin(0);
       y[i] = rectangle[i].origin(1);

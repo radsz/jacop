@@ -95,7 +95,7 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int index) {
 
-    assert (index < searchVariables.length);
+    assert index < searchVariables.length;
 
     if (debugAll) {
       log.debug("index = {}", index);
@@ -138,9 +138,9 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    assert (currentIndex >= 0);
-    assert (currentIndex < searchVariables.length);
-    assert (searchVariables[currentIndex].dom() != null);
+    assert currentIndex >= 0;
+    assert currentIndex < searchVariables.length;
+    assert searchVariables[currentIndex].dom() != null;
 
     return valueOrdering.indomain(searchVariables[currentIndex]);
   }

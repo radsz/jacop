@@ -74,7 +74,7 @@ public class EqBool extends PrimitiveConstraint {
     this.result = result;
     setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**

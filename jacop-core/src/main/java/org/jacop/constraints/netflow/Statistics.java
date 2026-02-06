@@ -53,7 +53,7 @@ public class Statistics extends StatisticsBase {
     str.append("\n# consistency iterations : ");
     str.append(consistencyIterations);
     str.append("\t(avg ");
-    str.append(StatisticsBase.DF.format((double) consistencyIterations / consistencyCalls));
+    str.append(DF.format((double) consistencyIterations / consistencyCalls));
     str.append(")");
 
     if (Nvars.arcsExamined > 0) {

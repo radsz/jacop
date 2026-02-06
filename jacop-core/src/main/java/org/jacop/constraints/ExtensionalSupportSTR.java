@@ -245,7 +245,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   @Override
   public void removeLevel(int level) {
 
-    assert (level > firstConsistencyLevel)
+    assert level > firstConsistencyLevel
         : "Constraint has the level at which it has computed its initial state being removed.";
 
     //   It is called upon removing level
@@ -309,7 +309,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
         int j = 0;
 
         if (debugAll) {
-          log.debug("support for analysis{}", java.util.Arrays.toString(t));
+          log.debug("support for analysis{}", Arrays.toString(t));
         }
 
         for (int val : t) {
@@ -335,7 +335,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
         if (debugAll) {
           if (!stillSupport[i]) {
-            log.debug("Not support {}", java.util.Arrays.toString(t));
+            log.debug("Not support {}", Arrays.toString(t));
           }
         }
 
@@ -358,7 +358,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
           i++;
 
           if (debugAll) {
-            log.debug("Still support {}", java.util.Arrays.toString(t));
+            log.debug("Still support {}", Arrays.toString(t));
           }
         }
 

@@ -134,10 +134,10 @@ public class Rectangle {
   public static Rectangle[] toArrayOf2dRectangles(
       IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
-    assert (origin1 != null) : "o1 list is null";
-    assert (origin2 != null) : "o2 list is null";
-    assert (length1 != null) : "l1 list is null";
-    assert (length2 != null) : "l2 list is null";
+    assert origin1 != null : "o1 list is null";
+    assert origin2 != null : "o2 list is null";
+    assert length1 != null : "l1 list is null";
+    assert length2 != null : "l2 list is null";
 
     int size = origin1.length;
 
@@ -160,13 +160,13 @@ public class Rectangle {
 
   public static Rectangle[] toArrayOf2dRectangles(IntVar[][] rectangles) {
 
-    assert (rectangles != null) : "Rectangles list is null";
+    assert rectangles != null : "Rectangles list is null";
 
     Rectangle[] result = new Rectangle[rectangles.length];
 
     for (int i = 0; i < rectangles.length; i++) {
 
-      assert (rectangles[i] != null) : i + "-th list within rectangles list is null";
+      assert rectangles[i] != null : i + "-th list within rectangles list is null";
 
       if (rectangles[i].length == 4) {
         result[i] = new Rectangle(rectangles[i]);

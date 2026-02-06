@@ -431,9 +431,9 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     // This comes from the frame computation for NonOverlapping external constraint.
 
-    assert (objects.length > 0) : "empty collection of objects";
-    assert (shapes.length > 0) : "empty collection of shapes";
-    assert (constraints.length > 0) : "empty collection of constraints";
+    assert objects.length > 0 : "empty collection of objects";
+    assert shapes.length > 0 : "empty collection of shapes";
+    assert constraints.length > 0 : "empty collection of constraints";
 
     this.queueIndex = 2;
     this.objects = objects.clone();
@@ -501,7 +501,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     shapeRegister = new Shape[idShapeMap.size()];
 
     for (Map.Entry<Integer, Shape> e : idShapeMap.entrySet()) {
-      assert (e.getKey() < idShapeMap.size())
+      assert e.getKey() < idShapeMap.size()
           : "Shapes do not have unique ids between 0 and n-1, where n is number of shapes.";
       shapeRegister[e.getKey()] = e.getValue();
     }
@@ -518,7 +518,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
     shapeIdsToPrune = new int[shapeRegister.length];
 
-    assert (dimension > 0) : "No dimensions";
+    assert dimension > 0 : "No dimensions";
 
     // one extra dimension for time
     c = new int[dimension + 1];
@@ -582,7 +582,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       for (Var v : o.getVariables()) {
         if (!v.singleton()) {
           GeostObject previousValue = variableObjectMap.put(v, o);
-          assert (previousValue == null)
+          assert previousValue == null
               : "Current implementation of Geost does not allow reuse of not singleton variables.";
         }
       }
@@ -595,7 +595,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     backtracking = false;
     workingList = new ArrayList<>();
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     groundedVars = new ArrayList<>();
 

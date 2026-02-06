@@ -198,7 +198,7 @@ public class Diff2 extends Diff {
    */
   public Diff2(IntVar[][] rectangles) {
 
-    assert (rectangles != null) : "Rectangles list is null";
+    assert rectangles != null : "Rectangles list is null";
 
     queueIndex = 2;
     this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);

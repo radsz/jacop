@@ -104,9 +104,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   // adds an arc at its lower or upper bound
   private void add(Arc arc) {
 
-    assert (arc.forward);
+    assert arc.forward;
 
-    assert (arc.capacity == 0 || arc.sister.capacity == 0);
+    assert arc.capacity == 0 || arc.sister.capacity == 0;
 
     if (SHOW_CHANGES) {
       log.debug("Adding arc: {}", arc);
@@ -138,9 +138,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       arc = arc.sister;
     }
 
-    assert (arc.capacity == 0 || arc.sister.capacity == 0) : "Arc not at lower or upper bound";
-    assert (checkFlow(this));
-    assert (checkStructure(this));
+    assert arc.capacity == 0 || arc.sister.capacity == 0 : "Arc not at lower or upper bound";
+    assert checkFlow(this);
+    assert checkStructure(this);
 
     if (SHOW_CHANGES) {
       // print();
@@ -158,7 +158,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
         //       addArc(tail.artificial);
         updateTree(arc.sister, tail.artificial);
       } else { // pointing downwards
-        assert (arc.head.parent == tail);
+        assert arc.head.parent == tail;
         //       addArc(arc.head.artificial);
         updateTree(arc, arc.head.artificial);
       }
@@ -282,8 +282,8 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     // TODO: CRUCIAL, BUG, switched off. Is it ok?
     // assert (arc.index >= TREE_ARC);
 
-    assert (checkFlow(this));
-    assert (checkStructure(this));
+    assert checkFlow(this);
+    assert checkStructure(this);
   }
 
   public void changeCostOffset(long delta) {

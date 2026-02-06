@@ -60,10 +60,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   private static final boolean debugNarr = false;
   private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
   private final Task[] Ts;
-  private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> (o2.max() - o1.max());
+  private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> o2.max() - o1.max();
   private final Comparator<IntDomain> domainMinComparator = Comparator.comparingInt(IntDomain::min);
   private final Comparator<Task> taskAscEctComparator = Comparator.comparingInt(Task::ect);
-  private final Comparator<Task> taskDescLstComparator = (o1, o2) -> (o2.lst() - o1.lst());
+  private final Comparator<Task> taskDescLstComparator = (o1, o2) -> o2.lst() - o1.lst();
 
   /** It specifies the limit of the profile of cumulative use of resources. */
   public IntVar limit;
@@ -130,8 +130,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       throw new IllegalArgumentException("\nResource limit must be >= 0 in cumulative");
     }
 
-    assert (starts.length == durations.length) : "Starts and durations list have different length";
-    assert (resources.length == durations.length)
+    assert starts.length == durations.length : "Starts and durations list have different length";
+    assert resources.length == durations.length
         : "Resources and durations list have different length";
 
     this.queueIndex = 2;
@@ -822,12 +822,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     int limitMax = limit.max();
     long availableArea = (long) (lctOfS - est0) * limitMax;
     if (debug) {
-      log.debug("Fit tasks of {} after {} = {}", s, est0, (availableArea >= areaS));
+      log.debug("Fit tasks of {} after {} = {}", s, est0, availableArea >= areaS);
     }
     FitAfter = availableArea >= areaS;
 
     if (FitAfter) {
-      FitAfter = ((lctOfS - est0) / minDur) * (limitMax / minRes) >= s.size();
+      FitAfter = (lctOfS - est0) / minDur * (limitMax / minRes) >= s.size();
     }
     return FitAfter;
   }
@@ -859,7 +859,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     FitBefore = availableArea >= areaS;
     if (FitBefore) {
-      FitBefore = ((lct0 - estOfS) / minDur) * (limitMax / minRes) >= s.size();
+      FitBefore = (lct0 - estOfS) / minDur * (limitMax / minRes) >= s.size();
     }
     return FitBefore;
   }
@@ -1195,7 +1195,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               log.debug(
                   ">>> Cumulative Profile 8. Narrowed {} in 0..{}",
                   resources,
-                  (limit.max() - p.value + offset));
+                  limit.max() - p.value + offset);
             }
 
             resources.domain.in(store.level, resources, 0, limit.max() - p.value + offset);

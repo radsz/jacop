@@ -95,7 +95,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int index) {
 
-    assert (index < searchVariables.length);
+    assert index < searchVariables.length;
 
     int finalIndex = searchVariables.length;
 
@@ -115,9 +115,9 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    assert (currentIndex.value() >= 0);
-    assert (currentIndex.value() < searchVariables.length);
-    assert (searchVariables[currentIndex.value()].dom() != null);
+    assert currentIndex.value() >= 0;
+    assert currentIndex.value() < searchVariables.length;
+    assert searchVariables[currentIndex.value()].dom() != null;
 
     return valueOrdering.indomain(searchVariables[currentIndex.value()]);
   }

@@ -63,7 +63,7 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
    */
   public Lds(int maxDiscrepancies) {
 
-    assert (maxDiscrepancies >= 0);
+    assert maxDiscrepancies >= 0;
 
     this.maxNoDiscrepancies = maxDiscrepancies;
   }

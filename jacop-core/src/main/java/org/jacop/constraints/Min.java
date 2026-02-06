@@ -193,7 +193,7 @@ public class Min extends Constraint implements SatisfiedPresent {
       if (list[i].min() < minValue) {
         return false;
       }
-      if (!eq && (list[i].singleton() && list[i].value() == minValue)) {
+      if (!eq && list[i].singleton() && list[i].value() == minValue) {
         eq = true;
       }
       i++;

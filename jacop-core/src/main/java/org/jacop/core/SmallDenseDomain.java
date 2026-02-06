@@ -245,7 +245,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -260,7 +260,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
 
     /* TODO: implement special code,
-       if (domain.domainId() == IntDomain.IntervalDomainID) {
+       if (domain.domainId() == IntervalDomainID) {
 
        IntervalDomain input = (IntervalDomain) domain;
 
@@ -271,7 +271,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     boolean result = super.contains(domain);
 
-    assert (result == this.toIntervalDomain().contains(domain))
+    assert result == this.toIntervalDomain().contains(domain)
         : "Improper implementation of function contains " + this + "d" + domain;
 
     return result;
@@ -318,14 +318,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       return input.min == this.min && input.bits == this.bits;
     }
 
-    if (domain.domainId() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -341,8 +341,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         }
       }
 
-      assert (super.eq(domain))
-          : "Incorrect implementation for IntervalDomain and SmallDenseDomain.";
+      assert super.eq(domain) : "Incorrect implementation for IntervalDomain and SmallDenseDomain.";
 
       return true;
     }
@@ -425,7 +424,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int getSize() {
 
-    assert (size == getSize(bits)) : "size cache was not updated before correctly";
+    assert size == getSize(bits) : "size cache was not updated before correctly";
 
     return size;
   }
@@ -481,7 +480,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       assert checkInvariants() == null : checkInvariants();
 
-      var.domainHasChanged(IntDomain.GROUND);
+      var.domainHasChanged(GROUND);
 
     } else {
 
@@ -505,7 +504,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
-      var.domainHasChanged(IntDomain.GROUND);
+      var.domainHasChanged(GROUND);
     }
   }
 
@@ -514,7 +513,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     assert checkInvariants() == null : checkInvariants();
 
-    assert (min <= max) : "Min value greater than max value " + min + " > " + max;
+    assert min <= max : "Min value greater than max value " + min + " > " + max;
 
     if (max < this.min) {
       throw failException;
@@ -573,7 +572,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       throw failException;
     }
 
-    assert (newSize < size) : "Incorrect in operation";
+    assert newSize < size : "Incorrect in operation";
 
     // Pruning has occurred.
 
@@ -600,9 +599,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(IntDomain.BOUND);
+        var.domainHasChanged(BOUND);
       }
 
     } else {
@@ -629,8 +628,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         result.max = result.previousValue(max + 1);
       }
 
-      assert (result.max <= max) : "Domain update incorrect.";
-      assert (result.min >= min) : "Domain update incorrect.";
+      assert result.max <= max : "Domain update incorrect.";
+      assert result.min >= min : "Domain update incorrect.";
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -644,9 +643,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
-        var.domainHasChanged(IntDomain.BOUND);
+        var.domainHasChanged(BOUND);
       }
     }
   }
@@ -683,19 +682,19 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       adaptMin();
       max = previousValue(max + 1);
 
-      assert (max <= previousMax) : "Domain update incorrect.";
-      assert (min >= previousMin) : "Domain update incorrect.";
+      assert max <= previousMax : "Domain update incorrect.";
+      assert min >= previousMin : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
 
         if (previousMin != min || previousMax != max) {
-          var.domainHasChanged(IntDomain.BOUND);
+          var.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          var.domainHasChanged(ANY);
         }
       }
 
@@ -713,20 +712,20 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) var).domain = result;
 
-      assert (result.max <= previousMax) : "Domain update incorrect.";
-      assert (result.min >= previousMin) : "Domain update incorrect.";
+      assert result.max <= previousMax : "Domain update incorrect.";
+      assert result.min >= previousMin : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
 
         if (previousMin != result.min || previousMax != result.max) {
-          var.domainHasChanged(IntDomain.BOUND);
+          var.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          var.domainHasChanged(ANY);
         }
       }
     }
@@ -740,7 +739,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -766,7 +765,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    if (domain.domainId() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -808,25 +807,25 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         inBits = inBits | SEQ_ARRAY[next.max() - next.min()];
       }
 
-      inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max()), 0);
+      inBits = inBits << Math.max(this.max - input.intervals[i - 1].max(), 0);
       // SmallDenseDomain temp = new SmallDenseDomain(this.min, inBits);
 
       if (i < input.size && next.min() <= this.max) {
 
-        inBits = inBits | SEQ_ARRAY[this.max - (next.min())];
+        inBits = inBits | SEQ_ARRAY[this.max - next.min()];
       }
 
       inBits = inBits << (this.min + 63 - this.max);
 
       in(storeLevel, var, inBits);
 
-      assert (!domain.complement().isIntersecting((IntDomain) var.dom()))
+      assert !domain.complement().isIntersecting((IntDomain) var.dom())
           : "Error either in in or isIntersecting.";
 
       return;
     }
 
-    assert (domain.max() - domain.min() + 1 == domain.getSize()) : "Loosing propagation" + domain;
+    assert domain.max() - domain.min() + 1 == domain.getSize() : "Loosing propagation" + domain;
 
     // TODO: improve, it does not take yet holes in the domain.
     in(storeLevel, var, domain.min(), domain.max());
@@ -834,7 +833,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
   private void adaptMin() {
 
-    assert (bits != 0) : "Empty domain, min can not be adapted.";
+    assert bits != 0 : "Empty domain, min can not be adapted.";
 
     while ((bits & first8) == 0) {
       min += 8;
@@ -870,7 +869,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       throw failException;
     }
 
-    assert (newSize <= size) : "Incorrect in operation";
+    assert newSize <= size : "Incorrect in operation";
 
     if (newSize == size) {
       return;
@@ -901,18 +900,18 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         boundEvent = true;
       }
 
-      assert (max <= previousMax) : "Domain update incorrect.";
-      assert (min >= previousMin) : "Domain update incorrect.";
+      assert max <= previousMax : "Domain update incorrect.";
+      assert min >= previousMin : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(IntDomain.BOUND);
+          var.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          var.domainHasChanged(ANY);
         }
       }
 
@@ -940,8 +939,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         result.singleton = true;
       }
 
-      assert (result.max <= max) : "Domain update incorrect.";
-      assert (result.min >= min) : "Domain update incorrect.";
+      assert result.max <= max : "Domain update incorrect.";
+      assert result.min >= min : "Domain update incorrect.";
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -955,12 +954,12 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(IntDomain.BOUND);
+          var.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          var.domainHasChanged(ANY);
         }
       }
     }
@@ -1000,7 +999,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       throw failException;
     }
 
-    assert (newSize <= size) : "Incorrect in operation";
+    assert newSize <= size : "Incorrect in operation";
 
     if (newSize == size) {
       return;
@@ -1031,18 +1030,18 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         boundEvent = true;
       }
 
-      assert (max <= previousMax) : "Domain update incorrect.";
-      assert (min >= previousMin) : "Domain update incorrect.";
+      assert max <= previousMax : "Domain update incorrect.";
+      assert min >= previousMin : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
 
       if (singleton) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(IntDomain.BOUND);
+          var.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          var.domainHasChanged(ANY);
         }
       }
 
@@ -1071,8 +1070,8 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         result.singleton = true;
       }
 
-      assert (result.max <= max) : "Domain update incorrect.";
-      assert (result.min >= min) : "Domain update incorrect.";
+      assert result.max <= max : "Domain update incorrect.";
+      assert result.min >= min : "Domain update incorrect.";
 
       result.modelConstraints = modelConstraints;
       result.searchConstraints = searchConstraints;
@@ -1086,12 +1085,12 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       assert result.checkInvariants() == null : result.checkInvariants();
 
       if (result.singleton()) {
-        var.domainHasChanged(IntDomain.GROUND);
+        var.domainHasChanged(GROUND);
       } else {
         if (boundEvent) {
-          var.domainHasChanged(IntDomain.BOUND);
+          var.domainHasChanged(BOUND);
         } else {
-          var.domainHasChanged(IntDomain.ANY);
+          var.domainHasChanged(ANY);
         }
       }
     }
@@ -1122,7 +1121,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public void inShift(int storeLevel, Var var, IntDomain domain, int shift) {
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1150,7 +1149,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // TODO: create proper assert check for this case.
 
-    if (domain.domainId() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1209,7 +1208,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    assert (domain.max() - domain.min() + 1 == domain.getSize()) : "Loosing propagation" + domain;
+    assert domain.max() - domain.min() + 1 == domain.getSize() : "Loosing propagation" + domain;
 
     // TODO: improve, it does not take yet holes in the domain.
     in(storeLevel, var, domain.min() + shift, domain.max() + shift);
@@ -1222,7 +1221,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     // TODO: check all return empty domains to make sure that they are not being used
     // as normal domains (constraints).
     if (isEmpty()) {
-      return SmallDenseDomain.emptyDomain;
+      return emptyDomain;
     }
 
     long inBits = 0;
@@ -1237,7 +1236,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
 
     if (i == input.size) {
-      return SmallDenseDomain.emptyDomain;
+      return emptyDomain;
     }
 
     Interval first = input.intervals[i];
@@ -1248,7 +1247,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
 
     if (length < 0) {
-      return SmallDenseDomain.emptyDomain;
+      return emptyDomain;
     }
 
     inBits = inBits | SEQ_ARRAY[length];
@@ -1283,12 +1282,12 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain intersect(IntDomain domain) {
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       if (input.bits == 0) {
-        return IntDomain.emptyIntDomain;
+        return emptyIntDomain;
       }
 
       long inBits;
@@ -1316,7 +1315,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return result;
     }
 
-    if (domain.domainId() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
@@ -1360,7 +1359,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     //      System.out.println("i>" + this  + "(" + domain + ")");
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1387,14 +1386,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       long bitsResult = bits & inBits;
 
       if (bitsResult == bits) {
-        return IntDomain.NONE;
+        return NONE;
       }
 
       int newSize = getSize(bitsResult);
 
       if (newSize == 0) {
         clear();
-        return IntDomain.GROUND;
+        return GROUND;
       }
 
       // Pruning has occurred.
@@ -1411,32 +1410,32 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       adaptMin();
       max = previousValue(max + 1);
 
-      assert (max <= previousMax) : "Domain update incorrect.";
-      assert (min >= previousMin) : "Domain update incorrect.";
+      assert max <= previousMax : "Domain update incorrect.";
+      assert min >= previousMin : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
 
       //  System.out.println("i<" + this );
 
       if (singleton) {
-        return IntDomain.GROUND;
+        return GROUND;
       } else {
 
         if (previousMin != min || previousMax != max) {
-          return IntDomain.BOUND;
+          return BOUND;
         } else {
-          return IntDomain.ANY;
+          return ANY;
         }
       }
     }
 
-    if (domain.domainId() == IntDomain.IntervalDomainID) {
+    if (domain.domainId() == IntervalDomainID) {
 
       IntervalDomain input = (IntervalDomain) domain;
 
       SmallDenseDomain result = this.intersect(input, 0);
 
-      assert (result.eq(this.toIntervalDomain().intersect(input)))
+      assert result.eq(this.toIntervalDomain().intersect(input))
           : "Intersection not properly computed." + this + "i" + input + "r" + result;
 
       assert result.checkInvariants() == null : result.checkInvariants();
@@ -1447,17 +1446,17 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       setDomain(result);
 
       if (isEmpty()) {
-        return IntDomain.GROUND;
+        return GROUND;
       }
 
       if (singleton) {
-        return IntDomain.GROUND;
+        return GROUND;
       } else {
 
         if (previousMin != min || previousMax != max) {
-          return IntDomain.BOUND;
+          return BOUND;
         } else {
-          return IntDomain.ANY;
+          return ANY;
         }
       }
     }
@@ -1473,17 +1472,17 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       intersectAdapt(input.min(), input.max());
 
       if (isEmpty()) {
-        return IntDomain.GROUND;
+        return GROUND;
       }
 
       if (singleton) {
-        return IntDomain.GROUND;
+        return GROUND;
       } else {
 
         if (previousMin != min || previousMax != max) {
-          return IntDomain.BOUND;
+          return BOUND;
         } else {
-          return IntDomain.ANY;
+          return ANY;
         }
       }
     }
@@ -1499,16 +1498,16 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     // TODO: test, recent code.
 
     if (isEmpty()) {
-      return IntDomain.NONE;
+      return NONE;
     }
 
     if (min <= this.min && max >= this.max) {
-      return IntDomain.NONE;
+      return NONE;
     }
 
     if (this.max < min || this.min > max) {
       clear();
-      return IntDomain.GROUND;
+      return GROUND;
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -1528,9 +1527,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     if (!singleton) {
-      return IntDomain.BOUND;
+      return BOUND;
     } else {
-      return IntDomain.GROUND;
+      return GROUND;
     }
   }
 
@@ -1547,7 +1546,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return false;
     }
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1572,17 +1571,17 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       inBits = inBits & bits;
 
       if (inBits != 0) {
-        assert (super.isIntersecting(domain)) : "isIntersecting not properly implemented";
+        assert super.isIntersecting(domain) : "isIntersecting not properly implemented";
         return true;
       } else {
-        assert (!super.isIntersecting(domain)) : "isIntersecting not properly implemented";
+        assert !super.isIntersecting(domain) : "isIntersecting not properly implemented";
         return false;
       }
     }
 
     boolean result = super.isIntersecting(domain);
 
-    assert (result == this.toIntervalDomain().isIntersecting(domain))
+    assert result == this.toIntervalDomain().isIntersecting(domain)
         : "isIntersecting not properly implemented." + this + "d" + domain + "result " + result;
 
     return result;
@@ -1591,7 +1590,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public boolean isIntersecting(int min, int max) {
 
-    assert (min <= max) : "Illegal arguments min is greater than max";
+    assert min <= max : "Illegal arguments min is greater than max";
 
     // TODO: test.
 
@@ -1630,7 +1629,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int max() {
 
-    assert (bits != 0) : "max function called for an empty domain";
+    assert bits != 0 : "max function called for an empty domain";
 
     return max;
   }
@@ -1638,7 +1637,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int min() {
 
-    assert ((bits & TWO_N_ARRAY[63]) != 0) : "Inconsistent field min when compared to bits." + this;
+    assert (bits & TWO_N_ARRAY[63]) != 0 : "Inconsistent field min when compared to bits." + this;
 
     return min;
   }
@@ -1646,7 +1645,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int nextValue(int value) {
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     long temp = bits;
 
@@ -1719,7 +1718,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public int previousValue(int value) {
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     long temp = bits;
     int shift = this.min + 63 - Math.min(max, value - 1);
@@ -1908,7 +1907,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain subtract(IntDomain domain) {
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -1935,7 +1934,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       if (result != 0) {
         return new SmallDenseDomain(this.min, result);
       } else {
-        return SmallDenseDomain.emptyIntDomain;
+        return emptyIntDomain;
       }
     }
 
@@ -1945,7 +1944,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     IntDomain result = super.subtract(domain);
 
-    assert (result.eq(this.toIntervalDomain().subtract(domain)))
+    assert result.eq(this.toIntervalDomain().subtract(domain))
         : "Subtraction not properly implemented " + this + "d " + domain + "res" + result;
 
     assert result.checkInvariants() == null : result.checkInvariants();
@@ -1972,7 +1971,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     long result = this.bits & ~(SEQ_ARRAY[max - min] << (63 - (max - min) - (min - this.min)));
 
     if (result == 0) {
-      return SmallDenseDomain.emptyIntDomain;
+      return emptyIntDomain;
     } else {
       SmallDenseDomain returnObj = new SmallDenseDomain(this.min, result);
       assert returnObj.checkInvariants() == null : returnObj.checkInvariants();
@@ -2078,7 +2077,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // TODO: test it.
 
-    if (domain.domainId() == IntDomain.SmallDenseDomainID) {
+    if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
@@ -2086,7 +2085,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       if (this.min <= input.min) {
 
-        assert (this.min + 63 >= newMax)
+        assert this.min + 63 >= newMax
             : "Union of two SmallDenseDomain does not fit in SmallDenseDomain";
 
         long bitsResult = this.bits | (input.bits >>> (input.min - this.min));
@@ -2095,7 +2094,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
       } else {
 
-        assert (input.min + 63 >= newMax)
+        assert input.min + 63 >= newMax
             : "Union of two SmallDenseDomain does not fit in SmallDenseDomain";
 
         long bitsResult = input.bits | (this.bits >>> (this.min - input.min));
@@ -2110,7 +2109,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     // result of union.
     IntDomain result = super.union(domain);
 
-    assert (result.eq(this.toIntervalDomain().union(domain)))
+    assert result.eq(this.toIntervalDomain().union(domain))
         : "Union not properly implemented " + this + "d" + domain + "res" + result;
 
     assert result.checkInvariants() == null : result.checkInvariants();
@@ -2206,7 +2205,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public String checkInvariants() {
 
-    assert (singleton || getSize(bits) != 1) : "Singleton value was not recognized";
+    assert singleton || getSize(bits) != 1 : "Singleton value was not recognized";
 
     if (bits != 0) {
       min();
@@ -2289,14 +2288,14 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public void removeLevel(int level, Var var) {
 
-    assert (this.stamp <= level);
+    assert this.stamp <= level;
 
     if (this.stamp == level) {
 
       ((IntVar) var).domain = this.previousDomain;
     }
 
-    assert (((IntVar) var).domain.stamp < level);
+    assert ((IntVar) var).domain.stamp < level;
   }
 
   @Override

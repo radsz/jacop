@@ -118,7 +118,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
    */
   public Diff(IntVar[][] rectangles) {
 
-    assert (rectangles != null) : "Rectangles list is null";
+    assert rectangles != null : "Rectangles list is null";
 
     queueIndex = 2;
     this.rectangles = Rectangle.toArrayOf2dRectangles(rectangles);

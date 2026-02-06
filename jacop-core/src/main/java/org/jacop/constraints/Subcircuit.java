@@ -106,7 +106,7 @@ public class Subcircuit extends Alldiff {
       useDominance = Boolean.parseBoolean(dominance);
     }
     if (!useScc && !useDominance) {
-      throw new java.lang.IllegalArgumentException("Wrong property configuration for Subcircuit");
+      throw new IllegalArgumentException("Wrong property configuration for Subcircuit");
     }
 
     setScope(list);

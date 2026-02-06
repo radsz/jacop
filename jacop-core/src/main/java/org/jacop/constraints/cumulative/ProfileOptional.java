@@ -286,7 +286,7 @@ public class ProfileOptional {
                     log.debug(
                         ">>> CumulativeBasic Profile 1. Narrowed {} \\ {}",
                         t.start,
-                        new IntervalDomain(startExcluded[ti], (e.date() - 1)));
+                        new IntervalDomain(startExcluded[ti], e.date() - 1));
                   }
 
                   t.start.domain.inComplement(
@@ -380,7 +380,7 @@ public class ProfileOptional {
                 log.debug(
                     ">>> CumulativeBasic Profile 2. Narrowed {} inMax {} => {}",
                     t.start,
-                    (startExcluded[ti] - 1),
+                    startExcluded[ti] - 1,
                     t.start);
               }
 

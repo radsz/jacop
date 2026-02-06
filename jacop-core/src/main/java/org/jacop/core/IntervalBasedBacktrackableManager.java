@@ -80,7 +80,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
 
     super(vars, noOfObjects);
 
-    assert (maxNoOfIntervals > 0) : "The maximal number of intervals must be positive integer.";
+    assert maxNoOfIntervals > 0 : "The maximal number of intervals must be positive integer.";
 
     this.minHoleSize = Math.max(minHoleSize, minHoleSizeAfterSplit);
     this.maxNoOfIntervals = maxNoOfIntervals;
@@ -134,7 +134,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
           addChangedToInterval(index);
         }
 
-        assert (isRecognizedAsChanged(index));
+        assert isRecognizedAsChanged(index);
         return;
       }
 
@@ -155,7 +155,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       }
     }
 
-    assert (isRecognizedAsChanged(index));
+    assert isRecognizedAsChanged(index);
   }
 
   @Override
@@ -179,7 +179,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       log.debug(">{}Add level {}", this, level);
     }
 
-    assert (level > this.currentLevel) : "It is possible only to add higher levels";
+    assert level > this.currentLevel : "It is possible only to add higher levels";
 
     if (addingToIntervals) {
       intervalBasedTrail.add(valueTrue);
@@ -287,7 +287,7 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       if (trailContainsAllChanges) {
         int lastLevel = levelInfo.removeLast();
 
-        assert (lastLevel == removedLevel) : "It is only possible to remove recently added level";
+        assert lastLevel == removedLevel : "It is only possible to remove recently added level";
 
         int[] lastTrail = trail.removeLast();
 
@@ -409,10 +409,10 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       log.debug("<{}Remove level {}", this, removedLevel);
     }
 
-    assert (removedLevel >= currentLevel)
+    assert removedLevel >= currentLevel
         : "It is only possible to remove the most recent not removed level";
 
-    assert (checkRemoveInvariant(removedLevel) == null) : checkRemoveInvariant(removedLevel);
+    assert checkRemoveInvariant(removedLevel) == null : checkRemoveInvariant(removedLevel);
   }
 
   /**

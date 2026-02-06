@@ -121,7 +121,7 @@ public class Mdd {
 
     for (int i = 0; i < vars.length; i++) {
       this.views[i] = new IndexDomainView(vars[i], true);
-      assert (domainLimits[i] >= vars[i].getSize())
+      assert domainLimits[i] >= vars[i].getSize()
           : i + "-th variable has a size larger than its domain limit size";
       if (domainLimits[i] < vars[i].domain.getSize()) {
         throw new IllegalArgumentException(
@@ -317,7 +317,7 @@ public class Mdd {
 
     for (int value : tuple) {
       int indexOfValue = findPosition(value, views[varNo].indexToValue);
-      assert (indexOfValue != -1);
+      assert indexOfValue != -1;
       nodePosition += indexOfValue;
       varNo++;
 
@@ -432,7 +432,7 @@ public class Mdd {
 
       int nodePosition = 0;
 
-      assert (tuple.length == positions.length) : "Tuples have different length.";
+      assert tuple.length == positions.length : "Tuples have different length.";
 
       boolean badTuple = false;
       for (int i = 0; i < tuple.length; i++) {
@@ -449,7 +449,7 @@ public class Mdd {
 
       for (int i = 0; i < tuple.length; i++) {
 
-        assert (positions[i] != -1)
+        assert positions[i] != -1
             : "value specified by tuple "
                 + List.of(tuple)
                 + "for variable no. "
@@ -654,7 +654,7 @@ public class Mdd {
    */
   public boolean checkIfAllowed(int[] tuple) {
 
-    assert (tuple.length == vars.length);
+    assert tuple.length == vars.length;
 
     int position = views[0].indexOfValue(tuple[0]);
 

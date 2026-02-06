@@ -76,7 +76,7 @@ public class Nooverlap extends Constraint {
    */
   public Nooverlap(IntVar[][] rectangle) {
 
-    assert (rectangle != null) : "Rectangles list is null";
+    assert rectangle != null : "Rectangles list is null";
 
     this.queueIndex = 2;
     this.numberId = idNumber.incrementAndGet();
@@ -84,8 +84,8 @@ public class Nooverlap extends Constraint {
     this.rectangle = new Rectangle[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      assert (rectangle[i] != null) : i + "-th rectangle in the list is null";
-      assert (rectangle[i].length == 4) : "The rectangle has to have exactly two dimensions";
+      assert rectangle[i] != null : i + "-th rectangle in the list is null";
+      assert rectangle[i].length == 4 : "The rectangle has to have exactly two dimensions";
       this.rectangle[i] =
           new Rectangle(rectangle[i][0], rectangle[i][1], rectangle[i][2], rectangle[i][3]);
       this.rectangle[i].index = i;
@@ -353,7 +353,7 @@ public class Nooverlap extends Constraint {
       }
     }
     if (xLengthMin > 0 && yLengthMin > 0) {
-      int maxNumberRectangles = ((xMax - xMin) / xLengthMin) * ((yMax - yMin) / yLengthMin);
+      int maxNumberRectangles = (xMax - xMin) / xLengthMin * ((yMax - yMin) / yLengthMin);
       if (maxNumberRectangles < rects.cardinality() + 1) {
         throw Store.failException;
       }

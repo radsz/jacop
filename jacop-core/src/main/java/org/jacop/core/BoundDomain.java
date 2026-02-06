@@ -192,22 +192,22 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public IntDomain complement() {
 
-    if (min == IntDomain.MinInt) {
+    if (min == MinInt) {
 
-      if (max == IntDomain.MaxInt) {
+      if (max == MaxInt) {
         return new BoundDomain();
       }
 
-      return new BoundDomain(max + 1, IntDomain.MaxInt);
+      return new BoundDomain(max + 1, MaxInt);
     }
 
-    if (max == IntDomain.MaxInt) {
-      return new BoundDomain(IntDomain.MinInt, min - 1);
+    if (max == MaxInt) {
+      return new BoundDomain(MinInt, min - 1);
     }
 
     IntervalDomain complement = new IntervalDomain();
-    complement.unionAdapt(IntDomain.MinInt, min - 1);
-    complement.unionAdapt(max + 1, IntDomain.MaxInt);
+    complement.unionAdapt(MinInt, min - 1);
+    complement.unionAdapt(max + 1, MaxInt);
 
     return complement;
   }
@@ -284,7 +284,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void in(int storeLevel, Var var, int min, int max) {
 
-    assert (min <= max);
+    assert min <= max;
 
     if (this.max < min || this.min > max) {
       throw failException;
@@ -441,7 +441,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void inComplement(int storeLevel, Var var, int min, int max) {
 
-    assert (min <= max);
+    assert min <= max;
 
     // all elements are removed so fail.
     if (this.min >= min && this.max <= max) {
@@ -792,19 +792,19 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void removeLevel(int level, Var var) {
 
-    assert (this.stamp <= level);
+    assert this.stamp <= level;
 
     if (this.stamp == level) {
 
       ((IntVar) var).domain = this.previousDomain;
     }
 
-    assert (var.level() < level);
+    assert var.level() < level;
   }
 
   @Override
   public int rightElement(int intervalNo) {
-    assert (intervalNo == 0);
+    assert intervalNo == 0;
     return max;
   }
 
@@ -827,7 +827,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   @Override
   public void setDomain(int min, int max) {
 
-    assert (min <= max);
+    assert min <= max;
 
     this.min = min;
     this.max = max;
@@ -1076,14 +1076,14 @@ class BoundDomain extends IntDomain implements Cloneable {
   public int intersectAdapt(int minIntersect, int maxIntersect) {
 
     if (minIntersect <= min && max <= maxIntersect) {
-      return Domain.NONE;
+      return NONE;
     }
 
     if (minIntersect > max) {
       // Intersection is empty.
       min = 0;
       max = -1;
-      return IntDomain.GROUND;
+      return GROUND;
     }
 
     if (max > maxIntersect) {
@@ -1094,7 +1094,7 @@ class BoundDomain extends IntDomain implements Cloneable {
       min = minIntersect;
     }
 
-    return IntDomain.BOUND;
+    return BOUND;
   }
 
   @Override
@@ -1130,7 +1130,7 @@ class BoundDomain extends IntDomain implements Cloneable {
       result += max - min + 1;
     }
 
-    assert (result <= this.getSize()) : "Invariant violated. Check the code.";
+    assert result <= this.getSize() : "Invariant violated. Check the code.";
     return result;
   }
 

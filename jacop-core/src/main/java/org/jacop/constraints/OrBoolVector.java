@@ -93,7 +93,7 @@ public class OrBoolVector extends PrimitiveConstraint {
     this.list = varSet.toArray(new IntVar[0]);
     this.result = result;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     if (l > 2) {
       queueIndex = 1;

@@ -49,7 +49,7 @@ public record Interval(int min, int max) implements Cloneable {
    */
   public Interval {
 
-    assert (min <= max) : "min value " + min + " is larger than max value " + max;
+    assert min <= max : "min value " + min + " is larger than max value " + max;
   }
 
   @Override

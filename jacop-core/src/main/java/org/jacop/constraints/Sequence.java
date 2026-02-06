@@ -126,7 +126,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
           mappingQuantity.put(nextState, mappingQuantity.get(state) + 1);
         }
 
-        if (mappingQuantity.get(state) + (sequence.q - i) > sequence.min) {
+        if (mappingQuantity.get(state) + sequence.q - i > sequence.min) {
           // transition 0 (outside set) is allowed
           FsmState nextState = new FsmState();
           state.addTransition(new FsmTransition(setComplement, nextState));

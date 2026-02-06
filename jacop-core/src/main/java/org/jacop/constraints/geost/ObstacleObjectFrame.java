@@ -671,7 +671,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
           }
         }
 
-        assert (outBox.checkInvariants() == null) : outBox.checkInvariants();
+        assert outBox.checkInvariants() == null : outBox.checkInvariants();
 
         if (outBox.containsPoint(c)) {
           return outBox;

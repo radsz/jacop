@@ -86,7 +86,7 @@ public class BoolClause extends PrimitiveConstraint {
     this.x = Arrays.copyOf(x, x.length);
     this.y = Arrays.copyOf(y, y.length);
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
 
     if (lx + ly > 4) {
       queueIndex = 1;

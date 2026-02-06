@@ -130,7 +130,7 @@ public class IntVar extends Var {
     dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
 
-    assert (name.lastIndexOf(" ") == -1) : "Name can not contain space character";
+    assert name.lastIndexOf(" ") == -1 : "Name can not contain space character";
 
     id = name;
     domain = dom;
@@ -442,9 +442,9 @@ public class IntVar extends Var {
    */
   public void domainHasChanged(int event) {
 
-    assert ((event == IntDomain.ANY && !singleton())
+    assert (event == IntDomain.ANY && !singleton())
             || (event == IntDomain.BOUND && !singleton())
-            || (event == IntDomain.GROUND && singleton()))
+            || (event == IntDomain.GROUND && singleton())
         : "Wrong event generated";
 
     store.addChanged(this, event, Integer.MIN_VALUE);

@@ -308,7 +308,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
     return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()
-        && java.lang.Math.abs(Xdom.min() - Ydom.min()) == Zdom.min();
+        && Math.abs(Xdom.min() - Ydom.min()) == Zdom.min();
   }
 
   @Override
@@ -331,7 +331,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
     return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()
-        && !(java.lang.Math.abs(Xdom.min() - Ydom.min()) == Zdom.min());
+        && !(Math.abs(Xdom.min() - Ydom.min()) == Zdom.min());
   }
 
   @Override

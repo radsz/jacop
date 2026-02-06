@@ -227,9 +227,9 @@ public class Pruning extends Network {
 
           int flow = companion.flowOffset + arc.sister.capacity;
           if (arc.head == node) {
-            assert (arc.sister.capacity == -node.balance) : "\n" + node + "\n" + arc;
+            assert arc.sister.capacity == -node.balance : "\n" + node + "\n" + arc;
           } else {
-            assert (arc.sister.capacity == node.balance) : "\n" + node + "\n" + arc;
+            assert arc.sister.capacity == node.balance : "\n" + node + "\n" + arc;
           }
           nvarIn(companion, flow, flow);
         }
@@ -353,7 +353,7 @@ public class Pruning extends Network {
 
     int capacity = arc.capacity;
     int flow = analyzeArc(arc, costLimit);
-    assert (arc.capacity == (capacity - flow));
+    assert arc.capacity == capacity - flow;
 
     final int _capacity = arc.capacity;
     final int _residual = arc.sister.capacity;
@@ -363,8 +363,8 @@ public class Pruning extends Network {
     if (arc.index == DELETED_ARC) {
       addArcWithFlow(arc);
     }
-    assert (checkFlow(this));
-    assert (checkStructure(this));
+    assert checkFlow(this);
+    assert checkStructure(this);
 
     if (DO_INSTRUMENTATION) {
       if (_companion.xVar != null) {
@@ -387,11 +387,11 @@ public class Pruning extends Network {
     networkSimplex(999999);
 
     long cost = cost(Long.MAX_VALUE);
-    assert (cost(Long.MAX_VALUE) == cost) : cost(Long.MAX_VALUE) + " != " + cost;
+    assert cost(Long.MAX_VALUE) == cost : cost(Long.MAX_VALUE) + " != " + cost;
   }
 
   private int analyzeArc(Arc arc, int costLimit) {
-    assert (arc.capacity > 0);
+    assert arc.capacity > 0;
 
     // Remove arc from graph
     if (arc.index == TREE_ARC) {
@@ -417,7 +417,7 @@ public class Pruning extends Network {
 
     while (capacity > 0) {
       int unitCost = arc.reducedCost(); // + arc.cost;
-      assert (unitCost >= 0);
+      assert unitCost >= 0;
       if (unitCost > 0) {
         int maxCapacity = costLimit / unitCost;
         if (capacity > maxCapacity) {
@@ -476,7 +476,7 @@ public class Pruning extends Network {
   }
 
   private void pruneArc(int capacity, int residual, boolean forward, ArcCompanion companion) {
-    assert (capacity > 0);
+    assert capacity > 0;
 
     // int level = store.level;
     if (forward) {

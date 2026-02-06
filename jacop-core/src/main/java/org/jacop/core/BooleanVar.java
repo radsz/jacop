@@ -106,7 +106,7 @@ public class BooleanVar extends IntVar {
   // it will cause problems if dom is reused.
   public BooleanVar(Store store, String name, BoundDomain dom) {
 
-    assert (dom.min >= 0 && dom.min <= dom.max && dom.max <= 1)
+    assert dom.min >= 0 && dom.min <= dom.max && dom.max <= 1
         : "Boolean variable can only get value between 0..1";
 
     dom.searchConstraints = new ArrayList<>();

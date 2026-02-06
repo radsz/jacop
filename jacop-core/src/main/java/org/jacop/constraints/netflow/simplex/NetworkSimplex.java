@@ -142,8 +142,8 @@ public class NetworkSimplex {
       incrementDegree(arc.tail(), arc);
     }
 
-    assert (checkFlow(this));
-    assert (checkStructure(this));
+    assert checkFlow(this);
+    assert checkStructure(this);
   }
 
   private void incrementDegree(Node node, Arc myArc) {
@@ -161,7 +161,7 @@ public class NetworkSimplex {
 
   private void decrementDegree(Node node) {
     //   System.out.println("DECR " + node.name);
-    assert (node != root);
+    assert node != root;
 
     node.degree--;
     // build adjacency list
@@ -169,11 +169,11 @@ public class NetworkSimplex {
       int i = 0;
       for (Arc arc : allArcs) {
         if (arc.index != DELETED_ARC && (arc.head == node || arc.tail() == node)) {
-          assert (i < 2) : node + " has extra arc " + arc;
+          assert i < 2 : node + " has extra arc " + arc;
           node.adjacencyList[i++] = arc;
         }
       }
-      assert (i == 2);
+      assert i == 2;
     }
     // update adjacency list
     if (node.degree < 2) {
@@ -189,10 +189,10 @@ public class NetworkSimplex {
         node.adjacencyList[1] = null;
       }
 
-      assert ((node.degree == 1
-                  && ((node.adjacencyList[0] == null) ^ (node.adjacencyList[1] == null)))
+      assert (node.degree == 1 && (node.adjacencyList[0] == null) ^ (node.adjacencyList[1] == null))
               || (node.degree == 0
-                  && ((node.adjacencyList[0] == null) && (node.adjacencyList[1] == null))))
+                  && (node.adjacencyList[0] == null)
+                  && (node.adjacencyList[1] == null))
           : node + "\n" + node.degree + ": " + Arrays.toString(node.adjacencyList);
     }
   }
@@ -203,7 +203,7 @@ public class NetworkSimplex {
    * @param arc the network arc being added
    */
   protected void addArc(Arc arc) {
-    assert (arc.index == DELETED_ARC) : arc;
+    assert arc.index == DELETED_ARC : arc;
     int index = numArcs++;
     arc.index = arc.sister.index = index;
     if (arc.capacity == 0) {
@@ -212,7 +212,7 @@ public class NetworkSimplex {
     } else {
       // arc at lower bound
       lower[index] = arc;
-      assert (arc.sister.capacity == 0);
+      assert arc.sister.capacity == 0;
     }
 
     if (arc.companion != null) {
@@ -225,7 +225,7 @@ public class NetworkSimplex {
   }
 
   public void addArcWithFlow(Arc arc) {
-    assert (arc.index == DELETED_ARC) : arc;
+    assert arc.index == DELETED_ARC : arc;
     int index = numArcs++;
     arc.index = arc.sister.index = index;
     if (arc.capacity == 0) {
@@ -238,7 +238,7 @@ public class NetworkSimplex {
       if (arc.sister.capacity > 0) {
         primalStep(arc.sister);
       }
-      assert (arc.sister.capacity == 0 || arc.index == TREE_ARC);
+      assert arc.sister.capacity == 0 || arc.index == TREE_ARC;
     }
 
     if (arc.companion != null) {
@@ -253,7 +253,7 @@ public class NetworkSimplex {
   public void removeArc(Arc arc) {
     // Remove arc from graph
     int index = arc.index;
-    assert (index >= 0) : arc.toString();
+    assert index >= 0 : arc.toString();
     if (index < --numArcs) {
       Arc last = lower[numArcs];
       lower[index] = last;
@@ -280,8 +280,8 @@ public class NetworkSimplex {
    */
   public int networkSimplex(int maxPivots) {
 
-    assert (checkFlow(this));
-    assert (checkStructure(this));
+    assert checkFlow(this);
+    assert checkStructure(this);
     //   infeasibleNodes.add(arc.tail());
     //   infeasibleNodes.add(arc.head);
 
@@ -312,7 +312,7 @@ public class NetworkSimplex {
       }
     }
     root.computePotentials();
-    assert (checkInfeasibleNodes(this));
+    assert checkInfeasibleNodes(this);
 
     // Add violating arcs to the tree
     pivotRule.reset();
@@ -350,7 +350,7 @@ public class NetworkSimplex {
       } else {
         // demand node
         infeasibleFlow = -arc.capacity;
-        assert (delta != 0);
+        assert delta != 0;
       }
 
       // update node
@@ -367,9 +367,9 @@ public class NetworkSimplex {
 
     root.computePotentials();
 
-    assert (checkFlow(this));
-    assert (checkStructure(this));
-    assert (pivots == -1 || failure || checkOptimality(this));
+    assert checkFlow(this);
+    assert checkStructure(this);
+    assert pivots == -1 || failure || checkOptimality(this);
 
     if (DEBUG) {
       if (pivots == -1) {
@@ -430,7 +430,7 @@ public class NetworkSimplex {
    *     'blocking'.
    */
   public int augmentFlow(Node from, Node to, int delta) {
-    assert (delta >= 0);
+    assert delta >= 0;
 
     blocking = null; // default value
     if (delta == 0) {
@@ -493,7 +493,7 @@ public class NetworkSimplex {
       log.debug("entering = {}", entering);
     }
 
-    assert (checkBeforeUpdate(leaving, entering));
+    assert checkBeforeUpdate(leaving, entering);
 
     // Let (p,q) and (k,l) be the leaving and entering arcs,
     // respectively

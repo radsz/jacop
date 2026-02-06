@@ -70,7 +70,7 @@ public class Dbox {
     this.origin = origin;
     this.length = length;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**
@@ -374,7 +374,7 @@ public class Dbox {
    */
   public boolean containsPoint(int[] pointCoordinates) {
 
-    assert (pointCoordinates.length <= origin.length) : "dimension mismatch";
+    assert pointCoordinates.length <= origin.length : "dimension mismatch";
 
     int pointDim = pointCoordinates.length;
 
@@ -412,7 +412,7 @@ public class Dbox {
    */
   public Dbox intersectWith(Dbox other) {
 
-    Dbox intersection = Dbox.getAllocatedInstance(origin.length);
+    Dbox intersection = getAllocatedInstance(origin.length);
 
     // the origin of the intersection
     int[] intersectionOrigin = intersection.origin;
@@ -447,7 +447,7 @@ public class Dbox {
    */
   public Dbox intersectWith(Dbox other, int[] otherOffset) {
 
-    Dbox intersection = Dbox.getAllocatedInstance(origin.length);
+    Dbox intersection = getAllocatedInstance(origin.length);
 
     // the origin of the intersection
     int[] intersectionOrigin = intersection.origin;
@@ -486,7 +486,7 @@ public class Dbox {
    */
   public Dbox intersectWith(int[] offset, Dbox other, int[] otherOffset) {
 
-    Dbox intersection = Dbox.getAllocatedInstance(origin.length);
+    Dbox intersection = getAllocatedInstance(origin.length);
 
     // minimal value of the intersection
     int[] intersectionOrigin = intersection.origin;
@@ -587,7 +587,7 @@ public class Dbox {
 
           sliceLength[i] = hole.origin[i] - lowerbound[i];
 
-          assert (newBox.checkInvariants() == null) : newBox.checkInvariants();
+          assert newBox.checkInvariants() == null : newBox.checkInvariants();
 
           // the box is defined, we can add it
           difference.add(newBox);
@@ -609,7 +609,7 @@ public class Dbox {
             newBox.length[j] = upperbound[j] - sliceOrigin[j];
           }
 
-          assert (newBox.checkInvariants() == null) : newBox.checkInvariants();
+          assert newBox.checkInvariants() == null : newBox.checkInvariants();
 
           // the box is defined, we can add it
           difference.add(newBox);
@@ -619,7 +619,7 @@ public class Dbox {
         }
       }
 
-      Dbox.dispatchBox(dummyBox);
+      dispatchBox(dummyBox);
     }
 
     return difference;

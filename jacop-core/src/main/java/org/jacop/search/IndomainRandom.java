@@ -65,7 +65,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
   public int indomain(IntVar var) {
 
-    assert (!var.singleton()) : "Indomain should not be called with singleton domain";
+    assert !var.singleton() : "Indomain should not be called with singleton domain";
 
     IntDomain dom = var.domain;
 

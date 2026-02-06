@@ -122,7 +122,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   /** It returns the solution number no. The first solution has an index 1. */
   public Domain[] getSolution(int no) {
 
-    assert (no <= noSolutions);
+    assert no <= noSolutions;
     assert recordSolutions;
 
     return solutions[no - 1];
@@ -287,13 +287,13 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
       number = 0;
     }
 
-    assert (number < noSolutions) : "Smaller number of solutions were found.";
-    assert (recordSolutions || number == 0) : "The solutions were not stored.";
-    assert (solutions.length > number) : "The solution of the given number was not stored.";
+    assert number < noSolutions : "Smaller number of solutions were found.";
+    assert recordSolutions || number == 0 : "The solutions were not stored.";
+    assert solutions.length > number : "The solution of the given number was not stored.";
 
     if (vars != null) {
 
-      assert (store.currentConstraint == null);
+      assert store.currentConstraint == null;
 
       for (int i = 0; i < vars.length; i++) {
         vars[i].dom().in(store.level, vars[i], solutions[number][i]);

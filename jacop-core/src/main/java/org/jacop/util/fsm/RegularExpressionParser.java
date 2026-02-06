@@ -107,24 +107,20 @@ public class RegularExpressionParser {
             expect(LexicalAnalyzer.Beginning);
           } // if
           Expression c2 = parse(false);
-          if (c.getType() == RegularExpressionParser.Sum
-              && c2.getType() == RegularExpressionParser.Sum) {
+          if (c.getType() == Sum && c2.getType() == Sum) {
             ((Sum) c).addSum((Sum) c2);
           }
 
-          if (c.getType() == RegularExpressionParser.Sum
-              && c2.getType() != RegularExpressionParser.Sum) {
+          if (c.getType() == Sum && c2.getType() != Sum) {
             ((Sum) c).addExp(c2);
           }
 
-          if (c.getType() != RegularExpressionParser.Sum
-              && c2.getType() == RegularExpressionParser.Sum) {
+          if (c.getType() != Sum && c2.getType() == Sum) {
             ((Sum) c2).addExp(c);
             c = c2;
           }
 
-          if (c.getType() != RegularExpressionParser.Sum
-              && c2.getType() != RegularExpressionParser.Sum) {
+          if (c.getType() != Sum && c2.getType() != Sum) {
             c = new Sum(c, c2);
           }
 
@@ -352,7 +348,7 @@ public class RegularExpressionParser {
 
     @Override
     public int getType() {
-      return RegularExpressionParser.Sum;
+      return Sum;
     }
 
     @Override
@@ -392,10 +388,10 @@ public class RegularExpressionParser {
         if (first) {
           tmp = e.parseToFsm();
           first = false;
-          if (e.getType() != RegularExpressionParser.Literal) {
+          if (e.getType() != Literal) {
             isSimple = false;
           }
-        } else if (e.getType() == RegularExpressionParser.Literal && isSimple) {
+        } else if (e.getType() == Literal && isSimple) {
 
           IntDomain dom = tmp.initState.transitions.iterator().next().domain;
           int val = Integer.parseInt(((Literal) e).lit);
@@ -429,7 +425,7 @@ public class RegularExpressionParser {
 
     @Override
     public int getType() {
-      return RegularExpressionParser.Literal;
+      return Literal;
     }
 
     @Override

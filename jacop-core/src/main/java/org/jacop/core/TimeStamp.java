@@ -98,7 +98,7 @@ public class TimeStamp<T> implements Stateful {
       final T[] oldValues = values;
       final int[] oldStamps = stamps;
 
-      int newCapacity = (oldCapacity * 3) / 2 + 1;
+      int newCapacity = oldCapacity * 3 / 2 + 1;
 
       // Here if there was no pointer4Last++ instruction
       // before calling ensureCapacity then it would need
@@ -170,7 +170,7 @@ public class TimeStamp<T> implements Stateful {
    */
   public void update(T val) {
 
-    assert (stamps[pointer4Last] <= store.level)
+    assert stamps[pointer4Last] <= store.level
         : "Error - Timestamp" + this + "has greater level than store " + "- missing remove";
 
     if (stamps[pointer4Last] == store.level) {

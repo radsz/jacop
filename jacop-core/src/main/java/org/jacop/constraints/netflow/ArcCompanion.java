@@ -107,7 +107,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
    */
   public void changeCapacity(int min, int max) {
 
-    assert (min <= max) : "min value must be smaller or equal the maximum value";
+    assert min <= max : "min value must be smaller or equal the maximum value";
 
     // the order only matters if intervals (before & after) are
     // non-overlapping
@@ -124,8 +124,8 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
   public void changeMinCapacity(int min) {
 
-    assert (min >= 0);
-    assert (min <= (flowOffset + arc.capacity + arc.sister.capacity));
+    assert min >= 0;
+    assert min <= flowOffset + arc.capacity + arc.sister.capacity;
 
     int delta = min - flowOffset;
     if (delta != 0) {
@@ -138,14 +138,14 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // repair flow if lower bound raises above current flow
       if (arc.sister.capacity < 0) {
         setFlow(min);
-        assert (arc.sister.capacity == 0);
+        assert arc.sister.capacity == 0;
       }
     }
   }
 
   public void changeMaxCapacity(int max) {
 
-    assert (max >= flowOffset);
+    assert max >= flowOffset;
 
     int residual = arc.capacity;
     int total = flowOffset + residual + arc.sister.capacity;
@@ -158,7 +158,7 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       // repair flow if upper bound falls below current flow
       if (arc.capacity < 0) {
         setFlow(max);
-        assert (arc.capacity == 0);
+        assert arc.capacity == 0;
       }
     }
   }
@@ -275,8 +275,8 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   public void setFlow(int flow) {
 
     int currentFlow = flowOffset + arc.sister.capacity;
-    assert (flowOffset <= flow);
-    assert (flow <= currentFlow + arc.capacity);
+    assert flowOffset <= flow;
+    assert flow <= currentFlow + arc.capacity;
 
     int delta = flow - currentFlow;
 

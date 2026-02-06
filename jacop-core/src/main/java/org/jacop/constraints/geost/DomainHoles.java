@@ -158,7 +158,7 @@ public class DomainHoles extends InternalConstraint {
    */
   public boolean stillHasHole() {
 
-    assert (object.dimension == object.coords.length)
+    assert object.dimension == object.coords.length
         : "object dimension is not equal to dimension indicated by coords.";
 
     IntVar[] vars = object.coords;

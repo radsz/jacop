@@ -607,23 +607,23 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 suc.outDegree);
           }
 
-          assert (s.outDegree >= 0);
+          assert s.outDegree >= 0;
 
           if (s.outDegree == 0) {
             if (debugAll) {
               log.debug("Move OUT state out of scope : q_{}{}", varIndex, s.id);
             }
-            assert (s.level == varIndex);
+            assert s.level == varIndex;
             disableState(varIndex, s.pos);
           }
 
-          assert (suc.inDegree >= 0);
+          assert suc.inDegree >= 0;
 
           if (suc.inDegree == 0) {
             if (debugAll) {
               log.debug("Move IN state out of scope : q_{}{}", suc.level, suc.id);
             }
-            assert (suc.level == varIndex + 1);
+            assert suc.level == varIndex + 1;
             disableState(nextVar, suc.pos);
             levelHadChanged[nextVar] = true;
           }
@@ -681,10 +681,10 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
           }
         }
 
-        assert (s.outDegree >= 0) : "Negative successor number of q_" + s.level + s.id;
+        assert s.outDegree >= 0 : "Negative successor number of q_" + s.level + s.id;
 
         if (s.outDegree == 0) {
-          assert (s.level == level);
+          assert s.level == level;
           disableState(level, sPos);
           cont = true;
         }
@@ -746,14 +746,14 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
                 suc.id);
           }
 
-          assert (suc.inDegree >= 0) : "Negative indegree of successor state" + suc.level + suc.id;
+          assert suc.inDegree >= 0 : "Negative indegree of successor state" + suc.level + suc.id;
 
           if (suc.inDegree == 0) {
             if (debugAll) {
               log.debug("> Move IN state out of scope : q_{}{}", suc.level, suc.id);
             }
             // changed to directl disableState(int, int).
-            assert (suc.level == level + 1);
+            assert suc.level == level + 1;
             disableState(level + 1, suc.pos);
             // @todo levelHasChanged[level+1] = true
             cont = true;
@@ -779,7 +779,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
 
     int lim = activeLevels[level].value();
 
-    assert (pos < lim);
+    assert pos < lim;
 
     RegState s = stateLevels[level][pos];
 
@@ -796,7 +796,7 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
   @Override
   public void removeLevel(int level) {
 
-    assert (level > firstConsistencyLevel)
+    assert level > firstConsistencyLevel
         : "Constraint has the level at which it has computed its initial state being removed.";
 
     this.variableQueue.clear();

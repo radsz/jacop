@@ -67,7 +67,7 @@ public class AllowedArea extends InternalConstraint {
     this.origin = origin;
     this.length = length;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**

@@ -148,7 +148,7 @@ public class Binpacking extends Constraint
 
     binMap = Var.positionMapping(load, false, this.getClass());
 
-    Comparator<BinItem> weightComparator = (o1, o2) -> (o2.weight() - o1.weight());
+    Comparator<BinItem> weightComparator = (o1, o2) -> o2.weight() - o1.weight();
     Arrays.sort(item, weightComparator);
 
     itemMap =

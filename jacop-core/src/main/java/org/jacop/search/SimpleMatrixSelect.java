@@ -139,7 +139,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
       Indomain<T> indomain,
       int pivotPosition) {
 
-    assert (pivotPosition >= 0) : "Pivot position must be equal or greater 0";
+    assert pivotPosition >= 0 : "Pivot position must be equal or greater 0";
 
     this.mainComparator = mainComparator;
     this.tieBreakingComparator = tieBreakingComparator;
@@ -152,7 +152,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
       List<T> current = new ArrayList<>();
 
-      assert (var.length > pivotPosition);
+      assert var.length > pivotPosition;
 
       for (T t : var) {
         current.add(t);
@@ -176,7 +176,7 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
   // @todo is this specialtiebreaking (lexdynamic actually employed)?
   public T getChoiceVariable(int firstVariable) {
 
-    assert (searchVariables.size() > firstVariable)
+    assert searchVariables.size() > firstVariable
         : "The position of the first entity to check is larger than the array size";
 
     int finalIndex = searchVariables.size();
@@ -354,8 +354,8 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public int getChoiceValue() {
 
-    assert (primaryIndex >= 0);
-    assert (primaryIndex < searchVariables.size());
+    assert primaryIndex >= 0;
+    assert primaryIndex < searchVariables.size();
 
     return valueOrdering.indomain(searchVariables.get(primaryIndex).get(secondaryIndex));
   }

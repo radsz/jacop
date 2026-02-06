@@ -157,7 +157,7 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
       t = setFirstValid(varPosition, value);
     }
 
-    assert (t != null) : " First valid tuple can not be null ";
+    assert t != null : " First valid tuple can not be null ";
 
     int invalidPosition;
 
@@ -416,7 +416,7 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
       int j = 0;
 
       if (debugAll) {
-        log.debug("conflict for analysis{}", java.util.Arrays.toString(t));
+        log.debug("conflict for analysis{}", Arrays.toString(t));
       }
 
       for (int val : t) {
@@ -436,7 +436,7 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
 
       if (debugAll) {
         if (!stillConflict[i]) {
-          log.debug("Not support {}", java.util.Arrays.toString(t));
+          log.debug("Not support {}", Arrays.toString(t));
         }
       }
 
@@ -459,7 +459,7 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
         i++;
 
         if (debugAll) {
-          log.debug("Still support {}", java.util.Arrays.toString(t));
+          log.debug("Still support {}", Arrays.toString(t));
         }
       }
 

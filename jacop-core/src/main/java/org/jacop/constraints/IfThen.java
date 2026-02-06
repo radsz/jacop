@@ -293,7 +293,7 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable {
     if (imposed) {
       return condC.notSatisfied();
     } else {
-      return (condC.satisfied() && thenC.satisfied()) || (condC.notSatisfied());
+      return condC.satisfied() && thenC.satisfied() || condC.notSatisfied();
     }
   }
 

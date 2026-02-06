@@ -194,8 +194,7 @@ public class SumWeight extends Constraint
 
         IntDomain currentDomain = list[i].domain;
 
-        assert (!currentDomain.singleton())
-            : "Singletons should not occur in this part of the array";
+        assert !currentDomain.singleton() : "Singletons should not occur in this part of the array";
 
         long mul1 = currentDomain.min() * weights[i];
         long mul2 = currentDomain.max() * weights[i];

@@ -62,7 +62,7 @@ public class BoundDomainValueEnumeration extends ValueEnumeration {
 
   @Override
   public int nextElement() {
-    assert (current < max);
+    assert current < max;
     return ++current;
   }
 

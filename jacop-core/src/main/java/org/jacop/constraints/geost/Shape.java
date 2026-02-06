@@ -74,7 +74,7 @@ public class Shape {
     // the bounding box is lazily initialized
     boundingBox = computeBoundingBox();
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**
@@ -91,7 +91,7 @@ public class Shape {
 
     this.boundingBox = box;
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**

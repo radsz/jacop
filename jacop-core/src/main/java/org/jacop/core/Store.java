@@ -711,7 +711,7 @@ public class Store {
    */
   public void impose(Constraint c, int queueIndex) {
 
-    assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < queueNo : "Constraint queue number larger than permitted by store.";
 
     c.impose(this, queueIndex);
   }
@@ -729,7 +729,7 @@ public class Store {
     c.impose(this);
 
     if (!consistency()) {
-      throw Store.failException;
+      throw failException;
     }
   }
 
@@ -744,12 +744,12 @@ public class Store {
    */
   public void imposeWithConsistency(Constraint c, int queueIndex) throws FailException {
 
-    assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < queueNo : "Constraint queue number larger than permitted by store.";
 
     c.impose(this, queueIndex);
 
     if (!consistency()) {
-      throw Store.failException;
+      throw failException;
     }
   }
 
@@ -776,7 +776,7 @@ public class Store {
   public <T extends Constraint> void imposeDecomposition(
       DecomposedConstraint<T> c, int queueIndex) {
 
-    assert (queueIndex < queueNo) : "Constraint queue number larger than permitted by store.";
+    assert queueIndex < queueNo : "Constraint queue number larger than permitted by store.";
 
     c.imposeDecomposition(this, queueIndex);
   }
@@ -793,7 +793,7 @@ public class Store {
     c.imposeDecomposition(this);
 
     if (!consistency()) {
-      throw Store.failException;
+      throw failException;
     }
   }
 
@@ -864,7 +864,7 @@ public class Store {
 
     Var previousVar = variablesHashMap.put(var.id(), var);
 
-    assert (previousVar == null) : "Two variables have the same id " + previousVar + " " + var;
+    assert previousVar == null : "Two variables have the same id " + previousVar + " " + var;
 
     if (var.index != -1) {
       if (vars[var.index] == var) {
@@ -939,7 +939,7 @@ public class Store {
       return;
     }
 
-    assert (trailManager.getLevel() == level)
+    assert trailManager.getLevel() == level
         : "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()";
 
     //      assert (!trailManager.trailContainsAllChanges

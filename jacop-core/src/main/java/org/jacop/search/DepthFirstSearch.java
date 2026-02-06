@@ -436,7 +436,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       if (fdv != null) {
 
         val = heuristic.getChoiceValue();
-        assert (store.currentConstraint == null);
+        assert store.currentConstraint == null;
 
         //   maybe a boolean flag, if search should work
         //   C, not(C) versus not(C), C;
@@ -635,7 +635,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         } else {
 
-          assert (store.currentConstraint == null);
+          assert store.currentConstraint == null;
           store.impose(choice);
           decisions++;
 
@@ -692,7 +692,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
         if (choice != null) {
 
-          assert (store.currentConstraint == null);
+          assert store.currentConstraint == null;
 
           store.setLevel(store.level);
 
@@ -711,7 +711,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           store.removeLevel(depth);
         } else if (!fdv.dom().singleton()) { //       else if (!fdv.dom().singleton(val)) {
 
-          assert (store.currentConstraint == null);
+          assert store.currentConstraint == null;
 
           store.setLevel(store.level);
 

@@ -69,7 +69,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public DiffnDecomposed(IntVar[][] rectangle) {
 
-    assert (rectangle != null) : "Rectangles list is null";
+    assert rectangle != null : "Rectangles list is null";
 
     queueIndex = 2;
 
@@ -79,8 +79,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     ly = new IntVar[rectangle.length];
 
     for (int i = 0; i < rectangle.length; i++) {
-      assert (rectangle[i] != null) : i + "-th rectangle in the list is null";
-      assert (rectangle[i].length != 4) : "The rectangle has to have exactly two dimensions";
+      assert rectangle[i] != null : i + "-th rectangle in the list is null";
+      assert rectangle[i].length != 4 : "The rectangle has to have exactly two dimensions";
 
       x[i] = rectangle[i][0];
       y[i] = rectangle[i][1];
@@ -135,7 +135,7 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
    */
   public DiffnDecomposed(List<? extends List<? extends IntVar>> rectangle) {
 
-    assert (rectangle != null) : "Rectangles list is null";
+    assert rectangle != null : "Rectangles list is null";
 
     this.queueIndex = 2;
 
@@ -145,8 +145,8 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     ly = new IntVar[rectangle.size()];
 
     for (int i = 0; i < rectangle.size(); i++) {
-      assert (rectangle.get(i) != null) : i + "-th rectangle in the list is null";
-      assert (rectangle.get(i).size() != 4) : "The rectangle has to have exactly two dimensions";
+      assert rectangle.get(i) != null : i + "-th rectangle in the list is null";
+      assert rectangle.get(i).size() != 4 : "The rectangle has to have exactly two dimensions";
 
       x[i] = rectangle.get(i).getFirst();
       y[i] = rectangle.get(i).get(1);

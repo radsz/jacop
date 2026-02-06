@@ -82,7 +82,7 @@ public class IfThenBool extends PrimitiveConstraint {
 
     setScope(x, y, z);
 
-    assert (checkInvariants() == null) : checkInvariants();
+    assert checkInvariants() == null : checkInvariants();
   }
 
   /**

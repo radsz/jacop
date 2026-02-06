@@ -266,8 +266,8 @@ public class NetworkFlow extends Constraint
       network.pruneNodesWithSmallDegree();
       network.analyze(costLimit);
 
-      assert (checkFlow(network));
-      assert (checkStructure(network));
+      assert checkFlow(network);
+      assert checkStructure(network);
 
       updateGraph();
     }

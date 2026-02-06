@@ -137,8 +137,8 @@ public final class Arc {
     capacity -= delta;
     sister.capacity += delta;
 
-    assert (sister.capacity >= 0) : delta + ", Bad capacity: " + this;
-    assert (capacity >= 0) : delta + ", Bad capacity: " + this;
+    assert sister.capacity >= 0 : delta + ", Bad capacity: " + this;
+    assert capacity >= 0 : delta + ", Bad capacity: " + this;
   }
 
   public Node tail() {
@@ -159,10 +159,10 @@ public final class Arc {
    */
   public void set(int newCost, int newCapacity) {
 
-    assert (cost == 0);
-    assert (sister.cost == 0);
-    assert (capacity == 0);
-    assert (sister.capacity == 0);
+    assert cost == 0;
+    assert sister.cost == 0;
+    assert capacity == 0;
+    assert sister.capacity == 0;
 
     cost = newCost;
     sister.cost = -newCost;
