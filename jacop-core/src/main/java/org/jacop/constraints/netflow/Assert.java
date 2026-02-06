@@ -38,6 +38,8 @@ import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
 
 /**
+ * Utility class for validating network flow constraints.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */

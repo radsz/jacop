@@ -44,6 +44,8 @@ import org.jacop.core.Var;
 public interface VarHandler {
 
   /**
+   * Returns the list of variables handled by this handler.
+   *
    * @return the list of variables handled by this handler
    */
   List<IntVar> listVariables();

@@ -104,6 +104,8 @@ public class SumInt extends PrimitiveConstraint {
   int guideValue;
 
   /**
+   * Constructs a SumInt constraint with the specified relation.
+   *
    * @param list variables which are being multiplied by weights.
    * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
    *     "{@literal >=}", "{@literal !=}"

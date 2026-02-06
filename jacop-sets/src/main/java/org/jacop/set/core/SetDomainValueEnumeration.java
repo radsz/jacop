@@ -50,6 +50,8 @@ public class SetDomainValueEnumeration extends ValueEnumeration {
   int pascalPlace;
 
   /**
+   * Constructs an enumeration for the specified SetDomain.
+   *
    * @param dom It specifies the SetDomain for which enumeration of sets is performed.
    */
   public SetDomainValueEnumeration(SetDomain dom) {

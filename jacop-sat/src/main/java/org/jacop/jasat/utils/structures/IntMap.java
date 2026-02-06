@@ -110,6 +110,8 @@ public final class IntMap<E> {
   }
 
   /**
+   * Returns the number of keys in the map.
+   *
    * @return the number of keys in the map
    */
   public int size() {

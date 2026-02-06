@@ -46,6 +46,8 @@ import org.jacop.floats.core.FloatVar;
 public class SumFloat extends LinearFloat {
 
   /**
+   * Constructs a SumFloat constraint with unit weights.
+   *
    * @param list variables which are being multiplied by weights.
    * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
    *     "{@literal >=}", "{@literal !=}"

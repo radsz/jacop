@@ -100,6 +100,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   public abstract int rateThisClause(int[] clause);
 
   /**
+   * Returns the index of this database in the DatabasesStore.
+   *
    * @return the index of this database in the DatabasesStore
    */
   public final int getDatabaseIndex() {
@@ -136,6 +138,8 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
   }
 
   /**
+   * Checks whether a literal watches a clause.
+   *
    * @param literal the literal to check
    * @param clauseIndex the clause id for checking
    * @return true if the literal watches the clause, false otherwise

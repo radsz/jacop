@@ -67,6 +67,8 @@ public class Member extends PrimitiveConstraint {
   private TimeStamp<Integer> position;
 
   /**
+   * Constructs a Member constraint to check if a variable equals one in the list.
+   *
    * @param list list of variables.
    * @param e variable to be checkd on the list.
    */

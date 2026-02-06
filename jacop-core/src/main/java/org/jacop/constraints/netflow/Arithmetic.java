@@ -43,6 +43,8 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
+ * Decomposed constraint for arithmetic expressions in network flow problems.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */

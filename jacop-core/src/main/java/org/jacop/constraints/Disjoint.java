@@ -58,6 +58,8 @@ public class Disjoint extends Diff {
   Diff2Var[] evalRects;
 
   /**
+   * Constructs a Disjoint constraint ensuring rectangles do not overlap.
+   *
    * @param rectangles a list of rectangles.
    * @param doProfile should profile be computed and used.
    */

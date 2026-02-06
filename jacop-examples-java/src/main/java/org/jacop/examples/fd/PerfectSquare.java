@@ -78,6 +78,8 @@ public class PerfectSquare extends ExampleFd {
   IntVar[] size;
 
   /**
+   * Returns the problem instances data.
+   *
    * @return The following table contains all the data for all problems instances. Each entry
    *     (line)within a three dimensional table is one problem. The first one element int array
    *     contains the size of the master square. The master square is the square which must

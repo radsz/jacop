@@ -680,6 +680,8 @@ public class Mdd {
   }
 
   /**
+   * Checks if all variables are grounded and their values are allowed by the Mdd.
+   *
    * @return true only if all variables are grounded and the values assigned to variables are
    *     allowed by a Mdd.
    */

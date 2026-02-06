@@ -91,6 +91,8 @@ public class TreeNode {
   }
 
   /**
+   * Checks if this node is a leaf.
+   *
    * @return true if the node is a leaf, false otherwise.
    */
   public boolean isLeaf() {

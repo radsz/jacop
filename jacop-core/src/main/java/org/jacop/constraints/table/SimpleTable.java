@@ -78,7 +78,7 @@ public class SimpleTable extends Constraint
 
   long mask;
 
-  /** */
+  /** Maps variables to their indices. */
   Map<IntVar, Integer> varMap;
 
   /**

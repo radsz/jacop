@@ -132,6 +132,8 @@ public final class HeuristicForgetModule
   }
 
   /**
+   * Counts the number of learnt clauses.
+   *
    * @return the number of learnt clauses one can hope to delete
    */
   private int numberOfLearntClauses() {

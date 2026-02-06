@@ -31,6 +31,8 @@
 package org.jacop.core;
 
 /**
+ * Interface for managing backtrackable objects during search.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */

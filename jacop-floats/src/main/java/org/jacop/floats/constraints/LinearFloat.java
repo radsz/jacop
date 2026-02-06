@@ -54,6 +54,8 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
   // =================== constructors ========================
 
   /**
+   * Constructs a LinearFloat constraint with a constant sum.
+   *
    * @param list variables which are being multiplied by weights.
    * @param weights weight for each variable.
    * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
@@ -66,6 +68,8 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
   }
 
   /**
+   * Constructs a LinearFloat constraint with a variable sum.
+   *
    * @param list variables which are being multiplied by weights.
    * @param weights weight for each variable.
    * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",

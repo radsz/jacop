@@ -754,6 +754,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   /**
+   * Checks whether all domain invariants hold.
+   *
    * @return It returns the information about the first invariant which does not hold or null
    *     otherwise.
    */

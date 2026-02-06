@@ -34,6 +34,8 @@ import java.util.Set;
 import org.jacop.core.IntDomain;
 
 /**
+ * Represents a transition in a finite state machine.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */

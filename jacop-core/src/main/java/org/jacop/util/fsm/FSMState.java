@@ -35,6 +35,8 @@ import java.util.Set;
 import lombok.EqualsAndHashCode;
 
 /**
+ * Represents a state in a finite state machine.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 4.10
  */

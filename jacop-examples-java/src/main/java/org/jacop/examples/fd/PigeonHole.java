@@ -48,7 +48,7 @@ import org.jacop.core.Store;
  */
 public class PigeonHole extends ExampleFd {
 
-  /** */
+  /** The number of pigeons in the problem. */
   public int noPigeons = 5;
 
   /**

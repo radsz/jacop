@@ -131,6 +131,8 @@ public final class IntHashMap<E> {
   }
 
   /**
+   * Checks if the table is empty.
+   *
    * @return true if the table is empty
    */
   public boolean isEmpty() {
@@ -277,6 +279,8 @@ public final class IntHashMap<E> {
   }
 
   /**
+   * Returns the set of keys of the map.
+   *
    * @return the set of keys of the map
    */
   public Set<Integer> keySet() {

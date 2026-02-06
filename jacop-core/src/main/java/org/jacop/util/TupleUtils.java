@@ -254,6 +254,8 @@ public class TupleUtils {
   }
 
   /**
+   * Sorts the given tuples.
+   *
    * @param ts tuples to be sorted.
    * @return sorted tuples.
    */

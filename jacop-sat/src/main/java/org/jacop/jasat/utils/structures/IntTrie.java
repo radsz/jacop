@@ -168,6 +168,8 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
+   * Returns the root node of the trie.
+   *
    * @return the root node
    */
   public final N getRoot() {
@@ -271,6 +273,8 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
+   * Checks if the trie is empty.
+   *
    * @return true if and only if the trie does not contain anything
    */
   public final boolean isEmpty() {
@@ -278,6 +282,8 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
+   * Returns the number of elements in the trie.
+   *
    * @return the number of elements in the Trie
    */
   public final int size() {
@@ -285,6 +291,8 @@ public class IntTrie<N extends IntTrie.Node<N>> {
   }
 
   /**
+   * Returns the set of values that the trie contains.
+   *
    * @return the set of values that the Trie contains (quite inefficient)
    */
   @SuppressWarnings("unused")

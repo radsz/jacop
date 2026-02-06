@@ -148,6 +148,8 @@ public abstract class Domain {
   public abstract void removeSearchConstraint(int storeLevel, Var var, int position, Constraint c);
 
   /**
+   * Returns the search constraints imposed after setting up the model.
+   *
    * @return it returns the array containing search constraints (the ones imposed after setting up
    *     the model).
    */

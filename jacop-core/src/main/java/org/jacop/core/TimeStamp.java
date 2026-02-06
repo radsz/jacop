@@ -112,6 +112,8 @@ public class TimeStamp<T> implements Stateful {
   }
 
   /**
+   * Returns the previous value according to the stamp.
+   *
    * @return the previous value according to the stamp.
    */
   public final T previousValue() {

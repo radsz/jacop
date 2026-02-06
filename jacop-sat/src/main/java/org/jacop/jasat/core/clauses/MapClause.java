@@ -162,6 +162,8 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
+   * Checks if the clause is unsatisfiable in the given trail.
+   *
    * @param trail the trail to check
    * @return true if all literals of the clause are false in the trail
    */
@@ -181,6 +183,8 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
+   * Checks if the clause is unit with the given literal in the trail.
+   *
    * @param literal the only satisfiable literal in the clause
    * @param trail the trail for the literal
    * @return true if the clause is unit with only @param literal not set
@@ -220,6 +224,8 @@ public final class MapClause implements Iterable<Integer> {
   }
 
   /**
+   * Checks if the clause is empty.
+   *
    * @return true if the clause is empty
    */
   public boolean isEmpty() {

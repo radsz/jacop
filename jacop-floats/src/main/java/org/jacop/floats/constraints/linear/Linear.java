@@ -106,6 +106,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   TimeStamp<Boolean> noSat;
 
   /**
+   * Constructs a Linear constraint with a constant sum.
+   *
    * @param store current store
    * @param list variables which are being multiplied by weights.
    * @param weights weight for each variable.
@@ -118,6 +120,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   }
 
   /**
+   * Constructs a Linear constraint with a variable sum.
+   *
    * @param store current store
    * @param list variables which are being multiplied by weights.
    * @param weights weight for each variable.

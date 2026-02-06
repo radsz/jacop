@@ -68,7 +68,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   /** Tuples specifying the allowed values. */
   public final int[][] tuple;
 
-  /** */
+  /** Maps variables to their indices. */
   final Map<IntVar, Integer> varMap;
 
   Store store;

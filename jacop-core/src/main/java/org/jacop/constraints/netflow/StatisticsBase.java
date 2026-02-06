@@ -33,6 +33,8 @@ package org.jacop.constraints.netflow;
 import java.text.DecimalFormat;
 
 /**
+ * Base class for collecting statistics about network flow operations.
+ *
  * @author : Radoslaw Szymanek
  * @version 4.10
  */

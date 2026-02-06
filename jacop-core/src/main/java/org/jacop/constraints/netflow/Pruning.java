@@ -47,6 +47,8 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 
 /**
+ * Network extension that performs domain pruning for network flow constraints.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */

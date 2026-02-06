@@ -33,6 +33,8 @@ package org.jacop.core;
 import lombok.NoArgsConstructor;
 
 /**
+ * Stores the value of a mutable domain with backtracking support.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
@@ -47,6 +49,8 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
   int stamp;
 
   /**
+   * Constructs a mutable domain value with the specified domain.
+   *
    * @param domain specifies domain stored by a mutable domain.
    */
   public MutableDomainValue(Domain domain) {

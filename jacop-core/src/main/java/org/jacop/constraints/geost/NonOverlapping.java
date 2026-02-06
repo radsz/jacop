@@ -37,6 +37,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * External constraint for geost ensuring objects do not overlap.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
  */

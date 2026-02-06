@@ -39,6 +39,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
 /**
+ * Handler that helps to handle multiple variables.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */

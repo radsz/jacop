@@ -42,11 +42,15 @@ import java.util.Enumeration;
 public abstract class FloatIntervalEnumeration implements Enumeration<FloatInterval> {
 
   /**
+   * Checks if there are more intervals to enumerate.
+   *
    * @return true if there are more elements to enumerate.
    */
   public abstract boolean hasMoreElements();
 
   /**
+   * Returns the next interval in the enumeration.
+   *
    * @return next interval.
    */
   public abstract FloatInterval nextElement();

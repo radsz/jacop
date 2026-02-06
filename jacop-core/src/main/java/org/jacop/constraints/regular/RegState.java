@@ -107,6 +107,8 @@ public abstract class RegState {
   public abstract boolean intersects(IntDomain dom, int successorNo);
 
   /**
+   * Sets the supports for all values of a given variable.
+   *
    * @param hashMap It contains supports for all values of a given variable.
    * @param successorNo it specifies the edge position.
    */
@@ -130,6 +132,8 @@ public abstract class RegState {
   public abstract void add(IntDomain varDom, int successorNo);
 
   /**
+   * Returns the string representation of values accepted by the specified edge.
+   *
    * @param successorNo - edge position.
    * @return It return the string representation of the values accepted by specified edge.
    */

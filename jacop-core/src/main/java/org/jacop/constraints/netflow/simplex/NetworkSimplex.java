@@ -46,6 +46,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.netflow.Pruning;
 
 /**
+ * Implementation of the network simplex for solving minimum cost flow problems.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */
@@ -196,6 +198,8 @@ public class NetworkSimplex {
   }
 
   /**
+   * Adds an arc to the network.
+   *
    * @param arc the network arc being added
    */
   protected void addArc(Arc arc) {
@@ -268,6 +272,8 @@ public class NetworkSimplex {
   }
 
   /**
+   * Executes the network simplex algorithm to find an optimal solution.
+   *
    * @param maxPivots max value of the pivot
    * @return the number of pivots performed until optimality was reached, or -1 if the maximum
    *     number of pivots was reached.

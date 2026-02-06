@@ -809,6 +809,8 @@ public abstract class SetDomain extends Domain {
   public abstract ValueEnumeration valueEnumeration();
 
   /**
+   * Checks whether all domain invariants hold.
+   *
    * @return It returns the information about the first invariant which does not hold or null
    *     otherwise.
    */

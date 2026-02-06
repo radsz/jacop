@@ -33,6 +33,8 @@ package org.jacop.core;
 import lombok.extern.slf4j.Slf4j;
 
 /**
+ * Represents a mutable domain that can be modified during search.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.10
  */
@@ -49,6 +51,8 @@ public class MutableDomain implements MutableVar {
   MutableDomainValue value;
 
   /**
+   * Constructs an empty mutable domain in the specified store.
+   *
    * @param store store in which the mutable domain is created.
    */
   public MutableDomain(Store store) {
@@ -58,6 +62,8 @@ public class MutableDomain implements MutableVar {
   }
 
   /**
+   * Constructs a mutable domain with the specified initial domain.
+   *
    * @param store store in which the mutable domain is created.
    * @param domain specifies the domain used to create mutable domain.
    */

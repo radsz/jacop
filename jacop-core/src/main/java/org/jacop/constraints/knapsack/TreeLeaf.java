@@ -196,6 +196,8 @@ public final class TreeLeaf extends TreeNode {
   }
 
   /**
+   * Returns the minimum value.
+   *
    * @return The minimum value of the variable after slicing.
    */
   public int min() {
@@ -203,6 +205,8 @@ public final class TreeLeaf extends TreeNode {
   }
 
   /**
+   * Returns the maximum value.
+   *
    * @return The maximum value of the variable after slicing
    */
   public int max() {

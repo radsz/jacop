@@ -57,6 +57,8 @@ public final class IntStack {
   }
 
   /**
+   * Checks if the stack is empty.
+   *
    * @return true if the stack is empty
    */
   public boolean isEmpty() {
@@ -64,6 +66,8 @@ public final class IntStack {
   }
 
   /**
+   * Returns the number of elements of the stack.
+   *
    * @return the number of elements of the stack
    */
   public int size() {

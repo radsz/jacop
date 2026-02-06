@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 /**
+ * Defines measures for evaluating constraint violations.
+ *
  * @author Robin Steiger and Radoslaw Szymanek
  * @version 4.10
  */

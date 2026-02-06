@@ -36,6 +36,8 @@ import java.util.Collection;
 import lombok.EqualsAndHashCode;
 
 /**
+ * Represents a D-dimensional box used in geost constraint.
+ *
  * @author Marc-Olivier Fleury and Radoslaw Szymanek
  * @version 4.10
  */

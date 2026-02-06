@@ -224,6 +224,8 @@ public class CarSequencing extends ExampleFd {
   }
 
   /**
+   * Creates a finite state machine for a simple count constraint.
+   *
    * @param count The number of times a value from yes domain needs to be encountered.
    * @param yes the values which are counted.
    * @param no the values which are not counted.

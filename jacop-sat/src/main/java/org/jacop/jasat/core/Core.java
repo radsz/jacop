@@ -339,6 +339,8 @@ public final class Core implements SolverComponent {
   }
 
   /**
+   * Returns the current maximum variable.
+   *
    * @return the current max variable
    */
   public int getMaxVariable() {
@@ -663,6 +665,8 @@ public final class Core implements SolverComponent {
   }
 
   /**
+   * Checks if the solver has found a solution.
+   *
    * @return true if the solver reached a solution
    */
   public boolean hasSolution() {

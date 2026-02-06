@@ -230,7 +230,7 @@ public class RegularExpressionParser {
   /** SyntaxException raised if not regular expression is being parsed. */
   public static class SyntaxException extends Exception {
 
-    /** */
+    /** Serial version UID for serialization. */
     @Serial private static final long serialVersionUID = 5532774111743285222L;
 
     /** The constructor to create an syntax exception without the message. */
@@ -250,6 +250,8 @@ public class RegularExpressionParser {
   public abstract static class Expression {
 
     /**
+     * Returns the type of this expression.
+     *
      * @return type
      */
     abstract int getType();

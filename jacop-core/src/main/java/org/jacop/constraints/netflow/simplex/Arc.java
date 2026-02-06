@@ -182,6 +182,8 @@ public final class Arc {
   }
 
   /**
+   * Returns the cost associated with this arc.
+   *
    * @return cost associated with an arc.
    */
   public long longCost() {
