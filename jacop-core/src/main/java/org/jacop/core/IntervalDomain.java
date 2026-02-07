@@ -477,14 +477,12 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             return false;
           }
 
-          if (next < intervals[i].min()) {
-            continue;
+          if (next >= intervals[i].min()) {
+            assert isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
+                : "isIntersecting not properly implemented";
+
+            return true;
           }
-
-          assert isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
-              : "isIntersecting not properly implemented";
-
-          return true;
         }
 
         assert !isIntersecting(((SmallDenseDomain) domain).toIntervalDomain())
@@ -531,8 +529,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     int i = 0;
-    for (; i < size && intervals[i].max() < min; i++) {
-      // advance past intervals that end before min
+    while (i < size && intervals[i].max() < min) {
+      i++;
     }
 
     return i != size && intervals[i].min() <= max;
@@ -662,8 +660,8 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       int i = 0;
       int min = domain.min();
 
-      for (; i < size && intervals[i].max() < min; i++) {
-        // advance past intervals that end before min
+      while (i < size && intervals[i].max() < min) {
+        i++;
       }
 
       if (i == size) {
@@ -1457,42 +1455,35 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     Interval interval1 = intervals[pointer1];
 
-    while (true) {
+    while (pointer1 < size && interval1.max() < value) {
+      pointer1++;
+      if (pointer1 < size) {
+        interval1 = intervals[pointer1];
+      }
+    }
 
-      if (interval1.max() < value) {
+    if (pointer1 < size && interval1.min() <= value) {
+
+      if (interval1.min() != value) {
+
+        int oldMax = interval1.max();
+        // replace min..max with interval1.min..value-1
+        result.intervals[pointer1] = new Interval(interval1.min(), value - 1);
         pointer1++;
-        if (pointer1 < size) {
-          interval1 = intervals[pointer1];
-          continue;
-        } else {
-          break;
-        }
-      }
 
-      if (interval1.min() <= value) {
-
-        if (interval1.min() != value) {
-
-          int oldMax = interval1.max();
-          // replace min..max with interval1.min..value-1
-          result.intervals[pointer1] = new Interval(interval1.min(), value - 1);
+        if (value != oldMax) {
+          // add domain value+1..oldMax
+          result.unionAdapt(value + 1, oldMax);
           pointer1++;
-
-          if (value != oldMax) {
-            // add domain value+1..oldMax
-            result.unionAdapt(value + 1, oldMax);
-            pointer1++;
-          }
-
-        } else if (interval1.max() != value) {
-          // replace value..max with value+1..interval1.max
-          result.intervals[pointer1] = new Interval(value + 1, interval1.max());
-          pointer1++;
-        } else {
-          result.removeInterval(pointer1);
         }
+
+      } else if (interval1.max() != value) {
+        // replace value..max with value+1..interval1.max
+        result.intervals[pointer1] = new Interval(value + 1, interval1.max());
+        pointer1++;
+      } else {
+        result.removeInterval(pointer1);
       }
-      break;
     }
 
     assert checkInvariants() == null : checkInvariants();
@@ -2173,59 +2164,54 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
       Interval currentInterval1 = intervals[i1];
 
-      while (true) {
-
-        // all intervals before and not glued (min..max) are included
-        if (currentInterval1.max() + 1 < min) {
-          result.unionAdapt(currentInterval1);
-          i1++;
-          if (i1 == size) {
-            break;
-          }
+      // all intervals before and not glued (min..max) are included
+      while (i1 < size && currentInterval1.max() + 1 < min) {
+        result.unionAdapt(currentInterval1);
+        i1++;
+        if (i1 < size) {
           currentInterval1 = intervals[i1];
-          continue;
         }
+      }
 
+      if (i1 < size) {
         // currentInterval if after and not glued
         if (max + 1 < currentInterval1.min()) {
           result.unionAdapt(new Interval(min, max));
-          break;
-        }
-
-        // current interval is glued or intersects with (min..max).
-
-        int tempMin;
-
-        if (currentInterval1.min() < min) {
-          tempMin = currentInterval1.min();
         } else {
-          tempMin = min;
-        }
+          // current interval is glued or intersects with (min..max).
 
-        if (currentInterval1.max() > max) {
-          result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
-          i1++;
-        } else {
+          int tempMin;
 
-          // (min..max) can cover multiple intervals.
-          while (currentInterval1.max() <= max) {
-            i1++;
-            if (i1 == size) {
-              result.unionAdapt(new Interval(tempMin, max));
-              break;
-            }
-            currentInterval1 = intervals[i1];
+          if (currentInterval1.min() < min) {
+            tempMin = currentInterval1.min();
+          } else {
+            tempMin = min;
           }
 
-          // if current interval is glued or intersects with (min..max)
-          if (max + 1 >= currentInterval1.min()) {
+          if (currentInterval1.max() > max) {
             result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
             i1++;
           } else {
-            result.unionAdapt(new Interval(tempMin, max));
+
+            // (min..max) can cover multiple intervals.
+            while (currentInterval1.max() <= max) {
+              i1++;
+              if (i1 == size) {
+                result.unionAdapt(new Interval(tempMin, max));
+                break;
+              }
+              currentInterval1 = intervals[i1];
+            }
+
+            // if current interval is glued or intersects with (min..max)
+            if (max + 1 >= currentInterval1.min()) {
+              result.unionAdapt(new Interval(tempMin, currentInterval1.max()));
+              i1++;
+            } else {
+              result.unionAdapt(new Interval(tempMin, max));
+            }
           }
         }
-        break;
       }
 
       if (i1 < size) {
@@ -2418,26 +2404,21 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
     Interval currentInterval1 = intervals[i1];
 
-    while (true) {
-
-      // all intervals before and not glued (min..max) are included
-      if (currentInterval1.max() + 1 < min) {
-        result.unionAdapt(currentInterval1);
-        i1++;
-        if (i1 == size) {
-          result.unionAdapt(new Interval(min, max));
-          break;
-        }
+    // all intervals before and not glued (min..max) are included
+    while (i1 < size && currentInterval1.max() + 1 < min) {
+      result.unionAdapt(currentInterval1);
+      i1++;
+      if (i1 < size) {
         currentInterval1 = intervals[i1];
-        continue;
       }
+    }
 
+    if (i1 == size) {
+      result.unionAdapt(new Interval(min, max));
+    } else if (max + 1 < currentInterval1.min()) {
       // currentInterval if after and not glued
-      if (max + 1 < currentInterval1.min()) {
-        result.unionAdapt(new Interval(min, max));
-        break;
-      }
-
+      result.unionAdapt(new Interval(min, max));
+    } else {
       // current interval is glued or intersects with (min..max).
 
       int tempMin;
@@ -2471,7 +2452,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           result.unionAdapt(new Interval(tempMin, max));
         }
       }
-      break;
     }
 
     if (i1 < size) {
@@ -2860,9 +2840,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && intervals[pointer1].max() <= inputIntervals[pointer2].max()
           && ++pointer1 < size) {
 
-        while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-            && ++pointer2 < inputSize) {
-          // advance pointer2
+        while (intervals[pointer1].max() > inputIntervals[pointer2].max()) {
+          pointer2++;
+          if (pointer2 >= inputSize) {
+            break;
+          }
         }
 
         if (pointer2 == inputSize) {
@@ -3161,9 +3143,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             && intervals[pointer1].max() <= domain.getInterval(pointer2).max()
             && ++pointer1 < size) {
 
-          while (intervals[pointer1].max() > domain.getInterval(pointer2).max()
-              && ++pointer2 < inputSize) {
-            // advance pointer2
+          while (intervals[pointer1].max() > domain.getInterval(pointer2).max()) {
+            pointer2++;
+            if (pointer2 >= inputSize) {
+              break;
+            }
           }
 
           if (pointer2 == inputSize) {
@@ -3353,9 +3337,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && intervals[pointer1].max() <= domain.getInterval(pointer2).max()
           && ++pointer1 < size) {
 
-        while (intervals[pointer1].max() > domain.getInterval(pointer2).max()
-            && ++pointer2 < inputSize) {
-          // advance pointer2
+        while (intervals[pointer1].max() > domain.getInterval(pointer2).max()) {
+          pointer2++;
+          if (pointer2 >= inputSize) {
+            break;
+          }
         }
 
         if (pointer2 == inputSize) {
@@ -4153,9 +4139,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && intervals[pointer1].max() <= inputIntervals[pointer2].max() + shift
           && ++pointer1 < size) {
 
-        while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift
-            && ++pointer2 < input.size) {
-          // advance pointer2
+        while (intervals[pointer1].max() > inputIntervals[pointer2].max() + shift) {
+          pointer2++;
+          if (pointer2 >= input.size) {
+            break;
+          }
         }
 
         if (pointer2 == input.size) {
@@ -4462,9 +4450,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             && intervals[pointer1].max() <= domain.getInterval(pointer2).max() + shift
             && ++pointer1 < size) {
 
-          while (intervals[pointer1].max() > domain.getInterval(pointer2).max() + shift
-              && ++pointer2 < inputSize) {
-            // advance pointer2
+          while (intervals[pointer1].max() > domain.getInterval(pointer2).max() + shift) {
+            pointer2++;
+            if (pointer2 >= inputSize) {
+              break;
+            }
           }
 
           if (pointer2 == inputSize) {
@@ -4649,9 +4639,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && intervals[pointer1].max() <= domain.getInterval(pointer2).max() + shift
           && ++pointer1 < size) {
 
-        while (intervals[pointer1].max() > domain.getInterval(pointer2).max() + shift
-            && ++pointer2 < inputSize) {
-          // advance pointer2
+        while (intervals[pointer1].max() > domain.getInterval(pointer2).max() + shift) {
+          pointer2++;
+          if (pointer2 >= inputSize) {
+            break;
+          }
         }
 
         if (pointer2 == inputSize) {
@@ -4904,16 +4896,13 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       Interval i = intervals[m];
 
       // the max of previous interval is the seeked value.
-      if (i.min() >= value) {
-        continue;
+      if (i.min() < value) {
+        if (i.max() >= value) {
+          return value - 1;
+        }
+        // the value is equal
+        return i.max();
       }
-
-      if (i.max() >= value) {
-        return value - 1;
-      }
-
-      // the value is equal
-      return i.max();
     }
 
     return value;
@@ -5169,9 +5158,11 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           && intervals[pointer1].max() <= inputIntervals[pointer2].max()
           && ++pointer1 < size) {
 
-        while (intervals[pointer1].max() > inputIntervals[pointer2].max()
-            && ++pointer2 < inputSize) {
-          // advance pointer2 until it covers the current interval
+        while (intervals[pointer1].max() > inputIntervals[pointer2].max()) {
+          pointer2++;
+          if (pointer2 >= inputSize) {
+            break;
+          }
         }
 
         if (pointer2 == inputSize) {
