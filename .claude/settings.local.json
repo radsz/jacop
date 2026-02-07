@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git mv:*)",
-      "Bash(mvn compile:*)",
-      "Bash(mvn pmd:pmd:*)"
-    ]
-  }
-}
