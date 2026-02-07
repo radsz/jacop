@@ -60,6 +60,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    */
   public int queueIndex;
 
+  /**
+   * Returns the set of non-singleton variables that appear more than once in the given array.
+   *
+   * @param parameters the array of variables to check for duplicates.
+   * @return a set of variables that appear at least twice, excluding singletons.
+   */
   public static Set<Var> getDubletonsSkipSingletons(Var[] parameters) {
     List<Var> notGroundedParametersList =
         Arrays.stream(parameters).filter(i -> !i.singleton()).collect(Collectors.toList());
@@ -113,6 +119,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     return null;
   }
 
+  /**
+   * Checks that none of the given parameter arrays or their elements are null.
+   *
+   * @param a descriptions of the parameters, used in error messages.
+   * @param parameters the parameter arrays to validate for nullness.
+   */
   public void checkInputForNullness(String[] a, Object[]... parameters) {
 
     // Case when parameters is just one array.
@@ -178,6 +190,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Checks that the given parameter array and its elements are not null.
+   *
+   * @param a description of the parameter, used in error messages.
+   * @param parameters the array of objects to validate for nullness.
+   */
   public void checkInputForNullness(String a, Object[] parameters) {
 
     if (parameters == null) {
@@ -203,6 +221,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Checks that the given integer array parameter is not null.
+   *
+   * @param a description of the parameter, used in error messages.
+   * @param parameters the integer array to validate for nullness.
+   */
   public void checkInputForNullness(String a, int[] parameters) {
     if (parameters == null) {
       throw new IllegalArgumentException(
@@ -214,6 +238,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Checks that the given parameter array contains no duplicate elements.
+   *
+   * @param a description of the parameter, used in error messages.
+   * @param parameters the array to validate for duplicates.
+   */
   public void checkInputForDuplication(String a, Object[] parameters) {
 
     if (Arrays.stream(parameters).collect(Collectors.toSet()).size() != parameters.length) {
@@ -226,6 +256,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Checks that non-singleton variables in the given array are not duplicated.
+   *
+   * @param a description of the parameter, used in error messages.
+   * @param parameters the array of variables to validate for duplicates among non-singletons.
+   */
   public void checkInputForDuplicationSkipSingletons(String a, Var[] parameters) {
 
     Set<Var> dubletons = getDubletonsSkipSingletons(parameters);
@@ -240,6 +276,14 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Validates that all elements in the array satisfy the given condition.
+   *
+   * @param <T> the type of the array elements.
+   * @param list the array of elements to validate.
+   * @param condition the predicate that each element must satisfy.
+   * @param conditionDescription description of the condition, used in error messages.
+   */
   public <T> void checkInput(T[] list, Predicate<T> condition, String conditionDescription) {
 
     for (int i = 0; i < list.length; i++) {
@@ -256,6 +300,13 @@ public abstract class DecomposedConstraint<T extends Constraint> {
     }
   }
 
+  /**
+   * Validates that all elements in the integer array satisfy the given condition.
+   *
+   * @param list the array of integers to validate.
+   * @param condition the predicate that each element must satisfy.
+   * @param conditionDescription description of the condition, used in error messages.
+   */
   public void checkInput(int[] list, Predicate<Integer> condition, String conditionDescription) {
 
     for (int i = 0; i < list.length; i++) {

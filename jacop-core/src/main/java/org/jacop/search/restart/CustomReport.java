@@ -45,15 +45,26 @@ public class CustomReport {
 
   Var[] vars;
 
+  /**
+   * Constructs a custom report for the specified variables.
+   *
+   * @param vs the array of variables to be reported.
+   */
   public CustomReport(Var[] vs) {
     addVariables(vs);
   }
 
+  /**
+   * Adds variables to this custom report.
+   *
+   * @param vs the array of variables to be added.
+   */
   public void addVariables(Var[] vs) {
     vars = new Var[vs.length];
     System.arraycopy(vs, 0, vars, 0, vs.length);
   }
 
+  /** Prints a report of all variables to the log. */
   public void report() {
     log.info("{}", Arrays.asList(vars));
   }

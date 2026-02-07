@@ -48,10 +48,16 @@ public final class IntStack {
   // pointer to the first free slot
   public int currentIndex;
 
+  /**
+   * Creates a new integer stack using the given memory pool.
+   *
+   * @param pool the memory pool for allocating arrays
+   */
   public IntStack(MemoryPool pool) {
     this.pool = pool;
   }
 
+  /** Clears all elements from the stack. */
   public void clear() {
     currentIndex = 0;
   }

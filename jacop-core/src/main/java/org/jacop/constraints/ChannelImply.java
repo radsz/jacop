@@ -47,18 +47,44 @@ public class ChannelImply extends AbstractChannel {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
+  /**
+   * Constructs a ChannelImply constraint with explicit value mapping.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the array of boolean variables representing implication status.
+   * @param value the array of values corresponding to each boolean variable.
+   */
   public ChannelImply(IntVar x, IntVar[] bs, int[] value) {
     super(idNumber.incrementAndGet(), x, bs, value, "ChannelImply");
   }
 
+  /**
+   * Constructs a ChannelImply constraint with values taken from the given domain.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the array of boolean variables representing implication status.
+   * @param value the domain whose values correspond to each boolean variable.
+   */
   public ChannelImply(IntVar x, IntVar[] bs, IntDomain value) {
     this(x, bs, toArray(value));
   }
 
+  /**
+   * Constructs a ChannelImply constraint using values from the domain of x.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the array of boolean variables representing implication status.
+   */
   public ChannelImply(IntVar x, IntVar[] bs) {
     this(x, bs, toArray(x.domain));
   }
 
+  /**
+   * Constructs a ChannelImply constraint using a map from values to boolean variables.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the map from integer values to their corresponding boolean variables.
+   */
   public ChannelImply(IntVar x, Map<Integer, ? extends IntVar> bs) {
     super(idNumber.incrementAndGet(), x, bs);
   }

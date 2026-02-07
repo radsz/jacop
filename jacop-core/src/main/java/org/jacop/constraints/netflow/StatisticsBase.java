@@ -51,6 +51,11 @@ public class StatisticsBase {
   public int consistencyCalls;
   public int consistencyIterations;
 
+  /**
+   * Appends statistics information to the provided string builder.
+   *
+   * @param str the string builder to append statistics to
+   */
   protected void toString(StringBuilder str) {
 
     str.append("\t# arcs examined : ");
@@ -74,6 +79,11 @@ public class StatisticsBase {
     str.append(DF.format((double) minScoreSum / consistencyIterations));
   }
 
+  /**
+   * Returns a string representation of the collected statistics.
+   *
+   * @return string containing formatted statistics information
+   */
   public String toString() {
 
     StringBuilder str = new StringBuilder();

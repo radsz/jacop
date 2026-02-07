@@ -86,6 +86,12 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     this(vs.toArray(new Var[0]));
   }
 
+  /**
+   * Imposes this trace constraint on the given store, registering listeners for all traced
+   * variables.
+   *
+   * @param store the constraint store.
+   */
   public void impose(Store store) {
 
     this.store = store;
@@ -101,6 +107,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     store.countConstraint();
   }
 
+  /** {@inheritDoc} */
   public void consistency(Store store) {}
 
   @Override
@@ -108,6 +115,7 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     return IntDomain.ANY;
   }
 
+  /** {@inheritDoc} */
   public void queueVariable(int level, Var var) {
     log.debug("Var: {}, level: {}, constraint: {}", var, level, store.currentConstraint);
   }
@@ -117,8 +125,10 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     log.debug("Restore level: {}, vars: {}", level, java.util.Arrays.toString(vars));
   }
 
+  /** {@inheritDoc} */
   public void removeConstraint() {}
 
+  /** {@inheritDoc} */
   public boolean satisfied() {
     return false;
   }
@@ -135,5 +145,6 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     return result.toString();
   }
 
+  /** {@inheritDoc} */
   public void increaseWeight() {}
 }

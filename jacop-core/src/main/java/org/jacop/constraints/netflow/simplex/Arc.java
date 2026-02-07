@@ -133,6 +133,11 @@ public final class Arc {
     return cost - tail.potential + head.potential;
   }
 
+  /**
+   * Adjusts the flow on this arc by the given delta, updating residual capacities accordingly.
+   *
+   * @param delta the amount of flow to add (positive increases flow, negative decreases it).
+   */
   public void addFlow(int delta) {
     capacity -= delta;
     sister.capacity += delta;
@@ -141,10 +146,21 @@ public final class Arc {
     assert capacity >= 0 : delta + ", Bad capacity: " + this;
   }
 
+  /**
+   * Returns the tail node of this arc (the node where the arc originates).
+   *
+   * @return the tail node, which is the head of the sister arc.
+   */
   public Node tail() {
     return sister.head;
   }
 
+  /**
+   * Checks whether this arc crosses a cut defined by marked nodes.
+   *
+   * @param forward true to check for a forward cut (tail marked, head unmarked).
+   * @return true if the arc crosses the cut in the specified direction.
+   */
   public boolean isInCut(boolean forward) {
     boolean t = tail().marked;
     boolean h = head.marked;
@@ -204,7 +220,7 @@ public final class Arc {
     return (long) flow * (long) cost;
   }
 
-  /* for debugging */
+  /** {@inheritDoc} */
   public String toString() {
 
     // TODO: only for debugging, otherwise we would use StringBuilder
@@ -232,6 +248,11 @@ public final class Arc {
         + "]";
   }
 
+  /**
+   * Returns a string representation of this arc's flow information for debugging.
+   *
+   * @return a string showing tail, head, flow, capacity, and cost details.
+   */
   public String toFlow() {
     // TODO: only for debugging, otherwise we would use StringBuilder
     Node tail = tail();
@@ -253,14 +274,29 @@ public final class Arc {
         + (flow * cost);
   }
 
+  /**
+   * Checks whether this arc or its sister arc has a companion.
+   *
+   * @return true if either this arc or its sister has a non-null companion.
+   */
   public boolean hasCompanion() {
     return (companion != null) || (sister.companion != null);
   }
 
+  /**
+   * Returns the companion of this arc, checking the sister arc if this arc has none.
+   *
+   * @return the arc companion, or null if neither this arc nor its sister has one.
+   */
   public ArcCompanion getCompanion() {
     return companion != null ? companion : sister.companion;
   }
 
+  /**
+   * Returns a short name for this arc in the format "tail-&gt;head".
+   *
+   * @return the name string identifying this arc by its endpoint node names.
+   */
   public String name() {
     return tail().name + "->" + head.name;
   }

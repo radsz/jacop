@@ -13,27 +13,43 @@ public class SimpleNode implements Node {
   protected Object value;
   protected Parser parser;
 
+  /**
+   * Constructs a simple node with the specified id.
+   *
+   * @param i the node id
+   */
   public SimpleNode(int i) {
     id = i;
   }
 
+  /**
+   * Constructs a simple node with the specified parser and id.
+   *
+   * @param p the parser
+   * @param i the node id
+   */
   public SimpleNode(Parser p, int i) {
     this(i);
     parser = p;
   }
 
+  /** {@inheritDoc} */
   public void jjtOpen() {}
 
+  /** {@inheritDoc} */
   public void jjtClose() {}
 
+  /** {@inheritDoc} */
   public void jjtSetParent(Node n) {
     parent = n;
   }
 
+  /** {@inheritDoc} */
   public Node jjtGetParent() {
     return parent;
   }
 
+  /** {@inheritDoc} */
   public void jjtAddChild(Node n, int i) {
     if (children == null) {
       children = new Node[i + 1];
@@ -45,18 +61,22 @@ public class SimpleNode implements Node {
     children[i] = n;
   }
 
+  /** {@inheritDoc} */
   public Node jjtGetChild(int i) {
     return children[i];
   }
 
+  /** {@inheritDoc} */
   public int jjtGetNumChildren() {
     return children == null ? 0 : children.length;
   }
 
+  /** {@inheritDoc} */
   public void jjtSetValue(Object value) {
     this.value = value;
   }
 
+  /** {@inheritDoc} */
   public Object jjtGetValue() {
     return value;
   }
@@ -67,10 +87,17 @@ public class SimpleNode implements Node {
   toString(String), otherwise overriding toString() is probably all
   you need to do. */
 
+  /** {@inheritDoc} */
   public String toString() {
     return ParserTreeConstants.jjtNodeName[id];
   }
 
+  /**
+   * Returns string representation of the node with prefix.
+   *
+   * @param prefix the prefix to prepend
+   * @return the string representation
+   */
   public String toString(String prefix) {
     return prefix + this;
   }
@@ -78,6 +105,11 @@ public class SimpleNode implements Node {
   /* Override this method if you want to customize how the node dumps
   out its children. */
 
+  /**
+   * Dumps the node tree to output with indentation.
+   *
+   * @param prefix the indentation prefix
+   */
   public void dump(String prefix) {
     IO.println(toString(prefix));
     if (children != null) {
@@ -90,11 +122,16 @@ public class SimpleNode implements Node {
     }
   }
 
+  /**
+   * Returns the node id.
+   *
+   * @return the node id
+   */
   public int getId() {
     return id;
   }
 
-  // remove all nodes KK
+  /** Removes all child nodes. */
   void removeChildren() {
     children = null;
   }

@@ -54,15 +54,26 @@ public final class IntQueue implements Iterable<Integer> {
   // pool of int[]
   public MemoryPool pool;
 
+  /**
+   * Creates a new integer queue using the given memory pool.
+   *
+   * @param pool the memory pool for allocating arrays
+   */
   public IntQueue(MemoryPool pool) {
     assert pool != null;
     this.pool = pool;
   }
 
+  /** Clears all elements from the queue. */
   public void clear() {
     start = stop = 0;
   }
 
+  /**
+   * Checks if the queue is empty.
+   *
+   * @return true if the queue is empty
+   */
   public boolean isEmpty() {
     return start == stop;
   }
@@ -115,6 +126,11 @@ public final class IntQueue implements Iterable<Integer> {
     return answer;
   }
 
+  /**
+   * Returns the number of elements in the queue.
+   *
+   * @return the size of the queue
+   */
   public int size() {
     if (start <= stop) {
       return stop - start;
@@ -162,6 +178,11 @@ public final class IntQueue implements Iterable<Integer> {
     return sb.append(']').toString();
   }
 
+  /**
+   * Returns an iterator over the elements in this queue.
+   *
+   * @return an iterator over the elements in this queue
+   */
   public Iterator<Integer> iterator() {
     return new QueueIterator();
   }

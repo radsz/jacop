@@ -218,6 +218,13 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
     }
   }
 
+  /**
+   * Finds the position of a value in a sorted array of values.
+   *
+   * @param value the value to find
+   * @param values the sorted array of values
+   * @return the position of the value, or -1 if not found
+   */
   protected int findPosition(int value, int[] values) {
     return findValuePosition(value, values);
   }
@@ -388,10 +395,24 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
     variableQueue.add((IntVar) var);
   }
 
+  /**
+   * Compares two tuples lexicographically to determine if the first is smaller than the second.
+   *
+   * @param tuple1 the first tuple
+   * @param tuple2 the second tuple
+   * @return true if tuple1 is lexicographically smaller than tuple2
+   */
   boolean smaller(int[] tuple1, int[] tuple2) {
     return tuplesSmaller(tuple1, tuple2);
   }
 
+  /**
+   * Checks if two tuples are equal by comparing all their elements.
+   *
+   * @param tuple1 the first tuple
+   * @param tuple2 the second tuple
+   * @return true if tuples are equal, false otherwise
+   */
   boolean equal(int[] tuple1, int[] tuple2) {
     return tuplesEqual(tuple1, tuple2);
   }
@@ -565,6 +586,13 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
     }
   }
 
+  /**
+   * Finds the first position in a tuple where the value is not in the corresponding variable's
+   * domain.
+   *
+   * @param t the tuple to check
+   * @return the position of the first invalid value, or -1 if all values are valid
+   */
   public int seekInvalidPosition(int[] t) {
     return TupleUtils.seekInvalidPosition(t, list);
   }

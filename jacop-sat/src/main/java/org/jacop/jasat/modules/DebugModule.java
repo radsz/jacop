@@ -64,6 +64,11 @@ public final class DebugModule
   private final MapClause mapClause = new MapClause();
   private Core core;
 
+  /**
+   * Called when the solver restarts from a given decision level.
+   *
+   * @param level the decision level from which the restart occurs
+   */
   public void onRestart(int level) {
     printLine(true);
 
@@ -73,6 +78,12 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when a conflict is detected during solving.
+   *
+   * @param conflictClause the clause that caused the conflict
+   * @param level the decision level at which the conflict occurred
+   */
   public void onConflict(MapClause conflictClause, int level) {
     printLine(true);
 
@@ -83,6 +94,12 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when the solver performs a backjump operation.
+   *
+   * @param oldLevel the decision level before the backjump
+   * @param newLevel the decision level after the backjump
+   */
   public void onBackjump(int oldLevel, int newLevel) {
     printLine(true);
 
@@ -92,6 +109,12 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when a literal is asserted at a specific decision level.
+   *
+   * @param literal the literal being asserted
+   * @param level the decision level at which the assertion occurs
+   */
   public void onAssertion(int literal, int level) {
     printLine(true);
 
@@ -101,6 +124,12 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when a literal is propagated through unit propagation.
+   *
+   * @param literal the literal being propagated
+   * @param clauseId the identifier of the clause causing the propagation
+   */
   public void onPropagate(int literal, int clauseId) {
     printLine(true);
 
@@ -110,6 +139,11 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when a solution is found or when the problem is determined to be unsatisfiable.
+   *
+   * @param satisfiable true if a solution was found, false if the problem is unsatisfiable
+   */
   public void onSolution(boolean satisfiable) {
     printLine(true);
 
@@ -122,6 +156,11 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when a conflict explanation clause is generated.
+   *
+   * @param explanation the explanation clause derived from conflict analysis
+   */
   public void onExplain(MapClause explanation) {
     printLine(true);
     printClause("explanation clause : ", explanation);
@@ -131,15 +170,29 @@ public final class DebugModule
     printBlank();
   }
 
+  /**
+   * Called when a new clause is added to the solver.
+   *
+   * @param clause the clause being added as an array of literals
+   * @param clauseId the unique identifier assigned to the clause
+   * @param isModelClause true if the clause is from the original model, false if it is a learnt
+   *     clause
+   */
   public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
     String c = Utils.showClause(clause);
     core.logc(3, "add clause (%s): %s", isModelClause ? "model" : "learnt", c);
   }
 
+  /**
+   * Called when a clause is removed from the solver.
+   *
+   * @param clauseId the identifier of the clause being removed
+   */
   public void onClauseRemoval(int clauseId) {
     core.logc(3, "remove clause %d", clauseId);
   }
 
+  /** Called when the solver performs a forget operation to remove learnt clauses. */
   public void onForget() {
     printLine(true);
     core.logc(3, "forget() called");
@@ -147,6 +200,7 @@ public final class DebugModule
     printBlank();
   }
 
+  /** Called when the solver starts its search process. */
   public void onStart() {
     printLine(true);
     core.logc(3, "solver started at %d", core.getTime("start"));
@@ -154,6 +208,7 @@ public final class DebugModule
     printBlank();
   }
 
+  /** Called when the solver stops its search process. */
   public void onStop() {
     printLine(true);
     core.logc(3, "solver stopped at %d", core.getTime("stop"));
@@ -197,6 +252,11 @@ public final class DebugModule
     core.logc(3, sb.append(']').toString());
   }
 
+  /**
+   * Initializes the debug module and registers it with the solver core for all relevant events.
+   *
+   * @param core the solver core instance
+   */
   public void initialize(Core core) {
     this.core = core;
 

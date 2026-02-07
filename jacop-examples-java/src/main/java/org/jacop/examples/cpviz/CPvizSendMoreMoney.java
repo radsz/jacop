@@ -79,6 +79,7 @@ public class CpvizSendMoreMoney {
     exampleGlobal.modelGlobal();
   }
 
+  /** Creates the constraint model for the SEND+MORE=MONEY problem using basic constraints. */
   public void model() {
 
     vars = new ArrayList<>();
@@ -188,10 +189,10 @@ public class CpvizSendMoreMoney {
 
   }
 
-  /*
-   * This creates a model which uses global constraints to provide consize modeling.
+  /**
+   * Creates the constraint model for the SEND+MORE=MONEY problem using global constraints. This
+   * provides more concise modeling using Alldifferent and LinearInt constraints.
    */
-
   public void modelGlobal() {
 
     vars = new ArrayList<>();

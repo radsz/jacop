@@ -512,6 +512,12 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
   }
 
+  /**
+   * Converts a string relation to a byte code.
+   *
+   * @param r the relation string (e.g., "==", "<", "<=", "!=", ">", ">=")
+   * @return the byte code representing the relation
+   */
   public byte relation(String r) {
     switch (r) {
       case "==", "=" -> {
@@ -539,6 +545,11 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
   }
 
+  /**
+   * Converts the relation byte code to a string representation.
+   *
+   * @return the string representation of the relation
+   */
   public String rel2String() {
     return switch (relationType) {
       case eq -> "==";

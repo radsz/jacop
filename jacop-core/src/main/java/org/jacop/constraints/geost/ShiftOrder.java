@@ -101,6 +101,7 @@ public class ShiftOrder implements LexicographicalOrder {
     }
   }
 
+  /** {@inheritDoc} */
   public int compare(int[] p1, int[] p2) {
 
     assert p1.length == p2.length : "dimension mismatch";
@@ -119,19 +120,23 @@ public class ShiftOrder implements LexicographicalOrder {
     return 0;
   }
 
+  /** {@inheritDoc} */
   public int dimensionAt(int precedenceLevel) {
     return orderingWithShiftConsidered[precedenceLevel];
   }
 
+  /** {@inheritDoc} */
   public int precedenceOf(int dimension) {
 
     return (dimension - mostSignificant) % noOfDimensions;
   }
 
+  /** {@inheritDoc} */
   public int getMostSignificantDimension() {
     return mostSignificant;
   }
 
+  /** {@inheritDoc} */
   public void setMostSignificantDimension(int dimension) {
 
     this.mostSignificant = dimension;
@@ -140,6 +145,7 @@ public class ShiftOrder implements LexicographicalOrder {
     assert checkInvariants() == null : checkInvariants();
   }
 
+  /** {@inheritDoc} */
   public int[] masterOrdering() {
     return masterOrdering;
   }

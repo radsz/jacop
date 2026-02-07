@@ -93,6 +93,7 @@ public class InArea implements ExternalConstraint {
     return null;
   }
 
+  /** {@inheritDoc} */
   public Collection<InternalConstraint> genInternalConstraints(Geost geost) {
 
     constraints = new HashSet<>(holes.size() + 1);
@@ -113,17 +114,20 @@ public class InArea implements ExternalConstraint {
     return false;
   }
 
+  /** {@inheritDoc} */
   public void onObjectUpdate(GeostObject o) {
     // nothing to do here, as the external constraint does not have any state changing due to
     // updating any object.
   }
 
+  /** {@inheritDoc} */
   public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
     // all objects are in the scope of this constraint and each object is constrained in the same
     // manner.
     return constraints;
   }
 
+  /** {@inheritDoc} */
   public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
 
     if (ic.getClass() != AllowedArea.class && ic.getClass() != ForbiddenArea.class) {
@@ -133,10 +137,12 @@ public class InArea implements ExternalConstraint {
     }
   }
 
+  /** {@inheritDoc} */
   public GeostObject[] getObjectScope() {
     return null;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     return "(in_area: " + allowedArea + " - holes(" + holes + "))";
   }

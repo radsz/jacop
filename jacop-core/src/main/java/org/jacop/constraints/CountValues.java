@@ -269,6 +269,11 @@ public class CountValues extends Constraint implements SatisfiedPresent {
     }
   }
 
+  /**
+   * Checks if the constraint is satisfied.
+   *
+   * @return true if the constraint is satisfied, false otherwise.
+   */
   public boolean satisfied() {
 
     for (int i = 0; i < counter.length; i++) {

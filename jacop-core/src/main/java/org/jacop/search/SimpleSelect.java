@@ -299,6 +299,11 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
     return searchVariables[searchPosition];
   }
 
+  /**
+   * It returns the string representation of the choice point selector.
+   *
+   * @return string describing the variables, ordering, and value selection heuristic.
+   */
   public String toString() {
     return Arrays.asList(searchVariables)
         + ", SimpleSelect("

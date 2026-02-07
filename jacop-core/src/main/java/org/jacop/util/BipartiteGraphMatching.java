@@ -93,7 +93,11 @@ public class BipartiteGraphMatching {
     }
   }
 
-  // Returns size of maximum matching
+  /**
+   * It computes the maximum matching using the Hopcroft-Karp algorithm.
+   *
+   * @return the size of the maximum matching.
+   */
   public int hopcroftKarp() {
     // pairU[u] stores pair of u in matching where u is a vertex on left side of Bipartite Graph.
     // If u doesn't have any pair, then pairU[u] is NIL
@@ -127,7 +131,11 @@ public class BipartiteGraphMatching {
     return result;
   }
 
-  // Returns true if there is an augmenting path, else returns false
+  /**
+   * It performs breadth-first search to find augmenting paths.
+   *
+   * @return true if there is an augmenting path, false otherwise.
+   */
   boolean bfs() {
 
     Queue<Integer> Q = new LinkedList<>();
@@ -174,7 +182,12 @@ public class BipartiteGraphMatching {
     return dist[NIL] != INF;
   }
 
-  // Returns true if there is an augmenting path beginning with free vertex u
+  /**
+   * It performs depth-first search to find augmenting paths starting from a free vertex.
+   *
+   * @param u the vertex to start the search from.
+   * @return true if there is an augmenting path beginning with u, false otherwise.
+   */
   boolean dfs(int u) {
     if (u != NIL) {
       for (int v : adj[u]) {
@@ -199,7 +212,13 @@ public class BipartiteGraphMatching {
     return true;
   }
 
-  // To add edge from u to v
+  /**
+   * It adds an edge from vertex u on the left side to vertex v on the right side of the bipartite
+   * graph.
+   *
+   * @param u the vertex on the left side.
+   * @param v the vertex on the right side.
+   */
   void addEdge(int u, int v) {
     if (adj[u] == null) {
       adj[u] = new int[1];

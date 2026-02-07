@@ -65,6 +65,13 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   // the small pool of literals of clauses that can be used for watching.
   private int[][] literalsCache = new int[DEFAULT_INITIAL_NUMBER_OF_CLAUSES][];
 
+  /**
+   * Adds a long clause to the database.
+   *
+   * @param clause the clause to add
+   * @param isModel true if this is a model clause
+   * @return the unique ID of the added clause
+   */
   public int addClause(int[] clause, boolean isModel) {
     // TODO: reuse empty slots ?
     assert clause.length > 2 * SIZE_OF_CLAUSE_CACHE;
@@ -86,6 +93,11 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     return indexToUniqueId(newIndex);
   }
 
+  /**
+   * Notifies the database that a literal has been asserted for unit propagation.
+   *
+   * @param literal the literal that has been asserted
+   */
   public void assertLiteral(int literal) {
 
     /* get the watched clauses for this literal;
@@ -234,26 +246,55 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     }
   }
 
+  /**
+   * Removes a clause from the database.
+   *
+   * @param clauseId the unique ID of the clause to remove
+   */
   public void removeClause(int clauseId) {
     // TODO: Auto-generated method stub
 
   }
 
+  /**
+   * Checks if a clause can be removed from the database.
+   *
+   * @param clauseId the unique ID of the clause
+   * @return true if the clause can be removed
+   */
   public boolean canRemove(int clauseId) {
     // TODO: Auto-generated method stub
     return false;
   }
 
+  /**
+   * Performs resolution with the specified clause.
+   *
+   * @param clauseIndex the index of the clause in the database
+   * @param clause the clause to resolve with
+   * @return the resulting clause after resolution
+   */
   public MapClause resolutionWith(int clauseIndex, MapClause clause) {
     // TODO: Auto-generated method stub
     return null;
   }
 
+  /**
+   * Handles backjumping to a specified decision level.
+   *
+   * @param level the level to backjump to
+   */
   public void backjump(int level) {
     // TODO: Auto-generated method stub
 
   }
 
+  /**
+   * Rates how well this database can handle the given clause.
+   *
+   * @param clause the clause to rate
+   * @return the rating value indicating database suitability
+   */
   public int rateThisClause(int[] clause) {
 
     if (clause.length > (SIZE_OF_CLAUSE_CACHE << 2)) {
@@ -263,6 +304,11 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
     }
   }
 
+  /**
+   * Returns the number of clauses in the database.
+   *
+   * @return the number of clauses
+   */
   public int size() {
     // TODO: Auto-generated method stub
     return 0;

@@ -72,6 +72,12 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
   // factor to increase the threshold by
   private double thresholdIncreaseRate;
 
+  /**
+   * Called when a conflict is detected during solving.
+   *
+   * @param clause the clause that caused the conflict
+   * @param level the decision level at which the conflict occurred
+   */
   public void onConflict(MapClause clause, int level) {
     conflictCount++;
 
@@ -80,8 +86,19 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
     }
   }
 
+  /**
+   * Called when the solver performs a backjump operation.
+   *
+   * @param oldLevel the decision level before the backjump
+   * @param newLevel the decision level after the backjump
+   */
   public void onBackjump(int oldLevel, int newLevel) {}
 
+  /**
+   * Called when the solver restarts from a given decision level.
+   *
+   * @param oldLevel the decision level from which the restart occurs
+   */
   public void onRestart(int oldLevel) {
     // increase the number of conflicts needed to restart
     threshold = Math.round(threshold * thresholdIncreaseRate);
@@ -91,6 +108,11 @@ public final class HeuristicRestartModule implements ConflictListener, BackjumpL
     shouldRestart = false;
   }
 
+  /**
+   * Initializes the heuristic restart module and registers it with the solver core.
+   *
+   * @param core the solver core instance
+   */
   public void initialize(Core core) {
     conflictCount = 0;
     threshold = core.config.restartConflictThreshold;

@@ -75,6 +75,7 @@ public class FilterBenchmark {
 
   static IntVar cost;
 
+  /** Default constructor. */
   protected FilterBenchmark() {}
 
   /**
@@ -468,6 +469,13 @@ public class FilterBenchmark {
     }
   }
 
+  /**
+   * Performs integer division with ceiling rounding.
+   *
+   * @param a the dividend
+   * @param b the divisor
+   * @return the quotient rounded up to the nearest integer
+   */
   private static int div(int a, int b) {
     int div;
     int rem;

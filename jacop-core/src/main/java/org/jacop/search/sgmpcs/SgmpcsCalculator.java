@@ -47,6 +47,11 @@ public class SgmpcsCalculator<T extends Var> implements ConsistencyListener {
 
   @Getter @Setter int failLimit;
 
+  /**
+   * Constructs an SGMPCS calculator with the specified fail limit.
+   *
+   * @param limit the maximum number of fails allowed.
+   */
   public SgmpcsCalculator(int limit) {
     failLimit = limit;
   }
@@ -68,7 +73,17 @@ public class SgmpcsCalculator<T extends Var> implements ConsistencyListener {
     }
   }
 
+  /**
+   * Sets an array of children consistency listeners.
+   *
+   * @param children the array of consistency listeners to be set as children.
+   */
   public void setChildrenListeners(ConsistencyListener[] children) {}
 
+  /**
+   * Sets a single child consistency listener.
+   *
+   * @param child the consistency listener to be set as a child.
+   */
   public void setChildrenListeners(ConsistencyListener child) {}
 }

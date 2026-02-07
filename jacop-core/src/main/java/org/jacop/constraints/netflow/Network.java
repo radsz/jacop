@@ -83,6 +83,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   /** The store. */
   public Store store;
 
+  /**
+   * Constructs a network with the given nodes and arcs.
+   *
+   * @param nodes the list of nodes in the network.
+   * @param arcs the list of arcs in the network.
+   */
   public Network(List<Node> nodes, List<Arc> arcs) {
 
     super(nodes, arcs);
@@ -94,6 +100,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
   }
 
+  /**
+   * Initializes the network with the given constraint store, setting up timestamps for
+   * backtracking.
+   *
+   * @param store the constraint store used for backtracking support.
+   */
   public void initialize(Store store) {
 
     this.store = store;
@@ -129,6 +141,11 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   }
 
   // removes an arc at its lower or upper bound
+  /**
+   * Removes an arc from the network at its lower or upper bound.
+   *
+   * @param arc the arc to remove from the network.
+   */
   public void remove(Arc arc) {
 
     if (!arc.forward) {
@@ -189,6 +206,11 @@ public class Network extends NetworkSimplex implements MutableNetwork {
 
   }
 
+  /**
+   * Records that an arc has been modified, registering any infeasible nodes.
+   *
+   * @param companion the arc companion associated with the modified arc.
+   */
   public void modified(ArcCompanion companion) {
 
     if (lastModifiedArcs.add(companion)) {
@@ -210,6 +232,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
   }
 
+  /** Increases the search level, clearing the set of last modified arcs if needed. */
   public void increaseLevel() {
 
     // TODO: does this solve the problem below ?
@@ -223,6 +246,7 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     // (Geost has the same problem)
   }
 
+  /** Backtracks the network by restoring deleted and modified arcs to their previous state. */
   public void backtrack() {
 
     // restore deleted arcs
@@ -283,6 +307,11 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     assert checkStructure(this);
   }
 
+  /**
+   * Adjusts the cost offset by the given delta value.
+   *
+   * @param delta the amount to add to the current cost offset.
+   */
   public void changeCostOffset(long delta) {
     costOffset += delta;
   }
@@ -296,6 +325,12 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     return store.level;
   }
 
+  /**
+   * Checks whether the network needs to be updated due to infeasible nodes or excessive cost.
+   *
+   * @param maxCost the maximum allowed cost for the current flow.
+   * @return true if the network has infeasible nodes or cost exceeds the maximum.
+   */
   public boolean needsUpdate(int maxCost) {
     // Are there any infeasible node balances ?
     Iterator<Node> it = infeasibleNodes.iterator();

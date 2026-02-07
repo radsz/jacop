@@ -77,10 +77,24 @@ public class Gates extends ExampleFd {
     IO.println("\n\t*** Execution time = " + T + " ms");
   }
 
+  /**
+   * Creates a table constraint using SimpleTable representation.
+   *
+   * @param vars variables to be constrained
+   * @param tuples allowed tuples defining the constraint
+   * @return a SimpleTable constraint
+   */
   public static Constraint tableConstraintProviderUsingSimpleTable(IntVar[] vars, int[][] tuples) {
     return new SimpleTable(vars, tuples);
   }
 
+  /**
+   * Creates a table constraint using ExtensionalSupportStr representation.
+   *
+   * @param vars variables to be constrained
+   * @param tuples allowed tuples defining the constraint
+   * @return an ExtensionalSupportStr constraint
+   */
   public static Constraint tableConstraintProviderUsingExtensionalStr(
       IntVar[] vars, int[][] tuples) {
     return new ExtensionalSupportStr(vars, tuples);
@@ -91,6 +105,11 @@ public class Gates extends ExampleFd {
     model(Gates::tableConstraintProviderUsingSimpleTable);
   }
 
+  /**
+   * Creates the constraint model for the adder circuit using gates.
+   *
+   * @param tableConstraintProvider function providing table constraint implementation
+   */
   public void model(BiFunction<IntVar[], int[][], Constraint> tableConstraintProvider) {
 
     store = new Store();

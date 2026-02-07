@@ -41,21 +41,34 @@ public class LubyCalculator extends Calculator {
   final long scale;
   int n;
 
+  /**
+   * Constructs a Luby calculator with the given scale factor for restart limits.
+   *
+   * @param scale the scale factor multiplied with Luby sequence values to compute fail limits.
+   */
   public LubyCalculator(int scale) {
     n = 1;
     this.scale = scale;
     failLimit = this.scale * getLuby(n);
   }
 
+  /** Resets the fail counter and computes the next fail limit using the Luby sequence. */
   public void newLimit() {
     numberFails = 0;
     failLimit = scale * getLuby(++n);
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     return "lubyCalculator(" + scale + ")";
   }
 
+  /**
+   * Computes the i-th value in the Luby sequence.
+   *
+   * @param i the 1-based index in the Luby sequence.
+   * @return the Luby sequence value at position i.
+   */
   public int getLuby(int i) {
 
     double precision = 1E-8;

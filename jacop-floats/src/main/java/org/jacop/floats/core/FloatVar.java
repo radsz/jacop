@@ -268,6 +268,11 @@ public class FloatVar extends Var {
     return domain.getSize();
   }
 
+  /**
+   * It returns the size of the domain as a floating-point value.
+   *
+   * @return the size of the domain as a double
+   */
   public double getSizeFloat() {
     return ((FloatIntervalDomain) domain).getSizeFloat();
   }
@@ -434,6 +439,11 @@ public class FloatVar extends Var {
     return id + domain.toStringFull();
   }
 
+  /**
+   * Removes the domain level associated with the given store level during backtracking.
+   *
+   * @param removedLevel the store level being removed.
+   */
   public void remove(int removedLevel) {
     domain.removeLevel(removedLevel, this);
   }
@@ -453,6 +463,11 @@ public class FloatVar extends Var {
     store.addChanged(this, event, Integer.MIN_VALUE);
   }
 
+  /**
+   * It registers constraint with current variable with the ANY pruning event.
+   *
+   * @param c the constraint which is being attached to the variable.
+   */
   public void putConstraint(Constraint c) {
     putModelConstraint(c, IntDomain.ANY);
   }

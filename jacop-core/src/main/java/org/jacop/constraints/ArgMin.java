@@ -77,6 +77,12 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     this.indexOffset = indexOffset;
   }
 
+  /**
+   * It constructs min constraint with default index offset of 0.
+   *
+   * @param list the array of variables for which the index of the minimum value is imposed.
+   * @param minIndex variable denoting the index of the minimum value
+   */
   public ArgMin(IntVar[] list, IntVar minIndex) {
 
     checkInputForNullness(new String[] {"list", "minIndex"}, new Object[][] {list, {minIndex}});
@@ -103,6 +109,12 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     this.indexOffset = indexOffset;
   }
 
+  /**
+   * It constructs min constraint with default index offset of 0.
+   *
+   * @param variables the list of variables for which the index of the minimum value is imposed.
+   * @param minIndex variable denoting the index of the minimum value
+   */
   public ArgMin(List<? extends IntVar> variables, IntVar minIndex) {
 
     this(variables.toArray(new IntVar[0]), minIndex);

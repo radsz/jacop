@@ -192,6 +192,13 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * Decomposes the diffn constraint into a collection of simpler constraints including nooverlap
+   * and cumulative constraints in both dimensions.
+   *
+   * @param store the constraint store
+   * @return list of constraints representing the decomposition
+   */
   public List<Constraint> decompose(Store store) {
     constraints = new ArrayList<>();
 
@@ -248,6 +255,11 @@ public class DiffnDecomposed extends DecomposedConstraint<Constraint> {
     return constraints;
   }
 
+  /**
+   * Returns the list of auxiliary variables created during decomposition.
+   *
+   * @return list of auxiliary variables
+   */
   public List<Var> auxiliaryVariables() {
     return auxVar;
   }

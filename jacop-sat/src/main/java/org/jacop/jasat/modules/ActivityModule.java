@@ -99,13 +99,30 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
   // used to update sorting of priorities sometimes
   private int conflictCount;
 
+  /**
+   * Called when the solver performs a backjump operation.
+   *
+   * @param oldLevel the decision level before the backjump
+   * @param newLevel the decision level after the backjump
+   */
   public void onBackjump(int oldLevel, int newLevel) {}
 
+  /**
+   * Called when the solver restarts from a given decision level.
+   *
+   * @param oldLevel the decision level from which the restart occurs
+   */
   public void onRestart(int oldLevel) {
     // get the priorities sorted again
     sortArray();
   }
 
+  /**
+   * Called when a conflict is detected during solving.
+   *
+   * @param conflictClause the clause that caused the conflict
+   * @param level the decision level at which the conflict occurred
+   */
   public void onConflict(MapClause conflictClause, int level) {
     conflictCount++;
 
@@ -121,6 +138,14 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     Arrays.sort(priorities, 0, prioritiesIndex, comparator);
   }
 
+  /**
+   * Called when a new clause is added to the solver.
+   *
+   * @param clause the clause being added as an array of literals
+   * @param clauseId the unique identifier assigned to the clause
+   * @param isModelClause true if the clause is from the original model, false if it is a learnt
+   *     clause
+   */
   public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
 
     // if needed, increase bump rate
@@ -153,6 +178,11 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     }
   }
 
+  /**
+   * Called when a clause is removed from the solver.
+   *
+   * @param clauseId the identifier of the clause being removed
+   */
   public void onClauseRemoval(int clauseId) {
     // nothing to do
   }
@@ -265,6 +295,11 @@ public final class ActivityModule implements ClauseListener, BackjumpListener, C
     return "ActivityModule";
   }
 
+  /**
+   * Initializes the activity module and registers it with the solver core for relevant events.
+   *
+   * @param core the solver core instance
+   */
   public void initialize(Core core) {
 
     this.core = core;

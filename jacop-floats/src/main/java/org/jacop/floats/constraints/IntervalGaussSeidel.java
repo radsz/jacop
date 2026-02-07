@@ -52,6 +52,12 @@ public class IntervalGaussSeidel {
   FloatInterval[][] A;
   double[] b;
 
+  /**
+   * Constructs an IntervalGaussSeidel solver for the system Ax = b.
+   *
+   * @param a the interval matrix of coefficients
+   * @param b the right-hand side vector
+   */
   public IntervalGaussSeidel(FloatInterval[][] a, double[] b) {
 
     this.A = new FloatInterval[a.length][];
@@ -83,6 +89,14 @@ public class IntervalGaussSeidel {
     return Math.max(vMax, vMin);
   }
 
+  /**
+   * Restructures the matrix to achieve diagonal dominance if possible.
+   *
+   * @param currentRow the current row being processed
+   * @param done array tracking which rows have been assigned
+   * @param row array storing the row mapping
+   * @return true if restructuring was successful, false otherwise
+   */
   public boolean restructure(int currentRow, boolean[] done, int[] row) {
 
     if (currentRow == A.length) {
@@ -126,6 +140,12 @@ public class IntervalGaussSeidel {
     return false;
   }
 
+  /**
+   * Solves the system of linear equations using the Gauss-Seidel method.
+   *
+   * @return the solution vector as an array of FloatIntervals, or null if the system cannot be
+   *     solved
+   */
   public FloatInterval[] solve() {
     int N = 0;
     FloatInterval[] x = new FloatInterval[b.length];
@@ -278,6 +298,11 @@ public class IntervalGaussSeidel {
     }
   }
 
+  /**
+   * Returns a string representation of the linear system.
+   *
+   * @return string representation of the system
+   */
   public String toString() {
 
     StringBuilder s = new StringBuilder();

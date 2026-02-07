@@ -35,7 +35,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 
 /**
- * Defines a MaxRegret comparator for Variables.
+ * Defines a MaxRegret comparator for Variables. It selects variables with maximum regret, which is
+ * the difference between the smallest and second smallest value in the domain. This heuristic helps
+ * identify variables where choosing the wrong value would be most costly.
  *
  * @param <T> variable of type IntVar.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -46,6 +48,13 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
   /** It constructs MaxRegret comparator. */
   public MaxRegret() {}
 
+  /**
+   * Compares a metric value (regret) with a variable's regret value.
+   *
+   * @param ldiff the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if ldiff has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double ldiff, T var) {
 
     ValueEnumeration rEnum = var.domain.valueEnumeration();
@@ -69,6 +78,15 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     return 0;
   }
 
+  /**
+   * Compares two variables based on their regret values. Variables with larger regret have higher
+   * priority.
+   *
+   * @param left the first variable to compare.
+   * @param right the second variable to compare.
+   * @return positive if left has higher priority, negative if right has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T left, T right) {
 
     ValueEnumeration lEnum = left.domain.valueEnumeration();
@@ -98,6 +116,13 @@ public class MaxRegret<T extends IntVar> implements ComparatorVariable<T> {
     return Integer.compare(ldiff, rdiff);
   }
 
+  /**
+   * Computes the metric for a variable, which is the regret value (difference between smallest and
+   * second smallest domain value).
+   *
+   * @param o the variable for which the metric is computed.
+   * @return the regret value for the variable.
+   */
   public double metric(T o) {
 
     ValueEnumeration oEnum = o.domain.valueEnumeration();

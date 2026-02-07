@@ -48,6 +48,12 @@ public class IndomainSetMax<T extends SetVar> implements Indomain<T> {
    */
   public IndomainSetMax() {}
 
+  /**
+   * Selects the maximal value from the set variable's domain.
+   *
+   * @param var the set variable from which to select a value.
+   * @return the maximum element from the difference between lub and glb.
+   */
   public int indomain(T var) {
 
     return var.domain.lub().subtract(var.domain.glb()).max();

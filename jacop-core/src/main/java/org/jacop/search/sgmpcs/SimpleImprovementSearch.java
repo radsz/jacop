@@ -83,6 +83,13 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
   int searchCost;
   long timeOut;
 
+  /**
+   * Constructs a simple improvement search with the given store, variables, and cost variable.
+   *
+   * @param store the constraint store used for search.
+   * @param vars the search variables.
+   * @param cost the cost variable to minimize.
+   */
   public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
     this.store = store;
     this.vars = new IntVar[vars.length];
@@ -90,6 +97,12 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     this.cost = cost;
   }
 
+  /**
+   * Performs a search starting from an empty solution using depth-first search.
+   *
+   * @param failLimit the maximum number of allowed failures before the search stops.
+   * @return true if a solution was found, false otherwise.
+   */
   public boolean searchFromEmptySolution(int failLimit) {
 
     DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
@@ -116,6 +129,13 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
     return result;
   }
 
+  /**
+   * Performs a search starting from an elite solution, using it as default variable assignment.
+   *
+   * @param eliteSolution the elite solution to guide the search.
+   * @param failLimit the maximum number of allowed failures before the search stops.
+   * @return true if a solution was found, false otherwise.
+   */
   public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
 
     Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
@@ -178,6 +198,13 @@ public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolutio
    */
   public class CostListener<T extends IntVar> extends SimpleSolutionListener<T> {
 
+    /**
+     * Executes after a solution is found, recording the cost of the current solution.
+     *
+     * @param search the current search.
+     * @param select the choice point selection strategy.
+     * @return true if the search should continue looking for better solutions.
+     */
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);

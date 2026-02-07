@@ -184,6 +184,11 @@ public final class ConflictLearning implements SolverComponent {
     dbStore.resolutionWith(clauseId, explanationClause);
   }
 
+  /**
+   * Initializes the conflict learning component with the solver core.
+   *
+   * @param core the solver core
+   */
   public void initialize(Core core) {
     this.core = core;
     core.conflictLearning = this;

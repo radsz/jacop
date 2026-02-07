@@ -178,16 +178,32 @@ public class Lds<T extends Var> implements ExitChildListener<T> {
     noDiscrepancies--;
   }
 
+  /**
+   * It is executed after the right child has been explored.
+   *
+   * @param choice the constraint representing the choice.
+   * @param status the status of the child exploration.
+   */
   public void rightChild(PrimitiveConstraint choice, boolean status) {
 
     noDiscrepancies--;
   }
 
+  /**
+   * Sets an array of children exit child listeners.
+   *
+   * @param children the array of exit child listeners to be set as children.
+   */
   public void setChildrenListeners(ExitChildListener<T>[] children) {
 
     exitChildListeners = children;
   }
 
+  /**
+   * Sets a single child exit child listener.
+   *
+   * @param child the exit child listener to be set as a child.
+   */
   @SuppressWarnings("unchecked")
   public void setChildrenListeners(ExitChildListener<T> child) {
     exitChildListeners = new ExitChildListener[1];

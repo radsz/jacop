@@ -212,6 +212,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public IntDomain complement() {
 
@@ -220,6 +221,11 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     return intervalBasedRepresentation.complement();
   }
 
+  /**
+   * Returns the previous domain state before the last modification.
+   *
+   * @return the previous domain
+   */
   public IntDomain getPreviousDomain() {
     return previousDomain;
   }
@@ -502,6 +508,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void in(int storeLevel, Var var, int min, int max) {
 
@@ -644,6 +651,13 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
   }
 
+  /**
+   * Restricts the domain to the intersection with the given bit representation.
+   *
+   * @param storeLevel the level of the store
+   * @param var the variable to update
+   * @param domain the bit representation of the domain to intersect with
+   */
   public void in(int storeLevel, Var var, long domain) {
 
     assert checkInvariants() == null : checkInvariants();
@@ -1206,6 +1220,13 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     in(storeLevel, var, domain.min() + shift, domain.max() + shift);
   }
 
+  /**
+   * It computes the intersection of this domain with an interval domain applying a shift.
+   *
+   * @param input the interval domain to intersect with.
+   * @param shift the shift value to apply.
+   * @return the resulting small dense domain after intersection.
+   */
   public SmallDenseDomain intersect(IntervalDomain input, int shift) {
 
     // System.out.println("Domain " + this + " intersecting with " + input);
@@ -2343,6 +2364,11 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     max += shift;
   }
 
+  /**
+   * Converts this small dense domain to an equivalent interval domain representation.
+   *
+   * @return a new IntervalDomain containing the same values as this domain.
+   */
   public IntervalDomain toIntervalDomain() {
 
     int noIntervals = this.noIntervals();

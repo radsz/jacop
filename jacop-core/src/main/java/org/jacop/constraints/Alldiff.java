@@ -79,6 +79,7 @@ public class Alldiff extends Alldifferent {
   private Element[] minsorted;
   private Element[] maxsorted;
 
+  /** Protected constructor for subclassing purposes. */
   protected Alldiff() {}
 
   /**
@@ -164,6 +165,10 @@ public class Alldiff extends Alldifferent {
     // } while (store.propagationHasOccurred);
   }
 
+  /**
+   * Initializes the bounds consistency data structures by sorting variables and computing unique
+   * bounds. This method prepares the bounds array and ranks for each variable's min and max values.
+   */
   private void init() {
     int n = list.length;
     Arrays.sort(minsorted, 0, n, minVariable);
@@ -204,6 +209,10 @@ public class Alldiff extends Alldifferent {
     bounds[nb + 1] = bounds[nb] + 2;
   }
 
+  /**
+   * Performs lower bound propagation using Hall intervals to enforce bounds consistency. This
+   * method updates variable lower bounds based on capacity constraints and Hall intervals.
+   */
   private void updateLb() {
 
     for (int i = 1; i <= nb + 1; i++) {
@@ -237,6 +246,10 @@ public class Alldiff extends Alldifferent {
     }
   }
 
+  /**
+   * Performs upper bound propagation using Hall intervals to enforce bounds consistency. This
+   * method updates variable upper bounds based on capacity constraints and Hall intervals.
+   */
   private void updateUb() {
 
     for (int i = 0; i <= nb; i++) {
@@ -269,6 +282,15 @@ public class Alldiff extends Alldifferent {
     }
   }
 
+  /**
+   * Sets all elements in path from start to end to point to the given target value. This is a path
+   * compression operation used in the union-find-like structure for Hall intervals.
+   *
+   * @param v the array representing the path structure
+   * @param start the starting position in the path
+   * @param end the ending position in the path
+   * @param to the target value to set for all elements in the path
+   */
   private void pathset(int[] v, int start, int end, int to) {
     int next = start;
     int prev = next;
@@ -279,6 +301,14 @@ public class Alldiff extends Alldifferent {
     }
   }
 
+  /**
+   * Finds the minimum element in the path starting from the given index. Follows the path structure
+   * downward until reaching a local minimum.
+   *
+   * @param v the array representing the path structure
+   * @param i the starting index
+   * @return the index of the minimum element in the path
+   */
   private int pathmin(int[] v, int i) {
     while (v[i] < i) {
       i = v[i];
@@ -287,6 +317,14 @@ public class Alldiff extends Alldifferent {
     return i;
   }
 
+  /**
+   * Finds the maximum element in the path starting from the given index. Follows the path structure
+   * upward until reaching a local maximum.
+   *
+   * @param v the array representing the path structure
+   * @param i the starting index
+   * @return the index of the maximum element in the path
+   */
   private int pathmax(int[] v, int i) {
     while (v[i] > i) {
       i = v[i];
@@ -306,6 +344,14 @@ public class Alldiff extends Alldifferent {
     return result.toString();
   }
 
+  /**
+   * Propagates the alldifferent constraint for singleton variables by removing their values from
+   * all other variable domains. This ensures that once a variable is assigned, no other variable
+   * can take the same value.
+   *
+   * @param store the constraint store
+   * @param fdvs the set of changed variables to process
+   */
   protected void propagateAllDifferentOnSingletons(Store store, LinkedHashSet<IntVar> fdvs) {
     for (IntVar changedVar : fdvs) {
       if (changedVar.singleton()) {
@@ -325,6 +371,10 @@ public class Alldiff extends Alldifferent {
     super.queueVariable(level, var);
   }
 
+  /**
+   * Internal data structure representing a variable with its ranking information. Used during
+   * bounds consistency propagation.
+   */
   private static class Element {
     private IntVar var;
     private int minrank;

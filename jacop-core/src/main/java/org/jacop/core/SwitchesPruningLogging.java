@@ -91,10 +91,35 @@ public final class SwitchesPruningLogging {
 
   private SwitchesPruningLogging() {}
 
+  /**
+   * Logs a message if the given switch is enabled.
+   *
+   * @param isEnabled whether logging is enabled
+   * @param fromClass the class from which the log originates
+   * @param pattern the message pattern
+   * @param args the arguments for the pattern
+   */
   public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object[] args) {}
 
+  /**
+   * Logs a message if the given switch is enabled.
+   *
+   * @param isEnabled whether logging is enabled
+   * @param fromClass the class from which the log originates
+   * @param pattern the message pattern
+   * @param arg1 the first argument for the pattern
+   */
   public static void log(boolean isEnabled, Class<?> fromClass, String pattern, Object arg1) {}
 
+  /**
+   * Logs a message if the given switch is enabled.
+   *
+   * @param isEnabled whether logging is enabled
+   * @param fromClass the class from which the log originates
+   * @param pattern the message pattern
+   * @param arg1 the first argument for the pattern
+   * @param arg2 the second argument for the pattern
+   */
   public static void log(
       boolean isEnabled, Class<?> fromClass, String pattern, Object arg1, Object arg2) {}
 }

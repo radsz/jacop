@@ -48,6 +48,11 @@ public class SimpleTimeOut implements TimeOutListener {
   /** It contains child(ren) of this timeout listener. */
   public TimeOutListener[] timeOutListeners;
 
+  /**
+   * It is executed when the timeout occurs.
+   *
+   * @param solutionsNo the number of solutions found before the timeout.
+   */
   public void executedAtTimeOut(int solutionsNo) {
     this.solutionsNo = solutionsNo;
     this.timeOutOccurred = true;
@@ -59,10 +64,20 @@ public class SimpleTimeOut implements TimeOutListener {
     }
   }
 
+  /**
+   * Sets an array of children timeout listeners.
+   *
+   * @param children the array of timeout listeners to be set as children.
+   */
   public void setChildrenListeners(TimeOutListener[] children) {
     timeOutListeners = children;
   }
 
+  /**
+   * Sets a single child timeout listener.
+   *
+   * @param child the timeout listener to be set as a child.
+   */
   public void setChildrenListeners(TimeOutListener child) {
     timeOutListeners = new TimeOutListener[1];
     timeOutListeners[0] = child;

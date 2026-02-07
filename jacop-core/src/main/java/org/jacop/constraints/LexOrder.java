@@ -106,6 +106,13 @@ public class LexOrder extends Constraint
     numberId = idNumber.incrementAndGet();
   }
 
+  /**
+   * It creates a lexicographical order constraint for vectors x and y with the specified ordering.
+   *
+   * @param x first vector constrained by LexOrder constraint.
+   * @param y second vector constrained by LexOrder constraint.
+   * @param lt if true, strict less-than ordering is enforced; otherwise, less-than-or-equal.
+   */
   public LexOrder(IntVar[] x, IntVar[] y, boolean lt) {
 
     checkInputForNullness(new String[] {"x", "y"}, x, y);
@@ -316,6 +323,7 @@ public class LexOrder extends Constraint
     return result.toString();
   }
 
+  /** Initializes generalized arc consistency by computing the initial alpha and beta bounds. */
   protected void establishGacInit() {
 
     satisfied = false;
@@ -415,6 +423,7 @@ public class LexOrder extends Constraint
     }
   }
 
+  /** Advances the alpha pointer past equal singleton pairs and re-establishes GAC. */
   public void updateAlpha() {
 
     int a = alphaValue + 1;
@@ -451,6 +460,11 @@ public class LexOrder extends Constraint
     }
   }
 
+  /**
+   * Updates the beta bound by moving it backwards when domain changes invalidate the current bound.
+   *
+   * @param i the index at which to attempt setting the new beta value.
+   */
   public void updateBeta(int i) {
 
     int a = alphaValue;

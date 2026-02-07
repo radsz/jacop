@@ -215,10 +215,20 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     }
   }
 
+  /**
+   * Checks if there are more clauses to parse.
+   *
+   * @return true if more clauses are available
+   */
   public boolean hasNext() {
     return nextClause != null;
   }
 
+  /**
+   * Returns the next clause and advances the parser.
+   *
+   * @return the next clause
+   */
   public IntVec next() {
     assert nextClause != null;
 
@@ -228,6 +238,7 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     return answer;
   }
 
+  /** Removes the current clause (unsupported operation). */
   public void remove() {
     throw new UnsupportedOperationException();
   }
@@ -248,6 +259,11 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
    */
   @SuppressWarnings("serial")
   public static final class ParseException extends Exception {
+    /**
+     * Constructs a new parse exception with the specified message.
+     *
+     * @param msg the error message
+     */
     public ParseException(String msg) {
       super(msg);
     }

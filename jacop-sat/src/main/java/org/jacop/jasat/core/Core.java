@@ -308,6 +308,13 @@ public final class Core implements SolverComponent {
     return conflictLearning.getLevelToBackjump(explanationClause);
   }
 
+  /**
+   * Computes at which level we should backjump to solve the conflict using the given explanation
+   * clause.
+   *
+   * @param explanationClause the explanation clause
+   * @return a level lower than the current level
+   */
   public int getLevelToBackjump(MapClause explanationClause) {
     assert explanationClause != null;
     return conflictLearning.getLevelToBackjump(explanationClause);
@@ -729,6 +736,11 @@ public final class Core implements SolverComponent {
         + "]";
   }
 
+  /**
+   * Initializes the core component.
+   *
+   * @param core the solver core (must be this instance)
+   */
   public void initialize(Core core) {
     assert core == this;
   }

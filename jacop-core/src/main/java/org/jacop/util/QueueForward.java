@@ -54,6 +54,12 @@ public class QueueForward<T extends Constraint> {
 
   public final boolean isEmpty;
 
+  /**
+   * Constructs a queue forward mapping from variables to constraints that need notification.
+   *
+   * @param constraints the constraints to consider for forwarding.
+   * @param variables the variables whose changes should be forwarded.
+   */
   public QueueForward(Collection<T> constraints, Collection<Var> variables) {
 
     forwardMap = Var.createEmptyPositioning();
@@ -92,30 +98,71 @@ public class QueueForward<T extends Constraint> {
     isEmpty = forwardMap.isEmpty();
   }
 
+  /**
+   * Constructs a queue forward from arrays of constraints and variables.
+   *
+   * @param constraints the constraints to consider for forwarding.
+   * @param vars the variables whose changes should be forwarded.
+   */
   public QueueForward(T[] constraints, Var[] vars) {
     this(Arrays.asList(constraints), Arrays.asList(vars));
   }
 
+  /**
+   * Constructs a queue forward from an array of constraints and a collection of variables.
+   *
+   * @param constraints the constraints to consider for forwarding.
+   * @param vars the variables whose changes should be forwarded.
+   */
   public QueueForward(T[] constraints, Collection<Var> vars) {
     this(Arrays.asList(constraints), vars);
   }
 
+  /**
+   * Constructs a queue forward from a single constraint and a collection of variables.
+   *
+   * @param constraint the constraint to consider for forwarding.
+   * @param vars the variables whose changes should be forwarded.
+   */
   public QueueForward(T constraint, Collection<Var> vars) {
     this(Collections.singletonList(constraint), vars);
   }
 
+  /**
+   * Constructs a queue forward from a collection of constraints and a single variable.
+   *
+   * @param constraints the constraints to consider for forwarding.
+   * @param var the variable whose changes should be forwarded.
+   */
   public QueueForward(Collection<T> constraints, Var var) {
     this(constraints, Collections.singletonList(var));
   }
 
+  /**
+   * Constructs a queue forward from a single constraint and a single variable.
+   *
+   * @param constraint the constraint to consider for forwarding.
+   * @param var the variable whose changes should be forwarded.
+   */
   public QueueForward(T constraint, Var var) {
     this(Collections.singletonList(constraint), Collections.singletonList(var));
   }
 
+  /**
+   * Returns whether the forward map is empty (no variables need forwarding).
+   *
+   * @return true if no variable-to-constraint mappings exist.
+   */
   public boolean isEmpty() {
     return isEmpty;
   }
 
+  /**
+   * Forwards a variable change event to all constraints that depend on the given variable.
+   *
+   * @param level the current store level.
+   * @param variable the variable that has changed.
+   */
   public void queueForward(int level, Var variable) {
 
     if (isEmpty) {

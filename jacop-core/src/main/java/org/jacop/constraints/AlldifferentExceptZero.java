@@ -48,6 +48,7 @@ import org.jacop.core.Store;
 public class AlldifferentExceptZero extends Alldifferent
     implements UsesQueueVariable, SatisfiedPresent {
 
+  /** Protected constructor for subclassing purposes. */
   protected AlldifferentExceptZero() {}
 
   /**
@@ -123,6 +124,14 @@ public class AlldifferentExceptZero extends Alldifferent
     }
   }
 
+  /**
+   * Checks if the constraint cannot be satisfied using bipartite matching algorithm. Determines if
+   * there exists a valid assignment where all variables except those with value zero can take
+   * different values.
+   *
+   * @param vs the array of variables to check
+   * @return true if the constraint cannot be satisfied, false otherwise
+   */
   public boolean notSatisfied(IntVar[] vs) {
     return notSatisfiedByMatching(vs);
   }

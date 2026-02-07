@@ -47,8 +47,16 @@ public class ReversibleSparseBitSet {
   private TimeStamp<Integer> limit;
   private long[] mask;
 
+  /** Creates an empty reversible sparse bit set. */
   public ReversibleSparseBitSet() {}
 
+  /**
+   * Creates a reversible sparse bit set initialized with valid tuples.
+   *
+   * @param store the constraint store
+   * @param x the variables
+   * @param tuple the tuples to validate and include
+   */
   public ReversibleSparseBitSet(Store store, IntVar[] x, int[][] tuple) {
 
     int n = tuple.length;
@@ -65,6 +73,12 @@ public class ReversibleSparseBitSet {
     init(store, bs);
   }
 
+  /**
+   * Initializes the reversible sparse bit set with the given words.
+   *
+   * @param store the constraint store
+   * @param w the long array representing the bit set
+   */
   void init(Store store, long[] w) {
     int n = w.length;
 
@@ -182,6 +196,11 @@ public class ReversibleSparseBitSet {
     return index.length; // words.value().length;
   }
 
+  /**
+   * It returns a string representation of the reversible sparse bit set.
+   *
+   * @return string describing the words and their values.
+   */
   public String toString() {
     StringBuilder s = new StringBuilder("words: ");
 

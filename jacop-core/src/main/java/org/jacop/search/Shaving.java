@@ -122,6 +122,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   private boolean leftChildWrongDecision;
   private int depth;
 
+  /** {@inheritDoc} */
   public boolean leftChild(IntVar var, int value, boolean status) {
 
     leftChild = false;
@@ -131,6 +132,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     return true;
   }
 
+  /** {@inheritDoc} */
   public boolean leftChild(PrimitiveConstraint choice, boolean status) {
 
     leftChild = false;
@@ -139,6 +141,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     return true;
   }
 
+  /** {@inheritDoc} */
   public void rightChild(IntVar var, int value, boolean status) {
 
     leftChild = false;
@@ -166,6 +169,7 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     leftChildWrongDecision = false;
   }
 
+  /** {@inheritDoc} */
   public void rightChild(PrimitiveConstraint choice, boolean status) {
     leftChild = false;
     depth--;
@@ -181,16 +185,32 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     exitChildListeners = children;
   }
 
+  /**
+   * Sets a single consistency listener as the child listener.
+   *
+   * @param child the consistency listener to set.
+   */
   public void setChildrenListeners(ConsistencyListener child) {
     consistencyListeners = new ConsistencyListener[1];
     consistencyListeners[0] = child;
   }
 
+  /**
+   * Sets a single exit child listener as the child listener.
+   *
+   * @param child the exit child listener to set.
+   */
   public void setChildrenListeners(ExitChildListener<T> child) {
     exitChildListeners = new ExitChildListener[1];
     exitChildListeners[0] = child;
   }
 
+  /**
+   * Executes shaving logic after consistency check. Attempts to shave variable-value pairs.
+   *
+   * @param consistent whether the store is consistent after propagation.
+   * @return true if the store remains consistent after shaving, false otherwise.
+   */
   public boolean executeAfterConsistency(boolean consistent) {
 
     if (!consistent) {

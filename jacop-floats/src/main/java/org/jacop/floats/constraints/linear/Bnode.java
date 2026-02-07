@@ -39,16 +39,37 @@ public class Bnode extends BinaryNode {
   // bounds for this node
   final BoundsVar bound;
 
+  /**
+   * Constructs a binary node with default bounds.
+   *
+   * @param store the constraint store
+   */
   public Bnode(Store store) {
     id = n.incrementAndGet();
     bound = new BoundsVar(store);
   }
 
+  /**
+   * Constructs a binary node with specified min and max bounds.
+   *
+   * @param store the constraint store
+   * @param min the minimum bound
+   * @param max the maximum bound
+   */
   public Bnode(Store store, double min, double max) {
     id = n.incrementAndGet();
     bound = new BoundsVar(store, min, max);
   }
 
+  /**
+   * Constructs a binary node with specified bounds and lookahead bounds.
+   *
+   * @param store the constraint store
+   * @param min the minimum bound
+   * @param max the maximum bound
+   * @param lb the lower lookahead bound
+   * @param ub the upper lookahead bound
+   */
   public Bnode(Store store, double min, double max, double lb, double ub) {
     id = n.incrementAndGet();
     bound = new BoundsVar(store, min, max, lb, ub);
@@ -254,6 +275,11 @@ public class Bnode extends BinaryNode {
     bound.update(min, max, lb, ub);
   }
 
+  /**
+   * Returns a string representation of this binary node.
+   *
+   * @return string representation including node id, stamp and bounds
+   */
   public String toString() {
     return super.toString() + "(" + bound.stamp() + ")" + " : " + bound;
   }

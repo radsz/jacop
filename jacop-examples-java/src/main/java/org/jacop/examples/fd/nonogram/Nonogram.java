@@ -195,6 +195,11 @@ public class Nonogram extends ExampleFd {
     }
   }
 
+  /**
+   * Reads a nonogram problem definition from a file.
+   *
+   * @param filename path to the file containing the nonogram puzzle specification
+   */
   public void readFromFile(String filename) {
 
     String[] lines = new String[100];

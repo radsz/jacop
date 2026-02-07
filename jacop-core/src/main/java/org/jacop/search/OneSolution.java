@@ -50,8 +50,10 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
 
   InitializeListener[] childrenInitializeListeners;
 
-  /*
-   * Initilize listener
+  /**
+   * Resets the solution-found flag so the search can look for a new single solution.
+   *
+   * @param store the constraint store being initialized.
    */
   public void executedAtInitialize(Store store) {
     solutionFound = false;
@@ -78,6 +80,11 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
     childrenInitializeListeners[0] = child;
   }
 
+  /**
+   * Sets a single consistency listener as child.
+   *
+   * @param child the consistency listener to set.
+   */
   public void setChildrenListeners(ConsistencyListener child) {
 
     childrenConsistencyListeners = new ConsistencyListener[1];
@@ -88,8 +95,12 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
     childrenConsistencyListeners = children;
   }
 
-  /*
-   * Solution listener
+  /**
+   * Executes after a solution is found, marking the solution-found flag to stop further search.
+   *
+   * @param search the current search.
+   * @param select the choice point selection strategy.
+   * @return true if the search should continue, false otherwise.
    */
   public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
@@ -100,8 +111,12 @@ public class OneSolution<T extends Var> extends SimpleSolutionListener<T>
     return returnCode;
   }
 
-  /*
-   * Consistency listener
+  /**
+   * Executes after consistency check. Returns false if a solution has already been found to stop
+   * the search.
+   *
+   * @param consistent whether the current node is consistent.
+   * @return false if a solution was already found, otherwise the consistency status.
    */
   public boolean executeAfterConsistency(boolean consistent) {
 

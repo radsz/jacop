@@ -42,6 +42,12 @@ public class GeometricCalculator extends Calculator {
   final double base;
   int n;
 
+  /**
+   * Constructs a geometric calculator where the fail limit grows geometrically.
+   *
+   * @param base the base factor for geometric progression.
+   * @param scale the initial scale value for the fail limit.
+   */
   public GeometricCalculator(double base, int scale) {
     n = 0;
     failLimit = scale;
@@ -49,12 +55,21 @@ public class GeometricCalculator extends Calculator {
     this.scale = scale;
   }
 
+  /**
+   * Resets the fail counter and calculates a new fail limit using geometric progression. The new
+   * limit is calculated as base^n * scale where n is incremented each time.
+   */
   public void newLimit() {
     numberFails = 0;
     double p = Math.pow(base, ++n);
     failLimit = (long) p * scale;
   }
 
+  /**
+   * Returns a string representation of this geometric calculator.
+   *
+   * @return a string describing the calculator with its base and scale parameters.
+   */
   public String toString() {
     return "geometricCalculator(" + base + ", " + scale + ")";
   }

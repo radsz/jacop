@@ -62,6 +62,14 @@ public class Optimize<T extends Var> {
   double costValue = Double.NaN;
   FloatInterval lastCost;
 
+  /**
+   * Constructs an optimization search for minimizing a float cost variable.
+   *
+   * @param store the constraint store
+   * @param search the search object to use for labeling
+   * @param select the choice point selector for variables
+   * @param cost the float variable to minimize
+   */
   public Optimize(Store store, Search<T> search, SelectChoicePoint<T> select, FloatVar cost) {
 
     this.store = store;
@@ -83,6 +91,11 @@ public class Optimize<T extends Var> {
     lastVarValues = new FloatInterval[variables.length];
   }
 
+  /**
+   * Performs minimization search using branch and bound approach.
+   *
+   * @return true if at least one solution was found, false otherwise
+   */
   public boolean minimize() {
 
     store.setLevel(store.level + 1);
@@ -152,6 +165,7 @@ public class Optimize<T extends Var> {
     }
   }
 
+  /** Prints the last found solution including variable values and cost. */
   void printLastSolution() {
 
     IO.print("[");
@@ -165,10 +179,20 @@ public class Optimize<T extends Var> {
     IO.println("% Solution with cost " + cost.id() + "::{" + lastCost + "}");
   }
 
+  /**
+   * Returns the final cost interval of the best solution found.
+   *
+   * @return the cost interval of the optimal solution
+   */
   public FloatInterval getFinalCost() {
     return lastCost;
   }
 
+  /**
+   * Returns the final variable values of the best solution found.
+   *
+   * @return array of float intervals representing the optimal variable values
+   */
   public FloatInterval[] getFinalVarValues() {
     return lastVarValues;
   }
@@ -178,10 +202,16 @@ public class Optimize<T extends Var> {
 
     final Var[] var;
 
+    /**
+     * Creates a result listener that tracks solutions for the given variables.
+     *
+     * @param v the variables to track in solutions.
+     */
     public ResultListener(Var[] v) {
       var = v;
     }
 
+    /** {@inheritDoc} */
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       final boolean returnCode = super.executeAfterSolution(search, select);

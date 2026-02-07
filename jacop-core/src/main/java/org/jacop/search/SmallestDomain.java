@@ -45,6 +45,13 @@ public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
   /** It constructs a smallest domain variable comparator. */
   public SmallestDomain() {}
 
+  /**
+   * Compares a metric value with a variable's domain size.
+   *
+   * @param left the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double left, T var) {
     int right = var.getSize();
 
@@ -57,6 +64,15 @@ public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
     return 0;
   }
 
+  /**
+   * Compares two variables based on their domain sizes. Variables with smaller domains have higher
+   * priority.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return positive if leftVar has higher priority, negative if rightVar has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T leftVar, T rightVar) {
     int left = leftVar.getSize();
     int right = rightVar.getSize();
@@ -64,6 +80,12 @@ public class SmallestDomain<T extends Var> implements ComparatorVariable<T> {
     return Integer.compare(right, left);
   }
 
+  /**
+   * Computes the metric for a variable, which is its domain size.
+   *
+   * @param var the variable for which the metric is computed.
+   * @return the domain size of the variable.
+   */
   public double metric(T var) {
     return var.getSize();
   }

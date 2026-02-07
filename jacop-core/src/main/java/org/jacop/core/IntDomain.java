@@ -100,8 +100,14 @@ public abstract class IntDomain extends Domain {
    */
   public IntDomain previousDomain;
 
-  /*
-   * Finds result interval for multiplication of {a..b} * {c..d}
+  /**
+   * Finds the result interval for multiplication of {a..b} * {c..d}.
+   *
+   * @param a the minimum of the first interval.
+   * @param b the maximum of the first interval.
+   * @param c the minimum of the second interval.
+   * @param d the maximum of the second interval.
+   * @return the interval representing the bounds of the multiplication result.
    */
   public static Interval mulBounds(int a, int b, int c, int d) {
 
@@ -115,8 +121,13 @@ public abstract class IntDomain extends Domain {
     return new Interval(min, max);
   }
 
-  /*
-   * Finds result interval by constant for multiplication of {a..b} * c
+  /**
+   * Finds the result interval for multiplication of {a..b} by a constant c.
+   *
+   * @param a the minimum of the interval.
+   * @param b the maximum of the interval.
+   * @param c the constant multiplier.
+   * @return the interval representing the bounds of the multiplication result.
    */
   public static Interval mulBounds(int a, int b, int c) {
 
@@ -133,8 +144,12 @@ public abstract class IntDomain extends Domain {
     return new Interval(min, max);
   }
 
-  /*
-   * Finds result interval for {a..b}^2
+  /**
+   * Finds the result interval for squaring the interval {a..b}.
+   *
+   * @param a the minimum of the interval.
+   * @param b the maximum of the interval.
+   * @return the interval representing the bounds of the squaring result.
    */
   public static Interval squareBounds(int a, int b) {
 
@@ -150,8 +165,14 @@ public abstract class IntDomain extends Domain {
     return new Interval(min, max);
   }
 
-  /*
-   * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
+  /**
+   * Finds the result interval for division of {a..b} / {c..d} for div and mod constraints.
+   *
+   * @param a the minimum of the dividend interval.
+   * @param b the maximum of the dividend interval.
+   * @param c the minimum of the divisor interval.
+   * @param d the maximum of the divisor interval.
+   * @return the interval representing the bounds of the division result.
    */
   public static Interval divBounds(int a, int b, int c, int d) {
 
@@ -191,8 +212,14 @@ public abstract class IntDomain extends Domain {
     return result;
   }
 
-  /*
-   * Finds result interval for division of {a..b} / {c..d} for mul constraints
+  /**
+   * Finds the result interval for integer division of {a..b} / {c..d} for mul constraints.
+   *
+   * @param a the minimum of the dividend interval.
+   * @param b the maximum of the dividend interval.
+   * @param c the minimum of the divisor interval.
+   * @param d the maximum of the divisor interval.
+   * @return the interval representing the bounds of the integer division result.
    */
   public static Interval divIntBounds(int a, int b, int c, int d) {
     int min;
@@ -236,8 +263,14 @@ public abstract class IntDomain extends Domain {
     return result;
   }
 
-  /*
-   * Finds result interval by constnat division of {a..b} / c for div and mod constraints
+  /**
+   * Finds the result interval for integer division of {a..b} by a constant c for div and mod
+   * constraints.
+   *
+   * @param a the minimum of the dividend interval.
+   * @param b the maximum of the dividend interval.
+   * @param c the constant divisor.
+   * @return the interval representing the bounds of the integer division result.
    */
   public static Interval divIntBounds(int a, int b, int c) {
 
@@ -265,18 +298,46 @@ public abstract class IntDomain extends Domain {
     }
   }
 
+  /**
+   * Computes the floor division of two long values, rounding towards negative infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the floor of the division a / b.
+   */
   public static long divRoundDown(long a, long b) {
     return Math.floorDiv(a, b);
   }
 
+  /**
+   * Computes the floor division of two int values, rounding towards negative infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the floor of the division a / b.
+   */
   public static int divRoundDown(int a, int b) {
     return Math.floorDiv(a, b);
   }
 
+  /**
+   * Computes the ceiling division of two long values, rounding towards positive infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the ceiling of the division a / b.
+   */
   public static long divRoundUp(long a, long b) {
     return -Math.floorDiv(-a, b);
   }
 
+  /**
+   * Computes the ceiling division of two int values, rounding towards positive infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the ceiling of the division a / b.
+   */
   public static int divRoundUp(int a, int b) {
     return -Math.floorDiv(-a, b);
   }
@@ -935,6 +996,11 @@ public abstract class IntDomain extends Domain {
     }
   }
 
+  /**
+   * Returns the total number of constraints attached to this domain across all event types.
+   *
+   * @return the number of constraints attached to this domain.
+   */
   public int noConstraints() {
     return searchConstraintsToEvaluate
         + modelConstraintsToEvaluate[GROUND]
@@ -1225,6 +1291,14 @@ public abstract class IntDomain extends Domain {
     }
   }
 
+  /**
+   * Removes a search constraint from this domain. If the domain's stamp is older than the store
+   * level, a clone is created first.
+   *
+   * @param storeLevel the current level of the store.
+   * @param var the variable associated with this domain.
+   * @param c the search constraint to remove.
+   */
   public void removeSearchConstraint(int storeLevel, Var var, Constraint c) {
 
     if (stamp < storeLevel) {
@@ -1294,15 +1368,26 @@ public abstract class IntDomain extends Domain {
     }
   }
 
+  /**
+   * Creates a deep copy of this domain including all intervals and metadata.
+   *
+   * @return a clone of this domain.
+   */
   public abstract IntDomain clone();
 
+  /**
+   * Creates a lightweight copy of this domain containing only the domain values without constraint
+   * metadata.
+   *
+   * @return a lightweight clone of this domain.
+   */
   public abstract IntDomain cloneLight();
 
-  /*
-   * Returns the lexical ordering between the sets
+  /**
+   * Returns the lexical ordering between this domain and the given domain.
    *
-   * @param domain the set that should be lexically compared to this set
-   * @return -1 if s is greater than this set, 0 if s is equal to this set and else it returns 1.
+   * @param domain the domain that should be lexically compared to this domain.
+   * @return -1 if the given domain is greater, 0 if equal, and 1 if this domain is greater.
    */
   public int lex(IntDomain domain) {
 

@@ -259,6 +259,10 @@ public class Nooverlap extends Constraint {
     } while (store.propagationHasOccurred);
   }
 
+  /**
+   * Performs constraint propagation by pruning domains of rectangle variables. Checks for overlaps
+   * and applies energy-based reasoning to detect infeasibility.
+   */
   void pruning() {
 
     for (int j = 0; j < rectangle.length; j++) {
@@ -284,6 +288,12 @@ public class Nooverlap extends Constraint {
     }
   }
 
+  /**
+   * Prunes the domains of a rectangle based on its potential overlaps with other rectangles.
+   *
+   * @param r the rectangle to prune
+   * @param rects the set of potentially overlapping rectangles
+   */
   void prune(Rectangle r, BitSet rects) {
 
     for (int i = rects.nextSetBit(0); i >= 0; i = rects.nextSetBit(i + 1)) {
@@ -296,6 +306,14 @@ public class Nooverlap extends Constraint {
     }
   }
 
+  /**
+   * Prunes two rectangles in a specific dimension based on their overlap. If rectangles overlap in
+   * one dimension, they must not overlap in the other.
+   *
+   * @param ri the first rectangle
+   * @param rj the second rectangle
+   * @param dim the dimension (0 for x, 1 for y) in which to perform pruning
+   */
   private void prune(Rectangle ri, Rectangle rj, int dim) {
 
     int lstI = ri.lst(dim);
@@ -327,6 +345,13 @@ public class Nooverlap extends Constraint {
     }
   }
 
+  /**
+   * Performs energy-based feasibility check for a rectangle and its potentially overlapping
+   * rectangles. Verifies that the total minimum area of rectangles can fit within the bounding box.
+   *
+   * @param r the rectangle to check
+   * @param rects the set of potentially overlapping rectangles
+   */
   void energyCheck(Rectangle r, BitSet rects) {
 
     int xMin = r.est(x);
@@ -387,6 +412,11 @@ public class Nooverlap extends Constraint {
     }
   }
 
+  /**
+   * Checks if the constraint is satisfied, i.e., no two rectangles overlap.
+   *
+   * @return true if constraint is satisfied, false otherwise
+   */
   public boolean satisfied() {
     for (int i = 0; i < rectangle.length; i++) {
       for (int j = i + 1; j < rectangle.length; j++) {
@@ -398,6 +428,11 @@ public class Nooverlap extends Constraint {
     return true;
   }
 
+  /**
+   * Checks if the constraint cannot be satisfied, i.e., at least two rectangles must overlap.
+   *
+   * @return true if constraint cannot be satisfied, false otherwise
+   */
   public boolean notSatisfied() {
     for (int i = 0; i < rectangle.length; i++) {
       for (int j = i + 1; j < rectangle.length; j++) {

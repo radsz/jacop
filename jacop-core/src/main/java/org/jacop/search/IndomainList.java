@@ -63,10 +63,14 @@ public class IndomainList<T extends IntVar> implements Indomain<T> {
     this.defIndomain = defIndomain;
   }
 
-  /*
-   * @throws JaCoPException if no value can be returned since list does not
-   * contain a value which belongs to the domain and default indomain was not
-   * supplied.
+  /**
+   * It returns the value to be assigned to the variable from the ordered list of preferred values,
+   * or uses the default indomain if none of the preferred values are in the domain.
+   *
+   * @param var the variable for which a value is being selected.
+   * @return the value to be assigned to the variable.
+   * @throws RuntimeException if no value can be returned since list does not contain a value which
+   *     belongs to the domain and default indomain was not supplied.
    */
   public int indomain(T var) throws RuntimeException {
 

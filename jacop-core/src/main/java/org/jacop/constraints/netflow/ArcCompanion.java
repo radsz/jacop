@@ -75,11 +75,18 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
   /** The pruningScore. */
   public int pruningScore;
 
+  /**
+   * Constructs an arc companion with the given arc and flow offset.
+   *
+   * @param arc the forward arc.
+   * @param offset the initial lower capacity (flow offset).
+   */
   public ArcCompanion(Arc arc, int offset) {
     this.arc = arc;
     this.flowOffset = offset;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     StringBuilder str = new StringBuilder("[offset = " + flowOffset);
     if (xVar != null) {
@@ -122,6 +129,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     }
   }
 
+  /**
+   * Changes the lower capacity bound of this arc, adjusting node balances and repairing flow if
+   * necessary.
+   *
+   * @param min the new minimum capacity.
+   */
   public void changeMinCapacity(int min) {
 
     assert min >= 0;
@@ -143,6 +156,11 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     }
   }
 
+  /**
+   * Changes the upper capacity bound of this arc, repairing flow if necessary.
+   *
+   * @param max the new maximum capacity.
+   */
   public void changeMaxCapacity(int max) {
 
     assert max >= flowOffset;
@@ -163,6 +181,11 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     }
   }
 
+  /**
+   * Returns the list of integer variables (capacity and/or cost) associated with this arc.
+   *
+   * @return list of associated variables.
+   */
   public List<IntVar> listVariables() {
 
     // It is called only in constructors, no need to make it extra efficient.
@@ -180,6 +203,13 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     }
   }
 
+  /**
+   * Processes a bound event on a capacity or cost variable, updating the arc and network
+   * accordingly.
+   *
+   * @param variable the variable whose domain has changed.
+   * @param network the mutable network to update.
+   */
   public void processEvent(IntVar variable, MutableNetwork network) {
 
     // arc already deleted ?
@@ -292,6 +322,12 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     }
   }
 
+  /**
+   * Returns the pruning event type that triggers processing for the given variable.
+   *
+   * @param var the variable to get the pruning event for.
+   * @return the pruning event constant (BOUND for X- and W-variables).
+   */
   public int getPruningEvent(Var var) {
     return IntDomain.BOUND; // for X- and W-variables
   }
@@ -346,6 +382,13 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
     return updated;
   }
 
+  /**
+   * Compares this arc companion with another based on deletion status and pruning score.
+   *
+   * @param that the other arc companion to compare to.
+   * @return a negative, zero, or positive integer as this object is less than, equal to, or greater
+   *     than the specified object.
+   */
   public int compareTo(ArcCompanion that) {
     if (this.arc.index == DELETED_ARC) {
       if (that.arc.index != DELETED_ARC) {

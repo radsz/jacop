@@ -649,6 +649,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     return shapeRegister[id];
   }
 
+  /** Generates internal constraints from external constraints and initializes data structures. */
   protected void genInternalConstraints() {
 
     internalConstraints = new ArrayList<>();
@@ -960,6 +961,16 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     }
   }
 
+  /**
+   * Finds a forbidden domain (outbox) for the given object at the specified point.
+   *
+   * @param o the object being pruned
+   * @param currentShape the shape id of the object
+   * @param point the point coordinates to check
+   * @param dir the sweep direction
+   * @param order the lexicographical order for dimensions
+   * @return a Dbox representing the forbidden domain, or null if the point is feasible
+   */
   protected Dbox findForbiddenDomain(
       GeostObject o,
       int currentShape,

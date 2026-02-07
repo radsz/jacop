@@ -42,9 +42,26 @@ import org.jacop.constraints.DecomposedConstraint;
  */
 public interface Replaceable<T extends Constraint> {
 
+  /**
+   * Returns the class type that this replaceable constraint handler is designed for.
+   *
+   * @return the constraint class type
+   */
   Class<T> forClass();
 
+  /**
+   * Checks if the given constraint can be replaced.
+   *
+   * @param constraint the constraint to check
+   * @return true if the constraint can be replaced, false otherwise
+   */
   boolean isReplaceable(T constraint);
 
+  /**
+   * Replaces the constraint with a decomposed version.
+   *
+   * @param constraint the constraint to replace
+   * @return the decomposed constraint
+   */
   DecomposedConstraint<Constraint> replace(T constraint);
 }

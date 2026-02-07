@@ -114,15 +114,19 @@ public class LinearInt extends PrimitiveConstraint {
   long sumMin;
   long sumMax;
 
+  /** Default constructor for subclasses. */
   protected LinearInt() {}
 
   // ======== constructors ===============
 
-  /*
-   * @param list    variables which are being multiplied by weights.
+  /**
+   * Constructs a LinearInt constraint with array parameters.
+   *
+   * @param list variables which are being multiplied by weights.
    * @param weights weight for each variable.
-   * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum     the sum of weighted variables.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the sum of weighted variables.
    */
   public LinearInt(IntVar[] list, int[] weights, String rel, int sum) {
     checkInputForNullness("list", list);
@@ -151,11 +155,14 @@ public class LinearInt extends PrimitiveConstraint {
     numberId = idNumber.incrementAndGet();
   }
 
-  /*
-   * @param list    variables which are being multiplied by weights.
+  /**
+   * Constructs a LinearInt constraint where the sum is represented by a variable.
+   *
+   * @param list variables which are being multiplied by weights.
    * @param weights weight for each variable.
-   * @param rel     the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum     the sum of weighted variables.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the variable representing the sum of weighted variables.
    */
   public LinearInt(IntVar[] list, int[] weights, String rel, IntVar sum) {
     checkInputForNullness("list", list);
@@ -169,6 +176,16 @@ public class LinearInt extends PrimitiveConstraint {
     numberId = idNumber.incrementAndGet();
   }
 
+  /**
+   * Common initialization for all constructors. Normalizes weights, merges duplicate variables, and
+   * separates positive and negative coefficients.
+   *
+   * @param store the constraint store.
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation string.
+   * @param sum the sum of weighted variables.
+   */
   protected void commonInitialization(
       Store store, IntVar[] list, int[] weights, String rel, int sum) {
 
@@ -256,6 +273,11 @@ public class LinearInt extends PrimitiveConstraint {
     propagate(negRel[relationType]);
   }
 
+  /**
+   * Propagates the constraint using the specified relation type.
+   *
+   * @param rel the relation type to use for propagation.
+   */
   public void propagate(int rel) {
 
     computeInit();
@@ -516,6 +538,11 @@ public class LinearInt extends PrimitiveConstraint {
     return false;
   }
 
+  /**
+   * Checks if the equality relation is satisfied.
+   *
+   * @return true if the weighted sum is equal to the target value.
+   */
   public boolean satisfiedEq() {
 
     long sMin = 0L;
@@ -533,6 +560,11 @@ public class LinearInt extends PrimitiveConstraint {
     return sMin == sMax && sMin == b;
   }
 
+  /**
+   * Checks if the not-equal relation is satisfied.
+   *
+   * @return true if the weighted sum is provably not equal to the target value.
+   */
   public boolean satisfiedNeq() {
 
     long sMax = 0L;
@@ -550,6 +582,12 @@ public class LinearInt extends PrimitiveConstraint {
     return sMin > b || sMax < b;
   }
 
+  /**
+   * Checks if the less-than-or-equal relation is satisfied.
+   *
+   * @param b the upper bound to check against.
+   * @return true if the maximum possible weighted sum is at most b.
+   */
   public boolean satisfiedLtEq(long b) {
 
     long sMax = 0;
@@ -564,6 +602,12 @@ public class LinearInt extends PrimitiveConstraint {
     return sMax <= b;
   }
 
+  /**
+   * Checks if the greater-than-or-equal relation is satisfied.
+   *
+   * @param b the lower bound to check against.
+   * @return true if the minimum possible weighted sum is at least b.
+   */
   public boolean satisfiedGtEq(long b) {
 
     long sMin = 0;
@@ -601,6 +645,13 @@ public class LinearInt extends PrimitiveConstraint {
     };
   }
 
+  /**
+   * Converts a relation string to its internal byte representation.
+   *
+   * @param r the relation string (e.g., "==", "{@literal <}", "{@literal <=}", "!=", "{@literal
+   *     >}", "{@literal >=}").
+   * @return the byte code representing the relation.
+   */
   public byte relation(String r) {
     switch (r) {
       case "==", "=" -> {
@@ -628,6 +679,12 @@ public class LinearInt extends PrimitiveConstraint {
     }
   }
 
+  /**
+   * Converts the internal relation type to its string representation.
+   *
+   * @return the string representation of the relation (e.g., "==", "{@literal <}", "{@literal
+   *     >=}").
+   */
   public String rel2String() {
     return switch (relationType) {
       case eq -> "==";

@@ -49,16 +49,28 @@ public class MultiVarHandler implements VarHandler {
   private final IntVar variable;
   private final List<VarHandler> handlers;
 
+  /**
+   * Constructs a handler that delegates to multiple variable handlers for the given variable.
+   *
+   * @param variable the variable managed by this handler.
+   * @param handlers the individual handlers to delegate to.
+   */
   public MultiVarHandler(IntVar variable, VarHandler... handlers) {
     this.variable = variable;
     this.handlers = new ArrayList<>(Arrays.asList(handlers));
   }
 
+  /**
+   * Adds an additional variable handler to this multi-handler.
+   *
+   * @param handler the handler to add; must list the same variable as this handler.
+   */
   public void add(VarHandler handler) {
     assert handler.listVariables().contains(variable);
     handlers.add(handler);
   }
 
+  /** {@inheritDoc} */
   public int getPruningEvent(Var variable) {
     assert this.variable == variable;
     int max = IntDomain.GROUND;
@@ -71,10 +83,12 @@ public class MultiVarHandler implements VarHandler {
     return max;
   }
 
+  /** {@inheritDoc} */
   public List<IntVar> listVariables() {
     return Collections.singletonList(variable);
   }
 
+  /** {@inheritDoc} */
   public void processEvent(IntVar variable, MutableNetwork network) {
     assert this.variable == variable;
     for (VarHandler handler : handlers) {

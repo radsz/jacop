@@ -46,6 +46,13 @@ public class IndomainSimpleRandom<T extends IntVar> implements Indomain<T> {
   /** It does not achieve uniform probability but it does work faster than IndomainRandom. */
   public IndomainSimpleRandom() {}
 
+  /**
+   * It returns a randomly selected value from the domain of the variable. This method is faster
+   * than IndomainRandom but does not achieve uniform probability distribution.
+   *
+   * @param var the variable for which a value is being selected.
+   * @return a randomly selected value from the variable domain.
+   */
   public int indomain(IntVar var) {
 
     IntDomain dom = var.domain;

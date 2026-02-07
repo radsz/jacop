@@ -155,6 +155,12 @@ public class SimpleTable extends Constraint
     setScope(list);
   }
 
+  /**
+   * Checks if the tuple at the given index is valid with respect to current variable domains.
+   *
+   * @param index the index of the tuple to check
+   * @return true if the tuple is valid, false otherwise
+   */
   boolean validTuple(int index) {
 
     int[] t = tuple[index];
@@ -378,6 +384,11 @@ public class SimpleTable extends Constraint
     return true;
   }
 
+  /**
+   * It removes the specified level from the constraint.
+   *
+   * @param level the level to be removed.
+   */
   public void removeLevel(int level) {
     variableQueue.clear();
   }

@@ -64,7 +64,7 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
   // log_2 of the number of databases
   private int logOfNumDatabases;
 
-  // compute values and check things
+  /** Computes mask values and checks internal consistency. */
   private void initializeMasks() {
     int i = maxNumberOfDatabases >>> 1;
     while (i > 0) {
@@ -82,6 +82,13 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     assert Integer.bitCount(databasesMask ^ indexMask) == Integer.SIZE - 1;
   }
 
+  /**
+   * Adds a clause to the most appropriate database.
+   *
+   * @param clause the clause to add
+   * @param isModelClause true if this is a model clause
+   * @return the unique ID of the added clause
+   */
   public int addClause(int[] clause, boolean isModelClause) {
 
     assert currentIndex > 0 : "must be at least one DB";
@@ -107,6 +114,12 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     return db.addClause(clause, isModelClause);
   }
 
+  /**
+   * Checks if a clause can be removed.
+   *
+   * @param clauseId the unique ID of the clause
+   * @return true if the clause can be removed
+   */
   public boolean canRemove(int clauseId) {
     int dbIndex = uniqueIdToDb(clauseId);
     int clauseIndex = uniqueIdToIndex(clauseId);
@@ -130,6 +143,13 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     }
   }
 
+  /**
+   * Performs resolution with the specified clause.
+   *
+   * @param clauseId the unique ID of the clause
+   * @param clause the clause to resolve with
+   * @return the resulting clause after resolution
+   */
   public MapClause resolutionWith(int clauseId, MapClause clause) {
 
     // find the right DB, the index, and delegate
@@ -247,6 +267,11 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     return "DatabaseStore (with " + currentIndex + " databases)";
   }
 
+  /**
+   * Initializes the database store with the solver core.
+   *
+   * @param core the solver core
+   */
   public void initialize(Core core) {
     // interconnect components
     this.core = core;
@@ -260,6 +285,12 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
     initializeMasks();
   }
 
+  /**
+   * Writes all clauses to CNF format.
+   *
+   * @param output the buffered writer to write to
+   * @throws IOException if an I/O error occurs
+   */
   public void toCnf(BufferedWriter output) throws IOException {
 
     int noOfVariables = core.getMaxVariable();

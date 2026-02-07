@@ -112,6 +112,7 @@ public class NonOverlapping implements ExternalConstraint {
     return changed;
   }
 
+  /** {@inheritDoc} */
   public Collection<ObstacleObjectFrame> genInternalConstraints(Geost geost) {
 
     if (objectConstraintMap == null) {
@@ -145,6 +146,7 @@ public class NonOverlapping implements ExternalConstraint {
     return constraints;
   }
 
+  /** {@inheritDoc} */
   public void onObjectUpdate(GeostObject o) {
 
     /*
@@ -155,6 +157,7 @@ public class NonOverlapping implements ExternalConstraint {
     }
   }
 
+  /** {@inheritDoc} */
   public Collection<? extends InternalConstraint> getObjectConstraints(GeostObject o) {
 
     Collection<InternalConstraint> relatedConstraints = new ArrayList<>();
@@ -175,15 +178,18 @@ public class NonOverlapping implements ExternalConstraint {
     return relatedConstraints;
   }
 
+  /** {@inheritDoc} */
   public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
 
     return getObjectConstraints(o).contains(ic);
   }
 
+  /** {@inheritDoc} */
   public GeostObject[] getObjectScope() {
     return objects;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
 
     return "(non_overlapping: "

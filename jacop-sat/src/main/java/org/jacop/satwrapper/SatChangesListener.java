@@ -95,12 +95,14 @@ public final class SatChangesListener
     booleanVarsToUpdate.clear();
   }
 
+  /** {@inheritDoc} */
   public void onPropagate(int literal, int clauseId) {
     if (wrapper.isVarLiteral(literal)) {
       onAssertion(literal);
     }
   }
 
+  /** {@inheritDoc} */
   public void onAssertion(int literal, int level) {
     if (wrapper.isVarLiteral(literal)) {
       onAssertion(literal);
@@ -184,11 +186,12 @@ public final class SatChangesListener
     }
   }
 
-  /** Clear on backjump. */
+  /** {@inheritDoc} */
   public void onBackjump(int oldLevel, int newLevel) {
     clear();
   }
 
+  /** {@inheritDoc} */
   public void onRestart(int oldLevel) {
     onBackjump(oldLevel, 0);
   }
@@ -282,6 +285,7 @@ public final class SatChangesListener
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     // number of int vars to update
@@ -293,6 +297,11 @@ public final class SatChangesListener
         countPos, booleanVarsToUpdate.size());
   }
 
+  /**
+   * Initializes the listener with the SAT solver core.
+   *
+   * @param core the SAT solver core
+   */
   public void initialize(Core core) {
     this.core = core;
 
@@ -302,6 +311,11 @@ public final class SatChangesListener
     core.backjumpModules[core.numBackjumpModules++] = this;
   }
 
+  /**
+   * Initializes the listener with the SAT wrapper.
+   *
+   * @param wrapper the SAT wrapper
+   */
   public void initialize(SatWrapper wrapper) {
     this.wrapper = wrapper;
   }

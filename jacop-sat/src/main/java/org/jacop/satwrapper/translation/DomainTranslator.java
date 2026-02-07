@@ -148,6 +148,7 @@ public final class DomainTranslator implements WrapperComponent {
     }
   }
 
+  /** {@inheritDoc} */
   public void initialize(SatWrapper wrapper) {
     this.wrapper = wrapper;
   }

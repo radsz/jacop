@@ -208,6 +208,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     return clause;
   }
 
+  /** {@inheritDoc} */
   public void backjump(int level) {
 
     // wrapper.log(this, "backjump to level "+level);
@@ -228,14 +229,17 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     return 0; // 0 clauses, always !
   }
 
+  /** {@inheritDoc} */
   public int addClause(int[] clause, boolean isModel) {
     throw new AssertionError("oh noes !");
   }
 
+  /** {@inheritDoc} */
   public void removeClause(int clauseId) {
     throw new AssertionError("oh noes !");
   }
 
+  /** {@inheritDoc} */
   public boolean canRemove(int clauseId) {
     return false;
   }
@@ -245,6 +249,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
     return "constraint clause database (" + wrapper.registeredVars.size() + " CP variables)";
   }
 
+  /** {@inheritDoc} */
   public void initialize(SatWrapper wrapper) {
     this.wrapper = wrapper;
   }

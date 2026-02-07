@@ -43,6 +43,13 @@ public class VarWeightNode extends VariableNode {
   // bounds for this node
   final BoundsVar bound;
 
+  /**
+   * Constructs a weighted variable node for a FloatVar with a weight coefficient.
+   *
+   * @param store the constraint store
+   * @param v the FloatVar associated with this node
+   * @param w the weight coefficient for this variable
+   */
   public VarWeightNode(Store store, FloatVar v, double w) {
 
     id = n.incrementAndGet();
@@ -164,6 +171,11 @@ public class VarWeightNode extends VariableNode {
     bound.update(min, max, lb, ub);
   }
 
+  /**
+   * Returns a string representation of this weighted variable node.
+   *
+   * @return string representation including relation, variable, weight, and bounds
+   */
   public String toString() {
     return super.toString()
         + " (rel = "

@@ -50,6 +50,11 @@ public final class HeuristicAssertionModule implements SolverComponent {
   // trail instance (from the solver)
   private Trail trail;
 
+  /**
+   * Constructs a heuristic assertion module with the given activity tracker.
+   *
+   * @param activity the activity module used to track literal activities
+   */
   public HeuristicAssertionModule(ActivityModule activity) {
     this.activity = activity;
   }
@@ -86,6 +91,11 @@ public final class HeuristicAssertionModule implements SolverComponent {
     return answer;
   }
 
+  /**
+   * Initializes the heuristic assertion module with the solver core.
+   *
+   * @param core the solver core instance
+   */
   public void initialize(Core core) {
     this.core = core;
     this.trail = core.trail;

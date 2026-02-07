@@ -176,6 +176,7 @@ public class Diffn extends Nooverlap {
     super(o1, o2, l1, l2, strict);
   }
 
+  /** {@inheritDoc} */
   public void consistency(Store store) {
 
     this.store = store;
@@ -631,6 +632,7 @@ public class Diffn extends Nooverlap {
     }
   }
 
+  /** {@inheritDoc} */
   public List<Constraint> decompose(Store store) {
     constraints = new ArrayList<>();
 
@@ -701,6 +703,7 @@ public class Diffn extends Nooverlap {
     return constraints;
   }
 
+  /** {@inheritDoc} */
   public List<Var> auxiliaryVariables() {
     return auxVar;
   }

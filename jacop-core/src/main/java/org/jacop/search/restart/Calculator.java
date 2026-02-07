@@ -48,6 +48,7 @@ public abstract class Calculator implements ConsistencyListener {
 
   ConsistencyListener child;
 
+  /** It computes and sets a new fail limit for the restart strategy. */
   public abstract void newLimit();
 
   /**
@@ -69,12 +70,27 @@ public abstract class Calculator implements ConsistencyListener {
     return consistent;
   }
 
+  /**
+   * Checks if the fail limit has been reached or exceeded.
+   *
+   * @return true if the number of fails has reached or exceeded the fail limit, false otherwise.
+   */
   public boolean pointsExhausted() {
     return numberFails >= failLimit;
   }
 
+  /**
+   * Sets an array of children consistency listeners.
+   *
+   * @param children the array of consistency listeners to be set as children.
+   */
   public void setChildrenListeners(ConsistencyListener[] children) {}
 
+  /**
+   * Sets a single child consistency listener.
+   *
+   * @param child the consistency listener to be set as a child.
+   */
   public void setChildrenListeners(ConsistencyListener child) {
     this.child = child;
   }

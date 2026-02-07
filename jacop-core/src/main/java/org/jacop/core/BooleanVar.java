@@ -260,6 +260,11 @@ public class BooleanVar extends IntVar {
     return (BoundDomain) domain.recentDomainPruning(store.level);
   }
 
+  /**
+   * It adds a constraint to the boolean variable as a model constraint with any pruning event.
+   *
+   * @param c the constraint being added to the variable.
+   */
   public void putConstraint(Constraint c) {
     putModelConstraint(c, IntDomain.ANY);
   }

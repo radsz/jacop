@@ -40,8 +40,10 @@ package org.jacop.constraints.netflow.simplex;
 public record Danzig(NetworkSimplex network) implements PivotRule {
 
   /**
-   * Finds the lower arc which violates optimality the most (If all lower arcs satisfy optimality
-   * then all upper arcs do too. In this case null is returned)
+   * Finds the lower arc which violates optimality the most. If all lower arcs satisfy optimality
+   * then all upper arcs do too, and null is returned.
+   *
+   * @return the arc with maximum optimality violation, or null if all arcs are optimal
    */
   public Arc next() {
     Arc next = null;
@@ -57,6 +59,7 @@ public record Danzig(NetworkSimplex network) implements PivotRule {
     return next;
   }
 
+  /** It resets the Danzig pivot selector. */
   public void reset() {
     // TODO: Auto-generated method stub
 

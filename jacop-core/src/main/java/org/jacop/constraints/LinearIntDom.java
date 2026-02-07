@@ -136,6 +136,11 @@ public class LinearIntDom extends LinearInt {
     propagate(negRel[relationType]);
   }
 
+  /**
+   * Propagates the constraint for the specified relation type.
+   *
+   * @param rel the relation type for propagation.
+   */
   public void propagate(int rel) {
 
     switch (rel) {

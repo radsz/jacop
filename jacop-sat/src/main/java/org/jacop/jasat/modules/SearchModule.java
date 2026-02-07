@@ -79,10 +79,20 @@ public final class SearchModule
   /** Search implementation, without timeout (search until solution is found). */
   public SearchModule() {}
 
+  /**
+   * Called when a conflict explanation clause is generated.
+   *
+   * @param explanation the explanation clause derived from conflict analysis
+   */
   public void onExplain(MapClause explanation) {
     clauseToLearn = explanation;
   }
 
+  /**
+   * Called when a solution is found or when the problem is determined to be unsatisfiable.
+   *
+   * @param solution true if a solution was found, false if the problem is unsatisfiable
+   */
   public void onSolution(boolean solution) {
     mustStop = true;
   }
@@ -199,6 +209,11 @@ public final class SearchModule
     return "SearchModule";
   }
 
+  /**
+   * Initializes the search module and registers it with the solver core.
+   *
+   * @param core the solver core instance
+   */
   public void initialize(Core core) {
     timeout = core.config.timeout > 0 ? core.config.timeout : 0;
 

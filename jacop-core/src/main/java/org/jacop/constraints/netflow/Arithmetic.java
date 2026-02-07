@@ -101,10 +101,23 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     return id;
   }
 
+  /**
+   * Adds a linear equation with zero constant to the arithmetic system.
+   *
+   * @param vars the variables in the equation.
+   * @param coeffs the coefficients corresponding to each variable.
+   */
   public void addEquation(IntVar[] vars, int[] coeffs) {
     addEquation(vars, coeffs, 0);
   }
 
+  /**
+   * Adds a linear equation to the arithmetic system.
+   *
+   * @param vars the variables in the equation.
+   * @param coeffs the coefficients corresponding to each variable.
+   * @param constant the constant term of the equation.
+   */
   public void addEquation(IntVar[] vars, int[] coeffs, int constant) {
     if (vars.length == 0 || vars.length != coeffs.length) {
       throw new IllegalArgumentException();
@@ -127,16 +140,36 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     eqns.add(eqn);
   }
 
+  /**
+   * Adds the equation x + y = z to the arithmetic system.
+   *
+   * @param x the first addend variable.
+   * @param y the second addend variable.
+   * @param z the sum variable.
+   */
   public void addXplusYeqZ(IntVar x, IntVar y, IntVar z) {
     IntVar[] vars = {x, y, z};
     int[] coeffs = {1, 1, -1};
     addEquation(vars, coeffs);
   }
 
+  /**
+   * Adds the equation x - y = z to the arithmetic system.
+   *
+   * @param x the minuend variable.
+   * @param y the subtrahend variable.
+   * @param z the difference variable.
+   */
   public void addXsubYeqZ(IntVar x, IntVar y, IntVar z) {
     addXplusYeqZ(z, y, x);
   }
 
+  /**
+   * Adds a summation equation: sum(vars) = sum.
+   *
+   * @param vars the variables to sum.
+   * @param sum the variable representing the total sum.
+   */
   public void addSum(IntVar[] vars, IntVar sum) {
     int n = vars.length;
     IntVar[] _vars = Arrays.copyOf(vars, n + 1);
@@ -149,6 +182,12 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     addEquation(_vars, coeffs);
   }
 
+  /**
+   * Decomposes equations into primitive LinearInt constraints without network flow optimization.
+   *
+   * @param store the constraint store.
+   * @return a list of LinearInt constraints representing the equations.
+   */
   public List<Constraint> primitiveDecomposition(Store store) {
 
     if (decomposition == null) {
@@ -197,6 +236,12 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * Performs one optimization pass by flipping equations to reduce the total weight of the sum.
+   *
+   * @param sum the current sum array to optimize in place.
+   * @return true if any equation was flipped, false if no improvement was found.
+   */
   protected boolean optimize(final int[] sum) {
     boolean change = false;
     int[] sum1 = sum;

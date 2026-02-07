@@ -66,8 +66,12 @@ public class IndomainDefaultValue<T extends Var> implements Indomain<T> {
     this.defValue = defaultValue;
   }
 
-  /*
-   * indomain method
+  /**
+   * It returns the value to be assigned to the variable. It first tries to use the default value if
+   * it is in the domain, otherwise it uses the default indomain heuristic.
+   *
+   * @param v the variable for which a value is being selected.
+   * @return the value to be assigned to the variable.
    */
   public int indomain(T v) {
     if (defValue.containsKey(v)) {

@@ -198,6 +198,15 @@ public class Binpacking extends Constraint
     minBinNumber = minBin;
   }
 
+  /**
+   * It constructs a binpacking constraint.
+   *
+   * @param bin array of variables representing bin assignment for each item.
+   * @param load array of variables representing the load in each bin.
+   * @param w array of weights for each item.
+   * @param minBin minimum bin number to consider.
+   * @param lbPruning flag indicating whether to enable lower bound pruning.
+   */
   @Builder
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean lbPruning) {
     this(bin, load, w, minBin);
@@ -369,6 +378,7 @@ public class Binpacking extends Constraint
     }
   }
 
+  /** Computes and applies the lower bound on the number of bins required. */
   void lbNumberBins() {
     // Lower bound of number of bins pruning
     int[] unpacked = new int[item.length];

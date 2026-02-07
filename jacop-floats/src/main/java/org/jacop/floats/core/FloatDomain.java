@@ -143,51 +143,102 @@ public abstract class FloatDomain extends Domain {
     outward = out;
   }
 
+  /**
+   * It sets the interval print mode for domain output.
+   *
+   * @param p true to print as intervals, false to print singletons as single values
+   */
   public static void intervalPrint(boolean p) {
     intervalPrint = p;
   }
 
+  /**
+   * It returns the current precision format for floating point print-out.
+   *
+   * @return the format precision value
+   */
   public static double format() {
     return format;
   }
 
+  /**
+   * It sets the precision format for floating point print-out.
+   *
+   * @param f the format precision value
+   */
   public static void setFormat(double f) {
     format = f;
   }
 
+  /**
+   * It returns the current precision for floating point operations.
+   *
+   * @return the precision value
+   */
   public static double precision() {
     return precision;
   }
 
+  /**
+   * It sets the precision for floating point operations.
+   *
+   * @param p the precision value
+   */
   public static void setPrecision(double p) {
     precision = p;
   }
 
+  /**
+   * It returns the epsilon value for the given floating-point number.
+   *
+   * @param f the floating-point value
+   * @return the maximum of precision and ULP of f
+   */
   public static double epsilon(double f) {
 
     return Math.max(precision(), Math.ulp(f));
   }
 
-  // Unit in the last place
+  /**
+   * It returns the unit in the last place (ULP) of the given floating-point value.
+   *
+   * @param f the floating-point value
+   * @return the ULP of f
+   */
   public static double ulp(double f) {
 
     return Math.ulp(f);
   }
 
-  // Unit in the last place for minimal value
+  /**
+   * It returns the unit in the last place (ULP) for the minimal value of the variable.
+   *
+   * @param f the floating-point variable
+   * @return the ULP of the minimum value
+   */
   public static double minUlp(FloatVar f) {
 
     return Math.ulp(f.min());
   }
 
-  // Unit in the last place for maximal value
+  /**
+   * It returns the unit in the last place (ULP) for the maximal value of the variable.
+   *
+   * @param f the floating-point variable
+   * @return the ULP of the maximum value
+   */
   public static double maxUlp(FloatVar f) {
 
     return Math.ulp(f.max());
   }
 
-  // returns previous (toward -inf) floating-point number before d
-  // supposed to be used by constraints
+  /**
+   * It returns the previous floating-point number toward negative infinity before d. This method is
+   * supposed to be used by constraints.
+   *
+   * @param d the floating-point value
+   * @return the previous floating-point number if outward rounding is enabled, otherwise d
+   */
   public static double down(double d) {
 
     if (outward) {
@@ -197,8 +248,13 @@ public abstract class FloatDomain extends Domain {
     }
   }
 
-  // returns next (toward inf) floating-point number after d
-  // supposed to be used by constraints
+  /**
+   * It returns the next floating-point number toward positive infinity after d. This method is
+   * supposed to be used by constraints.
+   *
+   * @param d the floating-point value
+   * @return the next floating-point number if outward rounding is enabled, otherwise d
+   */
   public static double up(double d) {
 
     if (outward) {
@@ -208,19 +264,33 @@ public abstract class FloatDomain extends Domain {
     }
   }
 
-  // returns previous (toward -inf) floating-point number before d
-  // supposed to be used by methods for domain computations
+  /**
+   * It returns the previous floating-point number toward negative infinity before d. This method is
+   * supposed to be used by methods for domain computations.
+   *
+   * @param d the floating-point value
+   * @return the previous floating-point number
+   */
   public static double previous(double d) {
     return Math.nextDown(d); // downBit(d); //d - ulp(d);
   }
 
-  // Sets optimization step for floating point optimization
+  /**
+   * It sets the optimization step for floating point optimization.
+   *
+   * @param s the step size for minimization
+   */
   public static void setStep(double s) {
     minimizationStep = s;
   }
 
-  // returns previous floating-point number before d
-  // for minimization with FloatVar cost function
+  /**
+   * It returns the previous floating-point number before d for minimization with FloatVar cost
+   * function.
+   *
+   * @param d the floating-point value
+   * @return the previous value for minimization purposes
+   */
   public static double previousForMinimization(double d) {
     if (minimizationStep == 0) {
       return previous(d); // + upBit(d);
@@ -229,14 +299,25 @@ public abstract class FloatDomain extends Domain {
     }
   }
 
-  // returns next (toward inf) floating-point number after d
-  // supposed to be used by methods for domain computations
+  /**
+   * It returns the next floating-point number toward positive infinity after d. This method is
+   * supposed to be used by methods for domain computations.
+   *
+   * @param d the floating-point value
+   * @return the next floating-point number
+   */
   public static double next(double d) {
     return Math.nextUp(d); // upBit(d); // d + ulp(d);
   }
 
-  /*
-   * Finds result interval for addition of {a..b} - {c..d}
+  /**
+   * It finds the result interval for addition of {a..b} + {c..d}.
+   *
+   * @param a the minimum value of the first interval
+   * @param b the maximum value of the first interval
+   * @param c the minimum value of the second interval
+   * @param d the maximum value of the second interval
+   * @return the interval domain representing the result of the addition
    */
   public static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
@@ -262,8 +343,14 @@ public abstract class FloatDomain extends Domain {
     return new FloatIntervalDomain(min, max);
   }
 
-  /*
-   * Finds result interval for subtraction of {a..b} - {c..d}
+  /**
+   * It finds the result interval for subtraction of {a..b} - {c..d}.
+   *
+   * @param a the minimum value of the first interval
+   * @param b the maximum value of the first interval
+   * @param c the minimum value of the second interval
+   * @param d the maximum value of the second interval
+   * @return the interval domain representing the result of the subtraction
    */
   public static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
 
@@ -289,8 +376,14 @@ public abstract class FloatDomain extends Domain {
     return new FloatIntervalDomain(min, max);
   }
 
-  /*
-   * Finds result interval for multiplication of {a..b} * {c..d}
+  /**
+   * It finds the result interval for multiplication of {a..b} * {c..d}.
+   *
+   * @param a the minimum value of the first interval
+   * @param b the maximum value of the first interval
+   * @param c the minimum value of the second interval
+   * @param d the maximum value of the second interval
+   * @return the interval domain representing the result of the multiplication
    */
   public static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
@@ -420,8 +513,14 @@ public abstract class FloatDomain extends Domain {
     }
   }
 
-  /*
-   * Finds result interval for division of {a..b} / {c..d} for div and mod constraints
+  /**
+   * It finds the result interval for division of {a..b} / {c..d} for div and mod constraints.
+   *
+   * @param a the minimum value of the first interval
+   * @param b the maximum value of the first interval
+   * @param c the minimum value of the second interval
+   * @param d the maximum value of the second interval
+   * @return the interval domain representing the result of the division
    */
   public static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
 
@@ -705,6 +804,12 @@ public abstract class FloatDomain extends Domain {
     return contains(value, value);
   }
 
+  /**
+   * Checks whether the given double value belongs to the domain.
+   *
+   * @param value the value to check.
+   * @return true if value belongs to the domain.
+   */
   public abstract boolean contains(double value);
 
   /**
@@ -1162,14 +1267,24 @@ public abstract class FloatDomain extends Domain {
         + modelConstraintsToEvaluate[ANY];
   }
 
+  /**
+   * Creates a deep copy of this float domain.
+   *
+   * @return a new FloatDomain that is a copy of this domain.
+   */
   public abstract FloatDomain clone();
 
+  /**
+   * Creates a lightweight copy of this float domain without full history.
+   *
+   * @return a new FloatDomain that is a lightweight copy of this domain.
+   */
   public abstract FloatDomain cloneLight();
 
-  /*
-   * Returns the lexical ordering between the sets
+  /**
+   * Returns the lexical ordering between the sets.
    *
-   * @param domain the set that should be lexically compared to this set
+   * @param domain the set that should be lexically compared to this set.
    * @return -1 if s is greater than this set, 0 if s is equal to this set and else it returns 1.
    */
   public int lex(FloatDomain domain) {
@@ -1512,6 +1627,13 @@ public abstract class FloatDomain extends Domain {
     return min();
   }
 
+  /**
+   * It normalizes an angle interval to the range [0, 2*PI).
+   *
+   * @param min the minimum angle value
+   * @param max the maximum angle value
+   * @return the normalized angle interval
+   */
   public static FloatInterval normalizeAngle(double min, double max) {
     double normMin = FloatDomain.down(min % (2 * FloatDomain.PI));
     double maxmin = max - min;

@@ -64,6 +64,11 @@ public class Derivative {
 
   private Derivative() {}
 
+  /**
+   * Initializes the derivative computation with a store.
+   *
+   * @param s the constraint store to use
+   */
   public static void init(Store s) {
     store = s;
 
@@ -72,6 +77,15 @@ public class Derivative {
     definitionConstraint = Var.createEmptyPositioning();
   }
 
+  /**
+   * Computes the derivative of a function variable with respect to another variable.
+   *
+   * @param store the constraint store
+   * @param f the function variable to differentiate
+   * @param vars the set of primitive variables
+   * @param x the variable with respect to which to differentiate
+   * @return the derivative as a FloatVar
+   */
   public static FloatVar getDerivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
     // System.out.println ("Var = " + f);
@@ -213,14 +227,30 @@ public class Derivative {
     return c;
   }
 
+  /**
+   * Defines a constraint that should be used for computing the derivative of a variable.
+   *
+   * @param f the variable to define the constraint for
+   * @param c the constraint that defines the variable
+   */
   public static void defineConstraint(FloatVar f, Constraint c) {
     definitionConstraint.put(f, c);
   }
 
+  /**
+   * Returns the number of derivative constraints that have been created.
+   *
+   * @return the number of derivative constraints
+   */
   public static int numberDerivativeConstraints() {
     return derivateConstraints.size();
   }
 
+  /**
+   * Returns the set of all derivative constraints that have been created.
+   *
+   * @return the set of derivative constraints
+   */
   public static Set<Constraint> derivativeConstraints() {
     return derivateConstraints;
   }

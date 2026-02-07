@@ -74,6 +74,13 @@ public class Pruning extends Network {
   private final PruningStrategy strategy;
   public int numActiveArcs;
 
+  /**
+   * Constructs a pruning network from the given nodes, arcs, and statistics tracker.
+   *
+   * @param nodes the list of nodes in the network.
+   * @param arcs the list of arcs in the network.
+   * @param statistics the statistics object for recording pruning instrumentation data.
+   */
   public Pruning(List<Node> nodes, List<Arc> arcs, Statistics statistics) {
 
     super(nodes, arcs);
@@ -293,6 +300,11 @@ public class Pruning extends Network {
     }
   }
 
+  /**
+   * Analyzes arcs in the network to perform domain pruning based on sensitivity analysis.
+   *
+   * @param costLimit the maximum cost increase allowed for pruning decisions.
+   */
   public void analyze(int costLimit) {
 
     ArcCompanion companion;
@@ -535,6 +547,7 @@ public class Pruning extends Network {
       this.minimum = minimum;
     }
 
+    /** Initializes the strategy by counting active arcs and computing the pruning limit. */
     public void init() {
       int numActiveArcs = 0;
       for (ArcCompanion c : queue) {
@@ -550,6 +563,11 @@ public class Pruning extends Network {
       // checkCount();
     }
 
+    /**
+     * Returns the next arc companion to be pruned, or null if the limit has been reached.
+     *
+     * @return the next arc companion, or null if no more arcs should be examined.
+     */
     public ArcCompanion next() {
       if (i < limit) {
         ArcCompanion companion = queue.poll();
@@ -564,6 +582,7 @@ public class Pruning extends Network {
       return null;
     }
 
+    /** Restores all examined arc companions back into the priority queue. */
     public void close() {
       queue.addAll(seen);
       seen.clear();

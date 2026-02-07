@@ -53,6 +53,9 @@ public class TanExample {
     example.model();
   }
 
+  /**
+   * Defines the constraint model for solving the equation tan(x) = -x in the interval -4*pi..4*pi.
+   */
   public void model() {
 
     IO.println("\nProgram to solve tan(x) = -x problem in interval -4*pi..4*pi");

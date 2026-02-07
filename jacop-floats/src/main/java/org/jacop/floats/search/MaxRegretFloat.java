@@ -48,6 +48,14 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
   /** It constructs MaxRegretFloat comparator. */
   public MaxRegretFloat() {}
 
+  /**
+   * Compares a metric value with a variable's regret (difference between smallest and second
+   * smallest values).
+   *
+   * @param ldiff the metric value to compare
+   * @param var the variable whose regret is compared
+   * @return negative if var has smaller regret, positive if larger, zero if equal
+   */
   public int compare(double ldiff, T var) {
 
     double rmin = var.min();
@@ -58,6 +66,13 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
     return Double.compare(ldiff, rdiff);
   }
 
+  /**
+   * Compares two variables based on their regret values.
+   *
+   * @param left the first variable to compare
+   * @param right the second variable to compare
+   * @return negative if left has smaller regret, positive if larger, zero if equal
+   */
   public int compare(T left, T right) {
 
     double lmin = left.min();
@@ -73,6 +88,12 @@ public class MaxRegretFloat<T extends FloatVar> implements ComparatorVariable<T>
     return Double.compare(ldiff, rdiff);
   }
 
+  /**
+   * Computes the metric value for a variable based on its regret.
+   *
+   * @param o the variable to compute the metric for
+   * @return the regret value (difference between smallest and second smallest domain values)
+   */
   public double metric(T o) {
 
     double omin = o.min();

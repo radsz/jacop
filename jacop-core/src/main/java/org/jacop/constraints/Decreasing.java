@@ -41,7 +41,7 @@ import org.jacop.core.IntVar;
  */
 public class Decreasing extends Increasing {
 
-  /*
+  /**
    * It constructs an decreasing constraint.
    *
    * @param x variables which must be in decreasing order.
@@ -55,6 +55,12 @@ public class Decreasing extends Increasing {
     }
   }
 
+  /**
+   * It constructs an decreasing constraint.
+   *
+   * @param x variables which must be in decreasing order.
+   * @param strict true if strict decreasing order is required, false otherwise.
+   */
   public Decreasing(IntVar[] x, boolean strict) {
     this(x);
 
@@ -72,6 +78,12 @@ public class Decreasing extends Increasing {
     this(x.toArray(new IntVar[0]));
   }
 
+  /**
+   * It constructs an decreasing constraint.
+   *
+   * @param x variables which must be in decreasing order.
+   * @param strict true if strict decreasing order is required, false otherwise.
+   */
   public Decreasing(List<? extends IntVar> x, boolean strict) {
     this(x.toArray(new IntVar[0]), strict);
   }

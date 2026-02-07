@@ -222,6 +222,13 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
     }
   }
 
+  /**
+   * Records a support tuple for a given variable-value pair to optimize future support searches.
+   *
+   * @param varPosition the position of the variable
+   * @param value the value for which support is recorded
+   * @param t the support tuple to record
+   */
   private void recordSupport(int varPosition, int value, int[] t) {
 
     int pos = findPosition(value, values[varPosition]);
@@ -314,6 +321,13 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
     return -1;
   }
 
+  /**
+   * Finds the first position in a tuple where the value is not in the corresponding variable's
+   * domain.
+   *
+   * @param t the tuple to check
+   * @return the position of the first invalid value, or -1 if all values are valid
+   */
   public int seekInvalidPosition(int[] t) {
     return TupleUtils.seekInvalidPosition(t, list);
   }
@@ -378,6 +392,13 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
     }
   }
 
+  /**
+   * Finds the position of a value in a sorted array of values.
+   *
+   * @param value the value to find
+   * @param values the sorted array of values
+   * @return the position of the value, or -1 if not found
+   */
   protected int findPosition(int value, int[] values) {
     return findValuePosition(value, values);
   }
@@ -558,6 +579,15 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
     store.raiseLevelBeforeConsistency = true;
   }
 
+  /**
+   * Computes the last tuple in a sequence of consecutive forbidden tuples. This optimization allows
+   * skipping over sequences of forbidden tuples during support search.
+   *
+   * @param is the array of forbidden tuples
+   * @param posVar the position of the variable being considered
+   * @param l the starting position in the tuple array
+   * @return the index of the last tuple in the consecutive sequence
+   */
   private int computeLastOfSequence(int[][] is, int posVar, int l) {
 
     int[] t = tuple;
@@ -598,10 +628,24 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
     variableQueue.add(var);
   }
 
+  /**
+   * Compares two tuples lexicographically to determine if the first is smaller than the second.
+   *
+   * @param tuple1 the first tuple
+   * @param tuple2 the second tuple
+   * @return true if tuple1 is lexicographically smaller than tuple2
+   */
   boolean smaller(int[] tuple1, int[] tuple2) {
     return tuplesSmaller(tuple1, tuple2);
   }
 
+  /**
+   * Checks if two tuples are equal by comparing all their elements.
+   *
+   * @param tuple1 the first tuple
+   * @param tuple2 the second tuple
+   * @return true if tuples are equal, false otherwise
+   */
   boolean equal(int[] tuple1, int[] tuple2) {
     return tuplesEqual(tuple1, tuple2);
   }

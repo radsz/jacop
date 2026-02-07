@@ -39,5 +39,6 @@ package org.jacop.fz;
 @SuppressWarnings("serial")
 public class NumberSolutionsReached extends RuntimeException {
 
+  /** Constructs a NumberSolutionsReached exception. */
   public NumberSolutionsReached() {}
 }

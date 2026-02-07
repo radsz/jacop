@@ -98,6 +98,11 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
     return Collections.singletonList(c);
   }
 
+  /**
+   * Returns a string representation of the constraint.
+   *
+   * @return string representation of the constraint.
+   */
   public String toString() {
     return c.toString();
   }

@@ -42,8 +42,14 @@ public class InternalException extends RuntimeException {
 
   @Serial private static final long serialVersionUID = 8683452581100000009L;
 
+  /** Creates a new InternalException with no detail message. */
   public InternalException() {}
 
+  /**
+   * Creates a new InternalException with the specified detail message.
+   *
+   * @param message the detail message
+   */
   public InternalException(String message) {
     super(message);
   }

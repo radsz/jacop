@@ -144,6 +144,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     this.nf.setGroupingUsed(false);
   }
 
+  /**
+   * Solves the flatzinc model represented by the AST tree.
+   *
+   * @param astTree the abstract syntax tree of the model
+   * @param table the tables containing all variable definitions
+   * @param opt the options for solving
+   */
   public void solveModel(SimpleNode astTree, Tables table, Options opt) {
 
     dictionary = table;
@@ -312,6 +319,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Parses search annotations and filters them into a list.
+   *
+   * @param searchSeq the list of search items to parse
+   * @return the filtered list of search items
+   */
   ArrayList<SearchItem<T>> parseSearchAnnotations(ArrayList<SearchItem<T>> searchSeq) {
     ArrayList<SearchItem<T>> ns = new ArrayList<>();
 
@@ -727,6 +740,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printStatisticsForSingleSearch(false, result);
   }
 
+  /**
+   * Configures search to find all solutions.
+   *
+   * @param label the depth first search to configure
+   */
   @SuppressWarnings("unchecked")
   void searchForAll(DepthFirstSearch<T> label) {
 
@@ -750,15 +768,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } while (s != null);
   }
 
+  /**
+   * Prints search statistics.
+   *
+   * @param result whether a solution was found
+   */
   public void statistics(boolean result) {
 
     printStatistics(false, result);
   }
 
+  /** Prints statistics when search is interrupted. */
   public void printStatisticsIterrupt() {
     printStatistics(true, result);
   }
 
+  /**
+   * Prints search statistics.
+   *
+   * @param interrupted whether the search was interrupted
+   * @param result whether a solution was found
+   */
   public void printStatistics(boolean interrupted, boolean result) {
 
     if (singleSearch) {
@@ -768,6 +798,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Prints statistics for single search execution.
+   *
+   * @param interrupted whether the search was interrupted
+   * @param result whether a solution was found
+   */
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
 
     if (label == null) {
@@ -1572,15 +1608,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Returns the search time in milliseconds.
+   *
+   * @return the search time in milliseconds
+   */
   double getSearchTime_ms() {
     searchTime = timer.getCpuTime() - startCpu;
     return (double) searchTime / (long) 1e+6;
   }
 
+  /**
+   * Returns the initialization time in milliseconds.
+   *
+   * @return the initialization time in milliseconds
+   */
   double getInitTime_ms() {
     return (double) initTime / (long) 1e+6;
   }
 
+  /**
+   * Checks if any timeout occurred in the list of searches.
+   *
+   * @param listSeqSearches the list of searches to check
+   * @return true if any timeout occurred, false otherwise
+   */
   boolean anyTimeOutOccured(ArrayList<Search<T>> listSeqSearches) {
 
     for (Search<T> listSeqSearche : listSeqSearches) {
@@ -2117,6 +2169,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /** Starts the CPU timer for measuring search time. */
   void startTimer() {
 
     if ("true".equals(p)) {
@@ -2134,19 +2187,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     final double precision;
     InitializeListener[] initializeChildListeners;
 
+    /**
+     * Constructs precision setting with the specified precision value.
+     *
+     * @param p the precision value
+     */
     PrecisionSetting(double p) {
       precision = p;
     }
 
+    /** {@inheritDoc} */
     public void executedAtInitialize(Store store) {
       FloatDomain.setPrecision(precision);
     }
 
+    /** {@inheritDoc} */
     public void setChildrenListeners(InitializeListener[] children) {
       initializeChildListeners = new InitializeListener[children.length];
       System.arraycopy(children, 0, initializeChildListeners, 0, children.length);
     }
 
+    /** {@inheritDoc} */
     public void setChildrenListeners(InitializeListener child) {
       initializeChildListeners = new InitializeListener[1];
       initializeChildListeners[0] = child;
@@ -2156,6 +2217,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Listener that tracks cost during solve. */
   public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
 
+    /** {@inheritDoc} */
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);

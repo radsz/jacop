@@ -47,15 +47,27 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
 
   private ActivityMax() {}
 
+  /**
+   * Creates an ActivityMax comparator using the store's default decay.
+   *
+   * @param store the constraint store.
+   */
   public ActivityMax(Store store) {
     this(store, store.getDecay());
   }
 
+  /**
+   * Creates an ActivityMax comparator with a specified decay factor.
+   *
+   * @param store the constraint store.
+   * @param decay the decay factor for activity weight recalculation.
+   */
   public ActivityMax(Store store, double decay) {
     store.activityManagement(true);
     store.setDecay(decay);
   }
 
+  /** {@inheritDoc} */
   public int compare(double left, T var) {
 
     double right = var.activity();
@@ -63,6 +75,7 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(left, right);
   }
 
+  /** {@inheritDoc} */
   public int compare(T leftVar, T rightVar) {
 
     double left = leftVar.activity();
@@ -72,6 +85,7 @@ public class ActivityMax<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(left, right);
   }
 
+  /** {@inheritDoc} */
   public double metric(T var) {
 
     return var.activity();

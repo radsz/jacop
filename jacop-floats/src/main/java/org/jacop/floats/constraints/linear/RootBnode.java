@@ -41,10 +41,22 @@ public class RootBnode extends Bnode {
   // relation
   byte rel;
 
+  /**
+   * Constructs a root binary node with default bounds.
+   *
+   * @param store the constraint store
+   */
   public RootBnode(Store store) {
     super(store);
   }
 
+  /**
+   * Constructs a root binary node with specified min and max bounds.
+   *
+   * @param store the constraint store
+   * @param min the minimum bound
+   * @param max the maximum bound
+   */
   public RootBnode(Store store, double min, double max) {
     super(store, min, max);
   }
@@ -203,6 +215,11 @@ public class RootBnode extends Bnode {
     prune(min, max);
   }
 
+  /**
+   * Returns a string representation of this root binary node.
+   *
+   * @return string representation including relation and value
+   */
   public String toString() {
     return super.toString() + " (rel = " + rel + ", val = " + val + ")";
   }

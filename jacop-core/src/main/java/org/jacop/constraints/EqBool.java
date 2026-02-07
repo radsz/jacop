@@ -117,6 +117,11 @@ public class EqBool extends PrimitiveConstraint {
     return IntDomain.GROUND;
   }
 
+  /**
+   * Enforces consistency for this constraint.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
   public void consistency(Store store) {
 
     int x1 = 0;

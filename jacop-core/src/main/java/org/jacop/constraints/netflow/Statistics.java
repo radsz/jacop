@@ -43,6 +43,12 @@ public class Statistics extends StatisticsBase {
   public final StatisticsBase Wvars = new StatisticsBase();
   public final StatisticsBase Svars = new StatisticsBase();
 
+  /**
+   * Returns a string representation of all collected statistics including detailed breakdown by
+   * variable type.
+   *
+   * @return formatted string containing comprehensive statistics information
+   */
   public String toString() {
 
     StringBuilder str = new StringBuilder();

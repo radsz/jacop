@@ -164,12 +164,14 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return lastNotNullSearch;
   }
 
+  /** {@inheritDoc} */
   public boolean labeling(Store store, SelectChoicePoint<T> select) {
 
     heuristic = select;
     return labeling(store);
   }
 
+  /** {@inheritDoc} */
   public boolean labeling(Store store) {
 
     this.store = store;
@@ -262,11 +264,26 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
   }
 
+  /**
+   * Starts the labeling process with optimization of the given cost variable.
+   *
+   * @param store the constraint store.
+   * @param select the choice point selector (ignored, sub-searches have their own selectors).
+   * @param costVar the cost variable to optimize.
+   * @return true if at least one solution was found, false otherwise.
+   */
   public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar) {
 
     return labeling(store, costVar);
   }
 
+  /**
+   * Starts the labeling process with optimization of the given cost variable.
+   *
+   * @param store the constraint store.
+   * @param costVar the cost variable to optimize.
+   * @return true if at least one solution was found, false otherwise.
+   */
   public boolean labeling(Store store, Var costVar) {
 
     this.store = store;
@@ -381,6 +398,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
   }
 
+  /** {@inheritDoc} */
   public boolean labeling() {
 
     this.store = allVars.getFirst().getStore();
@@ -584,6 +602,7 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return maxDepthExcludePaths;
   }
 
+  /** Collects and aggregates search statistics from all sub-searches. */
   public void getStatistics() {
 
     nodes = getNodes();
@@ -615,6 +634,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         + "\n";
   }
 
+  /**
+   * Sets the cost variable for optimization.
+   *
+   * @param cost the cost variable.
+   */
   public void setCostVariable(Var cost) {
     costVariable = cost;
   }
@@ -648,6 +672,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return current;
   }
 
+  /**
+   * Collects all variables from all sub-searches of the given PrioritySearch.
+   *
+   * @param ps the PrioritySearch to collect variables from.
+   * @return list of all variables across all sub-searches.
+   */
   public List<T> getVariables(PrioritySearch<T> ps) {
 
     List<T> vars = new ArrayList<>();
@@ -674,6 +704,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return vars;
   }
 
+  /**
+   * Adds a restart calculator as a consistency listener to all sub-searches.
+   *
+   * @param s the search to add the restart calculator to.
+   * @param calc the restart calculator to add.
+   */
   public void addRestartCalculator(DepthFirstSearch<T> s, Calculator calc) {
 
     List<DepthFirstSearch<T>> searchList;
@@ -696,14 +732,25 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     }
   }
 
+  /**
+   * Sets the maximum number of solutions to find.
+   *
+   * @param no the solution limit.
+   */
   public void setSolutionLimit(int no) {
     solutionsLimit = no;
   }
 
+  /**
+   * Returns the list of sub-searches used by this priority search.
+   *
+   * @return the list of depth first searches.
+   */
   public List<DepthFirstSearch<T>> getSearchSeq() {
     return search;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     StringBuilder b = new StringBuilder();
 
@@ -727,6 +774,11 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return b.toString();
   }
 
+  /**
+   * Returns the number of solutions found during the search.
+   *
+   * @return the number of solutions found.
+   */
   public int noSolutions() {
     return noSolutions;
   }

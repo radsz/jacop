@@ -152,7 +152,7 @@ public class ObstacleObjectFrame extends InternalConstraint {
     return null;
   }
 
-  /** It creates the frame if it does not exist, and clears it if it does. */
+  /** Creates the frame if it does not exist, and clears it if it does. */
   private void clearFrame() {
 
     if (frame != null) {
@@ -529,6 +529,16 @@ public class ObstacleObjectFrame extends InternalConstraint {
     return variables;
   }
 
+  /**
+   * It checks if two objects overlap only in the time dimension.
+   *
+   * @param min the sweep direction for pruning.
+   * @param order the lexicographical order for comparison.
+   * @param o the geost object to check.
+   * @param currentShape the current shape identifier.
+   * @param c the coordinates array.
+   * @return true if there is no overlap in time dimension, false otherwise.
+   */
   protected boolean timeOnlyCheck(
       Geost.SweepDirection min,
       LexicographicalOrder order,

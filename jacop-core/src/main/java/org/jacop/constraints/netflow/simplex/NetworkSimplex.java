@@ -81,6 +81,13 @@ public class NetworkSimplex {
   // second 'return' value of augmentFlow method
   public Arc blocking;
 
+  /**
+   * Constructs a network simplex solver with the given nodes and arcs, initializing the spanning
+   * tree.
+   *
+   * @param nodes the list of nodes in the network.
+   * @param arcs the list of arcs in the network.
+   */
   public NetworkSimplex(List<Node> nodes, List<Arc> arcs) {
 
     this.allArcs = new ArrayList<>(arcs);
@@ -225,6 +232,11 @@ public class NetworkSimplex {
     //   System.out.println(numArcs+"  Added : " + arc);
   }
 
+  /**
+   * Adds an arc back into the network, performing a primal step if the arc carries flow.
+   *
+   * @param arc the arc to add, which must currently be marked as deleted.
+   */
   public void addArcWithFlow(Arc arc) {
     assert arc.index == DELETED_ARC : arc;
     int index = numArcs++;
@@ -251,6 +263,11 @@ public class NetworkSimplex {
     //   System.out.println(numArcs+"  Added2 : " + arc);
   }
 
+  /**
+   * Removes an arc from the network and updates adjacency information.
+   *
+   * @param arc the arc to remove from the network.
+   */
   public void removeArc(Arc arc) {
     // Remove arc from graph
     int index = arc.index;
@@ -621,6 +638,13 @@ public class NetworkSimplex {
     return pivots;
   }
 
+  /**
+   * Performs a dual pivot operation by finding and swapping an entering arc for the leaving arc.
+   *
+   * @param leaving the tree arc that is leaving the basis.
+   * @return true if a valid entering arc was found and the pivot was performed, false if
+   *     infeasible.
+   */
   public boolean dualPivot(Arc leaving) {
     // Perform dual pivot
     Node tree;
@@ -661,6 +685,12 @@ public class NetworkSimplex {
     }
   }
 
+  /**
+   * Computes the total cost of the current flow solution, stopping early if the cutoff is reached.
+   *
+   * @param cutoff the maximum cost value; computation stops and returns this value if exceeded.
+   * @return the total cost of the current flow, or the cutoff value if the cost exceeds it.
+   */
   public long cost(long cutoff) {
     long cost = 0;
     // non-tree arcs

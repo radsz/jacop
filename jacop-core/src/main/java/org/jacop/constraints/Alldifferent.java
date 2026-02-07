@@ -69,6 +69,7 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
   protected TimeStamp<Integer> grounded;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
+  /** Protected constructor for subclassing purposes. */
   protected Alldifferent() {}
 
   /**
@@ -106,6 +107,15 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     grounded.update(groundPos);
   }
 
+  /**
+   * Processes grounded (singleton) variables to maintain consistency by removing their values from
+   * all other variables. Variables are moved to the front of the list once grounded.
+   *
+   * @param store the constraint store
+   * @param groundPos the current position marking the boundary between grounded and non-grounded
+   *     variables
+   * @return the updated position of the first non-grounded variable
+   */
   protected int processGroundedVariables(Store store, int groundPos) {
     LinkedHashSet<IntVar> fdvs = variableQueue;
     variableQueue = new LinkedHashSet<>();
@@ -158,6 +168,13 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     return true;
   }
 
+  /**
+   * Performs a full consistency check to determine if the constraint is satisfied. Verifies that
+   * all variable domains are pairwise non-intersecting.
+   *
+   * @param store the constraint store
+   * @return true if all variable domains are disjoint, false otherwise
+   */
   @SuppressWarnings("unused")
   private boolean satisfiedFullCheck(Store store) {
 
@@ -233,6 +250,12 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
     variableQueue.add((IntVar) var);
   }
 
+  /**
+   * Checks if the constraint is satisfied based on variable bounds. Verifies that variable domains
+   * do not overlap based on their min/max values.
+   *
+   * @return true if all variable bounds are disjoint, false otherwise
+   */
   @SuppressWarnings("unused")
   private boolean satisfiedBound() {
     boolean sat = true;

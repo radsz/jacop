@@ -334,6 +334,11 @@ public class CrossWord extends ExampleFd {
 
     final char[][] crossWordTemplate;
 
+    /**
+     * Constructs a print listener for crossword solutions.
+     *
+     * @param crosswordTemplate the crossword template to use for printing
+     */
     public PrintListener(char[][] crosswordTemplate) {
       this.crossWordTemplate = crosswordTemplate;
     }

@@ -225,10 +225,16 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     id = name;
   }
 
+  /** {@inheritDoc} */
   public String id() {
     return id;
   }
 
+  /**
+   * Sets the child searches to be executed after this search assigns all its variables.
+   *
+   * @param child array of child searches to set.
+   */
   public void setChildSearch(Search<? extends Var>[] child) {
 
     if (childSearches != null) {
@@ -245,6 +251,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
+  /**
+   * Adds a child search to be executed after this search assigns all its variables.
+   *
+   * @param child the child search to add.
+   */
   @SuppressWarnings("unchecked")
   public void addChildSearch(Search<? extends Var> child) {
 
@@ -281,14 +292,30 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return maxDepthExcludePaths;
   }
 
+  /**
+   * Returns the most recent solution found by this search.
+   *
+   * @return array of domains representing the last solution found.
+   */
   public Domain[] getSolution() {
     return solutionListener.getSolution(solutionListener.solutionsNo());
   }
 
+  /**
+   * Returns the solution with the given number.
+   *
+   * @param no the solution number.
+   * @return array of domains representing the specified solution.
+   */
   public Domain[] getSolution(int no) {
     return solutionListener.getSolution(no);
   }
 
+  /**
+   * Returns the variables used by this search.
+   *
+   * @return array of variables used in this search.
+   */
   public T[] getVariables() {
 
     T[] vars = solutionListener.getVariables();
@@ -738,6 +765,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
+  /**
+   * Sets the cost variable and enables optimization.
+   *
+   * @param cost the variable representing the cost to be minimized.
+   */
   public void setCostVar(Var cost) {
 
     costVariable = cost;
@@ -869,6 +901,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
+  /**
+   * Performs labeling using the given store and choice point selection heuristic.
+   *
+   * @param store the constraint store.
+   * @param select the choice point selection heuristic.
+   * @return true if a solution was found, false otherwise.
+   */
   public boolean labeling(Store store, SelectChoicePoint<T> select) {
 
     this.store = store;
@@ -946,6 +985,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
+  /**
+   * Performs optimization labeling using the given store, choice point selection, and cost
+   * variable.
+   *
+   * @param store the constraint store.
+   * @param select the choice point selection heuristic.
+   * @param costVar the variable representing the cost to be minimized.
+   * @return true if an optimal solution was found, false otherwise.
+   */
   public boolean labeling(Store store, SelectChoicePoint<T> select, Var costVar) {
 
     this.store = store;
@@ -1106,6 +1154,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     timeOut = System.currentTimeMillis() + tOut * 1000;
   }
 
+  /**
+   * Sets the timeout in milliseconds after which the search will exit.
+   *
+   * @param out the number of milliseconds before the search exits.
+   */
   public void setTimeOutMilliseconds(long out) {
     tOut = out;
     check = true;
@@ -1130,6 +1183,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return id + ": DFS(" + heuristic + ")";
   }
 
+  /**
+   * Returns a detailed string representation of this search including statistics.
+   *
+   * @return full string representation with nodes, decisions, backtracks, and depth info.
+   */
   public String toStringFull() {
 
     StringBuilder buf = new StringBuilder();
@@ -1166,6 +1224,11 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return buf.toString();
   }
 
+  /**
+   * Assigns the most recent solution to the store.
+   *
+   * @return true if the solution was successfully assigned, false otherwise.
+   */
   public boolean assignSolution() {
 
     if (solutionListener.solutionsNo() != 0) {
@@ -1175,6 +1238,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
   }
 
+  /**
+   * Assigns the specified solution to the store.
+   *
+   * @param no the solution number to assign.
+   * @return true if the solution was successfully assigned, false otherwise.
+   */
   public boolean assignSolution(int no) {
 
     boolean result;
@@ -1207,6 +1276,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return true;
   }
 
+  /** Prints all solutions found by this search. */
   public void printAllSolutions() {
     solutionListener.printAllSolutions();
   }

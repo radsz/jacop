@@ -43,19 +43,62 @@ import org.jacop.core.Var;
  */
 public interface ImproveSolution<T extends Var> {
 
+  /**
+   * Searches for a solution starting from an empty initial state.
+   *
+   * @param failLimit the maximum number of failures allowed during search.
+   * @return true if a solution was found, false otherwise.
+   */
   boolean searchFromEmptySolution(int failLimit);
 
+  /**
+   * Searches for a solution starting from the given elite solution.
+   *
+   * @param solution the elite solution to start the search from.
+   * @param failLimit the maximum number of failures allowed during search.
+   * @return true if an improved solution was found, false otherwise.
+   */
   boolean searchFromEliteSolution(int[] solution, int failLimit);
 
+  /**
+   * Returns the cost of the current best solution.
+   *
+   * @return the current solution cost.
+   */
   int getCurrentCost();
 
+  /**
+   * Returns the current best solution as an array of variable values.
+   *
+   * @return the solution values.
+   */
   int[] getSolution();
 
+  /**
+   * Returns the number of failures encountered during the last search.
+   *
+   * @return the number of fails.
+   */
   int getNumberFails();
 
+  /**
+   * Returns the fail limit used in the last search.
+   *
+   * @return the fail limit.
+   */
   int getFailLimit();
 
+  /**
+   * Enables or disables printing of search information.
+   *
+   * @param p true to enable printing, false to disable.
+   */
   void setPrintInfo(boolean p);
 
+  /**
+   * Sets the time limit for the search.
+   *
+   * @param timeOut the timeout in milliseconds.
+   */
   void setTimeOut(long timeOut);
 }

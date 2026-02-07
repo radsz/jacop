@@ -75,6 +75,13 @@ public class OptParse<E> {
     this.mainHelp = helpString;
   }
 
+  /**
+   * Parses command-line arguments and applies handlers.
+   *
+   * @param args the command-line arguments
+   * @param e the initial value of the configuration object
+   * @return the modified configuration object after parsing, or null if parsing fails
+   */
   public E parse(String[] args, E e) {
     realArgs = new String[args.length];
     int realIndex = 0;

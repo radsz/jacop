@@ -93,6 +93,12 @@ public class Rectangle {
     this(list.toArray(new IntVar[0]));
   }
 
+  /**
+   * It returns a stream of all variables from the array of rectangles.
+   *
+   * @param scope array of rectangles.
+   * @return stream containing all origin and length variables from the rectangles.
+   */
   public static Stream<Var> getStream(Rectangle[] scope) {
     return Arrays.stream(scope)
         .flatMap(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)));
@@ -176,6 +182,11 @@ public class Rectangle {
         && length[1].domain.stamp < level;
   }
 
+  /**
+   * Checks if the rectangle exists (has positive length in both dimensions).
+   *
+   * @return true if the rectangle has positive length in both dimensions, false otherwise.
+   */
   boolean exists() {
     return length[0].min() > 0 && length[1].min() > 0;
   }

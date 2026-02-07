@@ -69,6 +69,11 @@ public final class MapClause implements Iterable<Integer> {
     addAll(clause);
   }
 
+  /**
+   * Initializes the SetClause with given iterable of literals.
+   *
+   * @param clause the clause
+   */
   public MapClause(Iterable<Integer> clause) {
     addAll(clause);
   }
@@ -211,6 +216,12 @@ public final class MapClause implements Iterable<Integer> {
     return true;
   }
 
+  /**
+   * Checks if the clause is unit in the given trail.
+   *
+   * @param trail the trail to check
+   * @return true if the clause is unit (only one unset literal)
+   */
   public boolean isUnitIn(Trail trail) {
     // number of non set literals
     int num = 0;

@@ -149,6 +149,12 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     setScope(list);
   }
 
+  /**
+   * Creates support structures and initializes word arrays for the reversible sparse bit set.
+   *
+   * @param nw the number of words needed for the bit set
+   * @return the initialized word array
+   */
   @SuppressWarnings("unchecked")
   long[] makeSupportAndWords(int nw) {
     supports = new HashMap[x.length];
@@ -383,6 +389,11 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     variableQueue.add((IntVar) v);
   }
 
+  /**
+   * It removes the specified level from the constraint.
+   *
+   * @param level the level to be removed.
+   */
   public void removeLevel(int level) {
     variableQueue.clear();
   }

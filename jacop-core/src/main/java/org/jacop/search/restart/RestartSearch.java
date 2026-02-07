@@ -78,6 +78,15 @@ public class RestartSearch<T extends Var> {
   int[] values;
   int restartsLimit; // no limit
 
+  /**
+   * Constructs a restart search with the given parameters.
+   *
+   * @param store the constraint store.
+   * @param s the depth first search to use.
+   * @param sel the choice point selection heuristic.
+   * @param calculator the calculator for computing restart limits.
+   * @param cost the cost variable for optimization, or null for satisfaction search.
+   */
   @SuppressWarnings("unchecked")
   public RestartSearch(
       Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, T cost) {
@@ -121,11 +130,25 @@ public class RestartSearch<T extends Var> {
     generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
+  /**
+   * Constructs a restart search without a cost variable (satisfaction search).
+   *
+   * @param store the constraint store.
+   * @param s the depth first search to use.
+   * @param sel the choice point selection heuristic.
+   * @param calculator the calculator for computing restart limits.
+   */
   public RestartSearch(
       Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator) {
     this(store, s, sel, calculator, null);
   }
 
+  /**
+   * Performs the restart search, iteratively restarting until a solution is found or limits are
+   * reached.
+   *
+   * @return true if a solution was found, false otherwise.
+   */
   public boolean labeling() {
 
     store.setLevel(store.level + 1);
@@ -231,19 +254,39 @@ public class RestartSearch<T extends Var> {
     return floatCostValue;
   }
 
+  /**
+   * Adds a custom reporter to be called when a solution is found.
+   *
+   * @param r the custom report to add.
+   */
   public void addReporter(CustomReport r) {
     reportSolution = r;
   }
 
+  /**
+   * Returns the number of restarts performed so far.
+   *
+   * @return the number of restarts.
+   */
   public int restarts() {
     return numberRestarts;
   }
 
+  /**
+   * Sets the timeout in seconds after which the search will exit.
+   *
+   * @param timeout the number of seconds before the search exits.
+   */
   public void setTimeOut(long timeout) {
     timeOutCheck = true;
     timeOut = System.currentTimeMillis() + timeout * 1000;
   }
 
+  /**
+   * Sets the timeout in milliseconds after which the search will exit.
+   *
+   * @param timeout the number of milliseconds before the search exits.
+   */
   public void setTimeOutMilliseconds(long timeout) {
     timeOutCheck = true;
     timeOut = System.currentTimeMillis() + timeout;
@@ -272,6 +315,12 @@ public class RestartSearch<T extends Var> {
     } while (s != null);
   }
 
+  /**
+   * Configures relax-and-reconstruct with the given variables and probability.
+   *
+   * @param vs the variables to relax.
+   * @param p the probability (0-100) of fixing each variable to its previous solution value.
+   */
   public void setRelaxAndReconstruct(IntVar[] vs, int p) {
 
     rarVars = new IntVar[vs.length];
@@ -279,6 +328,10 @@ public class RestartSearch<T extends Var> {
     probability = p;
   }
 
+  /**
+   * Assigns relaxed variables to their previous solution values based on the configured
+   * probability.
+   */
   public void assignRelaxedVariables() {
 
     for (int i = 0; i < rarVars.length; i++) {
@@ -306,6 +359,11 @@ public class RestartSearch<T extends Var> {
     restartsLimit = l;
   }
 
+  /**
+   * Returns whether at least one solution has been found during the search.
+   *
+   * @return true if at least one solution was found, false otherwise.
+   */
   public boolean atLeastOneSolution() {
     return atLeastOneSolution;
   }
@@ -313,6 +371,7 @@ public class RestartSearch<T extends Var> {
   /** Listener that tracks cost for optimization search. */
   public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
 
+    /** {@inheritDoc} */
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);

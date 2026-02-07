@@ -48,17 +48,39 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
   /** It constructs RandomVar Comparator. */
   public RandomVar() {}
 
+  /**
+   * Compares a metric value with a randomly generated value for a variable.
+   *
+   * @param left the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double left, T var) {
     double right = generator.nextFloat();
     return Double.compare(right, left);
   }
 
+  /**
+   * Compares two variables using randomly generated values. This provides random variable
+   * selection.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return positive if leftVar has higher priority, negative if rightVar has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T leftVar, T rightVar) {
     double left = generator.nextFloat();
     double right = generator.nextFloat();
     return Double.compare(right, left);
   }
 
+  /**
+   * Computes the metric for a variable, which is a randomly generated value.
+   *
+   * @param o the variable for which the metric is computed.
+   * @return a random value between 0 and 1.
+   */
   public double metric(T o) {
     return generator.nextFloat();
   }

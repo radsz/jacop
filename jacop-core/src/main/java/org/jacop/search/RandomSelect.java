@@ -187,6 +187,11 @@ public class RandomSelect<T extends Var> implements SelectChoicePoint<T> {
     return searchVariables[searchPosition];
   }
 
+  /**
+   * It returns the string representation of the choice point selector.
+   *
+   * @return string describing the search variables.
+   */
   public String toString() {
     return "" + Arrays.asList(searchVariables);
   }

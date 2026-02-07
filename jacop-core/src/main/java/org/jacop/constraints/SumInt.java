@@ -155,6 +155,11 @@ public class SumInt extends PrimitiveConstraint {
     propagate(negRel[relationType]);
   }
 
+  /**
+   * Propagates bounds consistency for the given relation type.
+   *
+   * @param rel the relation type code to propagate.
+   */
   public void propagate(int rel) {
 
     computeInit();
@@ -363,6 +368,11 @@ public class SumInt extends PrimitiveConstraint {
     return false;
   }
 
+  /**
+   * Checks whether the equality relation is satisfied.
+   *
+   * @return true if the sum of variables equals the sum variable.
+   */
   public boolean satisfiedEq() {
 
     long sMin = 0;
@@ -377,6 +387,11 @@ public class SumInt extends PrimitiveConstraint {
         && sMin >= (long) sum.max(); // sMin == sMax && sMin == sum.min() && sMin == sum.max();
   }
 
+  /**
+   * Checks whether the not-equal relation is satisfied.
+   *
+   * @return true if the sum of variables is guaranteed to differ from the sum variable.
+   */
   public boolean satisfiedNeq() {
 
     long sMax = 0;
@@ -390,6 +405,12 @@ public class SumInt extends PrimitiveConstraint {
     return sMin > (long) sum.max() || sMax < (long) sum.min();
   }
 
+  /**
+   * Checks whether the less-than or equal relation is satisfied, with an optional offset.
+   *
+   * @param b the offset (0 for less-or-equal, 1 for strictly less-than).
+   * @return true if the relation is satisfied.
+   */
   public boolean satisfiedLtEq(int b) {
 
     long sMax = 0;
@@ -401,6 +422,12 @@ public class SumInt extends PrimitiveConstraint {
     return sMax <= (long) sum.min() - b;
   }
 
+  /**
+   * Checks whether the greater-than or equal relation is satisfied, with an optional offset.
+   *
+   * @param b the offset (0 for greater-or-equal, 1 for strictly greater-than).
+   * @return true if the relation is satisfied.
+   */
   public boolean satisfiedGtEq(int b) {
 
     long sMin = 0;
@@ -437,6 +464,12 @@ public class SumInt extends PrimitiveConstraint {
     };
   }
 
+  /**
+   * Converts a relation string to its internal byte code representation.
+   *
+   * @param r the relation string (e.g., "==", "{@literal <}", "{@literal >=}").
+   * @return the byte code for the relation.
+   */
   public byte relation(String r) {
     switch (r) {
       case "==", "=" -> {
@@ -464,6 +497,11 @@ public class SumInt extends PrimitiveConstraint {
     }
   }
 
+  /**
+   * Returns the string representation of the current relation type.
+   *
+   * @return the relation as a string (e.g., "==", "{@literal <}", "{@literal >=}").
+   */
   public String rel2String() {
     return switch (relationType) {
       case eq -> "==";

@@ -95,9 +95,9 @@ public class Rectangle {
   }
 
   /**
-   * It constructs a rectangle.
+   * It constructs a copy of the given rectangle.
    *
-   * @param rect the rectangle based on which a new rectangle is created.
+   * @param rect the rectangle to copy.
    */
   public Rectangle(Rectangle rect) {
 
@@ -109,6 +109,12 @@ public class Rectangle {
     System.arraycopy(rect.origin, 0, this.origin, 0, rect.origin.length);
   }
 
+  /**
+   * Converts a list of variable lists into an array of 2D rectangles.
+   *
+   * @param rectangles a list where each inner list contains 4 IntVars representing a 2D rectangle.
+   * @return an array of rectangles constructed from the input lists.
+   */
   public static Rectangle[] toArrayOf2dRectangles(
       List<? extends List<? extends IntVar>> rectangles) {
 
@@ -131,6 +137,15 @@ public class Rectangle {
     return result;
   }
 
+  /**
+   * Converts separate origin and length arrays into an array of 2D rectangles.
+   *
+   * @param origin1 the x-origins of the rectangles.
+   * @param origin2 the y-origins of the rectangles.
+   * @param length1 the x-lengths of the rectangles.
+   * @param length2 the y-lengths of the rectangles.
+   * @return an array of rectangles constructed from the input arrays.
+   */
   public static Rectangle[] toArrayOf2dRectangles(
       IntVar[] origin1, IntVar[] origin2, IntVar[] length1, IntVar[] length2) {
 
@@ -158,6 +173,12 @@ public class Rectangle {
     }
   }
 
+  /**
+   * Converts a 2D array of IntVars into an array of 2D rectangles.
+   *
+   * @param rectangles a 2D array where each row contains 4 IntVars representing a 2D rectangle.
+   * @return an array of rectangles constructed from the input array.
+   */
   public static Rectangle[] toArrayOf2dRectangles(IntVar[][] rectangles) {
 
     assert rectangles != null : "Rectangles list is null";
@@ -184,6 +205,12 @@ public class Rectangle {
     return result;
   }
 
+  /**
+   * Returns a stream of all variables (origins and lengths) from the given rectangles.
+   *
+   * @param scope the array of rectangles.
+   * @return a stream of all origin and length variables across all rectangles.
+   */
   public static Stream<Var> getStream(Rectangle[] scope) {
     return Arrays.stream(scope)
         .flatMap(r -> Stream.concat(Arrays.stream(r.origin), Arrays.stream(r.length)));
@@ -274,6 +301,13 @@ public class Rectangle {
     return use;
   }
 
+  /**
+   * Computes the minimum usage of this rectangle excluding the selected dimension.
+   *
+   * @param selDimension the dimension to exclude from the computation.
+   * @param u the output rectangle to store the minimum usage intervals.
+   * @return true if the rectangle has a valid minimum usage, false otherwise.
+   */
   public boolean minUse(int selDimension, IntRectangle u) {
     boolean use = true;
     int start;
@@ -300,6 +334,12 @@ public class Rectangle {
     return use;
   }
 
+  /**
+   * Computes the minimum usage of this rectangle across all dimensions.
+   *
+   * @param u the output rectangle to store the minimum usage intervals.
+   * @return true if the rectangle has a valid minimum usage in all dimensions, false otherwise.
+   */
   public boolean minUse(IntRectangle u) {
     boolean use = true;
     int start;

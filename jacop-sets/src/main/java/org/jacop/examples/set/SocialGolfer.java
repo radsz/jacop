@@ -75,7 +75,7 @@ public class SocialGolfer extends ExampleSet {
    *
    * @param args parameters (none)
    */
-  static void main(String[] args) {
+  public static void main(String[] args) {
 
     SocialGolfer example = new SocialGolfer();
 
@@ -163,6 +163,7 @@ public class SocialGolfer extends ExampleSet {
     this.players = players;
   }
 
+  /** Creates the constraint model for the social golfer problem. */
   public void model() {
 
     final int N = groups * players;
@@ -255,6 +256,11 @@ public class SocialGolfer extends ExampleSet {
     }
   }
 
+  /**
+   * Performs the search for a solution to the social golfer problem.
+   *
+   * @return true if a solution is found, false otherwise.
+   */
   public boolean search() {
 
     Thread tread = Thread.currentThread();

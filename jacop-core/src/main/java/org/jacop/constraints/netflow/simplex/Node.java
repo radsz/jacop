@@ -71,6 +71,12 @@ public final class Node {
   /** Marks the cut (S,T) for dual pivot. */
   boolean marked;
 
+  /**
+   * Constructs a node with the specified name and balance.
+   *
+   * @param name the name of the node
+   * @param balance the initial balance of the node
+   */
   public Node(String name, int balance) {
     this.name = name;
     this.balance = 0;
@@ -142,7 +148,7 @@ public final class Node {
     } while (i.depth > depth);
   }
 
-  /** Recomputes the potential & depth values in the subtree rooted at this node. */
+  /** Recomputes the potential and depth values in the subtree rooted at this node. */
   void computePotentials() {
     for (Node i = thread; true; i = i.thread) {
       // the depth value of i might be wrong so we use its parent's depth
@@ -159,7 +165,11 @@ public final class Node {
     }
   }
 
-  // a string representation of the state
+  /**
+   * It returns a string representation of the node state.
+   *
+   * @return string describing the node with its balance, delta, and potential.
+   */
   public String toString() {
     // TODO: only for debugging, otherwise we would use StringBuilder
     return "[node: "

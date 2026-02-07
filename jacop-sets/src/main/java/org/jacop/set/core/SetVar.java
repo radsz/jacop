@@ -391,6 +391,11 @@ public class SetVar extends Var {
     return id + domain.toStringFull();
   }
 
+  /**
+   * Removes the domain information stored at the specified level.
+   *
+   * @param removedLevel the level to be removed from the domain history.
+   */
   public void remove(int removedLevel) {
     domain.removeLevel(removedLevel, this);
   }
@@ -413,6 +418,11 @@ public class SetVar extends Var {
     store.addChanged(this, event, Integer.MIN_VALUE);
   }
 
+  /**
+   * Registers a constraint with the default pruning event (ANY).
+   *
+   * @param c the constraint to be attached to this variable.
+   */
   public void putConstraint(Constraint c) {
     putModelConstraint(c, SetDomain.ANY);
   }

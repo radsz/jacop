@@ -47,6 +47,14 @@ public class TableMill {
 
   private TableMill() {}
 
+  /**
+   * Generates a table of support tuples for a linear constraint of the form sum(w[i] * x[i]) = b.
+   *
+   * @param x the array of variables
+   * @param w the array of weights
+   * @param b the constant value
+   * @return a two-dimensional array of tuples, or null if the table size exceeds the maximum
+   */
   public static int[][] linear(IntVar[] x, int[] w, int b) {
 
     ArrayList<int[]> support = new ArrayList<>();
@@ -62,6 +70,18 @@ public class TableMill {
     return t;
   }
 
+  /**
+   * Recursively generates support tuples for a linear constraint.
+   *
+   * @param x the array of variables
+   * @param w the array of weights
+   * @param b the constant value
+   * @param sum the current partial sum
+   * @param index the current variable index
+   * @param support the list to collect support tuples
+   * @param assignment the current partial assignment
+   * @return the list of support tuples, or null if the table size exceeds the maximum
+   */
   static ArrayList<int[]> linearSupport(
       IntVar[] x, int[] w, int b, int sum, int index, ArrayList<int[]> support, int[] assignment) {
 
@@ -87,6 +107,15 @@ public class TableMill {
     return support;
   }
 
+  /**
+   * It generates support tuples for an element constraint with offset.
+   *
+   * @param index the index variable.
+   * @param list the list of integers to index into.
+   * @param value the value variable.
+   * @param offset the offset to apply to the index.
+   * @return array of support tuples.
+   */
   public static int[][] elementSupport(IntVar index, int[] list, IntVar value, int offset) {
 
     ArrayList<int[]> support = new ArrayList<>();

@@ -66,6 +66,11 @@ public abstract class BinaryNode {
 
   abstract void updateBounds(double min, double max, double lb, double ub);
 
+  /**
+   * Returns a string representation of this binary node.
+   *
+   * @return the node's id as a string
+   */
   public String toString() {
     return "" + id;
   }

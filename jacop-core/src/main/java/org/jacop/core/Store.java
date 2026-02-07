@@ -284,6 +284,12 @@ public class Store {
         new IntervalBasedBacktrackableManager(vars, this.size, 10, Math.max(size / 10, 4));
   }
 
+  /**
+   * Returns the seed for the random number generator.
+   *
+   * @return the seed value.
+   * @throws IllegalArgumentException if the seed has not been set.
+   */
   public static long getSeed() {
     if (seedPresent) {
       return seed;
@@ -292,15 +298,26 @@ public class Store {
     throw new IllegalArgumentException("Not defined seed for random generator");
   }
 
+  /**
+   * Sets the seed for the random number generator.
+   *
+   * @param s the seed value to set.
+   */
   public static void setSeed(long s) {
     seed = s;
     seedPresent = true;
   }
 
+  /**
+   * Checks whether a seed for the random number generator has been set.
+   *
+   * @return true if the seed has been set, false otherwise.
+   */
   public static boolean seedPresent() {
     return seedPresent;
   }
 
+  /** Resets the seed for the random number generator, marking it as not present. */
   public static void resetSeed() {
     seedPresent = false;
   }
@@ -1188,6 +1205,11 @@ public class Store {
     return result.toString();
   }
 
+  /**
+   * Returns the set of all constraints associated with variables in this store.
+   *
+   * @return set of all constraints.
+   */
   public Set<Constraint> getConstraints() {
 
     Set<Constraint> constraints = new HashSet<>();
@@ -1201,6 +1223,7 @@ public class Store {
     return constraints;
   }
 
+  /** Caches the set of all constraints currently present in this store. */
   public void setAllConstraints() {
     allConstraints = getConstraints();
   }
@@ -1213,10 +1236,20 @@ public class Store {
     decay = d;
   }
 
+  /**
+   * Enables or disables accumulated failure count (AFC) management for constraints.
+   *
+   * @param m true to enable AFC management, false to disable.
+   */
   public void afcManagement(boolean m) {
     constraintAfcManagement = m;
   }
 
+  /**
+   * Enables or disables variable activity management for search heuristics.
+   *
+   * @param m true to enable activity management, false to disable.
+   */
   public void activityManagement(boolean m) {
     variableActivityManagement = m;
     variablesPrunned = new HashSet<>();
@@ -1268,6 +1301,11 @@ public class Store {
     return null;
   }
 
+  /**
+   * Returns a string representation of all variables in this store, ordered alphabetically by id.
+   *
+   * @return string representation of ordered variables.
+   */
   public String toStringOrderedVars() {
 
     StringBuilder result = new StringBuilder();

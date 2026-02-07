@@ -405,6 +405,11 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
     inputOrderTieBreaking = true;
   }
 
+  /**
+   * It returns the string representation of the choice point selector.
+   *
+   * @return string describing the search variables matrix.
+   */
   public String toString() {
     return searchVariables + "\n";
   }

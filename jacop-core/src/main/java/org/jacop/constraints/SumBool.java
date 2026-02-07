@@ -93,10 +93,13 @@ public class SumBool extends PrimitiveConstraint {
   final int l;
   boolean reified = true;
 
-  /*
-   * @param list variables which are being multiplied by weights.
-   * @param rel  the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum  variable containing the sum of weighted variables.
+  /**
+   * Constructs a SumBool constraint over an array of 0/1 variables.
+   *
+   * @param list variables which are being summed.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}".
+   * @param sum variable containing the sum of the boolean variables.
    */
   public SumBool(IntVar[] list, String rel, IntVar sum) {
     checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
@@ -118,12 +121,13 @@ public class SumBool extends PrimitiveConstraint {
     setScope(Stream.concat(Stream.of(sum), Arrays.stream(list)));
   }
 
-  /*
-   * It constructs the constraint SumBool.
+  /**
+   * Constructs a SumBool constraint over a list of 0/1 variables.
    *
-   * @param variables variables which are being multiplied by weights.
-   * @param rel       the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}", "{@literal >=}", "{@literal !=}"
-   * @param sum       variable containing the sum of weighted variables.
+   * @param variables variables which are being summed.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}".
+   * @param sum variable containing the sum of the boolean variables.
    */
   public SumBool(List<? extends IntVar> variables, String rel, IntVar sum) {
     this(variables.toArray(new IntVar[0]), rel, sum);
@@ -325,6 +329,13 @@ public class SumBool extends PrimitiveConstraint {
     };
   }
 
+  /**
+   * Converts a relation string to its internal byte representation.
+   *
+   * @param r the relation string (e.g., "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "!=").
+   * @return the byte code representing the relation.
+   */
   public byte relation(String r) {
     switch (r) {
       case "==", "=" -> {
@@ -352,6 +363,11 @@ public class SumBool extends PrimitiveConstraint {
     }
   }
 
+  /**
+   * Converts the internal relation type to its string representation.
+   *
+   * @return the string representation of the relation (e.g., "==", "{@literal <}", "{@literal >}").
+   */
   public String rel2String() {
     return switch (relationType) {
       case eq -> "==";

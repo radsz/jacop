@@ -35,10 +35,16 @@ public class RunWhenShuttingDown extends Thread {
 
   final Parser parser;
 
+  /**
+   * Constructs a shutdown hook thread for the parser.
+   *
+   * @param parser the parser instance
+   */
   public RunWhenShuttingDown(Parser parser) {
     this.parser = parser;
   }
 
+  /** {@inheritDoc} */
   public void run() {
 
     if (!parser.options.getAll() && parser.solver.lastSolution != null) {

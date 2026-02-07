@@ -65,6 +65,11 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
     return val;
   }
 
+  /**
+   * It returns the previous mutable variable value in the backtracking chain.
+   *
+   * @return the previous mutable domain value.
+   */
   public MutableVarValue previous() {
     return previousMutableDomainVariableValue;
   }

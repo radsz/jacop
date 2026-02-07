@@ -91,10 +91,21 @@ public class Tables {
    */
   public Tables() {}
 
+  /**
+   * Constructs the storage object with a store reference.
+   *
+   * @param s the constraint store
+   */
   public Tables(Store s) {
     this.store = s;
   }
 
+  /**
+   * Returns a constant integer variable for the given value.
+   *
+   * @param c the constant value
+   * @return the constant integer variable
+   */
   public IntVar getConstant(int c) {
     IntVar v = constantTable.get(c);
 
@@ -106,6 +117,12 @@ public class Tables {
     return v;
   }
 
+  /**
+   * Returns a constant boolean variable for the given value.
+   *
+   * @param c the constant value (0 or 1)
+   * @return the constant boolean variable
+   */
   public BooleanVar getConstantBoolean(int c) {
     BooleanVar v = constantTableBoolean.get(c);
 
@@ -117,6 +134,12 @@ public class Tables {
     return v;
   }
 
+  /**
+   * Returns a constant float variable for the given value.
+   *
+   * @param c the constant value
+   * @return the constant float variable
+   */
   public FloatVar getFloatConstant(double c) {
     FloatVar v = constantFloatTable.get(c);
 
@@ -128,6 +151,12 @@ public class Tables {
     return v;
   }
 
+  /**
+   * Adds an alias relationship between two integer variables.
+   *
+   * @param b the boolean/integer variable that is an alias
+   * @param v the variable being aliased
+   */
   public void addAlias(IntVar b, IntVar v) {
     IntVar x = aliasTable.get(v);
     if (x == null) {
@@ -139,6 +168,12 @@ public class Tables {
     // System.out.println(v + " is alias of " + b);
   }
 
+  /**
+   * Returns the alias for a variable, or the variable itself if no alias exists.
+   *
+   * @param b the variable to look up
+   * @return the alias variable or the original variable
+   */
   IntVar getAlias(IntVar b) {
     IntVar v = aliasTable.get(b);
     if (v == null) {
@@ -148,6 +183,7 @@ public class Tables {
     }
   }
 
+  /** Removes aliased variables from the search variable collection. */
   void removeAliasFromSearch() {
 
     Set<Map.Entry<IntVar, IntVar>> entries = aliasTable.entrySet();
@@ -293,6 +329,12 @@ public class Tables {
     return setArrayTable.get(ident);
   }
 
+  /**
+   * Stores a float array with the given identifier.
+   *
+   * @param ident the identity of the stored array
+   * @param array the float array being stored
+   */
   public void addFloatArray(String ident, double[] array) {
     // TODO: asserts to prevent multiple array being put with the same identity?
     // assert ( intArrayTable.get(ident) == null ) : "The int array with identity " + ident + "
@@ -558,38 +600,76 @@ public class Tables {
     defaultSearchSetArrays.add(v);
   }
 
+  /**
+   * Sets the number of all variable types.
+   *
+   * @param nb the number of boolean variables
+   * @param ns the number of set variables
+   * @param nf the number of float variables
+   */
   public void setNumberOfAllVariables(int nb, int ns, int nf) {
     numberBoolVariables = nb;
     numberSetVariables = ns;
     numberFloatVariables = nf;
   }
 
+  /**
+   * Returns the number of boolean variables.
+   *
+   * @return the number of boolean variables
+   */
   public int getNumberBoolVariables() {
     return numberBoolVariables;
   }
 
+  /**
+   * Sets the number of boolean variables.
+   *
+   * @param n the number of boolean variables
+   */
   public void setNumberBoolVariables(int n) {
     numberBoolVariables = n;
   }
 
+  /**
+   * Returns the number of float variables.
+   *
+   * @return the number of float variables
+   */
   public int getNumberFloatVariables() {
     return numberFloatVariables;
   }
 
+  /**
+   * Sets the number of float variables.
+   *
+   * @param n the number of float variables
+   */
   public void setNumberFloatVariables(int n) {
     numberFloatVariables = n;
   }
 
+  /**
+   * Returns the number of set variables.
+   *
+   * @return the number of set variables
+   */
   public int getNumberSetVariables() {
     return numberSetVariables;
   }
 
+  /**
+   * Sets the number of set variables.
+   *
+   * @param n the number of set variables
+   */
   public void setNumberSetVariables(int n) {
     numberSetVariables = n;
   }
 
   // StringBuilder to be used instead of normal string additions.
 
+  /** {@inheritDoc} */
   @SuppressWarnings("unchecked")
   public String toString() {
 

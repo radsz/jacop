@@ -33,7 +33,8 @@ package org.jacop.search;
 import org.jacop.core.IntVar;
 
 /**
- * Defines a LargestMin comparator for Variables.
+ * Defines a LargestMin comparator for Variables. It prefers variables which have larger minimal
+ * value in their domain.
  *
  * @param <T> type of IntVar being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -41,6 +42,16 @@ import org.jacop.core.IntVar;
  */
 public class LargestMin<T extends IntVar> implements ComparatorVariable<T> {
 
+  /** It constructs LargestMin Comparator. */
+  public LargestMin() {}
+
+  /**
+   * Compares a metric value with a variable's minimum domain value.
+   *
+   * @param left the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double left, T var) {
     int right = var.dom().min();
     if (left > right) {
@@ -52,12 +63,27 @@ public class LargestMin<T extends IntVar> implements ComparatorVariable<T> {
     return 0;
   }
 
+  /**
+   * Compares two variables based on their minimum domain values. Variables with larger minimum
+   * values have higher priority.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return positive if leftVar has higher priority, negative if rightVar has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T leftVar, T rightVar) {
     int left = leftVar.dom().min();
     int right = rightVar.dom().min();
     return Integer.compare(left, right);
   }
 
+  /**
+   * Computes the metric for a variable, which is the minimum value in its domain.
+   *
+   * @param var the variable for which the metric is computed.
+   * @return the minimum value in the variable's domain.
+   */
   public double metric(T var) {
     return var.dom().min();
   }

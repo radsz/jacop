@@ -33,7 +33,9 @@ package org.jacop.search;
 import org.jacop.core.Var;
 
 /**
- * Defines a MostConstrainedDynamic comparator for Variables.
+ * Defines a MostConstrainedDynamic comparator for Variables. It selects variables with the most
+ * constraints currently attached to them. The constraint count is dynamic and changes during
+ * search.
  *
  * @param <T> type of variable being compared.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
@@ -41,6 +43,16 @@ import org.jacop.core.Var;
  */
 public class MostConstrainedDynamic<T extends Var> implements ComparatorVariable<T> {
 
+  /** It constructs MostConstrainedDynamic Comparator. */
+  public MostConstrainedDynamic() {}
+
+  /**
+   * Compares a metric value with a variable's dynamic constraint count.
+   *
+   * @param left the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double left, T var) {
     int right = var.sizeConstraints();
     if (left > right) {
@@ -52,12 +64,27 @@ public class MostConstrainedDynamic<T extends Var> implements ComparatorVariable
     return 0;
   }
 
+  /**
+   * Compares two variables based on their dynamic constraint counts. Variables with more
+   * constraints have higher priority.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return positive if leftVar has higher priority, negative if rightVar has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T leftVar, T rightVar) {
     int left = leftVar.sizeConstraints();
     int right = rightVar.sizeConstraints();
     return Integer.compare(left, right);
   }
 
+  /**
+   * Computes the metric for a variable, which is its current number of attached constraints.
+   *
+   * @param var the variable for which the metric is computed.
+   * @return the current number of constraints attached to the variable.
+   */
   public double metric(T var) {
     return var.sizeConstraints();
   }

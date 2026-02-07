@@ -104,10 +104,22 @@ public final class HeuristicForgetModule
     }
   }
 
+  /**
+   * Called when the solver performs a backjump operation. This method should not be called.
+   *
+   * @param oldLevel the decision level before the backjump
+   * @param newLevel the decision level after the backjump
+   * @throws AssertionError always, as this method should not be invoked
+   */
   public void onBackjump(int oldLevel, int newLevel) {
     throw new AssertionError("should not be called");
   }
 
+  /**
+   * Called when a conflict explanation clause is generated.
+   *
+   * @param explanation the explanation clause derived from conflict analysis
+   */
   public void onExplain(MapClause explanation) {
     if (explanation.size() > 2) {
       // only try to remember clauses longer than 2
@@ -156,6 +168,11 @@ public final class HeuristicForgetModule
     return 0;
   }
 
+  /**
+   * Initializes the heuristic forget module and registers it with the solver core.
+   *
+   * @param core the solver core instance
+   */
   public void initialize(Core core) {
     this.core = core;
 

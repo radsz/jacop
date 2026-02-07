@@ -63,6 +63,7 @@ public class CpvizSudoku {
     example.modelBasic();
   }
 
+  /** Creates the constraint model for Sudoku using global Alldistinct constraints. */
   public void model() {
 
     // >0 - known element

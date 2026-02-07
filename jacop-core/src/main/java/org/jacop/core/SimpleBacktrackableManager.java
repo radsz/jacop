@@ -250,6 +250,11 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
         : "It can not set the size larger than the length of the object array";
   }
 
+  /**
+   * It returns a string representation of the backtrackable manager state.
+   *
+   * @return string describing the current level, trail, and stored information.
+   */
   public String toString() {
     StringBuilder result = new StringBuilder();
 
@@ -310,6 +315,11 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     }
   }
 
+  /**
+   * Returns the current level of the manager.
+   *
+   * @return the current level at which changes are being recorded.
+   */
   public int getLevel() {
     return currentLevel;
   }
@@ -361,6 +371,12 @@ public class SimpleBacktrackableManager implements BacktrackableManager {
     }
   }
 
+  /**
+   * Updates the manager with a new array of objects and the count of managed objects.
+   *
+   * @param objects the new array of backtrackable objects to be managed.
+   * @param noOfObjects the number of objects in the array that are actively managed.
+   */
   public void update(Backtrackable[] objects, int noOfObjects) {
 
     assert noOfObjects <= objects.length : "More objects than array is holding.";

@@ -54,6 +54,11 @@ public class BasicPreprocessor {
   // local clause
   private final MapClause localClause = new MapClause();
 
+  /**
+   * Creates a basic preprocessor for the given solver core.
+   *
+   * @param core the solver core
+   */
   public BasicPreprocessor(Core core) {
     this.core = core;
   }

@@ -47,15 +47,27 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
 
   private ActivityMinDeg() {}
 
+  /**
+   * Creates an ActivityMinDeg comparator using the store's default decay.
+   *
+   * @param store the constraint store.
+   */
   public ActivityMinDeg(Store store) {
     this(store, store.getDecay());
   }
 
+  /**
+   * Creates an ActivityMinDeg comparator with a specified decay factor.
+   *
+   * @param store the constraint store.
+   * @param decay the decay factor for activity weight recalculation.
+   */
   public ActivityMinDeg(Store store, double decay) {
     store.activityManagement(true);
     store.setDecay(decay);
   }
 
+  /** {@inheritDoc} */
   public int compare(double left, T var) {
 
     double right = var.activity() / var.getSizeFloat();
@@ -63,6 +75,7 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(right, left);
   }
 
+  /** {@inheritDoc} */
   public int compare(T leftVar, T rightVar) {
 
     double left = leftVar.activity() / leftVar.getSizeFloat();
@@ -72,6 +85,7 @@ public class ActivityMinDeg<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(right, left);
   }
 
+  /** {@inheritDoc} */
   public double metric(T var) {
 
     return var.activity() / var.getSizeFloat();

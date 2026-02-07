@@ -53,7 +53,7 @@ public class Increasing extends Constraint {
   protected List<Constraint> constraints;
   byte strict = 0;
 
-  /*
+  /**
    * It constructs an increasing constraint.
    *
    * @param x variables which must be in increasing order.
@@ -71,6 +71,12 @@ public class Increasing extends Constraint {
     setScope(x);
   }
 
+  /**
+   * It constructs an increasing constraint.
+   *
+   * @param x variables which must be in increasing order.
+   * @param strict true if strict increasing order is required, false otherwise.
+   */
   public Increasing(IntVar[] x, boolean strict) {
     this(x);
 
@@ -88,6 +94,12 @@ public class Increasing extends Constraint {
     this(x.toArray(new IntVar[0]));
   }
 
+  /**
+   * It constructs an increasing constraint.
+   *
+   * @param x variables which must be in increasing order.
+   * @param strict true if strict increasing order is required, false otherwise.
+   */
   public Increasing(List<? extends IntVar> x, boolean strict) {
     this(x.toArray(new IntVar[0]), strict);
   }

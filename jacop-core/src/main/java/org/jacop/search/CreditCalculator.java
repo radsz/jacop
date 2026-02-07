@@ -409,6 +409,13 @@ public class CreditCalculator<T extends Var>
     }
   }
 
+  /**
+   * Handles exiting the right child when choice points are constraint-based. Updates credit
+   * distribution and backtrack counters.
+   *
+   * @param choice the constraint used as the choice point.
+   * @param status the return code from the right child.
+   */
   public void rightChild(PrimitiveConstraint choice, boolean status) {
 
     currentLevel--;
@@ -445,17 +452,32 @@ public class CreditCalculator<T extends Var>
     timeOutListeners = children;
   }
 
+  /**
+   * Sets a single consistency listener as child.
+   *
+   * @param child the consistency listener to set.
+   */
   public void setChildrenListeners(ConsistencyListener child) {
     consistencyListeners = new ConsistencyListener[1];
     consistencyListeners[0] = child;
   }
 
+  /**
+   * Sets a single exit child listener as child.
+   *
+   * @param child the exit child listener to set.
+   */
   @SuppressWarnings("unchecked")
   public void setChildrenListeners(ExitChildListener<T> child) {
     exitChildListeners = new ExitChildListener[1];
     exitChildListeners[0] = child;
   }
 
+  /**
+   * Sets a single time-out listener as child.
+   *
+   * @param child the time-out listener to set.
+   */
   public void setChildrenListeners(TimeOutListener child) {
 
     timeOutListeners = new TimeOutListener[1];

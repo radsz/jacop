@@ -146,6 +146,11 @@ public class AndBoolVector extends PrimitiveConstraint {
     position = new TimeStamp<>(store, 0);
   }
 
+  /**
+   * Enforces consistency for this constraint.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
   public void consistency(Store store) {
 
     int start = position.value();

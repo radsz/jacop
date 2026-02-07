@@ -91,6 +91,8 @@ public class WhoKilledAgatha extends ExampleFd {
     }
   } // end main
 
+  /** Creates the constraint model for the "Who Killed Agatha" logic puzzle. */
+  @Override
   public void model() {
 
     int n = 3;

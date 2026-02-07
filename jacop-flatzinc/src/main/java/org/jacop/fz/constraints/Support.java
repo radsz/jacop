@@ -101,12 +101,25 @@ public class Support implements ParserTreeConstants {
   boolean intPresent = true;
   boolean floatPresent = true;
 
+  /**
+   * Constructs a support object for flatzinc constraint generation.
+   *
+   * @param store the constraint store
+   * @param d the tables containing variable definitions
+   * @param sat the SAT translation interface
+   */
   public Support(Store store, Tables d, SatTranslation sat) {
     this.store = store;
     this.dictionary = d;
     this.sat = sat;
   }
 
+  /**
+   * Retrieves an integer value from a scalar flat expression node.
+   *
+   * @param node the scalar flat expression node
+   * @return the integer value
+   */
   public int getInt(ASTScalarFlatExpr node) {
     intPresent = true;
 
@@ -130,6 +143,13 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a scalar flat expression value from a child node.
+   *
+   * @param node the parent node
+   * @param i the index of the child node
+   * @return the integer value from the scalar flat expression
+   */
   int getScalarFlatExpr(SimpleNode node, int i) {
     SimpleNode child = (SimpleNode) node.jjtGetChild(i);
     if (child.getId() == JJTSCALARFLATEXPR) {
@@ -155,6 +175,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an integer array from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the integer array
+   */
   int[] getIntArray(SimpleNode node) {
     if (node.getId() == JJTARRAYLITERAL) {
       int count = node.jjtGetNumChildren();
@@ -181,6 +207,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Gets an integer variable from a scalar flat expression node.
+   *
+   * @param node the AST scalar flat expression node
+   * @return the integer variable
+   */
   public IntVar getVariable(ASTScalarFlatExpr node) {
     if (node.getType() == 0) { // int
       int val = node.getInt();
@@ -209,6 +241,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a float variable from a scalar flat expression node.
+   *
+   * @param node the scalar flat expression node
+   * @return the float variable
+   */
   FloatVar getFloatVariable(ASTScalarFlatExpr node) {
 
     if (node.getType() == 5) { // float
@@ -237,6 +275,13 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a set variable from a parse tree node.
+   *
+   * @param node the parent node
+   * @param index the index of the child node
+   * @return the set variable
+   */
   SetVar getSetVariable(SimpleNode node, int index) {
 
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
@@ -269,6 +314,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a float value from a scalar flat expression node.
+   *
+   * @param node the scalar flat expression node
+   * @return the float value
+   */
   double getFloat(ASTScalarFlatExpr node) {
     floatPresent = true;
 
@@ -289,6 +340,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a float array from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the float array
+   */
   double[] getFloatArray(SimpleNode node) {
     if (node.getId() == JJTARRAYLITERAL) {
       int count = node.jjtGetNumChildren();
@@ -314,6 +371,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an array of integer variables from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the array of integer variables
+   */
   IntVar[] getVarArray(SimpleNode node) {
     if (node.getId() == JJTARRAYLITERAL) {
       int count = node.jjtGetNumChildren();
@@ -353,6 +416,12 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an array of float variables from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the array of float variables
+   */
   FloatVar[] getFloatVarArray(SimpleNode node) {
     if (node.getId() == JJTARRAYLITERAL) {
       int count = node.jjtGetNumChildren();
@@ -523,6 +592,11 @@ public class Support implements ParserTreeConstants {
     return rs;
   }
 
+  /**
+   * Parses annotations from a constraint node.
+   *
+   * @param constraintWithAnnotations the constraint node with annotations
+   */
   public void parseAnnotations(SimpleNode constraintWithAnnotations) {
 
     for (int i = 1; i < constraintWithAnnotations.jjtGetNumChildren(); i++) {
@@ -576,6 +650,7 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
     // generate channeling constraints for aliases
     // variables that are output variables
@@ -647,18 +722,42 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Adds a reified constraint.
+   *
+   * @param x the integer variable
+   * @param v the value
+   * @param b the boolean variable
+   */
   public void addReified(IntVar x, int v, IntVar b) {
     reif.add(x, v, b);
   }
 
+  /**
+   * Imposes all reified constraints.
+   *
+   * @param s the support object
+   */
   public void poseReified(Support s) {
     reif.pose();
   }
 
+  /**
+   * Adds an implied constraint.
+   *
+   * @param x the integer variable
+   * @param v the value
+   * @param b the boolean variable
+   */
   public void addImplied(IntVar x, int v, IntVar b) {
     imply.add(x, v, b);
   }
 
+  /**
+   * Imposes all implied constraints.
+   *
+   * @param s the support object
+   */
   public void poseImplied(Support s) {
     imply.pose();
   }

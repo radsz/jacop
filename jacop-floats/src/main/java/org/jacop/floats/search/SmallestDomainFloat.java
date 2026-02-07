@@ -46,12 +46,26 @@ public class SmallestDomainFloat<T extends Var> implements ComparatorVariable<T>
   /** It constructs a smallest domain variable comparator. */
   public SmallestDomainFloat() {}
 
+  /**
+   * Compares a metric value with a variable's domain size.
+   *
+   * @param left the metric value to compare
+   * @param var the variable whose domain size is compared
+   * @return negative if var has smaller domain, positive if larger, zero if equal
+   */
   public int compare(double left, T var) {
     double right = var.getSizeFloat();
 
     return Double.compare(right, left);
   }
 
+  /**
+   * Compares two variables based on their domain sizes.
+   *
+   * @param leftVar the first variable to compare
+   * @param rightVar the second variable to compare
+   * @return negative if leftVar has smaller domain, positive if larger, zero if equal
+   */
   public int compare(T leftVar, T rightVar) {
     double left = leftVar.getSizeFloat();
     double right = rightVar.getSizeFloat();
@@ -59,6 +73,12 @@ public class SmallestDomainFloat<T extends Var> implements ComparatorVariable<T>
     return Double.compare(right, left);
   }
 
+  /**
+   * Computes the metric value for a variable based on its domain size.
+   *
+   * @param var the variable to compute the metric for
+   * @return the domain size of the variable
+   */
   public double metric(T var) {
     return var.getSizeFloat();
   }

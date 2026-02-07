@@ -39,11 +39,13 @@ public class ThreadTimer implements Timer {
   final Thread thread;
   final ThreadMXBean timer;
 
+  /** Constructs a thread timer using the current thread. */
   public ThreadTimer() {
     thread = Thread.currentThread();
     timer = ManagementFactory.getThreadMXBean();
   }
 
+  /** {@inheritDoc} */
   public long getCpuTime() {
     return timer.getThreadCpuTime(thread.threadId());
   }

@@ -63,6 +63,14 @@ public class Loan {
     }
   }
 
+  /**
+   * Models and solves a loan payment problem over four quarters.
+   *
+   * @param i the interest rate
+   * @param p the principal initially borrowed (0.0 if unknown)
+   * @param r the quarterly repayment (0.0 if unknown)
+   * @param b4 the balance owing at end (negative value if unknown)
+   */
   public void loan(double i, double p, double r, double b4) {
 
     // ￼￼￼LOAN1 I = 0.04;

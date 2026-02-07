@@ -47,18 +47,44 @@ public class ChannelReif extends AbstractChannel {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
+  /**
+   * Constructs a ChannelReif constraint with explicit value mapping.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the array of boolean variables representing reification status.
+   * @param value the array of values corresponding to each boolean variable.
+   */
   public ChannelReif(IntVar x, IntVar[] bs, int[] value) {
     super(idNumber.incrementAndGet(), x, bs, value, "ChannelReif");
   }
 
+  /**
+   * Constructs a ChannelReif constraint with values taken from the given domain.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the array of boolean variables representing reification status.
+   * @param value the domain whose values correspond to each boolean variable.
+   */
   public ChannelReif(IntVar x, IntVar[] bs, IntDomain value) {
     this(x, bs, toArray(value));
   }
 
+  /**
+   * Constructs a ChannelReif constraint using values from the domain of x.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the array of boolean variables representing reification status.
+   */
   public ChannelReif(IntVar x, IntVar[] bs) {
     this(x, bs, toArray(x.domain));
   }
 
+  /**
+   * Constructs a ChannelReif constraint using a map from values to boolean variables.
+   *
+   * @param x the integer variable being channelled.
+   * @param bs the map from integer values to their corresponding boolean variables.
+   */
   public ChannelReif(IntVar x, Map<Integer, ? extends IntVar> bs) {
     super(idNumber.incrementAndGet(), x, bs);
   }

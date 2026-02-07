@@ -65,6 +65,13 @@ public class MultivariateIntervalNewton {
   double[] b;
   Map<FloatVar, Double> map;
 
+  /**
+   * Constructs a multivariate interval Newton solver for a system of non-linear equations.
+   *
+   * @param store the constraint store
+   * @param f the array of function variables
+   * @param x the array of variable to solve for
+   */
   public MultivariateIntervalNewton(Store store, FloatVar[] f, FloatVar[] x) {
 
     this.f = new FloatVar[f.length];
@@ -94,6 +101,11 @@ public class MultivariateIntervalNewton {
     }
   }
 
+  /**
+   * Solves the system of non-linear equations using the interval Newton method.
+   *
+   * @return the solution as an array of FloatIntervals, or null if the system cannot be solved
+   */
   public FloatInterval[] solve() {
 
     A = new FloatInterval[fprime.length][];
@@ -340,6 +352,11 @@ public class MultivariateIntervalNewton {
     return false;
   }
 
+  /**
+   * Returns a string representation of the Newton solver including functions and derivatives.
+   *
+   * @return string representation
+   */
   public String toString() {
     StringBuilder s = new StringBuilder("MultivariateIntervalNewton:\n");
 

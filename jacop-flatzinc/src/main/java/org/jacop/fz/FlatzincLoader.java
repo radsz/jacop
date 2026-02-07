@@ -62,6 +62,7 @@ public class FlatzincLoader {
     opt.doNotRunSearch();
   }
 
+  /** Loads and parses the flatzinc model without running the search. */
   public void load() {
 
     if (opt.getVerbose()) {
@@ -93,37 +94,77 @@ public class FlatzincLoader {
     }
   }
 
+  /**
+   * Returns the constraint store.
+   *
+   * @return the constraint store
+   */
   public Store getStore() {
     return parser.store;
   }
 
+  /**
+   * Returns the depth first search object.
+   *
+   * @return the depth first search
+   */
   @SuppressWarnings("unchecked")
   public DepthFirstSearch<Var> getDfs() {
     return parser.solver.flatzincDfs;
   }
 
+  /**
+   * Returns the select choice point for variable selection.
+   *
+   * @return the select choice point
+   */
   @SuppressWarnings("unchecked")
   public SelectChoicePoint<Var> getSelectChoicePoint() {
     return parser.solver.flatzincVariableSelection;
   }
 
+  /**
+   * Returns the cost variable.
+   *
+   * @return the cost variable
+   */
   public Var getCost() {
     return parser.solver.flatzincCost;
   }
 
+  /**
+   * Returns the solve object.
+   *
+   * @return the solve object
+   */
   @SuppressWarnings("unchecked")
   public Solve<Var> getSolve() {
     return parser.solver;
   }
 
+  /**
+   * Returns the tables containing variable definitions.
+   *
+   * @return the tables
+   */
   public Tables getTables() {
     return parser.dict;
   }
 
+  /**
+   * Returns the search item.
+   *
+   * @return the search item
+   */
   public SearchItem<Var> getSearch() {
     return getSolve().getSearch();
   }
 
+  /**
+   * Returns the options.
+   *
+   * @return the options
+   */
   public Options getOptions() {
     return opt;
   }

@@ -106,6 +106,12 @@ public final class MemoryPool implements SolverComponent {
     pool[size][newIndex] = array;
   }
 
+  /**
+   * Sets up the memory pool with the given parameters.
+   *
+   * @param maxSize the maximum size of arrays to pool
+   * @param stockSize the number of arrays to keep for each size
+   */
   private void setupPool(int maxSize, int stockSize) {
 
     this.stockSize = stockSize;
@@ -124,6 +130,11 @@ public final class MemoryPool implements SolverComponent {
     return "MemoryPool";
   }
 
+  /**
+   * Initializes the memory pool with the solver core.
+   *
+   * @param core the solver core
+   */
   public void initialize(Core core) {
     core.pool = this;
     // create the pool matrix

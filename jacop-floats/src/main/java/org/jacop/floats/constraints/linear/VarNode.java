@@ -36,6 +36,12 @@ import org.jacop.floats.core.FloatVar;
 /** Variable node with single variable for linear constraint tree. */
 public class VarNode extends VariableNode {
 
+  /**
+   * Constructs a variable node for a single FloatVar.
+   *
+   * @param store the constraint store
+   * @param v the FloatVar associated with this node
+   */
   public VarNode(Store store, FloatVar v) {
 
     id = n.incrementAndGet();
@@ -81,6 +87,11 @@ public class VarNode extends VariableNode {
     var.domain.in(store.level, var, min, max);
   }
 
+  /**
+   * Returns a string representation of this variable node.
+   *
+   * @return string representation including relation and variable
+   */
   public String toString() {
     return super.toString() + " (rel = " + rel + ", " + var + ")";
   }

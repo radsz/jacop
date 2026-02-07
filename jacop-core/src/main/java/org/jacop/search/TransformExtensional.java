@@ -70,6 +70,11 @@ public class TransformExtensional implements InitializeListener {
 
   InitializeListener[] initializeChildListeners;
 
+  /**
+   * It is executed at initialization of the search.
+   *
+   * @param store the constraint store in which the transformation will be applied.
+   */
   public void executedAtInitialize(Store store) {
 
     // @todo methods to suggest the interesting scope of the transformation.
@@ -154,10 +159,20 @@ public class TransformExtensional implements InitializeListener {
     }
   }
 
+  /**
+   * Sets an array of children initialize listeners.
+   *
+   * @param children the array of initialize listeners to be set as children.
+   */
   public void setChildrenListeners(InitializeListener[] children) {
     initializeChildListeners = children;
   }
 
+  /**
+   * Sets a single child initialize listener.
+   *
+   * @param child the initialize listener to be set as a child.
+   */
   public void setChildrenListeners(InitializeListener child) {
     initializeChildListeners = new InitializeListener[1];
     initializeChildListeners[0] = child;

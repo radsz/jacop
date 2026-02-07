@@ -51,6 +51,7 @@ public class AlldifferentExcept extends Alldifferent
 
   IntDomain s;
 
+  /** Protected constructor for subclassing purposes. */
   protected AlldifferentExcept() {}
 
   /**
@@ -128,6 +129,14 @@ public class AlldifferentExcept extends Alldifferent
     }
   }
 
+  /**
+   * Checks if the constraint cannot be satisfied using bipartite matching algorithm. Determines if
+   * there exists a valid assignment where all variables except those with exception values can take
+   * different values.
+   *
+   * @param vs the array of variables to check
+   * @return true if the constraint cannot be satisfied, false otherwise
+   */
   public boolean notSatisfied(IntVar[] vs) {
     return notSatisfiedByMatching(vs);
   }

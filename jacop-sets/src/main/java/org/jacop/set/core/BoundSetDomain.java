@@ -253,6 +253,12 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     return this.lub.contains(set);
   }
 
+  /**
+   * Checks if this domain contains the specified domain.
+   *
+   * @param domain the domain to check for containment
+   * @return true if this domain contains the specified domain, false otherwise
+   */
   public boolean contains(SetDomain domain) {
 
     assert domain.checkInvariants() == null : domain.checkInvariants();
@@ -1140,10 +1146,10 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   }
 
   /**
-   * It assigns a set variable to lub of its current domain.
+   * It assigns a set variable to the least upper bound of its current domain.
    *
-   * @param level level of the store at which the change takes place.
-   * @param var variable for which the domain is changing.
+   * @param level the level of the store at which the change takes place.
+   * @param var the variable for which the domain is changing.
    */
   public void inValueLub(int level, SetVar var) {
 

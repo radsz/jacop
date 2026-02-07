@@ -64,6 +64,7 @@ public class CpvizNetworkFlow {
     run.transportationProblem();
   }
 
+  /** Creates and solves a transportation problem using network flow constraints. */
   void transportationProblem() {
     final long T1 = System.currentTimeMillis();
 
@@ -169,6 +170,13 @@ public class CpvizNetworkFlow {
   /** Listener for network flow solutions. */
   public class NetListener<T extends Var> extends SimpleSolutionListener<T> {
 
+    /**
+     * Executes actions after a solution is found.
+     *
+     * @param search the search object
+     * @param select the choice point selector
+     * @return true if search should continue, false otherwise
+     */
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);

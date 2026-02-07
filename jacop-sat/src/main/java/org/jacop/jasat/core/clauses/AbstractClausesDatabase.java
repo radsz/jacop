@@ -281,6 +281,11 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
     return getClass().getSimpleName() + " (with " + size() + ')';
   }
 
+  /**
+   * Initializes the clause database with the solver core.
+   *
+   * @param core the solver core
+   */
   public final void initialize(Core core) {
     this.core = core;
     this.trail = core.trail;

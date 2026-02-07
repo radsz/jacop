@@ -48,6 +48,12 @@ public class Assert {
 
   private Assert() {}
 
+  /**
+   * Validates flow conservation constraints on all nodes of the network.
+   *
+   * @param g the network simplex to validate.
+   * @return true if flow conservation holds on all nodes.
+   */
   public static boolean checkFlow(NetworkSimplex g) {
 
     final List<Arc> allArcsForDebug = allArcsForDebug(g);
@@ -162,6 +168,13 @@ public class Assert {
     return true;
   }
 
+  /**
+   * Validates preconditions before a tree update (pivot) operation.
+   *
+   * @param leaving the arc leaving the basis tree.
+   * @param entering the arc entering the basis tree.
+   * @return true if the preconditions for the update are satisfied.
+   */
   public static boolean checkBeforeUpdate(Arc leaving, Arc entering) {
 
     assert leaving.index == -1;
@@ -179,6 +192,12 @@ public class Assert {
     return true;
   }
 
+  /**
+   * Validates the structural integrity of the network simplex data structures.
+   *
+   * @param g the network simplex to validate.
+   * @return true if the tree structure, arc indices, and node degrees are consistent.
+   */
   public static boolean checkStructure(NetworkSimplex g) {
     List<Arc> allArcsForDebug = allArcsForDebug(g);
     List<Arc> tree = new ArrayList<>();
@@ -286,6 +305,12 @@ public class Assert {
     return true;
   }
 
+  /**
+   * Checks optimality conditions by verifying reduced costs of all arcs.
+   *
+   * @param g the network simplex to validate.
+   * @return true if all arcs satisfy the optimality conditions.
+   */
   public static boolean checkOptimality(NetworkSimplex g) {
     StringBuilder s = new StringBuilder();
     for (Arc arc : allArcsForDebug(g)) {
@@ -309,6 +334,12 @@ public class Assert {
     return true;
   }
 
+  /**
+   * Validates that the infeasible nodes set is consistent with node delta balances.
+   *
+   * @param g the network simplex to validate.
+   * @return true if the infeasible nodes set matches the actual infeasible nodes.
+   */
   public static boolean checkInfeasibleNodes(NetworkSimplex g) {
 
     for (Node node : g.nodes) {
@@ -322,6 +353,7 @@ public class Assert {
     return true;
   }
 
+  /** Forces assertion checking to verify that assertions are enabled in the JVM. */
   @SuppressWarnings("PMD.UnusedLocalVariable")
   public static void forceAsserts() {
 
@@ -329,6 +361,12 @@ public class Assert {
     assert asserts = true;
   }
 
+  /**
+   * Returns all arcs in the network including artificial arcs, for debugging purposes.
+   *
+   * @param g the network simplex whose arcs are collected.
+   * @return a list containing all arcs and artificial arcs in the network.
+   */
   public static List<Arc> allArcsForDebug(NetworkSimplex g) {
     List<Arc> arcs = new ArrayList<>(g.allArcs);
     for (Node node : g.nodes) {

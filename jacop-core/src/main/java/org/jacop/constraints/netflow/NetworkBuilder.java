@@ -64,10 +64,16 @@ public class NetworkBuilder {
   public IntVar costVariable;
   private int nextNodeName = 1;
 
+  /** Creates a new network builder with no cost variable. */
   public NetworkBuilder() {
     this.costVariable = null;
   }
 
+  /**
+   * Creates a new network builder with the specified cost variable.
+   *
+   * @param costVariable the variable representing the total cost of the network flow
+   */
   public NetworkBuilder(IntVar costVariable) {
     this.costVariable = costVariable;
   }
@@ -80,19 +86,43 @@ public class NetworkBuilder {
 
   /* add node */
 
+  /**
+   * Adds a new node with zero balance to the network.
+   *
+   * @return the newly created node
+   */
   public Node addNode() {
     return addNode(0);
   }
 
+  /**
+   * Adds a new node with the specified balance to the network.
+   *
+   * @param balance the supply (positive) or demand (negative) at this node
+   * @return the newly created node
+   */
   public Node addNode(int balance) {
     String name = "(" + nextNodeName++ + ")";
     return addNode(name, balance);
   }
 
+  /**
+   * Adds a new node with the specified name and zero balance to the network.
+   *
+   * @param name the name of the node
+   * @return the newly created node
+   */
   public Node addNode(String name) {
     return addNode(name, 0);
   }
 
+  /**
+   * Adds a new node with the specified name and balance to the network.
+   *
+   * @param name the name of the node
+   * @param balance the supply (positive) or demand (negative) at this node
+   * @return the newly created node
+   */
   public Node addNode(String name, int balance) {
     Node node = new Node(name, balance);
     nodeList.add(node);
@@ -101,6 +131,15 @@ public class NetworkBuilder {
 
   /* add arc */
 
+  /**
+   * Adds an arc with variable weight and variable flow to the network.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @param wvar the variable representing the arc weight (cost per unit flow)
+   * @param xvar the variable representing the flow on this arc
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to, IntVar wvar, IntVar xvar) {
 
     Arc arc = addArc(from, to, wvar, xvar.min(), xvar.max());
@@ -110,6 +149,15 @@ public class NetworkBuilder {
     return arc;
   }
 
+  /**
+   * Adds an arc with fixed weight and variable flow to the network.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @param weight the fixed cost per unit of flow
+   * @param xvar the variable representing the flow on this arc
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to, int weight, IntVar xvar) {
 
     Arc arc = addArc(from, to, weight, xvar.min(), xvar.max());
@@ -124,6 +172,16 @@ public class NetworkBuilder {
     return arc;
   }
 
+  /**
+   * Adds an arc with variable weight and specified capacity bounds to the network.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @param wvar the variable representing the arc weight (cost per unit flow)
+   * @param lowerCapacity the minimum flow capacity of the arc
+   * @param upperCapacity the maximum flow capacity of the arc
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to, IntVar wvar, int lowerCapacity, int upperCapacity) {
 
     int weight = wvar.min();
@@ -139,20 +197,54 @@ public class NetworkBuilder {
     return arc;
   }
 
+  /**
+   * Adds an arc with fixed weight and specified capacity bounds to the network.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @param weight the fixed cost per unit of flow
+   * @param lowerCapacity the minimum flow capacity of the arc
+   * @param upperCapacity the maximum flow capacity of the arc
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to, int weight, int lowerCapacity, int upperCapacity) {
     Arc arc = new Arc(from, to, weight, lowerCapacity, upperCapacity);
     arcList.add(arc);
     return arc;
   }
 
+  /**
+   * Adds an arc with fixed weight, zero lower capacity, and specified upper capacity.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @param weight the fixed cost per unit of flow
+   * @param capacity the maximum flow capacity of the arc
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to, int weight, int capacity) {
     return addArc(from, to, weight, 0, capacity);
   }
 
+  /**
+   * Adds an arc with fixed weight and unlimited capacity.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @param weight the fixed cost per unit of flow
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to, int weight) {
     return addArc(from, to, weight, Integer.MAX_VALUE);
   }
 
+  /**
+   * Adds an arc with zero weight and unlimited capacity.
+   *
+   * @param from the source node
+   * @param to the destination node
+   * @return the newly created arc
+   */
   public Arc addArc(Node from, Node to) {
     return addArc(from, to, 0);
   }
@@ -205,7 +297,11 @@ public class NetworkBuilder {
 
   /* list variables */
 
-  // list of all variables, excluding the cost variable
+  /**
+   * Returns a list of all variables in the network, excluding the cost variable.
+   *
+   * @return a list of all flow and weight variables managed by the handlers
+   */
   public ArrayList<IntVar> listVariables() {
 
     ArrayList<IntVar> list = new ArrayList<>();
@@ -219,6 +315,11 @@ public class NetworkBuilder {
 
   /* build network */
 
+  /**
+   * Builds and returns a {@link NetworkFlow} constraint from the current network configuration.
+   *
+   * @return the constructed network flow constraint
+   */
   public NetworkFlow build() {
     return new NetworkFlow(this);
   }

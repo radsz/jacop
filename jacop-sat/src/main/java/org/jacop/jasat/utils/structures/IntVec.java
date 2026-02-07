@@ -104,6 +104,12 @@ public final class IntVec implements Iterable<Integer> {
     return numElem == 0;
   }
 
+  /**
+   * Gets the element at the specified index.
+   *
+   * @param index the index
+   * @return the element at the index
+   */
   public int get(int index) {
     assert index >= 0;
     assert index < numElem;
@@ -185,6 +191,11 @@ public final class IntVec implements Iterable<Integer> {
     return "IntVec " + Arrays.toString(Arrays.copyOf(array, numElem));
   }
 
+  /**
+   * Returns an iterator over the elements in the vector.
+   *
+   * @return an iterator over the elements
+   */
   public Iterator<Integer> iterator() {
     List<Integer> list = new ArrayList<>();
     for (int i = 0; i < numElem; i++) {

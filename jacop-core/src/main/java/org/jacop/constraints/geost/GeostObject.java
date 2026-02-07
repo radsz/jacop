@@ -163,6 +163,11 @@ public class GeostObject {
     return groundCount == variables.size();
   }
 
+  /**
+   * Returns a string representation of this geost object.
+   *
+   * @return string describing the object with its shape, coordinates, and time variables
+   */
   public String toString() {
 
     return "Object("

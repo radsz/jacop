@@ -41,17 +41,31 @@ public class LinearCalculator extends Calculator {
   final long increment;
   long n;
 
+  /**
+   * Constructs a linear calculator where the fail limit grows linearly.
+   *
+   * @param scale the increment value and initial fail limit.
+   */
   public LinearCalculator(int scale) {
     n = 1;
     failLimit = scale;
     increment = scale;
   }
 
+  /**
+   * Resets the fail counter and calculates a new fail limit using linear progression. The new limit
+   * is calculated as n * increment where n is incremented each time.
+   */
   public void newLimit() {
     numberFails = 0;
     failLimit = ++n * increment;
   }
 
+  /**
+   * Returns a string representation of this linear calculator.
+   *
+   * @return a string describing the calculator with current fails and fail limit.
+   */
   public String toString() {
     return "constantCalculator: " + numberFails + "(" + failLimit + ")";
   }

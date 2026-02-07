@@ -38,9 +38,14 @@ package org.jacop.constraints.netflow.simplex;
  */
 public interface PivotRule {
 
-  // returns an arc that violates the optimality conditions or
-  // null, if the current solution is optimal)
+  /**
+   * Returns an arc that violates the optimality conditions or null if the current solution is
+   * optimal.
+   *
+   * @return an arc violating optimality conditions, or null if optimal
+   */
   Arc next();
 
+  /** Resets the pivot rule to its initial state. */
   void reset();
 }

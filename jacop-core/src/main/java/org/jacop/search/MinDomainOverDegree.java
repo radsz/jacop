@@ -33,7 +33,10 @@ package org.jacop.search;
 import org.jacop.core.Var;
 
 /**
- * Defines a MinDomainOverDegree comparator for Variables.
+ * Defines a MinDomainOverDegree comparator for Variables. It selects variables with the smallest
+ * ratio of domain size to degree (number of constraints). This heuristic balances domain size with
+ * constraint involvement, preferring variables that are tightly constrained relative to their
+ * domain.
  *
  * @param <T> type of variable being compared.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -41,6 +44,16 @@ import org.jacop.core.Var;
  */
 public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T> {
 
+  /** It constructs MinDomainOverDegree Comparator. */
+  public MinDomainOverDegree() {}
+
+  /**
+   * Compares a metric value with a variable's domain-to-degree ratio.
+   *
+   * @param left the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double left, T var) {
 
     double right = (double) var.getSize() / var.sizeConstraints();
@@ -48,6 +61,15 @@ public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T>
     return Double.compare(right, left);
   }
 
+  /**
+   * Compares two variables based on their domain-to-degree ratios. Variables with smaller ratios
+   * have higher priority.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return positive if leftVar has higher priority, negative if rightVar has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T leftVar, T rightVar) {
 
     double left = (double) leftVar.getSize() / leftVar.sizeConstraints();
@@ -56,6 +78,13 @@ public class MinDomainOverDegree<T extends Var> implements ComparatorVariable<T>
     return Double.compare(right, left);
   }
 
+  /**
+   * Computes the metric for a variable, which is the ratio of domain size to degree (number of
+   * constraints).
+   *
+   * @param var the variable for which the metric is computed.
+   * @return the domain-to-degree ratio for the variable.
+   */
   public double metric(T var) {
     return (double) var.getSize() / var.sizeConstraints();
   }

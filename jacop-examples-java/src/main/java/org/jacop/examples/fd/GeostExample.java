@@ -65,6 +65,8 @@ public class GeostExample extends ExampleFd {
     example.search();
   }
 
+  /** Creates the constraint model for the Geost constraint example. */
+  @Override
   public void model() {
 
     store = new Store();
@@ -176,6 +178,12 @@ public class GeostExample extends ExampleFd {
     store.impose(c);
   }
 
+  /**
+   * Executes the search for a solution by checking store consistency.
+   *
+   * @return true if a solution is found, false otherwise
+   */
+  @Override
   public boolean search() {
 
     long T1;

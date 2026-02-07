@@ -57,6 +57,11 @@ public class LengauerTarjan {
   int root;
   int dfs_n;
 
+  /**
+   * Constructs a LengauerTarjan instance for a directed graph with the given number of nodes.
+   *
+   * @param n the number of nodes in the graph.
+   */
   public LengauerTarjan(int n) {
     succ = new BitSet[n];
     parent = new int[n];
@@ -83,6 +88,7 @@ public class LengauerTarjan {
     }
   }
 
+  /** Resets all graph data structures for reuse. */
   public void init() {
     for (int i = 0; i < n; i++) {
       succ[i].clear();
@@ -94,6 +100,12 @@ public class LengauerTarjan {
     }
   }
 
+  /**
+   * Computes the dominator tree for the graph rooted at the given node.
+   *
+   * @param r the root node of the graph.
+   * @return true if all nodes are reachable from the root, false otherwise.
+   */
   public boolean dominators(int r) {
 
     root = r;
@@ -193,15 +205,22 @@ public class LengauerTarjan {
     ancestor[w] = v;
   }
 
-  // To add edge from u to v
+  /**
+   * Adds a directed edge from node u to node v.
+   *
+   * @param u the source node.
+   * @param v the target node.
+   */
   public void addArc(int u, int v) {
     succ[u].set(v);
   }
 
-  /*
-   * @param n1 graph node to be checked if it is dominated by n2
-   * @param n2 graph node to be checked if it dominates n1
-   * @return true : n1 is dominated by n2
+  /**
+   * Checks whether node n1 is dominated by node n2 in the dominator tree.
+   *
+   * @param n1 graph node to be checked if it is dominated by n2.
+   * @param n2 graph node to be checked if it dominates n1.
+   * @return true if n1 is dominated by n2.
    */
   public boolean dominatedBy(int n1, int n2) {
     return domClosure[n1].get(n2);
@@ -218,6 +237,11 @@ public class LengauerTarjan {
     }
   }
 
+  /**
+   * Generates a DOT file representation of the dominator tree.
+   *
+   * @param filename the base filename (without extension) for the output DOT file.
+   */
   public void generate(String filename) {
 
     FileOutputStream out; // declare a file output object

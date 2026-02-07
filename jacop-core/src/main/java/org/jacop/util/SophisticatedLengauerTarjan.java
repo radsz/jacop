@@ -36,6 +36,11 @@ public class SophisticatedLengauerTarjan extends LengauerTarjan {
   final int[] child;
   final int[] size;
 
+  /**
+   * Constructs the sophisticated Lengauer-Tarjan dominator tree algorithm.
+   *
+   * @param n the number of vertices in the graph.
+   */
   public SophisticatedLengauerTarjan(int n) {
     super(n);
     child = new int[n];

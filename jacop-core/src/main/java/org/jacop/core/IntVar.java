@@ -431,6 +431,11 @@ public class IntVar extends Var {
     return id + domain.toStringFull();
   }
 
+  /**
+   * Removes the specified level from the variable's domain, effectively backtracking to that level.
+   *
+   * @param removedLevel the level to be removed.
+   */
   public void remove(int removedLevel) {
     domain.removeLevel(removedLevel, this);
   }
@@ -450,6 +455,11 @@ public class IntVar extends Var {
     store.addChanged(this, event, Integer.MIN_VALUE);
   }
 
+  /**
+   * Registers a constraint with this variable using the ANY pruning event.
+   *
+   * @param c the constraint to be attached to the variable.
+   */
   public void putConstraint(Constraint c) {
     putModelConstraint(c, IntDomain.ANY);
   }

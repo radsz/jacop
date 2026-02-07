@@ -110,6 +110,13 @@ public class SgmpcsSearch {
   // time-out value in miliseconds (default 10 second)
   long timeOut = 10000;
 
+  /**
+   * Constructs an SgmpcsSearch with the default simple improvement search strategy.
+   *
+   * @param store the constraint store.
+   * @param vars the variables for search.
+   * @param cost the cost variable to minimize.
+   */
   public SgmpcsSearch(Store store, IntVar[] vars, IntVar cost) {
 
     this.store = store;
@@ -120,6 +127,14 @@ public class SgmpcsSearch {
     search = new SimpleImprovementSearch<>(store, vars, cost);
   }
 
+  /**
+   * Constructs an SgmpcsSearch with a custom improvement search strategy.
+   *
+   * @param store the constraint store.
+   * @param vars the variables for search.
+   * @param cost the cost variable to minimize.
+   * @param search the custom improvement search strategy.
+   */
   public SgmpcsSearch(Store store, IntVar[] vars, IntVar cost, ImproveSolution<IntVar> search) {
 
     this.store = store;
@@ -130,6 +145,11 @@ public class SgmpcsSearch {
     this.search = search;
   }
 
+  /**
+   * Executes the SGMPCS search by finding elite solutions and then improving them.
+   *
+   * @return true when the search completes.
+   */
   public boolean search() {
 
     l = strategy == luby ? getLuby(1) : 32;
@@ -151,6 +171,7 @@ public class SgmpcsSearch {
   /*
    * Finds elite solutions if they do not exist yet.
    */
+  /** Finds elite solutions if they do not exist yet. */
   public void findEliteSolutions() {
 
     if (elite == null) {
@@ -370,6 +391,12 @@ public class SgmpcsSearch {
     }
   }
 
+  /**
+   * Computes the Luby sequence value for the given index.
+   *
+   * @param i the index in the Luby sequence (1-based).
+   * @return the Luby sequence value at the given index.
+   */
   public int getLuby(int i) {
 
     if (i == 1) {
@@ -420,6 +447,12 @@ public class SgmpcsSearch {
     return solution;
   }
 
+  /**
+   * Sets the elite solutions to the provided array. The number of solutions must match the elite
+   * size.
+   *
+   * @param solutions the array of elite solutions to set.
+   */
   public void setEliteSolutions(int[][] solutions) {
     if (solutions.length != e) {
       log.error(
@@ -444,18 +477,38 @@ public class SgmpcsSearch {
     elite[n][costPosition] = searchCost;
   }
 
+  /**
+   * Sets the probability of selecting search starting from an empty solution.
+   *
+   * @param p the probability value (between 0.0 and 1.0).
+   */
   public void setProbability(double p) {
     this.p = p;
   }
 
+  /**
+   * Sets the number of elite solutions to maintain.
+   *
+   * @param e the elite solution pool size.
+   */
   public void setEliteSize(int e) {
     this.e = e;
   }
 
+  /**
+   * Sets the number of initial solutions to generate for selecting elite solutions.
+   *
+   * @param einit the initial solution pool size.
+   */
   public void setInitialSolutionsSize(int einit) {
     this.eInit = einit;
   }
 
+  /**
+   * Sets the fail limit strategy. Must be either {@link #luby} or {@link #poly}.
+   *
+   * @param strategy the fail limit strategy to use.
+   */
   public void setFailStrategy(int strategy) {
     if (strategy == poly || strategy == luby) {
       this.strategy = strategy;
@@ -466,6 +519,11 @@ public class SgmpcsSearch {
     }
   }
 
+  /**
+   * Prints the given solution values to the log.
+   *
+   * @param solution the solution array to print.
+   */
   public void printSolution(int[] solution) {
     StringBuilder sb = new StringBuilder();
     for (int j : solution) {
@@ -474,10 +532,20 @@ public class SgmpcsSearch {
     log.info("{}", sb);
   }
 
+  /**
+   * Returns the last found solution.
+   *
+   * @return the variable values of the last found solution.
+   */
   public int[] lastSolution() {
     return solution;
   }
 
+  /**
+   * Returns the cost of the last found solution.
+   *
+   * @return the cost value of the last search result.
+   */
   public int lastCost() {
     return searchCost;
   }

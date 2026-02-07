@@ -78,6 +78,14 @@ public final class Utils {
     return answer;
   }
 
+  /**
+   * Resize the array to newSize, using the given memory pool.
+   *
+   * @param array the array to resize
+   * @param newSize the size of the new array
+   * @param pool the MemoryPool from which to find an int[]
+   * @return a new int[] with required size, and elements from the array
+   */
   public static int[] resize(int[] array, int newSize, MemoryPool pool) {
     return resize(array, newSize, array.length, pool);
   }
@@ -110,6 +118,13 @@ public final class Utils {
     return answer;
   }
 
+  /**
+   * Ensures the array has at least the given size, resizing if necessary.
+   *
+   * @param array the array to check
+   * @param size the minimum required size
+   * @return the array or a new larger array if resizing was needed
+   */
   public static Integer[] ensure(Integer[] array, int size) {
     if (array.length <= size) {
       Integer[] answer = new Integer[2 * size];
@@ -125,6 +140,14 @@ public final class Utils {
    * (which should be faster) about representation of signed literals
    */
 
+  /**
+   * Ensures the array of HashSets has at least the given size, resizing if necessary.
+   *
+   * @param <E> the element type
+   * @param array the array to check
+   * @param size the minimum required size
+   * @return the array or a new larger array if resizing was needed
+   */
   public static <E> Set<E>[] ensure(HashSet<E>[] array, int size) {
     if (array.length <= size) {
       @SuppressWarnings("unchecked")

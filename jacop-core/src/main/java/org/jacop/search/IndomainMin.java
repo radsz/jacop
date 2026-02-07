@@ -47,8 +47,12 @@ public class IndomainMin<T extends IntVar> implements Indomain<T> {
    */
   public IndomainMin() {}
 
-  // FIXME. check and remove.
-
+  /**
+   * It returns the minimal value from the domain of the variable.
+   *
+   * @param var the variable for which a value is being selected.
+   * @return the minimal value in the variable domain.
+   */
   public int indomain(IntVar var) {
     return var.min();
   }

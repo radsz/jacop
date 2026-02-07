@@ -73,6 +73,12 @@ public class Lex extends DecomposedConstraint<Constraint> {
     this(x, false);
   }
 
+  /**
+   * It creates a lexicographical order constraint for vectors x with the specified ordering type.
+   *
+   * @param x vector of vectors whose assignment is constrained by the Lex constraint.
+   * @param lt if true, strict less-than ordering is enforced; otherwise, less-than-or-equal.
+   */
   public Lex(IntVar[][] x, boolean lt) {
 
     assert x != null : "x list is null.";
@@ -127,6 +133,12 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * Decomposes the less-than-or-equal lexicographic constraint using a Regular automaton.
+   *
+   * @param store the constraint store used for decomposition.
+   * @return the list of constraints forming the decomposition.
+   */
   public List<Constraint> decomposeLeRegular(Store store) {
 
     if (constraints == null) {
@@ -257,6 +269,12 @@ public class Lex extends DecomposedConstraint<Constraint> {
     return constraints;
   }
 
+  /**
+   * Decomposes the strict less-than lexicographic constraint using a Regular automaton.
+   *
+   * @param store the constraint store used for decomposition.
+   * @return the list of constraints forming the decomposition.
+   */
   public List<Constraint> decomposeLtRegular(Store store) {
 
     if (constraints == null) {
@@ -398,6 +416,12 @@ public class Lex extends DecomposedConstraint<Constraint> {
     return constraints;
   }
 
+  /**
+   * Decomposes the strict less-than lexicographic constraint for exactly two vectors.
+   *
+   * @param store the constraint store used for decomposition.
+   * @return the list of constraints forming the decomposition.
+   */
   public List<Constraint> decomposeLt(Store store) {
 
     if (constraints == null) {
@@ -434,6 +458,12 @@ public class Lex extends DecomposedConstraint<Constraint> {
     return constraints;
   }
 
+  /**
+   * Decomposes the less-than-or-equal lexicographic constraint for exactly two vectors.
+   *
+   * @param store the constraint store used for decomposition.
+   * @return the list of constraints forming the decomposition.
+   */
   public List<Constraint> decomposeLe(Store store) {
 
     if (constraints == null) {

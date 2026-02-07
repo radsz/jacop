@@ -198,6 +198,11 @@ public final class SatWrapper extends Constraint
     varToSatBridge.put(variable, bridge);
   }
 
+  /**
+   * Registers a variable with the SAT wrapper using default translation.
+   *
+   * @param result the variable to register
+   */
   public void register(IntVar result) {
     register(result, true);
   }
@@ -395,6 +400,11 @@ public final class SatWrapper extends Constraint
 
   }
 
+  /**
+   * Called when a solution is found.
+   *
+   * @param satisfiable indicates if the solution is satisfiable
+   */
   public void onSolution(boolean satisfiable) {
     hasSolution = true;
   }
@@ -561,6 +571,12 @@ public final class SatWrapper extends Constraint
         + boolVarToCpValue(literal);
   }
 
+  /**
+   * Shows the meaning of a clause as a string.
+   *
+   * @param literals the literals in the clause
+   * @return string representation of clause meaning
+   */
   public String showClauseMeaning(Iterable<Integer> literals) {
     StringBuilder answer = new StringBuilder();
     for (int i : literals) {
@@ -569,11 +585,13 @@ public final class SatWrapper extends Constraint
     return answer.toString();
   }
 
+  /** {@inheritDoc} */
   @Override
   public String id() {
     return getClass().getName();
   }
 
+  /** {@inheritDoc} */
   @Override
   public void removeConstraint() {
     /*
@@ -583,18 +601,22 @@ public final class SatWrapper extends Constraint
     core = null; // garbage collect
   }
 
+  /** {@inheritDoc} */
   public boolean satisfied() {
     return hasSolution || core.currentState == SolverState.SATISFIABLE;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return getClass().getName();
   }
 
+  /** {@inheritDoc} */
   @Override
   public void increaseWeight() {}
 
+  /** {@inheritDoc} */
   @Override
   public Set<Var> arguments() {
     return new HashSet<>(registeredVars);
@@ -637,6 +659,11 @@ public final class SatWrapper extends Constraint
     modelClausesToAdd.add(toAdd);
   }
 
+  /**
+   * Adds a model clause to the SAT solver.
+   *
+   * @param clause the clause as an array of literals
+   */
   public void addModelClause(int[] clause) {
 
     empty = false;
@@ -780,6 +807,7 @@ public final class SatWrapper extends Constraint
     return true;
   }
 
+  /** Called when the SAT solver starts. */
   public void onStart() {
     assert core != null;
     assert core.dbStore != null;
@@ -787,8 +815,14 @@ public final class SatWrapper extends Constraint
     // before this point
   }
 
+  /** Called when the SAT solver stops. */
   public void onStop() {}
 
+  /**
+   * Initializes the wrapper with the specified SAT core.
+   *
+   * @param core the SAT core to initialize with
+   */
   public void initialize(Core core) {
 
     this.core = core;
@@ -813,6 +847,12 @@ public final class SatWrapper extends Constraint
     domainTranslator.initialize(this);
   }
 
+  /**
+   * Writes the SAT problem to CNF format.
+   *
+   * @param output the buffered writer to write to
+   * @throws IOException if an I/O error occurs
+   */
   public void toCnf(BufferedWriter output) throws IOException {
 
     core.dbStore.toCnf(output);

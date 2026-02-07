@@ -49,16 +49,28 @@ public class AfcMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
   private AfcMaxDeg() {}
 
+  /**
+   * Creates an AfcMaxDeg comparator using the store's default decay.
+   *
+   * @param store the constraint store.
+   */
   public AfcMaxDeg(Store store) {
     this(store, store.getDecay());
   }
 
+  /**
+   * Creates an AfcMaxDeg comparator with a specified decay factor.
+   *
+   * @param store the constraint store.
+   * @param decay the decay factor for AFC weight recalculation.
+   */
   public AfcMaxDeg(Store store, double decay) {
     store.setAllConstraints();
     store.afcManagement(true);
     store.setDecay(decay);
   }
 
+  /** {@inheritDoc} */
   public int compare(double left, T var) {
 
     double right = afcValue(var) / var.getSizeFloat();
@@ -66,6 +78,7 @@ public class AfcMaxDeg<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(left, right);
   }
 
+  /** {@inheritDoc} */
   public int compare(T leftVar, T rightVar) {
 
     double left = afcValue(leftVar) / leftVar.getSizeFloat();
@@ -75,6 +88,7 @@ public class AfcMaxDeg<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(left, right);
   }
 
+  /** {@inheritDoc} */
   public double metric(T var) {
 
     return afcValue(var) / var.getSizeFloat();

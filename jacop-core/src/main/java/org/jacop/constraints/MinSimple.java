@@ -104,6 +104,11 @@ public class MinSimple extends Constraint implements SatisfiedPresent {
     return IntDomain.BOUND;
   }
 
+  /**
+   * Checks if the constraint is satisfied.
+   *
+   * @return true if the constraint is satisfied, false otherwise.
+   */
   public boolean satisfied() {
 
     int minVal = min.max();

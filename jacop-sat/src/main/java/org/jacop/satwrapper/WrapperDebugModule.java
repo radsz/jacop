@@ -67,6 +67,7 @@ public final class WrapperDebugModule
   // the associate wrapper
   private SatWrapper wrapper;
 
+  /** {@inheritDoc} */
   public void onRestart(int oldLevel) {
     printLine(true);
     core.logc(3, "restart from level %d <=> CP level %d", oldLevel, wrapper.store.level);
@@ -74,6 +75,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onConflict(MapClause conflictClause, int level) {
     printLine(true);
     core.logc(3, "conflict at level " + level);
@@ -86,6 +88,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onBackjump(int oldLevel, int newLevel) {
     printLine(true);
     core.logc(
@@ -103,6 +106,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onAssertion(int literal, int level) {
     printLine(true);
 
@@ -124,6 +128,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onPropagate(int literal, int clauseId) {
     printLine(true);
     core.logc(
@@ -144,6 +149,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onSolution(boolean satisfiable) {
     printLine(true);
     core.logc(3, "current level : " + core.currentLevel);
@@ -154,6 +160,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onExplain(MapClause explanation) {
     printLine(true);
     core.logc(
@@ -166,6 +173,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onClauseAdd(int[] clause, int clauseId, boolean isModelClause) {
     String c = Utils.showClause(clause);
     mapClause.clear();
@@ -181,10 +189,12 @@ public final class WrapperDebugModule
             + wrapper.showClauseMeaning(mapClause));
   }
 
+  /** {@inheritDoc} */
   public void onClauseRemoval(int clauseId) {
     core.logc(3, "remove clause " + clauseId);
   }
 
+  /** {@inheritDoc} */
   public void onForget() {
     printLine(true);
     core.logc(3, "forget() called");
@@ -192,6 +202,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onStart() {
     printLine(true);
     core.logc(3, "solver started at " + core.getTime("start"));
@@ -199,6 +210,7 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /** {@inheritDoc} */
   public void onStop() {
     printLine(true);
     core.logc(3, "solver stopped at " + core.getTime("stop"));
@@ -206,6 +218,11 @@ public final class WrapperDebugModule
     printBlank();
   }
 
+  /**
+   * Prints a separator line in debug output.
+   *
+   * @param start true for opening line, false for closing line
+   */
   private void printLine(boolean start) {
     if (start) {
       core.logc(3, "/==================================");
@@ -214,10 +231,17 @@ public final class WrapperDebugModule
     }
   }
 
+  /** Prints a blank line in debug output. */
   private void printBlank() {
     core.logc(3, "");
   }
 
+  /**
+   * Prints the trail state for variables in a clause.
+   *
+   * @param prefix prefix string for the output
+   * @param clause the clause whose variables to print
+   */
   private void printTrail(String prefix, MapClause clause) {
     StringBuilder sb = new StringBuilder().append("[ ");
     for (int var : clause.literals.keySet()) {
@@ -231,6 +255,7 @@ public final class WrapperDebugModule
     core.logc(3, prefix + sb.append(']'));
   }
 
+  /** {@inheritDoc} */
   public void initialize(Core core) {
     this.core = core;
 
@@ -249,6 +274,7 @@ public final class WrapperDebugModule
     core.verbosity = 3;
   }
 
+  /** {@inheritDoc} */
   public void initialize(SatWrapper wrapper) {
     this.wrapper = wrapper;
     initialize(wrapper.core);

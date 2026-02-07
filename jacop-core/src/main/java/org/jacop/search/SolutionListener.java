@@ -64,7 +64,11 @@ public interface SolutionListener<T extends Var> {
    */
   boolean assignSolution(Store store, int no);
 
-  /** It returns the string representation of the last solution. */
+  /**
+   * It returns the string representation of the last solution.
+   *
+   * @return string describing the last solution.
+   */
   String toString();
 
   /**
@@ -135,6 +139,12 @@ public interface SolutionListener<T extends Var> {
    */
   int findSolutionMatchingParent(int parentSolutionNo);
 
+  /**
+   * It returns the parent solution number for a given child solution.
+   *
+   * @param childSolutionNo the child solution number.
+   * @return the parent solution number.
+   */
   int getParentSolution(int childSolutionNo);
 
   /**

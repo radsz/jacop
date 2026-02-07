@@ -76,6 +76,12 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     this.indexOffset = indexOffset;
   }
 
+  /**
+   * It constructs max constraint with default index offset of 0.
+   *
+   * @param list the array of variables for which the index of the maximum value is imposed.
+   * @param maxIndex variable denoting the index of the maximum value
+   */
   public ArgMax(IntVar[] list, IntVar maxIndex) {
 
     checkInputForNullness(new String[] {"list", "maxIndex"}, new Object[][] {list, {maxIndex}});
@@ -102,6 +108,12 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     this.indexOffset = indexOffset;
   }
 
+  /**
+   * It constructs max constraint with default index offset of 0.
+   *
+   * @param variables the list of variables for which the index of the maximum value is imposed.
+   * @param maxIndex variable denoting the index of the maximum value
+   */
   public ArgMax(List<? extends IntVar> variables, IntVar maxIndex) {
     this(variables.toArray(new IntVar[0]), maxIndex);
   }

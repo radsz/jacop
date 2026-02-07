@@ -57,14 +57,30 @@ public final class IntSet extends IntTrie<IntTrie.SimpleNode> {
     }
   }
 
+  /**
+   * Sets the bit at the specified index (alias for add).
+   *
+   * @param i the index to set
+   */
   public void set(int i) {
     add(i);
   }
 
+  /**
+   * Gets the bit at the specified index (alias for contains).
+   *
+   * @param i the index to check
+   * @return true if the index is in the set
+   */
   public boolean get(int i) {
     return contains(i);
   }
 
+  /**
+   * Clears the bit at the specified index (alias for remove).
+   *
+   * @param i the index to clear
+   */
   public void clear(int i) {
     remove(i);
   }

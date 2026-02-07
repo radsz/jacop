@@ -232,6 +232,7 @@ public class TraceGenerator<T extends Var>
     }
   }
 
+  /** {@inheritDoc} */
   public T getChoiceVariable(int index) {
 
     selectedVar = select.getChoiceVariable(index);
@@ -246,6 +247,7 @@ public class TraceGenerator<T extends Var>
     return selectedVar;
   }
 
+  /** {@inheritDoc} */
   public int getChoiceValue() {
 
     selectedValue = select.getChoiceValue();
@@ -258,6 +260,7 @@ public class TraceGenerator<T extends Var>
     return selectedValue;
   }
 
+  /** {@inheritDoc} */
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
     PrimitiveConstraint c = select.getChoiceConstraint(index);
@@ -291,6 +294,7 @@ public class TraceGenerator<T extends Var>
     return select.getIndex();
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     return "";
   }
@@ -298,38 +302,69 @@ public class TraceGenerator<T extends Var>
   // =================================================================
   // Metods for tracing using ConsistencyListener
 
+  /**
+   * Sets the children consistency listeners.
+   *
+   * @param children the array of consistency listeners to set as children
+   */
   public void setChildrenListeners(ConsistencyListener[] children) {
     consistencyListeners = new ConsistencyListener[children.length];
     System.arraycopy(children, 0, consistencyListeners, 0, children.length);
   }
 
+  /**
+   * Sets a single child consistency listener.
+   *
+   * @param child the consistency listener to set as the sole child
+   */
   public void setChildrenListeners(ConsistencyListener child) {
     consistencyListeners = new ConsistencyListener[1];
     consistencyListeners[0] = child;
   }
 
+  /**
+   * Sets the children exit child listeners.
+   *
+   * @param children the array of exit child listeners to set as children
+   */
   @SuppressWarnings("unchecked")
   public void setChildrenListeners(ExitChildListener<T>[] children) {
     exitChildListeners = new ExitChildListener[children.length];
     System.arraycopy(children, 0, exitChildListeners, 0, children.length);
   }
 
+  /**
+   * Sets the children exit listeners.
+   *
+   * @param children the array of exit listeners to set as children
+   */
   public void setChildrenListeners(ExitListener[] children) {
     exitListeners = new ExitListener[children.length];
     System.arraycopy(children, 0, exitListeners, 0, children.length);
   }
 
+  /**
+   * Sets a single child exit child listener.
+   *
+   * @param child the exit child listener to set as the sole child
+   */
   @SuppressWarnings("unchecked")
   public void setChildrenListeners(ExitChildListener<T> child) {
     exitChildListeners = new ExitChildListener[1];
     exitChildListeners[0] = child;
   }
 
+  /**
+   * Sets a single child exit listener.
+   *
+   * @param child the exit listener to set as the sole child
+   */
   public void setChildrenListeners(ExitListener child) {
     exitListeners = new ExitListener[1];
     exitListeners[0] = child;
   }
 
+  /** {@inheritDoc} */
   public boolean executeAfterConsistency(boolean consistent) {
 
     if (consistencyListeners != null) {
@@ -383,6 +418,7 @@ public class TraceGenerator<T extends Var>
   // =================================================================
   // Metods for tracing using ExitChildListener
 
+  /** {@inheritDoc} */
   public boolean leftChild(T var, int value, boolean status) {
 
     boolean returnCode = true;
@@ -431,6 +467,7 @@ public class TraceGenerator<T extends Var>
     return returnCode;
   }
 
+  /** {@inheritDoc} */
   public boolean leftChild(PrimitiveConstraint choice, boolean status) {
 
     boolean returnCode = true;
@@ -461,11 +498,13 @@ public class TraceGenerator<T extends Var>
     return returnCode;
   }
 
+  /** {@inheritDoc} */
   public void rightChild(T var, int value, boolean status) {
 
     currentSearchNode = searchStack.pop();
   }
 
+  /** {@inheritDoc} */
   public void rightChild(PrimitiveConstraint choice, boolean status) {
 
     currentSearchNode = searchStack.pop();
@@ -474,6 +513,7 @@ public class TraceGenerator<T extends Var>
   // =================================================================
   // Metods for tracing using ExitListener
 
+  /** {@inheritDoc} */
   public void executedAtExit(Store store, int solutionsNo) {
 
     try {
@@ -614,6 +654,11 @@ public class TraceGenerator<T extends Var>
     }
   }
 
+  /**
+   * Adds a variable to the list of traced variables.
+   *
+   * @param v the variable to add to the trace
+   */
   public void addTracedVar(Var v) {
     tracedVar.add(v);
   }

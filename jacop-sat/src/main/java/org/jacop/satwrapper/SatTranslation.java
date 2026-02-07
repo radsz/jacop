@@ -49,6 +49,11 @@ public class SatTranslation {
   public boolean debug;
   long numberClauses;
 
+  /**
+   * Constructs a SAT translation instance for the given store.
+   *
+   * @param store the constraint store
+   */
   public SatTranslation(Store store) {
     this.store = store;
     clauses = new SatWrapper();
@@ -57,6 +62,12 @@ public class SatTranslation {
     clauses.empty = true;
   }
 
+  /**
+   * Generates a SAT clause from positive and negative literals.
+   *
+   * @param a1 array of variables for positive literals
+   * @param a2 array of variables for negative literals
+   */
   public void generateClause(IntVar[] a1, IntVar[] a2) {
 
     List<IntVar> a1reduced = new ArrayList<>();
@@ -111,6 +122,13 @@ public class SatTranslation {
 
   }
 
+  /**
+   * Generates a reified clause expressing ((a1 \/ ... \/ an) \/ (-b1 \/ ... \/ -bn)) <=> r.
+   *
+   * @param a array of variables for positive literals
+   * @param b array of variables for negative literals
+   * @param r reification variable
+   */
   public void generateClauseReif(IntVar[] a, IntVar[] b, IntVar r) {
     // ((a1 \/ ...\/ an) \/ (-b1 \/ ... \/ -bn)) <=> r
     // a1 \/ ...\/ an \/ -b1 \/ ... \/ -bn \/ -r
@@ -128,6 +146,12 @@ public class SatTranslation {
     }
   }
 
+  /**
+   * Generates clauses for OR constraint: c <=> (a1 \/ a2 \/ ... \/ an).
+   *
+   * @param a array of input variables
+   * @param c output variable
+   */
   public void generateOr(IntVar[] a, IntVar c) {
 
     // (a1 \/ a2 \/ ... \/ an \/ -c)
@@ -146,6 +170,12 @@ public class SatTranslation {
     }
   }
 
+  /**
+   * Generates clauses for AND constraint: c <=> (a1 /\ a2 /\ ... /\ an).
+   *
+   * @param a array of input variables
+   * @param c output variable
+   */
   public void generateAnd(IntVar[] a, IntVar c) {
 
     // -a1 \/ -a2 \/ ... \/ c
@@ -193,11 +223,26 @@ public class SatTranslation {
     }
   }
 
+  /**
+   * Generates clauses for XOR constraint with two inputs: c <=> (a xor b).
+   *
+   * @param a first input variable
+   * @param b second input variable
+   * @param c output variable
+   */
   public void generateXor(IntVar a, IntVar b, IntVar c) {
     // (a xor b) <=> c
     generateNeqReif(a, b, c);
   }
 
+  /**
+   * Generates clauses for XOR constraint with three inputs: d <=> (a xor b xor c).
+   *
+   * @param a first input variable
+   * @param b second input variable
+   * @param c third input variable
+   * @param d output variable
+   */
   public void generateXor(IntVar a, IntVar b, IntVar c, IntVar d) {
     // (a xor b xor c) <=> d
     generateClause(new IntVar[] {a}, new IntVar[] {b, c, d});
@@ -211,6 +256,12 @@ public class SatTranslation {
     generateClause(new IntVar[] {a, b, c}, new IntVar[] {d});
   }
 
+  /**
+   * Generates clauses for equality constraint: a = b.
+   *
+   * @param a first variable
+   * @param b second variable
+   */
   public void generateEq(IntVar a, IntVar b) {
     // a = b
     // ===========
@@ -219,6 +270,12 @@ public class SatTranslation {
     generateClause(new IntVar[] {a}, new IntVar[] {b});
   }
 
+  /**
+   * Generates clauses for less-than-or-equal constraint: a <= b.
+   *
+   * @param a first variable
+   * @param b second variable
+   */
   public void generateLe(IntVar a, IntVar b) {
     // a =< b
     // ===========
@@ -226,6 +283,12 @@ public class SatTranslation {
     generateClause(new IntVar[] {b}, new IntVar[] {a});
   }
 
+  /**
+   * Generates clauses for less-than constraint: a < b.
+   *
+   * @param a first variable
+   * @param b second variable
+   */
   public void generateLt(IntVar a, IntVar b) {
     // a < b
     // ===========
@@ -234,6 +297,13 @@ public class SatTranslation {
     generateClause(new IntVar[] {b}, new IntVar[] {});
   }
 
+  /**
+   * Generates clauses for reified equality constraint: c <=> (a = b).
+   *
+   * @param a first variable
+   * @param b second variable
+   * @param c reification variable
+   */
   public void generateEqReif(IntVar a, IntVar b, IntVar c) {
     // a = b <=> c
     // ===========
@@ -248,6 +318,13 @@ public class SatTranslation {
     generateClause(new IntVar[] {c}, new IntVar[] {a, b});
   }
 
+  /**
+   * Generates clauses for reified inequality constraint: c <=> (a != b).
+   *
+   * @param a first variable
+   * @param b second variable
+   * @param c reification variable
+   */
   public void generateNeqReif(IntVar a, IntVar b, IntVar c) {
     // a != b <=> c
     // ===========
@@ -262,6 +339,13 @@ public class SatTranslation {
     generateClause(new IntVar[] {}, new IntVar[] {a, b, c});
   }
 
+  /**
+   * Generates clauses for reified less-than-or-equal constraint: c <=> (a <= b).
+   *
+   * @param a first variable
+   * @param b second variable
+   * @param c reification variable
+   */
   public void generateLeReif(IntVar a, IntVar b, IntVar c) {
     // a =< b <=> c
     // ===========
@@ -271,6 +355,13 @@ public class SatTranslation {
     generateClause(new IntVar[] {c}, new IntVar[] {b});
   }
 
+  /**
+   * Generates clauses for reified less-than constraint: c <=> (a < b).
+   *
+   * @param a first variable
+   * @param b second variable
+   * @param c reification variable
+   */
   public void generateLtReif(IntVar a, IntVar b, IntVar c) {
     // a < b <=> c
     // ===========
@@ -280,6 +371,12 @@ public class SatTranslation {
     generateClause(new IntVar[] {b}, new IntVar[] {c});
   }
 
+  /**
+   * Generates clauses for NOT constraint: b <=> -a.
+   *
+   * @param a input variable
+   * @param b output variable
+   */
   public void generateNot(IntVar a, IntVar b) {
     // -a = b
     // ===========
@@ -290,6 +387,12 @@ public class SatTranslation {
     generateClause(new IntVar[] {}, new IntVar[] {a, b});
   }
 
+  /**
+   * Generates clauses for implication constraint: a => b.
+   *
+   * @param a antecedent variable
+   * @param b consequent variable
+   */
   public void generateImplication(IntVar a, IntVar b) {
     // a => b
     // ===========
@@ -298,6 +401,13 @@ public class SatTranslation {
     generateClause(new IntVar[] {b}, new IntVar[] {a});
   }
 
+  /**
+   * Generates clauses for reified implication constraint: c <=> (a => b).
+   *
+   * @param a antecedent variable
+   * @param b consequent variable
+   * @param c reification variable
+   */
   public void generateImplicationReif(IntVar a, IntVar b, IntVar c) {
     // (a => b) <=> c
     // ===========
@@ -310,6 +420,12 @@ public class SatTranslation {
     generateClause(new IntVar[] {c}, new IntVar[] {b});
   }
 
+  /**
+   * Generates clauses for reified all-zero constraint: c <=> (a[0] = 0 /\ ... /\ a[n] = 0).
+   *
+   * @param as array of variables to check for zero
+   * @param c reification variable
+   */
   public void generateAllZeroReif(IntVar[] as, IntVar c) {
     // allZero(a) <=> c
     // - (a[0] \/ .. \/ a[n]) <=> c
@@ -333,6 +449,13 @@ public class SatTranslation {
     generateClause(v, new IntVar[] {});
   }
 
+  /**
+   * Generates clauses for if-then-else boolean constraint: if c then a else b.
+   *
+   * @param c condition variable
+   * @param a variable set to true when c is true
+   * @param b variable set to true when c is false
+   */
   public void generateIfThenElseBool(IntVar c, IntVar a, IntVar b) {
     // case for if c then a = true else b = true
     // (-c \/ a) /\ (c \/ b)
@@ -340,6 +463,7 @@ public class SatTranslation {
     generateClause(new IntVar[] {c, b}, new IntVar[] {});
   }
 
+  /** Imposes the generated clauses on the store. */
   public void impose() {
 
     store.countConstraint();
@@ -347,10 +471,21 @@ public class SatTranslation {
     store.impose(clauses);
   }
 
+  /**
+   * Returns the number of clauses generated.
+   *
+   * @return the number of generated clauses
+   */
   public long numberClauses() {
     return numberClauses;
   }
 
+  /**
+   * Converts a clause to its string representation.
+   *
+   * @param clause the clause as an array of literals
+   * @return string representation of the clause
+   */
   String clauseToString(int[] clause) {
 
     StringBuilder buffer = new StringBuilder();

@@ -524,6 +524,13 @@ public class Mdd {
     return -1;
   }
 
+  /**
+   * It finds the position of a value within a range of values using binary search.
+   *
+   * @param value the value to search for.
+   * @param values the array of values to search in.
+   * @return the position of the value, or -1 if not found.
+   */
   protected int findRange(int value, int[] values) {
 
     int left = 0;
@@ -560,7 +567,7 @@ public class Mdd {
     }
   }
 
-  /** It reduces Mdd to minimal size. */
+  /** It reduces Mdd to minimal canonical form by identifying and merging equivalent nodes. */
   @SuppressWarnings("unchecked")
   public void reduce() {
 

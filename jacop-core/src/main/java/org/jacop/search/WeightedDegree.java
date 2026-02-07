@@ -49,10 +49,23 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
 
   private WeightedDegree() {}
 
+  /**
+   * Constructs a WeightedDegree comparator and enables variable weight management in the store.
+   *
+   * @param store the constraint store for which weight management is enabled.
+   */
   public WeightedDegree(Store store) {
     store.variableWeightManagement = true;
   }
 
+  /**
+   * Compares a precomputed metric value against the weighted degree metric of the given variable.
+   *
+   * @param left the precomputed metric value.
+   * @param var the variable whose metric is computed and compared.
+   * @return a negative integer, zero, or a positive integer as left is less than, equal to, or
+   *     greater than the variable's metric.
+   */
   public int compare(double left, T var) {
 
     double right = ((double) var.weight) / var.getSizeFloat();
@@ -60,6 +73,14 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(left, right);
   }
 
+  /**
+   * Compares two variables based on their weighted degree divided by domain size.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return a negative integer, zero, or a positive integer as leftVar's metric is less than, equal
+   *     to, or greater than rightVar's metric.
+   */
   public int compare(T leftVar, T rightVar) {
 
     double left = ((double) leftVar.weight) / leftVar.getSizeFloat();
@@ -69,6 +90,12 @@ public class WeightedDegree<T extends Var> implements ComparatorVariable<T> {
     return Double.compare(left, right);
   }
 
+  /**
+   * Computes the weighted degree metric for the given variable (weight divided by domain size).
+   *
+   * @param var the variable for which the metric is computed.
+   * @return the weighted degree metric value.
+   */
   public double metric(T var) {
 
     return var.weight / var.getSizeFloat();

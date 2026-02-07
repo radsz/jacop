@@ -64,9 +64,13 @@ public class IndomainHierarchical<T extends Var> implements Indomain<T> {
     this.defIndomain = defIndomain;
   }
 
-  /*
-   * @throws JaCoPException if no value can be returned since no selection
-   * mechanism is provided.
+  /**
+   * It returns the value to be assigned to the variable using the appropriate indomain heuristic
+   * from the mapping or the default indomain if not found.
+   *
+   * @param v the variable for which a value is being selected.
+   * @return the value to be assigned to the variable.
+   * @throws RuntimeException if no value can be returned since no selection mechanism is provided.
    */
   public int indomain(T v) throws RuntimeException {
     if (hashmap.containsKey(v)) {

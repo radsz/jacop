@@ -62,9 +62,9 @@ public class Steiner extends ExampleSet {
   /**
    * It executes the program which solves this Steiner problem.
    *
-   * @param args prameters (none)
+   * @param args parameters (none)
    */
-  static void main(String[] args) {
+  public static void main(String[] args) {
 
     Steiner example = new Steiner();
     example.n = 7;
@@ -73,6 +73,7 @@ public class Steiner extends ExampleSet {
     example.search();
   }
 
+  /** Creates the constraint model for the Steiner problem. */
   public void model() {
 
     int t = n * (n - 1) / 6;
@@ -119,6 +120,11 @@ public class Steiner extends ExampleSet {
     }
   }
 
+  /**
+   * Performs the search for a solution to the Steiner problem.
+   *
+   * @return true if a solution is found, false otherwise.
+   */
   public boolean search() {
 
     long T1;

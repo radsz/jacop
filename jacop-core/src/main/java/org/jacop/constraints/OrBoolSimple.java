@@ -81,6 +81,11 @@ public class OrBoolSimple extends PrimitiveConstraint {
     setScope(a, b, result);
   }
 
+  /**
+   * Enforces consistency for this constraint.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
   public void consistency(Store store) {
     // a OR b = result
     if (a.max() == 0 && b.max() == 0) {

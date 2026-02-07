@@ -45,17 +45,37 @@ public class LargestMaxFloat<T extends FloatVar> implements ComparatorVariable<T
   /** It constructs variable comparator with priority based on the largest maximal value. */
   public LargestMaxFloat() {}
 
+  /**
+   * Compares a metric value with a variable's maximum domain value.
+   *
+   * @param left the metric value to compare
+   * @param var the variable whose maximum value is compared
+   * @return negative if var has larger maximum, positive if smaller, zero if equal
+   */
   public int compare(double left, T var) {
     double right = var.dom().max();
     return Double.compare(left, right);
   }
 
+  /**
+   * Compares two variables based on their maximum domain values.
+   *
+   * @param leftVar the first variable to compare
+   * @param rightVar the second variable to compare
+   * @return negative if leftVar has larger maximum, positive if smaller, zero if equal
+   */
   public int compare(T leftVar, T rightVar) {
     double left = leftVar.dom().max();
     double right = rightVar.dom().max();
     return Double.compare(left, right);
   }
 
+  /**
+   * Computes the metric value for a variable based on its maximum domain value.
+   *
+   * @param var the variable to compute the metric for
+   * @return the maximum value in the variable's domain
+   */
   public double metric(T var) {
     return var.dom().max();
   }

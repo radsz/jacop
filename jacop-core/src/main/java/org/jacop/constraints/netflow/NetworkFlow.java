@@ -140,6 +140,11 @@ public class NetworkFlow extends Constraint
     setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
   }
 
+  /**
+   * It constructs a network flow constraint from a network builder.
+   *
+   * @param builder the network builder containing nodes, arcs, handlers, and cost variable.
+   */
   public NetworkFlow(NetworkBuilder builder) {
 
     this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
@@ -186,6 +191,7 @@ public class NetworkFlow extends Constraint
     }
   }
 
+  /** Updates the network graph with queued variable changes. */
   private void updateGraph() {
     // update graph
     network.increaseLevel();

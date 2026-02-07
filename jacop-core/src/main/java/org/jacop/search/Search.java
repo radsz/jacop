@@ -242,6 +242,11 @@ public interface Search<T extends Var> {
    */
   void setWrongDecisionsOut(long out);
 
+  /**
+   * It returns the string representation of the search.
+   *
+   * @return string describing the search.
+   */
   String toString();
 
   /**

@@ -144,6 +144,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     this.store = store;
   }
 
+  /**
+   * Parses search parameters from the parse tree node.
+   *
+   * @param node the parse tree node containing search annotations
+   * @param n the index of the child node to process
+   */
   void searchParameters(SimpleNode node, int n) {
 
     // node.dump("");
@@ -311,6 +317,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     // compilation aborted.");
   }
 
+  /**
+   * Creates a vector of search items from a parse tree node.
+   *
+   * @param body the parse tree node containing the search vector
+   */
   void makeVectorOfSearches(SimpleNode body) {
 
     if (Objects.equals(((ASTAnnotation) body).getAnnId(), "$vector")) {
@@ -342,6 +353,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Determines the exploration type from an annotation node.
+   *
+   * @param expr4 the annotation node containing exploration type
+   */
   void explorationType(ASTAnnotation expr4) {
     switch (expr4.getAnnId()) {
       case "$expr" ->
@@ -395,6 +411,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Parses search parameters from multiple annotations.
+   *
+   * @param node the parse tree node containing multiple search annotations
+   * @param n the index parameter (currently unused)
+   */
   void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
 
     // node.dump("");
@@ -415,6 +437,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     search_type = "seq_search";
   }
 
+  /**
+   * Creates a select choice point for warm start search.
+   *
+   * @return the select choice point for warm start
+   */
   SelectChoicePoint<IntVar> getWarmStartSelect() {
 
     Indomain<IntVar> indom =
@@ -441,6 +468,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     return new SimpleSelect<>(searchVars, var_sel, indom);
   }
 
+  /**
+   * Creates a select choice point for integer variable search.
+   *
+   * @return the select choice point for integer variables
+   */
   SelectChoicePoint<IntVar> getIntSelect() {
 
     if ("random".equals(var_selection_heuristic)) {
@@ -514,6 +546,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Creates a select choice point for float variable search.
+   *
+   * @return the select choice point for float variables
+   */
   SelectChoicePoint<FloatVar> getFloatSelect() {
 
     ComparatorsVar<FloatVar> vs = getFloatVarSelect();
@@ -558,6 +595,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Creates a select choice point for set variable search.
+   *
+   * @return the select choice point for set variables
+   */
   SelectChoicePoint<SetVar> getSetSelect() {
 
     ComparatorsVar<SetVar> vs = getSetVarSelect();
@@ -578,6 +620,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Returns the indomain heuristic for set variables.
+   *
+   * @param indomain the name of the indomain heuristic
+   * @return the indomain heuristic for set variables
+   */
   Indomain<SetVar> getIndomain4Set(String indomain) {
 
     if (indomain == null) {
@@ -596,6 +644,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Returns the indomain heuristic for integer variables.
+   *
+   * @param indomain the name of the indomain heuristic
+   * @return the indomain heuristic for integer variables
+   */
   Indomain<IntVar> getIndomain(String indomain) {
     if (indomain == null) {
       return new IndomainMin<>();
@@ -615,6 +669,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Gets the variable selection comparator for integer variables.
+   *
+   * @return the comparator for variable selection
+   */
   public ComparatorsVar<IntVar> getVarSelect() {
 
     if (var_selection_heuristic == null) {
@@ -675,6 +734,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Gets the variable selection comparator for float variables.
+   *
+   * @return the comparator for float variable selection
+   */
   public ComparatorsVar<FloatVar> getFloatVarSelect() {
 
     if (var_selection_heuristic == null) {
@@ -732,6 +796,11 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Returns variable selection comparators for set variables.
+   *
+   * @return the variable selection comparators for set variables
+   */
   ComparatorsVar<SetVar> getSetVarSelect() {
 
     if (var_selection_heuristic == null) {
@@ -786,6 +855,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an integer variable from a scalar flat expression node.
+   *
+   * @param node the scalar flat expression node
+   * @return the integer variable
+   */
   IntVar getVariable(ASTScalarFlatExpr node) {
     if (node.getType() == 0) { // int
       return dictionary.getConstant(
@@ -805,6 +880,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a float variable from a scalar flat expression node.
+   *
+   * @param node the scalar flat expression node
+   * @return the float variable
+   */
   FloatVar getFloatVariable(ASTScalarFlatExpr node) {
     if (node.getType() == 5) { // float
       return new FloatVar(store, node.getFloat(), node.getFloat());
@@ -823,6 +904,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an integer array from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the integer array
+   */
   int[] getIntArray(SimpleNode node) {
 
     if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
@@ -848,6 +935,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Gets an integer value from a scalar flat expression node.
+   *
+   * @param node the AST scalar flat expression node
+   * @return the integer value
+   */
   public int getInt(ASTScalarFlatExpr node) {
 
     if (node.getType() == 0) { // int
@@ -869,6 +962,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an array of integer variables from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the array of integer variables
+   */
   IntVar[] getVarArray(SimpleNode node) {
 
     if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
@@ -901,6 +1000,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an array of float variables from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the array of float variables
+   */
   FloatVar[] getFloatVarArray(SimpleNode node) {
 
     if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
@@ -925,6 +1030,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves a set variable from a scalar flat expression node.
+   *
+   * @param node the scalar flat expression node
+   * @return the set variable
+   */
   SetVar getSetVariable(ASTScalarFlatExpr node) {
     if (node.getType() == 2) { // ident
       return dictionary.getSetVariable(node.getIdent());
@@ -935,6 +1046,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Retrieves an array of set variables from a parse tree node.
+   *
+   * @param node the parse tree node
+   * @return the array of set variables
+   */
   SetVar[] getSetVarArray(SimpleNode node) {
 
     if (Objects.equals(((ASTAnnotation) node).getAnnId(), "$vector")) {
@@ -967,34 +1084,75 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Returns the search type.
+   *
+   * @return the search type
+   */
   public String type() {
     return search_type;
   }
 
+  /**
+   * Sets the search type.
+   *
+   * @param st the search type to set
+   */
   public void setSearchType(String st) {
     search_type = st;
   }
 
+  /**
+   * Returns the exploration strategy.
+   *
+   * @return the exploration strategy
+   */
   public String exploration() {
     return explore;
   }
 
+  /**
+   * Returns the indomain heuristic name.
+   *
+   * @return the indomain heuristic name
+   */
   public String indomain() {
     return indomain;
   }
 
+  /**
+   * Returns the variable selection heuristic name.
+   *
+   * @return the variable selection heuristic name
+   */
   public String var_selection() {
     return var_selection_heuristic;
   }
 
+  /**
+   * Returns the search variables.
+   *
+   * @return the array of search variables
+   */
   public Var[] vars() {
     return search_variables;
   }
 
+  /**
+   * Returns the list of sub-search items.
+   *
+   * @return the list of search items
+   */
   ArrayList<SearchItem<T>> getSearchItems() {
     return search_seq;
   }
 
+  /**
+   * Extracts the variable selection heuristic from an annotation.
+   *
+   * @param expr the annotation expression
+   * @return the variable selection heuristic name
+   */
   public String getVarSelectHeuristic(ASTAnnotation expr) {
 
     if ("$expr".equals(expr.getAnnId())) {
@@ -1043,14 +1201,25 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Adds a search item to the sequence.
+   *
+   * @param si the search item to add
+   */
   public void addSearch(SearchItem<T> si) {
     search_seq.add(si);
   }
 
+  /**
+   * Returns the size of the search sequence.
+   *
+   * @return the number of search items in the sequence
+   */
   public int search_seqSize() {
     return search_seq.size();
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     StringBuilder s = new StringBuilder();
 
@@ -1120,24 +1289,46 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     final ComparatorVariable<T> v1;
     final ComparatorVariable<T> v2;
 
+    /**
+     * Creates a pair of variable comparators for variable selection and tie-breaking.
+     *
+     * @param v1 the primary variable comparator
+     * @param v2 the tie-breaking variable comparator
+     */
     public ComparatorsVar(ComparatorVariable<T> v1, ComparatorVariable<T> v2) {
       this.v1 = v1;
       this.v2 = v2;
     }
 
+    /**
+     * Creates a variable comparator with only a primary comparator.
+     *
+     * @param v1 the primary variable comparator
+     */
     public ComparatorsVar(ComparatorVariable<T> v1) {
       this.v1 = v1;
       this.v2 = null;
     }
 
+    /**
+     * Returns the primary variable selector.
+     *
+     * @return the primary variable comparator
+     */
     public ComparatorVariable<T> getVarSel() {
       return v1;
     }
 
+    /**
+     * Returns the tie-breaking variable selector.
+     *
+     * @return the tie-breaking variable comparator
+     */
     public ComparatorVariable<T> getTieSel() {
       return v2;
     }
 
+    /** {@inheritDoc} */
     public String toString() {
       return "(" + v1 + ", " + v2 + ")";
     }

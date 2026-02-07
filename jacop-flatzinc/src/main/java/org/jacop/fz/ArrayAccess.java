@@ -54,14 +54,25 @@ public class ArrayAccess {
     this.index = index;
   }
 
+  /**
+   * Returns the identifier of the array.
+   *
+   * @return the array identifier
+   */
   String getIdent() {
     return id;
   }
 
+  /**
+   * Returns the index of the array access.
+   *
+   * @return the index
+   */
   int getIndex() {
     return index;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
     return id + "[" + index + "]";
   }

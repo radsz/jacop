@@ -123,6 +123,11 @@ public class SparseSet {
     dense[0] = -1;
   }
 
+  /**
+   * It returns the string representation of the sparse set.
+   *
+   * @return string containing all members of the set.
+   */
   public String toString() {
 
     StringBuilder result = new StringBuilder();

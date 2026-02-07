@@ -66,10 +66,26 @@ public abstract class Var implements Backtrackable {
   /** Pruning activity of this variable. */
   double pruningActivity = 1.0d;
 
+  /**
+   * Creates an empty position mapping.
+   *
+   * @param <T> type of the variable.
+   * @param <R> type of the mapped value.
+   * @return a new empty map.
+   */
   public static <T extends Var, R> Map<T, R> createEmptyPositioning() {
     return new HashMap<>();
   }
 
+  /**
+   * Creates a position mapping from variables to their indices in the given array.
+   *
+   * @param <T> type of the variable.
+   * @param list array of variables to map.
+   * @param skipSingletons if true, duplicate singleton variables are ignored.
+   * @param clazz the constraint class used for error reporting.
+   * @return a map from each variable to its index in the array.
+   */
   public static <T extends Var> Map<T, Integer> positionMapping(
       T[] list, boolean skipSingletons, Class<?> clazz) {
 
@@ -78,6 +94,17 @@ public abstract class Var implements Backtrackable {
     return position;
   }
 
+  /**
+   * Creates a position mapping from variables to values computed by the given function.
+   *
+   * @param <T> type of the variable.
+   * @param <R> type of the mapped value.
+   * @param list array of variables to map.
+   * @param function the function applied to each variable to compute the mapped value.
+   * @param skipSingletons if true, duplicate singleton variables are ignored.
+   * @param clazz the constraint class used for error reporting.
+   * @return a map from each variable to its computed value.
+   */
   public static <T extends Var, R> Map<T, R> positionMapping(
       T[] list, Function<T, R> function, boolean skipSingletons, Class<?> clazz) {
 
@@ -86,6 +113,15 @@ public abstract class Var implements Backtrackable {
     return position;
   }
 
+  /**
+   * Adds index-based position mappings for the given variables into an existing map.
+   *
+   * @param <T> type of the variable.
+   * @param position the map to add entries to.
+   * @param list array of variables to map.
+   * @param skipSingletons if true, duplicate singleton variables are ignored.
+   * @param clazz the constraint class used for error reporting.
+   */
   public static <T extends Var> void addPositionMapping(
       Map<T, Integer> position, T[] list, boolean skipSingletons, Class<?> clazz) {
 
@@ -103,6 +139,17 @@ public abstract class Var implements Backtrackable {
     }
   }
 
+  /**
+   * Adds function-based position mappings for the given variables into an existing map.
+   *
+   * @param <T> type of the variable.
+   * @param <R> type of the mapped value.
+   * @param position the map to add entries to.
+   * @param list array of variables to map.
+   * @param function the function applied to each variable to compute the mapped value.
+   * @param skipSingletons if true, duplicate singleton variables are ignored.
+   * @param clazz the constraint class used for error reporting.
+   */
   public static <T extends Var, R> void addPositionMapping(
       Map<T, R> position,
       T[] list,
@@ -261,6 +308,11 @@ public abstract class Var implements Backtrackable {
     return index;
   }
 
+  /**
+   * Computes the accumulated failure count (AFC) value for this variable.
+   *
+   * @return the sum of AFC values of all constraints attached to this variable.
+   */
   public float afcValue() {
     float value = 0.0f;
     for (Constraint c : dom().constraints()) {
@@ -269,14 +321,21 @@ public abstract class Var implements Backtrackable {
     return value;
   }
 
+  /** Increments the pruning activity counter for this variable. */
   public void updateActivity() {
     pruningActivity += 1.0;
   }
 
+  /**
+   * Returns the current pruning activity value for this variable.
+   *
+   * @return the pruning activity.
+   */
   public double activity() {
     return pruningActivity;
   }
 
+  /** Applies the decay factor from the store to this variable's pruning activity. */
   public void applyDecay() {
     pruningActivity = pruningActivity * store.decay;
   }

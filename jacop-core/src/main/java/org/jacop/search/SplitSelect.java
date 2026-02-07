@@ -121,6 +121,11 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
     }
   }
 
+  /**
+   * It returns the string representation of the choice point selector.
+   *
+   * @return string describing the variables, ordering, and value selection heuristic.
+   */
   public String toString() {
     return Arrays.asList((Var[]) searchVariables)
         + ", SplitSelect("

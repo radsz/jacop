@@ -72,7 +72,7 @@ public class DefaultSearchVars {
     this.dictionary = dict;
   }
 
-  /** It collects all output variables for search. */
+  /** Collects all output variables for search. */
   void outputVars() {
 
     // ==== Collect ALL OUTPUT variables ====
@@ -197,22 +197,43 @@ public class DefaultSearchVars {
     // ==== End collect guessed search variables ====
   }
 
+  /**
+   * Returns the integer variables for search.
+   *
+   * @return the integer variables
+   */
   IntVar[] getIntVars() {
     return int_search_variables;
   }
 
+  /**
+   * Returns the set variables for search.
+   *
+   * @return the set variables
+   */
   SetVar[] getSetVars() {
     return set_search_variables;
   }
 
+  /**
+   * Returns the boolean variables for search.
+   *
+   * @return the boolean variables
+   */
   BooleanVar[] getBoolVars() {
     return bool_search_variables;
   }
 
+  /**
+   * Returns the float variables for search.
+   *
+   * @return the float variables
+   */
   FloatVar[] getFloatVars() {
     return float_search_variables;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
 
     return "%% default int search variables = array1d(1.."

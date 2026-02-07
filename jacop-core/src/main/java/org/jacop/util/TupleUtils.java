@@ -286,6 +286,13 @@ public class TupleUtils {
     return result;
   }
 
+  /**
+   * Checks if tuple1 is strictly smaller than tuple2 in lexicographic order.
+   *
+   * @param tuple1 the first tuple to compare.
+   * @param tuple2 the second tuple to compare.
+   * @return true if tuple1 is strictly less than tuple2.
+   */
   public static boolean tuplesSmaller(int[] tuple1, int[] tuple2) {
     int arity = tuple1.length;
     for (int i = 0; i < arity && tuple1[i] <= tuple2[i]; i++) {
@@ -296,6 +303,13 @@ public class TupleUtils {
     return false;
   }
 
+  /**
+   * Checks if two tuples are equal element by element.
+   *
+   * @param tuple1 the first tuple to compare.
+   * @param tuple2 the second tuple to compare.
+   * @return true if all elements of tuple1 and tuple2 are equal.
+   */
   public static boolean tuplesEqual(int[] tuple1, int[] tuple2) {
     int arity = tuple1.length;
     for (int i = 0; i < arity; i++) {
@@ -306,6 +320,13 @@ public class TupleUtils {
     return true;
   }
 
+  /**
+   * Finds the position of a value in a sorted array using binary search.
+   *
+   * @param value the value to search for.
+   * @param values the sorted array to search in.
+   * @return the index of the value in the array, or -1 if not found.
+   */
   public static int findValuePosition(int value, int[] values) {
     int left = 0;
     int right = values.length - 1;
@@ -332,6 +353,14 @@ public class TupleUtils {
     return -1;
   }
 
+  /**
+   * Finds the first position where the tuple value is not contained in the corresponding variable's
+   * domain.
+   *
+   * @param t the tuple of values to check.
+   * @param list the array of variables whose domains are checked against the tuple.
+   * @return the index of the first invalid position, or -1 if all values are valid.
+   */
   public static int seekInvalidPosition(int[] t, IntVar[] list) {
     int noVars = list.length;
     for (int i = 0; i < noVars; i++) {

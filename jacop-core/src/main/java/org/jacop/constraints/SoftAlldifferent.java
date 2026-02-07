@@ -56,6 +56,13 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
   public final ViolationMeasure violationMeasure;
   public List<Constraint> decomposition;
 
+  /**
+   * Constructs a soft alldifferent constraint that allows violations with an associated cost.
+   *
+   * @param xvars the variables that should preferably take different values
+   * @param costVar the variable representing the total cost of violations
+   * @param violationMeasure the measure used to compute violation cost
+   */
   public SoftAlldifferent(IntVar[] xvars, IntVar costVar, ViolationMeasure violationMeasure) {
 
     checkInputForNullness("xVars", xvars);
@@ -67,6 +74,13 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
     this.violationMeasure = violationMeasure;
   }
 
+  /**
+   * Provides a primitive decomposition of the soft alldifferent constraint using basic constraints.
+   * Creates reified equality constraints for each pair of variables to count violations.
+   *
+   * @param store the constraint store
+   * @return list of constraints representing the primitive decomposition
+   */
   public List<Constraint> primitiveDecomposition(Store store) {
 
     if (decomposition == null) {
@@ -180,8 +194,15 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
     return result.toString();
   }
 
+  /** Internal builder class for constructing a network flow representation of soft alldifferent. */
   private class SoftAlldiffBuilder extends NetworkBuilder {
 
+    /**
+     * Constructs the network flow graph for soft alldifferent constraint.
+     *
+     * @param doms the domains for value nodes
+     * @param vm the violation measure to use
+     */
     private SoftAlldiffBuilder(IntDomain[] doms, ViolationMeasure vm) {
 
       super(costVar);

@@ -41,10 +41,20 @@ public class Btree {
   // tree structure
   final RootBnode root;
 
+  /**
+   * Constructs a binary tree with the specified root node.
+   *
+   * @param root the root node of the tree
+   */
   public Btree(RootBnode root) {
     this.root = root;
   }
 
+  /**
+   * Returns a string representation of the tree structure.
+   *
+   * @return string representation of the tree
+   */
   public String toString() {
 
     return printNode(root);

@@ -101,12 +101,22 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     return vars;
   }
 
+  /**
+   * Sets the variables for which solutions will be recorded.
+   *
+   * @param vs the array of variables to track.
+   */
   public void setVariables(T[] vs) {
     vars = vs;
     solutions = new Domain[1][vars.length];
     parentSolutionNo = new int[1];
   }
 
+  /**
+   * Sets the variables for which solutions will be recorded.
+   *
+   * @param vs the list of variables to track.
+   */
   @SuppressWarnings("unchecked")
   public void setVariables(List<T> vs) {
     vars = (T[]) vs.toArray(new Var[0]);
@@ -114,6 +124,11 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     parentSolutionNo = new int[1];
   }
 
+  /**
+   * Checks whether the solution limit has been reached.
+   *
+   * @return true if the number of solutions found equals the solution limit, false otherwise.
+   */
   public boolean solutionLimitReached() {
 
     return solutionLimit == noSolutions;
@@ -218,6 +233,14 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     }
   }
 
+  /**
+   * Executed after a solution is found. Records the solution and determines whether the search
+   * should continue.
+   *
+   * @param search the search that found the solution.
+   * @param select the choice point selector used in the search.
+   * @return true if the solution limit has been reached and search should stop, false otherwise.
+   */
   @SuppressWarnings("unchecked")
   public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
@@ -281,6 +304,13 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     }
   }
 
+  /**
+   * Assigns the solution with the given number to the store.
+   *
+   * @param store the store in the context of which the search took place.
+   * @param number the solution number to assign (0-based index).
+   * @return true if the store is consistent after assigning the solution, false otherwise.
+   */
   public boolean assignSolution(Store store, int number) {
 
     if (number == noSolutions - 1 && !recordSolutions) {
@@ -337,6 +367,11 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     return buf.toString();
   }
 
+  /**
+   * Returns the most recent solution as an array of primitive constraints.
+   *
+   * @return array of primitive constraints enforcing the last solution, or null if no variables.
+   */
   public PrimitiveConstraint[] returnSolution() {
 
     return returnSolution(noSolutions - 1);
@@ -378,6 +413,12 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     return recordSolutions;
   }
 
+  /**
+   * Finds the index of a child solution that corresponds to the given parent solution number.
+   *
+   * @param parentNo the parent solution number to match.
+   * @return the index of the matching solution, or -1 if no match is found.
+   */
   public int findSolutionMatchingParent(int parentNo) {
 
     if (!isRecordingSolutions()) {
@@ -422,17 +463,28 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     }
   }
 
+  /**
+   * Sets the children solution listeners.
+   *
+   * @param children the array of child solution listeners.
+   */
   public void setChildrenListeners(SolutionListener<T>[] children) {
 
     childrenSolutionListeners = children;
   }
 
+  /**
+   * Sets a single child solution listener.
+   *
+   * @param child the child solution listener.
+   */
   @SuppressWarnings("unchecked")
   public void setChildrenListeners(SolutionListener<T> child) {
     childrenSolutionListeners = new SolutionListener[1];
     childrenSolutionListeners[0] = child;
   }
 
+  /** Prints all recorded solutions, or the last solution if solutions were not recorded. */
   public void printAllSolutions() {
 
     if (recordSolutions) {
@@ -472,6 +524,12 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
     }
   }
 
+  /**
+   * Returns the parent solution number corresponding to the given child solution number.
+   *
+   * @param childSolutionNo the child solution number (1-based).
+   * @return the parent solution number, or -1 if not available.
+   */
   public int getParentSolution(int childSolutionNo) {
 
     if (parentSolutionNo == null || parentSolutionNo.length < childSolutionNo) {

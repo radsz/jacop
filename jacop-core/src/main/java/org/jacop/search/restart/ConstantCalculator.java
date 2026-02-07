@@ -38,14 +38,25 @@ package org.jacop.search.restart;
  */
 public class ConstantCalculator extends Calculator {
 
+  /**
+   * Constructs a constant calculator with a fixed fail limit.
+   *
+   * @param scale the constant fail limit value.
+   */
   public ConstantCalculator(int scale) {
     failLimit = scale;
   }
 
+  /** Resets the fail counter to zero while keeping the same fail limit. */
   public void newLimit() {
     numberFails = 0;
   }
 
+  /**
+   * Returns a string representation of this constant calculator.
+   *
+   * @return a string describing the calculator and its fail limit.
+   */
   public String toString() {
     return "constantCalculator(" + failLimit + ")";
   }

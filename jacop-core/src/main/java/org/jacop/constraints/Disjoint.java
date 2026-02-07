@@ -208,6 +208,11 @@ public class Disjoint extends Diff {
     doProfile = profile;
   }
 
+  /**
+   * Imposes the constraint in the constraint store.
+   *
+   * @param store the constraint store in which the constraint is imposed.
+   */
   public void impose(Store store) {
 
     super.impose(store);

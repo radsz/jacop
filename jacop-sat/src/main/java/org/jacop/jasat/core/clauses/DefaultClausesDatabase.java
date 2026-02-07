@@ -315,7 +315,13 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     assert checkWatches4var(Math.abs(literal)) == null;
   }
 
-  // TODO: reuse empty slots ?
+  /**
+   * Adds a clause to the database.
+   *
+   * @param clause the clause to add (must be of length at least 2)
+   * @param isModel true if this is a model clause
+   * @return the unique ID of the added clause
+   */
   public int addClause(int[] clause, boolean isModel) {
 
     assert clause.length >= 2;
@@ -421,6 +427,11 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     return clauseId;
   }
 
+  /**
+   * Removes a clause from the database.
+   *
+   * @param clauseIndex the index of the clause to remove
+   */
   public void removeClause(int clauseIndex) {
 
     numRemoved++;
@@ -436,10 +447,23 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
     clauses[clauseIndex] = null;
   }
 
+  /**
+   * Checks if a clause can be removed from the database.
+   *
+   * @param clauseId the unique ID of the clause
+   * @return true if the clause can be removed
+   */
   public boolean canRemove(int clauseId) {
     return true;
   }
 
+  /**
+   * Performs resolution with the specified clause.
+   *
+   * @param clauseId the unique ID of the clause in the database
+   * @param explanation the clause to resolve with
+   * @return the resulting clause after resolution
+   */
   public MapClause resolutionWith(int clauseId, MapClause explanation) {
 
     int[] clause = clauses[uniqueIdToIndex(clauseId)];

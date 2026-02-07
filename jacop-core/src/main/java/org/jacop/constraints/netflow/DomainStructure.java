@@ -72,11 +72,26 @@ public class DomainStructure implements VarHandler {
     this(variable, domList.toArray(new IntDomain[0]), arcList.toArray(new Arc[0]));
   }
 
+  /**
+   * Creates a domain structure with default pruning behavior of {@link Behavior#PRUNE_BOTH}.
+   *
+   * @param variable the structure variable.
+   * @param domains the sub-domains associated with each arc.
+   * @param arcs the arcs associated with each sub-domain.
+   */
   public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs) {
 
     this(variable, domains, arcs, Behavior.PRUNE_BOTH);
   }
 
+  /**
+   * Creates a domain structure with the specified pruning behavior.
+   *
+   * @param variable the structure variable.
+   * @param domains the sub-domains associated with each arc.
+   * @param arcs the arcs associated with each sub-domain.
+   * @param behavior the pruning behavior for this structure.
+   */
   public DomainStructure(IntVar variable, IntDomain[] domains, Arc[] arcs, Behavior behavior) {
 
     if (domains.length != arcs.length) {
@@ -105,7 +120,12 @@ public class DomainStructure implements VarHandler {
     }
   }
 
-  // updates the network after the structure variable changed
+  /**
+   * Updates the network after the structure variable has changed, grounding arcs as needed.
+   *
+   * @param variable the variable whose domain has changed.
+   * @param network the mutable network to update.
+   */
   public void processEvent(IntVar variable, MutableNetwork network) {
 
     IntDomain vardom = variable.domain;
@@ -207,6 +227,11 @@ public class DomainStructure implements VarHandler {
     arcs[i].companion.arcId = i;
   }
 
+  /**
+   * Marks a previously grounded arc as not grounded, restoring it to active status.
+   *
+   * @param arcId the index of the arc to unground.
+   */
   public void ungroundArc(int arcId) {
     assert arcId >= notGrounded;
 
@@ -216,14 +241,31 @@ public class DomainStructure implements VarHandler {
     notGrounded++;
   }
 
+  /**
+   * Returns a singleton list containing the structure variable.
+   *
+   * @return a list with the single structure variable.
+   */
   public List<IntVar> listVariables() {
     return Collections.singletonList(variable);
   }
 
+  /**
+   * Checks whether the arc with the given ID is grounded (fixed at a bound).
+   *
+   * @param arcId the index of the arc to check.
+   * @return true if the arc is grounded, false otherwise.
+   */
   public boolean isGrounded(int arcId) {
     return arcId >= notGrounded;
   }
 
+  /**
+   * Returns the pruning event type for the given variable.
+   *
+   * @param var the variable for which to determine the pruning event.
+   * @return the pruning event constant for structure variables.
+   */
   public int getPruningEvent(Var var) {
     return IntDomain.ANY; // for S-variables
   }

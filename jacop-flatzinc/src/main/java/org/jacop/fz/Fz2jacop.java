@@ -44,6 +44,11 @@ import org.jacop.core.FailException;
  */
 public class Fz2jacop {
 
+  /**
+   * Calls the main method with the provided arguments.
+   *
+   * @param args the command line arguments
+   */
   public void callMain(String[] args) {
     main(args);
   }

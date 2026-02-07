@@ -1647,6 +1647,11 @@ public class PerfectSquare extends ExampleFd {
     IO.println("Number of constraints: " + store.numberConstraints());
   }
 
+  /**
+   * Creates the constraint model using Diffn constraint for the perfect square problem.
+   *
+   * @param problemNo the problem number to be fetched from the array of problem descriptions
+   */
   public void model(int problemNo) {
 
     store = new Store();
@@ -1698,6 +1703,12 @@ public class PerfectSquare extends ExampleFd {
     model(0);
   }
 
+  /**
+   * Creates the constraint model using both Geost and Diffn constraints for the perfect square
+   * problem.
+   *
+   * @param problemNo the problem number to be fetched from the array of problem descriptions
+   */
   public void modelGeost(int problemNo) {
 
     store = new Store();

@@ -47,6 +47,11 @@ public class Matrix {
 
   final double[][] A;
 
+  /**
+   * Constructs a matrix from a two-dimensional array.
+   *
+   * @param matrix the source matrix to copy
+   */
   public Matrix(double[][] matrix) {
 
     A = new double[matrix.length][];
@@ -56,6 +61,13 @@ public class Matrix {
     }
   }
 
+  /**
+   * Multiplies an interval matrix by a double matrix.
+   *
+   * @param f the interval matrix (m x n)
+   * @param b the double matrix (n x p)
+   * @return the resulting interval domain matrix (m x p), or null if dimensions are incompatible
+   */
   public static FloatIntervalDomain[][] mult(
       FloatInterval[][] f, double[][] b) { // f[m][n] * b[n][p]
 
@@ -91,6 +103,12 @@ public class Matrix {
     return result;
   }
 
+  /**
+   * Multiplies this matrix by another matrix.
+   *
+   * @param b the matrix to multiply by (n x p)
+   * @return the resulting matrix (m x p), or null if dimensions are incompatible
+   */
   // A*m
   public double[][] mult(double[][] b) { // A[m][n] * b[n][p]
 
@@ -116,6 +134,12 @@ public class Matrix {
     return result;
   }
 
+  /**
+   * Multiplies this matrix by a vector.
+   *
+   * @param b the vector to multiply by (length n)
+   * @return the resulting vector (length m), or null if dimensions are incompatible
+   */
   // A*m
   public double[] mult(double[] b) { // A[m][n] * b[n]
 
@@ -138,10 +162,21 @@ public class Matrix {
     return result;
   }
 
+  /**
+   * Computes the determinant of this matrix.
+   *
+   * @return the determinant value
+   */
   public double determinant() {
     return determinant(A);
   }
 
+  /**
+   * Computes the determinant of a given matrix.
+   *
+   * @param matrix the matrix to compute determinant for
+   * @return the determinant value
+   */
   public double determinant(double[][] matrix) {
 
     if (!isSquare(matrix)) {
@@ -160,6 +195,12 @@ public class Matrix {
     return sum;
   }
 
+  /**
+   * Computes the cofactor matrix.
+   *
+   * @param m the input matrix
+   * @return the cofactor matrix
+   */
   public double[][] cofactor(double[][] m) {
 
     double[][] t = new double[m.length][m[0].length];
@@ -173,6 +214,12 @@ public class Matrix {
     return t;
   }
 
+  /**
+   * Computes the transpose of a matrix.
+   *
+   * @param m the input matrix
+   * @return the transposed matrix
+   */
   public double[][] transpose(double[][] m) {
 
     double[][] t = new double[m[0].length][m.length];
@@ -185,10 +232,21 @@ public class Matrix {
     return t;
   }
 
+  /**
+   * Computes the inverse of this matrix.
+   *
+   * @return the inverse matrix
+   */
   public double[][] inverse() {
     return inverse(A);
   }
 
+  /**
+   * Computes the inverse of a given matrix.
+   *
+   * @param m the input matrix
+   * @return the inverse matrix
+   */
   public double[][] inverse(double[][] m) {
 
     return multiplyByConstant(transpose(cofactor(m)), 1.0 / determinant(m));

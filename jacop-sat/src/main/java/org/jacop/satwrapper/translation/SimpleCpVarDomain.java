@@ -51,7 +51,12 @@ public class SimpleCpVarDomain extends SatCpBridge {
   // the special clauses database of the wrapper
   private DomainClausesDatabase clauseDatabase;
 
-  // basic constructor
+  /**
+   * Constructs a simple CP variable domain.
+   *
+   * @param wrapper the SAT wrapper
+   * @param variable the integer variable
+   */
   public SimpleCpVarDomain(SatWrapper wrapper, IntVar variable) {
     super(variable);
     initialize(wrapper);
@@ -61,7 +66,13 @@ public class SimpleCpVarDomain extends SatCpBridge {
     }
   }
 
-  // basic constructor
+  /**
+   * Constructs a simple CP variable domain with translation control.
+   *
+   * @param wrapper the SAT wrapper
+   * @param variable the integer variable
+   * @param translate whether to translate the variable
+   */
   public SimpleCpVarDomain(SatWrapper wrapper, IntVar variable, boolean translate) {
     super(variable);
     this.isTranslated = translate;
@@ -215,11 +226,13 @@ public class SimpleCpVarDomain extends SatCpBridge {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public boolean isTranslated() {
     return isTranslated;
   }
 
+  /** {@inheritDoc} */
   @Override
   public void initialize(SatWrapper wrapper) {
     super.initialize(wrapper);

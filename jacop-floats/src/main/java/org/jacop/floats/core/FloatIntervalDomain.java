@@ -116,6 +116,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return FloatIntervalDomainID;
   }
 
+  /** {@inheritDoc} */
   public FloatDomain previousDomain() {
     return previousDomain;
   }
@@ -509,6 +510,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return contains((double) value);
   }
 
+  /** {@inheritDoc} */
   public boolean contains(double value) {
     assert checkInvariants() == null : checkInvariants();
 
@@ -570,6 +572,12 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return result;
   }
 
+  /**
+   * It returns the next value in the domain after the specified value.
+   *
+   * @param value the value for which the next value is sought
+   * @return the next value in the domain after the given value
+   */
   public double nextValue(double value) {
 
     assert checkInvariants() == null : checkInvariants();
@@ -641,6 +649,11 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     throw new RuntimeException("getSize() has no meanning for floats. Not implemented.");
   }
 
+  /**
+   * It returns the size of the domain as a floating-point value.
+   *
+   * @return the size of the domain as a double
+   */
   public double getSizeFloat() {
 
     assert checkInvariants() == null : checkInvariants();

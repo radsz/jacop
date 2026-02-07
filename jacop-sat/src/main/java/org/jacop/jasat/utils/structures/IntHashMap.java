@@ -79,7 +79,7 @@ public final class IntHashMap<E> {
     }
   }
 
-  /** Public constructor. */
+  /** Creates a new hash map with default initial size. */
   public IntHashMap() {
     this(INITIAL_SIZE);
   }
@@ -105,6 +105,12 @@ public final class IntHashMap<E> {
     return i != -1;
   }
 
+  /**
+   * Checks if the map contains the specified key.
+   *
+   * @param arg0 the key to check
+   * @return true if the map contains the key, false otherwise
+   */
   public boolean containsKey(Object arg0) {
     if (arg0 instanceof Integer) {
       return containsKey(((Integer) arg0).intValue());
@@ -214,6 +220,11 @@ public final class IntHashMap<E> {
     return answer;
   }
 
+  /**
+   * Returns the number of elements in the map.
+   *
+   * @return the size of the map
+   */
   public int size() {
     return cardinal;
   }

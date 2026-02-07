@@ -45,6 +45,13 @@ public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {
   /** It constructs SmallestMin Comparator. */
   public SmallestMin() {}
 
+  /**
+   * Compares a metric value with a variable's minimum domain value.
+   *
+   * @param left the metric value to compare.
+   * @param var the variable to compare against.
+   * @return positive if left has higher priority, negative if var has higher priority, 0 if equal.
+   */
   public int compare(double left, T var) {
     int right = var.dom().min();
     if (left < right) {
@@ -56,12 +63,27 @@ public class SmallestMin<T extends IntVar> implements ComparatorVariable<T> {
     return 0;
   }
 
+  /**
+   * Compares two variables based on their minimum domain values. Variables with smaller minimum
+   * values have higher priority.
+   *
+   * @param leftVar the first variable to compare.
+   * @param rightVar the second variable to compare.
+   * @return positive if leftVar has higher priority, negative if rightVar has higher priority, 0 if
+   *     equal.
+   */
   public int compare(T leftVar, T rightVar) {
     int left = leftVar.dom().min();
     int right = rightVar.dom().min();
     return Integer.compare(right, left);
   }
 
+  /**
+   * Computes the metric for a variable, which is the minimum value in its domain.
+   *
+   * @param o the variable for which the metric is computed.
+   * @return the minimum value in the variable's domain.
+   */
   public double metric(T o) {
     return o.dom().min();
   }

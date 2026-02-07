@@ -80,6 +80,13 @@ public class AndBoolSimple extends PrimitiveConstraint {
     setScope(a, b, result);
   }
 
+  /**
+   * Enforces consistency for the AND constraint by propagating domain restrictions. If either
+   * operand is 0, result must be 0. If both operands are 1, result must be 1. If result is 1, both
+   * operands must be 1. If result is 0 and one operand is 1, the other must be 0.
+   *
+   * @param store the constraint store
+   */
   public void consistency(final Store store) {
 
     if (a.max() == 0 || b.max() == 0) {
@@ -138,6 +145,11 @@ public class AndBoolSimple extends PrimitiveConstraint {
     return id() + " : andBoolSimple([ " + a + ", " + b + "], " + result + ")";
   }
 
+  /**
+   * Checks that the operand variables have valid boolean domains (0 or 1).
+   *
+   * @return null if invariants hold, error message otherwise
+   */
   public String checkInvariants() {
     return checkBooleanDomains(a, b);
   }

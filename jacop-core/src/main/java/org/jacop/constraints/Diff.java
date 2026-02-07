@@ -89,6 +89,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   // use to collect information on possible length of rectangles for pruning
   private List<Integer> durMax;
 
+  /** It constructs an empty Diff constraint. */
   protected Diff() {}
 
   /**
@@ -484,6 +485,11 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return IntDomain.ANY;
   }
 
+  /**
+   * Returns the array of rectangles constrained by this diff constraint.
+   *
+   * @return the array of rectangles.
+   */
   Rectangle[] getRectangles() {
     return rectangles;
   }

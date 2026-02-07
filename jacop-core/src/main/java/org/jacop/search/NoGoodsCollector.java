@@ -112,6 +112,13 @@ public class NoGoodsCollector<T extends IntVar>
     }
   }
 
+  /**
+   * Handles exiting the left child when using constraint-based choices.
+   *
+   * @param choice the primitive constraint used as the left branch choice.
+   * @param status true if a solution was found, false otherwise.
+   * @return true if search should continue, false if it should exit.
+   */
   public boolean leftChild(PrimitiveConstraint choice, boolean status) {
     if (exitChildListeners == null) {
       return true;
@@ -124,6 +131,13 @@ public class NoGoodsCollector<T extends IntVar>
     }
   }
 
+  /**
+   * Handles exiting the right child, collecting no-good information during timeout.
+   *
+   * @param var the variable of the right branch choice.
+   * @param value the value of the right branch choice.
+   * @param status true if a solution was found, false otherwise.
+   */
   public void rightChild(T var, int value, boolean status) {
 
     if (timeOut) {
@@ -143,6 +157,12 @@ public class NoGoodsCollector<T extends IntVar>
     }
   }
 
+  /**
+   * Handles exiting the right child when using constraint-based choices.
+   *
+   * @param choice the primitive constraint used as the right branch choice.
+   * @param status true if a solution was found, false otherwise.
+   */
   public void rightChild(PrimitiveConstraint choice, boolean status) {
     if (exitChildListeners != null) {
       for (ExitChildListener<T> exitChildListener : exitChildListeners) {
@@ -151,6 +171,12 @@ public class NoGoodsCollector<T extends IntVar>
     }
   }
 
+  /**
+   * Executed when exiting the search, imposing collected no-goods if a timeout occurred.
+   *
+   * @param store the constraint store in which no-goods are imposed.
+   * @param solutionsNo the number of solutions found during search.
+   */
   public void executedAtExit(Store store, int solutionsNo) {
 
     if (timeOut && solutionsNo == 0) {
@@ -180,16 +206,31 @@ public class NoGoodsCollector<T extends IntVar>
     timeOutListeners = children;
   }
 
+  /**
+   * Sets a single timeout listener as the child listener.
+   *
+   * @param child the timeout listener to set.
+   */
   public void setChildrenListeners(TimeOutListener child) {
     timeOutListeners = new TimeOutListener[1];
     timeOutListeners[0] = child;
   }
 
+  /**
+   * Sets a single exit listener as the child listener.
+   *
+   * @param child the exit listener to set.
+   */
   public void setChildrenListeners(ExitListener child) {
     exitListeners = new ExitListener[1];
     exitListeners[0] = child;
   }
 
+  /**
+   * Sets a single exit child listener as the child listener.
+   *
+   * @param child the exit child listener to set.
+   */
   @SuppressWarnings("unchecked")
   public void setChildrenListeners(ExitChildListener<T> child) {
     exitChildListeners = new ExitChildListener[1];

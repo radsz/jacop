@@ -85,6 +85,11 @@ public class Diet extends ExampleFd {
   public IntVar[] x;
   public String[] ingredients = {"Calories", "Chocolate", "Sugar", "Fat"};
 
+  /**
+   * Prints the last solution found for the diet problem.
+   *
+   * @param diet the diet problem instance with the solution to print
+   */
   public static void printLastSolution(Diet diet) {
 
     IO.println("Cost: " + diet.cost.value());

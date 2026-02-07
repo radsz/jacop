@@ -48,6 +48,12 @@ public class IndomainSetMin<T extends SetVar> implements Indomain<T> {
    */
   public IndomainSetMin() {}
 
+  /**
+   * Selects the minimal value from the set variable's domain.
+   *
+   * @param var the set variable from which to select a value.
+   * @return the minimum element from the difference between lub and glb.
+   */
   public int indomain(T var) {
 
     return var.domain.lub().subtract(var.domain.glb()).min();

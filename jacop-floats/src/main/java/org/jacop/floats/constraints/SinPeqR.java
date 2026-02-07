@@ -341,6 +341,15 @@ public class SinPeqR extends Constraint
     return id() + " : SinPeqR(" + p + ", " + q + " )";
   }
 
+  /**
+   * Computes the derivative of this constraint with respect to a variable.
+   *
+   * @param store the constraint store
+   * @param f the function variable for which to compute the derivative
+   * @param vars the set of variables involved in the derivative computation
+   * @param x the variable with respect to which the derivative is computed
+   * @return the derivative variable, or null if f is not part of this constraint
+   */
   public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
     if (f.equals(q)) {
       // f = sin(p)

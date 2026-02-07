@@ -119,6 +119,13 @@ public class ConferenceTalkPlacement {
     // example.store.print(); // Useful for small examples.
   }
 
+  /**
+   * Transforms a 2D array of costs into a nested map structure.
+   *
+   * @param costs 2D array where each row contains [talk1, talk2, cost]
+   * @param noOfTalks total number of talks
+   * @return nested map structure mapping pairs of talks to their scheduling costs
+   */
   private Map<Integer, Map<Integer, Integer>> transformCosts(int[][] costs, int noOfTalks) {
 
     Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
@@ -136,6 +143,14 @@ public class ConferenceTalkPlacement {
     return result;
   }
 
+  /**
+   * Generates random costs for scheduling talk pairs.
+   *
+   * @param noOfTalks total number of talks
+   * @param randomSeed seed for random number generation
+   * @param maxSingleCost maximum cost for any single talk pair
+   * @return nested map structure with random costs for each talk pair
+   */
   private Map<Integer, Map<Integer, Integer>> randomCosts(
       int noOfTalks, int randomSeed, int maxSingleCost) {
 
@@ -177,6 +192,15 @@ public class ConferenceTalkPlacement {
     return lowerBound;
   }
 
+  /**
+   * Creates the constraint model for the conference talk placement problem.
+   *
+   * @param noOfParallelTracks number of parallel tracks
+   * @param noOfTalks number of talks to schedule
+   * @param noOfTimeSlots number of available time slots
+   * @param maxSingleCost maximum cost for a single conflict
+   * @param costMap mapping of talk pairs to their conflict costs
+   */
   public void model(
       int noOfParallelTracks,
       int noOfTalks,
@@ -290,6 +314,13 @@ public class ConferenceTalkPlacement {
     return result;
   }
 
+  /**
+   * Performs search for a solution with specified cost constraint and timeout.
+   *
+   * @param maxCostAllowed maximum allowed cost (-1 for no limit)
+   * @param timeOutSeconds timeout in seconds
+   * @return true if a solution was found, false otherwise
+   */
   public boolean search(int maxCostAllowed, int timeOutSeconds) {
 
     if (maxCostAllowed != -1) {

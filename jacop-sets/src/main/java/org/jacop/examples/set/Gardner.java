@@ -56,11 +56,11 @@ import org.jacop.set.search.IndomainSetMin;
 public class Gardner extends ExampleSet {
 
   /**
-   * It executes the program which solves this gardner problem.
+   * It executes the program which solves this Gardner problem.
    *
    * @param args parameters (none)
    */
-  static void main(String[] args) {
+  public static void main(String[] args) {
 
     Gardner example = new Gardner();
     example.model();
@@ -68,6 +68,7 @@ public class Gardner extends ExampleSet {
     example.search();
   }
 
+  /** Creates the constraint model for the Gardner dinner problem. */
   public void model() {
 
     final int num_days = 35;
@@ -116,6 +117,11 @@ public class Gardner extends ExampleSet {
             + store.numberConstraints());
   }
 
+  /**
+   * Performs the search for a solution to the Gardner dinner problem.
+   *
+   * @return true if a solution is found, false otherwise.
+   */
   public boolean search() {
 
     Thread tread = Thread.currentThread();

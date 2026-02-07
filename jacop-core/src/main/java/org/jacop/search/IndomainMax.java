@@ -45,6 +45,12 @@ public class IndomainMax<T extends IntVar> implements Indomain<T> {
   /** It creates an IndomainMax heuristic. */
   public IndomainMax() {}
 
+  /**
+   * It returns the maximal value from the domain of the variable.
+   *
+   * @param var the variable for which a value is being selected.
+   * @return the maximal value in the variable domain.
+   */
   public int indomain(T var) {
     return var.max();
   }

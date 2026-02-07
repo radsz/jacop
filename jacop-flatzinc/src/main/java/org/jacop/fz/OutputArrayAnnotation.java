@@ -62,26 +62,58 @@ public class OutputArrayAnnotation {
     indexes = indexBounds;
   }
 
+  /**
+   * Returns the name of the output array annotation.
+   *
+   * @return the name
+   */
   String getName() {
     return id;
   }
 
+  /**
+   * Returns the variable array.
+   *
+   * @return the variable array
+   */
   Var[] getArray() {
     return array;
   }
 
+  /**
+   * Sets the variable array.
+   *
+   * @param a the variable array to set
+   */
   void setArray(Var[] a) {
     array = a;
   }
 
+  /**
+   * Returns the number of index dimensions.
+   *
+   * @return the number of indexes
+   */
   int getNumberIndexes() {
     return indexes.size();
   }
 
+  /**
+   * Returns the index domain at the specified position.
+   *
+   * @param i the index position
+   * @return the index domain
+   */
   IntDomain getIndexes(int i) {
     return indexes.get(i);
   }
 
+  /**
+   * Checks if the array contains the specified variable.
+   *
+   * @param x the variable to check
+   * @return true if the variable is in the array, false otherwise
+   */
   boolean contains(Var x) {
 
     for (Var v : array) {
@@ -92,6 +124,7 @@ public class OutputArrayAnnotation {
     return false;
   }
 
+  /** {@inheritDoc} */
   public String toString() {
 
     StringBuilder s = new StringBuilder(id + " = array" + indexes.size() + "d(");

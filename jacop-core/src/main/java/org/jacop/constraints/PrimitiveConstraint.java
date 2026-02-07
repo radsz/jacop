@@ -159,6 +159,11 @@ public abstract class PrimitiveConstraint extends Constraint
     return getDefaultConsistencyPruningEvent();
   }
 
+  /**
+   * Returns the default pruning event used for the notConsistency method.
+   *
+   * @return the default pruning event for notConsistency evaluation.
+   */
   protected abstract int getDefaultNotConsistencyPruningEvent();
 
   /**
@@ -191,12 +196,23 @@ public abstract class PrimitiveConstraint extends Constraint
     notConsistencyPruningEvents.put(var, pruningEvent);
   }
 
+  /**
+   * Includes this constraint and all nested constraints in the given store.
+   *
+   * @param store the constraint store in which to include this constraint.
+   */
   public void include(Store store) {
     if (constraintScope != null) {
       constraintScope.forEach(i -> i.include(store));
     }
   }
 
+  /**
+   * Checks whether the given variable has a boolean domain (0..1).
+   *
+   * @param var the variable to check.
+   * @return an error message if the domain is not boolean, or null if valid.
+   */
   protected static String checkBooleanDomain(IntVar var) {
     if (var.min() < 0 || var.max() > 1) {
       return "Variable " + var + " does not have boolean domain";
@@ -204,6 +220,12 @@ public abstract class PrimitiveConstraint extends Constraint
     return null;
   }
 
+  /**
+   * Checks whether all given variables have boolean domains (0..1).
+   *
+   * @param vars the variables to check.
+   * @return an error message for the first non-boolean variable found, or null if all are valid.
+   */
   protected static String checkBooleanDomains(IntVar... vars) {
     for (IntVar var : vars) {
       String error = checkBooleanDomain(var);

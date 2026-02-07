@@ -83,6 +83,7 @@ public class CpvizNewspaper {
     example.model();
   }
 
+  /** Creates the constraint model for the newspaper reading scheduling problem. */
   public void model() {
 
     // Creating constraint store

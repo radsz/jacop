@@ -110,22 +110,48 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   double afcWeight = 1.0d;
 
+  /**
+   * Constructs a constraint with the specified variable arrays as its scope.
+   *
+   * @param vars arrays of variables forming the constraint scope.
+   */
   protected Constraint(Var[]... vars) {
     setScope(vars);
   }
 
+  /**
+   * Constructs a constraint with the scope defined by a stream of variables.
+   *
+   * @param vars stream of variables forming the constraint scope.
+   */
   protected Constraint(Stream<Var> vars) {
     setScope(vars);
   }
 
+  /**
+   * Constructs a constraint with scope derived from the given primitive constraints.
+   *
+   * @param constraints primitive constraints whose variable scopes define this constraint's scope.
+   */
   protected Constraint(PrimitiveConstraint[] constraints) {
     setScope(constraints);
   }
 
+  /**
+   * Constructs a constraint with scope defined by the given set of variables.
+   *
+   * @param set the set of variables forming the constraint scope.
+   */
   protected Constraint(Set<? extends Var> set) {
     setScope(set);
   }
 
+  /**
+   * Converts an integer array to a formatted string representation.
+   *
+   * @param array the integer array to convert.
+   * @return a string representation of the array in the format "[v1, v2, ...]".
+   */
   public static String intArrayToString(int[] array) {
     return Arrays.stream(array).mapToObj(Integer::toString).collect(joining(", ", "[", "]"));
   }
@@ -154,6 +180,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * Safely converts a long value to an int, clamping to Integer.MAX_VALUE or Integer.MIN_VALUE on
+   * overflow.
+   *
+   * @param value the long value to convert.
+   * @return the int representation, clamped to integer bounds if necessary.
+   */
   public static int long2int(long value) {
     if (value > (long) Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;
@@ -177,18 +210,38 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     this.scope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(variables)));
   }
 
+  /**
+   * Sets the constraint scope from multiple variable arrays.
+   *
+   * @param variables arrays of variables to include in the scope.
+   */
   protected void setScope(Var[]... variables) {
     setScope(Arrays.stream(variables).flatMap(Arrays::stream));
   }
 
+  /**
+   * Sets the constraint scope from a stream of variables.
+   *
+   * @param scope stream of variables to include in the scope.
+   */
   protected void setScope(Stream<Var> scope) {
     setScope(scope.toArray(Var[]::new));
   }
 
+  /**
+   * Sets the constraint scope from the variable scopes of the given primitive constraints.
+   *
+   * @param constraints primitive constraints whose variable scopes define this constraint's scope.
+   */
   protected void setScope(PrimitiveConstraint[] constraints) {
     setScope(Arrays.stream(constraints).map(Constraint::arguments).flatMap(Collection::stream));
   }
 
+  /**
+   * Sets the constraint scope from a set of variables.
+   *
+   * @param set the set of variables to include in the scope.
+   */
   protected void setScope(Set<? extends Var> set) {
     setScope(set.toArray(new Var[0]));
   }
@@ -239,6 +292,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     return getDefaultConsistencyPruningEvent();
   }
 
+  /**
+   * It returns the default pruning event used for consistency checking when no specific event is
+   * defined for a variable.
+   *
+   * @return the int code of the default pruning event.
+   */
   public abstract int getDefaultConsistencyPruningEvent();
 
   /**
@@ -329,10 +388,20 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * Sets the watched variable used as a quick check for groundedness.
+   *
+   * @param var the variable to watch for grounding.
+   */
   public void setWatchedVariableGrounded(Var var) {
     watchedVariableGrounded = var;
   }
 
+  /**
+   * Checks whether the watched variable is grounded (singleton) or no watched variable is set.
+   *
+   * @return true if no watched variable is set or the watched variable is a singleton.
+   */
   public boolean watchedVariableGrounded() {
     return watchedVariableGrounded == null || watchedVariableGrounded.singleton();
   }
@@ -446,10 +515,22 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Returns the accumulated failure count (AFC) weight of this constraint.
+   *
+   * @return the current AFC weight.
+   */
   public double afc() {
     return afcWeight;
   }
 
+  /**
+   * Updates the accumulated failure count (AFC) weight with decay, rescaling all constraint weights
+   * if overflow is imminent.
+   *
+   * @param allConstraints the set of all constraints used for rescaling on overflow.
+   * @param decay the decay factor applied to the updated weight.
+   */
   public void updateAfc(Set<Constraint> allConstraints, double decay) {
     afcWeight = (afcWeight + 1.0d) / decay;
 
@@ -464,6 +545,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It is executed after the constraint has failed. It allows to clean some data structures. */
   public void cleanAfterFailure() {}
 
+  /**
+   * Appends the string representation of each element in the array to the StringBuilder, separated
+   * by commas.
+   *
+   * @param sb the StringBuilder to append to.
+   * @param array the array of objects to append.
+   */
   protected static void appendArrayToString(StringBuilder sb, Object[] array) {
     for (int i = 0; i < array.length; i++) {
       sb.append(array[i]);
@@ -473,6 +561,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
   }
 
+  /**
+   * Computes the maximum bipartite matching between the given variables and their domain values
+   * using the Hopcroft-Karp algorithm.
+   *
+   * @param vs the array of integer variables.
+   * @return the size of the maximum matching.
+   */
   protected static int computeMaxBipartiteMatching(IntVar[] vs) {
     Map<Integer, Integer> valueMap = new HashMap<>();
     int valueIndex = 0;
@@ -503,6 +598,13 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     return matcher.hopcroftKarp();
   }
 
+  /**
+   * Checks whether the variables cannot be satisfied by a complete matching, i.e., the maximum
+   * bipartite matching is smaller than the number of variables.
+   *
+   * @param vs the array of integer variables.
+   * @return true if the maximum matching is less than the number of variables.
+   */
   protected static boolean notSatisfiedByMatching(IntVar[] vs) {
     return computeMaxBipartiteMatching(vs) < vs.length;
   }

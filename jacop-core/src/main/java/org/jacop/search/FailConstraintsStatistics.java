@@ -53,6 +53,11 @@ public class FailConstraintsStatistics implements ConsistencyListener {
   final Store store;
   public long otherFails;
 
+  /**
+   * Creates a new fail constraints statistics listener for the given store.
+   *
+   * @param s the constraint store to monitor.
+   */
   public FailConstraintsStatistics(Store s) {
     store = s;
   }
@@ -66,8 +71,11 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     return list;
   }
 
-  /*
-   * Listener for failers
+  /**
+   * Records statistics about failed constraints after a consistency check.
+   *
+   * @param consistent whether the consistency check succeeded.
+   * @return the value of {@code consistent}.
    */
   public boolean executeAfterConsistency(boolean consistent) {
 
@@ -83,8 +91,10 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     }
   }
 
+  /** {@inheritDoc} */
   public void setChildrenListeners(ConsistencyListener[] children) {}
 
+  /** {@inheritDoc} */
   public void setChildrenListeners(ConsistencyListener child) {}
 
   void collectFailStatistics(Constraint currentConstraint) {
@@ -111,6 +121,7 @@ public class FailConstraintsStatistics implements ConsistencyListener {
     // ========
   }
 
+  /** {@inheritDoc} */
   public String toString() {
 
     StringBuilder c = new StringBuilder();

@@ -45,17 +45,37 @@ public class LargestMinFloat<T extends FloatVar> implements ComparatorVariable<T
   /** It constructs variable comparator with priority based on the largest minimal value. */
   public LargestMinFloat() {}
 
+  /**
+   * Compares a metric value with a variable's minimum domain value.
+   *
+   * @param left the metric value to compare
+   * @param var the variable whose minimum value is compared
+   * @return negative if var has larger minimum, positive if smaller, zero if equal
+   */
   public int compare(double left, T var) {
     double right = var.dom().min();
     return Double.compare(left, right);
   }
 
+  /**
+   * Compares two variables based on their minimum domain values.
+   *
+   * @param leftVar the first variable to compare
+   * @param rightVar the second variable to compare
+   * @return negative if leftVar has larger minimum, positive if smaller, zero if equal
+   */
   public int compare(T leftVar, T rightVar) {
     double left = leftVar.dom().min();
     double right = rightVar.dom().min();
     return Double.compare(left, right);
   }
 
+  /**
+   * Computes the metric value for a variable based on its minimum domain value.
+   *
+   * @param var the variable to compute the metric for
+   * @return the minimum value in the variable's domain
+   */
   public double metric(T var) {
     return var.dom().min();
   }

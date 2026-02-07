@@ -150,6 +150,11 @@ public class Cumulative extends CumulativeBasic {
         limit);
   }
 
+  /**
+   * Sets whether to use the quadratic edge-finding algorithm.
+   *
+   * @param doQef true to enable quadratic edge-finding, false otherwise.
+   */
   public void doQuadraticEdgeFind(boolean doQef) {
     doQuadraticEdgeFind = doQef;
   }

@@ -333,6 +333,12 @@ public class SoftGCC extends DecomposedConstraint<Constraint> {
     this.violationMeasure = violationMeasure;
   }
 
+  /**
+   * Decomposes the constraint into primitive constraints.
+   *
+   * @param store the constraint store.
+   * @return list of primitive constraints.
+   */
   public List<Constraint> primitiveDecomposition(Store store) {
 
     if (decomposition == null) {

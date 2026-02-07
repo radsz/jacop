@@ -55,10 +55,14 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
   private int numRemoved;
 
   /**
-   * TODO Efficiency,.
+   * Adds a binary clause to the database.
    *
-   * <p>Watches require a very large array, but there maybe not so many binary clauses. Maybe a
-   * hashmap, connecting variable and list of watched clauses is more appropriate.
+   * <p>TODO Efficiency: Watches require a very large array, but there maybe not so many binary
+   * clauses. Maybe a hashmap, connecting variable and list of watched clauses is more appropriate.
+   *
+   * @param clause the clause to add (must be of length 2)
+   * @param isModel true if this is a model clause
+   * @return the unique ID of the added clause
    */
   public int addClause(int[] clause, boolean isModel) {
 
@@ -88,6 +92,11 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     return indexToUniqueId(newIndex);
   }
 
+  /**
+   * Notifies the database that a literal has been asserted for unit propagation.
+   *
+   * @param literal the literal that has been asserted
+   */
   public void assertLiteral(int literal) {
 
     int var = literal > 0 ? literal : -literal; // Math.abs(literal);
@@ -112,6 +121,11 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     }
   }
 
+  /**
+   * Removes a clause from the database.
+   *
+   * @param clauseId the unique ID of the clause to remove
+   */
   public void removeClause(int clauseId) {
 
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
@@ -126,10 +140,23 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     clauses[offset + 1] = 0;
   }
 
+  /**
+   * Checks if a clause can be removed from the database.
+   *
+   * @param clauseId the unique ID of the clause
+   * @return true if the clause can be removed
+   */
   public boolean canRemove(int clauseId) {
     return true;
   }
 
+  /**
+   * Performs resolution with the specified clause.
+   *
+   * @param clauseId the unique ID of the clause in the database
+   * @param clause the clause to resolve with
+   * @return the resulting clause after resolution
+   */
   public MapClause resolutionWith(int clauseId, MapClause clause) {
 
     int clauseIndex = dbStore.uniqueIdToIndex(clauseId);
@@ -143,6 +170,11 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     return clause;
   }
 
+  /**
+   * Handles backjumping to a specified decision level.
+   *
+   * @param level the level to backjump to
+   */
   public void backjump(int level) {
     // nothing to do
   }
@@ -214,6 +246,12 @@ public final class BinaryClausesDatabase extends AbstractClausesDatabase {
     return currentIndex - numRemoved;
   }
 
+  /**
+   * Writes the binary clauses to CNF format.
+   *
+   * @param output the buffered writer to write to
+   * @throws IOException if an I/O error occurs
+   */
   public void toCnf(BufferedWriter output) throws IOException {
 
     for (int i = 0; i < currentIndex; i++) {

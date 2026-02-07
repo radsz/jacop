@@ -39,8 +39,10 @@ package org.jacop.fz;
 @SuppressWarnings("serial")
 public class TrivialSolution extends RuntimeException {
 
+  /** Constructs a TrivialSolution exception. */
   public TrivialSolution() {}
 
+  /** {@inheritDoc} */
   @Override
   public Throwable fillInStackTrace() {
     return this;

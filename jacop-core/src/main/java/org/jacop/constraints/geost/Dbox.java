@@ -660,6 +660,11 @@ public class Dbox {
     return box;
   }
 
+  /**
+   * Returns a string representation of this Dbox.
+   *
+   * @return string showing the origin and length arrays of the Dbox
+   */
   public String toString() {
 
     return "Dbox(" + Arrays.toString(origin) + " ; " + Arrays.toString(length) + ")";
