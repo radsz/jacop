@@ -273,7 +273,6 @@ public class CountValues extends Constraint implements SatisfiedPresent {
 
     for (int i = 0; i < counter.length; i++) {
       int v = values[i];
-      int c;
       if (counter[i].singleton()) {
         counter[i].value();
       } else {

@@ -594,7 +594,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
               r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
-              computeNewMaxDuration(r.origin[i], r.length[i].min(), exclude.min, exclude.max);
+              computeNewMaxDuration(r.origin[i], exclude.min, exclude.max);
 
               // System.out.println ("7. length = "+   durMax);
             }
@@ -623,7 +623,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     }
   }
 
-  private void computeNewMaxDuration(IntVar start, int durMin, int excludeMin, int excludeMax) {
+  private void computeNewMaxDuration(IntVar start, int excludeMin, int excludeMax) {
 
     int dMax = IntDomain.MaxInt;
 
@@ -827,7 +827,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
             start.domain.in(store.level, start, update);
 
-            computeNewMaxDuration(start, dur, p.min, p.max);
+            computeNewMaxDuration(start, p.min, p.max);
 
             int lengthLimit = 0;
             for (int l : durMax) {

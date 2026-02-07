@@ -300,13 +300,6 @@ public class Circuit extends Alldiff implements Stateful {
     return min;
   }
 
-  private void dominanceFilter() {
-    int n = list.length;
-
-    if (!graphDominance(random.nextInt(n))) {
-      reversedGraphDominance(random.nextInt(n));
-    }
-  }
 
   private boolean graphDominance(int root) {
 

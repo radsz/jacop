@@ -224,8 +224,6 @@ public class NetworkFlow extends Constraint
     }
     updateGraph();
 
-    boolean first = true; // (previousLevel != store.level);
-    // System.out.println(store.level + "   (" + first + ")");
     previousLevel = store.level;
 
     int iteration = 0;

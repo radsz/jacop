@@ -179,7 +179,6 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
       for (int i = start; i < n; i++) {
         IntVar v = list[i];
         int noValuesInDomain = 0;
-        int mayBe = 0;
 
         for (int j = 0; j < values.length; j++) {
           if (v.domain.contains(values[j])) {

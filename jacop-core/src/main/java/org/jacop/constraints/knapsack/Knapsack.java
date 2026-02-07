@@ -785,8 +785,6 @@ public class Knapsack extends Constraint
 
     // @TODO: What if item changed is critical, make sure the code is correct in that case.
 
-    final boolean rightToCrit = leafForV.positionInTheTree > positionOfCriticalItem.value();
-
     final boolean leftToCrit = leafForV.positionInTheTree < positionOfCriticalItem.value();
 
     /* we look if there is some changed to do */

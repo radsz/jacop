@@ -277,8 +277,6 @@ public class BoxDisplay extends JFrame {
       display2dBox(area, c, true);
     }
 
-    // draw bounding box
-    final boolean draw_bounding_box = false;
   }
 
   /**
@@ -308,8 +306,6 @@ public class BoxDisplay extends JFrame {
         display2dBox(area, c, true);
       }
     }
-    // draw bounding box
-    final boolean draw_bounding_box = false;
   }
 
   /**

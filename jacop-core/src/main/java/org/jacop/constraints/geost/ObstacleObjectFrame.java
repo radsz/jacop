@@ -436,8 +436,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
     // reuse previously allocated array
     int[] outPoint = Dbox.getAllocatedInstance(obstacle.dimension + 1).origin;
 
-    final boolean consider_all = false;
-
     if (frame.isEmpty()) {
       return null;
     } else {

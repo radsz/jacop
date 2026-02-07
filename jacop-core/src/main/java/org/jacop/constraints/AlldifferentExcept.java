@@ -114,7 +114,6 @@ public class AlldifferentExcept extends Alldifferent
     grounded.update(groundPos);
 
     ArrayList<IntVar> vars = new ArrayList<>();
-    int j = 0;
     for (int i = groundPos; i < list.length; i++) {
       if (!s.isIntersecting(list[i].dom())) {
         vars.add(list[i]);

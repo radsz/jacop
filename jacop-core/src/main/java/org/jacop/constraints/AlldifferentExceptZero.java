@@ -109,7 +109,6 @@ public class AlldifferentExceptZero extends Alldifferent
     grounded.update(groundPos);
 
     ArrayList<IntVar> vars = new ArrayList<>();
-    int j = 0;
     for (int i = groundPos; i < list.length; i++) {
       if (!list[i].domain.contains(0)) {
         vars.add(list[i]);

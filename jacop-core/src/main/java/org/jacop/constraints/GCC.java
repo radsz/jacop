@@ -206,7 +206,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     pCount = new PriorityQueue<>(10, sortPriorityMaxOrder);
 
     xNodesHash = Var.createEmptyPositioning();
-    Set<IntVar> xVariableToChange = new HashSet<>();
 
     setScope(Stream.concat(Arrays.stream(x), Arrays.stream(counters)));
   }
@@ -570,7 +569,9 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
     for (IntVar xVar : x) {
       int xValue = xVar.value();
       int position = 0;
-      for (; position < count.length && domainHash[position] != xValue; position++) {}
+      for (; position < count.length && domainHash[position] != xValue; position++) {
+        // advance to matching position
+      }
       assert position < count.length;
       count[position]++;
     }

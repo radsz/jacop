@@ -177,9 +177,6 @@ public class NonOverlapping implements ExternalConstraint {
 
   public boolean isInternalConstraintApplicableTo(InternalConstraint ic, GeostObject o) {
 
-    final boolean inefficient = true;
-
-    // TODO: do we keep inefficient version? If so, attribute constraints is no longer needed.
     return getObjectConstraints(o).contains(ic);
   }
 

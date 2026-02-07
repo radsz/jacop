@@ -324,6 +324,7 @@ public class Assert {
     return true;
   }
 
+  @SuppressWarnings("PMD.UnusedLocalVariable")
   public static void forceAsserts() {
 
     boolean asserts = false;

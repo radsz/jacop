@@ -107,8 +107,7 @@ public class AndBool extends DecomposedConstraint<PrimitiveConstraint> {
     for (IntVar x : xs) {
       if (x.max() == 0) {
         return null;
-      } else if (x.min() == 1) {
-      } else {
+      } else if (x.min() != 1) {
         result.add(x);
       }
     }

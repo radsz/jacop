@@ -158,7 +158,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     int ub0 = ub0Ts.value();
 
     IntVar x;
-    IntVar tmpX;
 
     boolean inLb;
 
@@ -687,7 +686,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
       // lbSDOm and ubSdom are ready
       IntVar x;
-      IntVar tmpX;
       if (!skipInitialLb0Ub0Calculation) {
         for (int i = lb0; i < ub0; i++) {
           x = listOfX[i];
@@ -1091,10 +1089,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   public void impose(Store store) {
 
     xIndex = Var.positionMapping(listOfX, false, this.getClass());
-
-    int i = 0;
-    IntVar y;
-    IntVar x;
 
     yIndex = Var.positionMapping(listOfY, false, this.getClass());
 

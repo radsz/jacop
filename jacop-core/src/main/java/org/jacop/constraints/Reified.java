@@ -61,7 +61,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 
-  private final boolean needRemoveLevelLate = false;
 
   /**
    * It creates Reified constraint.
@@ -209,12 +208,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
     }
   }
 
-  // TODO:, what about include function, should it have registerRemoveLevelLateListener?
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-  }
 
   @Override
   public boolean satisfied() {

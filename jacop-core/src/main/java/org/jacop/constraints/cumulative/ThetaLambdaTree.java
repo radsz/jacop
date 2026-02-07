@@ -113,8 +113,7 @@ class ThetaLambdaTree extends Tree {
 
   private void computeNodeVals(int i) {
 
-    if (notExist(left(i)) || notExist(right(i))) {
-    } else {
+    if (!notExist(left(i)) && !notExist(right(i))) {
 
       ThetaLambdaNode node = tree[i];
       ThetaLambdaNode l = tree[left(i)];
@@ -154,9 +153,7 @@ class ThetaLambdaTree extends Tree {
 
   private void computeThetaNode(int i) {
 
-    if (notExist(left(i))) {
-    } else if (notExist(right(i))) {
-    } else {
+    if (!notExist(left(i)) && !notExist(right(i))) {
 
       ThetaLambdaNode node = tree[i];
       ThetaLambdaNode l = tree[left(i)];

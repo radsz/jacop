@@ -60,7 +60,6 @@ public class Xor extends PrimitiveConstraint {
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 
-  private final boolean needRemoveLevelLate = false;
 
   /**
    * It constructs a xor constraint.

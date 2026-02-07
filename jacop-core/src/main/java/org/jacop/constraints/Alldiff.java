@@ -319,6 +319,7 @@ public class Alldiff extends Alldifferent {
   }
 
   // Overwritten as QueueForwardQueue checks that constraint has declared this method.
+  @SuppressWarnings("PMD.UselessOverridingMethod")
   @Override
   public void queueVariable(int level, Var var) {
     super.queueVariable(level, var);

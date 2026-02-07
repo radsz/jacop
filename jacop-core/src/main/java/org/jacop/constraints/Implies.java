@@ -38,7 +38,6 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
-import org.jacop.util.QueueForward;
 
 /**
  * Constraint b {@literal =>} c (implication or half-reification).
@@ -49,7 +48,6 @@ import org.jacop.util.QueueForward;
 public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private final QueueForward<PrimitiveConstraint> queueForward;
 
   /** It specifies variable b in the Implies constraint. */
   public IntVar b;
@@ -79,7 +77,6 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
     this.c = c;
     setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
     setConstraintScope(c);
-    queueForward = new QueueForward<>(c, arguments());
     this.queueIndex = c.queueIndex;
   }
 

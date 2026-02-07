@@ -218,7 +218,7 @@ public class Subcircuit extends Alldiff {
 
     if (sat) {
       // check if there are subcricuits that together cover all nodes
-      sat = sccs(store) == list.length;
+      sat = sccs() == list.length;
     }
     return sat;
   }
@@ -275,7 +275,7 @@ public class Subcircuit extends Alldiff {
     }
   }
 
-  private int sccs(Store store) {
+  private int sccs() {
 
     int totalNodes = 0;
 

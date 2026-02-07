@@ -819,14 +819,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     return value;
   }
 
-  private int div(int a, int b) {
-    int div;
-    int rem;
-
-    div = a / b;
-    rem = a % b;
-    return rem > 0 ? div + 1 : div;
-  }
 
   @Override
   public ValueEnumeration valueEnumeration() {
