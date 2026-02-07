@@ -333,10 +333,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
           }
         }
 
-        if (debugAll) {
-          if (!stillSupport[i]) {
-            log.debug("Not support {}", Arrays.toString(t));
-          }
+        if (debugAll && !stillSupport[i]) {
+          log.debug("Not support {}", Arrays.toString(t));
         }
 
         i++;

@@ -169,14 +169,11 @@ public class Lex extends DecomposedConstraint<Constraint> {
         numberVar += 2;
         //       numberStates += 2;
 
-        if (i < x.length - 2) {
-          //         numberStates += 2*(sizeToCompare-j) - 1;
-          if (j == 0) {
-            addState[i] = new FsmState[2 * (sizeToCompare - j) - 1];
+        if (i < x.length - 2 && j == 0) {
+          addState[i] = new FsmState[2 * (sizeToCompare - j) - 1];
 
-            for (int k = 0; k < addState[i].length; k++) {
-              addState[i][k] = new FsmState();
-            }
+          for (int k = 0; k < addState[i].length; k++) {
+            addState[i][k] = new FsmState();
           }
         }
       }
@@ -316,15 +313,11 @@ public class Lex extends DecomposedConstraint<Constraint> {
           //         numberStates++;
         }
 
-        if (i < x.length - 2) {
-          //         numberStates += 2*(sizeToCompare-j) - 2;
+        if (i < x.length - 2 && j == 0) {
+          addState[i] = new FsmState[2 * (sizeToCompare - j) - 2];
 
-          if (j == 0) {
-            addState[i] = new FsmState[2 * (sizeToCompare - j) - 2];
-
-            for (int k = 0; k < addState[i].length; k++) {
-              addState[i][k] = new FsmState();
-            }
+          for (int k = 0; k < addState[i].length; k++) {
+            addState[i][k] = new FsmState();
           }
         }
       }

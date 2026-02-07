@@ -398,11 +398,8 @@ public class CreditCalculator<T extends Var>
       creditsRight[currentLevel] = 0;
     }
 
-    if (!timeOut) {
-
-      if (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0) {
-        currentBacktracks--;
-      }
+    if (!timeOut && (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0)) {
+      currentBacktracks--;
     }
 
     if (exitChildListeners != null) {
@@ -423,11 +420,8 @@ public class CreditCalculator<T extends Var>
       creditsLeft[currentLevel + 1] = 0;
     }
 
-    if (!timeOut) {
-
-      if (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0) {
-        currentBacktracks--;
-      }
+    if (!timeOut && (currentLevel >= creditsLeft.length || creditsLeft[currentLevel] == 0)) {
+      currentBacktracks--;
     }
 
     if (exitChildListeners != null) {

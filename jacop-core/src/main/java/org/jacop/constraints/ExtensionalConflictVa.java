@@ -434,10 +434,8 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
         noConflicts++;
       }
 
-      if (debugAll) {
-        if (!stillConflict[i]) {
-          log.debug("Not support {}", Arrays.toString(t));
-        }
+      if (debugAll && !stillConflict[i]) {
+        log.debug("Not support {}", Arrays.toString(t));
       }
 
       i++;

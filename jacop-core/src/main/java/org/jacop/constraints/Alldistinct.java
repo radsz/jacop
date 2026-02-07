@@ -741,21 +741,18 @@ public class Alldistinct extends Constraint
 
         stampValue = stamp.value();
 
-        if (stampValue == 0) {
+        if (stampValue == 0 && valueMapVariable.get(value).getFirst().dom().getSize() > 1) {
+          log.debug("Transformation Alldistinct-Permutation and missing propagation ");
 
-          if (valueMapVariable.get(value).getFirst().dom().getSize() > 1) {
-            log.debug("Transformation Alldistinct-Permutation and missing propagation ");
+          valueMapVariable
+              .get(value)
+              .getFirst()
+              .domain
+              .inValue(store.level, valueMapVariable.get(value).getFirst(), value); // , value);
 
-            valueMapVariable
-                .get(value)
-                .getFirst()
-                .domain
-                .inValue(store.level, valueMapVariable.get(value).getFirst(), value); // , value);
+          variableQueue.add(valueMapVariable.get(value).getFirst());
 
-            variableQueue.add(valueMapVariable.get(value).getFirst());
-
-            narrowingEvent = true;
-          }
+          narrowingEvent = true;
         }
       }
     }
@@ -1257,12 +1254,8 @@ public class Alldistinct extends Constraint
 
           // If v was earlier visited and v belongs to stack then
           // update low number of x.
-          if (dfsnumv < dfsnum.get(x)) {
-            if (l.contains(v)) {
-              if (low.get(x) > dfsnumv) {
-                low.put(x, dfsnumv);
-              }
-            }
+          if (dfsnumv < dfsnum.get(x) && l.contains(v) && low.get(x) > dfsnumv) {
+            low.put(x, dfsnumv);
           }
         }
       }
@@ -1402,12 +1395,8 @@ public class Alldistinct extends Constraint
 
         // If v was earlier visited and v belongs to stack then
         // update low number of x.
-        if (dfsnumv < dfsnum.get(x)) {
-          if (l.contains(v)) {
-            if (low.get(x) > dfsnumv) {
-              low.put(x, dfsnumv);
-            }
-          }
+        if (dfsnumv < dfsnum.get(x) && l.contains(v) && low.get(x) > dfsnumv) {
+          low.put(x, dfsnumv);
         }
       }
     }

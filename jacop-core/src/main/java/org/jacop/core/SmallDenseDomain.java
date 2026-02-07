@@ -213,12 +213,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public void addDom(IntDomain domain) {
-
-    super.addDom(domain);
-  }
-
-  @Override
   public IntDomain complement() {
 
     IntDomain intervalBasedRepresentation = this.toIntervalDomain();
@@ -772,8 +766,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       int i = 0;
 
       for (; i < input.size; i++) {
-        if (input.intervals[i].max() < this.min) {
-        } else {
+        if (input.intervals[i].max() >= this.min) {
           break;
         }
       }
@@ -1158,8 +1151,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       int i = 0;
 
       for (; i < input.size; i++) {
-        if (input.intervals[i].max() + shift < this.min) {
-        } else {
+        if (input.intervals[i].max() + shift >= this.min) {
           break;
         }
       }
@@ -1229,8 +1221,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     int i = 0;
 
     for (; i < input.size; i++) {
-      if (input.intervals[i].max() + shift < this.min) {
-      } else {
+      if (input.intervals[i].max() + shift >= this.min) {
         break;
       }
     }
@@ -1326,7 +1317,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return result;
     }
 
-    if (domain.domainId() == IntDomain.BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       IntervalDomain input = new IntervalDomain(domain.min(), domain.max());
 
@@ -1461,7 +1452,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
     }
 
-    if (domain.domainId() == IntDomain.BoundDomainID) {
+    if (domain.domainId() == BoundDomainID) {
 
       // TODO: test this special case.
       BoundDomain input = (BoundDomain) domain;
@@ -1618,12 +1609,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     return result != 0;
 
     // Used in AbsXeqY, Regular.
-  }
-
-  @Override
-  public int leftElement(int intervalNo) {
-
-    return super.leftElement(intervalNo);
   }
 
   @Override
@@ -1790,12 +1775,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public int rightElement(int intervalNo) {
-
-    return super.rightElement(intervalNo);
-  }
-
-  @Override
   public void setDomain(IntDomain domain) {
 
     // TODO: test it a bit more. SETADD.
@@ -1883,12 +1862,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     return singleton;
-  }
-
-  @Override
-  public int sizeOfIntersection(IntDomain domain) {
-
-    return super.sizeOfIntersection(domain);
   }
 
   @Override
@@ -2021,14 +1994,9 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     } else {
       // min > this.min
 
+      // when max < this.max, no changes to min and max are needed
       if (max >= this.max) {
-
         this.max = previousValue(min);
-
-      } else {
-        // min > this.min
-        // max < this.max
-        // no changes to min and max
       }
     }
   }

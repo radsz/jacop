@@ -165,22 +165,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       x = listOfX[i];
       inLb = false;
       // watch the relation with lbS
-      if (lbSdom.getSize() > 0) {
-        if (lbSdom.contains(x.domain)) {
-          swapXtoFront(i, lb0);
-          lb0++;
-          inLb = true;
-          x.removeConstraint(this);
-        }
+      if (lbSdom.getSize() > 0 && lbSdom.contains(x.domain)) {
+        swapXtoFront(i, lb0);
+        lb0++;
+        inLb = true;
+        x.removeConstraint(this);
       }
 
-      if (!inLb) {
-        if (!lbSdom.isIntersecting(x.domain)) {
-          swapXtoBack(i, ub0 - 1);
-          ub0--;
-          i--;
-          x.removeConstraint(this);
-        }
+      if (!inLb && !lbSdom.isIntersecting(x.domain)) {
+        swapXtoBack(i, ub0 - 1);
+        ub0--;
+        i--;
+        x.removeConstraint(this);
       }
     }
 
@@ -565,10 +561,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               lastIndex++;
             }
           } else {
-            if (!firstTimeWhileLoop) {
-              if (y.domain.getPreviousDomain() != null) {
-                pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
-              }
+            if (!firstTimeWhileLoop && y.domain.getPreviousDomain() != null) {
+              pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
             }
             if (y.domain.getPreviousDomain() != null) {
               mustBeCoveredNow =
@@ -797,10 +791,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
             for (int i = lb0; i < ub0; i++) {
               x = listOfX[i];
               // a) count the weight
-              if (firstTimeWhileLoop) {
-                if (x.domain.contains(v)) {
-                  weight++;
-                }
+              if (firstTimeWhileLoop && x.domain.contains(v)) {
+                weight++;
               }
               // b)count the relation with lbS
               if (lbSdom.union(v).contains(x.domain)) {
@@ -827,39 +819,28 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
               lbMin = lbTmp;
             }
 
-            if (debugAll) {
-              if (firstTimeWhileLoop) {
-                log.debug("--- weight[{}] = {}", v, weight);
-              }
+            if (debugAll && firstTimeWhileLoop) {
+              log.debug("--- weight[{}] = {}", v, weight);
             }
 
-            if (firstTimeWhileLoop) {
-              if (weight != 0) {
-                if (!lbVubV.contains(n.domain)) {
-                  int max;
-                  int min;
-                  lbTmp = lbTmp - lb0;
+            if (firstTimeWhileLoop && weight != 0 && !lbVubV.contains(n.domain)) {
+              int max;
+              int min;
+              lbTmp = lbTmp - lb0;
 
-                  if (lbVubV.getSize() > 0) {
-                    for (Interval a : lbVubV.intervals) {
-                      if (a != null) {
-                        max = Math.min(weight + a.max(), ub0);
-                        min = Math.max(lbTmp + a.min(), lb0);
+              if (lbVubV.getSize() > 0) {
+                for (Interval a : lbVubV.intervals) {
+                  if (a != null) {
+                    max = Math.min(weight + a.max(), ub0);
+                    min = Math.max(lbTmp + a.min(), lb0);
 
-                        if (min <= max) {
-                          lbVubV = (IntervalDomain) lbVubV.union(min, max);
-                          if (debugAll) {
-                            if (a != null) {
-                              log.debug(
-                                  " >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
-                            }
-                          }
-                        } else if (debugAll) {
-                          if (a != null) {
-                            log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
-                          }
-                        }
+                    if (min <= max) {
+                      lbVubV = (IntervalDomain) lbVubV.union(min, max);
+                      if (debugAll && a != null) {
+                        log.debug(" >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
                       }
+                    } else if (debugAll && a != null) {
+                      log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
                     }
                   }
                 }
@@ -992,22 +973,18 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
           inLb = false;
 
           // watch the relation with lbS
-          if (lbSdom.getSize() > 0) {
-            if (lbSdom.contains(x.domain)) {
-              swapXtoFront(i, lb0);
-              lb0++;
-              inLb = true;
-              x.removeConstraint(this);
-            }
+          if (lbSdom.getSize() > 0 && lbSdom.contains(x.domain)) {
+            swapXtoFront(i, lb0);
+            lb0++;
+            inLb = true;
+            x.removeConstraint(this);
           }
 
-          if (!inLb && recalculateUb0) {
-            if (!ubSdom.isIntersecting(x.domain)) {
-              swapXtoBack(i, ub0 - 1);
-              ub0--;
-              i--;
-              x.removeConstraint(this);
-            }
+          if (!inLb && recalculateUb0 && !ubSdom.isIntersecting(x.domain)) {
+            swapXtoBack(i, ub0 - 1);
+            ub0--;
+            i--;
+            x.removeConstraint(this);
           }
         }
 
@@ -1045,12 +1022,10 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       }
 
       if (n.singleton()) {
-        if (lbSdom.getSize() > 0) {
-          if (n.value() == lb0) {
-            for (int i = lb0; i < ub0; i++) {
-              x = listOfX[i];
-              x.domain.in(store.level, x, x.domain.subtract(lbSdom));
-            }
+        if (lbSdom.getSize() > 0 && n.value() == lb0) {
+          for (int i = lb0; i < ub0; i++) {
+            x = listOfX[i];
+            x.domain.in(store.level, x, x.domain.subtract(lbSdom));
           }
         }
         if (n.value() == ub0) {
@@ -1121,11 +1096,9 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       return;
     }
 
-    if (var != this.n) {
+    if (var != this.n && var.singleton()) {
       // It can be only X
-      if (var.singleton()) {
-        xGrounded.update(xGrounded.value() + 1);
-      }
+      xGrounded.update(xGrounded.value() + 1);
     }
   }
 
@@ -1140,10 +1113,8 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       boolean allYsGrounded = yGrounded.value() == listOfY.length;
       boolean allXsGrounded = xGrounded.value() == listOfX.length;
 
-      if (allYsGrounded) {
-        if (n.value() == lb0 && lb0 == ub0) {
-          return true;
-        }
+      if (allYsGrounded && n.value() == lb0 && lb0 == ub0) {
+        return true;
       }
 
       assert !allYsGrounded || !allXsGrounded || (n.value() == lb0)

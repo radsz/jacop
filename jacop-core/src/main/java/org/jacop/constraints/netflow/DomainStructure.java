@@ -131,14 +131,10 @@ public class DomainStructure implements VarHandler {
       }
 
       // make arc inactive ?
-      if (inter == 0) {
-        if (behavior != Behavior.PRUNE_ACTIVE) {
-          groundArc(id, false, network);
-        }
-      } else if (inter == size) { // make arc active ?
-        if (behavior != Behavior.PRUNE_INACTIVE) {
-          groundArc(id, true, network);
-        }
+      if (inter == 0 && behavior != Behavior.PRUNE_ACTIVE) {
+        groundArc(id, false, network);
+      } else if (inter == size && behavior != Behavior.PRUNE_INACTIVE) {
+        groundArc(id, true, network);
       }
     }
   }

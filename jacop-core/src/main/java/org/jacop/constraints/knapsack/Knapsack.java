@@ -466,10 +466,8 @@ public class Knapsack extends Constraint
      constraint is being printed out.
     */
     int consistencyInfoFrom = 0;
-    if (debugAll) {
-      if (countConsistency >= consistencyInfoFrom) {
-        log.debug("{}", displayQuantitiesInEfficiencyOrder());
-      }
+    if (debugAll && countConsistency >= consistencyInfoFrom) {
+      log.debug("{}", displayQuantitiesInEfficiencyOrder());
     }
 
     assert sliceInvariant();
@@ -525,10 +523,8 @@ public class Knapsack extends Constraint
     needMandatory = false;
     needForbidden = false;
 
-    if (debugAll) {
-      if (countConsistency >= consistencyInfoFrom) {
-        log.debug("{}", displayQuantitiesInEfficiencyOrder());
-      }
+    if (debugAll && countConsistency >= consistencyInfoFrom) {
+      log.debug("{}", displayQuantitiesInEfficiencyOrder());
     }
 
     inConsistency = false;
@@ -770,9 +766,7 @@ public class Knapsack extends Constraint
         positionOfAlreadyUpdated = 0;
       }
 
-      if (list.size() > updateLimit) {
-        /* we don't add, we recompute */
-      } else {
+      if (list.size() <= updateLimit) {
         list.add(leafForV);
       }
 

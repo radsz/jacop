@@ -143,26 +143,23 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
     leftChild = false;
 
-    if (!status) {
+    if (!status && quickShave && leftChildWrongDecision) {
 
-      if (quickShave && leftChildWrongDecision) {
+      int position = shavable.size() - 1;
 
-        int position = shavable.size() - 1;
-
-        if (position > depth) {
-          position = depth - 1;
-        }
-
-        if (position < 0) {
-          position = 0;
-        }
-
-        Map<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
-        LinkedHashSet<Integer> shaveVarList =
-            current.computeIfAbsent(var, _ -> new LinkedHashSet<>());
-
-        shaveVarList.add(value);
+      if (position > depth) {
+        position = depth - 1;
       }
+
+      if (position < 0) {
+        position = 0;
+      }
+
+      Map<IntVar, LinkedHashSet<Integer>> current = shavable.get(position);
+      LinkedHashSet<Integer> shaveVarList =
+          current.computeIfAbsent(var, _ -> new LinkedHashSet<>());
+
+      shaveVarList.add(value);
     }
 
     depth--;
@@ -262,10 +259,8 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
     if (!leftChildShaving || leftChild) {
       for (Constraint g : shavingConstraints) {
 
-        if (onlyFailedConstraint) {
-          if (recentlyFailedConstraint != g) {
-            continue;
-          }
+        if (onlyFailedConstraint && recentlyFailedConstraint != g) {
+          continue;
         }
 
         IntVar shaveVar = (T) g.getGuideVariable();
@@ -276,10 +271,8 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
         int shaveVal = g.getGuideValue();
 
-        if (onlyIntVarsOfFailedConstraint) {
-          if (!varsOfFailedConstraint.contains(shaveVar)) {
-            continue;
-          }
+        if (onlyIntVarsOfFailedConstraint && !varsOfFailedConstraint.contains(shaveVar)) {
+          continue;
         }
 
         LinkedHashSet<Integer> notShavableListShaveVar;

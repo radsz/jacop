@@ -325,16 +325,15 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       this.changedVariables = new HashSet<>();
       for (IntVar var : changedVariablesCopy) {
         // if v is singleton and is an X variable
-        if (var.singleton() && xNodesHash.containsKey(var)) {
-          // if
-          if (xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
-            if (debug) {
-              log.debug(" in xVariableToChange: {}", var);
-            }
-            if (stamp.value() > 0) {
-              stamp.update(stamp.value() - 1);
-              putToTheEnd(x, xNodesHash.get(var));
-            }
+        if (var.singleton()
+            && xNodesHash.containsKey(var)
+            && xNodesHash.get(var) < stamp.value()) { // changing '<=' to '<' (KK)
+          if (debug) {
+            log.debug(" in xVariableToChange: {}", var);
+          }
+          if (stamp.value() > 0) {
+            stamp.update(stamp.value() - 1);
+            putToTheEnd(x, xNodesHash.get(var));
           }
         }
       }

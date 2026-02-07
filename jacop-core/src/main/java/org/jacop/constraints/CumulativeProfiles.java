@@ -77,13 +77,11 @@ class CumulativeProfiles {
         maxProfile.addToProfile(strt, stp, value);
       }
 
-      if (tDurMin > 0 && tResMin > 0) {
-        if (t.minUse(iTask)) {
-          if (trace) {
-            log.debug("Update profile {} [{}..{})={}", t, iTask.start(), iTask.stop(), tResMin);
-          }
-          minProfile.addToProfile(iTask.start(), iTask.stop(), tResMin);
+      if (tDurMin > 0 && tResMin > 0 && t.minUse(iTask)) {
+        if (trace) {
+          log.debug("Update profile {} [{}..{})={}", t, iTask.start(), iTask.stop(), tResMin);
         }
+        minProfile.addToProfile(iTask.start(), iTask.stop(), tResMin);
       }
     }
   }

@@ -355,10 +355,8 @@ public class Subcircuit extends Alldiff {
       }
     }
 
-    if (pr > 0) {
-      if (!graphDominance(possibleRoots[random.nextInt(pr)])) {
-        reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
-      }
+    if (pr > 0 && !graphDominance(possibleRoots[random.nextInt(pr)])) {
+      reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
     }
   }
 

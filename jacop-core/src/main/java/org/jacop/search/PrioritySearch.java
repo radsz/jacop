@@ -227,11 +227,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       timeOutOccured |= search.get(2 * i).timeOutOccured;
     }
 
-    if (timeOutOccured) {
-
-      if (printInfo) {
-        log.info("Time-out {}s", tOut);
-      }
+    if (timeOutOccured && printInfo) {
+      log.info("Time-out {}s", tOut);
     }
 
     if (noSolutions > 0) {
@@ -344,11 +341,8 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       timeOutOccured |= search.get(2 * i).timeOutOccured;
     }
 
-    if (timeOutOccured) {
-
-      if (printInfo) {
-        log.info("Time-out {}s", tOut);
-      }
+    if (timeOutOccured && printInfo) {
+      log.info("Time-out {}s", tOut);
     }
 
     if (noSolutions > 0) {
@@ -475,27 +469,20 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
       timeOutOccured |= search.get(2 * i).timeOutOccured;
     }
 
-    if (timeOutOccured) {
-
-      if (printInfo) {
-        log.info("Time-out {}s", tOut);
-      }
+    if (timeOutOccured && printInfo) {
+      log.info("Time-out {}s", tOut);
     }
 
     if (noSolutions > 0) {
       // update number solutions in solution listener; otherwise it will be zero :(
       ((SimpleSolutionListener<?>) solutionListener).setSolutionsNo(noSolutions);
 
-      if (printInfo) {
-        if (costVariable != null) {
-          if (costVariable instanceof IntVar) {
-            log.info("Solution cost is {}", costValue);
-          }
-        }
+      if (printInfo && costVariable != null && costVariable instanceof IntVar) {
+        log.info("Solution cost is {}", costValue);
+      }
 
-        if (printInfo) {
-          log.info("{}", statistics());
-        }
+      if (printInfo) {
+        log.info("{}", statistics());
       }
 
       if (raisedLevel) {

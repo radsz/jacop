@@ -165,31 +165,29 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
     for (int i = 0; i < mdd.domainLimits[level]; i++) {
       int shift = nodeId + i;
-      if (mdd.diagram[shift] != Mdd.NOEDGE) {
-        if (views[level].contains(i)) {
-          if (mdd.diagram[shift] == Mdd.TERMINAL || seekSupport(mdd.diagram[shift], level + 1)) {
+      // ith-value has a support
+      // returns true is new support was found
+      // it always checks the preliminary finish condition
+      // at least once if new support was found.
+      if (mdd.diagram[shift] != Mdd.NOEDGE
+          && views[level].contains(i)
+          && (mdd.diagram[shift] == Mdd.TERMINAL || seekSupport(mdd.diagram[shift], level + 1))
+          && (!views[level].setSupport(i) || !result)) {
 
-            // ith-value has a support
-            // returns true is new support was found
-            // it always checks the preliminary finish condition
-            // at least once if new support was found.
-            if (!views[level].setSupport(i) || !result) {
+        result = true;
 
-              result = true;
+        // TODO: check if allIndexesSupported needs updating
+        // if it needs updating check the break condition below.
+        // break if for all following levels variables
+        // have all values been signaled as already supported
+        // notSupportYet is empty for all variables level..vars.length
 
-              // TODO: check if allIndexesSupported needs updating
-              // if it needs updating check the break condition below.
-              // break if for all following levels variables
-              // have all values been signaled as already supported
-              // notSupportYet is empty for all variables level..vars.length
-
-              int j = level;
-              for (; j < views.length && views[j].isSupported(); j++) {}
-              if (j == views.length) {
-                break;
-              }
-            }
-          }
+        int j = level;
+        for (; j < views.length && views[j].isSupported(); j++) {
+          // advance past supported views
+        }
+        if (j == views.length) {
+          break;
         }
       }
     }

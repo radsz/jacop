@@ -306,10 +306,8 @@ public abstract class Domain {
     if (modelConstraints != null) {
       for (int i = 0; i < modelConstraints.length; i++) {
         for (int j = modelConstraintsToEvaluate[i]; j >= 0; j--) {
-          if (modelConstraints[i] != null) {
-            if (j < modelConstraints[i].length) {
-              result.add(modelConstraints[i][j]);
-            }
+          if (modelConstraints[i] != null && j < modelConstraints[i].length) {
+            result.add(modelConstraints[i][j]);
           }
         }
       }

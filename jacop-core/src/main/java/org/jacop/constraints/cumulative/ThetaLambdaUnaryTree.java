@@ -105,8 +105,7 @@ class ThetaLambdaUnaryTree extends ThetaTree {
 
   void computeNodeVals(int i) {
 
-    if (notExist(left(i)) || notExist(right(i))) {
-    } else {
+    if (!notExist(left(i)) && !notExist(right(i))) {
 
       ThetaLambdaUnaryNode node = tree[i];
       ThetaLambdaUnaryNode l = tree[left(i)];

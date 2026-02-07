@@ -70,11 +70,6 @@ public class NetworkFlow extends Constraint
   private static final boolean DO_INSTRUMENTATION = false;
   private static final boolean SHOW_LEVEL = false;
 
-  static {
-    // fails if asserts are disabled
-    // asserts.Assert.forceAsserts();
-  }
-
   /** The network. */
   // public final Network network;
   public final Pruning network;
@@ -188,9 +183,6 @@ public class NetworkFlow extends Constraint
         return;
       }
       queue.add((IntVar) variable);
-    } else {
-      // TODO: remove
-      // System.err.println("Can this actually happen ... " + variable);
     }
   }
 

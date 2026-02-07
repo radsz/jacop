@@ -239,10 +239,8 @@ public class LexOrder extends Constraint
       } else if (eqSingletons(x[i], y[i])) {
         if (lexLt) { // <
           return false;
-        } else // <=
-        if (i == n - 1) {
+        } else if (i == n - 1) { // <=
           return true;
-        } else {
         }
       } else {
         return false;
@@ -407,10 +405,8 @@ public class LexOrder extends Constraint
       }
     }
 
-    if (a < i && i < b) {
-      if ((i == (b - 1) && x[i].min() == y[i].max()) || x[i].min() > y[i].max()) {
-        updateBeta(i - 1);
-      }
+    if (a < i && i < b && ((i == (b - 1) && x[i].min() == y[i].max()) || x[i].min() > y[i].max())) {
+      updateBeta(i - 1);
     }
 
     if (debug) {

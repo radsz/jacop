@@ -276,7 +276,6 @@ public class BoxDisplay extends JFrame {
       }
       display2dBox(area, c, true);
     }
-
   }
 
   /**

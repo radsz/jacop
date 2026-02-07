@@ -396,10 +396,8 @@ public class IntervalBasedBacktrackableManager extends SimpleBacktrackableManage
       }
 
       currentLevelMax = false;
-      if (!trail.isEmpty()) {
-        if (trail.getLast() == fullLevel) {
-          currentLevelMax = true;
-        }
+      if (!trail.isEmpty() && trail.getLast() == fullLevel) {
+        currentLevelMax = true;
       }
 
       addingToIntervals = false;

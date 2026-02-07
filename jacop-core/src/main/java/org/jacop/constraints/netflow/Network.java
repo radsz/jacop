@@ -123,11 +123,8 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     addArc(arc);
     costOffset -= arc.longCost();
 
-    if (arc.companion != null) {
-      //     ((Pruning)this).numActiveArcs++;
-      if (arc.companion.structure != null) {
-        arc.companion.structure.ungroundArc(arc.companion.arcId);
-      }
+    if (arc.companion != null && arc.companion.structure != null) {
+      arc.companion.structure.ungroundArc(arc.companion.arcId);
     }
   }
 

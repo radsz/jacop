@@ -311,54 +311,44 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     if (check) {
 
-      if (timeOutCheck) {
-        if (System.currentTimeMillis() > timeOut) {
-          timeOutOccured = true;
-          if (timeOutListener != null) {
-            timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-          }
-          return false;
+      if (timeOutCheck && System.currentTimeMillis() > timeOut) {
+        timeOutOccured = true;
+        if (timeOutListener != null) {
+          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
         }
+        return false;
       }
 
-      if (nodesOutCheck) {
-        if (nodes > nodesOut) {
-          timeOutOccured = true;
-          if (timeOutListener != null) {
-            timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-          }
-          return false;
+      if (nodesOutCheck && nodes > nodesOut) {
+        timeOutOccured = true;
+        if (timeOutListener != null) {
+          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
         }
+        return false;
       }
 
-      if (decisionsOutCheck) {
-        if (decisions > decisionsOut) {
-          timeOutOccured = true;
-          if (timeOutListener != null) {
-            timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-          }
-          return false;
+      if (decisionsOutCheck && decisions > decisionsOut) {
+        timeOutOccured = true;
+        if (timeOutListener != null) {
+          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
         }
+        return false;
       }
 
-      if (wrongDecisionsOutCheck) {
-        if (wrongDecisions > wrongDecisionsOut) {
-          timeOutOccured = true;
-          if (timeOutListener != null) {
-            timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-          }
-          return false;
+      if (wrongDecisionsOutCheck && wrongDecisions > wrongDecisionsOut) {
+        timeOutOccured = true;
+        if (timeOutListener != null) {
+          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
         }
+        return false;
       }
 
-      if (backtracksOutCheck) {
-        if (numberBacktracks > backtracksOut) {
-          timeOutOccured = true;
-          if (timeOutListener != null) {
-            timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
-          }
-          return false;
+      if (backtracksOutCheck && numberBacktracks > backtracksOut) {
+        timeOutOccured = true;
+        if (timeOutListener != null) {
+          timeOutListener.executedAtTimeOut(solutionListener.solutionsNo());
         }
+        return false;
       }
     }
 
@@ -650,14 +640,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
       consistent = label(heuristic.getIndex());
 
-      if (exitChildListener != null) {
-        if ((choice == null && !exitChildListener.leftChild(fdv, val, consistent))
-            || (choice != null && !exitChildListener.leftChild(choice, consistent))) {
-          store.removeLevel(depth);
-          store.setLevel(--depth);
-          depthExcludePaths--;
-          return false;
-        }
+      if (exitChildListener != null
+          && ((choice == null && !exitChildListener.leftChild(fdv, val, consistent))
+              || (choice != null && !exitChildListener.leftChild(choice, consistent)))) {
+        store.removeLevel(depth);
+        store.setLevel(--depth);
+        depthExcludePaths--;
+        return false;
       }
 
       if (consistent) {
@@ -923,11 +912,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       exitListener.executedAtExit(store, solutionListener.solutionsNo() - solutionNoBeforeSearch);
     }
 
-    if (timeOutOccured) {
-
-      if (printInfo) {
-        log.info("Time-out {}s", tOut);
-      }
+    if (timeOutOccured && printInfo) {
+      log.info("Time-out {}s", tOut);
     }
 
     if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
@@ -1002,11 +988,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       exitListener.executedAtExit(store, solutionListener.solutionsNo());
     }
 
-    if (timeOutOccured) {
-
-      if (printInfo) {
-        log.info("Time-out {}s", tOut);
-      }
+    if (timeOutOccured && printInfo) {
+      log.info("Time-out {}s", tOut);
     }
 
     if (solutionListener.solutionsNo() > solutionNoBeforeSearch) {
@@ -1015,22 +998,20 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         assignSolution();
       }
 
-      if (printInfo) {
-        if (costVariable != null) {
-          CostVariableHandler costHandler =
-              SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
-          if (costHandler != null) {
-            DomainOperationHandler domainHandler =
-                SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
-            if (domainHandler != null) {
-              log.info("Solution cost is {}", domainHandler.getDomainString(costVariable));
-            } else {
-              double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-              log.info("Solution cost is {}", cost);
-            }
-          } else if (costVariable instanceof IntVar) {
-            log.info("Solution cost is {}", costValue);
+      if (printInfo && costVariable != null) {
+        CostVariableHandler costHandler =
+            SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
+        if (costHandler != null) {
+          DomainOperationHandler domainHandler =
+              SearchHandlerRegistry.getInstance().findDomainHandler(costVariable);
+          if (domainHandler != null) {
+            log.info("Solution cost is {}", domainHandler.getDomainString(costVariable));
+          } else {
+            double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
+            log.info("Solution cost is {}", cost);
           }
+        } else if (costVariable instanceof IntVar) {
+          log.info("Solution cost is {}", costValue);
         }
       }
 

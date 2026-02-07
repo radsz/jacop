@@ -866,11 +866,9 @@ public class Store {
 
     assert previousVar == null : "Two variables have the same id " + previousVar + " " + var;
 
-    if (var.index != -1) {
-      if (vars[var.index] == var) {
-        throw new IllegalArgumentException(
-            "\nSetting Variable: Variable already exists: " + var.id());
-      }
+    if (var.index != -1 && vars[var.index] == var) {
+      throw new IllegalArgumentException(
+          "\nSetting Variable: Variable already exists: " + var.id());
     }
 
     // boolean variables are not trailed the same fashion as int variables.
@@ -1109,15 +1107,12 @@ public class Store {
       return;
     }
 
-    if (removeDebug) {
+    if (removeDebug && level > levelSetTo && level > 0) {
 
-      if (level > levelSetTo && level > 0) {
+      for (int i = 0; i < size; i++) {
 
-        for (int i = 0; i < size; i++) {
-
-          assert vars[i].level() < level || trailManager.isRecognizedAsChanged(vars[i].index)
-              : "Variable position " + i + " not properly recorded to have changed ";
-        }
+        assert vars[i].level() < level || trailManager.isRecognizedAsChanged(vars[i].index)
+            : "Variable position " + i + " not properly recorded to have changed ";
       }
     }
 

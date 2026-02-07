@@ -301,12 +301,10 @@ public class Pruning extends Network {
 
     companion = strategy.next();
 
-    if (DO_INSTRUMENTATION) {
-      if (companion != null) {
-        statistics.Xvars.maxScoreSum += companion.pruningScore;
-        statistics.Wvars.maxScoreSum += companion.pruningScore;
-        statistics.Svars.maxScoreSum += companion.pruningScore;
-      }
+    if (DO_INSTRUMENTATION && companion != null) {
+      statistics.Xvars.maxScoreSum += companion.pruningScore;
+      statistics.Wvars.maxScoreSum += companion.pruningScore;
+      statistics.Svars.maxScoreSum += companion.pruningScore;
     }
 
     while (companion != null) {
@@ -336,12 +334,10 @@ public class Pruning extends Network {
       prev = companion;
       companion = strategy.next();
     }
-    if (DO_INSTRUMENTATION) {
-      if (prev != null) {
-        statistics.Xvars.minScoreSum += prev.pruningScore;
-        statistics.Wvars.minScoreSum += prev.pruningScore;
-        statistics.Svars.minScoreSum += prev.pruningScore;
-      }
+    if (DO_INSTRUMENTATION && prev != null) {
+      statistics.Xvars.minScoreSum += prev.pruningScore;
+      statistics.Wvars.minScoreSum += prev.pruningScore;
+      statistics.Svars.minScoreSum += prev.pruningScore;
     }
     strategy.close();
   }
@@ -394,11 +390,9 @@ public class Pruning extends Network {
     assert arc.capacity > 0;
 
     // Remove arc from graph
-    if (arc.index == TREE_ARC) {
-      if (!dualPivot(arc.sister)) {
-        // This is the last arc in the cut, prune all remaining capacity
-        return 0;
-      }
+    if (arc.index == TREE_ARC && !dualPivot(arc.sister)) {
+      // This is the last arc in the cut, prune all remaining capacity
+      return 0;
     }
     removeArc(arc);
 
@@ -560,7 +554,7 @@ public class Pruning extends Network {
       if (i < limit) {
         ArcCompanion companion = queue.poll();
         seen.add(companion);
-        while (companion.arc.index == DELETED_ARC) {
+        if (companion.arc.index == DELETED_ARC) {
           return next();
         }
         i++;

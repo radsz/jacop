@@ -176,10 +176,8 @@ public class SumBool extends PrimitiveConstraint {
       case le:
         sum.domain.inMin(store.level, sum, min);
 
-        if (!reified) {
-          if (max <= sum.min()) {
-            removeConstraint();
-          }
+        if (!reified && max <= sum.min()) {
+          removeConstraint();
         }
 
         if (sum.singleton(min) && min != max) {
@@ -194,10 +192,8 @@ public class SumBool extends PrimitiveConstraint {
       case lt:
         sum.domain.inMin(store.level, sum, min + 1);
 
-        if (!reified) {
-          if (max < sum.min()) {
-            removeConstraint();
-          }
+        if (!reified && max < sum.min()) {
+          removeConstraint();
         }
 
         if (sum.singleton(min + 1) && min != max) {
@@ -227,10 +223,8 @@ public class SumBool extends PrimitiveConstraint {
       case gt:
         sum.domain.inMax(store.level, sum, max - 1);
 
-        if (!reified) {
-          if (min > sum.max()) {
-            removeConstraint();
-          }
+        if (!reified && min > sum.max()) {
+          removeConstraint();
         }
 
         if (sum.singleton(max - 1) && min != max) {
@@ -245,10 +239,8 @@ public class SumBool extends PrimitiveConstraint {
       case ge:
         sum.domain.inMax(store.level, sum, max);
 
-        if (!reified) {
-          if (min >= sum.max()) {
-            removeConstraint();
-          }
+        if (!reified && min >= sum.max()) {
+          removeConstraint();
         }
 
         if (sum.singleton(max) && min != max) {

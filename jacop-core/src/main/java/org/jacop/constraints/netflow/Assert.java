@@ -85,7 +85,6 @@ public class Assert {
             del_in += a.sister.capacity;
           } else if (a.tail() == n) {
             del_out += a.sister.capacity;
-          } else {
           }
         } else {
           // available arc
@@ -93,7 +92,6 @@ public class Assert {
             in += a.sister.capacity;
           } else if (a.tail() == n) {
             out += a.sister.capacity;
-          } else {
           }
         }
         //       System.out.println("  " + a);

@@ -61,7 +61,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
 
   private final QueueForward<PrimitiveConstraint> queueForward;
 
-
   /**
    * It creates Reified constraint.
    *
@@ -207,7 +206,6 @@ public class Reified extends PrimitiveConstraint implements UsesQueueVariable {
       }
     }
   }
-
 
   @Override
   public boolean satisfied() {

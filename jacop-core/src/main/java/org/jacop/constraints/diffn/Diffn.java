@@ -468,15 +468,14 @@ public class Diffn extends Nooverlap {
           }
 
           // ========= for start pruning
-          if (rr.exists()) { // (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
-            if (limit - profileValue < rr.length(oDim).min()
-                || blocking(
-                    sweepLine,
-                    rr.origin(oDim).min(),
-                    rr.origin(oDim).max() + rr.length(oDim).min(),
-                    rr.length(oDim).min())) {
-              startExcluded = e.date();
-            }
+          if (rr.exists() // (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
+              && (limit - profileValue < rr.length(oDim).min()
+                  || blocking(
+                      sweepLine,
+                      rr.origin(oDim).min(),
+                      rr.origin(oDim).max() + rr.length(oDim).min(),
+                      rr.length(oDim).min()))) {
+            startExcluded = e.date();
           }
 
           // ========= resource pruning
@@ -500,24 +499,22 @@ public class Diffn extends Nooverlap {
           }
 
           // ========= pruning start variable
-          if (rr.exists()) { // (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
-            if (startExcluded != Integer.MAX_VALUE) {
-              // task ends and we remove forbidden area
+          if (rr.exists()
+              && startExcluded != Integer.MAX_VALUE
+              && startExcluded - 1
+                  <= rr.lst(dim)) { // (rr.length(oDim).min() > 0 && rr.length(dim).min() > 0)
+            // task ends and we remove forbidden area
+            if (debugNarr) {
+              log.debug(
+                  ">>> Diffn Profile 2. Narrowed {} \\ {}",
+                  rr.origin(dim),
+                  new IntervalDomain(startExcluded, e.date()));
+            }
 
-              if (startExcluded - 1 <= rr.lst(dim)) {
-                if (debugNarr) {
-                  log.debug(
-                      ">>> Diffn Profile 2. Narrowed {} \\ {}",
-                      rr.origin(dim),
-                      new IntervalDomain(startExcluded, e.date()));
-                }
+            rr.origin(dim).domain.inMax(store.level, rr.origin(dim), startExcluded - 1);
 
-                rr.origin(dim).domain.inMax(store.level, rr.origin(dim), startExcluded - 1);
-
-                if (debugNarr) {
-                  log.debug(" => {}", rr.origin(dim));
-                }
-              }
+            if (debugNarr) {
+              log.debug(" => {}", rr.origin(dim));
             }
           }
 

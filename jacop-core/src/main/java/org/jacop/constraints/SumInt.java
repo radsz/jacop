@@ -173,48 +173,38 @@ public class SumInt extends PrimitiveConstraint {
         case le:
           pruneLtEq(0L);
 
-          if (!reified) {
-            if (sumXmax <= sum.min()) {
-              removeConstraint();
-            }
+          if (!reified && sumXmax <= sum.min()) {
+            removeConstraint();
           }
           break;
 
         case lt:
           pruneLtEq(1L);
 
-          if (!reified) {
-            if (sumXmax < sum.min()) {
-              removeConstraint();
-            }
+          if (!reified && sumXmax < sum.min()) {
+            removeConstraint();
           }
           break;
         case ne:
           pruneNeq();
 
-          if (!reified) {
-            // if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
-            if (sumXmin > sum.max() || sumXmax < sum.min()) {
-              removeConstraint();
-            }
+          // if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
+          if (!reified && (sumXmin > sum.max() || sumXmax < sum.min())) {
+            removeConstraint();
           }
           break;
         case gt:
           pruneGtEq(1L);
 
-          if (!reified) {
-            if (sumXmin > sum.max()) {
-              removeConstraint();
-            }
+          if (!reified && sumXmin > sum.max()) {
+            removeConstraint();
           }
           break;
         case ge:
           pruneGtEq(0L);
 
-          if (!reified) {
-            if (sumXmin >= sum.max()) {
-              removeConstraint();
-            }
+          if (!reified && sumXmin >= sum.max()) {
+            removeConstraint();
           }
 
           break;

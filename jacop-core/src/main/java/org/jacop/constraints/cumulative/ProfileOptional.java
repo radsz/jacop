@@ -174,11 +174,10 @@ public class ProfileOptional {
       // from start to end
       int min = t.est();
       int max = t.lct();
-      if (t.maxNonZero()) { // t.dur.max() > 0 && t.res.max() > 0
-        if (!(min > maxProfile || max < minProfile)) {
-          es[j++] = new Event(pruneStart, t, min, 0);
-          es[j++] = new Event(pruneEnd, t, max, 0);
-        }
+      if (t.maxNonZero()
+          && !(min > maxProfile || max < minProfile)) { // t.dur.max() > 0 && t.res.max() > 0
+        es[j++] = new Event(pruneStart, t, min, 0);
+        es[j++] = new Event(pruneEnd, t, max, 0);
       }
     }
 
@@ -338,11 +337,9 @@ public class ProfileOptional {
           boolean noSpace = limitMax - profileValue < t.res.min();
 
           // ========= for start pruning
-          if (t.exists()) { // t.res.min() > 0 && t.dur.min() > 0
-            if (noSpace) {
-              startExcluded[ti] = e.date();
-              startConsidered[ti] = true;
-            }
+          if (t.exists() && noSpace) { // t.res.min() > 0 && t.dur.min() > 0
+            startExcluded[ti] = e.date();
+            startConsidered[ti] = true;
           }
 
           // ========= for duration pruning
@@ -372,20 +369,18 @@ public class ProfileOptional {
           }
 
           // ========= pruning start variable
-          if (t.exists()) {
-            if (startConsidered[ti]) {
-              // task ends and we remove forbidden area
+          if (t.exists() && startConsidered[ti]) {
+            // task ends and we remove forbidden area
 
-              if (debugNarr) {
-                log.debug(
-                    ">>> CumulativeBasic Profile 2. Narrowed {} inMax {} => {}",
-                    t.start,
-                    startExcluded[ti] - 1,
-                    t.start);
-              }
-
-              t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
+            if (debugNarr) {
+              log.debug(
+                  ">>> CumulativeBasic Profile 2. Narrowed {} inMax {} => {}",
+                  t.start,
+                  startExcluded[ti] - 1,
+                  t.start);
             }
+
+            t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
           }
 
           startConsidered[ti] = false;

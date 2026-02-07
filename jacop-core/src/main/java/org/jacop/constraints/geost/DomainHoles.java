@@ -210,10 +210,7 @@ public class DomainHoles extends InternalConstraint {
     for (int i = 0; i < o.dimension + 1; i++) {
 
       int d = order.dimensionAt(i);
-      if (d == o.dimension) {
-        // ignore time for now //TODO implement if possible, to improve pruning.
-
-      } else {
+      if (d != o.dimension) {
         IntDomain dom = o.coords[d].domain;
         if (dom.noIntervals() == 1) {
           continue; // there are no domain holes in this dimension

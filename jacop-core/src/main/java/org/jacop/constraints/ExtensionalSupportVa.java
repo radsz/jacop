@@ -272,10 +272,8 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
         noSupports++;
       }
 
-      if (debugAll) {
-        if (!stillSupport[i]) {
-          log.debug("Not support {}", Arrays.toString(t));
-        }
+      if (debugAll && !stillSupport[i]) {
+        log.debug("Not support {}", Arrays.toString(t));
       }
 
       i++;

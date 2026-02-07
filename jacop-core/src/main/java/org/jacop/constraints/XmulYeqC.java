@@ -162,14 +162,10 @@ public class XmulYeqC extends PrimitiveConstraint {
 
       store.propagationHasOccurred = false;
 
-      if (x.singleton()) {
-        if (c % x.value() == 0) {
-          y.domain.inComplement(store.level, y, c / x.value());
-        }
-      } else if (y.singleton()) {
-        if (c % y.value() == 0) {
-          x.domain.inComplement(store.level, x, c / y.value());
-        }
+      if (x.singleton() && c % x.value() == 0) {
+        y.domain.inComplement(store.level, y, c / x.value());
+      } else if (y.singleton() && c % y.value() == 0) {
+        x.domain.inComplement(store.level, x, c / y.value());
       }
 
     } while (store.propagationHasOccurred);

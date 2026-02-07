@@ -74,9 +74,13 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
         int iBefore = 0;
         int iAfter = domain.size - 1;
 
-        for (; iBefore < domain.size && domain.intervals[iBefore].max() < middle; iBefore++) {}
+        for (; iBefore < domain.size && domain.intervals[iBefore].max() < middle; iBefore++) {
+          // advance past intervals below middle
+        }
 
-        for (; iAfter >= 0 && domain.intervals[iAfter].min() > middle; iAfter--) {}
+        for (; iAfter >= 0 && domain.intervals[iAfter].min() > middle; iAfter--) {
+          // retreat past intervals above middle
+        }
 
         if (iBefore > iAfter) {
           if (middle - domain.intervals[iAfter].max() > domain.intervals[iBefore].min() - middle) {
@@ -114,9 +118,13 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
         int iBefore = 0;
         int iAfter = dom.noIntervals() - 1;
 
-        for (; iBefore < dom.noIntervals() && dom.getInterval(iBefore).max() < middle; iBefore++) {}
+        for (; iBefore < dom.noIntervals() && dom.getInterval(iBefore).max() < middle; iBefore++) {
+          // advance past intervals below middle
+        }
 
-        for (; iAfter >= 0 && dom.getInterval(iAfter).min() > middle; iAfter--) {}
+        for (; iAfter >= 0 && dom.getInterval(iAfter).min() > middle; iAfter--) {
+          // retreat past intervals above middle
+        }
 
         if (iBefore > iAfter) {
           if (middle - dom.getInterval(iAfter).max() > dom.getInterval(iBefore).min() - middle) {

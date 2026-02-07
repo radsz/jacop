@@ -274,48 +274,38 @@ public class LinearInt extends PrimitiveConstraint {
         case le:
           pruneLtEq(b);
 
-          if (!reified) {
-            if (sumMax <= b) {
-              removeConstraint();
-            }
+          if (!reified && sumMax <= b) {
+            removeConstraint();
           }
           break;
 
         case lt:
           pruneLtEq(b - 1L);
 
-          if (!reified) {
-            if (sumMax < b) {
-              removeConstraint();
-            }
+          if (!reified && sumMax < b) {
+            removeConstraint();
           }
           break;
         case ne:
           pruneNeq();
 
-          if (!reified) {
-            // if (sumMin == sumMax && (sumMin > b || sumMax < b))
-            if (sumMin > b || sumMax < b) {
-              removeConstraint();
-            }
+          // if (sumMin == sumMax && (sumMin > b || sumMax < b))
+          if (!reified && (sumMin > b || sumMax < b)) {
+            removeConstraint();
           }
           break;
         case gt:
           pruneGtEq(b + 1L);
 
-          if (!reified) {
-            if (sumMin > b) {
-              removeConstraint();
-            }
+          if (!reified && sumMin > b) {
+            removeConstraint();
           }
           break;
         case ge:
           pruneGtEq(b);
 
-          if (!reified) {
-            if (sumMin >= b) {
-              removeConstraint();
-            }
+          if (!reified && sumMin >= b) {
+            removeConstraint();
           }
 
           break;

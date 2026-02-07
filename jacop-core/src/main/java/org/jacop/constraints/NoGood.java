@@ -132,10 +132,7 @@ public class NoGood extends Constraint {
         log.debug("Special cases of noGood constraints have occured");
       }
 
-      if (listOfVars.length == 1) {
-
-        // store.in(firstWatch, Domain.domain.complement(firstValue));
-      } else {
+      if (listOfVars.length != 1) {
         // check if it still active no-good
         for (int i = 0; i < listOfVars.length; i++) {
           if (listOfVars[i].getSize() == 1 && listOfVars[i].value() != listOfValues[i]) {

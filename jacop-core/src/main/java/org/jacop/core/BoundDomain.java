@@ -924,10 +924,6 @@ class BoundDomain extends IntDomain implements Cloneable {
 
         BoundDomain dom = (BoundDomain) domain;
         domain = dom.previousDomain;
-
-      } else {
-
-        // Other type.
       }
 
     } while (domain != null);
@@ -1055,13 +1051,6 @@ class BoundDomain extends IntDomain implements Cloneable {
       if (max >= this.max) {
 
         this.max = min - 1;
-
-      } else {
-        // min > this.min
-        // max < this.max
-
-        // removal not possible so nothing is not removed.
-
       }
     }
   }

@@ -295,10 +295,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
       store.registerRemoveLevelLateListener(late);
     }
 
-    if (this instanceof Stateful c) {
-      if (c.isStateful()) {
-        store.registerRemoveLevelListener(c);
-      }
+    if (this instanceof Stateful c && c.isStateful()) {
+      store.registerRemoveLevelListener(c);
     }
   }
 

@@ -137,12 +137,10 @@ public class ObstacleObjectFrame extends InternalConstraint {
     int previous = 0;
     for (int i = 0; i < selectedDimensions.length; i++) {
 
-      if (i != 0) {
-        if (selectedDimensions[i] <= previous) {
-          return "selected dimensions "
-              + Arrays.toString(selectedDimensions)
-              + " are not sorted or not unique";
-        }
+      if (i != 0 && selectedDimensions[i] <= previous) {
+        return "selected dimensions "
+            + Arrays.toString(selectedDimensions)
+            + " are not sorted or not unique";
       }
 
       previous = selectedDimensions[i];
