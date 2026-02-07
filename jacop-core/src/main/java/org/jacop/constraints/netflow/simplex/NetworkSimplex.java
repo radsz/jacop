@@ -30,7 +30,11 @@
 
 package org.jacop.constraints.netflow.simplex;
 
-import static org.jacop.constraints.netflow.Assert.*;
+import static org.jacop.constraints.netflow.Assert.checkBeforeUpdate;
+import static org.jacop.constraints.netflow.Assert.checkFlow;
+import static org.jacop.constraints.netflow.Assert.checkInfeasibleNodes;
+import static org.jacop.constraints.netflow.Assert.checkOptimality;
+import static org.jacop.constraints.netflow.Assert.checkStructure;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,6 +52,7 @@ import org.jacop.constraints.netflow.Pruning;
  * @version 4.10
  */
 @Slf4j
+@SuppressWarnings("PMD.TooManyStaticImports")
 public class NetworkSimplex {
 
   public static final boolean DEBUG = false; // true;
