@@ -42,7 +42,7 @@ import org.jacop.core.ValueEnumeration;
  * can transition from this state to the given successor state.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 public class RegStateDom extends RegState {

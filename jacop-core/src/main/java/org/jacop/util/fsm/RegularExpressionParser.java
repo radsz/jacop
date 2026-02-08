@@ -44,7 +44,7 @@ import org.jacop.core.IntervalDomain;
  * Instances of this class parse the word combination little language.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 public class RegularExpressionParser {

@@ -4,7 +4,7 @@
  * <p>
  * JaCoP is a Java Constraint Programming solver.
  * <p>
- * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
  * <p>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -67,7 +67,7 @@ import org.jacop.core.Store;
  * <p>Solution Bill Sands Cook 71 Jack Clubb Maint 85 Paul Carter Caddy 78 Frank Green Clerk 75
  *
  * @author Mariusz Czarnojan, Krystian Burka, and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 public class Golf extends ExampleFd {
 

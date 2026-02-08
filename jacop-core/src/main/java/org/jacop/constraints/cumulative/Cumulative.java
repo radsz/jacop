@@ -4,7 +4,7 @@
  * <p>
  * JaCoP is a Java Constraint Programming solver.
  * <p>
- * Copyright (C) 2000-2008 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
  * <p>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -61,7 +61,7 @@ import org.jacop.core.Store;
  * vol. 19, no. 3, pp. 243--269.
  *
  * @author Krzysztof Kuchcinski
- * @version 4.10
+ * @version 5.0
  * @see <a
  *     href="http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172">http://urn.kb.se/resolve?urn=urn:nbn:se:uu:diva-132172</a>
  */

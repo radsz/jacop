@@ -4,7 +4,7 @@
  * <p>
  * JaCoP is a Java Constraint Programming solver.
  * <p>
- * Copyright (C) 2000-2008 Radoslaw Szymanek and Polina Makeeva
+ * Copyright (C) 2000-2026 Radoslaw Szymanek and Polina Makeeva
  * <p>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -48,7 +48,7 @@ import org.jacop.util.fsm.FsmTransition;
  * between 1 and 2, and any sequence of values 2 has to be of length between 2 and 3.
  *
  * @author Radoslaw Szymanek and Polina Makeeva
- * @version 4.10
+ * @version 5.0
  */
 public class Stretch extends DecomposedConstraint<Constraint> {
 

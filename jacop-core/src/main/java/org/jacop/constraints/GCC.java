@@ -59,7 +59,7 @@ import org.jacop.core.Var;
  * <p>We would like to thank Irit Katriel for making the code of GCC in C she wrote available to us.
  *
  * @author Jocelyne Lotfi and Radoslaw Szymanek.
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 @SuppressWarnings(

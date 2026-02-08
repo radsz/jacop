@@ -36,7 +36,7 @@ import org.jacop.core.TimeStamp;
  * The class responsible for connecting two states in regular automaton of Regular constraint.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 public class RegEdge {
 

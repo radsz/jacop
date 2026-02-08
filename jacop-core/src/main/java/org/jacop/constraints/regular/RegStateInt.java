@@ -42,7 +42,7 @@ import org.jacop.core.TimeStamp;
  * Different values using different entries in the successor array can lead to the same successor.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 public class RegStateInt extends RegState {

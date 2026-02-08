@@ -4,7 +4,7 @@
  * <p>
  * JaCoP is a Java Constraint Programming solver.
  * <p>
- * Copyright (C) 2000-2008 Radoslaw Szymanek and Wadeck Follonier
+ * Copyright (C) 2000-2026 Radoslaw Szymanek and Wadeck Follonier
  * <p>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -42,7 +42,7 @@ import org.jacop.core.IntVar;
  * efficiency. In case of equal efficiency then item which is heavier is preferred.
  *
  * @author Radoslaw Szymanek and Wadeck Follonier
- * @version 4.10
+ * @version 5.0
  */
 @Getter
 public final class KnapsackItem implements Comparable<KnapsackItem> {

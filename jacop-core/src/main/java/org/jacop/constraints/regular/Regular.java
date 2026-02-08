@@ -67,7 +67,7 @@ import org.jacop.util.fsm.FsmTransition;
  * improve the constraint further.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 public class Regular extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {

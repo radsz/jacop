@@ -39,7 +39,7 @@ import org.jacop.core.TimeStamp;
  * The state class representing a state in the regular automaton within Regular constraint.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 public abstract class RegState {
 

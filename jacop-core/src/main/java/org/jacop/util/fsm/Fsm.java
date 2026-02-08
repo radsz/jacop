@@ -46,7 +46,7 @@ import org.jacop.util.Mdd;
  * Deterministic Finite Acyclic graph.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 public class Fsm {
 

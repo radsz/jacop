@@ -56,7 +56,7 @@ import org.jacop.core.Var;
  * Hnich, Zeynep Kiziltan, Ian Miguel, and Toby Walsh , Artificial Intelligence 170 (2006) 803-834.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 public class LexOrder extends Constraint

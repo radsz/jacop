@@ -38,7 +38,7 @@ import java.io.StringReader;
  * Lexical analyzer for parsing regular expressions.
  *
  * @author Polina Maakeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 class LexicalAnalyzer {
 

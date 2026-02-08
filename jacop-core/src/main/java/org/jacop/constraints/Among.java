@@ -57,7 +57,7 @@ import org.jacop.core.Var;
  * computational load upon backtracking) to improve the constraint further.
  *
  * @author Polina Makeeva and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 @Slf4j
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {

@@ -4,7 +4,7 @@
  * <p>
  * JaCoP is a Java Constraint Programming solver.
  * <p>
- * Copyright (C) 2000-2008 Hakan Kjellerstrand and Radoslaw Szymanek
+ * Copyright (C) 2000-2026 Hakan Kjellerstrand and Radoslaw Szymanek
  * <p>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -77,7 +77,7 @@ import org.jacop.search.SmallestDomain;
  * href="http://web.mat.bham.ac.uk/R.W.Kaye/minesw/minesw.pdf">...</a>
  *
  * @author Hakan Kjellerstrand (hakank@bonetmail.com) and Radoslaw Szymanek
- * @version 4.10
+ * @version 5.0
  */
 public class MineSweeper extends ExampleFd {
 
