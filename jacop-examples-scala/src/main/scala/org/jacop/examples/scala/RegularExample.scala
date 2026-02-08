@@ -42,6 +42,7 @@ import org.jacop.scala._
  */
 object RegularExample extends App with jacop {
 
+  var dfa = new fsm(8) // create FSM with eight states
 
   val v = Array.tabulate(3)(i => new IntVar("v" + 0, 0, 2))
   val result = satisfyAll(search(v.toList, input_order, indomain_min))
@@ -68,5 +69,4 @@ object RegularExample extends App with jacop {
   println(dfa)
 
   regular(dfa, v.toList)
-  var dfa = new fsm(8) // create FSM with eight states
 }

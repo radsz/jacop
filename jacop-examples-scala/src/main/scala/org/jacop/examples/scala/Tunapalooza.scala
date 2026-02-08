@@ -44,6 +44,8 @@ import scala.collection.mutable.ArrayBuffer
  */
 object Tunapalooza extends App with jacop {
 
+  var vars = new ArrayBuffer[org.jacop.core.IntVar]()
+
   // names
   val Ellyfish = 1;
   val Korrupt = 2;
@@ -118,6 +120,5 @@ object Tunapalooza extends App with jacop {
 
   reggae #\= Korrupt
   reggae #\= information
-  var vars = new ArrayBuffer[org.jacop.core.IntVar]()
 
 }

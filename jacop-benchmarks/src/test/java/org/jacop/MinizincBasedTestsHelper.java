@@ -108,7 +108,6 @@ public class MinizincBasedTestsHelper {
       // File was not created (because the test timeout before it was created so deleting it failed.
     }
     System.gc();
-    System.runFinalization();
   }
 
   public int counter() {
