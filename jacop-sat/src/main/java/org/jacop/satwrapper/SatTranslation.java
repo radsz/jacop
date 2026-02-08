@@ -123,7 +123,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates a reified clause expressing ((a1 \/ ... \/ an) \/ (-b1 \/ ... \/ -bn)) <=> r.
+   * Generates a reified clause expressing {@code ((a1 \/ ... \/ an) \/ (-b1 \/ ... \/ -bn)) <=> r}.
    *
    * @param a array of variables for positive literals
    * @param b array of variables for negative literals
@@ -147,7 +147,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for OR constraint: c <=> (a1 \/ a2 \/ ... \/ an).
+   * Generates clauses for OR constraint: {@code c <=> (a1 \/ a2 \/ ... \/ an)}.
    *
    * @param a array of input variables
    * @param c output variable
@@ -171,7 +171,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for AND constraint: c <=> (a1 /\ a2 /\ ... /\ an).
+   * Generates clauses for AND constraint: {@code c <=> (a1 /\ a2 /\ ... /\ an)}.
    *
    * @param a array of input variables
    * @param c output variable
@@ -224,7 +224,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for XOR constraint with two inputs: c <=> (a xor b).
+   * Generates clauses for XOR constraint with two inputs: {@code c <=> (a xor b)}.
    *
    * @param a first input variable
    * @param b second input variable
@@ -236,7 +236,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for XOR constraint with three inputs: d <=> (a xor b xor c).
+   * Generates clauses for XOR constraint with three inputs: {@code d <=> (a xor b xor c)}.
    *
    * @param a first input variable
    * @param b second input variable
@@ -271,7 +271,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for less-than-or-equal constraint: a <= b.
+   * Generates clauses for less-than-or-equal constraint: {@code a <= b}.
    *
    * @param a first variable
    * @param b second variable
@@ -284,7 +284,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for less-than constraint: a < b.
+   * Generates clauses for less-than constraint: {@code a < b}.
    *
    * @param a first variable
    * @param b second variable
@@ -298,7 +298,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for reified equality constraint: c <=> (a = b).
+   * Generates clauses for reified equality constraint: {@code c <=> (a = b)}.
    *
    * @param a first variable
    * @param b second variable
@@ -319,7 +319,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for reified inequality constraint: c <=> (a != b).
+   * Generates clauses for reified inequality constraint: {@code c <=> (a != b)}.
    *
    * @param a first variable
    * @param b second variable
@@ -340,7 +340,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for reified less-than-or-equal constraint: c <=> (a <= b).
+   * Generates clauses for reified less-than-or-equal constraint: {@code c <=> (a <= b)}.
    *
    * @param a first variable
    * @param b second variable
@@ -356,7 +356,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for reified less-than constraint: c <=> (a < b).
+   * Generates clauses for reified less-than constraint: {@code c <=> (a < b)}.
    *
    * @param a first variable
    * @param b second variable
@@ -372,7 +372,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for NOT constraint: b <=> -a.
+   * Generates clauses for NOT constraint: {@code b <=> -a}.
    *
    * @param a input variable
    * @param b output variable
@@ -402,7 +402,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for reified implication constraint: c <=> (a => b).
+   * Generates clauses for reified implication constraint: {@code c <=> (a => b)}.
    *
    * @param a antecedent variable
    * @param b consequent variable
@@ -421,7 +421,7 @@ public class SatTranslation {
   }
 
   /**
-   * Generates clauses for reified all-zero constraint: c <=> (a[0] = 0 /\ ... /\ a[n] = 0).
+   * Generates clauses for reified all-zero constraint: {@code c <=> (a[0] = 0 /\ ... /\ a[n] = 0)}.
    *
    * @param as array of variables to check for zero
    * @param c reification variable

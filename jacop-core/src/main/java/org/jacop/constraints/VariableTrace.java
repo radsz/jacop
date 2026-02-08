@@ -128,7 +128,11 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
   /** {@inheritDoc} */
   public void removeConstraint() {}
 
-  /** {@inheritDoc} */
+  /**
+   * Checks whether this tracing constraint is definitely satisfied.
+   *
+   * @return {@code false}; this daemon-style constraint is not used as a satisfiability predicate.
+   */
   public boolean satisfied() {
     return false;
   }

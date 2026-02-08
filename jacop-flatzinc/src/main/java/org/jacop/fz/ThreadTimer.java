@@ -45,7 +45,11 @@ public class ThreadTimer implements Timer {
     timer = ManagementFactory.getThreadMXBean();
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Returns the CPU time consumed by the tracked thread.
+   *
+   * @return CPU time in nanoseconds for the current thread.
+   */
   public long getCpuTime() {
     return timer.getThreadCpuTime(thread.threadId());
   }

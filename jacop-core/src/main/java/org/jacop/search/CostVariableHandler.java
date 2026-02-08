@@ -71,7 +71,7 @@ public interface CostVariableHandler {
    *
    * @param var the cost variable
    * @param costValue the cost value to enforce
-   * @return a constraint enforcing cost <= costValue
+   * @return a constraint enforcing {@code cost <= costValue}
    */
   Constraint createCostConstraint(Var var, double costValue);
 
@@ -103,8 +103,9 @@ public interface CostVariableHandler {
   double getMaxCostValue(Var var);
 
   /**
-   * Checks if a given cost value is better than the current best cost. For minimization: returns
-   * true if newCost < currentCost For maximization: returns true if newCost > currentCost
+   * Checks if a given cost value is better than the current best cost. For minimization, returns
+   * {@code true} if {@code newCost < currentCost}. For maximization, returns {@code true} if {@code
+   * newCost > currentCost}.
    *
    * @param currentCost the current best cost
    * @param newCost the new cost to compare

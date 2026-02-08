@@ -515,7 +515,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   /**
    * Converts a string relation to a byte code.
    *
-   * @param r the relation string (e.g., "==", "<", "<=", "!=", ">", ">=")
+   * @param r the relation string (e.g., {@code "=="}, {@code "<"}, {@code "<="}, {@code "!="},
+   *     {@code ">"}, {@code ">="})
    * @return the byte code representing the relation
    */
   public byte relation(String r) {

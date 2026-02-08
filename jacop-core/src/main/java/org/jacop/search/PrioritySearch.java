@@ -171,7 +171,12 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     return labeling(store);
   }
 
-  /** {@inheritDoc} */
+  /**
+   * Starts the labeling process using this search's configured sub-searches.
+   *
+   * @param store the constraint store.
+   * @return {@code true} if at least one solution was found, {@code false} otherwise.
+   */
   public boolean labeling(Store store) {
 
     this.store = store;
