@@ -78,9 +78,6 @@ public abstract class IntDomain extends Domain {
   /** Unique identifier for a small dense domain type. */
   public static final int SmallDenseDomainID = 2;
 
-  /** It specifies an empty integer domain. */
-  public static final IntDomain emptyIntDomain = new IntervalDomain(0);
-
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
    * this by bit flags in int.

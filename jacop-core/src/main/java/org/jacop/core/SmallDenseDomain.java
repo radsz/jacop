@@ -1299,7 +1299,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       if (input.bits == 0) {
-        return emptyIntDomain;
+        return IntervalDomain.EMPTY;
       }
 
       long inBits;
@@ -1928,7 +1928,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       if (result != 0) {
         return new SmallDenseDomain(this.min, result);
       } else {
-        return emptyIntDomain;
+        return IntervalDomain.EMPTY;
       }
     }
 
@@ -1965,7 +1965,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     long result = this.bits & ~(SEQ_ARRAY[max - min] << (63 - (max - min) - (min - this.min)));
 
     if (result == 0) {
-      return emptyIntDomain;
+      return IntervalDomain.EMPTY;
     } else {
       SmallDenseDomain returnObj = new SmallDenseDomain(this.min, result);
       assert returnObj.checkInvariants() == null : returnObj.checkInvariants();

@@ -75,9 +75,6 @@ public abstract class SetDomain extends Domain {
   /** It specifies event that has changed the cardinality of the set. */
   public static final int CARDINALITY = 5;
 
-  /** It predefines empty domain so there is no need to constantly create it when needed. */
-  public static final SetDomain emptyDomain = new BoundSetDomain();
-
   /**
    * It specifies for each event what other events are subsumed by this event. Possibly implement
    * this by bit flags in int.
@@ -453,11 +450,11 @@ public abstract class SetDomain extends Domain {
    */
   public SetDomain recentDomainPruning(int storeLevel) {
     if (previousDomain == null) {
-      return emptyDomain;
+      return BoundSetDomain.EMPTY;
     }
 
     if (stamp < storeLevel) {
-      return emptyDomain;
+      return BoundSetDomain.EMPTY;
     }
 
     return previousDomain.subtract(this);

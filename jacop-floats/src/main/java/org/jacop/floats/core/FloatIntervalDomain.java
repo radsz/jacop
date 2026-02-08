@@ -56,6 +56,9 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   /** An empty domain, so no constant creation of empty domains is required. */
   public static final FloatIntervalDomain emptyDomain = new FloatIntervalDomain(0);
 
+  /** It specifies an empty float domain. */
+  public static final FloatDomain EMPTY = emptyDomain;
+
   /** The values of the domain are encoded as a list of intervals. */
   public FloatInterval[] intervals;
 
@@ -996,7 +999,7 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     if (isEmpty()) {
-      return FloatDomain.emptyFloatDomain;
+      return EMPTY;
     }
 
     FloatIntervalDomain intervalDomain = (FloatIntervalDomain) domain;

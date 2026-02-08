@@ -54,6 +54,9 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   /** An empty domain, so no constant creation of empty domains is required. */
   public static final IntervalDomain emptyDomain = new IntervalDomain(0);
 
+  /** It specifies an empty integer domain. */
+  public static final IntDomain EMPTY = emptyDomain;
+
   private static final Random generator =
       Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
@@ -1497,7 +1500,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     assert checkInvariants() == null : checkInvariants();
 
     if (isEmpty()) {
-      return emptyIntDomain;
+      return EMPTY;
     }
 
     if (domain.domainId() == IntervalDomainID) {

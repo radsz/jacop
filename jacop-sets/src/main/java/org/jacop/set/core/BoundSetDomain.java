@@ -47,6 +47,12 @@ import org.jacop.core.ValueEnumeration;
  */
 public class BoundSetDomain extends SetDomain implements Cloneable {
 
+  /** An empty domain, so no constant creation of empty domains is required. */
+  public static final BoundSetDomain emptyDomain = new BoundSetDomain();
+
+  /** It specifies an empty set domain. */
+  public static final SetDomain EMPTY = emptyDomain;
+
   // FIXME do not use emptySet to assign to lub, glb.
   /** The greatest lower bound of the domain. */
   public IntDomain glb;

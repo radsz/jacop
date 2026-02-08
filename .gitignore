@@ -23,6 +23,13 @@ target
 *.iml
 .idea
 
+# Eclipse
+.project
+.classpath
+.factorypath
+.settings/
+bin/
+
 .DS_Store
 .claude
 
