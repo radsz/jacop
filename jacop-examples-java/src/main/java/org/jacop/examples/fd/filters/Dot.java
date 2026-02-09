@@ -30,9 +30,6 @@
 
 package org.jacop.examples.fd.filters;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * It specifies Dot benchmark.
  *
@@ -75,67 +72,5 @@ public class Dot extends Filter {
         new int[] {mulId, mulId, mulId, mulId, mulId, mulId, addId, addId, addId, addId, addId};
 
     this.last = new int[] {10};
-  }
-
-  @Override
-  public List<String> names() {
-    List<String> names = new ArrayList<>(34);
-
-    names.add("*0");
-    names.add("*1");
-    names.add("*2");
-    names.add("*3");
-    names.add("*4");
-    names.add("*5");
-    names.add("+6");
-    names.add("+7");
-    names.add("+8");
-    names.add("+9");
-    names.add("+10");
-
-    return names;
-  }
-
-  @Override
-  public List<String> namesPipeline() {
-    List<String> names = new ArrayList<>(34);
-
-    names.add("*0");
-    names.add("*1");
-    names.add("*2");
-    names.add("*3");
-    names.add("*4");
-    names.add("*5");
-    names.add("+6");
-    names.add("+7");
-    names.add("+8");
-    names.add("+9");
-    names.add("+10");
-
-    names.add("*0a");
-    names.add("*1a");
-    names.add("*2a");
-    names.add("*3a");
-    names.add("*4a");
-    names.add("*5a");
-    names.add("+6a");
-    names.add("+7a");
-    names.add("+8a");
-    names.add("+9a");
-    names.add("+10a");
-
-    names.add("*0b");
-    names.add("*1b");
-    names.add("*2b");
-    names.add("*3b");
-    names.add("*4b");
-    names.add("*5b");
-    names.add("+6b");
-    names.add("+7b");
-    names.add("+8b");
-    names.add("+9b");
-    names.add("+10b");
-
-    return names;
   }
 }

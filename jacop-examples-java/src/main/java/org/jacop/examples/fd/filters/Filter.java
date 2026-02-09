@@ -30,6 +30,7 @@
 
 package org.jacop.examples.fd.filters;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -209,17 +210,34 @@ public abstract class Filter {
 
   /**
    * It specifies the names of the operations for the representation of the solution in textual
-   * form.
+   * form. Each name is derived from the operation type ('+' for addition, '*' for multiplication)
+   * and a 1-based index.
    *
    * @return list of names.
    */
-  public abstract List<String> names();
+  public List<String> names() {
+    List<String> names = new ArrayList<>(ids.length);
+    for (int i = 0; i < ids.length; i++) {
+      names.add((ids[i] == addId ? "+" : "*") + (i + 1));
+    }
+    return names;
+  }
 
   /**
    * It specifies the names of the operations for the textual representation of the pipelined
-   * solution.
+   * solution. Pipeline names are the base names repeated three times with suffixes "", "a", and "b"
+   * for the three pipeline stages.
    *
    * @return list of names.
    */
-  public abstract List<String> namesPipeline();
+  public List<String> namesPipeline() {
+    List<String> base = names();
+    List<String> names = new ArrayList<>(base.size() * 3);
+    for (String suffix : new String[] {"", "a", "b"}) {
+      for (String n : base) {
+        names.add(n + suffix);
+      }
+    }
+    return names;
+  }
 }
