@@ -44,14 +44,14 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @version 5.0
  */
 public class MinizincBasedTestUpTo1Hours extends MinizincBasedTestsHelper {
-  protected static final String timeCategory = "upTo1hour/";
+  protected static final String TIME_CATEGORY = "upTo1hour/";
 
   public MinizincBasedTestUpTo1Hours() {
-    super(timeCategory);
+    super(TIME_CATEGORY);
   }
 
   static Stream<String> parametricTest() throws IOException {
-    return fileReader(timeCategory).stream();
+    return fileReader(TIME_CATEGORY).stream();
   }
 
   @ParameterizedTest
@@ -59,6 +59,6 @@ public class MinizincBasedTestUpTo1Hours extends MinizincBasedTestsHelper {
   @Timeout(5400) // The test will be completed within 90 minutes
   public void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
-    testExecution(timeCategory);
+    testExecution(TIME_CATEGORY);
   }
 }

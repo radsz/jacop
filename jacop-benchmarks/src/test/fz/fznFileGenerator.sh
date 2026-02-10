@@ -79,6 +79,7 @@ fi
 removingEmptyDirectories(){
 
     find $folderPath -type d -empty -delete -mindepth 1 2>/dev/null
+    return 0
 }
 
 
@@ -92,6 +93,7 @@ if [ $diffresult -ne 0 ];then
 
         fi
 
+    return 0
 }
 
 function above()
@@ -137,6 +139,7 @@ category=${pa,,}
 
             fi
 
+    return 0
 }
 
 function sizeFznFiles
@@ -166,6 +169,7 @@ readarray -t arr3 < <(find $z -name \*.fzn 2>/dev/null)
 
 done
 
+    return 0
 }
 
 
@@ -714,6 +718,7 @@ if [ "${out#*%}" == "% =====TIME-OUT=====" ];then
 
 done
 
+    return 0
 }
 
 

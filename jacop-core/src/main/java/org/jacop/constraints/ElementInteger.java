@@ -65,13 +65,17 @@ public class ElementInteger extends Constraint
    * for value. Otherwise bound consistency is applied. This limit applies to both duplicates and
    * index.
    */
-  static final int limitForDomainPruning = 100;
+  static final int LIMIT_FOR_DOMAIN_PRUNING = 100;
+
+  static int limitForDomainPruning = LIMIT_FOR_DOMAIN_PRUNING;
 
   /**
    * It specifies the minimal size of number of duplicated values on the list that are consodered
    * together.. Otherwise they are processed one by one.
    */
-  static final int minDuplicatesSize = 10;
+  static final int MIN_DUPLICATES_SIZE = 10;
+
+  static int minDuplicatesSize = MIN_DUPLICATES_SIZE;
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 

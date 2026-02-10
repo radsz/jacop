@@ -44,14 +44,14 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 public class MizincBasedChosen extends MinizincBasedTestsHelper {
 
-  protected static final String timeCategory = "mizincbasedchosen/";
+  protected static final String TIME_CATEGORY = "mizincbasedchosen/";
 
   public MizincBasedChosen() {
-    super(timeCategory);
+    super(TIME_CATEGORY);
   }
 
   static Stream<String> parametricTest() throws IOException {
-    return fileReader(timeCategory).stream();
+    return fileReader(TIME_CATEGORY).stream();
   }
 
   @ParameterizedTest

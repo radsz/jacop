@@ -42,7 +42,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class CumulativeProfiles {
 
-  static final boolean trace = false;
+  static final boolean TRACE = false;
+  static boolean trace = TRACE;
 
   Profile maxProfile;
 

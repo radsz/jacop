@@ -57,10 +57,10 @@ import org.junit.jupiter.api.BeforeAll;
  * @version 5.0
  */
 public class MinizincBasedTestsHelper {
-  protected static final String relativePath = "src/test/fz/";
-  protected static final String listFileName = "list.txt";
-  protected static final boolean printInfo = false;
-  private static final int counter = 0;
+  protected static final String RELATIVE_PATH = "src/test/fz/";
+  protected static final String LIST_FILE_NAME = "list.txt";
+  protected static final boolean PRINT_INFO = false;
+  private static final int COUNTER = 0;
   protected static Fz2jacop fz2jacop;
   final String timeCategory;
   protected String testFilename;
@@ -76,14 +76,14 @@ public class MinizincBasedTestsHelper {
 
   protected static List<String> expected(String filename) throws IOException {
 
-    String filePath = new File(relativePath + filename).getAbsolutePath();
+    String filePath = new File(RELATIVE_PATH + filename).getAbsolutePath();
     return Files.readAllLines(Path.of(filePath), StandardCharsets.UTF_8);
   }
 
   protected static Collection<String> fileReader(String timeCategory) throws IOException {
 
     IO.println("timeCategory" + timeCategory);
-    try (FileReader file = new FileReader(relativePath + timeCategory + listFileName);
+    try (FileReader file = new FileReader(RELATIVE_PATH + timeCategory + LIST_FILE_NAME);
         BufferedReader br = new BufferedReader(file)) {
 
       String line = "";
@@ -100,7 +100,7 @@ public class MinizincBasedTestsHelper {
 
   @AfterEach
   public void cleanUp() {
-    String outputFilename = relativePath + timeCategory + testFilename + ".fzn" + ".out";
+    String outputFilename = RELATIVE_PATH + timeCategory + testFilename + ".fzn" + ".out";
     try {
       Files.delete(Path.of(outputFilename));
     } catch (IOException _) {
@@ -111,13 +111,13 @@ public class MinizincBasedTestsHelper {
   }
 
   public int counter() {
-    return counter;
+    return COUNTER;
   }
 
   protected List<String> computeResult(String filename) throws IOException {
 
     String outputFilename =
-        relativePath + filename + ".out"; // outputFilename contains path to *.out file.
+        RELATIVE_PATH + filename + ".out"; // outputFilename contains path to *.out file.
     String foo = outputFilename.substring(0, outputFilename.lastIndexOf('/'));
 
     // If options.opt exist reads parameters from the file and uses them in fzn2jacop program.
@@ -136,18 +136,18 @@ public class MinizincBasedTestsHelper {
               options.get(1),
               "--outputfile",
               outputFilename,
-              relativePath + filename
+              RELATIVE_PATH + filename
             });
         FloatDomain.setFormat(Double.MAX_VALUE);
       }
     } else {
       // fz2jacop compute result
-      fz2jacop.callMain(new String[] {"--outputfile", outputFilename, relativePath + filename});
+      fz2jacop.callMain(new String[] {"--outputfile", outputFilename, RELATIVE_PATH + filename});
     }
 
     String result = new String(Files.readAllBytes(Path.of(outputFilename)));
 
-    if (printInfo) {
+    if (PRINT_INFO) {
       IO.println(filename + "\n" + result);
     }
 

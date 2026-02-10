@@ -70,7 +70,9 @@ import org.jacop.core.Var;
 public class AmongVar extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   /** It turns out printing debugging information. */
-  public static final boolean debugAll = false;
+  public static final boolean DEBUG_ALL = false;
+
+  public static boolean debugAll = DEBUG_ALL;
 
   /** Number of Among constraints created. */
   static final AtomicInteger idNumber = new AtomicInteger(0);

@@ -64,9 +64,11 @@ import org.jacop.core.Var;
 @Slf4j
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
-  protected static final boolean trace = false;
+  protected static final boolean TRACE = false;
+  protected static boolean trace = TRACE;
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean traceNarr = false;
+  private static final boolean TRACE_NARR = false;
+  private static boolean traceNarr = TRACE_NARR;
   protected final Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
       dim ->
           (IntRectangle o1, IntRectangle o2) -> {

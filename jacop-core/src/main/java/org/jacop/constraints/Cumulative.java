@@ -56,8 +56,10 @@ import org.jacop.core.Store;
 public class Cumulative extends Constraint implements SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean debug = false;
-  private static final boolean debugNarr = false;
+  private static final boolean DEBUG = false;
+  private static final boolean DEBUG_NARR = false;
+  private static boolean debug = DEBUG;
+  private static boolean debugNarr = DEBUG_NARR;
   private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
   private final Task[] Ts;
   private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> o2.max() - o1.max();

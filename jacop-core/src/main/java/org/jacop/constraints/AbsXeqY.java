@@ -54,7 +54,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
 
   /** It contains variable x. */
   public final IntVar x;
@@ -133,7 +133,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       store.propagationHasOccurred = false;
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("X {} Y {}", x, y);
       }
 
@@ -194,7 +194,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       yDom.addDom(yDom1);
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("new Ydom {}", yDom);
       }
 
@@ -226,7 +226,7 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       xDom.addDom(yDom);
 
-      if (debugAll) {
+      if (DEBUG_ALL) {
         log.debug("new Xdom {}", xDom);
       }
 

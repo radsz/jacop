@@ -63,7 +63,8 @@ import org.jacop.core.Var;
 public class Among extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  private static final boolean debugAll = false;
+  private static final boolean DEBUG_ALL = false;
+  private static boolean debugAll = DEBUG_ALL;
 
   /** It specifies the list of variables whose values are checked. */
   public final IntVar[] list;

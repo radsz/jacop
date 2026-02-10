@@ -45,7 +45,8 @@ import org.jacop.core.IntDomain;
 @Slf4j
 class DisjointConditionalProfile extends ProfileConditional {
 
-  static final boolean trace = false;
+  static final boolean TRACE = false;
+  static boolean trace = TRACE;
   @Serial private static final long serialVersionUID = 8683452581100000008L;
 
   DisjointConditionalProfile() {}

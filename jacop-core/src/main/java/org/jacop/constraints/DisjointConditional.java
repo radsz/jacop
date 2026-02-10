@@ -58,8 +58,10 @@ import org.jacop.core.Store;
 @Slf4j
 public class DisjointConditional extends Diff {
 
-  static final boolean trace = false;
-  static final boolean traceNarr = false;
+  static final boolean TRACE = false;
+  static final boolean TRACE_NARR = false;
+  static boolean trace = TRACE;
+  static boolean traceNarr = TRACE_NARR;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what rectangles can conditionally overlap. */

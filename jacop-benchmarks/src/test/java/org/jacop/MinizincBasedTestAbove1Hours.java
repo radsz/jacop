@@ -43,20 +43,20 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @version 5.0
  */
 public class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
-  protected static final String timeCategory = "above1hour/";
+  protected static final String TIME_CATEGORY = "above1hour/";
 
   public MinizincBasedTestAbove1Hours() {
-    super(timeCategory);
+    super(TIME_CATEGORY);
   }
 
   static Stream<String> parametricTest() throws IOException {
-    return fileReader(timeCategory).stream();
+    return fileReader(TIME_CATEGORY).stream();
   }
 
   @ParameterizedTest
   @MethodSource("parametricTest")
   public void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
-    testExecution(timeCategory);
+    testExecution(TIME_CATEGORY);
   }
 }

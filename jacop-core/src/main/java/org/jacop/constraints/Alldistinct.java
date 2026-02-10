@@ -76,9 +76,11 @@ public class Alldistinct extends Constraint
    * with domain of size smaller equal n (number
    * of variables) can contribute to any pruning. */
 
-  static final boolean debugAll = false;
+  static final boolean DEBUG_ALL = false;
+  static boolean debugAll = DEBUG_ALL;
 
-  static final boolean debugPruning = false;
+  static final boolean DEBUG_PRUNING = false;
+  static boolean debugPruning = DEBUG_PRUNING;
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
