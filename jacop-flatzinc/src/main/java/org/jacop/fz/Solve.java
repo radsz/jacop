@@ -99,7 +99,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   long startCpu;
   long initTime;
   long searchTime;
-  // ComparatorVariable tieBreaking=null;
   SelectChoicePoint<T> variable_selection;
   ArrayList<Search<T>> list_seq_searches;
   boolean heuristicSeqSearch;
@@ -182,7 +181,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
 
       if (node.getId() == JJTMODELEND) {
-        // int k = node.jjtGetNumChildren();
         search((ASTSolveItem) node.jjtGetChild(0), table, opt);
       }
     }
@@ -203,8 +201,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     store.setDecay(opt.getDecay());
 
-    //      System.out.println(table);
-
     initNumberConstraints = store.numberConstraints();
 
     // Get runtime system
@@ -213,7 +209,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     dictionary = table;
 
-    // if (opt.getVerbose())
     if (opt.debug()) {
       IO.println(
           "%% Model constraints defined.\n%% Variables = "
@@ -234,8 +229,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     options = opt;
     solveKind = -1;
 
-    // node.dump("");
-
     ASTSolveKind kind;
     int count = node.jjtGetNumChildren();
 
@@ -248,7 +241,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       SearchItem<T> si = new SearchItem<>(store, dictionary);
       si.searchParameters(node, 0);
-      // System.out.println("1. *** "+si);
       String search_type = si.type();
 
       kind = (ASTSolveKind) node.jjtGetChild(1);
@@ -575,8 +567,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
             searchForAll(label);
           }
-
-          // printSearch(label);
 
           this.si = si;
 
@@ -970,7 +960,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (opt.debug()) {
       IO.println(searchVars);
-      // System.out.println ("cost = " + costVariable);
     }
 
     DepthFirstSearch<T> lastSearch = label;
@@ -1188,8 +1177,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void run_sequence_search(int solveKind, SimpleNode kind, SearchItem<T> si) {
 
     singleSearch = false;
-
-    // kind.dump("");
 
     this.si = si;
 
@@ -1817,8 +1804,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   DepthFirstSearch<T> priority_search(SearchItem<T> si) {
 
-    // System.out.println("============\n"+si);
-
     ArrayList<SearchItem<T>> dfs_s = si.getSearchItems();
     DepthFirstSearch<T>[] searches = new DepthFirstSearch[dfs_s.size()];
     int i = 0;
@@ -2099,7 +2084,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   void lds_search(DepthFirstSearch<T> label, int ldsValue) {
-    //      System.out.println("Lds("+ldsValue+")");
 
     Lds<T> lds = new Lds<>(ldsValue);
     if (label.getExitChildListener() == null) {
@@ -2110,7 +2094,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   void credit_search(DepthFirstSearch<T> label, int creditValue, int bbsValue) {
-    //      System.out.println("Credit("+creditValue+", "+bbsValue+")");
 
     int maxDepth = 1000; // IntDomain.MaxInt;
     CreditCalculator<T> credit = new CreditCalculator<>(creditValue, bbsValue, maxDepth);

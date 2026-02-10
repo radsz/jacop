@@ -508,7 +508,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // in the beginning of the array and move the pointer. It helps to avoid
     // some recalculations and give potential to fail if the number of ungrounded Y
     // is not enough to cover the future domain
-    //   int countGY = 0;
     IntVar y;
     int lastIndex = yGrounded.value();
     IntervalDomain lbVubV = new IntervalDomain();
@@ -637,7 +636,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       futureLbS.update(new MutableDomainValue(futureDom));
 
       if (debugAll) {
-        // System.out.println(countGY + " new y were grounded and " +(this.yGrounded.value()) + " in
         // general");
         log.debug("Future domain is {}", futureDom);
       }

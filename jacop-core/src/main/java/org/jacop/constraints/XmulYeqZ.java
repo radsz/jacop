@@ -87,8 +87,6 @@ public class XmulYeqZ extends Constraint implements SatisfiedPresent {
     xEqz = new XeqY(x, z);
     yEqz = new XeqY(y, z);
 
-    // checkForOverflow();
-
     setScope(x, y, z);
   }
 

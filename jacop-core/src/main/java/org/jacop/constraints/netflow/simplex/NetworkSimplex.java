@@ -117,21 +117,11 @@ public class NetworkSimplex {
       node.toParent = arc;
       arc.index = TREE_ARC;
       arc.sister.index = TREE_ARC;
-      // allArcs.add(arc);
 
-      // if (node.balance > 0) {
-      // Arc arc = new Arc(node, root, LARGE_COST, node.balance);
-      // arc.addFlow(node.balance);
       // node.toParent = arc;
       // arc.index = arc.sister.index = -1;
-      // allArcsForDebug.add(arc);
-      // } else {
-      // Arc arc = new Arc(root, node, LARGE_COST, -node.balance);
-      // arc.addFlow(-node.balance);
       // node.toParent = arc.sister;
       // arc.index = arc.sister.index = -1;
-      // allArcsForDebug.add(arc);
-      // }
 
       // register infeasible nodes
       if (node.deltaBalance != 0) {
@@ -155,10 +145,8 @@ public class NetworkSimplex {
   }
 
   private void incrementDegree(Node node, Arc myArc) {
-    //   System.out.println("INCR " + node.name);
 
     // TODO: CRUCIAL, BUG?, assert removed.
-    // assert(node != root);
 
     if (node.degree < 2) {
       node.adjacencyList[node.degree] = myArc.forward ? myArc : myArc.sister;
@@ -168,7 +156,6 @@ public class NetworkSimplex {
   }
 
   private void decrementDegree(Node node) {
-    //   System.out.println("DECR " + node.name);
     assert node != root;
 
     node.degree--;
@@ -229,7 +216,6 @@ public class NetworkSimplex {
 
     incrementDegree(arc.head, arc);
     incrementDegree(arc.tail(), arc);
-    //   System.out.println(numArcs+"  Added : " + arc);
   }
 
   /**
@@ -260,7 +246,6 @@ public class NetworkSimplex {
 
     incrementDegree(arc.head, arc);
     incrementDegree(arc.tail(), arc);
-    //   System.out.println(numArcs+"  Added2 : " + arc);
   }
 
   /**
@@ -286,7 +271,6 @@ public class NetworkSimplex {
 
     decrementDegree(arc.head);
     decrementDegree(arc.tail());
-    //   System.out.println(numArcs+"  Removed : " + arc);
   }
 
   /**
@@ -300,11 +284,8 @@ public class NetworkSimplex {
 
     assert checkFlow(this);
     assert checkStructure(this);
-    //   infeasibleNodes.add(arc.tail());
-    //   infeasibleNodes.add(arc.head);
 
     // initialize artificial arcs
-    //   infeasibleNodes.addAll(Arrays.asList(nodes));
     Iterator<Node> it = infeasibleNodes.iterator();
     while (it.hasNext()) {
       Node node = it.next();
@@ -348,10 +329,6 @@ public class NetworkSimplex {
       pivots++;
     }
 
-    // System.out.println("----");
-    // print();
-    // System.out.println("*****");
-
     // clear artificial arcs
     boolean failure = false;
     it = infeasibleNodes.iterator();
@@ -378,7 +355,6 @@ public class NetworkSimplex {
       if (infeasibleFlow != 0) {
         failure = true;
       } else {
-        //       removeArc(arc);
         it.remove();
       }
     }
@@ -663,7 +639,6 @@ public class NetworkSimplex {
     tree.markTree(true);
     for (int i = 0; i < numArcs; i++) {
       Arc arc = lower[i];
-      //     if (arc.isInCut(forward)) {// && arc.capacity > 0) {
       if (arc.capacity > 0 && arc.isInCut(forward)) {
 
         int reducedCost = arc.reducedCost();
@@ -698,7 +673,6 @@ public class NetworkSimplex {
       Arc arc = lower[i];
       cost += arc.longCost();
       if (cost >= cutoff) {
-        //       throw Store.failException;
         return cutoff;
       }
     }
@@ -706,7 +680,6 @@ public class NetworkSimplex {
     for (Node node = root.thread; node != root; node = node.thread) {
       cost += node.toParent.longCost();
       if (cost >= cutoff) {
-        //       throw Store.failException;
         return cutoff;
       }
     }

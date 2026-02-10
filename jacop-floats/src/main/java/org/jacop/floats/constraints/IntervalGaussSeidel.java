@@ -159,7 +159,6 @@ public class IntervalGaussSeidel {
 
     if (!dominant) {
 
-      // try to precondition to make it non-dominant
       // current method for computing preconditioner is far too slow
       // and need to be improved.
 

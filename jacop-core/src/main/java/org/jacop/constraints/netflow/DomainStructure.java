@@ -131,8 +131,6 @@ public class DomainStructure implements VarHandler {
     IntDomain vardom = variable.domain;
     int size = vardom.getSize();
 
-    // System.out.println("Event " + variable + " is " + vardom);
-
     for (int id = notGrounded - 1; id >= 0; id--) {
 
       // arc already deleted ?
@@ -236,7 +234,6 @@ public class DomainStructure implements VarHandler {
     assert arcId >= notGrounded;
 
     // add domain/arc pair
-    // swap(arcId, notGrounded++);
     assert arcId == notGrounded;
     notGrounded++;
   }

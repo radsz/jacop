@@ -91,7 +91,6 @@ public class FittingNumbers extends ExampleFd {
     }
 
     store.impose(new LinearInt(counters, elements, "==", sum));
-    // store.impose(new SumWeight(counters, elements, sum));
 
     IO.println(store);
   }

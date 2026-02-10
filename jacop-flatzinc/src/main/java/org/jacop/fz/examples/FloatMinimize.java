@@ -75,8 +75,6 @@ public class FloatMinimize {
 
     Store store = fl.getStore();
 
-    // System.out.println (store);
-
     IO.println(
         "\nVar store size: "
             + store.size()

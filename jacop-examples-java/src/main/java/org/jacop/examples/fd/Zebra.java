@@ -177,7 +177,6 @@ public class Zebra extends ExampleFd {
     // store.impose(new Reified(new XplusCeqZ(color[iblue], 1,
     // nationality[inorwegian]),
     // binary[1]));
-    // store.impose(new XneqY(binary[0], binary[1]));
 
     // Using Or constraint
     // store.impose(new Or(new XplusCeqZ(nationality[inorwegian],

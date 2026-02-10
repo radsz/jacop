@@ -241,7 +241,6 @@ public class Binpacking extends Constraint
         }
       }
       if (binUsed.cardinality() == load.length) {
-        // do not prune number of bins when all of them are already used.
         pruneLb = false;
         lbPruningStamp.update(false);
       }
@@ -274,7 +273,6 @@ public class Binpacking extends Constraint
     }
 
     BinItem[] candidates;
-    // for (int i = 0; i < load.length; i++) {  // replaced with needed bins to check
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
 
@@ -289,7 +287,6 @@ public class Binpacking extends Constraint
         int possible = 0;
 
         for (BinItem itemEl : item) {
-          // System.out.println (itemEl.bin + " prunned =
           // "+itemEl.bin.dom().recentDomainPruning(store.level));
 
           if (itemEl.bin().dom().contains(i + minBinNumber)) {
@@ -301,8 +298,6 @@ public class Binpacking extends Constraint
             }
           }
         }
-
-        // System.out.println ("load " + i + "  " +required +".."+possible);
 
         // Rule "Load Maintenance"
         load[i].domain.in(store.level, load[i], required, possible);
@@ -321,9 +316,6 @@ public class Binpacking extends Constraint
         for (int l = 0; l < candidatesLength; l++) {
           Cj[l] = candidates[l].weight();
         }
-
-        // if (noSum(Cj, load[i].min() - required, load[i].max() - required))
-        //     throw Store.failException;
 
         // Rule 3.3 "Tighteing Bounds on Bin Load"
         if (noSum(Cj, load[i].min() - required, load[i].min() - required)) {
@@ -528,11 +520,9 @@ public class Binpacking extends Constraint
       sum_c += x[N - kPrime];
       kPrime++;
     }
-    //   System.out.println("sum_c = " + sum_c + " k' = " + kPrime);
 
     sum_b = x[N - kPrime];
     while (sum_a < alpha && sum_b <= beta) {
-      //       System.out.println(sum_a +" < " +alpha + "  "+sum_b + " <= " + beta);
       sum_a += x[k++];
       if (sum_a < alpha) {
         kPrime--;

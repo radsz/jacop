@@ -397,7 +397,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         profileCheckTasks(store);
       }
 
-      // Do edge finding only the last time and when
       // max limit is 1 (heuristic) !!!
       if (doEdgeFinding && !store.propagationHasOccurred) {
         // Phase-up - from highest lct down
@@ -465,7 +464,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         Task l = L.get(indexOfl);
         int lLct = l.lct();
         final int limitMax = limit.max();
-        // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and after S
 
         int startOfS = IntDomain.MaxInt;
@@ -649,7 +647,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         Task l = L.get(indexOfl);
         int lEst = l.est();
         final int limitMax = limit.max();
-        // System.out.println("Maxumum area task= " + l);
         // Checking if l can be between and before S
 
         int completionOfS = IntDomain.MinInt;
@@ -968,7 +965,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
       }
       slack = (long) (completionS - sEst) * limit.max() - a - s.areaMin();
-      // System.out.println("slack = "+ slack);
       if (debug) {
         boolean notBeforeS = slack < 0;
         log.debug(
@@ -993,7 +989,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         j++;
       }
 
-      // System.out.println("slack after = " + slack + "tasks = " + taskArray );
       if (slack < 0 && tasksLength != 0) {
         Arrays.sort(taskArray, 0, tasksLength, taskAscEctComparator);
         j = 0;
@@ -1203,7 +1198,6 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
       } else { // ( ( i.min() >= p.max() || i.max()+dur <= p.min()) )
         if (start.max() < p.min && start.dom().noIntervals() == 1) {
-          // System.out.println("Nonoverlaping "+start+", "+i+", "+p);
           int ps = p.min - start.min();
           if (ps < duration.max() && limit.max() - p.value < resources.min()) {
             if (debugNarr) {

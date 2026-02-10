@@ -108,11 +108,9 @@ public class RunExample {
         System.exit(-1);
       } catch (NoSuchMethodException _) {
         System.err.println("exampleloader: no main(String[]) method found in class " + args[0]);
-        // e.printStackTrace();
         System.exit(-1);
       } catch (IllegalAccessException | InvocationTargetException _) {
         System.err.println("exampleloader: error calling main method in class " + args[0]);
-        // e.printStackTrace();
         System.exit(-1);
       }
     }

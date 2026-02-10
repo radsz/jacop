@@ -77,11 +77,9 @@ public class Loan {
     //            P = 1000.0;
     //            R = 260.0;
     //            result B4 = 65.78
-    //       LOAN2 I = 0.04;
     //             P = 1000.0;
     //             B4 = 0.0;
     //             result R=275.49 (precision 1e-11)
-    //       LOAN3 I = 0.04;
     //             R = 250.0;
     //             B4 = 0.0;
     //        result P = 907.47 (precision 1e-4)

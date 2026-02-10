@@ -65,7 +65,6 @@ public class Fz2jacop {
 
     Options opt = new Options(args);
 
-    // if (opt.getVerbose())
     if (opt.debug()) {
       IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
     }
@@ -120,9 +119,7 @@ public class Fz2jacop {
     } catch (StackOverflowError _) {
       IO.println("%% Stack overflow exception error; consider option -Xss... for JVM");
     } catch (TrivialSolution _) {
-      // do nothing
       Runtime.getRuntime().removeShutdownHook(t);
-      // return;
     }
 
     if (opt.getStatistics()) {

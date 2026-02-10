@@ -77,7 +77,6 @@ public class CpvizGardner {
     final long startCpu = b.getThreadCpuTime(tread.threadId());
     final long startUser = b.getThreadUserTime(tread.threadId());
 
-    // int num_days = 35;
     int num_persons_per_meeting = 3;
     int persons = 15;
 
@@ -129,9 +128,6 @@ public class CpvizGardner {
 
     // Trace --->
     SelectChoicePoint<SetVar> select = new TraceGenerator<>(label, varSelect); // , days);
-    //      label.setConsistencyListener((ConsistencyListener)select);
-    //     label.setExitChildListener((ExitChildListener)select);
-    //      label.setExitListener((ExitListener)select);
     // <---
 
     Result = label.labeling(store, select);

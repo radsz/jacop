@@ -47,7 +47,6 @@ import org.jacop.search.SmallestDomain;
 /** Example for tiny Tsp using float constraints. */
 public class TinyTsp {
 
-  // double MIN_FLOAT = -1e+150;
   final double maxFloat = 1e+150;
 
   /**

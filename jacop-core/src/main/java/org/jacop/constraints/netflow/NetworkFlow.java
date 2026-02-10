@@ -179,12 +179,9 @@ public class NetworkFlow extends Constraint
   /* Search {@literal &} Backtracking */
   @Override
   public void queueVariable(int level, Var variable) {
-    // DomainStructure structure = map.get(variable);
 
     if (!disableQueueVariable) {
-      //     System.out.println("\tQueue var : " + variable);
       if (variable == costVariable) {
-        // System.out.println("** Cost var queued, abort");
         return;
       }
       queue.add((IntVar) variable);
@@ -204,7 +201,6 @@ public class NetworkFlow extends Constraint
     } finally {
       queue.clear();
       disableQueueVariable = false;
-      // network.increaseLevel();
     }
   }
 
@@ -230,7 +226,6 @@ public class NetworkFlow extends Constraint
       if (DO_INSTRUMENTATION) {
         statistics.consistencyIterations++;
       }
-      // System.out.println(iteration);
 
       iteration++;
       if (SHOW_LEVEL) {
@@ -239,7 +234,6 @@ public class NetworkFlow extends Constraint
 
       // recompute flow
       int result = network.networkSimplex(9999999);
-      // network.print();
 
       // is flow infeasible ?
       if (result == -2) {

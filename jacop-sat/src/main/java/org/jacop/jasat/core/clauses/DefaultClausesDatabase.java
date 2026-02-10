@@ -261,7 +261,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
        * can be found
        */
       assert otherValue == 0; // myValue cannot be 0, the literal has just been asserted
-      // try to find another watch
       // iterate on all literals but the first (which is the unit literal, otherWatch)
       for (int j = 2; j < clause.length; j++) {
         int lit = clause[j];
@@ -305,9 +304,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
       newWatchList[0] = newWatchNum;
       watchLists[var] = newWatchList;
     }
-
-    // for (int c : watchList)
-    // assert checkWatches4Clause(c) == null;
 
     // recycle old watch list
     pool.storeOld(watchList);
@@ -470,7 +466,6 @@ public final class DefaultClausesDatabase extends AbstractClausesDatabase {
 
     for (int literal : clause) {
       // resolution !
-      // try to remove -literal. If it fails, add literal
       explanation.partialResolveWith(literal);
     }
     return explanation;

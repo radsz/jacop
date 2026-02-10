@@ -121,7 +121,6 @@ public class Markov {
     SplitSelectFloat<FloatVar> s =
         new SplitSelectFloat<>(store, vars, null); // new SmallestDomainFloat<FloatVar>());
     label.setAssignSolution(true);
-    // label.setSolutionListener(new PrintOutListener<FloatVar>());
     label.getSolutionListener().recordSolutions(true);
 
     boolean result = label.labeling(store, s, tot_cost);

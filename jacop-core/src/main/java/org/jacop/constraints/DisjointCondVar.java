@@ -102,18 +102,13 @@ class DisjointCondVar implements MutableVar {
   }
 
   public void update(MutableVarValue val) {
-    // DisjointCondVarValue VarValue = (DisjointCondVarValue)value();
     if (value.stamp == store.level) {
-      // System.out.print("1. Level: "+store.level()+", IN "+VarValue+",
       // New " + val);
       value.setValue(((DisjointCondVarValue) val).Rects);
-      // System.out.println(", OUT "+ value);
     } else if (value.stamp < store.level) {
       val.setStamp(store.level);
       val.setPrevious(value);
       value = (DisjointCondVarValue) val;
-
-      // System.out.println("\n=> OUT "+ this+ "\nOLD "+ value().next());
     }
   }
 

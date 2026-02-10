@@ -107,8 +107,6 @@ public class Laplace {
     label.setAssignSolution(true);
     s.leftFirst = false;
 
-    // label.setSolutionListener(new PrintOutListener<FloatVar>());
-
     label.labeling(store, s);
 
     for (int i = 0; i < r + 1; i++) {

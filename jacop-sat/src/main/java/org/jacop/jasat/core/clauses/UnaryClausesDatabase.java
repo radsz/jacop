@@ -146,7 +146,6 @@ public final class UnaryClausesDatabase extends AbstractClausesDatabase {
     assert clauseIndex < currentIndex;
 
     int literal = clauses[clauseIndex];
-    // try to remove -literal. If it fails, add literal
     clause.partialResolveWith(literal);
 
     return clause;

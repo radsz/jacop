@@ -188,7 +188,6 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
       if (doProfile) {
 
         up.sweepPruning(store, tvn, opt);
-        // up.updateTasksRes(store, ts);
       }
 
       if (doEdgeFind && !store.propagationHasOccurred) {

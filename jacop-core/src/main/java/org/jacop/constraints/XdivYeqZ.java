@@ -73,8 +73,6 @@ public class XdivYeqZ extends Constraint implements SatisfiedPresent {
     this.y = y;
     this.z = z;
 
-    // checkForOverflow();
-
     setScope(x, y, z);
   }
 

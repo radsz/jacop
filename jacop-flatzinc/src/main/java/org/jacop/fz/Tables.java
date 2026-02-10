@@ -164,8 +164,6 @@ public class Tables {
     } else {
       System.err.println("%% Double int var alias for bool var");
     }
-
-    // System.out.println(v + " is alias of " + b);
   }
 
   /**
@@ -274,7 +272,6 @@ public class Tables {
    */
   public void addIntArray(String ident, int[] array) {
     // TODO: asserts to prevent multiple array being put with the same identity?
-    // assert ( intArrayTable.get(ident) == null ) : "The int array with identity " + ident + "
     // already exists ";
     intArrayTable.put(ident, array);
   }
@@ -337,7 +334,6 @@ public class Tables {
    */
   public void addFloatArray(String ident, double[] array) {
     // TODO: asserts to prevent multiple array being put with the same identity?
-    // assert ( intArrayTable.get(ident) == null ) : "The int array with identity " + ident + "
     // already exists ";
     floatArrayTable.put(ident, array);
   }
@@ -695,10 +691,8 @@ public class Tables {
     int indexVariableArray = 5;
     int indexSetVariableArray = 7;
     int indexFloatArray = 8;
-    // int indexFloat = 9;
     int indexFloatVariableArray = 11;
     int indexConstantTable = 12;
-    // int indexAliasTable = 13;
 
     String[] tableNames = {
       "int", // 0

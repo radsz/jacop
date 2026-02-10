@@ -103,9 +103,7 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
       if (p.min() >= 0) {
         // possible domain consistecny for this case
-        // p.domain.in(store.level, p, q.domain);
         // store.propagationHasOccurred = false;
-        // q.domain.in(store.level, q, p.domain);
 
         // bounds consistency
         p.domain.in(store.level, p, q.min(), q.max());
@@ -120,7 +118,6 @@ public class AbsPeqR extends Constraint implements Stateful, SatisfiedPresent {
 
         q.domain.in(store.level, q, -p.max(), -p.min());
       } else { // p.min() < 0 && p.max() >= 0
-        // int pBound = Math.max(q.min(), q.max());
         double pBound = q.max(); // q is always >= 0
         p.domain.in(store.level, p, -pBound, pBound);
 

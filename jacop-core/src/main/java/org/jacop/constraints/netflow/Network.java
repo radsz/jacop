@@ -157,7 +157,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     assert checkStructure(this);
 
     if (SHOW_CHANGES) {
-      // print();
       log.debug("Before removing arc: {}", arc);
     }
 
@@ -169,11 +168,9 @@ public class Network extends NetworkSimplex implements MutableNetwork {
       Node tail = arc.tail();
       // pointing upwards
       if (tail.parent == arc.head) {
-        //       addArc(tail.artificial);
         updateTree(arc.sister, tail.artificial);
       } else { // pointing downwards
         assert arc.head.parent == tail;
-        //       addArc(arc.head.artificial);
         updateTree(arc, arc.head.artificial);
       }
     }
@@ -273,7 +270,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
 
     // TODO: CRUCIAL, BUG, switched off. Is it ok?
-    // assert (arc.index >= TREE_ARC);
 
     companion.restore(this);
 
@@ -301,7 +297,6 @@ public class Network extends NetworkSimplex implements MutableNetwork {
     }
 
     // TODO: CRUCIAL, BUG, switched off. Is it ok?
-    // assert (arc.index >= TREE_ARC);
 
     assert checkFlow(this);
     assert checkStructure(this);

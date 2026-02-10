@@ -504,9 +504,6 @@ public class MineSweeper extends ExampleFd {
         } // end if problem[i][j] > X
       } // end for j
     } // end for i
-
-    // HakankUtil.toXML(store, -1, ".", "minesweeper.xml");
-
   } // end model
 
   /**

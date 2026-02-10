@@ -344,7 +344,6 @@ public class Alldistinct extends Constraint
 
           // All Variable which still had qValue in its domain
           // have this value removed
-          // Domain complement = Domain.domain.complement(qValue);
           for (int c = 1; c <= lastPosition; c++) {
             currentList.get(c).domain.inComplement(store.level, currentList.get(c), qValue);
           }
@@ -683,7 +682,6 @@ public class Alldistinct extends Constraint
             log.debug("Value {} has only this variable possible {}", matched, variable);
           }
 
-          // store.in(variable, matched, matched);
           variable.domain.inValue(store.level, variable, matched); // , matched);
 
           // The above pruning does not require execution of
@@ -1452,8 +1450,6 @@ public class Alldistinct extends Constraint
 
     guideVariable = null;
 
-    //   System.out.println("1. var " + guideVariable + " value " + guideValue);
-
     int lastNotGroundedVariable = stampNotGroundedVariables.value();
 
     for (int i = 0; i <= lastNotGroundedVariable; i++) {
@@ -1554,8 +1550,6 @@ public class Alldistinct extends Constraint
         }
       }
     }
-
-    //   System.out.println("2. var " + guideVariable + " value " + guideValue);
 
     // Permutation only at this moment
 

@@ -131,7 +131,6 @@ public class OutputArrayAnnotation {
 
     for (IntDomain index : indexes) {
       if (index.getSize() == 0) {
-        // s.append(indexes.get(i)).append(",");
         s.append("{}, ");
       } else {
         s.append(index.min()).append("..").append(index.max()).append(", ");

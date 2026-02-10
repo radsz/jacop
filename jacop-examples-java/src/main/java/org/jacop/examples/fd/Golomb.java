@@ -175,7 +175,6 @@ public class Golomb extends ExampleFd {
 
     for (int i = 1; i < numbers.length; i++) {
 
-      // for (int j = i - 1; j >= 0; j--) {
       for (int j = 0; j < i; j++) {
         // Create FDV for a difference between ith and jth number
         IntVar sub =
@@ -185,7 +184,6 @@ public class Golomb extends ExampleFd {
 
         // sub + jth = ith since sub = ith - jth
         // Add constraint so the above relationship holds
-        //     store.imposePropagators(new XplusYeqZ(sub, numbers[j], numbers[i]));
         store.impose(new XplusYeqZ(sub, numbers[j], numbers[i]));
       }
     }

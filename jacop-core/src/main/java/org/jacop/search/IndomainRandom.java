@@ -95,7 +95,6 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
       int currentMin = dom.leftElement(i);
       int currentMax = dom.rightElement(i);
 
-      // log.debug("{}, {}", dom, value);
       if (currentMax - currentMin + 1 > value) {
         return currentMin + value;
       } else {

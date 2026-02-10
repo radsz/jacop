@@ -314,7 +314,6 @@ public class Rectangle {
     int stop;
 
     int i = 0;
-    //   int j = 0;
     while (use && i < dim) {
       if (i != selDimension) {
         IntDomain originIdom = origin[i].dom();
@@ -346,7 +345,6 @@ public class Rectangle {
     int stop;
 
     int i = 0;
-    //   int j = 0;
     while (use && i < dim) {
       IntDomain originI = origin[i].dom();
       start = originI.max();

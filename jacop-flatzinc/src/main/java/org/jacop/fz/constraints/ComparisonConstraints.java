@@ -478,17 +478,11 @@ class ComparisonConstraints implements ParserTreeConstants {
           } else if (generateForEqC(v1, i2, v3)) {
             return;
           } else {
-            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in
             // the current implementation
-            //     sat.generateEqC_reif(v1, i2, v3);
-            //     return;
-            // }
-            // else
             // c = new XeqC(v1, i2);
             support.pose(support.fzXeqCreified(v1, i2, v3));
             return;
           }
-        // break;
 
         case Support.ne:
           if (v1.min() > i2 || v1.max() < i2) {
@@ -506,17 +500,11 @@ class ComparisonConstraints implements ParserTreeConstants {
           } else if (generateForNeqC(v1, i2, v3)) { // binary variable
             return;
           } else {
-            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in
             // the current implementation
-            //     sat.generate_neC_reif(v1, i2, v3);
-            //     return;
-            // }
-            // else
             // c = new XneqC(v1, i2);
             support.pose(support.fzXneqCreified(v1, i2, v3));
             return;
           }
-        // break;
         case Support.lt:
           if (v1.max() < i2) {
             v3.domain.inValue(store.level, v3, 1);
@@ -603,7 +591,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCreified(v2, i1, v3));
             return;
           }
-        // break;
 
         case Support.ne:
           if (v2.min() > i1 || v2.max() < i1) {
@@ -619,7 +606,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCreified(v2, i1, v3));
             return;
           }
-        // break;
         case Support.lt:
           if (i1 < v2.min()) {
             v3.domain.inValue(store.level, v3, 1);
@@ -650,12 +636,7 @@ class ComparisonConstraints implements ParserTreeConstants {
             v3.domain.inValue(store.level, v3, 0);
             return;
           } else {
-            // if (support.options.useSat()) {  // it can be moved to SAT solver but it is slow in
             // the current implementation
-            //     sat.generate_geC_reif(v2, i1, v3);
-            //     return;
-            // }
-            // else
             c = new XgteqC(v2, i1);
           }
           break;
@@ -704,7 +685,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqYreified(v1, v2, v3));
             return;
           }
-        // break;
         case Support.ne:
           if (generateForNeq(v1, v2, v3)) {
             return;
@@ -784,7 +764,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCimplied(v1, i2, v3)); // specialized version of Implies...
             return;
           }
-        // break;
 
         case Support.ne:
           if (v1.min() > i2 || v1.max() < i2) {
@@ -802,7 +781,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCimplied(v1, i2, v3)); // specialized version of Implies...
             return;
           }
-        // break;
         case Support.lt:
           if (v1.max() < i2) {
             return;
@@ -898,7 +876,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXeqCimplied(v2, i1, v3));
             return;
           }
-        // break;
 
         case Support.ne:
           if (v2.min() > i1 || v2.max() < i1) {
@@ -912,7 +889,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             support.pose(support.fzXneqCimplied(v2, i1, v3)); // specialized version of Implies...
             return;
           }
-        // break;
         case Support.lt:
           if (i1 < v2.min()) {
             v3.domain.inValue(store.level, v3, 1);
@@ -981,7 +957,6 @@ class ComparisonConstraints implements ParserTreeConstants {
             return;
             // c = new XeqY(v1, v2);
           }
-        // break;
         case Support.ne:
           if (v2.singleton()) {
             // c = new XneqC(v1, v2.value());

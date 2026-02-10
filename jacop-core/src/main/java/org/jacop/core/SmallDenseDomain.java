@@ -302,11 +302,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     result = result >>> (min - this.min);
     result = result >>> (this.min + 63 - max);
 
-    // SmallDenseDomain temp = new SmallDenseDomain(this.min, result);
-
     return max - min + 1 == this.getSize(result);
-
-    //      System.out.println( this + " contains " + " min " + min + " max " + max );
   }
 
   @Override
@@ -534,33 +530,26 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     long bitsResult = bits;
 
-    //              System.out.println( "Starting with " + new SmallDenseDomain(min, bitsResult));
     if (this.max - max > 0) {
 
       int thisMax = this.min + 63;
 
       bitsResult = bitsResult >>> (thisMax - max);
-      //                  System.out.println( new SmallDenseDomain(min, bitsResult));
 
       if (min - this.min > 0) {
         bitsResult = bitsResult << (min - this.min + thisMax - max);
-        //                              System.out.println( new SmallDenseDomain(min, bitsResult));
 
         bitsResult = bitsResult >>> (min - this.min);
-        //                              System.out.println( new SmallDenseDomain(min, bitsResult));
       } else {
         bitsResult = bitsResult << (thisMax - max);
-        //                              System.out.println( new SmallDenseDomain(min, bitsResult));
       }
 
     } else {
 
       if (min - this.min > 0) {
         bitsResult = bitsResult << (min - this.min);
-        //                              System.out.println( new SmallDenseDomain(min, bitsResult));
 
         bitsResult = bitsResult >>> (min - this.min);
-        //                              System.out.println( new SmallDenseDomain(min, bitsResult));
       } else {
         // nothing to prune, it should not be here as this condition is discovered earlier.
         return;
@@ -815,7 +804,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       inBits = inBits << Math.max(this.max - input.intervals[i - 1].max(), 0);
-      // SmallDenseDomain temp = new SmallDenseDomain(this.min, inBits);
 
       if (i < input.size && next.min() <= this.max) {
 
@@ -1201,7 +1189,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
 
       inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max() + shift), 0);
-      // SmallDenseDomain temp = new SmallDenseDomain(this.min, inBits);
 
       if (i < input.size && next.min() + shift <= this.max) {
 
@@ -1228,8 +1215,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
    * @return the resulting small dense domain after intersection.
    */
   public SmallDenseDomain intersect(IntervalDomain input, int shift) {
-
-    // System.out.println("Domain " + this + " intersecting with " + input);
 
     // TODO: check all return empty domains to make sure that they are not being used
     // as normal domains (constraints).
@@ -1277,7 +1262,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     }
 
     inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max() + shift), 0);
-    // SmallDenseDomain temp = new SmallDenseDomain(this.min, inBits);
 
     if (i < input.size && next.min() + shift <= this.max) {
 
@@ -1369,8 +1353,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
     // TODO: do a bit more testing, although code has been derived from in function.
 
-    //      System.out.println("i>" + this  + "(" + domain + ")");
-
     if (domain.domainId() == SmallDenseDomainID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -1426,8 +1408,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       assert min >= previousMin : "Domain update incorrect.";
 
       assert checkInvariants() == null : checkInvariants();
-
-      //  System.out.println("i<" + this );
 
       if (singleton) {
         return GROUND;
@@ -1932,8 +1912,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       }
     }
 
-    // assert false;
-
     // TODO: CRUCIAL implement special function for IntervalDomain.
 
     IntDomain result = super.subtract(domain);
@@ -1948,8 +1926,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
 
   @Override
   public IntDomain subtract(int min, int max) {
-
-    //      System.out.println("s>" + this  + "(" + min + ", " + max + ")");
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1970,15 +1946,12 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       SmallDenseDomain returnObj = new SmallDenseDomain(this.min, result);
       assert returnObj.checkInvariants() == null : returnObj.checkInvariants();
 
-      //          System.out.println("s<" + returnObj  );
       return returnObj;
     }
   }
 
   @Override
   public void subtractAdapt(int min, int max) {
-
-    //      System.out.println("s>" + this  + "(" + min + ", " + max + ")");
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -2033,8 +2006,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
       return;
     }
 
-    //      System.out.println("s>" + this  + "(" + value + ")");
-
     if (singleton) {
       clear();
       return;
@@ -2055,8 +2026,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     if (value == max) {
       max = previousValue(value);
     }
-
-    //      System.out.println("s<" + this);
 
     assert checkInvariants() == null : checkInvariants();
   }
@@ -2091,8 +2060,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
         return new SmallDenseDomain(input.min, bitsResult);
       }
     }
-
-    // assert false;
 
     // TODO: take care in a nice fashion (no exception) if smalldensedomain can not handle the
     // result of union.
@@ -2135,8 +2102,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   @Override
   public void unionAdapt(int min, int max) {
 
-    //      System.out.println("u>" + this  + "(" + min + ", " + max + ")");
-
     assert checkInvariants() == null : checkInvariants();
 
     // TODO: Test properly. SETADD.
@@ -2173,9 +2138,6 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
     this.singleton = this.size == 1;
 
     assert checkInvariants() == null : checkInvariants();
-
-    //      System.out.println("u<" + this);
-
   }
 
   @Override

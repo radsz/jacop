@@ -380,7 +380,6 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
 
           if (t == null) {
             list[varPosition].domain.inComplement(store.level, list[varPosition], value);
-            // store.inComplement(x[varPosition], value);
             pruned = true;
           }
         }
@@ -443,7 +442,6 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
       for (int val : t) {
 
         if (!list[j].dom().contains(val)) {
-          // if (!Domain.domain.contains(x[j].dom(), val)) {
           stillConflict[i] = false;
           break;
         }
@@ -541,7 +539,6 @@ public class ExtensionalConflictVa extends Constraint implements UsesQueueVariab
         this.tuples[i][j] = new int[supportCount[i][j]][];
       }
 
-      //     int m = 0;
       for (int[] t : tuplesFromConstructor) {
 
         int value = t[i];

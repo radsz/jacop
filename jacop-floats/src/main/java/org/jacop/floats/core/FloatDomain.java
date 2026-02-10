@@ -384,8 +384,6 @@ public abstract class FloatDomain extends Domain {
    */
   public static FloatIntervalDomain mulBounds(double a, double b, double c, double d) {
 
-    // System.out.println ("[" + a +".." +b +"] * [" + c + ".." + d + "]");
-
     if (c == 1.0 && d == 1.0) {
       return new FloatIntervalDomain(a, b);
     } else if (c == -1.0 && d == -1.0) {
@@ -400,7 +398,6 @@ public abstract class FloatDomain extends Domain {
     boolean N1_1 = a < 0 && b < 0; // strictly negative
 
     boolean M_2 = c < 0 && d > 0;
-    // boolean Z_2 = (c == 0 && d == 0);
     boolean P0_2 = c == 0 && d > 0;
     boolean P1_2 = c > 0 && d > 0;
     boolean N0_2 = c < 0 && d == 0;
@@ -521,8 +518,6 @@ public abstract class FloatDomain extends Domain {
    */
   public static FloatIntervalDomain divBounds(double a, double b, double c, double d) {
 
-    // System.out.println ("[" + a +".." +b +"] / [" + c + ".." + d + "]");
-
     if (c == 1.0 && d == 1.0) {
       return new FloatIntervalDomain(a, b);
     } else if (c == -1.0 && d == -1.0) {
@@ -537,7 +532,6 @@ public abstract class FloatDomain extends Domain {
     boolean N1_1 = a < 0 && b < 0; // strictly negative
 
     boolean M_2 = c < 0 && d > 0;
-    // boolean Z_2 = (c == 0 && d == 0);
     boolean P0_2 = c == 0 && d > 0;
     boolean P1_2 = c > 0 && d > 0;
     boolean N0_2 = c < 0 && d == 0;
@@ -545,8 +539,6 @@ public abstract class FloatDomain extends Domain {
 
     double min;
     double max;
-
-    // FloatIntervalDomain result = null;
 
     if (P1_1) {
       if (P1_2) { // P1 /\ P1
@@ -710,7 +702,6 @@ public abstract class FloatDomain extends Domain {
    */
   public void addDom(FloatDomain domain) {
 
-    // if (!domain.isSparseRepresentation()) {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       unionAdapt(enumer.nextElement());
@@ -760,8 +751,6 @@ public abstract class FloatDomain extends Domain {
    * @return true if the supplied domain is cover by this domain.
    */
   public boolean contains(FloatDomain domain) {
-
-    // if (!domain.isSparseRepresentation()) {
 
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
@@ -885,7 +874,6 @@ public abstract class FloatDomain extends Domain {
       return this.cloneLight();
     }
 
-    // if (!domain.isSparseRepresentation()) {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     FloatInterval first = enumer.nextElement();
     FloatDomain result = this.subtract(first.min(), first.max());
@@ -1014,7 +1002,6 @@ public abstract class FloatDomain extends Domain {
       return result;
     }
 
-    // if (!domain.isSparseRepresentation()) {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();
@@ -1229,7 +1216,6 @@ public abstract class FloatDomain extends Domain {
     }
 
     // the same size.
-    // if (!domain.isSparseRepresentation()) {
     FloatIntervalEnumeration enumer = domain.floatIntervalEnumeration();
     while (enumer.hasMoreElements()) {
       FloatInterval next = enumer.nextElement();

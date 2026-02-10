@@ -105,8 +105,6 @@ public class SinPeqR extends Constraint
 
   void boundConsistency(Store store) {
 
-    // System.out.println ("1. SinPeqR("+p+", "+q+")");
-
     if (p.max() - p.min() >= 2 * FloatDomain.PI) {
       return;
     }
@@ -244,16 +242,12 @@ public class SinPeqR extends Constraint
               "Selected impossible case in sin, cos, asin or acos constraint");
       }
 
-      // System.out.println (q + " in " + qMin + ".." + qMax);
-
       q.domain.in(store.level, q, qMin, qMax);
 
-      // System.out.println ("q after in " + q);
       // p update
       double pMin = Math.asin(qMin); // range -PI/2..PI/2
       double pMax = Math.asin(qMax); // range -PI/2..PI/2
 
-      // System.out.println ("asin result " + p + " in " + pMin +".." + pMax + " copied to  n times
       // -PI/2 .. PI/2");
 
       pMin = FloatDomain.down(pMin);
@@ -275,12 +269,7 @@ public class SinPeqR extends Constraint
 
       p.domain.in(store.level, p, pDom); // .min(), pDom.max());
 
-      // System.out.println ("p after in " + p);
-
     } while (store.propagationHasOccurred);
-
-    // System.out.println ("2. SinPeqR("+p+", "+q+")");
-
   }
 
   FloatInterval normalize(FloatVar v) {

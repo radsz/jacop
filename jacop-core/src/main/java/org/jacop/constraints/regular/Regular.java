@@ -848,7 +848,6 @@ public class Regular extends Constraint implements UsesQueueVariable, Stateful, 
       // for every active state in the level
       stateNb = this.activeLevels[l].value();
 
-      // for (int s = 0; s < stateNb; s++) {
       for (int s = lastNumberOfActiveStates[l]; s < stateNb; s++) {
         // update its out degree by adding the accumulator
         // by doing this we add some old, possibly inactive edge

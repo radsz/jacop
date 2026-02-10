@@ -87,7 +87,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
      * not yet been examined
      */
     if (!wrapper.isVarLiteral(assertedLiteral)) {
-      // wrapper.log(this,"  (ignored) called on literal "+assertedLiteral+" meaning nothing");
       return;
     } else {
     }
@@ -169,9 +168,7 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
   }
 
   /** Clear everything (no more propagations or ignored literals). */
-  private void clear() {
-    // ignoreCache.clear();
-  }
+  private void clear() {}
 
   /**
    * To get a real clause to resolve with, we seek for the clause at the origin of the propagation.
@@ -210,8 +207,6 @@ public final class DomainClausesDatabase extends AbstractClausesDatabase
 
   /** {@inheritDoc} */
   public void backjump(int level) {
-
-    // wrapper.log(this, "backjump to level "+level);
 
     // clear everything
     clear();

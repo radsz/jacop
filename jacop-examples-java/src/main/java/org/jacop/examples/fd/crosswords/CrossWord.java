@@ -157,7 +157,6 @@ public class CrossWord extends ExampleFd {
             Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
             store.impose(new ExtensionalSupportMdd(mdd4word));
           }
-          // System.out.println(word);
           word.clear();
         } else {
           word.add(x[i][j]);
@@ -168,9 +167,7 @@ public class CrossWord extends ExampleFd {
         if (wordSizes.contains(word.size())) {
           Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
           store.impose(new ExtensionalSupportMdd(mdd4word));
-          // System.out.println(word);
         }
-        // System.out.println(word);
         word.clear();
       }
     }
@@ -185,7 +182,6 @@ public class CrossWord extends ExampleFd {
           if (wordSizes.contains(word.size())) {
             Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
             store.impose(new ExtensionalSupportMdd(mdd4word));
-            // System.out.println(word);
           }
           word.clear();
         } else {
@@ -197,7 +193,6 @@ public class CrossWord extends ExampleFd {
         if (wordSizes.contains(word.size())) {
           Mdd mdd4word = mdds.get(word.size()).reuse(word.toArray(new IntVar[0]));
           store.impose(new ExtensionalSupportMdd(mdd4word));
-          // System.out.println(word);
         }
         word.clear();
       }

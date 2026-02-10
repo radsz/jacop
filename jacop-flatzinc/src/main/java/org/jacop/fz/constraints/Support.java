@@ -188,7 +188,6 @@ public class Support implements ParserTreeConstants {
       for (int i = 0; i < count; i++) {
         ASTScalarFlatExpr child = (ASTScalarFlatExpr) node.jjtGetChild(i);
         int el = getInt(child);
-        //              if (el == Integer.MIN_VALUE)
         if (!intPresent) {
           return null;
         } else {
@@ -251,9 +250,6 @@ public class Support implements ParserTreeConstants {
 
     if (node.getType() == 5) { // float
       double val = node.getFloat();
-      // if (val == 0) return zero;
-      // else if (val == 1) return one;
-      // else
       return new FloatVar(store, val, val);
     } else if (node.getType() == 2) { // ident
       FloatVar float_Var = dictionary.getFloatVariable(node.getIdent());
@@ -470,7 +466,6 @@ public class Support implements ParserTreeConstants {
             for (int i = 0; i < sVar.length; i++) {
               s[i] = sVar[i].dom().glb();
             }
-            //                          System.out.println(((SetDomain)sVar[i].dom()).glb());
           }
         }
       } else {
@@ -482,7 +477,6 @@ public class Support implements ParserTreeConstants {
 
   SetVar[] getSetVarArray(SimpleNode node) {
     SetVar[] s;
-    // int arrayIndex = 0;
 
     if (node.getId() == JJTARRAYLITERAL) {
       int count = node.jjtGetNumChildren();
@@ -509,7 +503,6 @@ public class Support implements ParserTreeConstants {
   }
 
   IntDomain getSetLiteral(SimpleNode node, int index) {
-    // node.dump("Support.getSetLiteral ");
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     if (child.getId() == JJTSETLITERAL) {
       switch (((ASTSetLiteral) child).getType()) {
@@ -626,7 +619,6 @@ public class Support implements ParserTreeConstants {
         constraintPriority = getAnnInt(expr);
       }
     }
-    // System.out.println("defines " + definedVar);
   }
 
   Var getAnnVar(ASTAnnExpr node) {

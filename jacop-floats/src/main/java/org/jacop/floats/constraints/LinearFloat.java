@@ -112,8 +112,6 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
    */
   public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
-    // System.out.println ("FloatLinear of " + f + " on " + x);
-
     int fIndex = 0;
     while (list[fIndex] != f) {
       fIndex++;
@@ -127,8 +125,6 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
       if (i != fIndex) {
         df[i] = Derivative.getDerivative(store, list[i], vars, x);
 
-        // System.out.println ("derivate of " + list[i] + " = " + df[i]);
-
         ww[i] = weights[i] / (-weights[fIndex]);
       } else {
         v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
@@ -139,8 +135,6 @@ public class LinearFloat extends Linear implements UsesQueueVariable, FloatDeriv
 
     Constraint c = new LinearFloat(df, ww, "==", 0.0);
     Derivative.poseDerivativeConstraint(c);
-
-    // System.out.println ("Derivative of " + f + " over " + x + " is " + c);
 
     return v;
   }

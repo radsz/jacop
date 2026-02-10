@@ -424,7 +424,6 @@ public class Dbox {
       intersectionLength[i] =
           Math.min(origin[i] + length[i], other.origin[i] + other.length[i])
               - intersectionOrigin[i];
-      // return empty intersection if the size is negative
       if (intersectionLength[i] <= 0) {
         return null;
       }
@@ -575,7 +574,6 @@ public class Dbox {
 
         // slice before hole
         if (hole.origin[i] > lowerbound[i]) {
-          // else, we need to add the slice before, and update the lower bound
           Dbox newBox = newBox(dimension);
           int[] sliceLength = newBox.length;
           // origin is same as lower bound
@@ -598,7 +596,6 @@ public class Dbox {
 
         // slice after hole
         if (hole.origin[i] + hole.length[i] < upperbound[i]) {
-          // else, we need to add the slice after, and update the upper bound
           Dbox newBox = newBox(dimension);
           int[] sliceOrigin = newBox.origin;
           // origin is same as lower bound, except in the current dimension

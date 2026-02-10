@@ -82,7 +82,6 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
     for (int i = 0; i < Rects.length; i++) {
       Rects[i] = rectangles.get(i);
     }
-    // System.arraycopy(rectangles.toArray(),0,Rects,0,Rects.length);
   }
 
   void setValue(Rectangle[] rectangles) {

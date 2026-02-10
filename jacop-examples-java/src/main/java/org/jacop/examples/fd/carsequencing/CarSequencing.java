@@ -327,7 +327,6 @@ public class CarSequencing extends ExampleFd {
 
       System.out.println( counter );
 
-    // store.impose(new Regular(counter, cars));
 
       if (i == 0)
         union = counter;

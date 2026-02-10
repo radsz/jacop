@@ -118,7 +118,6 @@ public final class Core implements SolverComponent {
   public int numExplanationModules;
   public int numStartStopModules;
   public int numRestartModules;
-  // do we have to forget ?
   private boolean mustForget;
   // the maximum variable allowed
   private int maxVariable;
@@ -360,7 +359,6 @@ public final class Core implements SolverComponent {
    * @param maxVariable the new maximum variable. Must not be lower than solver.getMaxVariable().
    */
   public void setMaxVariable(int maxVariable) {
-    // logc(3, "higher variable for solver : "+maxVariable);
 
     if (maxVariable > this.maxVariable) {
       this.maxVariable = maxVariable;
@@ -519,8 +517,6 @@ public final class Core implements SolverComponent {
    */
   public void triggerPropagateEvent(int literal, int unitClauseId) {
     assert Math.abs(literal) <= maxVariable;
-    // dbStore.getConflictClause(unitClauseId, localClause);
-    // assert localClause.isUnit(trail);
 
     // inform the trail now
     trail.assertLiteral(literal, currentLevel, unitClauseId);

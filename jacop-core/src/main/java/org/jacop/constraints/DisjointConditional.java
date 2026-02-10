@@ -127,7 +127,6 @@ public class DisjointConditional extends Diff {
         throw new IllegalArgumentException(s);
       }
     }
-    // }
     if (size / 2 != 2) {
       String s = "\nRectangles of size > 2 not currently supported by Diff";
       throw new IllegalArgumentException(s);
@@ -369,7 +368,6 @@ public class DisjointConditional extends Diff {
     List<? extends IntVar> el = condVariables[j];
     int i = 0;
     while (!changed && i < el.size()) {
-      // System.out.println("checking "+ j + (Variable)el.get(i));
       changed = fdvQueue.contains(el.get(i));
       i++;
     }
@@ -391,7 +389,6 @@ public class DisjointConditional extends Diff {
       ProfileItem p = barrier.get(k);
       int hinderStart = p.min;
       int hinderStop = p.max;
-      // System.out.println(hinder);
       if (hinderStart - currentJposition >= durJ) {
         excludedState = false;
       }
@@ -579,14 +576,12 @@ public class DisjointConditional extends Diff {
       }
 
       if (availArea < area) {
-        // System.out.println("Fail area: "+ availArea+" < "+area+" at
         // level "+currentStore.level);
         throw Store.failException;
       } else
       // check whether there is enough room for
       // all minimal rectangles
       if (rectNumber < (totalNumberOfRectangles + 1)) {
-        // System.out.println("Fail number at level
         // "+currentStore.level);
         throw Store.failException;
       }
@@ -702,9 +697,7 @@ public class DisjointConditional extends Diff {
           IntDomain rOriginDom = r.origin[i].dom();
           int m = 0;
           for (; m < rOriginDom.noIntervals(); m++) {
-            // for (Interval rI : r.origin[i].dom()) {
             if (s >= rOriginDom.leftElement(m) && s <= rOriginDom.rightElement(m)) {
-              // System.out.println("Checking rectangles in
               // dimension "+i+
               // " starting at time interval "+ s + ".."
               // +(int)(s+r.length(i).min()-1)+
@@ -729,7 +722,6 @@ public class DisjointConditional extends Diff {
                         r.origin[i]);
                   }
 
-                  // currentStore.in(r.origin[i], Update);
                   r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
                 }
               }
@@ -785,7 +777,6 @@ public class DisjointConditional extends Diff {
                   maxLength);
             }
             r.length[i].domain.inMax(currentStore.level, r.length[i], maxLength);
-            // currentStore.in(r.length[i], MinInt, maxLength);
           }
         }
       }
@@ -815,7 +806,6 @@ public class DisjointConditional extends Diff {
       r = rectangles[l];
 
       boolean minLengthLt0 = false; // settled=true
-      // int maxLevel=0;
       for (int i = 0; i < r.dim(); i++) {
         minLengthLt0 = minLengthLt0 || (r.length[i].min() < 0); // (
         // rLength.min()
@@ -860,7 +850,6 @@ public class DisjointConditional extends Diff {
     int j = 0;
     while (excludedState && j < r.dim) {
       if (i != j) {
-        // System.out.println(r.toStringFull()+"\n"+consideredRect );
         IntDomain rOriginJdom = r.origin[j].dom();
         IntDomain rLengthJdom = r.length[j].dom();
         int minJ = rOriginJdom.min();
@@ -872,17 +861,14 @@ public class DisjointConditional extends Diff {
           int hinderJ = hinder.origin[j];
           barrier.addToProfile(hinderJ, hinderJ + hinder.length[j], 1);
         }
-        // System.out.println("Barrier : " + barrier);
 
         int currentJposition = minJ;
-        // System.out.println(maxJ+", "+durJ+", "+currentJposition);
         int k = 0;
         int barrierSize = barrier.size();
         while (k < barrierSize && excludedState) {
           ProfileItem p = barrier.get(k);
           int hinderStart = p.min;
           int hinderStop = p.max;
-          // System.out.println("Hinder =
           // "+hinderStart+".."+hinderStop);
           if (hinderStart - currentJposition >= durJ) {
             excludedState = false;
@@ -896,7 +882,6 @@ public class DisjointConditional extends Diff {
       }
       j++;
     }
-    // System.out.println("2. "+excludedState );
     return excludedState;
   }
 

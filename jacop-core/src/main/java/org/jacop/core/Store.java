@@ -889,7 +889,6 @@ public class Store {
     }
 
     // boolean variables are not trailed the same fashion as int variables.
-    // return default index specifying that this variable is not stored within vars array.
     if (var instanceof BooleanVar) {
       return -1;
     }
@@ -957,7 +956,6 @@ public class Store {
     assert trailManager.getLevel() == level
         : "An attempt to remeber a changed item at the level which have not been set properly by calling function setLevel()";
 
-    //      assert (!trailManager.trailContainsAllChanges
     //                      || trailManager.levelInfo.get(trailManager.levelInfo.size() - 1) ==
     // level) :
     //                             "An error. Trail should be containing all changes but it is not

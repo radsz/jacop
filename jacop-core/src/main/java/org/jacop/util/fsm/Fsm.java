@@ -247,8 +247,6 @@ public class Fsm {
 
     for (FsmState s : allStates) {
 
-      //       result.append( s.id ).append("\n");
-
       for (FsmTransition t : s.transitions) {
         result
             .append(s.id)

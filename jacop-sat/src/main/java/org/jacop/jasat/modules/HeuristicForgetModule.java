@@ -84,8 +84,6 @@ public final class HeuristicForgetModule
       while (clauseIterator.hasNext()) {
         if (numClausesToRemove <= 0) {
           break LBD; // stop forgetting
-
-          // try to remove this clause
         }
         int clauseId = clauseIterator.next();
         if (core.canRemove(clauseId)) {

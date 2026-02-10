@@ -190,8 +190,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
             if (new3.min != -1 && new3.min != new3.max) {
               if (new3.max == b) {
                 // rest of [a,b)
-                // System.out.println("***"+this);
-                // System.out.println("adding "+index+", ["+a+",
                 // "+b+")="+val);
                 addToProfile(index, new3.min, new3.max, val, exList);
               } else {

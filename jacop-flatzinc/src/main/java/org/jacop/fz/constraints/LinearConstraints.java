@@ -219,7 +219,6 @@ class LinearConstraints implements ParserTreeConstants {
             support.pose(
                 new Reified(new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3)), p4));
           }
-          // support.pose(new Reified(new LinearInt(p2, p1, "==", p3), p4));
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           support.pose(new Reified(new XplusCeqZ(p2[1], p3, p2[0]), p4));
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
@@ -487,7 +486,6 @@ class LinearConstraints implements ParserTreeConstants {
             support.pose(
                 new Implies(p4, new XmulCeqZ(p2[0], p1[0], support.dictionary.getConstant(p3))));
           }
-          // support.pose(new Implies(p4, new LinearInt(p2, p1, "==", p3)));
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
           support.pose(new Implies(p4, new XplusCeqZ(p2[1], p3, p2[0])));
         } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
@@ -949,7 +947,6 @@ class LinearConstraints implements ParserTreeConstants {
               support.pose(new SumInt(vect, ">", p2[posGe]));
             }
           } else {
-            // support.pose(new Linear(store, p2, p1, "<", p3));
             support.pose(new LinearInt(p2, p1, "<", p3));
           }
         }
@@ -972,7 +969,6 @@ class LinearConstraints implements ParserTreeConstants {
             if (support.options.debug()) {
               IO.println("Pruned variable " + p2[0] + " to be >= " + rhsValue);
             }
-            // support.pose(new XgteqC(p2[0], rhsValue));
           } else { // weight > 0
             int rhsValue = (int) (Math.round(Math.floor((float) p3 / (float) p1[0])));
 
@@ -981,7 +977,6 @@ class LinearConstraints implements ParserTreeConstants {
             if (support.options.debug()) {
               IO.println("% Pruned variable " + p2[0] + " to be <= " + rhsValue);
             }
-            // support.pose(new XlteqC(p2[0], rhsValue));
           }
         } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1 && p3 == 0) {
           support.pose(new XlteqY(p2[0], p2[1]));

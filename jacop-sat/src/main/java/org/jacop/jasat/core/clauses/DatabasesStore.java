@@ -201,7 +201,6 @@ public final class DatabasesStore implements SolverComponent, ClauseDatabaseInte
    * @param literal the literal
    */
   public void assertLiteral(int literal) {
-    // assert in all databases
     for (int i = 0; i < currentIndex; i++) {
       databases[i].assertLiteral(literal);
 

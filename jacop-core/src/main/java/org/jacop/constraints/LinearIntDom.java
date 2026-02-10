@@ -184,8 +184,6 @@ public class LinearIntDom extends LinearInt {
       s *= x[i].domain.getSize();
     }
 
-    // System.out.println("s = " + s);
-
     return s;
   }
 
@@ -211,8 +209,6 @@ public class LinearIntDom extends LinearInt {
     support = new IntervalDomain[l];
 
     findSupport(0, 0L);
-
-    // System.out.println("valid assignments: " + java.util.Arrays.asList(support));
 
     for (int i = 0; i < l; i++) {
       if (support[i] == null) {

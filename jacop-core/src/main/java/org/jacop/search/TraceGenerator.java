@@ -179,7 +179,6 @@ public class TraceGenerator<T extends Var>
     rootNode.id = 0;
     searchStack.push(rootNode);
 
-    //     for (Var v : vars) {
     for (int i = 0; i < vars.length; i++) {
       tracedVar.add(vars[i]);
       varIndex.put(vars[i], i);
@@ -481,7 +480,6 @@ public class TraceGenerator<T extends Var>
     }
 
     currentSearchNode = searchStack.pop();
-    //   SearchNode previousSearchNode = currentSearchNode;
 
     if (!status && returnCode) {
 

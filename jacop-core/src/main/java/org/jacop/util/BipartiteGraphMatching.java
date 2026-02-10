@@ -149,7 +149,6 @@ public class BipartiteGraphMatching {
         Q.add(u);
       } else {
 
-        // Else set distance as infinite so that this vertex
         // is considered next time
         dist[u] = INF;
       }
@@ -170,7 +169,6 @@ public class BipartiteGraphMatching {
           if (dist[pairV[v]] == INF) {
             // Consider the pair and add it to queue
             dist[pairV[v]] = dist[u] + 1;
-            // Q.push(pairV[v]);
             Q.add(pairV[v]);
           }
         }

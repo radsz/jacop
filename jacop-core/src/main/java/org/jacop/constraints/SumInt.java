@@ -193,7 +193,6 @@ public class SumInt extends PrimitiveConstraint {
         case ne:
           pruneNeq();
 
-          // if (sumXmin == sumXmax && sum.singleton() && sumXmin != sum.value())
           if (!reified && (sumXmin > sum.max() || sumXmax < sum.min())) {
             removeConstraint();
           }

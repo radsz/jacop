@@ -55,7 +55,6 @@ import org.junit.jupiter.api.Test;
  */
 public class QueueForwardTest {
 
-  //   String nl = System.lineSeparator();
   String nl = "\n";
 
   @Test

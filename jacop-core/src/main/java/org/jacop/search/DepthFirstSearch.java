@@ -334,8 +334,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
     boolean consistent;
 
-    // int textInterfaceLength = 0;
-
     if (check) {
 
       if (timeOutCheck && System.currentTimeMillis() > timeOut) {

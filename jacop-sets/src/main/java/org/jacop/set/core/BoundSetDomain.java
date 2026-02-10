@@ -236,7 +236,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
   public SetDomain cloneLight() {
     // FIXME, why no glb and lub cloning is safe?
     return new BoundSetDomain(glb, lub, cardinality);
-    //     return new SetDomain(glb.cloneLight(), lub.cloneLight());
   }
 
   /**
@@ -330,7 +329,6 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     // FIXME, do we need to do this expensive check in this manner, or at all here?
     if (glb.contains(inGlb) && inLub.contains(lub)) {
       // New domain is the same or "larger" than the old one; do nothing,
-      // do not re-evaluate constrained assigned to this variable
       return;
     }
 
@@ -1073,13 +1071,9 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
 
       int event;
 
-      //     if (intersect.domainId() == IntDomain.SmallDenseDomainID && lub.domainId() ==
       // IntDomain.IntervalDomainID) {
-      //       IntDomain replacement = intersect.cloneLight();
       //       event = replacement.intersectAdapt(lub);
       //       lub = replacement;
-      //     }
-      //     else
       event = lub.intersectAdapt(intersect);
 
       if (event == Domain.NONE) {

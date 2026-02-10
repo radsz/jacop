@@ -101,10 +101,8 @@ public class AinB extends PrimitiveConstraint {
       }
     }
 
-    // if (bHasChanged)
     a.domain.inLub(store.level, a, b.domain.lub());
 
-    // if (aHasChanged)
     b.domain.inGlb(store.level, b, a.domain.glb());
 
     if (strict) {

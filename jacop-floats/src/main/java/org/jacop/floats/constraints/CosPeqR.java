@@ -219,17 +219,12 @@ public class CosPeqR extends Constraint
               "Selected impossible case in sin, cos, asin or acos constraint");
       }
 
-      // System.out.println (q + " in " + qMin + ".." + qMax);
-
       q.domain.in(store.level, q, qMin, qMax);
-
-      // System.out.println ("q after in " + q);
 
       // p update
       double pMin = Math.acos(qMax); // range 0..PI
       double pMax = Math.acos(qMin); // range 0..PI
 
-      // System.out.println ("acos result " + p + " in " + pMin +".." + pMax + " copied to  n times
       // 0 .. PI");
 
       pMin = FloatDomain.down(pMin);
@@ -251,12 +246,7 @@ public class CosPeqR extends Constraint
 
       p.domain.in(store.level, p, pDom);
 
-      // System.out.println ("p after in " + p);
-
     } while (store.propagationHasOccurred);
-
-    // System.out.println ("2. CosPeqR("+p+", "+q+")");
-
   }
 
   FloatInterval normalize(FloatVar v) {

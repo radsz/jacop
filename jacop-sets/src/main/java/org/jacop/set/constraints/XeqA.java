@@ -80,9 +80,7 @@ public class XeqA extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    // if (aHasChanged)
     x.domain.in(store.level, x, a.domain.lub());
-    // if (xHasChanged)
     a.domain.inLub(store.level, a, x.domain);
 
     a.domain.inCardinality(store.level, a, 1, 1);

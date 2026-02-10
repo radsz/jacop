@@ -136,7 +136,6 @@ public class XeqY extends PrimitiveConstraint {
 
   @Override
   public boolean satisfied() {
-    // return grounded() && x.min() == y.min();  // inefficient grounded() :(
     int xMin = x.min();
     return x == y || x.singleton(xMin) && y.singleton(xMin);
   }

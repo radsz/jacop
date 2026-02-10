@@ -116,7 +116,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   int creditValue;
   int bbsValue;
 
-  // ComparatorVariable tieBreaking = null;
   ComparatorsVar<T> selVars;
   ComparatorVariable<IntVar> tieBreakingInt;
   ComparatorVariable<SetVar> tieBreakingSet;
@@ -151,8 +150,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @param n the index of the child node to process
    */
   void searchParameters(SimpleNode node, int n) {
-
-    // node.dump("");
 
     ASTAnnotation ann = (ASTAnnotation) node.jjtGetChild(n);
     search_type = ann.getAnnId();
@@ -260,8 +257,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         indomain = max > min ? "indomain_max" : "indomain_min";
       }
       case "priority_search" -> {
-        // ann.dump("");
-
         prioritySearch = true;
 
         SimpleNode expr1 = (SimpleNode) ann.jjtGetChild(0);
@@ -269,14 +264,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
         SimpleNode searches = (SimpleNode) ann.jjtGetChild(1);
         makeVectorOfSearches(searches);
-        // System.out.println(search_seq);
 
         ASTAnnotation expr2 = (ASTAnnotation) ann.jjtGetChild(2);
         var_selection_heuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnotation expr3 = (ASTAnnotation) ann.jjtGetChild(3);
         explorationType(expr3);
-        // System.out.println(explore);
         if (!"complete".equals(explore)) {
           System.err.println("Warning: not recognized search exploration type; use \"complete\"");
         }
@@ -313,7 +306,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       case null, default -> IO.println("% Warning: Ignored search annotation " + search_type);
     }
 
-    //      throw new IllegalArgumentException("Not supported search annotation "+search_type+";
     // compilation aborted.");
   }
 
@@ -332,8 +324,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         SearchItem<T> subSearch = new SearchItem<>(store, dictionary);
 
         ASTAnnotation ann = (ASTAnnotation) body.jjtGetChild(i);
-        // if (ann.getAnnId().equals("seq_search"))
-        //      throw new RuntimeException("Error: Nested seq_search or seq_search in
         // priority_search not supported; execution aborted");
 
         subSearch.searchParameters(body, i);
@@ -378,7 +368,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
                 ASTAnnExpr bv = (ASTAnnExpr) bbs.jjtGetChild(0).jjtGetChild(0);
                 if (bv.jjtGetNumChildren() == 1) {
                   bbsValue = ((ASTScalarFlatExpr) bv.jjtGetChild(0)).getInt();
-                  // System.out.println("Credit("+creditValue+", "+bbsValue+")");
                   return;
                 }
               }
@@ -418,8 +407,6 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @param n the index parameter (currently unused)
    */
   void searchParametersForSeveralAnnotations(SimpleNode node, int n) {
-
-    // node.dump("");
 
     int count = node.jjtGetNumChildren();
 

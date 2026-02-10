@@ -202,8 +202,6 @@ public class OrBoolVector extends PrimitiveConstraint {
   @Override
   public void notConsistency(Store store) {
 
-    // do {
-
     //     store.propagationHasOccurred = false;
 
     int start = position.value();

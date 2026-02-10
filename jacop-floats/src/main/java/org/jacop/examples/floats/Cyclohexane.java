@@ -145,13 +145,10 @@ public class Cyclohexane {
             store, new FloatVar[] {x, y, z}, null); // new SmallestDomainFloat<FloatVar>());
     label.setSolutionListener(new PrintOutListener<>());
     label.getSolutionListener().recordSolutions(true);
-    // label.getSolutionListener().searchAll(true);
     label.setAssignSolution(true);
     // s.leftFirst = false;
 
     label.labeling(store, s);
-
-    // label.printAllSolutions();
 
     IO.println("\nPrecision = " + FloatDomain.precision());
 

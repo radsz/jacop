@@ -120,7 +120,6 @@ public class Bnode extends BinaryNode {
       parent.propagate();
 
     } else { // no change in the domain but it was called since the children have been changed;
-      // do prune and do not contine to propagate
 
     }
   }
@@ -176,7 +175,6 @@ public class Bnode extends BinaryNode {
       parent.propagateAndPrune();
 
     } else { // no change in the domain but it was called since the children have been changed;
-      // do prune and do not contine to propagate
 
       prune(node_min, node_max);
     }

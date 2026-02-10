@@ -85,7 +85,6 @@ public class TanExample {
         new SplitSelectFloat<>(
             store, new FloatVar[] {p, q}, null); // new SmallestDomainFloat<FloatVar>());
     label.setAssignSolution(true);
-    // label.setSolutionListener(new PrintOutListener<FloatVar>());
     label.getSolutionListener().recordSolutions(true);
     label.getSolutionListener().searchAll(true);
     s.roundRobin = false;

@@ -349,8 +349,6 @@ public class Distance extends PrimitiveConstraint implements Stateful {
           // X - Y = Z => Y = X - Z
           // -X + Y = Z => Y = X + Z
 
-          // Domain first = Domain.domain.minus(X.dom(), Z.dom());
-
           y.domain.inComplement(store.level, y, x.value() - z.value());
           y.domain.inComplement(store.level, y, x.value() + z.value());
 

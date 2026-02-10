@@ -248,7 +248,6 @@ public class SocialGolfer extends ExampleSet {
       vs[n] = v[i];
       ws[n] = -1;
       store.impose(new LinearInt(vs, ws, "==", 0));
-      // store.impose(new SumWeight(var[i], weights, v[i]));
     }
 
     for (int i = 0; i < weeks - 1; i++) {
@@ -281,7 +280,6 @@ public class SocialGolfer extends ExampleSet {
             new MaxGlbCard<>(),
             new IndomainSetMin<>());
 
-    // label.setSolutionListener(new SetSimpleSolutionListener<SetVar>());
     label.getSolutionListener().searchAll(false);
     label.getSolutionListener().recordSolutions(false);
 

@@ -924,7 +924,6 @@ public class Tree {
     }
 
     TreeNode current = root;
-    //   int usedCapacity = 0;
     int obtainedProfit = 0;
 
     while (!current.isLeaf()) {
@@ -972,7 +971,6 @@ public class Tree {
 
     TreeNode current = root;
     int usedCapacity = 0;
-    //   int obtainedProfit = 0;
 
     while (!current.isLeaf()) {
 

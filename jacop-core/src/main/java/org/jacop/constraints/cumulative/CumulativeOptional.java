@@ -108,7 +108,6 @@ public class CumulativeOptional extends Cumulative {
       store.propagationHasOccurred = false;
 
       up.sweepPruning(store, taskNormal, opt);
-      // up.updateTasksRes(store, ts);
 
       if (!store.propagationHasOccurred && doEdgeFind) {
         // overloadCheck();  // not needed if profile propagator is used

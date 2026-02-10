@@ -104,8 +104,6 @@ public class NonTransitiveDice extends ExampleFd {
    */
   static void main(String[] args) {
 
-    //   int sols = 0;
-
     boolean firstSolutionFound = false;
 
     int noDices = 4;
@@ -243,16 +241,6 @@ public class NonTransitiveDice extends ExampleFd {
     }
 
     // Special implied constraints (type 1)
-    // do not decrease number of backtracks
-    // for (int i = 0; i < noDices; i ++)
-    // for (int j = 0; j < noSides; j++)
-    // for (int m = 0; m < noSides - 1; m++)
-    // store.impose(new XgteqY(wins[i][j][m], wins[i][j][m+1]));
-
-    // for (int i = 0; i < noDices; i ++)
-    // for (int m = 0; m < noSides; m++)
-    // for (int j = noSides - 1; j > 0; j--)
-    // store.impose(new XgteqY(wins[i][j][m], wins[i][j - 1][m]));
 
     // Another type of implied constraints, they do reduce no of
     // backtracks.
@@ -340,7 +328,6 @@ public class NonTransitiveDice extends ExampleFd {
     store.impose(new Max(faces, maxNo));
 
     // Simple maximum constraint on cost variable
-    // store.setLevel(store.level + 1);
 
     vars = new ArrayList<>();
 

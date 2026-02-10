@@ -79,7 +79,6 @@ public class FlatzincLoader {
     } catch (FailException _) {
       IO.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
       // } catch (ArithmeticException e) {
-      //     System.err.println("%% Evaluation of model resulted in an overflow.");
     } catch (ParseException | TokenMgrError e) {
       IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {

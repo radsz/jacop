@@ -361,7 +361,6 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
         this.tuples[i][j] = new int[supportCount[i][j]][];
       }
 
-      //     int m = 0;
       for (int[] t : tuplesFromConstructor) {
 
         int value = t[i];

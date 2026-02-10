@@ -68,7 +68,6 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 
       // right shift operator is a division by 2, more efficient
       int middle = dMin + ((dMax - dMin) >> 1);
-      // int middle = Dmin + ((Dmax - Dmin) / 2);
 
       if (!domain.contains(middle)) {
         int iBefore = 0;
@@ -112,7 +111,6 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
 
       // right shift operator is a division by 2, more efficient
       int middle = dMin + ((dMax - dMin) >> 1);
-      // int middle = Dmin + ((Dmax - Dmin) / 2);
 
       if (!dom.contains(middle)) {
         int iBefore = 0;

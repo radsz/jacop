@@ -214,8 +214,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
     // arc already deleted ?
     // (This can happen if the arc is attached to an S-variable)
-    //   if (arc.index == DELETED_ARC)
-    //     return;
 
     // Capacity variable was bounded
     if (variable == xVar && arc.index != DELETED_ARC) {
@@ -242,7 +240,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
       }
     } else if (variable == wVar) { // Weight variable was bounded
       // get new cost
-      // int newCost = network.isMinimizng() ? wVar.min() : -wVar.max();
       int newCost = wVar.min();
 
       // increase cost to new bound
@@ -293,7 +290,6 @@ public final class ArcCompanion implements VarHandler, Comparable<ArcCompanion> 
 
     if (xVar != null) {
       changeCapacity(xVar.min(), xVar.max());
-      //     assert (!xVar.singleton()) : " " + xVar + ", " + xVar.domain;
     }
   }
 

@@ -292,18 +292,14 @@ public class SendMoreMoney extends ExampleFd {
     int[] weights4 = {1000, 100, 10, 1};
 
     store.impose(new LinearInt(send, weights4, "==", valueSend));
-    // store.impose(new SumWeight(send, weights4, valueSend));
     store.impose(new LinearInt(more, weights4, "==", valueMore));
-    // store.impose(new SumWeight(more, weights4, wvalueMore));
     store.impose(new LinearInt(money, weights5, "==", valueMoney));
-    // store.impose(new SumWeight(money, weights5, valueMoney));
 
     store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     int[] weightsImplied = {1000, 91, 10, 1, -9000, -900, -90};
     IntVar[] varsImplied = {s, e, r, d, m, o, n};
     store.impose(new LinearInt(varsImplied, weightsImplied, "==", y));
-    // store.impose(new SumWeight(varsImplied, weightsImplied, y));
 
     store.impose(new XneqC(s, 0));
     store.impose(new XneqC(m, 0));

@@ -210,7 +210,6 @@ public class ProfileOptional {
 
     int profilePointer = 0;
     if (existsOpt) {
-      // System.out.println("%=================");
       utilizationProfile.add(new Event(profile, null, optMin, 0));
     }
     int curProfile = 0;
@@ -227,7 +226,6 @@ public class ProfileOptional {
 
           // ====> profile to be used by optional tasks
           if (existsOpt) {
-            // System.out.println("% "+e);
 
             Event ce = utilizationProfile.get(profilePointer);
             if (ce.date() == e.date()) {

@@ -456,7 +456,6 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
               list[lastAssignedVariablePosition].value());
     }
 
-    // int cnt=0;
     firstResidue = -1;
     int previous = -1;
     int current = first;

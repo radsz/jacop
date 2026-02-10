@@ -137,23 +137,18 @@ public class MinCostFlow {
     label.setAssignSolution(true);
     // s.leftFirst = false;
     label.setTimeOut(1);
-    // label.setSolutionListener(new PrintOutListener<FloatVar>());
 
     label.labeling(store, s, cost);
 
     IO.println(cost);
-    // System.out.printf ("cost = %.2f\n", cost.value());
 
     for (FloatVar x : X) {
       System.out.printf("%.2f, ", x.value());
     }
     IO.println();
-    // for (int i = 0; i < X.length; i++) {
     //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
-    //     System.out.println ("X["+i+"] = "+ X[i].min()+".."+X[i].max() + " * " + costs[i] + "
     // result =" +
     //       (double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
-    // }
 
     IO.println("\nPrecision = " + FloatDomain.precision());
   }

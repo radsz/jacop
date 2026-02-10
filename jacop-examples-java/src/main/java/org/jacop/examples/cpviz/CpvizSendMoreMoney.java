@@ -122,7 +122,6 @@ public class CpvizSendMoreMoney {
     }
 
     //     // Main equation of the problem SEND + MORE = MONEY
-    //     store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     // Since S is the first digit of SEND
     // and M is the first digit of MORE or MONEY
@@ -157,8 +156,6 @@ public class CpvizSendMoreMoney {
     store.impose(new XplusYeqZ(t5, letters[iD], letters[iY]));
 
     store.consistency();
-    //       System.out.println(vars);
-    //   }
 
     //   /**
     //    * This creates a standard search, which looks for a single solution.
@@ -175,18 +172,11 @@ public class CpvizSendMoreMoney {
 
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect);
 
-    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true);
     select.addTracedVar(letters[iE]);
 
-    //     search.setConsistencyListener((ConsistencyListener)select);
-    //     search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
-
-    //     return result;
-
   }
 
   /**
@@ -233,16 +223,12 @@ public class CpvizSendMoreMoney {
     // MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
     store.impose(new LinearInt(send, weights4, "==", 0));
     store.impose(new LinearInt(more, weights4, "==", 0));
-    // store.impose(new SumWeight(money, weights5, valueMoney));
     store.impose(new LinearInt(money, weights5, "==", 0));
 
     // Main equation of the problem SEND + MORE = MONEY
     store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
 
     //     // 1000*S + 91*E - 90*N + D - 9000*M - 900*O + 10*R = Y
-    //     int[] w = {1000, 91, -90, 1, -9000, -900, 10};
-    //     IntVar[] vs = {s, e, n, d, m, o, r};
-    //     store.impose(new SumWeight(vs, w, y));
 
     // Since S is the first digit of SEND
     // and M is the first digit of MORE or MONEY
@@ -264,14 +250,8 @@ public class CpvizSendMoreMoney {
     //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true, new IntVar[]
     // {s, e, n, d, m, o, r, y});
 
-    //     search.setConsistencyListener((ConsistencyListener)select);
-    //      search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select);
-
-    //     return result;
-
   }
 }

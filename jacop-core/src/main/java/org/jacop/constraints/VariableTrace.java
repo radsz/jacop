@@ -101,7 +101,6 @@ public class VariableTrace extends Constraint implements UsesQueueVariable, Remo
     for (Var v : vars) {
       v.putModelConstraint(this, getConsistencyPruningEvent(v));
       // we do not want to print initial values
-      // queueVariable(store.level, v);
     }
 
     store.countConstraint();

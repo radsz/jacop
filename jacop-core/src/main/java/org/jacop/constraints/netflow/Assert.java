@@ -100,7 +100,6 @@ public class Assert {
             out += a.sister.capacity;
           }
         }
-        //       System.out.println("  " + a);
       }
 
       assert n.balance == out - in
@@ -220,7 +219,6 @@ public class Assert {
           assert i == j.parent : "\ni = " + i + "\nj = " + j + "\nij = " + arc + "\n";
         }
       } else if (arc.index != -3) { // non-tree arc
-        //       String s = arc.toString();
 
         assert arc.index == arc.sister.index;
         assert 0 <= arc.index && arc.index < g.numArcs : g.numArcs + ", " + arc;
@@ -238,7 +236,6 @@ public class Assert {
           boolean b1 = arc.sister == g.lower[arc.index];
           boolean b2 = arc == g.lower[arc.index];
           assert b1 ^ b2;
-          // assertTrue(s, b1 ^ b2);
         }
       } else { // deleted arc
         del_cost += arc.longCost();
@@ -291,7 +288,6 @@ public class Assert {
         for (Arc arc : node.adjacencyList) {
           if (arc != null) {
             // TODO: CRUCIAL, BUG?, assert removed.
-            //         assertTrue(arc.forward);
             assert (arc.head == node) ^ (arc.tail() == node);
             assert arc.index != NetworkSimplex.DELETED_ARC;
             count2++;
@@ -318,7 +314,6 @@ public class Assert {
         continue;
       }
 
-      // System.out.println("@@ " + arc);
       int reduced = arc.reducedCost();
 
       if (arc.capacity > 0 && reduced < 0) {
@@ -328,7 +323,6 @@ public class Assert {
         s.append("\n").append(arc);
       }
     }
-    // System.out.println(s);
     assert s.isEmpty() : "non-optimal arcs:" + s;
 
     return true;

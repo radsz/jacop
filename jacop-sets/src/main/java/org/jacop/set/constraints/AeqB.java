@@ -72,10 +72,8 @@ public class AeqB extends PrimitiveConstraint {
   @Override
   public void consistency(Store store) {
 
-    // if (bHasChanged)
     a.domain.in(store.level, a, b.dom());
 
-    // if (aHasChanged)
     b.domain.in(store.level, b, a.dom());
 
     a.domain.inCardinality(store.level, a, b.domain.card().min(), b.domain.card().max());

@@ -271,9 +271,6 @@ public class MagicSquares extends ExampleFd {
     store.impose(new XltY(squares[0], squares[number - 1]));
     store.impose(new XltY(squares[0], squares[number * number - 1]));
     store.impose(new XltY(squares[0], squares[number * number - number]));
-
-    // store.print();
-
   }
 
   /** IT creates a dual model. */

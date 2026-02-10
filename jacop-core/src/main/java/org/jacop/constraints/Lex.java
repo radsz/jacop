@@ -148,7 +148,6 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
 
     // first index represents compared vectors and the second variables within vectors
-    //   int numberStates = 0;
     int numberVar = 0;
 
     BooleanVar[][] lt = new BooleanVar[x.length - 1][];
@@ -284,7 +283,6 @@ public class Lex extends DecomposedConstraint<Constraint> {
     }
 
     // first index represents compared vectors and the second varinbales within vectors
-    //   int numberStates = 0;
     int numberVar = 0;
     BooleanVar[][] lt = new BooleanVar[x.length - 1][];
     BooleanVar[][] eq = new BooleanVar[x.length - 1][];

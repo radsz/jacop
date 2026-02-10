@@ -423,11 +423,7 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
 
     if (!isRecordingSolutions()) {
 
-      // if (parentSolutionNo[0] == parentNo)
       return 0;
-      // else
-      //   return -1;
-
     }
 
     int left = 0;

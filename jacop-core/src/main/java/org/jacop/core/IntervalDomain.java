@@ -78,7 +78,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   public IntervalDomain() {
     // FIXME, check what is calling it and maybe remove some inappropriate callers.
     this(0);
-    // throw new RuntimeException("Do not use.");
   }
 
   /**
@@ -740,7 +739,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     int r = size - 1;
 
     while (l <= r) {
-      // Java (l + r) / 2 rounds-up down (floor) like Math.floorDiv((l + r), 2);
       // but shift right by one position does it also and it is faster ;)
       int m = (l + r) >> 1;
       Interval i = intervals[m];
@@ -1229,7 +1227,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
     }
 
     int pointer1 = 0;
-    // int pointer2 = 0;
 
     Interval interval1 = intervals[pointer1];
 
@@ -1697,7 +1694,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
             // interval (min, max) ends before interval of dom1 ends
             result.unionAdapt(new Interval(max + 1, currentDomain1.max()));
           }
-          // else: skip current interval of i1 completely
 
         } else { // currentDomain1.min < min)
 
@@ -2048,7 +2044,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           continue;
         }
 
-        // if (currentDomain1.max > currentDomain2.min ||
         // currentDomain2.max > currentDomain1.min) {
 
         int min = Math.min(currentDomain1.min(), currentDomain2.min());
@@ -2265,7 +2260,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       Interval currentDomain2 = domain.getInterval(i2);
 
       int max1 = size;
-      // int max2 = intervalDomain.size;
 
       while (true) {
 
@@ -2290,7 +2284,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
           }
         }
 
-        // if (currentDomain1.max > currentDomain2.min ||
         // currentDomain2.max > currentDomain1.min) {
 
         int min = Math.min(currentDomain1.min(), currentDomain2.min());
@@ -2805,8 +2798,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
 
   @Override
   public void in(int storeLevel, Var var, IntDomain domain) {
-
-    // System.out.println(var.domain + " " + domain);
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -3602,8 +3593,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   public void inComplement(int storeLevel, Var var, int complement) {
 
     assert checkInvariants() == null : checkInvariants();
-
-    //      System.out.println(var.domain + " " + complement);
 
     int counter = intervalNo(complement);
 
@@ -5311,8 +5300,6 @@ public class IntervalDomain extends IntDomain implements Cloneable {
       SmallDenseDomain input = (SmallDenseDomain) domain;
 
       // TODO: use contains.
-      //  if (input.contains(this))
-      //  if (input.eq(this))
 
       if (input.isEmpty()) {
         size = 0;

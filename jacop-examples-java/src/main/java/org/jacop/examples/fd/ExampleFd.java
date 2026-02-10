@@ -322,7 +322,6 @@ public abstract class ExampleFd {
 
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
-      // search.printAllSolutions();
     } else {
       IO.println("Failed to find any solution");
     }
@@ -430,7 +429,6 @@ public abstract class ExampleFd {
 
     while (timeout) {
 
-      // search.setPrintInfo(false);
       search.setNodesOut(1000);
 
       result = search.labeling(store, select);

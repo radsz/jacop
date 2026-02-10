@@ -218,7 +218,6 @@ public final class SatWrapper extends Constraint
     if (!registeredVars.contains(variable)) {
 
       registeredVars.add(variable);
-      // registeredVarsArray.add(variable);
 
       // tell the Sat Change listener
       satChangesListener.ensureAccess(variable);
@@ -295,7 +294,6 @@ public final class SatWrapper extends Constraint
      */
     while (!toAssertLiterals.isEmpty()) {
 
-      // do assert a literal, and propagate other literals if needed
       processOneLiteral();
 
       // check SAT consistency, because the previous assertion may have
@@ -337,7 +335,6 @@ public final class SatWrapper extends Constraint
         core.toPropagate.clear();
         throw Store.failException;
       }
-      // assert trail.values[Math.abs(literal)] == literal; // not unsat
       assert log(
           this, "literal " + literal + " already set (to " + trail.values[Math.abs(literal)] + ")");
 
@@ -452,7 +449,6 @@ public final class SatWrapper extends Constraint
 
       assert log(this, "core SAT level %d", core.currentLevel);
 
-      // do the real backjump
       core.backjumpToLevel(newMaxSatLevel);
       currentSatLevel = core.currentLevel;
       assert currentSatLevel == newMaxSatLevel;
@@ -680,8 +676,6 @@ public final class SatWrapper extends Constraint
 
     System.err.println("impose constraint in SatWrapper is not defined");
     throw new RuntimeException();
-
-    // constraint.imposeToSat(this);
   }
 
   @Override
@@ -717,7 +711,6 @@ public final class SatWrapper extends Constraint
     assert range != null;
 
     if (value < range.min || value > range.max) {
-      // System.out.println("Value for " + variable + " is out of bounds for value " + value);
       return 0;
     }
     return range.cpValueToBoolVar(value, isEquality);

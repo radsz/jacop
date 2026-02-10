@@ -229,7 +229,6 @@ public final class Arc {
     int total = capacity + flow;
 
     ArcCompanion comp = forward ? companion : sister.companion;
-    //   String x = (companion == null) ? "" : ", offset=" + companion.flowOffset;
     String compstr = comp == null ? "" : ", forward = " + forward + ", companion = " + comp;
 
     return "["

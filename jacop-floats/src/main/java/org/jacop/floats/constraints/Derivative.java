@@ -88,8 +88,6 @@ public class Derivative {
    */
   public static FloatVar getDerivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
 
-    // System.out.println ("Var = " + f);
-
     List<Constraint> constraints = new ArrayList<>();
 
     if (f == x) {
@@ -105,8 +103,6 @@ public class Derivative {
               Constraint currentConstraint = f.dom().modelConstraints[i][j];
               if (eval.search(currentConstraint) == -1) {
 
-                // System.out.println ("["+i+"]["+j+"]" + f.dom().modelConstraints[i][j]);
-
                 if (!derivateConstraints.contains(currentConstraint)) {
                   constraints.add(currentConstraint);
                 }
@@ -120,8 +116,6 @@ public class Derivative {
     if (constraints.size() == 1) {
 
       Constraint currentConstraint = constraints.getFirst();
-
-      // System.out.println ("Evaluate " + currentConstraint);
 
       if (!(currentConstraint instanceof FloatDerivableConstraint)) {
         throw new UnsupportedOperationException(
@@ -163,8 +157,6 @@ public class Derivative {
   }
 
   static void poseDerivativeConstraint(Constraint c) {
-
-    // System.out.println (c);
 
     store.impose(c);
 

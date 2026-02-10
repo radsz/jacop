@@ -136,10 +136,6 @@ public class CpvizNetworkFlow {
     // Trace --->
     final SelectChoicePoint<IntVar> select = new TraceGenerator<>(label, varSelect);
 
-    //      SelectChoicePoint<IntVar> select = new TraceGenerator<IntVar>(varSelect, false);
-    //      label.setConsistencyListener((ConsistencyListener)select);
-    //      label.setExitChildListener((ExitChildListener)select);
-    //      label.setExitListener((ExitListener)select);
     // <---
 
     DepthFirstSearch<IntVar> costSearch = new DepthFirstSearch<>();

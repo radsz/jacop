@@ -84,7 +84,6 @@ public class TestHelper {
 
     boolean result = search.labeling(store, select);
 
-    // search.printAllSolutions();
     return search.getSolutionListener().solutionsNo();
   }
 
@@ -104,7 +103,6 @@ public class TestHelper {
 
     boolean result = search.labeling(store, select);
 
-    // search.printAllSolutions();
     return search.getSolutionListener().solutionsNo();
   }
 }

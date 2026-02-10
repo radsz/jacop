@@ -190,7 +190,6 @@ public class Cumulative extends CumulativeBasic {
 
     // tasks sorted in non-decreasing order of est
     TaskView[] estList = filterZeroTasks(tn); // new TaskView[taskNormal.length];
-    // System.arraycopy(tn, 0, estList, 0, estList.length);
     if (estList == null) {
       return;
     }
@@ -212,9 +211,7 @@ public class Cumulative extends CumulativeBasic {
 
     // ========== Detect Order ============
     int[] prec = detectOrder(tree, lctList, auxOrderListInv, limit.max());
-    // System.out.println("*** prec = " + intArrayToString(prec));
     // write ThetaLambdaTree as dot file for visualization
-    // tree.printTree("tree_init");
 
     // ========== Adjust Bounds ============
     adjustBounds(store, tree, lctList, prec, limit.max());
@@ -275,7 +272,6 @@ public class Cumulative extends CumulativeBasic {
       capacities = preComputedCapacities;
       capMap = preComputedCapMap;
     }
-    // System.out.println("capacities = " + capacities);
 
     int[][] update = new int[capacities.size()][n];
 
@@ -289,7 +285,6 @@ public class Cumulative extends CumulativeBasic {
       for (int l = n - 1; l >= 0; l--) { // by non-decreasing of lct
 
         tree.enableNode(t[l].treeIndex, ci);
-        // tree.printTree("tree_task_"+t[l].index);
 
         long envlc = tree.calcEnvlc(t[l].lct(), ci);
         int diff = Integer.MIN_VALUE;

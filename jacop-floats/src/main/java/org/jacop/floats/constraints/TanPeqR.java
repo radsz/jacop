@@ -85,8 +85,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
   void boundConsistency(Store store) {
 
-    // System.out.println ("1. " + this);
-
     if (p.max() - p.min() >= FloatDomain.PI) {
       return;
     }
@@ -108,8 +106,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
         min = normP.min();
         max = normP.max();
       }
-
-      // System.out.println ("Normalized min/max = " + min+".."+max);
 
       FloatInterval minMax = new FloatInterval(min, max);
       if (minMax.singleton()) {
@@ -138,7 +134,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               break;
             default:
               return;
-              // throw new InternalException("Selected impossible case in tan and atan constraint");
           }
           break;
 
@@ -159,7 +154,6 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               break;
             default:
               return;
-              // throw new InternalException("Selected impossible case in tan and atan constraint");
           }
           break;
 
@@ -176,26 +170,18 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
               break;
             default:
               return;
-              // throw new InternalException("Selected impossible case in tan and atan constraint");
-
           }
           break;
         default:
           return;
-          // throw new InternalException("Selected impossible case in tan and atan constraint");
       }
 
-      // System.out.println (q + " in " + qMin + ".." + qMax);
-
       q.domain.in(store.level, q, qMin, qMax);
-
-      // System.out.println ("q after in " + q);
 
       // p update
       double pMin = Math.atan(qMin); // range -PI/2..PI/2
       double pMax = Math.atan(qMax); // range -PI/2..PI/2
 
-      // System.out.println ("atan result " + p + " in " + pMin +".." + pMax + " copied to  n times
       // -PI/2 .. PI/2");
 
       pMin = FloatDomain.down(pMin);
@@ -217,12 +203,7 @@ public class TanPeqR extends Constraint implements SatisfiedPresent {
 
       p.domain.in(store.level, p, pDom); // .min(), pDom.max());
 
-      // System.out.println ("p after in " + p);
-
     } while (store.propagationHasOccurred);
-
-    // System.out.println ("2. TanPeqR("+p+", "+q+")");
-
   }
 
   /*

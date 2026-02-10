@@ -415,7 +415,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       // change in x variable doesn't affect the pruning of y variable
       countBoundConsistency(store);
 
-      // do the pruning
       for (int j = 0; j < stampValue; j++) {
 
         assert match3[j] >= 0 && match3[j] < ySize;
@@ -666,7 +665,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void firstPass() {
 
     pFirst.clear();
-    //   int j = 0;
     int xIndex = 0;
     int maxY;
     int match1xOrderIndex = 0;
@@ -707,7 +705,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
     }
 
-    // do we have to check that the queue is empty ? If not it means that an x was not paired.
     // I add the test on the queue. It is possible if the maxY = 0 and is the last one visited
     // otherwise the element in the queue can be used by the next yNode.
     if (!pFirst.isEmpty()) {
@@ -737,7 +734,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
   private void secondPass() {
 
     pSecond.clear();
-    //   int j = 0;
     int top;
     int xIndex = 0;
     int minY;
@@ -887,8 +883,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
 
     // reachedFromS and reachesS need to contain only value false.
     // by default satisfied by Java, therefore the two lines below are not needed.
-    // Arrays.fill(reachedFromS, false);
-    // Arrays.fill(reachesS, false);
 
     // init reachedFromS and reachesS
     int comp;
@@ -1148,7 +1142,6 @@ public class GCC extends Constraint implements UsesQueueVariable, Stateful, Sati
       }
       log.debug("{}", sb);
     }
-    // do the pruning of the domain
     for (int i = 0; i < ySize; i++) {
       if (debug) {
         log.debug(

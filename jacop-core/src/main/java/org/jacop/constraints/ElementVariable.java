@@ -205,19 +205,16 @@ public class ElementVariable extends Constraint
         }
       }
 
-      // IntDomain valDomain = new IntervalDomain();
       int valMin = IntDomain.MaxInt;
       int valMax = IntDomain.MinInt;
       for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
         int position = e.nextElement() - 1 - indexOffset;
-        // valDomain.addDom(list[position].domain);
         int min = list[position].domain.min();
         int max = list[position].domain.max();
         valMin = Math.min(valMin, min);
         valMax = Math.max(valMax, max);
       }
       value.domain.in(store.level, value, valMin, valMax);
-      // value.domain.in(store.level, value, valDomain);
 
       // Consequtive execution of the consistency function.
 

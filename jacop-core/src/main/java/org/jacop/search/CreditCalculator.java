@@ -289,7 +289,6 @@ public class CreditCalculator<T extends Var>
         for (ExitChildListener<T> exitChildListener : exitChildListeners) {
           exitChildListener.leftChild(var, value, false);
         }
-        // return code is an and relationship with a parent
       }
 
       currentLevel--;

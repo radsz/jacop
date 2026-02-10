@@ -311,7 +311,6 @@ public abstract class AbstractClausesDatabase implements SolverComponent, Clause
    * @param j the position of the second literal
    */
   protected final void swap(int[] clause, int i, int j) {
-    // assert i >= 0 && j >= 0;
     if (i == j) {
       return;
     }

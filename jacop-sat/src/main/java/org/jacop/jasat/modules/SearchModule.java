@@ -179,7 +179,6 @@ public final class SearchModule
 
           break;
         } else {
-          // else, set the literal
           core.assertLiteral(nextLiteral, currentLevel);
         }
       }

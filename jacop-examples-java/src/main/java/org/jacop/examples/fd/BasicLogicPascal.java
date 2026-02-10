@@ -110,11 +110,8 @@ public class BasicLogicPascal extends ExampleFd {
     // LOGIC = 10000 * L + 1000 * O + 100 * G + I * 10 + C * 1
     // PASCAL = 100000 * P + 10000 * A + 1000 * S + 100 * C + 10 * A + L * 1
     store.impose(new LinearInt(basic, weights5, "==", valueBasic));
-    // store.impose(new SumWeight(basic, weights5, valueBasic));
     store.impose(new LinearInt(logic, weights5, "==", valueLogic));
-    // store.impose(new SumWeight(logic, weights5, valueLogic));
     store.impose(new LinearInt(pascal, weights6, "==", valuePascal));
-    // store.impose(new SumWeight(pascal, weights6, valuePascal));
 
     // Main equation of the problem BASIC+ LOGIC = PASCAL
     store.impose(new XplusYeqZ(valueBasic, valueLogic, valuePascal));

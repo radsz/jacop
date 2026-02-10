@@ -130,9 +130,6 @@ public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
 
       return result;
     }
-
-    // Do we have to add the cost-vars to the list of auxilary variables
-    // auxilaryVariables.addAll(costs);
   }
 
   @Override

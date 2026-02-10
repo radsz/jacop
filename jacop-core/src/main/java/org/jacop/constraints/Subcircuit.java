@@ -351,7 +351,6 @@ public class Subcircuit extends Alldiff {
     for (int v = 0; v < n; v++) {
       if (!list[v].dom().contains(v + 1)) {
         possibleRoots[pr++] = v;
-        // break;  // find only first root
       }
     }
 
@@ -409,7 +408,6 @@ public class Subcircuit extends Alldiff {
     graphDominance.init();
 
     // create graph
-    // int root = possibleRoots[random.nextInt(pr)];
     for (int v = 0; v < n; v++) {
       for (ValueEnumeration e = list[v].dom().valueEnumeration(); e.hasMoreElements(); ) {
         int w = e.nextElement() - 1;

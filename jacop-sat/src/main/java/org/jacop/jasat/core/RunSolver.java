@@ -251,7 +251,6 @@ public final class RunSolver {
     core.markTime("parse");
     core.logc(2, "parsing time (ms): %d", core.getTimeDiff("init_stop"));
 
-    // do search
     core.start();
 
     core.logc("solve time (ms): %d", core.getTimeDiff("start"));
@@ -267,7 +266,6 @@ public final class RunSolver {
       core.logc("solver state : %s", SolverState.show(core.currentState));
     }
 
-    // return with good exit code
     System.exit(core.getReturnCode());
   }
 }

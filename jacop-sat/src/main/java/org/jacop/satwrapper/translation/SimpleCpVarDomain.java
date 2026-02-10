@@ -151,7 +151,6 @@ public class SimpleCpVarDomain extends SatCpBridge {
     assert max >= min;
 
     if (max == min) {
-      // assert 'x=v' where v=min=max
       clauseDatabase.propagate(cpValueToBoolVar(min, true), literal);
       return;
     }

@@ -117,9 +117,6 @@ public class SatTranslation {
     clauses.addModelClause(clause);
 
     numberClauses++;
-
-    // System.out.print(clauseToString(clause));
-
   }
 
   /**

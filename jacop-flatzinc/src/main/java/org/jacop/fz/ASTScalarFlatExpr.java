@@ -33,13 +33,9 @@ public class ASTScalarFlatExpr extends SimpleNode {
   }
 
   public void setInt(int i) {
-    //     if (i <= JaCoP.core.Constants.MaxInt && i >= JaCoP.core.Constants.MinInt)
     intValue = i;
-    //     else {
     //         System.err.println("Error: Too large or too small integer " + i +
     //                "; execution aborted");
-    //        System.exit(0);
-    //     }
   }
 
   public double getFloat() {

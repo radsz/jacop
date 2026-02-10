@@ -91,7 +91,6 @@ public final class Trail implements SolverComponent {
       explanations = Utils.resize(explanations, newSize, size, pool);
       levels = Utils.resize(levels, newSize, size, pool);
 
-      // do not forget to reset the new slots
       Arrays.fill(values, size, newSize - 1, 0);
     }
   }

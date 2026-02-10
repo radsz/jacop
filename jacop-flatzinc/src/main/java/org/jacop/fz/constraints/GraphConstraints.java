@@ -69,8 +69,6 @@ class GraphConstraints implements ParserTreeConstants {
     int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     String cName = "GraphIsomorphism";
 
-    // support.poseDc(new GraphIsomorphism(t, p, targetType, patternType, m, offset));
-
     try {
       Class<?> c = Class.forName("org.jacop.graph." + cName);
       Constructor<?> cons =
@@ -297,16 +295,9 @@ class GraphConstraints implements ParserTreeConstants {
 
     IntVar cost = new IntVar(store, 0, IntDomain.MaxInt);
 
-    // Graph graph = buildGraph(g, type, index_min);
-
     // // CliqueDecomposed ctr = new CliqueDecomposed(store, graph, cost);
     // // support.poseDc(ctr);
-    // Clique ctr = new Clique(store, graph, cost);
-    // support.pose(ctr);
-    // IntVar[] vars = ctr.variables();
 
-    // if (vars.length != c.length)
-    //     throw new IllegalArgumentException("%% ERROR: sub_digraph_match must have pattern size
     // the same as pattern graph");
 
     try {

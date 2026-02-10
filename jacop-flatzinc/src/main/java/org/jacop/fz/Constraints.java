@@ -132,9 +132,6 @@ public class Constraints implements ParserTreeConstants {
 
   void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {
 
-    // if (debug)
-    //   constraintWithAnnotations.dump("");
-
     // default consistency - bounds
     support.boundsConsistency = true;
     support.domainConsistency = false;

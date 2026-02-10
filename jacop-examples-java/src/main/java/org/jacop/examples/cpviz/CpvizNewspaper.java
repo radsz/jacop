@@ -257,8 +257,6 @@ public class CpvizNewspaper {
     cost = makespan;
     vars.add(makespan);
 
-    //   }
-
     //   public static boolean label() {
 
     SelectChoicePoint<IntVar> varSelect =
@@ -284,10 +282,6 @@ public class CpvizNewspaper {
 
     TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect, abcd);
 
-    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, false, abcd);
-    //     search.setConsistencyListener((ConsistencyListener)select);
-    //      search.setExitChildListener((ExitChildListener<IntVar>)select);
-    //   search.setExitListener((ExitListener)select);
     // <---
 
     search.labeling(store, select, cost);

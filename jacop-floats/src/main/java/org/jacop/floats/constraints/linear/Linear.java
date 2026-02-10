@@ -193,7 +193,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     for (int i = 0; i < list.length; i++) {
       if (weights[i] != 0) {
         // This causes problem for several examples...
-        // if (list[i].singleton())
         if (list[i].min() == list[i].max()) {
           this.sum -= list[i].value() * weights[i];
         } else if (parameters.get(list[i]) != null) {
@@ -232,7 +231,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     if (this.list.length == 1) {
-      // System.out.println("% Warrning: List of length 1 in LinearFloat(["+this.list[0].id()+"],
       // ["+this.weights[0] +"], "+rel2String()+", " + this.sum+")");
 
       FloatVar v = this.list[0];
@@ -260,7 +258,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     Arrays.sort(leafNodes, new VarWeightComparator<>());
-    // System.out.println (java.util.Arrays.asList(leafNodes));
 
     RootBnode root = buildBinaryTree(leafNodes);
     linearTree = new Btree(root);
@@ -273,7 +270,6 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   RootBnode buildBinaryTree(BinaryNode[] nodes) {
 
     BinaryNode[] nextLevelNodes = new BinaryNode[nodes.length / 2 + nodes.length % 2];
-    // System.out.println ("next level length = " + nextLevelNodes.length);
 
     if (nodes.length > 1) {
       for (int i = 0; i < nodes.length - 1; i += 2) {

@@ -156,7 +156,6 @@ public class Optimize<T extends Var> {
       store.setLevel(store.level - 1);
       return result;
     } else {
-      // System.out.println ("Level = " + store.level + ", FAIL");
 
       store.removeLevel(store.level);
       store.setLevel(store.level - 1);

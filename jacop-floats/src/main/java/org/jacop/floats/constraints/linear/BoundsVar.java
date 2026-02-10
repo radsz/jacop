@@ -128,7 +128,6 @@ class BoundsVar implements MutableVar {
   public void update(double min, double max, double lb, double ub) {
     if (value.stamp == store.level) {
 
-      // value.setValue(min, max);
       value.min = min;
       value.max = max;
 

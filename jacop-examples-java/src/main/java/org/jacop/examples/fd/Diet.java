@@ -164,7 +164,6 @@ public class Diet extends ExampleFd {
       sums[i] = new IntVar(store, "sums_" + i, 0, IntDomain.MaxInt);
 
       store.impose(new LinearInt(x, matrix[i], "==", sums[i]));
-      // store.impose(new SumWeight(x, matrix[i], sums[i]));
       store.impose(new XgteqC(sums[i], limits[i]));
     }
 
@@ -172,7 +171,6 @@ public class Diet extends ExampleFd {
     cost = new IntVar(store, "cost", 0, 120);
 
     store.impose(new LinearInt(x, price, "==", cost));
-    // store.impose( new SumWeight(x, price, cost) );
 
     vars = new ArrayList<>();
     vars.addAll(Arrays.asList(x));
@@ -207,7 +205,6 @@ public class Diet extends ExampleFd {
         // this category has some items with zero profit, violates knapsack conditions so it is not
         // used.
         store.impose(new LinearInt(x, matrix[i], "==", minReq));
-        // store.impose(new SumWeight(x, matrix[i], minReq));
       }
     }
 

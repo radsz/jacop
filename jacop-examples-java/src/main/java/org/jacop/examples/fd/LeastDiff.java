@@ -107,9 +107,7 @@ public class LeastDiff extends ExampleFd {
 
     // Constraints for getting value for words
     store.impose(new LinearInt(abcde, weights5, "==", value_abcde));
-    // store.impose(new SumWeight (abcde, weights5, value_abcde));
     store.impose(new LinearInt(fghij, weights5, "==", value_fghij));
-    // store.impose(new SumWeight (fghij, weights5, value_fghij));
 
     // abcde > fghij
     store.impose(new XgtY(value_abcde, value_fghij));

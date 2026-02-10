@@ -93,7 +93,6 @@ public final class DomainTranslator implements WrapperComponent {
        */
       for (int i = domain.min; i < domain.max - 1; i++) {
         clause.clear();
-        // System.out.println(i);
         clause.add(-domain.cpValueToBoolVar(i, false));
         clause.add(domain.cpValueToBoolVar(i + 1, false));
         wrapper.addModelClause(clause);

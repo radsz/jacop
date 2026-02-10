@@ -235,7 +235,6 @@ public class CumulativeUnary extends Cumulative {
 
     ThetaTree tree = new ThetaTree();
     tree.initTree(t);
-    // tree.printTree("tree_init");
 
     // tasks sorted in ascending order of lct
     Arrays.sort(t, taskIncLctComparator);
@@ -263,7 +262,6 @@ public class CumulativeUnary extends Cumulative {
 
     ThetaTree tree = new ThetaTree();
     tree.initTree(t);
-    // tree.printTree("tree_init");
 
     // tasks sorted in ascending order of lct
     Arrays.sort(t, taskIncLctComparator);
@@ -346,7 +344,6 @@ public class CumulativeUnary extends Cumulative {
 
     ThetaTree tree = new ThetaTree();
     tree.initTree(t);
-    // tree.printTree("tree_init");
 
     // tasks sorted in ascending order of lct
     Arrays.sort(t, taskIncEctComparator);

@@ -174,7 +174,6 @@ public final class TernaryClausesDatabase extends AbstractClausesDatabase {
 
     for (int i = offset; i <= offset + 2; i++) {
       int literal = clauses[i];
-      // try to remove -literal. If it fails, add literal
       clause.partialResolveWith(literal);
     }
     return clause;

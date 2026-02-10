@@ -127,8 +127,6 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
 
-    // System.out.println (var + ", value = " + value);
-
     if (leftFirst) {
       if (((FloatVar) var).max() > value) {
         return new PlteqC((FloatVar) var, value);

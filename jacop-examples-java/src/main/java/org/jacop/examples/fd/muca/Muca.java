@@ -1025,7 +1025,6 @@ public class Muca extends ExampleFd {
             new SumInt(
                 new IntVar[] {previousPartialSum, deltasI[i][g], deltasO[i][g]}, "==", partialSum));
 
-        // store.impose(new XgteqC(partialSum, 0));
         previousPartialSum = partialSum;
       }
 
@@ -1188,7 +1187,6 @@ public class Muca extends ExampleFd {
           bids.add(new ArrayList<>());
           bids.get(bidCounter - 1).add(new ArrayList<>());
         }
-        // System.out.println(bidCounter + " " + bid_xorCounter);
         if (Integer.parseInt(tk.nextToken()) > bid_xorCounter) {
           bid_xorCounter++;
           transformationCounter = 1;
@@ -1210,7 +1208,6 @@ public class Muca extends ExampleFd {
         goodsCounter = 0;
         while (tk.hasMoreTokens()) {
           goodsCounter++;
-          // System.out.println(goodsCounter);
           if (goodsCounter <= noGoods) {
             Id = Integer.parseInt(tk.nextToken()) - 1;
             in = Integer.parseInt(tk.nextToken());

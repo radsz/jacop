@@ -437,7 +437,6 @@ public class LexOrder extends Constraint
       if (lexLt) {
         throw Store.failException; // fail
       } else {
-        // alpha.update(a);
         satisfied = true;
         removeConstraint();
         return;

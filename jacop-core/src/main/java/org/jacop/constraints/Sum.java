@@ -84,8 +84,6 @@ public class Sum extends Constraint implements SatisfiedPresent {
     this.sum = sum;
     this.list = Arrays.copyOf(list, list.length);
 
-    // checkForOverflow();
-
     setScope(Stream.concat(Arrays.stream(list), Stream.of(sum)));
   }
 

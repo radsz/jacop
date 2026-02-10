@@ -267,7 +267,6 @@ public class PrintSchedule {
       result.append(i).append("\t");
       // s = s + i + "\t";
       int j = 0;
-      // int k = 1;
       int start = ((IntVar) TaskArr[j].get(1)).min();
       int dur;
 
@@ -308,6 +307,5 @@ public class PrintSchedule {
     }
 
     return result.toString();
-    // return s;
   }
 }

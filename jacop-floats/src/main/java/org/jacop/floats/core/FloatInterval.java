@@ -71,7 +71,6 @@ public record FloatInterval(double min, double max) implements Cloneable {
    * @return true if an input interval is equal to this one.
    */
   public boolean eq(FloatInterval interval) {
-    // return min == interval.min && max == interval.max;
 
     double v = Math.max(Math.abs(min - interval.min), Math.abs(max - interval.max));
     return v <= FloatDomain.epsilon(v);
@@ -105,7 +104,6 @@ public record FloatInterval(double min, double max) implements Cloneable {
   public boolean singleton() {
 
     double large = Math.abs(max) >= Math.abs(min) ? max : min;
-    // double small = (Math.abs(max) >= Math.abs(min)) ? min : max;
 
     return (max - min) <= FloatDomain.epsilon(large);
   }
@@ -117,7 +115,6 @@ public record FloatInterval(double min, double max) implements Cloneable {
    * @return true if variable has a singleton domain and it is equal to value c.
    */
   public boolean singleton(double c) {
-    // return (min == max && min == c);
 
     return (max - min) <= FloatDomain.epsilon(max - min) && c <= max && c >= min;
   }

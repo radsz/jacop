@@ -182,10 +182,8 @@ public class DeBruijn extends ExampleFd {
       }
 
       store.impose(new LinearInt(binary[i], weights, "==", x[i]));
-      // store.impose(new SumWeight (binary[i], weights, x[i]));
     }
 
-    // assert the the deBruijn property:  element i in binary starts
     // with the end of element i-1
     for (int i = 1; i < m; i++) {
       for (int j = 1; j < n; j++) {

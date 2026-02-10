@@ -77,7 +77,6 @@ public class CurveFitting {
     }
 
     FloatVar sumExEx = new FloatVar(store, "sumExEx", minFloat, maxFloat);
-    // FloatVar sumExEy = new FloatVar(store, "sumExEy", minFloat, maxFloat);
 
     FloatVar[] ExEx = new FloatVar[n + 1];
     FloatVar[] ExEy = new FloatVar[n + 1];

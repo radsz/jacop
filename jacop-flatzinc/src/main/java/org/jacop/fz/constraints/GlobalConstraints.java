@@ -166,7 +166,6 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_cumulative(SimpleNode node) {
 
     // possible to control when edge find algorithm is used for Cumulative constraint
-    // System.setProperty("max_edge_find_size", "10");
 
     IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -426,7 +425,6 @@ class GlobalConstraints implements ParserTreeConstants {
     ViolationMeasure usedMeasure =
         useDecomp == 0 ? ViolationMeasure.VARIABLE_BASED : ViolationMeasure.DECOMPOSITION_BASED;
     SoftAlldifferent sa = new SoftAlldifferent(x, s, usedMeasure);
-    // sa.primitiveDecomposition(store);
     support.poseDc(sa);
   }
 
@@ -439,7 +437,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
     SoftGCC sgcc =
         new SoftGCC(x, hard_counters, values, soft_counters, cost, ViolationMeasure.VALUE_BASED);
-    // sgcc.primitiveDecomposition(store);
     support.poseDc(sgcc);
   }
 
@@ -490,7 +487,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // no diplicated variables allowed in this constraint and,
     // if present, they get value 0 (the only allowed to be duplicated)
-    // IntVar[] xs = removeDuplicates(x);
     IntVar[] xs = new IntVar[x.length];
     HashSet<IntVar> varSet = new HashSet<>();
     for (int i = 0; i < x.length; i++) {
@@ -540,7 +536,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new AmongVar(xx, ss, vv));
-    //                  support.pose(new AmongVar(x, s, v));
   }
 
   void gen_jacop_among(SimpleNode node) {
@@ -596,7 +591,6 @@ class GlobalConstraints implements ParserTreeConstants {
         intVar.domain.inMax(store.level, intVar, index_max);
       }
     }
-    //                  System.out.println("c = " + Arrays.asList(x));
 
     // =========> remove all non-existing-values counters
     IntDomain gcc_dom = new IntervalDomain();
@@ -691,7 +685,6 @@ class GlobalConstraints implements ParserTreeConstants {
       System.arraycopy(v, 4 * i, r[i], 0, 4);
     }
 
-    // support.pose(new Diff2(r));
     support.pose(new Diffn(r, false));
   }
 
@@ -805,7 +798,6 @@ class GlobalConstraints implements ParserTreeConstants {
     int n = x.length;
     long z = Arrays.stream(lb).filter(v -> v == 0).count();
     long m = Arrays.stream(ub).filter(v -> v == n).count();
-    // System.out.println("% z = " + z + ", m = " + m + ", lb.length = "+ lb.length + ", x.length =
     // " + n);
 
     // skip constraint since lb is 0 and ub is the length of the
@@ -1131,7 +1123,6 @@ class GlobalConstraints implements ParserTreeConstants {
       if (c != null && c.length <= 3) {
         if (v.length == 1) {
           for (int[] ints : c) {
-            // support.pose(new XneqC(v[0], c[i][0]));
             v[0].domain.inComplement(store.level, v[0], ints[0]);
             if (support.options.debug()) {
               IO.println("% " + v[0] + " \\ " + ints[0]);
@@ -1293,7 +1284,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
-    // support.pose(new Regular(dfa, xx));
   }
 
   void gen_jacop_regular_set(SimpleNode node) {
@@ -1353,7 +1343,6 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new Regular(dfa, xx));
-    // support.pose(new Regular(dfa, xx));
   }
 
   void gen_jacop_knapsack(SimpleNode node) {
@@ -1465,7 +1454,6 @@ class GlobalConstraints implements ParserTreeConstants {
       support.pose(new Increasing(x, strict));
     }
     // decompoistion possible
-    // support.poseDc(new Increasing(x, strict));
   }
 
   void gen_jacop_decreasing(SimpleNode node, boolean strict) {
@@ -1481,7 +1469,6 @@ class GlobalConstraints implements ParserTreeConstants {
       support.pose(new Decreasing(x, strict));
     }
     // decompoistion possible
-    // support.poseDc(new Decreasing(x, strict));
   }
 
   void gen_jacop_value_precede_int(SimpleNode node) {
@@ -1531,7 +1518,6 @@ class GlobalConstraints implements ParserTreeConstants {
       }
     }
     IntVar[] xs = xx.toArray(new IntVar[0]);
-    // System.out.println("% x.length = " + x.length + ", xs.length = " + xs.length);
 
     support.pose(new SeqPrecedeChain(xs));
   }
@@ -1548,7 +1534,6 @@ class GlobalConstraints implements ParserTreeConstants {
     // are duplicated.
     IntVar[] cc = removeDuplicates(capacity);
 
-    // support.pose( new org.jacop.constraints.binpacking.Binpacking(binx, capacity, w) );
     Constraint binPack =
         Binpacking.builder().bin(bin).load(cc).w(w).minBin(min_bin).lbPruning(true).build();
     support.delayedConstraints.add(binPack);
@@ -1638,8 +1623,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
       System.arraycopy(xx, i * dim, coords, 0, dim);
 
-      // System.out.println("coords = " + java.util.Arrays.asList(coords));
-
       IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
       IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);
       IntVar end = new IntVar(store, "end[" + i + "]", 1, 1);
@@ -1710,8 +1693,6 @@ class GlobalConstraints implements ParserTreeConstants {
       IntVar[] coords = new IntVar[dim];
 
       System.arraycopy(xx, i * dim, coords, 0, dim);
-
-      // System.out.println("coords = " + java.util.Arrays.asList(coords));
 
       IntVar start = new IntVar(store, "start[" + i + "]", 0, 0);
       IntVar duration = new IntVar(store, "duration[" + i + "]", 1, 1);

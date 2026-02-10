@@ -127,12 +127,6 @@ public class RootBnode extends Bnode {
     double lb = l.min();
     double ub = l.max();
 
-    // if (current_min < min || current_max > max) {
-    //     bound.update(min, max, lb, ub);
-
-    //     return true;
-    // }
-
     // =====
     if (min > current_min) {
       if (max < current_max) {

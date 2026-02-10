@@ -71,13 +71,11 @@ public final class ConflictLearning implements SolverComponent {
 
       // this literal is in the clause
       if (explanationClause.containsVariable(var)) {
-        // return the level of the second clause literal of the trail
         if (firstOne) {
           // ok, we met the first, the next one is the good one
           explanationClause.assertedLiteral = -trail.values[var];
           firstOne = false;
         } else {
-          // core.logc(3, "at level "+level+ " var is unit "+literal);
           return trail.getLevel(var);
         }
       }
@@ -119,7 +117,6 @@ public final class ConflictLearning implements SolverComponent {
         explanationClause.backjumpLevel = getLevelToBackjump(explanationClause);
         return;
       }
-      // throw new AssertionError("no literal of current level??");
 
       // resolve with its explanation
       applyExplain(explanationClause, assertionStack.array[lastLiteralPosition]);

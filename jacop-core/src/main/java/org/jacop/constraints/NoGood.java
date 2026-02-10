@@ -150,8 +150,6 @@ public class NoGood extends Constraint {
                 "The NoGood learnt for one model is used in different model (model created across many store levels)");
           }
         }
-
-        // store.in(firstWatch, Domain.domain.complement(firstValue));
       }
       firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
       return;
@@ -198,7 +196,6 @@ public class NoGood extends Constraint {
 
         secondWatch.dom().inComplement(store.level, secondWatch, secondValue);
 
-        // store.in(secondWatch, Domain.domain.complement(secondValue));
         if (debug) {
           log.debug("{}", secondWatch);
         }
@@ -231,7 +228,6 @@ public class NoGood extends Constraint {
 
         firstWatch.dom().inComplement(store.level, firstWatch, firstValue);
 
-        // store.in(firstWatch, Domain.domain.complement(firstValue));
         if (debug) {
           log.debug("{}", firstWatch);
         }

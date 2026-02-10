@@ -334,7 +334,6 @@ public class Diffn extends Nooverlap {
 
     int N = j;
     Arrays.sort(es, 0, N, eventComparator);
-    // Arrays.parallelSort(es, 0, N, new EventIncComparator<Event>());
 
     if (debugNarr) {
       log.debug("===========================");

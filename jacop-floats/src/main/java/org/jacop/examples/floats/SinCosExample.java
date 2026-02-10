@@ -83,7 +83,6 @@ public class SinCosExample {
             store, new FloatVar[] {p, q}, null); // new SmallestDomainFloat<FloatVar>());
     s.roundRobin = false;
     label.setAssignSolution(true);
-    // label.setSolutionListener(new PrintOutListener<FloatVar>());
     label.getSolutionListener().recordSolutions(true);
     label.getSolutionListener().searchAll(true);
     // s.leftFirst = false;

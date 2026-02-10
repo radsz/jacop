@@ -236,8 +236,6 @@ class ThetaLambdaTree extends Tree {
     // Cut
     // v is the rightmost node in the alpha subtree
 
-    // System.out.println("---------> Cut at node " + v + ", est = " + tree[v].task.start.min());
-
     long e_alpha = tree[v].e;
     long env_alpha = tree[v].env;
     long e_beta = 0L;
@@ -251,7 +249,6 @@ class ThetaLambdaTree extends Tree {
       }
       v = parent(v);
     }
-    // System.out.println("e_beta = " + e_beta + ", env_alpha = " + env_alpha);
 
     return plus(env_alpha, e_beta);
   }

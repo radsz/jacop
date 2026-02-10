@@ -269,8 +269,6 @@ public class ConferenceTalkPlacement {
 
     vars = new ArrayList<>();
     vars.addAll(Arrays.asList(talkPlacement));
-
-    // store.print();
   }
 
   /**

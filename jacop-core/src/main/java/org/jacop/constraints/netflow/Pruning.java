@@ -96,7 +96,6 @@ public class Pruning extends Network {
     this.numActiveArcs = queue.size();
 
     this.statistics = statistics;
-    // checkCount();
   }
 
   private void xvarInMax(ArcCompanion companion, int maxFlow) {
@@ -391,7 +390,6 @@ public class Pruning extends Network {
     }
 
     // restore optimal flow
-    // if (cost(Long.MAX_VALUE) != cost)
     networkSimplex(999999);
 
     long cost = cost(Long.MAX_VALUE);
@@ -484,7 +482,6 @@ public class Pruning extends Network {
   private void pruneArc(int capacity, int residual, boolean forward, ArcCompanion companion) {
     assert capacity > 0;
 
-    // int level = store.level;
     if (forward) {
       // prune upper capacity bound
       if (companion.xVar != null) {
@@ -559,8 +556,6 @@ public class Pruning extends Network {
       i = 0;
       limit =
           Math.max(Math.min(minimum, numActiveArcs), (int) Math.round(numActiveArcs * percentage));
-
-      // checkCount();
     }
 
     /**
@@ -578,7 +573,6 @@ public class Pruning extends Network {
         i++;
         return companion;
       }
-      // assert (queue.peek().arc.index == DELETED_ARC);
       return null;
     }
 

@@ -208,7 +208,6 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
         }
 
         decomposition.add(new LinearInt(variables, weights, "==", 0));
-        // decomposition.add(new SumWeight(variables, weights, ZERO));
       }
 
       return decomposition;

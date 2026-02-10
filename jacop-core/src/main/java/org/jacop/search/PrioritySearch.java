@@ -449,7 +449,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
     // Iterative Solution listener sets it to zero so it can find the next batch, so it has to be
     // executed
     // after initialize listener.
-    // int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
     // If constraints employ only one time execution of the part of
     // the consistency technique then the results of that part must be

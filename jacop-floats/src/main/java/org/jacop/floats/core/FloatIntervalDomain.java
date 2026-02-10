@@ -69,7 +69,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
   public FloatIntervalDomain() {
     // FIXME, check what is calling it and maybe remove some inappropriate callers.
     this(0);
-    // throw new RuntimeException("Do not use.");
   }
 
   /**
@@ -786,7 +785,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     }
 
     int pointer1 = 0;
-    //              int pointer2 = 0;
 
     FloatInterval interval1 = intervals[pointer1];
 
@@ -1316,7 +1314,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         continue;
       }
 
-      // if (currentDomain1.max > currentDomain2.min ||
       // currentDomain2.max > currentDomain1.min) {
 
       double min = Math.min(currentDomain1.min(), currentDomain2.min());
@@ -1635,14 +1632,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
         result.append(searchConstraint);
       }
 
-      // if (domain.domainId() == FloatIntervalDomainID) {
-
       FloatIntervalDomain dom = (FloatIntervalDomain) domain;
       domain = dom.previousDomain;
-
-      // } else {
-      //  break;
-      // }
 
     } while (domain != null);
 
@@ -1655,7 +1646,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
    */
   @Override
   public void inMin(int storeLevel, Var var, double min) {
-    // System.out.println (var + " inMin " + min);
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1742,7 +1732,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
    */
   @Override
   public void inMax(int storeLevel, Var var, double max) {
-    // System.out.println (var + " inMax " + max);
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -1824,7 +1813,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
    */
   @Override
   public void in(int storeLevel, Var var, double min, double max) {
-    // System.out.println (var + " in " + min+".."+max);
 
     assert checkInvariants() == null : checkInvariants();
 
@@ -3295,8 +3283,6 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     if (size == 0) {
       return IntDomain.NONE;
     }
-
-    // if (domain.domainId() == FloatIntervalDomainID) {
 
     FloatIntervalDomain input = (FloatIntervalDomain) domain;
 

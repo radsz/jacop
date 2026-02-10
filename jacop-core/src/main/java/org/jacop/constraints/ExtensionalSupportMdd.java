@@ -178,7 +178,6 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
         // TODO: check if allIndexesSupported needs updating
         // if it needs updating check the break condition below.
-        // break if for all following levels variables
         // have all values been signaled as already supported
         // notSupportYet is empty for all variables level..vars.length
 

@@ -618,7 +618,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
     if (variableQueue == null) {
       return "variable queue is null";
     }
-    //   if(objectQueue == null) return "object queue is null";
     if (objectQueue == null) {
       return "object queue is null";
     }
@@ -987,8 +986,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
       findForbiddenDomainCount++;
     }
 
-    // assert constraints != null : "not using correct version";
-
     // if there are holes in the domain, consider these first
     DomainHoles holeConstraint = domainHolesConstraints[o.no];
 
@@ -1059,7 +1056,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
           o.timeConstraint.consistencyDurationGtZero(store);
 
           if (o.timeConstraint.consistencyStartPlusDurationEqEnd(store)) {
-            // queueObject(o);
             onObjectUpdate(o);
           }
         }
@@ -1235,7 +1231,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                 // don't skip objects again if some shape ID changed
                 Arrays.fill(pruneIfGrounded, true);
 
-                // o.shapeId.domain.in(store.level, o.shapeId, o.shapeId.domain.subtract(sid));
                 // CHANGED. replaced the above with the line below.
                 o.shapeId.domain.inComplement(store.level, o.shapeId, sid);
 
@@ -1269,7 +1264,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
                   // don't skip objects if some shape ID changed
                   Arrays.fill(pruneIfGrounded, true);
 
-                  // o.shapeId.domain.in(store.level, o.shapeId, o.shapeId.domain.subtract(sid));
                   // CHANGED. replaced the above with the line below.
                   o.shapeId.domain.inComplement(store.level, o.shapeId, sid);
 
@@ -1304,9 +1298,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
               if (oneTimeVarChanged) {
                 o.timeConstraint.consistencyStartPlusDurationEqEnd(store);
-                // if(o.timeConstraint.consistencyStartPlusDurationEqEnd(store))
                 //   //modification of some of the time variables, sweep again
-                //   queueObject(o);
                 oneTimeVarChanged = false;
               }
 
@@ -1329,9 +1321,7 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
               if (oneTimeVarChanged) {
                 o.timeConstraint.consistencyStartPlusDurationEqEnd(store);
-                // if(o.timeConstraint.consistencyStartPlusDurationEqEnd(store))
                 //   //modification of some of the time variables, sweep again
-                //   queueObject(o);
                 oneTimeVarChanged = false;
               }
 
@@ -1352,7 +1342,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       // backtracking data storage
       if (!updatedObjectSet.isEmpty()) {
-        // if(setStart.stamp() < store.level) {
 
         // TODO: think of easy way of preventing multiple objects being put to the list at the same
         // level.
@@ -1794,7 +1783,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
 
       assert o != null;
 
-      // if(!updatedObjectSet.contains(o))
       //   // else it was already updated
       onObjectUpdate(o);
 
@@ -1802,8 +1790,6 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
         log.debug("restored object {}", o);
       }
     }
-
-    // updatedObjectSet.clear();
 
     backtracking = false;
   }

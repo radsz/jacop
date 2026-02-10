@@ -134,8 +134,6 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
 
-    // System.out.println (var + ", value = " + value);
-
     leftFirst = generator.nextBoolean();
 
     if (leftFirst) {

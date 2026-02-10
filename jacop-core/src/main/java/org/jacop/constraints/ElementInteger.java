@@ -225,21 +225,7 @@ public class ElementInteger extends Constraint
     }
 
     // ====== Very simple implementation =========
-    // IntDomain vs = new IntervalDomain();
-    // IntDomain xs = new IntervalDomain();
 
-    // for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-    //     int idx = e.nextElement();
-    //     int i = idx - 1 - indexOffset;
-    //     int valueOfElement = list[i];
-
-    //     if (value.domain.contains(valueOfElement)) {
-    //   vs.unionAdapt(valueOfElement);
-    //   xs.unionAdapt(idx);
-    //     }
-    // }
-    // index.domain.in(store.level, index, xs);
-    // value.domain.in(store.level, value, vs);
     // ==============================================
 
     boolean copyOfValueHasChanged = valueHasChanged;
@@ -251,7 +237,6 @@ public class ElementInteger extends Constraint
       IntervalDomain domValue = new IntervalDomain(5);
 
       if (checkDuplicates) {
-        // if (indexDom.getSize() < limitForDomainPruning)
         for (IntDomain duplicate : duplicates) {
           if (indexDom.isIntersecting(duplicate)) {
             if (domValue.isEmpty()) {

@@ -557,7 +557,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       List<IntRectangle> consideredRect = new ArrayList<>();
       for (IntRectangle ir : starts) {
         int s = ir.origin[i];
-        // System.out.println("*** start = " + s);
 
         consideredRect.clear();
 
@@ -577,7 +576,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
           IntDomain rIdom = r.origin[i].dom();
           if (s >= rIdom.min() && s <= rIdom.max()) {
-            // System.out.println("Checking rectangles in dimension
             // "+i+
             // " starting at time interval "+ s + ".."
             // +(int)(s+r.length(i).min()-1)+
@@ -601,8 +599,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               r.origin[i].domain.in(currentStore.level, r.origin[i], Update);
 
               computeNewMaxDuration(r.origin[i], exclude.min, exclude.max);
-
-              // System.out.println ("7. length = "+   durMax);
             }
           }
         }
@@ -718,7 +714,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     boolean excludedState = true;
     while (excludedState && j < r.dim) {
       if (i != j) {
-        // System.out.println(r.toStringFull()+"\n"+consideredRect );
         IntDomain rOriginJdom = r.origin[j].dom();
         IntDomain rLengthJdom = r.length[j].dom();
         int minJ = rOriginJdom.min();
@@ -734,7 +729,6 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             barrier.addToProfile(hinderJ, hinderJ + hinder.length[j], hinderValue);
           }
         }
-        // System.out.println("Barrier : " + barrier);
 
         int k = 0;
         int barrierSize = barrier.size();
@@ -771,9 +765,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               toAdd.add(new Interval(p.max, pNext.min));
             }
           }
-          // for (ProfileItem p : barrier) System.out.print(p + " ");
           for (Interval v : toAdd) {
-            // System.out.println("\n*** adding " + v);
             barrier.addToProfile(v.min(), v.max(), minimalAfter);
           }
 
