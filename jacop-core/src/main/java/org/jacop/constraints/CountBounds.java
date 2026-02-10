@@ -60,15 +60,8 @@ public class CountBounds extends PrimitiveConstraint {
   final int lb;
 
   final int ub;
-  /*
-   * Defines first position of the variable that are not considered;
-   * either equal to value or missing the value in their domain.
-   */
   private TimeStamp<Integer> position;
 
-  /*
-   * Defines number of variables equal to the value.
-   */
   private TimeStamp<Integer> equal;
 
   /**

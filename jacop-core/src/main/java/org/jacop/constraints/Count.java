@@ -62,15 +62,8 @@ public class Count extends PrimitiveConstraint {
   /** The value to which is any variable is equal to makes the constraint count it. */
   public final int value;
 
-  /*
-   * Defines first position of the variable that are not considered;
-   * either equal to value or missing the value in their domain.
-   */
   private TimeStamp<Integer> position;
 
-  /*
-   * Defines number of variables equal to the value.
-   */
   private TimeStamp<Integer> equal;
 
   /**

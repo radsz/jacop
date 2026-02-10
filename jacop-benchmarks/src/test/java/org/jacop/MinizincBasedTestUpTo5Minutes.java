@@ -43,7 +43,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
-public class MinizincBasedTestUpTo5Minutes extends MinizincBasedTestsHelper {
+class MinizincBasedTestUpTo5Minutes extends MinizincBasedTestsHelper {
   protected static final String TIME_CATEGORY = "upTo5min/";
 
   public MinizincBasedTestUpTo5Minutes() {
@@ -57,7 +57,7 @@ public class MinizincBasedTestUpTo5Minutes extends MinizincBasedTestsHelper {
   @ParameterizedTest
   @MethodSource("parametricTest")
   @Timeout(900) // The test will be completed within 15 minutes
-  public void testMinizinc(String testFilename) throws IOException {
+  void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
     testExecution(TIME_CATEGORY);
   }

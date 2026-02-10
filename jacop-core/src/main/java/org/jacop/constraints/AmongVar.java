@@ -422,7 +422,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       if (debugAll) {
         log.debug("........N must be equal to {}", countCoverMin);
       }
-      n.domain.inValue(store.level, n, countCoverMin); // , countCoverMin);
+      n.domain.inValue(store.level, n, countCoverMin);
     }
 
     K = K.subtract(U);
@@ -548,8 +548,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
                 pureUbs = (IntervalDomain) pureUbs.union(y.domain.getPreviousDomain());
               }
             }
-            //           countGY ++;
-
             if (yi >= lastIndex) {
               if (yi != lastIndex) {
                 int yInt = yi;
@@ -625,7 +623,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
 
                 swapYtoFront(last, lastIndex);
                 lastIndex++;
-                y_last.domain.inValue(store.level, y_last, v); // , v);
+                y_last.domain.inValue(store.level, y_last, v);
 
                 mustBeCoveredNow = mustBeCoveredNow.subtract(v, v);
               }
@@ -638,7 +636,6 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       futureLbS.update(new MutableDomainValue(futureDom));
 
       if (debugAll) {
-        // general");
         log.debug("Future domain is {}", futureDom);
       }
 

@@ -71,15 +71,8 @@ public class CountValues extends Constraint implements SatisfiedPresent {
   final IntDomain valuesDomain;
   final IntDomain valuesDomainComplement;
   private final int n; // length of the list
-  /*
-   * Defines first position of the variable that are not considered;
-   * either equal to value or missing the value in their domain.
-   */
   private TimeStamp<Integer> position;
 
-  /*
-   * Defines number of variables equal to the value.
-   */
   private TimeStamp<Integer>[] equal;
   private TimeStamp<Integer> rest;
 

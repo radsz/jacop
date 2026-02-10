@@ -684,7 +684,7 @@ public class Alldistinct extends Constraint
             log.debug("Value {} has only this variable possible {}", matched, variable);
           }
 
-          variable.domain.inValue(store.level, variable, matched); // , matched);
+          variable.domain.inValue(store.level, variable, matched);
 
           // The above pruning does not require execution of
           // consistency
@@ -748,7 +748,7 @@ public class Alldistinct extends Constraint
               .get(value)
               .getFirst()
               .domain
-              .inValue(store.level, valueMapVariable.get(value).getFirst(), value); // , value);
+              .inValue(store.level, valueMapVariable.get(value).getFirst(), value);
 
           variableQueue.add(valueMapVariable.get(value).getFirst());
 

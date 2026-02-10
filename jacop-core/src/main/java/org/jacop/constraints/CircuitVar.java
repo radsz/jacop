@@ -97,7 +97,6 @@ class CircuitVar implements MutableVar {
   public void update(MutableVarValue val) {
 
     if (value.stamp == store.level) {
-      // New " + val);
       value.setValue(((CircuitVarValue) val).next, ((CircuitVarValue) val).previous);
     } else if (value.stamp < store.level) {
 

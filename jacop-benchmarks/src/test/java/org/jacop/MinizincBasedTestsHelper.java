@@ -56,7 +56,7 @@ import org.junit.jupiter.api.BeforeAll;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
-public class MinizincBasedTestsHelper {
+class MinizincBasedTestsHelper {
   protected static final String RELATIVE_PATH = "src/test/fz/";
   protected static final String LIST_FILE_NAME = "list.txt";
   protected static final boolean PRINT_INFO = false;
@@ -70,7 +70,7 @@ public class MinizincBasedTestsHelper {
   }
 
   @BeforeAll
-  public static void initialize() {
+  static void initialize() {
     fz2jacop = new Fz2jacop();
   }
 
@@ -99,7 +99,7 @@ public class MinizincBasedTestsHelper {
   }
 
   @AfterEach
-  public void cleanUp() {
+  void cleanUp() {
     String outputFilename = RELATIVE_PATH + timeCategory + testFilename + ".fzn" + ".out";
     try {
       Files.delete(Path.of(outputFilename));

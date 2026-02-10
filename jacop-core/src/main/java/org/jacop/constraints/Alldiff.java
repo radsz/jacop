@@ -155,13 +155,9 @@ public class Alldiff extends Alldifferent {
       }
     }
 
-    // store.propagationHasOccurred = false;
-
     init();
     updateLb();
     updateUb();
-
-    // } while (store.propagationHasOccurred);
   }
 
   /**

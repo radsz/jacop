@@ -44,10 +44,10 @@ import org.junit.jupiter.api.Test;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class PerformanceTest extends TestHelper {
+class PerformanceTest extends TestHelper {
 
   @Test
-  public void testSumWeightPerformance() {
+  void testSumWeightPerformance() {
 
     Store store = new Store();
 
@@ -66,7 +66,7 @@ public class PerformanceTest extends TestHelper {
   }
 
   @Test
-  public void testLinearIntPerformance() {
+  void testLinearIntPerformance() {
 
     Store store = new Store();
 
@@ -86,7 +86,7 @@ public class PerformanceTest extends TestHelper {
   }
 
   @Test
-  public void testSumWeightPerformance2() {
+  void testSumWeightPerformance2() {
 
     Store store = new Store();
 
@@ -110,7 +110,7 @@ public class PerformanceTest extends TestHelper {
   }
 
   @Test
-  public void testLinearIntPerformance2() {
+  void testLinearIntPerformance2() {
 
     Store store = new Store();
 

@@ -56,7 +56,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @version 5.0
  */
 
-public class FilterBenchmarkTest extends FilterBenchmark {
+class FilterBenchmarkTest extends FilterBenchmark {
 
   static Stream<Arguments> testData() {
     return Stream.of(
@@ -174,8 +174,7 @@ public class FilterBenchmarkTest extends FilterBenchmark {
   @ParameterizedTest
   @MethodSource("testData")
   @SuppressWarnings("unchecked")
-  public void testFilter(
-      int[] resourcesConfiguration, Filter filter, String experiment, int costExp)
+  void testFilter(int[] resourcesConfiguration, Filter filter, String experiment, int costExp)
       throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
 
     Class<? extends FilterBenchmarkTest> cls = this.getClass();

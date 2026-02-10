@@ -241,7 +241,6 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
 
       if (x.min() >= 0) {
         // possible domain consistecny for this case
-        // store.propagationHasOccurred = false;
 
         // bounds consistency
         x.domain.in(store.level, x, y.min(), y.max());

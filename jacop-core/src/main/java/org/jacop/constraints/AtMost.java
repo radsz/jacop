@@ -66,15 +66,8 @@ public class AtMost extends PrimitiveConstraint {
 
   boolean reified = true;
 
-  /*
-   * Defines first position of the variable that are not considered;
-   * either equal to value or missing the value in their domain.
-   */
   private TimeStamp<Integer> position;
 
-  /*
-   * Defines number of variables equal to the value.
-   */
   private TimeStamp<Integer> equal;
 
   /**
