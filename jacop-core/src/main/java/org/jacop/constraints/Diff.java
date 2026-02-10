@@ -65,10 +65,10 @@ import org.jacop.core.Var;
 public class Diff extends Constraint implements UsesQueueVariable, Stateful, SatisfiedPresent {
 
   protected static final boolean TRACE = false;
-  protected static boolean trace = TRACE;
+  protected static boolean traceOn = TRACE;
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean TRACE_NARR = false;
-  private static boolean traceNarr = TRACE_NARR;
+  private static boolean traceNarrOn = TRACE_NARR;
   protected final Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
       dim ->
           (IntRectangle o1, IntRectangle o2) -> {
@@ -590,7 +590,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
                   new IntervalDomain(IntDomain.MinInt, exclude.min - r.length[i].min());
               Update.unionAdapt(exclude.max, IntDomain.MaxInt);
 
-              if (traceNarr) {
+              if (traceNarrOn) {
                 log.debug(
                     "7. Obligatory rectangles Narrow {} in {} --> {}",
                     r.origin[i],
@@ -608,7 +608,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
 
       // Update rectangles length in direction i
       // sort rectangles on increasing origin i
-      if (trace) {
+      if (traceOn) {
         log.debug("10. length = {}", durMax);
       }
 
@@ -619,7 +619,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
       }
 
-      if (traceNarr) {
+      if (traceNarrOn) {
         log.debug("10. Duration {} <-- 0..{}", r.length[i], lengthLimit);
       }
 
@@ -647,7 +647,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
       durMax.add(IntDomain.MaxInt);
     }
 
-    if (trace) {
+    if (traceOn) {
       log.debug("+++ {}", durMax);
     }
   }
@@ -655,7 +655,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   void narrowRectangle(
       Rectangle r, List<IntRectangle> usedRect, List<Rectangle> profileCandidates) {
 
-    if (trace) {
+    if (traceOn) {
       log.debug("Narrowing {}", r);
       log.debug("{}", usedRect);
     }
@@ -805,7 +805,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     int dur = duration.min();
     int intervalEnd = imax + dur;
     for (ProfileItem p : profile) {
-      if (trace) {
+      if (traceOn) {
         log.debug("Comparing [{}, {}] with profile item {}", imin, imax, p);
       }
 
@@ -821,7 +821,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             IntervalDomain update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
             update.unionAdapt(p.max, IntDomain.MaxInt);
 
-            if (traceNarr) {
+            if (traceNarrOn) {
               log.debug("6. Profile Narrowed {} \\ {} => {}", start, update, start);
             }
 
@@ -836,7 +836,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
               }
             }
 
-            if (traceNarr) {
+            if (traceNarrOn) {
               log.debug("6b. Length {} <-- 0..{}", duration, lengthLimit);
             }
 
@@ -851,7 +851,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             if (updateMax < resources.max()) {
               IntervalDomain update = new IntervalDomain(0, updateMax);
 
-              if (traceNarr) {
+              if (traceNarrOn) {
                 log.debug("8. Profile Narrowed {} in {} => {}", resources, update, resources);
               }
 
@@ -871,7 +871,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     IntDomain rOriginJdom = r.origin[j].dom();
     int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
-    if (trace) {
+    if (traceOn) {
       log.debug("Start time = {}, resource use = {}", s, resUse);
     }
 
@@ -897,7 +897,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
             j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), profileCandidates);
 
         if (!profile.isEmpty()) {
-          if (trace) {
+          if (traceOn) {
             log.debug("{}\n{}", r, profileCandidates);
             log.debug("Profile in dimension {} and {}\n{}", i, j, profile);
           }

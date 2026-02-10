@@ -44,8 +44,8 @@ import org.jacop.core.TimeStamp;
  */
 public class Nooverlap extends Constraint {
 
-  static final boolean trace = false;
-  static final boolean traceNarr = false;
+  static final boolean traceOn = false;
+  static final boolean traceNarrOn = false;
   static final int x = 0;
   static final int y = 1;
   static final AtomicInteger idNumber = new AtomicInteger(0);

@@ -58,7 +58,7 @@ public class NetworkSimplex {
   public static final boolean DEBUG = false; // true;
 
   @SuppressWarnings("PointlessBooleanExpression")
-  public static final boolean DEBUG_ALL = true & DEBUG;
+  public static final boolean DEBUG_ALL = true && DEBUG;
 
   public static final int LARGE_COST = 100000; // 1 << 29; // or 28 ?
 

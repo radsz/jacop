@@ -509,7 +509,7 @@ public class Disjoint extends Diff {
             j, i, r, rOriginIdomMin, rOriginIdomMax + r.length[i].min(), profileCandidates);
 
         if (!profile.isEmpty()) {
-          if (trace) {
+          if (traceOn) {
             log.debug(" *** {}\n{}", r, profileCandidates);
             log.debug("Profile in dimension {} and {}\n{}", i, j, profile);
           }

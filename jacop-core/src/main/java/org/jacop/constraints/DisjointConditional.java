@@ -60,8 +60,8 @@ public class DisjointConditional extends Diff {
 
   static final boolean TRACE = false;
   static final boolean TRACE_NARR = false;
-  static boolean trace = TRACE;
-  static boolean traceNarr = TRACE_NARR;
+  static boolean traceOn = TRACE;
+  static boolean traceNarrOn = TRACE_NARR;
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies what rectangles can conditionally overlap. */
@@ -713,7 +713,7 @@ public class DisjointConditional extends Diff {
                   IntervalDomain Update = new IntervalDomain(IntDomain.MinInt, min);
                   Update.unionAdapt(exclude.max(), IntDomain.MaxInt);
 
-                  if (traceNarr) {
+                  if (traceNarrOn) {
                     log.debug(
                         "7. Obligatory rectangles Narrow {}\n{}\n{} in {}length={}\n --> {}",
                         consideredRect,
@@ -771,7 +771,7 @@ public class DisjointConditional extends Diff {
           int maxLength = findMaxLength(i, newMaxLength, r);
 
           if (maxLength < r.length[i].max()) {
-            if (traceNarr) {
+            if (traceNarrOn) {
               log.debug(
                   "9. Obligatory rectangles Narrow {} in {}..{}",
                   r.length[i],
@@ -788,7 +788,7 @@ public class DisjointConditional extends Diff {
   void narrowRectangleCondition(
       Rectangle r, List<IntRectangle> usedRect, List<RectangleWithCondition> profileCandidates) {
 
-    if (trace) {
+    if (traceOn) {
       log.debug("Narrowing {}", r);
       log.debug("{}", profileCandidates);
     }
@@ -899,7 +899,7 @@ public class DisjointConditional extends Diff {
 
     int dur = duration.min();
     for (ProfileItem p : profile) {
-      if (trace) {
+      if (traceOn) {
         log.debug("Comparing [{} {}] with profile item {}", minVal, maxVal, p);
       }
       if (intervalOverlap(minVal, maxVal + dur, p.min, p.max)) {
@@ -912,7 +912,7 @@ public class DisjointConditional extends Diff {
             IntervalDomain update = new IntervalDomain(IntDomain.MinInt, p.min - dur);
             update.unionAdapt(p.max, IntDomain.MaxInt);
 
-            if (traceNarr) {
+            if (traceNarrOn) {
               log.debug(
                   "6. Profile Narrowed {} \\ {}; duration={}; resources={}, limit={}\n{}\n => {}",
                   start,
@@ -934,7 +934,7 @@ public class DisjointConditional extends Diff {
             int updateMax = limit - p.value;
             IntervalDomain update = new IntervalDomain(0, updateMax);
             if (updateMax < resources.max()) {
-              if (traceNarr) {
+              if (traceNarrOn) {
                 log.debug("8. Profile Narrowed {} in {} => {}", resources, update, resources);
               }
 
@@ -954,7 +954,7 @@ public class DisjointConditional extends Diff {
     IntDomain rOriginJdom = r.origin[j].dom();
     int limit = rOriginJdom.max() + resUse.max() - rOriginJdom.min();
 
-    if (trace) {
+    if (traceOn) {
       log.debug("Start time = {}, resource use = {}", s, resUse);
     }
 
@@ -987,7 +987,7 @@ public class DisjointConditional extends Diff {
             exclusionList);
 
         if (!profile.isEmpty()) {
-          if (trace) {
+          if (traceOn) {
             log.debug(" *** {}\n{}", r, profileCandidates);
             log.debug("Profile in dimension {} and {}\n{}", i, j, profile);
           }

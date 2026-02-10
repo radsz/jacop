@@ -46,7 +46,7 @@ import org.jacop.core.IntDomain;
 class DiffnProfile extends Profile {
 
   static final boolean TRACE = false;
-  static boolean trace = TRACE;
+  static boolean traceOn = TRACE;
   @Serial private static final long serialVersionUID = 8683452581100000011L;
 
   DiffnProfile() {}
@@ -69,7 +69,7 @@ class DiffnProfile extends Profile {
           && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
         iR.dim = 0;
         if (t.minUse(i, iR)) {
-          if (trace) {
+          if (traceOn) {
             log.debug(
                 "Update profile [{}..{})={}",
                 iR.origin[j],

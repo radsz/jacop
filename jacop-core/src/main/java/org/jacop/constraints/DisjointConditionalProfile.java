@@ -46,7 +46,7 @@ import org.jacop.core.IntDomain;
 class DisjointConditionalProfile extends ProfileConditional {
 
   static final boolean TRACE = false;
-  static boolean trace = TRACE;
+  static boolean traceOn = TRACE;
   @Serial private static final long serialVersionUID = 8683452581100000008L;
 
   DisjointConditionalProfile() {}
@@ -77,7 +77,7 @@ class DisjointConditionalProfile extends ProfileConditional {
           && tOrigin_i_Dom.max() + t.length[i].max() <= rOriginMax + rLengthMax) {
         rect.dim = 0;
         if (t.minUse(i, rect)) {
-          if (trace) {
+          if (traceOn) {
             log.debug(
                 "Update profile [{}..{})={}",
                 rect.origin[j],
