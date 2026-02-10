@@ -33,41 +33,22 @@ package org.jacop.floats.search;
 import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
-import org.jacop.floats.constraints.PeqC;
-import org.jacop.floats.constraints.PgtC;
-import org.jacop.floats.constraints.PltC;
-import org.jacop.floats.constraints.PlteqC;
-import org.jacop.floats.core.FloatVar;
 import org.jacop.search.ComparatorVariable;
-import org.jacop.search.SimpleSelect;
-
-// import org.jacop.search.Indomain;
 
 /**
  * It is simple and customizable selector of decisions (constraints) which will be enforced by
  * search. However, it does not use P=c as a search decision but rather P {@literal <=} c
  * (potentially splitting the domain), unless c is equal to the maximal value in the domain of P
- * then the constraint P {@literal <} c is used.
+ * then the constraint P {@literal <} c is used. The left/right branch direction is chosen randomly.
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
+public class SplitRandomSelectFloat<T extends Var> extends SplitSelectFloat<T> {
 
-  public final boolean roundRobin = true;
-  final TimeStamp<Integer> currentIndex;
-
-  /** Select parameters are kept here sicne we use floats ansd Simple select uses int. */
   private final Random generator;
-
-  /**
-   * It specifies if the left branch (values smaller or equal to the value selected) are first
-   * considered.
-   */
-  public boolean leftFirst = true;
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -78,9 +59,7 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
    */
   public SplitRandomSelectFloat(Store store, T[] variables, ComparatorVariable<T> varSelect) {
 
-    super(variables, varSelect, null);
-
-    currentIndex = new TimeStamp<>(store, 0);
+    super(store, variables, varSelect);
 
     generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
@@ -99,79 +78,17 @@ public class SplitRandomSelectFloat<T extends Var> extends SimpleSelect<T> {
       T[] variables,
       ComparatorVariable<T> varSelect,
       ComparatorVariable<T> tieBreakerVarSelect) {
-    // ,
-    //         Indomain<T> indomain) {
 
-    super(variables, varSelect, tieBreakerVarSelect, null);
-
-    currentIndex = new TimeStamp<>(store, 0);
+    super(store, variables, varSelect, tieBreakerVarSelect);
 
     generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   @Override
-  public T getChoiceVariable(int index) {
-    return null;
-  }
-
-  @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
-
-    super.getChoiceVariable(index);
-    T var;
-
-    if (variableOrdering == null && roundRobin) {
-      var = roundRobinVarSelection(index);
-    } else {
-      var = super.getChoiceVariable(index);
-    }
-
-    if (var == null) {
-      return null;
-    }
-
-    assert (index >= 0);
-
-    double value = (((FloatVar) var).min() + ((FloatVar) var).max()) / 2.0;
 
     leftFirst = generator.nextBoolean();
 
-    if (leftFirst) {
-      if (((FloatVar) var).max() > value) {
-        return new PlteqC((FloatVar) var, value);
-      } else {
-        return new PltC((FloatVar) var, value);
-      }
-    } else if (((FloatVar) var).max() > value) {
-      return new PgtC((FloatVar) var, value);
-    } else {
-      return new PeqC((FloatVar) var, value);
-    }
-  }
-
-  T roundRobinVarSelection(int index) {
-
-    assert (index < searchVariables.length);
-
-    int N = searchVariables.length;
-
-    int n = 0;
-    int i = currentIndex.value();
-    int ii;
-    do {
-
-      if (!searchVariables[i].singleton()) {
-        currentIndex.update((i + 1) % N);
-
-        return searchVariables[i];
-      }
-
-      ii = i;
-      i = (i + 1) % N;
-      n++;
-
-    } while (searchVariables[ii].singleton() && n < N);
-
-    return null;
+    return super.getChoiceConstraint(index);
   }
 }

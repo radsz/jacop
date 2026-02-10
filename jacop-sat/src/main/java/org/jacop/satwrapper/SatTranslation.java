@@ -49,6 +49,14 @@ public class SatTranslation {
   public boolean debug;
   long numberClauses;
 
+  private int[] toBoolVarArray(List<IntVar> vars) {
+    int[] result = new int[vars.size()];
+    for (int i = 0; i < vars.size(); i++) {
+      result[i] = clauses.cpVarToBoolVar(vars.get(i), 1, true);
+    }
+    return result;
+  }
+
   /**
    * Constructs a SAT translation instance for the given store.
    *
@@ -100,14 +108,8 @@ public class SatTranslation {
       clauses.register(v);
     }
 
-    int[] a1IsOne = new int[a1reduced.size()];
-    for (int i = 0; i < a1reduced.size(); i++) {
-      a1IsOne[i] = clauses.cpVarToBoolVar(a1reduced.get(i), 1, true);
-    }
-    int[] a2IsOne = new int[a2reduced.size()];
-    for (int i = 0; i < a2reduced.size(); i++) {
-      a2IsOne[i] = clauses.cpVarToBoolVar(a2reduced.get(i), 1, true);
-    }
+    int[] a1IsOne = toBoolVarArray(a1reduced);
+    int[] a2IsOne = toBoolVarArray(a2reduced);
 
     int[] clause = new int[a1reduced.size() + a2reduced.size()];
     System.arraycopy(a1IsOne, 0, clause, 0, a1reduced.size());
