@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -283,27 +284,24 @@ public class Fsm {
   }
 
   /**
-   * It creates an array of tuples representing this Regular context. It generates only the tuples
-   * which are allowed in the current context of the store.
+   * Computes the pruned outgoing-arc graph for the given variables. This performs a forward pass
+   * (computing reachable states and intersecting transition domains with variable domains) followed
+   * by a backward pass (removing paths that don't reach an accepting state). The FSM is resized
+   * (state IDs renumbered 0..n-1) as a side effect.
    *
-   * @param vars variables in which context a list of tuples is created.
-   * @return an array of tuples.
+   * @param vars the variables whose domains constrain the transitions.
+   * @return the outarc graph indexed by [level][fromState][toState].
    */
-  public int[][] transformIntoTuples(IntVar[] vars) {
+  private IntervalDomain[][][] computeOutarc(IntVar[] vars) {
 
     int levels = vars.length;
     int stateNumber = this.allStates.size();
 
-    // The array that keep all possible states with arcs and their domains
-    // If the domain is empty then the arc doesn't exist
     IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
 
-    // Reachable region of the graph
     Set<FsmState> reachable = new HashSet<>();
-    // Temporal variable for reachable region
     Set<FsmState> tmp = new HashSet<>();
 
-    // The id's of the states are renamed to make the future graph in latex look pretty
     int level = 0;
 
     resize();
@@ -312,28 +310,15 @@ public class Fsm {
       array[s.id] = s;
     }
 
-    // ----- compute the reachable region of the graph -----
-
-    // Start with initial state
+    // Forward pass: compute reachable states and transition domains
     reachable.add(this.initState);
 
     while (level < levels) {
-      // prepare tmp set of reachable states in the next level
       tmp.clear();
-      // For each state reached until now
       for (FsmState s : reachable) {
-        // watch it's edges
         for (FsmTransition t : s.transitions) {
-          // prepare the set of values of this edge
           IntDomain dom = t.domain.intersect(vars[level].dom());
           outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
-
-          /* If the edge is not empty them add the state to tmp set
-           * check that such states wasn't previously added.
-           *
-           * If the level is the last, then check whether the state
-           * belongs to the set of accepted states
-           */
 
           if (dom.getSize() > 0) {
             if (level < levels - 1) {
@@ -344,20 +329,12 @@ public class Fsm {
           }
         }
       }
-      // copy the tmp set of states into reachable region
       reachable.clear();
       reachable.addAll(tmp);
-      // got to next level
       level++;
     }
 
-    /* ----- delete the paths of the graph that doesn't reach the accepted state -----
-     *
-     *
-     *  by calculating the reachable region of the graph starting from the accepted
-     *  states and following the edges in the opposite direction.
-     */
-
+    // Backward pass: prune paths that don't reach an accepting state
     while (level > 0) {
       tmp.clear();
 
@@ -378,99 +355,92 @@ public class Fsm {
       level--;
     }
 
-    IntervalDomain dom;
-    int[] tuple = new int[levels];
-    List<int[]> result = new ArrayList<>();
+    return outarc;
+  }
+
+  /**
+   * Enumerates all valid tuples from the outarc graph, invoking the given action for each complete
+   * tuple. Iterates over all level-0 arcs and recursively builds tuples from there.
+   *
+   * @param outarc the pruned outgoing-arc graph.
+   * @param tuple the tuple array to fill (mutated in place).
+   * @param action the action to perform on each complete tuple.
+   */
+  private void enumerateAllTuples(
+      IntervalDomain[][][] outarc, int[] tuple, Consumer<int[]> action) {
+
+    int stateNumber = this.allStates.size();
 
     for (int i = 0; i < stateNumber; i++) {
       for (int j = 0; j < stateNumber; j++) {
         if (outarc[0][i][j] != null && outarc[0][i][j].getSize() > 0) {
-          dom = outarc[0][i][j];
+          IntervalDomain dom = outarc[0][i][j];
           for (int h = 0; h < dom.size; h++) {
             Interval inv = dom.intervals[h];
-            // for each interval of val
             if (inv != null) {
-              // For each value of the interval
               for (int v = inv.min(); v <= inv.max(); v++) {
                 tuple[0] = v;
-                recursiveCall(j, 1, stateNumber, outarc, tuple, result);
+                enumerateTuples(j, 1, stateNumber, outarc, tuple, action);
               }
             }
           }
         }
       }
     }
+  }
+
+  /**
+   * It creates an array of tuples representing this Regular context. It generates only the tuples
+   * which are allowed in the current context of the store.
+   *
+   * @param vars variables in which context a list of tuples is created.
+   * @return an array of tuples.
+   */
+  public int[][] transformIntoTuples(IntVar[] vars) {
+
+    IntervalDomain[][][] outarc = computeOutarc(vars);
+    int[] tuple = new int[vars.length];
+    List<int[]> result = new ArrayList<>();
+
+    enumerateAllTuples(outarc, tuple, t -> result.add(t.clone()));
 
     return result.toArray(new int[result.size()][]);
   }
 
-  // Recursive function used to create a list of tuples.
-  private void recursiveCall(
+  /**
+   * Recursively enumerates all tuples from the outarc graph starting at the given level and
+   * predecessor state, invoking the action for each complete tuple.
+   *
+   * @param prevSuc the predecessor state index.
+   * @param level the current level (variable index).
+   * @param stateNumber total number of states.
+   * @param outarc the reachability graph.
+   * @param tuple the tuple being built (mutated in place).
+   * @param action the action to perform on each complete tuple.
+   */
+  private void enumerateTuples(
       int prevSuc,
       int level,
       int stateNumber,
       IntervalDomain[][][] outarc,
       int[] tuple,
-      List<int[]> tuples) {
+      Consumer<int[]> action) {
 
     if (level == tuple.length) {
-      tuples.add(tuple.clone());
+      action.accept(tuple);
       return;
     }
 
-    IntervalDomain dom;
-
     for (int i = 0; i < stateNumber; i++) {
       if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
-        dom = outarc[level][prevSuc][i];
+        IntervalDomain dom = outarc[level][prevSuc][i];
 
         for (int h = 0; h < dom.size; h++) {
-
           Interval inv = dom.intervals[h];
-
           if (inv != null) {
-            // For each value of the interval
             for (int v = inv.min(); v <= inv.max(); v++) {
               tuple[level] = v;
-              recursiveCall(i, level + 1, stateNumber, outarc, tuple, tuples);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // It recursively creates
-  private void recursiveCall(
-      int prevSuc,
-      int level,
-      int stateNumber,
-      IntervalDomain[][][] outarc,
-      int[] tuple,
-      Mdd result) {
-
-    if (level == tuple.length) {
-      // it adds a tuple to an Mdd.
-      result.addTuple(tuple);
-      return;
-    }
-
-    IntervalDomain dom;
-
-    for (int i = 0; i < stateNumber; i++) {
-      if (outarc[level][prevSuc][i] != null && outarc[level][prevSuc][i].getSize() > 0) {
-
-        dom = outarc[level][prevSuc][i];
-
-        for (int h = 0; h < dom.size; h++) {
-
-          Interval inv = dom.intervals[h];
-
-          if (inv != null) {
-            // For each value of the interval
-            for (int v = inv.min(); v <= inv.max(); v++) {
-              tuple[level] = v;
-              recursiveCall(i, level + 1, stateNumber, outarc, tuple, result);
+              enumerateTuples(i, level + 1, stateNumber, outarc, tuple, action);
             }
           }
         }
@@ -489,119 +459,11 @@ public class Fsm {
    */
   public Mdd transformIntoMdd(IntVar[] vars) {
 
-    int levels = vars.length;
-    int stateNumber = this.allStates.size();
-
-    // The array that keep all possible states with arcs and their domains
-    // If the domain is empty then the arc doesn't exist
-    IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
-
-    // Reachable region of the graph
-    Set<FsmState> reachable = new HashSet<>();
-    // Temporal variable for reachable region
-    Set<FsmState> tmp = new HashSet<>();
-
-    // The id's of the states are renamed to make the future graph in latex look pretty
-    int level = 0;
-
-    resize();
-    FsmState[] array = new FsmState[stateNumber];
-    for (FsmState s : this.allStates) {
-      array[s.id] = s;
-    }
-
-    // ----- compute the reachable region of the graph -----
-
-    // Start with initial state
-    reachable.add(this.initState);
-
-    while (level < levels) {
-      // prepare tmp set of reachable states in the next level
-      tmp.clear();
-      // For each state reached until now
-      for (FsmState s : reachable) {
-        // watch it's edges
-        for (FsmTransition t : s.transitions) {
-          // prepare the set of values of this edge
-          IntDomain dom = t.domain.intersect(vars[level].dom());
-          outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
-
-          /* If the edge is not empty them add the state to tmp set
-           * check that such states wasn't previously added.
-           *
-           * If the level is the last, then check whether the state
-           * belongs to the set of accepted states
-           */
-
-          if (dom.getSize() > 0) {
-            if (level < levels - 1) {
-              tmp.add(t.successor);
-            } else if (finalStates.contains(t.successor)) {
-              tmp.add(t.successor);
-            }
-          }
-        }
-      }
-
-      // copy the tmp set of states into reachable region
-      reachable.clear();
-      reachable.addAll(tmp);
-      // got to next level
-      level++;
-    }
-
-    /* ----- delete the paths of the graph that doesn't reach the accepted state -----
-     *
-     *
-     *  by calculating the reachable region of the graph starting from the accepted
-     *  states and following the edges in the opposite direction.
-     */
-
-    while (level > 0) {
-
-      tmp.clear();
-
-      for (int i = 0; i < stateNumber; i++) {
-        for (int j = 0; j < stateNumber; j++) {
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
-            if (!reachable.contains(array[i])) {
-              outarc[level - 1][j][i].clear();
-            } else {
-              tmp.add(array[j]);
-            }
-          }
-        }
-      }
-
-      reachable.clear();
-      reachable.addAll(tmp);
-      level--;
-    }
-
-    IntervalDomain dom;
-    int[] tuple = new int[levels];
+    IntervalDomain[][][] outarc = computeOutarc(vars);
+    int[] tuple = new int[vars.length];
 
     Mdd result = new Mdd(vars);
-    // Part exploring all tuples and adding one by one to Mdd.
-    for (int i = 0; i < stateNumber; i++) {
-      for (int j = 0; j < stateNumber; j++) {
-        // for level 0 (first variable in the tuple)
-        if (outarc[0][i][j] != null && outarc[0][i][j].getSize() > 0) {
-          dom = outarc[0][i][j];
-          for (int h = 0; h < dom.size; h++) {
-            Interval inv = dom.intervals[h];
-            // for each interval of val
-            if (inv != null) {
-              // For each value of the interval
-              for (int v = inv.min(); v <= inv.max(); v++) {
-                tuple[0] = v;
-                recursiveCall(j, 1, stateNumber, outarc, tuple, result);
-              }
-            }
-          }
-        }
-      }
-    }
+    enumerateAllTuples(outarc, tuple, result::addTuple);
 
     result.reduce();
     return result;
@@ -618,95 +480,8 @@ public class Fsm {
    */
   public Mdd transformDirectlyIntoMdd(IntVar[] vars) {
 
-    int levels = vars.length;
+    IntervalDomain[][][] outarc = computeOutarc(vars);
     int stateNumber = this.allStates.size();
-
-    // The array that keep all possible states with arcs and their domains
-    // If the domain is empty then the arc doesn't exist
-    IntervalDomain[][][] outarc = new IntervalDomain[levels + 1][stateNumber][stateNumber];
-
-    // Reachable region of the graph
-    Set<FsmState> reachable = new HashSet<>();
-    // Temporal variable for reachable region
-    Set<FsmState> tmp = new HashSet<>();
-
-    // The id's of the states are renamed to make the future graph in latex look pretty
-    int level = 0;
-
-    resize();
-    FsmState[] array = new FsmState[stateNumber];
-    for (FsmState s : this.allStates) {
-      array[s.id] = s;
-    }
-
-    // ----- compute the reachable region of the graph -----
-
-    // Start with initial state
-    reachable.add(this.initState);
-
-    while (level < levels) {
-
-      // prepare tmp set of reachable states in the next level
-      tmp.clear();
-      // For each state reached until now
-      for (FsmState s : reachable) {
-        // watch it's edges
-        for (FsmTransition t : s.transitions) {
-          // prepare the set of values of this edge
-          IntDomain dom = t.domain.intersect(vars[level].dom());
-          outarc[level][s.id][t.successor.id] = (IntervalDomain) dom;
-
-          /* If the edge is not empty them add the state to tmp set
-           * check that such states wasn't previously added.
-           *
-           * If the level is the last, then check whether the state
-           * belongs to the set of accepted states
-           */
-
-          if (dom.getSize() > 0) {
-            if (level < levels - 1) {
-              tmp.add(t.successor);
-            } else if (finalStates.contains(t.successor)) {
-              tmp.add(t.successor);
-            }
-          }
-        }
-      }
-
-      // copy the tmp set of states into reachable region
-      reachable.clear();
-      reachable.addAll(tmp);
-      // got to next level
-      level++;
-    }
-
-    /* ----- delete the paths of the graph that doesn't reach the accepted state -----
-     *
-     *
-     *  by calculating the reachable region of the graph starting from the accepted
-     *  states and following the edges in the opposite direction.
-     */
-
-    while (level > 0) {
-
-      tmp.clear();
-
-      for (int i = 0; i < stateNumber; i++) {
-        for (int j = 0; j < stateNumber; j++) {
-          if (outarc[level - 1][j][i] != null && outarc[level - 1][j][i].getSize() > 0) {
-            if (!reachable.contains(array[i])) {
-              outarc[level - 1][j][i].clear();
-            } else {
-              tmp.add(array[j]);
-            }
-          }
-        }
-      }
-
-      reachable.clear();
-      reachable.addAll(tmp);
-      level--;
-    }
 
     int[] positions = new int[(vars.length + 1) * stateNumber];
 
