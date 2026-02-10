@@ -39,7 +39,7 @@ import lombok.NoArgsConstructor;
  * @version 5.0
  */
 @NoArgsConstructor
-public class MutableDomainValue implements MutableVarValue, Cloneable {
+public class MutableDomainValue implements MutableVarValue {
 
   /** It stores the value of the mutable domain. */
   public Domain domain;
@@ -58,8 +58,8 @@ public class MutableDomainValue implements MutableVarValue, Cloneable {
   }
 
   @Override
-  public Object clone() {
-    MutableDomainValue val = new MutableDomainValue(domain.clone());
+  public MutableDomainValue copy() {
+    MutableDomainValue val = new MutableDomainValue(domain.copy());
     val.stamp = stamp;
     val.previousMutableDomainVariableValue = previousMutableDomainVariableValue;
     return val;

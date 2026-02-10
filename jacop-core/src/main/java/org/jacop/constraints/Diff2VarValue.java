@@ -39,7 +39,7 @@ import org.jacop.core.MutableVarValue;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-class Diff2VarValue implements MutableVarValue, Cloneable {
+class Diff2VarValue implements MutableVarValue {
 
   Diff2VarValue previousDiff2VarValue;
 
@@ -57,7 +57,7 @@ class Diff2VarValue implements MutableVarValue, Cloneable {
   // Methods
 
   @Override
-  public Object clone() {
+  public Diff2VarValue copy() {
 
     Diff2VarValue Val = new Diff2VarValue(Rects);
     Val.stamp = stamp;

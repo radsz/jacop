@@ -46,7 +46,7 @@ import org.jacop.constraints.Constraint;
  * @version 5.0
  */
 @Slf4j
-public class IntervalDomain extends IntDomain implements Cloneable {
+public class IntervalDomain extends IntDomain {
 
   // FIXME, implement all already implemented functions from IntDomain
   // so it is more efficient, for example public int lex(IntDomain s).
@@ -566,7 +566,7 @@ public class IntervalDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public IntervalDomain clone() {
+  public IntervalDomain copy() {
 
     assert checkInvariants() == null : checkInvariants();
 

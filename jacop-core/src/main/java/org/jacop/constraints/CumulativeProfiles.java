@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 class CumulativeProfiles {
 
   static final boolean TRACE = false;
-  static boolean trace = TRACE;
+  static boolean traceEnabled = TRACE;
 
   Profile maxProfile;
 
@@ -72,14 +72,14 @@ class CumulativeProfiles {
         strt = t.est();
         stp = t.lastCt();
         value = t.res().max();
-        if (trace) {
+        if (traceEnabled) {
           log.debug("Update profile [{}..{})={}", strt, stp, value);
         }
         maxProfile.addToProfile(strt, stp, value);
       }
 
       if (tDurMin > 0 && tResMin > 0 && t.minUse(iTask)) {
-        if (trace) {
+        if (traceEnabled) {
           log.debug("Update profile {} [{}..{})={}", t, iTask.start(), iTask.stop(), tResMin);
         }
         minProfile.addToProfile(iTask.start(), iTask.stop(), tResMin);

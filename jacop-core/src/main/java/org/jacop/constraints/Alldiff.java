@@ -61,7 +61,7 @@ public class Alldiff extends Alldifferent {
   // it stores the store locally so all the private functions which
   // are part of the consistency function can throw failure exception
   // without passing store argument every time their function is called.
-  Store store;
+  protected Store store;
   private int[] t; // holds the critical capacity pointers; that is, t[i] points to the
   // predecessor of i in the bounds list.
   private int[] d; // holds the differences between critical capacities; that is d[i] is

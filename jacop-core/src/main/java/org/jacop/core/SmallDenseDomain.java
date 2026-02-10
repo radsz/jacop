@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  * @version 5.0
  */
 @Slf4j
-public class SmallDenseDomain extends IntDomain implements Cloneable {
+public class SmallDenseDomain extends IntDomain {
 
   /**
    * It is an empty domain returned by default when empty domain becomes a result of any function.
@@ -2176,7 +2176,7 @@ public class SmallDenseDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public SmallDenseDomain clone() {
+  public SmallDenseDomain copy() {
 
     assert checkInvariants() == null : checkInvariants();
 

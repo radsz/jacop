@@ -60,7 +60,6 @@ public class Subcircuit extends Alldiff {
   final SophisticatedLengauerTarjan graphDominance;
   final int[] stack; // stack for strongly connected compoents algorithm
   final Random random = new Random(0);
-  Store store;
   boolean firstConsistencyCheck = true;
   boolean useScc = true;
   boolean useDominance = true;

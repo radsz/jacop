@@ -58,8 +58,8 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean DEBUG = false;
   private static final boolean DEBUG_NARR = false;
-  private static boolean debug = DEBUG;
-  private static boolean debugNarr = DEBUG_NARR;
+  private static boolean debugEnabled = DEBUG;
+  private static boolean debugNarrEnabled = DEBUG_NARR;
   private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
   private final Task[] Ts;
   private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> o2.max() - o1.max();
@@ -290,7 +290,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     boolean afterS = true;
 
     if (!tasks.isEmpty()) {
-      if (debug) {
+      if (debugEnabled) {
         log.debug("Checking if {} can be after {}", l, tasks);
       }
       for (Task t : tasks) {
@@ -300,7 +300,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       afterS = (long) (l.lct() - startS) * limit.max() - a >= l.areaMin();
 
-      if (debug) {
+      if (debugEnabled) {
         log.debug("s(S')= {},  c(l)= {},  a(Sp)= {},  afterS= {}", startS, l.lct(), a, afterS);
       }
     }
@@ -313,7 +313,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     boolean beforeS = true;
 
     if (!tasks.isEmpty()) {
-      if (debug) {
+      if (debugEnabled) {
         log.debug("Checking if {} can be before tasks in {}", l, tasks);
       }
       for (Task t : tasks) {
@@ -323,7 +323,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       beforeS = (long) (completionS - l.est()) * limit.max() >= a + l.areaMin();
 
-      if (debug) {
+      if (debugEnabled) {
         log.debug(
             "s(l)= {},  c(S')= {},  a(Sp)= {},  beforeS= {}", l.est(), completionS, a, beforeS);
       }
@@ -339,7 +339,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     boolean betweenS = true;
 
     if (!tasks.isEmpty()) {
-      if (debug) {
+      if (debugEnabled) {
         log.debug("Checking if {} can be between tasks in {}", l, tasks);
       }
       for (Task t : tasks) {
@@ -350,7 +350,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       larea = minOverlap(l, startS, completionS);
 
       betweenS = (long) (completionS - startS) * limit.max() >= a + larea;
-      if (debug) {
+      if (debugEnabled) {
         log.debug(
             "s(S')= {},  c(S')= {},  a(Sp)= {}, l_area= {},  betweenS= {}",
             startS,
@@ -379,7 +379,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           maxProfile = cumulativeProfiles.maxProfile();
         }
 
-        if (debug) {
+        if (debugEnabled) {
           log.debug(
               "\n--------------------------------------\nMinProfile for {} :{}\nMaxProfile for {} :{}\n--------------------------------------",
               id(),
@@ -417,7 +417,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     TreeSet<IntDomain> estUpList = new TreeSet<>(domainMinComparator);
 
-    if (debug) {
+    if (debugEnabled) {
       log.debug(
           "------------------------------------------------\nEdge Finding Down\n------------------------------------------------");
     }
@@ -429,7 +429,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     for (IntDomain est : estUpList) {
       int est0 = est.min();
-      if (debug) {
+      if (debugEnabled) {
         log.debug("est0 = {}\n=================", est0);
       }
 
@@ -446,7 +446,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           }
         }
       }
-      if (debug) {
+      if (debugEnabled) {
         log.debug("S = {}", S);
         log.debug("L = {}", L);
       }
@@ -472,7 +472,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         int completionOfS = IntDomain.MinInt;
         long area1 = 0;
         long area2 = 0;
-        if (debug) {
+        if (debugEnabled) {
           log.debug("Checking if {} can be after {}", l, S);
         }
         for (Task t : S) {
@@ -534,7 +534,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
               int newStartl = compl - l.dur().min();
               if (newStartl < l.lst()) {
-                if (debugNarr) {
+                if (debugNarrEnabled) {
                   log.debug(
                       ">>> Cumulative EF <<< 2. Narrowed {} in {}..{}",
                       l.start(),
@@ -559,7 +559,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               // l must be before S
               // update upper bound of l.Start and l.Dur
 
-              if (debug) {
+              if (debugEnabled) {
                 log.debug("after={} between={}!!!", false, false);
               }
 
@@ -574,7 +574,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
               long finish = compl - (areaOfS + l.areaMin()) / limit.max();
               if (l.start().max() > finish) {
-                if (debugNarr) {
+                if (debugNarrEnabled) {
                   log.debug(
                       "{} must be before\n{}\n>>> Cumulative EF <<< 3. Narrowed {} in {}..{}",
                       l,
@@ -599,7 +599,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     TreeSet<IntDomain> lctDownList = new TreeSet<>(domainMaxComparator);
 
-    if (debug) {
+    if (debugEnabled) {
       log.debug(
           "------------------------------------------------\nEdge Finding Up\n------------------------------------------------");
     }
@@ -612,7 +612,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     for (IntDomain lct : lctDownList) {
 
       int lct0 = lct.max();
-      if (debug) {
+      if (debugEnabled) {
         log.debug("lct0 = {}\n=================", lct0);
       }
 
@@ -629,7 +629,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
           }
         }
       }
-      if (debug) {
+      if (debugEnabled) {
         log.debug("\nS = {}", S);
         log.debug("L = {}", L);
       }
@@ -655,7 +655,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         int startOfS = IntDomain.MaxInt;
         long area1 = 0;
         long area2 = 0;
-        if (debug) {
+        if (debugEnabled) {
           log.debug("Checking if {} can be before or between tasks in {}", l, S);
         }
 
@@ -674,7 +674,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         long larea = minOverlap(l, startOfS, completionOfS);
         boolean between = (long) (completionOfS - startOfS) * limitMax >= area2 + larea;
 
-        if (debug) {
+        if (debugEnabled) {
           log.debug(
               "before={} between={} completionOfS={} startOfS={} area2={}  larea={}\nS = {}\nl = {}",
               before,
@@ -734,7 +734,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             }
 
             if (newStartl > lEst) {
-              if (debugNarr) {
+              if (debugNarrEnabled) {
                 log.debug(
                     ">>> Cumulative EF <<< 0. Narrowed {} in {}..{}",
                     l.start(),
@@ -757,7 +757,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               // ! between && ! before => after S
               // l must be after S
               // update lower bound of l
-              if (debug) {
+              if (debugEnabled) {
                 log.debug("before={} between={}!!!", false, false);
               }
 
@@ -768,7 +768,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
               int start = startOfS + (int) (areaOfS / limit.max());
               if (start > l.start().min()) {
-                if (debugNarr) {
+                if (debugNarrEnabled) {
                   log.debug(
                       "{} must be after\n{}\n>>> Cumulative EF <<< 1. Narrowed {} in {}..{}",
                       l,
@@ -820,7 +820,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     int limitMax = limit.max();
     long availableArea = (long) (lctOfS - est0) * limitMax;
-    if (debug) {
+    if (debugEnabled) {
       log.debug("Fit tasks of {} after {} = {}", s, est0, availableArea >= areaS);
     }
     FitAfter = availableArea >= areaS;
@@ -851,7 +851,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     int limitMax = limit.max();
     long availableArea = (long) (lct0 - estOfS) * limitMax;
-    if (debug) {
+    if (debugEnabled) {
       log.debug(
           "Fit tasks of {} before {} = Available are: {} Area: {}", s, lct0, availableArea, areaS);
     }
@@ -957,7 +957,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     if (tasks.size() > 1) {
 
-      if (debug) {
+      if (debugEnabled) {
         log.debug("Not first {} in {}", s, tasks);
       }
       for (Task t : tasks) {
@@ -967,7 +967,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
       }
       slack = (long) (completionS - sEst) * limit.max() - a - s.areaMin();
-      if (debug) {
+      if (debugEnabled) {
         boolean notBeforeS = slack < 0;
         log.debug(
             "s(l)= {},  c(S')= {},  a(S)= {},  notBeforeS= {}", sEst, completionS, a, notBeforeS);
@@ -1004,7 +1004,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         }
 
         if (newStartl > sEst) {
-          if (debugNarr) {
+          if (debugNarrEnabled) {
             log.debug(
                 ">>> Cumulative EF <<< 4. Narrowed {} in {}..{}",
                 s.start(),
@@ -1031,7 +1031,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     if (tasks.size() > 1) {
 
-      if (debug) {
+      if (debugEnabled) {
         log.debug("Not last {} in {}", s, tasks);
       }
       for (Task t : tasks) {
@@ -1042,7 +1042,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       }
       slack = (long) (sLct - startS) * limit.max() - a - s.areaMin();
 
-      if (debug) {
+      if (debugEnabled) {
         boolean notLastInS = slack < 0;
         log.debug("s(S')= {},  c(l)= {},  a(S)= {},  notLastInS= {}", startS, sLct, a, notLastInS);
       }
@@ -1080,7 +1080,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
         newStartl = compl - s.dur().min();
         if (newStartl < s.start().max()) {
-          if (debugNarr) {
+          if (debugNarrEnabled) {
             log.debug(
                 ">>> Cumulative EF <<< 5. Narrowed {} in {}..{}",
                 s.start(),
@@ -1104,12 +1104,12 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       int mustUseMax) {
 
     for (ProfileItem p : minProfile) {
-      if (debug) {
+      if (debugEnabled) {
         log.debug("Comparing {} with profile item {}", i, p);
       }
 
       if (intervalOverlap(i.min(), i.max() + duration.min(), p.min, p.max)) {
-        if (debug) {
+        if (debugEnabled) {
           log.debug("Overlapping");
         }
         if (limit.max() - p.value < resources.min()) {
@@ -1124,7 +1124,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               int UpdateMin = left.min - duration.min() + 1;
               int UpdateMax = left.max - 1;
               if (!(UpdateMin > start.max() || UpdateMax < start.min())) {
-                if (debugNarr) {
+                if (debugNarrEnabled) {
                   log.debug(
                       ">>> Cumulative Profile 7a. Narrowed {} \\ {} => {}",
                       start,
@@ -1142,7 +1142,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
               int UpdateMin = right.min - duration.min() + 1;
               int UpdateMax = right.max - 1;
               if (!(UpdateMin > start.max() || UpdateMax < start.min())) {
-                if (debugNarr) {
+                if (debugNarrEnabled) {
                   log.debug(
                       ">>> Cumulative Profile 7b. Narrowed {} \\ {} => {}",
                       start,
@@ -1159,7 +1159,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             if (start.max() < right.min && start.dom().noIntervals() == 1) {
               int rs = right.min - start.min();
               if (rs < duration.max()) {
-                if (debugNarr) {
+                if (debugNarrEnabled) {
                   log.debug(">>> Cumulative Profile 9. Narrow {} in 0..{}", duration, rs);
                 }
                 duration.domain.inMax(store.level, duration, rs);
@@ -1169,7 +1169,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             int UpdateMin = p.min - duration.min() + 1;
             int UpdateMax = p.max - 1;
             if (!(UpdateMin > start.max() || UpdateMax < start.min())) {
-              if (debugNarr) {
+              if (debugNarrEnabled) {
                 log.debug(
                     ">>> Cumulative Profile 6. Narrowed {} \\ {} => {}",
                     start,
@@ -1188,7 +1188,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
             if (intervalOverlap(p.min(), p.max(), mustUseMin, mustUseMax)) {
               offset = resources.min();
             }
-            if (debugNarr) {
+            if (debugNarrEnabled) {
               log.debug(
                   ">>> Cumulative Profile 8. Narrowed {} in 0..{}",
                   resources,
@@ -1202,7 +1202,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         if (start.max() < p.min && start.dom().noIntervals() == 1) {
           int ps = p.min - start.min();
           if (ps < duration.max() && limit.max() - p.value < resources.min()) {
-            if (debugNarr) {
+            if (debugNarrEnabled) {
               log.debug(">>> Cumulative Profile 10. Narrowed {} in 0..{}", duration, ps);
             }
 
@@ -1229,7 +1229,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
         IntVar resUse = t.res();
         IntVar dur = t.dur();
 
-        if (debug) {
+        if (debugEnabled) {
           log.debug(
               "Start time = {}, resource use = {}, minimal use = {{{}..{}}}",
               t.start(),

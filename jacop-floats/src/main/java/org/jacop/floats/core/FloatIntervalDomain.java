@@ -48,7 +48,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class FloatIntervalDomain extends FloatDomain implements Cloneable {
+public class FloatIntervalDomain extends FloatDomain {
 
   // FIXME, implement all already implemented functions from IntDomain
   // so it is more efficient, for example public int lex(IntDomain s).
@@ -416,9 +416,8 @@ public class FloatIntervalDomain extends FloatDomain implements Cloneable {
     return cloned;
   }
 
-  /** It clones the domain object. */
   @Override
-  public FloatIntervalDomain clone() {
+  public FloatIntervalDomain copy() {
 
     assert checkInvariants() == null : checkInvariants();
 

@@ -39,7 +39,7 @@ import org.jacop.core.MutableVarValue;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-class DisjointCondVarValue implements MutableVarValue, Cloneable {
+class DisjointCondVarValue implements MutableVarValue {
 
   DisjointCondVarValue previousDisjointCondVarValue;
 
@@ -54,7 +54,7 @@ class DisjointCondVarValue implements MutableVarValue, Cloneable {
   }
 
   @Override
-  public Object clone() {
+  public DisjointCondVarValue copy() {
     DisjointCondVarValue val = new DisjointCondVarValue(Rects);
     val.stamp = stamp;
     val.previousDisjointCondVarValue = previousDisjointCondVarValue;

@@ -38,7 +38,7 @@ import org.jacop.core.MutableVarValue;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-class CircuitVarValue implements MutableVarValue, Cloneable {
+class CircuitVarValue implements MutableVarValue {
 
   int next;
   int previous;
@@ -55,7 +55,7 @@ class CircuitVarValue implements MutableVarValue, Cloneable {
   }
 
   @Override
-  public Object clone() {
+  public CircuitVarValue copy() {
     CircuitVarValue val = new CircuitVarValue(next, previous);
     val.stamp = stamp;
     val.nextCircuitVarValue = nextCircuitVarValue;

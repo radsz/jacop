@@ -104,7 +104,7 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
     this.queueIndex = 1;
     numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
-    this.kSet = kset.clone();
+    this.kSet = kset.copy();
     this.n = n;
 
     setScope(Stream.concat(Arrays.stream(list), Stream.of(n)));

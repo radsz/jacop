@@ -1368,9 +1368,9 @@ public abstract class IntDomain extends Domain {
   /**
    * Creates a deep copy of this domain including all intervals and metadata.
    *
-   * @return a clone of this domain.
+   * @return a copy of this domain.
    */
-  public abstract IntDomain clone();
+  public abstract IntDomain copy();
 
   /**
    * Creates a lightweight copy of this domain containing only the domain values without constraint

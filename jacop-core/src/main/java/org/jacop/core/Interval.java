@@ -39,7 +39,7 @@ package org.jacop.core;
  * @param min It specifies the minimal value in the interval.
  * @param max It specifies the maximal value in the interval.
  */
-public record Interval(int min, int max) implements Cloneable {
+public record Interval(int min, int max) {
 
   /**
    * It creates an interval with a given minimum and maximal value.
@@ -52,8 +52,12 @@ public record Interval(int min, int max) implements Cloneable {
     assert min <= max : "min value " + min + " is larger than max value " + max;
   }
 
-  @Override
-  public Object clone() {
+  /**
+   * Creates a copy of this interval.
+   *
+   * @return a new Interval with the same min and max values.
+   */
+  public Interval copy() {
     return new Interval(min, max);
   }
 

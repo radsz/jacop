@@ -41,7 +41,7 @@ import org.jacop.constraints.Constraint;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-class BoundDomain extends IntDomain implements Cloneable {
+class BoundDomain extends IntDomain {
 
   /** It predefines empty domain so there is no need to constantly create it when needed. */
   public static final BoundDomain emptyDomain = new BoundDomain();
@@ -152,7 +152,7 @@ class BoundDomain extends IntDomain implements Cloneable {
   }
 
   @Override
-  public BoundDomain clone() {
+  public BoundDomain copy() {
 
     BoundDomain cloned;
 

@@ -82,7 +82,7 @@ public class Sequence extends DecomposedConstraint<Constraint> {
     this.max = max;
 
     this.list = Arrays.copyOf(list, list.length);
-    this.set = set.clone();
+    this.set = set.copy();
     this.q = q;
   }
 

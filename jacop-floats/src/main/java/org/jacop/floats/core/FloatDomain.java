@@ -1255,7 +1255,7 @@ public abstract class FloatDomain extends Domain {
    *
    * @return a new FloatDomain that is a copy of this domain.
    */
-  public abstract FloatDomain clone();
+  public abstract FloatDomain copy();
 
   /**
    * Creates a lightweight copy of this float domain without full history.

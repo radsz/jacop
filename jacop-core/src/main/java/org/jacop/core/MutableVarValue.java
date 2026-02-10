@@ -39,12 +39,12 @@ package org.jacop.core;
 public interface MutableVarValue {
 
   /**
-   * It clones the value of mutable variable. It includes the stamp, pointer to earlier value, and
-   * current value of variable.
+   * Creates a copy of the mutable variable value. It includes the stamp, pointer to earlier value,
+   * and current value of variable.
    *
-   * @return clone of the mutable variable value.
+   * @return a copy of the mutable variable value.
    */
-  Object clone();
+  MutableVarValue copy();
 
   /**
    * It returns the earlier value of mutable variable.

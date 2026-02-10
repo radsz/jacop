@@ -71,7 +71,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * It specifies if upon the failure of the constraint, all variables in the constraint scope
    * should have their weight increased.
    */
-  public final boolean increaseWeight = true;
+  public final boolean isIncreaseWeightEnabled = true;
 
   public boolean trace = SwitchesPruningLogging.traceConstraint;
 
@@ -157,7 +157,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   static int toInt(final float f) {
-    if (f >= (float) Integer.MIN_VALUE && f <= (float) Integer.MAX_VALUE) {
+    if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
       return (int) f;
     } else {
       throw new ArithmeticException("Overflow occurred " + f);
@@ -165,7 +165,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   static int toInt(final double f) {
-    if (f >= (double) Integer.MIN_VALUE && f <= (double) Integer.MAX_VALUE) {
+    if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
       return (int) f;
     } else {
       throw new ArithmeticException("Overflow occurred " + f);
@@ -173,7 +173,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   static long toLong(final double f) {
-    if (f >= (double) Long.MIN_VALUE && f <= (double) Long.MAX_VALUE) {
+    if (f >= Long.MIN_VALUE && f <= Long.MAX_VALUE) {
       return (long) f;
     } else {
       throw new ArithmeticException("Overflow occurred " + f);
@@ -188,9 +188,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @return the int representation, clamped to integer bounds if necessary.
    */
   public static int long2int(long value) {
-    if (value > (long) Integer.MAX_VALUE) {
+    if (value > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;
-    } else if (value < (long) Integer.MIN_VALUE) {
+    } else if (value < Integer.MIN_VALUE) {
       return Integer.MIN_VALUE;
     } else {
       return (int) value;
@@ -476,7 +476,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** It increases the weight of the variables in the constraint scope. */
   public void increaseWeight() {
 
-    if (increaseWeight) {
+    if (isIncreaseWeightEnabled) {
       arguments().forEach(v -> v.weight++);
     }
   }

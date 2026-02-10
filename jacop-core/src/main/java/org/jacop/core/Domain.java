@@ -102,8 +102,12 @@ public abstract class Domain {
    */
   public abstract Domain cloneLight();
 
-  /** It clones the domain object. */
-  public abstract Domain clone();
+  /**
+   * Creates a deep copy of this domain object.
+   *
+   * @return a copy of this domain.
+   */
+  public abstract Domain copy();
 
   /**
    * It returns value enumeration of the domain values.

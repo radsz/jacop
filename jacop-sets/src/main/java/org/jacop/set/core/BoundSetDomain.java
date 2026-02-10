@@ -45,7 +45,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
  * @version 5.0
  */
-public class BoundSetDomain extends SetDomain implements Cloneable {
+public class BoundSetDomain extends SetDomain {
 
   /** An empty domain, so no constant creation of empty domains is required. */
   public static final BoundSetDomain emptyDomain = new BoundSetDomain();
@@ -208,9 +208,8 @@ public class BoundSetDomain extends SetDomain implements Cloneable {
     this.cardinality = new IntervalDomain(0, 0);
   }
 
-  /** Clones the domain. */
   @Override
-  public BoundSetDomain clone() {
+  public BoundSetDomain copy() {
 
     BoundSetDomain cloned = new BoundSetDomain(glb.cloneLight(), lub.cloneLight(), cardinality);
     cloned.stamp = stamp;

@@ -225,7 +225,7 @@ public class IntervalGaussSeidel {
       if (N == 0) {
         N++;
         for (int i = 0; i < x.length; i++) {
-          previousX[i] = (FloatInterval) x[i].clone();
+          previousX[i] = x[i].copy();
         }
 
         continue;
@@ -248,7 +248,7 @@ public class IntervalGaussSeidel {
       }
 
       for (int i = 0; i < x.length; i++) {
-        previousX[i] = (FloatInterval) x[i].clone();
+        previousX[i] = x[i].copy();
       }
     }
 

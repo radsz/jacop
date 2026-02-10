@@ -38,7 +38,7 @@ import org.jacop.core.MutableVarValue;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-class BoundsVarValue implements MutableVarValue, Cloneable {
+class BoundsVarValue implements MutableVarValue {
 
   BoundsVarValue previousBoundsVarValue;
 
@@ -63,7 +63,7 @@ class BoundsVarValue implements MutableVarValue, Cloneable {
   // Methods
 
   @Override
-  public Object clone() {
+  public BoundsVarValue copy() {
     BoundsVarValue Val = new BoundsVarValue(min, max, lb, ub);
     Val.stamp = stamp;
     Val.previousBoundsVarValue = previousBoundsVarValue;

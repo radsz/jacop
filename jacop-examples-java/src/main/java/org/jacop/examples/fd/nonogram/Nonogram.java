@@ -339,7 +339,7 @@ public class Nonogram extends ExampleFd {
 
     for (int i = 0; i < board.length; i++) {
       for (int j = 0; j < board[0].length; j++) {
-        board[i][j] = new IntVar(store, "board[" + i + "][" + j + "]", values.clone());
+        board[i][j] = new IntVar(store, "board[" + i + "][" + j + "]", values.copy());
       }
     }
 

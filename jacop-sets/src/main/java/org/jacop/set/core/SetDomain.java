@@ -285,11 +285,11 @@ public abstract class SetDomain extends Domain {
   public abstract IntDomain glb();
 
   /**
-   * It clones the domain object.
+   * Creates a deep copy of this domain object.
    *
-   * @return return a clone of the domain.
+   * @return a copy of this domain.
    */
-  public abstract SetDomain clone();
+  public abstract SetDomain copy();
 
   /**
    * It clones the domain object, only data responsible for encoding domain values is cloned. All

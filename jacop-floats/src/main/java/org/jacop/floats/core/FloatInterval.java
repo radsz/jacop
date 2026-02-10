@@ -41,7 +41,7 @@ import java.util.Locale;
  * @param min It specifies the minimal value in the interval.
  * @param max It specifies the maximal value in the interval.
  */
-public record FloatInterval(double min, double max) implements Cloneable {
+public record FloatInterval(double min, double max) {
 
   /** It creates the largest possible interval. */
   public FloatInterval() {
@@ -59,8 +59,12 @@ public record FloatInterval(double min, double max) implements Cloneable {
     assert (min <= max) : "min value " + min + " is larger than max value " + max;
   }
 
-  @Override
-  public Object clone() {
+  /**
+   * Creates a copy of this float interval.
+   *
+   * @return a new FloatInterval with the same min and max values.
+   */
+  public FloatInterval copy() {
     return new FloatInterval(min, max);
   }
 

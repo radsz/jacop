@@ -325,7 +325,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
       if (futureDomain.getSize() > 0) {
         U = lbSdom.subtract(futureDomain);
       } else {
-        U = lbSdom.clone();
+        U = lbSdom.copy();
       }
     } else {
       U = new IntervalDomain();
@@ -493,7 +493,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
     // shrinking of the Y domain will cause ubs's decrease
     IntDomain ubSdom;
     if (lbSdom.getSize() > 0) {
-      ubSdom = lbSdom.clone();
+      ubSdom = lbSdom.copy();
     } else {
       ubSdom = new IntervalDomain();
     }
@@ -1080,20 +1080,24 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var variable) {
+
+    if (!(variable instanceof IntVar intVar)) {
+      return;
+    }
 
     if (debugAll) {
       log.debug(" %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ");
-      log.debug("Var {}{}", var, ((IntVar) var).recentDomainPruning());
+      log.debug("Var {}{}", intVar, intVar.recentDomainPruning());
     }
 
-    Integer index = yIndex.get((IntVar) var);
+    Integer index = yIndex.get(intVar);
     if (index != null) {
       variableQueueY.add(index);
       return;
     }
 
-    if (var != this.n && var.singleton()) {
+    if (intVar != this.n && intVar.singleton()) {
       // It can be only X
       xGrounded.update(xGrounded.value() + 1);
     }
