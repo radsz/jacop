@@ -34,12 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * CountValues constraint implements the counting over numbers of occurrences of a given vector of
@@ -48,33 +44,15 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountValues extends Constraint implements SatisfiedPresent {
+public class CountValues extends AbstractCountValues {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /*
-   * It specifies variable idNumber to count the number of occurences of the specified value in a list.
-   */
+  /** It counts the number of occurences of the specified value in a list. */
   public final IntVar[] counter;
 
   public final IntVar counterRest;
   public final IntVar[] extendedCounter;
-
-  /*
-   * The list of variables which are checked and counted if equal to specified value.
-   */
-  public final IntVar[] list;
-  /*
-   * The value to which is any variable is equal to makes the constraint count it.
-   */
-  public final int[] values;
-  final IntDomain valuesDomain;
-  final IntDomain valuesDomainComplement;
-  private final int n; // length of the list
-  private TimeStamp<Integer> position;
-
-  private TimeStamp<Integer>[] equal;
-  private TimeStamp<Integer> rest;
 
   /**
    * It constructs a CountValues constraint.
@@ -85,28 +63,18 @@ public class CountValues extends Constraint implements SatisfiedPresent {
    */
   public CountValues(IntVar[] list, IntVar[] counter, int[] values) {
 
+    super(idNumber, list, values);
+
     checkInputForNullness(new String[] {"list", "counter"}, new Object[][] {list, {counter}});
 
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.n = list.length;
-    this.list = Arrays.copyOf(list, n);
     this.counter = counter;
-    this.values = values;
     this.counterRest = new IntVar(counter[0].getStore(), 0, n);
-
-    this.valuesDomain = new IntervalDomain();
-    for (int v : values) {
-      valuesDomain.unionAdapt(v);
-    }
-    this.valuesDomainComplement = valuesDomain.complement();
 
     extendedCounter = new IntVar[counter.length + 1];
     System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
     extendedCounter[counter.length] = counterRest;
 
-    setScope(Stream.concat(Arrays.stream(list), Arrays.stream(counter)));
+    setScope(Stream.concat(Arrays.stream(this.list), Arrays.stream(counter)));
   }
 
   /**
@@ -118,27 +86,6 @@ public class CountValues extends Constraint implements SatisfiedPresent {
    */
   public CountValues(List<? extends IntVar> list, IntVar[] counter, int[] values) {
     this(list.toArray(new IntVar[0]), counter, values);
-  }
-
-  // registers the constraint in the constraint store and
-  // initialize stateful variables
-  @SuppressWarnings("unchecked")
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp[values.length];
-    for (int i = 0; i < values.length; i++) {
-      equal[i] = new TimeStamp<>(store, 0);
-    }
-    rest = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override
@@ -252,14 +199,6 @@ public class CountValues extends Constraint implements SatisfiedPresent {
     rest.update(restEq);
 
     position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
   }
 
   /**

@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.Hashtable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.StoreAware;
+import org.jacop.core.Domain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -205,6 +206,35 @@ public abstract class PrimitiveConstraint extends Constraint
     if (constraintScope != null) {
       constraintScope.forEach(i -> i.include(store));
     }
+  }
+
+  /**
+   * Computes the maximum pruning event for a variable across a set of nested constraints. For each
+   * constraint that contains the variable in its arguments, both consistency and notConsistency
+   * nested pruning events are checked and the maximum is returned.
+   *
+   * <p>This helper eliminates duplicated pruning-event computation in reified constraints such as
+   * IfThen, Eq, Reified, Xor, Implies, etc.
+   *
+   * @param var the variable for which to compute the pruning event.
+   * @param constraints the nested constraints to query.
+   * @return the maximum pruning event, or {@link Domain#NONE} if the variable is not found.
+   */
+  protected static int computeMaxPruningEvent(Var var, PrimitiveConstraint... constraints) {
+    int eventAcross = -1;
+    for (PrimitiveConstraint constraint : constraints) {
+      if (constraint.arguments().contains(var)) {
+        int event = constraint.getNestedPruningEvent(var, true);
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
+        event = constraint.getNestedPruningEvent(var, false);
+        if (event > eventAcross) {
+          eventAcross = event;
+        }
+      }
+    }
+    return eventAcross == -1 ? Domain.NONE : eventAcross;
   }
 
   /**

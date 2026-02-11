@@ -30,65 +30,44 @@
 
 package org.jacop.constraints.table;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 /**
  * SimpleTable implements the table constraint using a method presented in.
  *
  * <p>"Compact-Table: Efficient Filtering Table Constraints with Reversible Sparse Bit-Sets" Jordan
  * Demeulenaere, Renaud Hartert, Christophe Lecoutre, Guillaume Perez, Laurent Perron, Jean-Charles
- * Régin, Pierre Schaus. Proc. International Conference on Principles and Practice of Constraint
+ * Régin, Pierre Schaus. Proc. International Conference on Principles and Practice of Constraint
  * Programming, CP 2016. pp 207-223
  *
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SimpleTable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent {
+public class SimpleTable extends AbstractTable implements SatisfiedPresent {
 
-  static final boolean debug = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** Variables within the scope of table constraint. */
-  public IntVar[] x;
-
-  /** Tuples specifying the allowed values. */
-  public int[][] tuple;
-
-  Store store;
 
   /** Main data structure for the constraint. */
   TimeStamp<Long> words;
 
   long mask;
 
-  /** Maps variables to their indices. */
-  Map<IntVar, Integer> varMap;
-
   /**
    * Data specifying support tuples for each variable; static structure created once when constraint
    * is posed.
    */
   Map<Integer, Long>[] supports;
-
-  Set<IntVar> variableQueue = new LinkedHashSet<>();
-  int noNoGround;
 
   /**
    * It constructs a table constraint.
@@ -110,74 +89,15 @@ public class SimpleTable extends Constraint
    */
   public SimpleTable(IntVar[] list, int[][] tuples, boolean reuseTupleArguments) {
 
-    checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
-    checkInput(
-        tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
+    super(list, tuples, reuseTupleArguments);
 
-    if (tuples.length > 64) {
+    if (tuple.length > 64) {
       throw new IllegalArgumentException(
-          "\nSimpleTable: number of tuples must be <= 64; is " + tuples.length);
-    }
-
-    this.x = Arrays.copyOf(list, list.length);
-    varMap = Var.positionMapping(list, false, this.getClass());
-
-    if (reuseTupleArguments) {
-      this.tuple = tuples;
-    } else {
-      // create tuples for the constraint; remove non feasible tuples
-      int size = list.length;
-      boolean[] tuplesToRemove = new boolean[tuples.length];
-      int n = 0;
-      for (int i = 0; i < tuples.length; i++) {
-        for (int j = 0; j < size; j++) {
-          if (!list[j].domain.contains(tuples[i][j])) {
-            tuplesToRemove[i] = true;
-          }
-        }
-        if (tuplesToRemove[i]) {
-          n++;
-        }
-      }
-      int k = tuples.length - n;
-      this.tuple = new int[k][size];
-      int m = 0;
-      for (int i = 0; i < tuples.length; i++) {
-        if (!tuplesToRemove[i]) {
-          this.tuple[m] = Arrays.copyOf(tuples[i], size);
-          m++;
-        }
-      }
+          "\nSimpleTable: number of tuples must be <= 64; is " + tuple.length);
     }
 
     numberId = idNumber.incrementAndGet();
-    this.queueIndex = 1;
-    setScope(list);
-  }
-
-  /**
-   * Checks if the tuple at the given index is valid with respect to current variable domains.
-   *
-   * @param index the index of the tuple to check
-   * @return true if the tuple is valid, false otherwise
-   */
-  boolean validTuple(int index) {
-
-    int[] t = tuple[index];
-    int n = t.length;
-    int i = 0;
-    while (i < n) {
-      if (!x[i].dom().contains(t[i])) {
-        return false;
-      }
-      i++;
-    }
-    return true;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
+    variableQueue = new LinkedHashSet<>();
   }
 
   @SuppressWarnings("unchecked")
@@ -212,25 +132,6 @@ public class SimpleTable extends Constraint
   }
 
   @Override
-  public void consistency(Store store) {
-
-    do {
-
-      store.propagationHasOccurred = false;
-
-      Set<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<>();
-
-      updateTable(fdvs);
-      filterDomains();
-
-    } while (store.propagationHasOccurred);
-
-    if (noNoGround == 1) {
-      removeConstraint();
-    }
-  }
-
   void updateTable(Set<IntVar> fdvs) {
 
     for (IntVar v : fdvs) {
@@ -307,6 +208,7 @@ public class SimpleTable extends Constraint
     return w == 0; // empty
   }
 
+  @Override
   void filterDomains() {
 
     noNoGround = 0;
@@ -357,8 +259,8 @@ public class SimpleTable extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var v) {
-    variableQueue.add((IntVar) v);
+  Set<IntVar> createVariableQueue() {
+    return new LinkedHashSet<>();
   }
 
   @Override
@@ -384,38 +286,10 @@ public class SimpleTable extends Constraint
     return true;
   }
 
-  /**
-   * It removes the specified level from the constraint.
-   *
-   * @param level the level to be removed.
-   */
-  public void removeLevel(int level) {
-    variableQueue.clear();
-  }
-
   @Override
   public String toString() {
 
-    StringBuilder s = new StringBuilder(id());
-
-    s.append(" : simpleTable(");
-    s.append(Arrays.asList(x));
-
-    s.append(", [");
-    for (int i = 0; i < tuple.length; i++) {
-      s.append("[");
-      for (int j = 0; j < tuple[i].length; j++) {
-        s.append(tuple[i][j]);
-        if (j < tuple[i].length - 1) {
-          s.append(", ");
-        }
-      }
-      s.append("]");
-      if (i < tuple.length - 1) {
-        s.append(", ");
-      }
-    }
-    s.append("])");
+    StringBuilder s = toStringBase("simpleTable");
 
     if (debug) {
       s.append("\n0:").append("0x%08X".formatted(words.value()));
@@ -426,8 +300,8 @@ public class SimpleTable extends Constraint
         Map<Integer, Long> supi = supports[i];
         for (Map.Entry<Integer, Long> e : supi.entrySet()) {
           s.append(" ").append(e.getKey()).append("= [");
-          Long mask = e.getValue();
-          s.append("0x%08X".formatted(mask)).append(" ");
+          Long localMask = e.getValue();
+          s.append("0x%08X".formatted(localMask)).append(" ");
           s.append("]");
         }
         s.append("} ");

@@ -30,13 +30,10 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * CountBounds constraint implements the counting over number of occurrences of a given value in a
@@ -46,12 +43,9 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountBounds extends PrimitiveConstraint {
+public class CountBounds extends AbstractCount {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** The list of variables which are checked and counted if equal to specified value. */
-  public final IntVar[] list;
 
   /** The value to which is any variable is equal to makes the constraint count it. */
   public final int value;
@@ -60,9 +54,6 @@ public class CountBounds extends PrimitiveConstraint {
   final int lb;
 
   final int ub;
-  private TimeStamp<Integer> position;
-
-  private TimeStamp<Integer> equal;
 
   /**
    * It constructs a CountBounds constraint.
@@ -74,17 +65,15 @@ public class CountBounds extends PrimitiveConstraint {
    */
   public CountBounds(IntVar[] list, int value, int lb, int ub) {
 
+    super(idNumber, list);
+
     checkInputForNullness("x", list);
 
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.list = Arrays.copyOf(list, list.length);
     this.lb = lb;
     this.ub = ub;
     this.value = value;
 
-    setScope(list);
+    setScope(this.list);
   }
 
   /**
@@ -97,33 +86,6 @@ public class CountBounds extends PrimitiveConstraint {
    */
   public CountBounds(List<? extends IntVar> list, int value, int lb, int ub) {
     this(list.toArray(new IntVar[0]), value, lb, ub);
-  }
-
-  // registers the constraint in the constraint store and
-  // initialize stateful variables
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override
@@ -168,8 +130,7 @@ public class CountBounds extends PrimitiveConstraint {
       removeConstraint();
     }
 
-    equal.update(numberEq);
-    position.update(start);
+    updateState(numberEq, start);
   }
 
   @Override
@@ -203,16 +164,7 @@ public class CountBounds extends PrimitiveConstraint {
       throw Store.failException;
     }
 
-    equal.update(numberEq);
-    position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
+    updateState(numberEq, start);
   }
 
   @Override

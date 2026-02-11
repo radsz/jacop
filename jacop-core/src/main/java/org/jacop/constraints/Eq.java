@@ -32,7 +32,6 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.Domain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.util.QueueForward;
@@ -112,49 +111,13 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public int getConsistencyPruningEvent(Var var) {
 
-    // If consistency function mode
     if (consistencyPruningEvents != null) {
       Integer possibleEvent = consistencyPruningEvents.get(var);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-
-    int eventAcross = -1;
-
-    if (c1.arguments().contains(var)) {
-      int event = c1.getNestedPruningEvent(var, true);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (c1.arguments().contains(var)) {
-      int event = c1.getNestedPruningEvent(var, false);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (c2.arguments().contains(var)) {
-      int event = c2.getNestedPruningEvent(var, true);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (c2.arguments().contains(var)) {
-      int event = c2.getNestedPruningEvent(var, false);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (eventAcross == -1) {
-      return Domain.NONE;
-    } else {
-      return eventAcross;
-    }
+    return computeMaxPruningEvent(var, c1, c2);
   }
 
   @Override
@@ -165,49 +128,13 @@ public class Eq extends PrimitiveConstraint implements UsesQueueVariable {
   @Override
   public int getNotConsistencyPruningEvent(Var var) {
 
-    // If notConsistency function mode
     if (notConsistencyPruningEvents != null) {
       Integer possibleEvent = notConsistencyPruningEvents.get(var);
       if (possibleEvent != null) {
         return possibleEvent;
       }
     }
-
-    int eventAcross = -1;
-
-    if (c1.arguments().contains(var)) {
-      int event = c1.getNestedPruningEvent(var, true);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (c1.arguments().contains(var)) {
-      int event = c1.getNestedPruningEvent(var, false);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (c2.arguments().contains(var)) {
-      int event = c2.getNestedPruningEvent(var, true);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (c2.arguments().contains(var)) {
-      int event = c2.getNestedPruningEvent(var, false);
-      if (event > eventAcross) {
-        eventAcross = event;
-      }
-    }
-
-    if (eventAcross == -1) {
-      return Domain.NONE;
-    } else {
-      return eventAcross;
-    }
+    return computeMaxPruningEvent(var, c1, c2);
   }
 
   @Override

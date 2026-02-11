@@ -30,48 +30,31 @@
 
 package org.jacop.constraints.table;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 /**
  * Table implements the table constraint using a method presented in.
  *
  * <p>"Compact-Table: Efficient Filtering Table Constraints with Reversible Sparse Bit-Sets" Jordan
  * Demeulenaere, Renaud Hartert, Christophe Lecoutre, Guillaume Perez, Laurent Perron, Jean-Charles
- * Régin, Pierre Schaus. Proc. International Conference on Principles and Practice of Constraint
+ * Régin, Pierre Schaus. Proc. International Conference on Principles and Practice of Constraint
  * Programming, CP 2016. pp 207-223
  *
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Table extends Constraint implements UsesQueueVariable, Stateful {
+public class Table extends AbstractTable {
 
-  static final boolean debug = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** Variables within the scope of table constraint. */
-  public final IntVar[] x;
-
-  /** Tuples specifying the allowed values. */
-  public final int[][] tuple;
-
-  /** Maps variables to their indices. */
-  final Map<IntVar, Integer> varMap;
-
-  Store store;
 
   /** Main data structure for the constraint. */
   ReversibleSparseBitSet rbs;
@@ -83,8 +66,6 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   Map<Integer, long[]>[] supports;
 
   Map<Integer, Integer>[] residues;
-  Set<IntVar> variableQueue = new HashSet<>();
-  int noNoGround;
 
   /**
    * It constructs a table constraint.
@@ -106,47 +87,10 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
    */
   public Table(IntVar[] list, int[][] tuples, boolean reuseTuplesArgument) {
 
-    checkInputForNullness(new String[] {"list", "tuples"}, list, tuples);
+    super(list, tuples, reuseTuplesArgument);
     checkInputForDuplication("list", list);
-    checkInput(
-        tuples, i -> i.length == list.length, "tuple need to have the same size as list argument.");
-
-    this.x = Arrays.copyOf(list, list.length);
-    this.varMap = Var.positionMapping(list, false, this.getClass());
-
-    if (reuseTuplesArgument) {
-      this.tuple = tuples;
-    } else {
-      // create tuples for the constraint; remove non feasible tuples
-      int size = list.length;
-      boolean[] tuplesToRemove = new boolean[tuples.length];
-      int n = 0;
-      for (int i = 0; i < tuples.length; i++) {
-        for (int j = 0; j < size; j++) {
-          if (!list[j].domain.contains(tuples[i][j])) {
-            tuplesToRemove[i] = true;
-          }
-        }
-        if (tuplesToRemove[i]) {
-          n++;
-        }
-      }
-      int k = tuples.length - n;
-      this.tuple = new int[k][size];
-      int m = 0;
-      for (int i = 0; i < tuples.length; i++) {
-        if (!tuplesToRemove[i]) {
-          this.tuple[m] = Arrays.copyOf(tuples[i], size);
-          m++;
-        }
-      }
-    }
-
     numberId = idNumber.incrementAndGet();
-
-    this.queueIndex = 1;
-
-    setScope(list);
+    variableQueue = new HashSet<>();
   }
 
   /**
@@ -193,25 +137,6 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     a[m] |= 1L << l;
   }
 
-  private boolean validTuple(int index) {
-
-    int[] t = tuple[index];
-    int n = t.length;
-    int i = 0;
-    while (i < n) {
-      if (!x[i].dom().contains(t[i])) {
-        return false;
-      }
-      i++;
-    }
-    return true;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   @Override
   public void impose(Store store) {
 
@@ -230,25 +155,6 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   }
 
   @Override
-  public void consistency(Store store) {
-
-    do {
-
-      store.propagationHasOccurred = false;
-
-      Set<IntVar> fdvs = variableQueue;
-      variableQueue = new HashSet<>();
-
-      updateTable(fdvs);
-      filterDomains();
-
-    } while (store.propagationHasOccurred);
-
-    if (noNoGround == 1) {
-      removeConstraint();
-    }
-  }
-
   void updateTable(Set<IntVar> fdvs) {
 
     for (IntVar v : fdvs) {
@@ -312,6 +218,7 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
     }
   }
 
+  @Override
   void filterDomains() {
 
     noNoGround = 0;
@@ -385,42 +292,14 @@ public class Table extends Constraint implements UsesQueueVariable, Stateful {
   }
 
   @Override
-  public void queueVariable(int level, Var v) {
-    variableQueue.add((IntVar) v);
-  }
-
-  /**
-   * It removes the specified level from the constraint.
-   *
-   * @param level the level to be removed.
-   */
-  public void removeLevel(int level) {
-    variableQueue.clear();
+  Set<IntVar> createVariableQueue() {
+    return new HashSet<>();
   }
 
   @Override
   public String toString() {
 
-    StringBuilder s = new StringBuilder(id());
-
-    s.append(" : table(");
-    s.append(Arrays.asList(x));
-
-    s.append(", [");
-    for (int i = 0; i < tuple.length; i++) {
-      s.append("[");
-      for (int j = 0; j < tuple[i].length; j++) {
-        s.append(tuple[i][j]);
-        if (j < tuple[i].length - 1) {
-          s.append(", ");
-        }
-      }
-      s.append("]");
-      if (i < tuple.length - 1) {
-        s.append(", ");
-      }
-    }
-    s.append("])");
+    StringBuilder s = toStringBase("table");
 
     if (debug) {
       s.append("\n").append(rbs);

@@ -33,12 +33,8 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * CountValuesBounds constraint implements the counting over numbers of occurrences of a given
@@ -48,7 +44,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountValuesBounds extends Constraint implements SatisfiedPresent {
+public class CountValuesBounds extends AbstractCountValues {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -58,31 +54,10 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
   public final Bounds counterRest;
   public final Bounds[] extendedCounter;
 
-  /** The list of variables which are checked and counted if equal to specified value. */
-  public final IntVar[] list;
-
-  /** The value to which is any variable is equal to makes the constraint count it. */
-  public final int[] values;
-
-  final IntDomain valuesDomain;
-  final IntDomain valuesDomainComplement;
-  /*
-   * lower and upper bounds on values occurence
-   */
+  /** Lower and upper bounds on values occurence. */
   final int[] lb;
-  final int[] ub;
-  private final int n; // length of the list
-  /*
-   * Defines first position of the variable that are not considered;
-   * either equal to value or missing the value in their domain.
-   */
-  private TimeStamp<Integer> position;
 
-  /*
-   * Defines number of variables equal to the value.
-   */
-  private TimeStamp<Integer>[] equal;
-  private TimeStamp<Integer> rest;
+  final int[] ub;
 
   /**
    * It constructs a CountValuesBounds constraint.
@@ -94,32 +69,24 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
    */
   public CountValuesBounds(IntVar[] list, int[] lb, int[] ub, int[] values) {
 
+    super(idNumber, list, values);
+
     checkInputForNullness("list", list);
 
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.n = list.length;
-    this.list = Arrays.copyOf(list, n);
     this.lb = lb;
     this.ub = ub;
-    this.values = values;
     this.counter = new Bounds[values.length];
     this.counterRest = new Bounds(0, n);
 
-    this.valuesDomain = new IntervalDomain();
     for (int i = 0; i < values.length; i++) {
-      int v = values[i];
       counter[i] = new Bounds(lb[i], ub[i]);
-      valuesDomain.unionAdapt(v);
     }
-    this.valuesDomainComplement = valuesDomain.complement();
 
     extendedCounter = new Bounds[counter.length + 1];
     System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
     extendedCounter[counter.length] = counterRest;
 
-    setScope(Arrays.stream(list));
+    setScope(Arrays.stream(this.list));
   }
 
   /**
@@ -132,27 +99,6 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
    */
   public CountValuesBounds(List<? extends IntVar> list, int[] lb, int[] ub, int[] values) {
     this(list.toArray(new IntVar[0]), lb, ub, values);
-  }
-
-  // registers the constraint in the constraint store and
-  // initialize stateful variables
-  @SuppressWarnings("unchecked")
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp[values.length];
-    for (int i = 0; i < values.length; i++) {
-      equal[i] = new TimeStamp<>(store, 0);
-    }
-    rest = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override
@@ -266,14 +212,6 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
     position.update(start);
   }
 
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
-  }
-
   /**
    * Checks if the constraint is satisfied.
    *
@@ -312,7 +250,7 @@ public class CountValuesBounds extends Constraint implements SatisfiedPresent {
         + Arrays.toString(values);
   }
 
-  private static class Bounds {
+  static class Bounds {
 
     final int lb;
     final int ub;

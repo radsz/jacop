@@ -34,10 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * CountVar constraint implements the counting over number of occurrences of a given value in a list
@@ -46,35 +44,15 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountVar extends PrimitiveConstraint {
+public class CountVar extends AbstractCount {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /*
-   * It specifies variable idNumber to count the number of occurences of the specified value in a list.
-   */
+  /** It specifies variable to count the number of occurences of the specified value in a list. */
   public final IntVar counter;
 
-  /*
-   * The list of variables which are checked and counted if equal to specified value.
-   */
-  public final IntVar[] list;
-
-  /*
-   * The value to which is any variable is equal to makes the constraint count it.
-   */
+  /** The value to which is any variable is equal to makes the constraint count it. */
   public final IntVar value;
-
-  /*
-   * Defines first position of the variable that are not considered;
-   * either equal to value or missing the value in their domain.
-   */
-  private TimeStamp<Integer> position;
-
-  /*
-   * Defines number of variables equal to the value.
-   */
-  private TimeStamp<Integer> equal;
 
   /**
    * It constructs a CountVar constraint.
@@ -85,18 +63,17 @@ public class CountVar extends PrimitiveConstraint {
    */
   public CountVar(IntVar[] list, IntVar counter, IntVar value) {
 
+    super(idNumber, list);
+
     checkInputForNullness(
         new String[] {"list", "counter", "value"}, new Object[][] {list, {counter}, {value}});
 
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.list = Arrays.copyOf(list, list.length);
     this.counter = counter;
     this.value = value;
 
     setScope(
-        Stream.concat(Stream.of(value), Stream.concat(Arrays.stream(list), Stream.of(counter))));
+        Stream.concat(
+            Stream.of(value), Stream.concat(Arrays.stream(this.list), Stream.of(counter))));
   }
 
   /**
@@ -108,33 +85,6 @@ public class CountVar extends PrimitiveConstraint {
    */
   public CountVar(List<? extends IntVar> list, IntVar counter, IntVar value) {
     this(list.toArray(new IntVar[0]), counter, value);
-  }
-
-  // registers the constraint in the constraint store and
-  // initialize stateful variables
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override
@@ -187,8 +137,7 @@ public class CountVar extends PrimitiveConstraint {
       }
     }
 
-    equal.update(numberEq);
-    position.update(start);
+    updateState(numberEq, start);
 
     counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
   }
@@ -224,16 +173,7 @@ public class CountVar extends PrimitiveConstraint {
       counter.domain.inComplement(store.level, counter, numberEq);
     }
 
-    equal.update(numberEq);
-    position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
+    updateState(numberEq, start);
   }
 
   @Override

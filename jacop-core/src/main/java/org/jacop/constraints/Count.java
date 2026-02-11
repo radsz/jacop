@@ -34,10 +34,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * Count constraint implements the counting over number of occurrences of a given value in a list of
@@ -46,7 +44,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Count extends PrimitiveConstraint {
+public class Count extends AbstractCount {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -56,15 +54,8 @@ public class Count extends PrimitiveConstraint {
    */
   public final IntVar counter;
 
-  /** The list of variables which are checked and counted if equal to specified value. */
-  public final IntVar[] list;
-
   /** The value to which is any variable is equal to makes the constraint count it. */
   public final int value;
-
-  private TimeStamp<Integer> position;
-
-  private TimeStamp<Integer> equal;
 
   /**
    * It constructs a Count constraint.
@@ -75,16 +66,14 @@ public class Count extends PrimitiveConstraint {
    */
   public Count(IntVar[] list, IntVar counter, int value) {
 
+    super(idNumber, list);
+
     checkInputForNullness(new String[] {"list", "counter"}, new Object[][] {list, {counter}});
 
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.list = Arrays.copyOf(list, list.length);
     this.counter = counter;
     this.value = value;
 
-    setScope(Stream.concat(Arrays.stream(list), Stream.of(counter)));
+    setScope(Stream.concat(Arrays.stream(this.list), Stream.of(counter)));
   }
 
   /**
@@ -96,33 +85,6 @@ public class Count extends PrimitiveConstraint {
    */
   public Count(List<? extends IntVar> list, IntVar counter, int value) {
     this(list.toArray(new IntVar[0]), counter, value);
-  }
-
-  // registers the constraint in the constraint store and
-  // initialize stateful variables
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
   }
 
   @Override
@@ -172,8 +134,7 @@ public class Count extends PrimitiveConstraint {
 
     counter.domain.in(store.level, counter, numberEq, numberEq + numberMayBe);
 
-    equal.update(numberEq);
-    position.update(start);
+    updateState(numberEq, start);
   }
 
   @Override
@@ -207,16 +168,7 @@ public class Count extends PrimitiveConstraint {
       counter.domain.inComplement(store.level, counter, numberEq);
     }
 
-    equal.update(numberEq);
-    position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
+    updateState(numberEq, start);
   }
 
   @Override
