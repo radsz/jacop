@@ -54,47 +54,12 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 @Slf4j
-public class SumInt extends PrimitiveConstraint {
-
-  /** Defines relations. */
-  static final byte eq = 0;
-
-  static final byte le = 1;
-  static final byte lt = 2;
-  static final byte ne = 3;
-  static final byte gt = 4;
-  static final byte ge = 5;
-
-  /** Defines negated relations. */
-  static final byte[] negRel = {
-    ne, // eq=0,
-    gt, // le=1,
-    ge, // lt=2,
-    eq, // ne=3,
-    le, // gt=4,
-    lt // ge=5;
-  };
+public class SumInt extends AbstractSum {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies what relations is used by this constraint. */
-  public final byte relationType;
-
-  final Store store;
-
-  /** It specifies a list of variables being summed. */
-  final IntVar[] x;
-
-  /** It specifies variable for the overall sum. */
-  final IntVar sum;
-
-  /** It specifies the number of variables. */
-  final int l;
-
   /** It specifies "variability" of each variable. */
   final long[] I;
-
-  boolean reified = true;
 
   /** It specifies sum of lower bounds (min values) and sum of upper bounds (max values). */
   long sumXmin;
@@ -112,16 +77,11 @@ public class SumInt extends PrimitiveConstraint {
    * @param sum variable containing the sum of weighted variables.
    */
   public SumInt(IntVar[] list, String rel, IntVar sum) {
+    super(parseRelation(rel), sum.getStore(), Arrays.copyOf(list, list.length), sum, list.length);
     checkInputForNullness(new String[] {"list", "rel", "sum"}, new Object[][] {list, {rel}, {sum}});
 
-    this.relationType = relation(rel);
-    this.store = sum.getStore();
-    this.sum = sum;
-
-    x = Arrays.copyOf(list, list.length);
     numberId = idNumber.incrementAndGet();
 
-    this.l = x.length;
     this.I = new long[l];
 
     if (l <= 2) {
@@ -463,73 +423,9 @@ public class SumInt extends PrimitiveConstraint {
     };
   }
 
-  /**
-   * Converts a relation string to its internal byte code representation.
-   *
-   * @param r the relation string (e.g., "==", "{@literal <}", "{@literal >=}").
-   * @return the byte code for the relation.
-   */
-  public byte relation(String r) {
-    switch (r) {
-      case "==", "=" -> {
-        return eq;
-      }
-      case "<" -> {
-        return lt;
-      }
-      case "<=", "=<" -> {
-        return le;
-      }
-      case "!=" -> {
-        return ne;
-      }
-      case ">" -> {
-        return gt;
-      }
-      case ">=", "=>" -> {
-        return ge;
-      }
-      default -> {
-        log.error("Wrong relation symbol in SumInt constraint {}; assumed ==", r);
-        return eq;
-      }
-    }
-  }
-
-  /**
-   * Returns the string representation of the current relation type.
-   *
-   * @return the relation as a string (e.g., "==", "{@literal <}", "{@literal >=}").
-   */
-  public String rel2String() {
-    return switch (relationType) {
-      case eq -> "==";
-      case lt -> "<";
-      case le -> "<=";
-      case ne -> "!=";
-      case gt -> ">";
-      case ge -> ">=";
-      default -> "?";
-    };
-  }
-
   @Override
   public String toString() {
-
-    StringBuilder result = new StringBuilder(id());
-    result.append(" : SumInt( [ ");
-
-    for (int i = 0; i < l; i++) {
-      result.append(x[i]);
-      if (i < l - 1) {
-        result.append(", ");
-      }
-    }
-    result.append("], ");
-
-    result.append(rel2String()).append(", ").append(sum).append(" )");
-
-    return result.toString();
+    return toStringHelper("SumInt");
   }
 
   @Override

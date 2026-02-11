@@ -30,27 +30,14 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.util.TupleUtils.findValuePosition;
-import static org.jacop.util.TupleUtils.tuplesEqual;
-import static org.jacop.util.TupleUtils.tuplesSmaller;
-
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
-import org.jacop.api.Stateful;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
-import org.jacop.util.TupleUtils;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the relation.
@@ -61,32 +48,17 @@ import org.jacop.util.TupleUtils;
  * @version 5.0
  */
 @Slf4j
-public class ExtensionalSupportVa extends Constraint implements UsesQueueVariable, Stateful {
-
-  static final boolean debugAll = false;
+public class ExtensionalSupportVa extends AbstractExtensionalVa {
 
   static final boolean debugPruning = false;
 
   /** It specifies the id of the constraint. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It stores variables within this extensional constraint, order does matter. */
-  public final IntVar[] list;
-
   boolean firstConsistencyCheck = true;
   int levelOfFirstConsistencyCheck;
 
-  /**
-   * It represents tuples which are supports for each of the variables. The first index denotes
-   * variable index. The second index denotes value index. The third index denotes tuple.
-   */
-  int[][][][] tuples;
-
-  /** It represents values which are supported for a variable. */
-  int[][] values;
-
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
-  private int[][] tuplesFromConstructor;
 
   /**
    * Partial constructor which stores variables involved in a constraint but does not get
@@ -95,14 +67,7 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
    * @param list list of variables for the constraint
    */
   public ExtensionalSupportVa(IntVar[] list) {
-
-    this.list = new IntVar[list.length];
-
-    System.arraycopy(list, 0, this.list, 0, list.length);
-
-    this.numberId = idNumber.incrementAndGet();
-
-    setScope(list);
+    super(idNumber, list);
   }
 
   /**
@@ -114,7 +79,6 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
    * @param tuples the tuples which are supports for the constraint.
    */
   public ExtensionalSupportVa(List<? extends IntVar> variables, int[][] tuples) {
-
     this(variables.toArray(new IntVar[0]), tuples);
   }
 
@@ -127,17 +91,7 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
    * @param tuples the tuples which are supports for the constraint.
    */
   public ExtensionalSupportVa(IntVar[] list, int[][] tuples) {
-
-    checkInputForNullness("list", list);
-    checkInputForNullness("tuples", tuples);
-
-    this.list = Arrays.copyOf(list, list.length);
-
-    tuplesFromConstructor = tuples;
-
-    numberId = idNumber.incrementAndGet();
-
-    setScope(list);
+    super(idNumber, list, tuples);
   }
 
   /**
@@ -182,205 +136,20 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
       levelOfFirstConsistencyCheck = store.level;
     }
 
-    boolean pruned = true;
-
-    while (pruned) {
-
-      pruned = false;
-      // For each variable
-      for (int varPosition = 0; varPosition < list.length; varPosition++) {
-        // for each value
-
-        for (ValueEnumeration enumer = list[varPosition].domain.valueEnumeration();
-            enumer.hasMoreElements(); ) {
-
-          int value = enumer.nextElement();
-
-          if (debugAll) {
-            log.debug("Seeking support for {} and value {}", list[varPosition], value);
-          }
-          int[] t = seekSupportVa(varPosition, value);
-
-          if (debugAll) {
-            log.debug("Found support? {}", t != null);
-          }
-
-          if (t == null) {
-            list[varPosition].domain.inComplement(store.level, list[varPosition], value);
-            pruned = true;
-          }
-        }
-      }
-    }
+    pruneUnsupported(store);
 
     if (debugAll) {
       log.debug("End {}", this);
     }
   }
 
-  /**
-   * Finds the position of a value in a sorted array of values.
-   *
-   * @param value the value to find
-   * @param values the sorted array of values
-   * @return the position of the value, or -1 if not found
-   */
-  protected int findPosition(int value, int[] values) {
-    return findValuePosition(value, values);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
   @Override
   public void impose(Store store) {
 
     super.impose(store);
-
-    if (debugAll) {
-      for (Var var : list) {
-        log.debug("Variable {}", var);
-      }
-    }
-
-    // TO DO, adjust (even simplify) all internal data structures
-    // to current domains of variables.
-    // filter which ignores all tuples which already are not supports.
-
-    boolean[] stillSupport = new boolean[tuplesFromConstructor.length];
-
-    int noSupports = 0;
-
-    int i = 0;
-
-    for (int[] t : tuplesFromConstructor) {
-
-      stillSupport[i] = true;
-
-      int j = 0;
-
-      if (debugAll) {
-        log.debug("support for analysis{}", Arrays.toString(t));
-      }
-
-      for (int val : t) {
-
-        if (!list[j].dom().contains(val)) {
-          stillSupport[i] = false;
-          break;
-        }
-
-        j++;
-      }
-
-      if (stillSupport[i]) {
-        noSupports++;
-      }
-
-      if (debugAll && !stillSupport[i]) {
-        log.debug("Not support {}", Arrays.toString(t));
-      }
-
-      i++;
-    }
-
-    if (debugAll) {
-      log.debug("No. still supports {}", noSupports);
-    }
-
-    int[][] temp4Shrinking = new int[noSupports][];
-
-    i = 0;
-    int k = 0;
-
-    for (int[] t : tuplesFromConstructor) {
-
-      if (stillSupport[k]) {
-        temp4Shrinking[i] = t;
-        i++;
-
-        if (debugAll) {
-          log.debug("Still support {}", Arrays.toString(t));
-        }
-      }
-
-      k++;
-    }
-
-    // Only still supports are kept.
-
-    tuplesFromConstructor = temp4Shrinking;
-
-    // TO DO, just store parameters for later use in impose
-    // function, move all code below to impose function.
-
-    this.tuples = new int[list.length][][][];
-    this.values = new int[list.length][];
-
-    int[][] supportCount = new int[list.length][];
-
-    for (i = 0; i < list.length; i++) {
-
-      Map<Integer, Integer> val = new HashMap<>();
-
-      for (int[] t : tuplesFromConstructor) {
-
-        Integer value = t[i];
-
-        val.merge(value, 1, Integer::sum);
-      }
-
-      if (debugAll) {
-        log.debug("values {}", val.keySet());
-      }
-
-      PriorityQueue<Integer> sortedVal = new PriorityQueue<>(val.keySet());
-
-      if (debugAll) {
-        log.debug("Sorted val size {}", sortedVal.size());
-      }
-
-      values[i] = new int[sortedVal.size()];
-      supportCount[i] = new int[sortedVal.size()];
-      this.tuples[i] = new int[sortedVal.size()][][];
-
-      if (debugAll) {
-        log.debug("values length {}", values[i].length);
-      }
-
-      for (int j = 0; j < values[i].length; j++) {
-
-        if (debugAll) {
-          log.debug("sortedVal {}", sortedVal);
-        }
-
-        values[i][j] = sortedVal.poll();
-        supportCount[i][j] = val.get(values[i][j]);
-        this.tuples[i][j] = new int[supportCount[i][j]][];
-      }
-
-      for (int[] t : tuplesFromConstructor) {
-
-        int value = t[i];
-        int position = findPosition(value, values[i]);
-
-        this.tuples[i][position][--supportCount[i][position]] = t;
-        //       m++;
-
-      }
-
-      // TODO: check sorting functionality.
-      for (int j = 0; j < tuples[i].length; j++) {
-        TupleUtils.sortTuplesWithin(tuples[i][j]);
-      }
-    }
-
+    filterAndIndexTuples(store);
     tuplesFromConstructor = null;
-
     firstConsistencyCheck = true;
-
     store.raiseLevelBeforeConsistency = true;
   }
 
@@ -394,79 +163,6 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
     variableQueue.add((IntVar) var);
   }
 
-  /**
-   * Compares two tuples lexicographically to determine if the first is smaller than the second.
-   *
-   * @param tuple1 the first tuple
-   * @param tuple2 the second tuple
-   * @return true if tuple1 is lexicographically smaller than tuple2
-   */
-  boolean smaller(int[] tuple1, int[] tuple2) {
-    return tuplesSmaller(tuple1, tuple2);
-  }
-
-  /**
-   * Checks if two tuples are equal by comparing all their elements.
-   *
-   * @param tuple1 the first tuple
-   * @param tuple2 the second tuple
-   * @return true if tuples are equal, false otherwise
-   */
-  boolean equal(int[] tuple1, int[] tuple2) {
-    return tuplesEqual(tuple1, tuple2);
-  }
-
-  @Override
-  public String toString() {
-
-    StringBuilder tupleString = new StringBuilder();
-
-    tupleString.append(id());
-    tupleString.append("(");
-
-    for (int i = 0; i < list.length; i++) {
-      tupleString.append(list[i].toString());
-      if (i + 1 < list.length) {
-        tupleString.append(" ");
-      }
-    }
-
-    tupleString.append(")");
-
-    if (tuplesFromConstructor != null) {
-
-      int[][] subset = tuplesFromConstructor;
-
-      for (int p1 = 0; p1 < subset.length; p1++) {
-        for (int p2 = subset.length - 1; p2 > p1; p2--) {
-          if (smaller(subset[p2], subset[p2 - 1])) {
-            int[] temp = subset[p2];
-            subset[p2] = subset[p2 - 1];
-            subset[p2 - 1] = temp;
-          }
-        }
-      }
-
-      for (int p1 = 0; p1 < subset.length; p1++) {
-        for (int p2 = 0; p2 < subset[p1].length; p2++) {
-          tupleString.append(subset[p1][p2]);
-          if (p2 != subset[p1].length - 1) {
-            tupleString.append(" ");
-          }
-        }
-
-        if (p1 != subset.length - 1) {
-          tupleString.append("|");
-        }
-      }
-
-      tupleString.append(")");
-      return tupleString.toString();
-    }
-
-    return tupleString.toString();
-  }
-
   // TODO: raiseLevelBeforeConsistency may not be needed by this constraint.
 
   /**
@@ -476,6 +172,7 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
    * @param value value for which the support is seek.
    * @return support tuple.
    */
+  @Override
   public int[] seekSupportVa(int varPosition, int value) {
 
     if (debugAll) {
@@ -583,16 +280,5 @@ public class ExtensionalSupportVa extends Constraint implements UsesQueueVariabl
       System.arraycopy(tuplesForGivenVariableValuePair[right], 0, t, 0, list.length);
       return t;
     }
-  }
-
-  /**
-   * Finds the first position in a tuple where the value is not in the corresponding variable's
-   * domain.
-   *
-   * @param t the tuple to check
-   * @return the position of the first invalid value, or -1 if all values are valid
-   */
-  public int seekInvalidPosition(int[] t) {
-    return TupleUtils.seekInvalidPosition(t, list);
   }
 }

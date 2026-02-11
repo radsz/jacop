@@ -31,12 +31,10 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
@@ -49,18 +47,9 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AltB extends PrimitiveConstraint {
+public class AltB extends AbstractAleqB {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies the first variable of the constraint. */
-  public final SetVar a;
-
-  /** It specifies the second variable of the constraint. */
-  public final SetVar b;
-
-  /** Negated constraint. */
-  AleB aGeb;
 
   /**
    * It constructs an Lexical ordering constraint to restrict the domain of the variables a and b.
@@ -71,15 +60,8 @@ public class AltB extends PrimitiveConstraint {
    */
   public AltB(SetVar a, SetVar b) {
 
-    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.a = a;
-    this.b = b;
-    aGeb = new AleB(b, a, true);
-
-    setScope(a, b);
+    super(idNumber, a, b);
+    negatedConstraint = new AleB(b, a, true);
   }
 
   /**
@@ -91,9 +73,7 @@ public class AltB extends PrimitiveConstraint {
    * @param negated used to distinguish constructors only.
    */
   AltB(SetVar a, SetVar b, boolean negated) {
-
-    this.a = a;
-    this.b = b;
+    super(a, b);
   }
 
   @Override
@@ -108,58 +88,32 @@ public class AltB extends PrimitiveConstraint {
           new IntervalDomain(
               a.domain.lub().min(),
               IntDomain.MaxInt)); // any b with cardinalirty > 0 is fine since a = {}
-
-      // case for ground domains; check for < domains
     } else {
       return; // any b with cardinalirty > 0 is fine since a = {}
-
-      // case for ground domains; check for < domains
     }
-    if (a.domain.singleton() && b.domain.singleton()) {
-      if (!setLexLt(a.domain.glb(), b.domain.glb())) {
+    if (a.domain.singleton()
+        && b.domain.singleton()
+        && !setLexCompare(a.domain.glb(), b.domain.glb())) {
+      throw Store.failException;
+    }
+
+    consistencyCommonPrefix(store);
+  }
+
+  @Override
+  protected void afterCommonPrefix(
+      Store store, SetVar a, SetVar b, ValueEnumeration aLubEnum, int lastAe) {
+    if (a.domain.lub().getSize() > b.domain.glb().getSize()) {
+      // a and b are equal to some point
+      int nextA = a.domain.lub().nextValue(lastAe);
+      if (b.domain.lub().max() <= nextA) {
         throw Store.failException;
-      }
-    }
-
-    if (b.domain.glb().getSize() > 0) {
-      ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
-      ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
-      int be = bGlbEnum.nextElement();
-      int ae;
-      do {
-        if (aLubEnum.hasMoreElements()) {
-          ae = aLubEnum.nextElement();
-
-          if (ae == be) {
-            if (bGlbEnum.hasMoreElements()) {
-              be = bGlbEnum.nextElement();
-              if (!aLubEnum.hasMoreElements()) {
-                return; // b has more elements than a
-              }
-            } else {
-              break;
-            }
-          } else if (ae < be) {
-            return; // b already greater
-          } else { // ae > be
-            throw Store.failException;
-          }
-        } else { // b has more elements and up to now all exqual
-          return;
-        }
-      } while (true);
-
-      if (a.domain.lub().getSize() > b.domain.glb().getSize()) {
-        // a and b are equal to some point
-        int nextA = a.domain.lub().nextValue(ae);
-        if (b.domain.lub().max() <= nextA) {
-          throw Store.failException;
-        }
       }
     }
   }
 
-  boolean setLexLt(IntDomain x, IntDomain y) {
+  @Override
+  boolean setLexCompare(IntDomain x, IntDomain y) {
 
     if (x.getSize() == 0 && y.getSize() > 0) {
       return true;
@@ -185,50 +139,6 @@ public class AltB extends PrimitiveConstraint {
     }
 
     return lt;
-  }
-
-  @Override
-  public void notConsistency(Store store) {
-    aGeb.consistency(store);
-  }
-
-  @Override
-  public boolean satisfied() {
-    if (a.domain.singleton() && b.domain.singleton()) {
-      return setLexLt(a.domain.glb(), b.domain.glb());
-    }
-    return false;
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return aGeb.satisfied();
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return SetDomain.ANY;
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
   }
 
   @Override

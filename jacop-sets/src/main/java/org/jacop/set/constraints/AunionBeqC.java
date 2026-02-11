@@ -31,12 +31,8 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.api.UsesQueueVariable;
-import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -46,30 +42,9 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AunionBeqC extends Constraint implements UsesQueueVariable, SatisfiedPresent {
+public class AunionBeqC extends AbstractSetOpBeqC {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies set variable a. */
-  public final SetVar a;
-
-  /** It specifies set variable b. */
-  public final SetVar b;
-
-  /** It specifies set variable c. */
-  public final SetVar c;
-
-  /**
-   * It specifies if the constrain attempts to perform expensive and yet unlikely propagation due to
-   * cardinality information.
-   */
-  public final boolean performCardinalityReasoning = false;
-
-  private boolean aHasChanged = true;
-
-  private boolean bHasChanged = true;
-
-  private boolean cHasChanged = true;
 
   /**
    * It constructs an AunionBeqC constraint to restrict the domain of the variables A, B and C.
@@ -79,112 +54,78 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
    * @param c variable that is restricted to be the union of a and b.
    */
   public AunionBeqC(SetVar a, SetVar b, SetVar c) {
-
-    checkInputForNullness(new String[] {"a", "b", "c"}, new Object[] {a, b, c});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.a = a;
-    this.b = b;
-    this.c = c;
-
-    setScope(a, b, c);
+    super(idNumber, a, b, c);
   }
 
   @Override
-  public void consistency(Store store) {
+  protected void propagateOperation(
+      Store store, boolean aHasChanged, boolean bHasChanged, boolean cHasChanged) {
 
-    do {
+    SetDomain aDom = a.dom();
+    SetDomain bDom = b.dom();
+    SetDomain cDom = c.dom();
 
-      store.propagationHasOccurred = false;
-
-      boolean aHasChanged = this.aHasChanged;
-      boolean bHasChanged = this.bHasChanged;
-      boolean cHasChanged = this.cHasChanged;
-
-      this.aHasChanged = false;
-      this.bHasChanged = false;
-      this.cHasChanged = false;
-
-      SetDomain aDom = a.dom();
-      SetDomain bDom = b.dom();
-      SetDomain cDom = c.dom();
-
-      if (cHasChanged || bHasChanged) {
-        if (cDom.lub().getSize() > 0) {
-          IntDomain glbA = cDom.glb().subtract(bDom.lub());
-          if (glbA.getSize() > 0) {
-            a.domain.inGlb(store.level, a, glbA);
-          }
+    if (cHasChanged || bHasChanged) {
+      if (cDom.lub().getSize() > 0) {
+        IntDomain glbA = cDom.glb().subtract(bDom.lub());
+        if (glbA.getSize() > 0) {
+          a.domain.inGlb(store.level, a, glbA);
         }
       }
+    }
 
-      if (cHasChanged) {
-        a.domain.inLub(store.level, a, cDom.lub());
-      }
+    if (cHasChanged) {
+      a.domain.inLub(store.level, a, cDom.lub());
+    }
 
-      if (aHasChanged || cHasChanged) {
-        if (cDom.lub().getSize() > 0) {
-          IntDomain glbB = cDom.glb().subtract(aDom.lub());
-          if (glbB.getSize() > 0) {
-            b.domain.inGlb(store.level, b, glbB);
-          }
+    if (aHasChanged || cHasChanged) {
+      if (cDom.lub().getSize() > 0) {
+        IntDomain glbB = cDom.glb().subtract(aDom.lub());
+        if (glbB.getSize() > 0) {
+          b.domain.inGlb(store.level, b, glbB);
         }
       }
+    }
 
-      if (cHasChanged) {
-        b.domain.inLub(store.level, b, cDom.lub());
-      }
+    if (cHasChanged) {
+      b.domain.inLub(store.level, b, cDom.lub());
+    }
 
-      if (aHasChanged) {
-        c.domain.inGlb(store.level, c, aDom.glb());
-      }
-      if (bHasChanged) {
-        c.domain.inGlb(store.level, c, bDom.glb());
-      }
-      if (aHasChanged || bHasChanged) {
-        c.domain.inLub(store.level, c, aDom.lub().union(bDom.lub()));
-      }
+    if (aHasChanged) {
+      c.domain.inGlb(store.level, c, aDom.glb());
+    }
+    if (bHasChanged) {
+      c.domain.inGlb(store.level, c, bDom.glb());
+    }
+    if (aHasChanged || bHasChanged) {
+      c.domain.inLub(store.level, c, aDom.lub().union(bDom.lub()));
+    }
 
-      if (performCardinalityReasoning) {
-        int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
-        int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
-        int maxLeft = a.domain.card().min() - sizeOf_4;
-        int maxRight = b.domain.card().min() - sizeOf_8;
+    if (performCardinalityReasoning) {
+      int sizeOf_4 = a.domain.glb().subtract(b.domain.lub()).getSize();
+      int sizeOf_8 = b.domain.glb().subtract(a.domain.lub()).getSize();
+      int maxLeft = a.domain.card().min() - sizeOf_4;
+      int maxRight = b.domain.card().min() - sizeOf_8;
 
-        c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
+      c.domain.inCardinality(store.level, c, Math.max(maxLeft, maxRight), Integer.MAX_VALUE);
 
-        int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
+      int sizeOf_2_5_6_7 = a.domain.lub().subtract(b.domain.lub()).getSize();
 
-        c.domain.inCardinality(
-            store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
+      c.domain.inCardinality(
+          store.level, c, maxLeft + maxRight - sizeOf_2_5_6_7, Integer.MAX_VALUE);
 
-        int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
+      int sizeOf_2_3_7_8 = b.domain.lub().subtract(a.domain.glb()).getSize();
 
-        a.domain.inCardinality(
-            store.level,
-            a,
-            c.domain.card().min() - sizeOf_2_3_7_8,
-            c.domain.card().max() - sizeOf_8);
+      a.domain.inCardinality(
+          store.level, a, c.domain.card().min() - sizeOf_2_3_7_8, c.domain.card().max() - sizeOf_8);
 
-        int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
+      int sizeOf_1_2_4_5 = a.domain.lub().subtract(b.domain.glb()).getSize();
 
-        b.domain.inCardinality(
-            store.level,
-            b,
-            c.domain.card().min() - sizeOf_1_2_4_5,
-            c.domain.card().max() - sizeOf_4);
+      b.domain.inCardinality(
+          store.level, b, c.domain.card().min() - sizeOf_1_2_4_5, c.domain.card().max() - sizeOf_4);
 
-        // FIXME, implement the cardinality based reasoning.
-
-      }
-
-    } while (store.propagationHasOccurred);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return SetDomain.ANY;
+      // FIXME, implement the cardinality based reasoning.
+    }
   }
 
   @Override
@@ -195,23 +136,5 @@ public class AunionBeqC extends Constraint implements UsesQueueVariable, Satisfi
   @Override
   public String toString() {
     return id() + " : AunionBeqC(" + a + ", " + b + ", " + c + " )";
-  }
-
-  @Override
-  public void queueVariable(int level, Var variable) {
-
-    if (variable == a) {
-      aHasChanged = true;
-      return;
-    }
-
-    if (variable == b) {
-      bHasChanged = true;
-      return;
-    }
-
-    if (variable == c) {
-      cHasChanged = true;
-    }
   }
 }

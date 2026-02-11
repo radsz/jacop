@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -129,18 +130,64 @@ public class Alldifferent extends Constraint implements UsesQueueVariable, Satis
           positionMapping.put(Q, groundPos);
           positionMapping.put(list[qPos], qPos);
           groundPos++;
-          for (int i = groundPos; i < list.length; i++) {
-            list[i].domain.inComplement(store.level, list[i], Q.min());
+          if (!isExceptionValue(Q.value())) {
+            for (int i = groundPos; i < list.length; i++) {
+              list[i].domain.inComplement(store.level, list[i], Q.min());
+            }
           }
         } else if (qPos == groundPos) {
           groundPos++;
-          for (int i = groundPos; i < list.length; i++) {
-            list[i].domain.inComplement(store.level, list[i], Q.min());
+          if (!isExceptionValue(Q.value())) {
+            for (int i = groundPos; i < list.length; i++) {
+              list[i].domain.inComplement(store.level, list[i], Q.min());
+            }
           }
         }
       }
     }
     return groundPos;
+  }
+
+  /**
+   * Determines whether the given value is an exception value that should not be subject to the
+   * alldifferent constraint. Subclasses override this to define exception sets.
+   *
+   * @param value the value to check
+   * @return true if the value is an exception, false otherwise
+   */
+  protected boolean isExceptionValue(int value) {
+    return false;
+  }
+
+  /**
+   * Determines whether the given variable's domain intersects with the set of exception values.
+   * Subclasses override this to define exception sets.
+   *
+   * @param var the variable to check
+   * @return true if the variable may take an exception value, false otherwise
+   */
+  protected boolean hasExceptionValues(IntVar var) {
+    return false;
+  }
+
+  /**
+   * Performs a matching-based consistency check on non-exception variables. Collects all
+   * non-grounded variables that cannot take exception values and verifies that a valid assignment
+   * exists using bipartite matching.
+   *
+   * @param store the constraint store
+   * @param groundPos the current position of the first non-grounded variable
+   */
+  protected void checkMatchingExcept(Store store, int groundPos) {
+    ArrayList<IntVar> vars = new ArrayList<>();
+    for (int i = groundPos; i < list.length; i++) {
+      if (!hasExceptionValues(list[i])) {
+        vars.add(list[i]);
+      }
+    }
+    if (vars.size() > 2 && notSatisfiedByMatching(vars.toArray(new IntVar[0]))) {
+      throw Store.failException;
+    }
   }
 
   @Override

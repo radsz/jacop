@@ -31,12 +31,10 @@
 package org.jacop.set.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
@@ -49,18 +47,9 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AleB extends PrimitiveConstraint {
+public class AleB extends AbstractAleqB {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies the first variable of the constraint. */
-  public final SetVar a;
-
-  /** It specifies the second variable of the constraint. */
-  public final SetVar b;
-
-  /** Negated constraint. */
-  AltB aGtb;
 
   /**
    * It constructs an Lexical ordering constraint to restrict the domain of the variables a and b.
@@ -70,15 +59,8 @@ public class AleB extends PrimitiveConstraint {
    */
   public AleB(SetVar a, SetVar b) {
 
-    checkInputForNullness(new String[] {"a", "b"}, new Object[] {a, b});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.a = a;
-    this.b = b;
-    aGtb = new AltB(b, a, true);
-
-    setScope(a, b);
+    super(idNumber, a, b);
+    negatedConstraint = new AltB(b, a, true);
   }
 
   /**
@@ -90,9 +72,7 @@ public class AleB extends PrimitiveConstraint {
    * @param negated used to distinguish constructors only.
    */
   AleB(SetVar a, SetVar b, boolean negated) {
-
-    this.a = a;
-    this.b = b;
+    super(a, b);
   }
 
   @Override
@@ -105,50 +85,20 @@ public class AleB extends PrimitiveConstraint {
           new IntervalDomain(
               a.domain.lub().min(),
               IntDomain.MaxInt)); // any b with cardinalirty > 0 is fine since a = {}
-
-      // case for ground domains; check for <= domains
     } else {
       return; // any b with cardinalirty > 0 is fine since a = {}
-
-      // case for ground domains; check for <= domains
     }
-    if (a.domain.singleton() && b.domain.singleton()) {
-      if (!setLexLe(a.domain.glb(), b.domain.glb())) {
-        throw Store.failException;
-      }
+    if (a.domain.singleton()
+        && b.domain.singleton()
+        && !setLexCompare(a.domain.glb(), b.domain.glb())) {
+      throw Store.failException;
     }
 
-    if (b.domain.glb().getSize() > 0) {
-      ValueEnumeration aLubEnum = a.domain.lub().valueEnumeration();
-      ValueEnumeration bGlbEnum = b.domain.glb().valueEnumeration();
-      int be = bGlbEnum.nextElement();
-      int ae;
-      do {
-        if (aLubEnum.hasMoreElements()) {
-          ae = aLubEnum.nextElement();
-
-          if (ae == be) {
-            if (bGlbEnum.hasMoreElements()) {
-              be = bGlbEnum.nextElement();
-              if (!aLubEnum.hasMoreElements()) {
-                return; // b has more elements than a
-              }
-            } else {
-              break;
-            }
-          } else if (ae < be) {
-            return; // b already greater
-          } else { // ae > be
-            throw Store.failException;
-          }
-        } else { // b has more elements and up to now all exqual
-          return;
-        }
-      } while (true);
-    }
+    consistencyCommonPrefix(store);
   }
 
-  boolean setLexLe(IntDomain x, IntDomain y) {
+  @Override
+  boolean setLexCompare(IntDomain x, IntDomain y) {
 
     if (x.getSize() == 0 && y.getSize() >= 0) {
       return true;
@@ -174,50 +124,6 @@ public class AleB extends PrimitiveConstraint {
     }
 
     return le;
-  }
-
-  @Override
-  public void notConsistency(Store store) {
-    aGtb.consistency(store);
-  }
-
-  @Override
-  public boolean satisfied() {
-    if (a.domain.singleton() && b.domain.singleton()) {
-      return setLexLe(a.domain.glb(), b.domain.glb());
-    }
-    return false;
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return aGtb.satisfied();
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return SetDomain.ANY;
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
   }
 
   @Override

@@ -608,4 +608,24 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   protected static boolean notSatisfiedByMatching(IntVar[] vs) {
     return computeMaxBipartiteMatching(vs) < vs.length;
   }
+
+  /**
+   * Verifies that the sum {@code a + b - c} does not overflow {@code int} arithmetic. Each
+   * component is given as a [min, max] range so that both the lower and upper bounds of the
+   * expression are checked. An {@link ArithmeticException} is thrown if overflow is detected.
+   *
+   * @param aMin minimum of the first addend.
+   * @param aMax maximum of the first addend.
+   * @param bMin minimum of the second addend.
+   * @param bMax maximum of the second addend.
+   * @param cMin minimum of the subtrahend.
+   * @param cMax maximum of the subtrahend.
+   */
+  protected static void checkSumOverflow(
+      int aMin, int aMax, int bMin, int bMax, int cMin, int cMax) {
+    int sumMin = Math.addExact(aMin, bMin);
+    int sumMax = Math.addExact(aMax, bMax);
+    Math.subtractExact(sumMin, cMax);
+    Math.subtractExact(sumMax, cMin);
+  }
 }

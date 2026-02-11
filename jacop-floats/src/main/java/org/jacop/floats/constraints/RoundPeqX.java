@@ -31,9 +31,6 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.SatisfiedPresent;
-import org.jacop.constraints.Constraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
@@ -44,15 +41,9 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class RoundPeqX extends Constraint implements SatisfiedPresent {
+public class RoundPeqX extends AbstractRoundPeqX {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies a left hand variable in equality constraint. */
-  public IntVar x;
-
-  /** It specifies a right hand variable in equality constraint. */
-  public FloatVar p;
 
   /**
    * It constructs constraint X = P.
@@ -61,19 +52,7 @@ public class RoundPeqX extends Constraint implements SatisfiedPresent {
    * @param p variable p.
    */
   public RoundPeqX(FloatVar p, IntVar x) {
-
-    checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
-
-    double q = Double.max(p.min(), p.max());
-    if (q > (double) Integer.MAX_VALUE || q < (double) Integer.MIN_VALUE) {
-      throw new RuntimeException("Error: JaCoP cannor handle " + p + " in rounding to integer.");
-    }
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.p = p;
-
-    setScope(x, p);
+    super(idNumber, p, x);
   }
 
   @Override
@@ -119,11 +98,6 @@ public class RoundPeqX extends Constraint implements SatisfiedPresent {
       }
     }
     return r;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

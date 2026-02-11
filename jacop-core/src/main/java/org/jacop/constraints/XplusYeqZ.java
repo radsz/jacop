@@ -110,18 +110,7 @@ public class XplusYeqZ extends PrimitiveConstraint {
   }
 
   void checkForOverflow() {
-
-    int sumMin = 0;
-    int sumMax = 0;
-
-    sumMin = Math.addExact(sumMin, x.min());
-    sumMax = Math.addExact(sumMax, x.max());
-
-    sumMin = Math.addExact(sumMin, y.min());
-    sumMax = Math.addExact(sumMax, y.max());
-
-    Math.subtractExact(sumMin, z.max());
-    Math.subtractExact(sumMax, z.min());
+    checkSumOverflow(x.min(), x.max(), y.min(), y.max(), z.min(), z.max());
   }
 
   @Override

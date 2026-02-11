@@ -30,15 +30,11 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * Max constraint implements the Maximum/2 constraint. It provides the maximum variable from all
@@ -49,21 +45,12 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Max extends Constraint implements SatisfiedPresent {
+public class Max extends AbstractMinMax {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies a list of variables among which a maximum value is being searched for. */
-  public final IntVar[] list;
-
   /** It specifies variable max which stores the maximum value present in the list. */
   public final IntVar max;
-
-  /** It specifies length of the list. */
-  final int l;
-
-  /** Defines first position of the variable that needs to be considered. */
-  private TimeStamp<Integer> position;
 
   /**
    * It constructs max constraint.
@@ -73,21 +60,8 @@ public class Max extends Constraint implements SatisfiedPresent {
    */
   public Max(IntVar[] list, IntVar max) {
 
-    checkInputForNullness(new String[] {"list", "max"}, new Object[][] {list, {max}});
-
-    this.l = list.length;
+    super(idNumber, list, max);
     this.max = max;
-    this.list = Arrays.copyOf(list, list.length);
-
-    if (list.length > 1000) { // rule of thumb
-      this.queueIndex = 2;
-    } else {
-      this.queueIndex = 1;
-    }
-
-    this.numberId = idNumber.incrementAndGet();
-
-    setScope(Stream.concat(Arrays.stream(list), Stream.of(max)));
   }
 
   /**
@@ -153,27 +127,6 @@ public class Max extends Constraint implements SatisfiedPresent {
     } while (store.propagationHasOccurred);
 
     position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    position = new TimeStamp<>(store, 0);
-
-    super.impose(store);
   }
 
   @Override

@@ -30,15 +30,11 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum varable from all FD
@@ -47,21 +43,12 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Min extends Constraint implements SatisfiedPresent {
+public class Min extends AbstractMinMax {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies a list of variables among which the minimum value is being searched for. */
-  public final IntVar[] list;
-
   /** It specifies variable min, which stores the minimum value within the whole list. */
   public final IntVar min;
-
-  /** It specifies the length of the list. */
-  final int l;
-
-  /** Defines first position of the variable that needs to be considered. */
-  private TimeStamp<Integer> position;
 
   /**
    * It constructs min constraint.
@@ -71,21 +58,8 @@ public class Min extends Constraint implements SatisfiedPresent {
    */
   public Min(IntVar[] list, IntVar min) {
 
-    checkInputForNullness(new String[] {"list", "min"}, list, new Object[] {min});
-
-    this.l = list.length;
+    super(idNumber, list, min);
     this.min = min;
-    this.list = Arrays.copyOf(list, list.length);
-
-    if (list.length > 1000) { // rule of thumb
-      this.queueIndex = 2;
-    } else {
-      this.queueIndex = 1;
-    }
-
-    this.numberId = idNumber.incrementAndGet();
-
-    setScope(Stream.concat(Arrays.stream(list), Stream.of(min)));
   }
 
   /**
@@ -95,7 +69,6 @@ public class Min extends Constraint implements SatisfiedPresent {
    * @param list the array of variables for which the minimal value is imposed.
    */
   public Min(List<? extends IntVar> list, IntVar min) {
-
     this(list.toArray(new IntVar[0]), min);
   }
 
@@ -155,27 +128,6 @@ public class Min extends Constraint implements SatisfiedPresent {
     } while (store.propagationHasOccurred);
 
     position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  // registers the constraint in the constraint store
-  @Override
-  public void impose(final Store store) {
-
-    super.impose(store);
-    position = new TimeStamp<>(store, 0);
   }
 
   @Override

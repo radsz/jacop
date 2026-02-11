@@ -31,8 +31,6 @@
 package org.jacop.search;
 
 import java.util.Arrays;
-import java.util.Map;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Var;
 
 /**
@@ -42,23 +40,14 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-@SuppressWarnings("unchecked")
-public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
+public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
 
-  static final boolean debugAll = false;
-  public final T[] searchVariables;
   public final ComparatorVariable<T> variableOrdering;
-
-  /** It stores the original positions of variables to be used for input order tie-breaking. */
-  public final Map<T, Integer> position;
-
-  final Indomain<T> valueOrdering;
 
   /** It chooses if input order tie breaking is used. */
   public boolean inputOrderTieBreaking = true;
 
   public ComparatorVariable<T> tieBreakingComparator;
-  int currentIndex;
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -69,23 +58,8 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public SimpleSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
 
-    position = Var.createEmptyPositioning();
-
-    int unique = 0;
-    for (T variable : variables) {
-      if (position.get(variable) == null) {
-        position.put(variable, unique++);
-      }
-    }
-
-    this.searchVariables = (T[]) new Var[position.size()];
-
-    for (Map.Entry<T, Integer> e : position.entrySet()) {
-      searchVariables[e.getValue()] = e.getKey();
-    }
-
+    super(variables, indomain);
     variableOrdering = varSelect;
-    valueOrdering = indomain;
   }
 
   /**
@@ -103,29 +77,13 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
       ComparatorVariable<T> tieBreakerVarSelect,
       Indomain<T> indomain) {
 
-    position = Var.createEmptyPositioning();
-
-    int unique = 0;
-    for (T variable : variables) {
-      if (position.get(variable) == null) {
-        position.put(variable, unique++);
-      }
-    }
-
-    this.searchVariables = (T[]) new Var[position.size()];
-
-    for (Map.Entry<T, Integer> e : position.entrySet()) {
-      searchVariables[e.getValue()] = e.getKey();
-    }
-
+    super(variables, indomain);
     variableOrdering = varSelect;
     tieBreakingComparator = tieBreakerVarSelect;
 
     if (tieBreakingComparator != null) {
       inputOrderTieBreaking = false;
     }
-
-    valueOrdering = indomain;
   }
 
   /**
@@ -242,61 +200,6 @@ public class SimpleSelect<T extends Var> implements SelectChoicePoint<T> {
     this.currentIndex = index;
 
     return searchVariables[index];
-  }
-
-  /**
-   * It returns a value which is the base of the next choice point. Only if choice is of an X = C
-   * type.
-   */
-  public int getChoiceValue() {
-
-    assert currentIndex >= 0;
-    assert currentIndex < searchVariables.length;
-    assert searchVariables[currentIndex].dom() != null;
-
-    return valueOrdering.indomain(searchVariables[currentIndex]);
-  }
-
-  /** It always returns null as choice point is obtained by getChoiceVariable and getChoiceValue. */
-  public PrimitiveConstraint getChoiceConstraint(int index) {
-
-    return null;
-  }
-
-  /** It returns the variables for which assignment in the solution is given. */
-  public Map<T, Integer> getVariablesMapping() {
-
-    return position;
-  }
-
-  /**
-   * It returns the current index. Supplying this value in the next invocation of select will make
-   * search for next variable faster without comprimising efficiency.
-   */
-  public int getIndex() {
-    return currentIndex;
-  }
-
-  /**
-   * It gets as input the index of the variable which is chosen by search to be instantiated at this
-   * stage. The variable is positioned at search position.
-   *
-   * @param searchPosition position at which search store currently choosen variable.
-   * @param variablePosition current position of the variable choosen by search.
-   * @return variable choosen to be a base of the choice point.
-   */
-  public T placeSearchVariable(int searchPosition, int variablePosition) {
-
-    if (searchPosition != variablePosition) {
-
-      T temp = searchVariables[searchPosition];
-
-      searchVariables[searchPosition] = searchVariables[variablePosition];
-
-      searchVariables[variablePosition] = temp;
-    }
-
-    return searchVariables[searchPosition];
   }
 
   /**

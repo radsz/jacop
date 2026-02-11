@@ -30,8 +30,6 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
@@ -80,65 +78,22 @@ public class AlldifferentExcept extends Alldifferent
 
     int groundPos = grounded.value();
     do {
-
       store.propagationHasOccurred = false;
-
-      LinkedHashSet<IntVar> fdvs = variableQueue;
-      variableQueue = new LinkedHashSet<>();
-
-      for (IntVar Q : fdvs) {
-        if (Q.singleton()) {
-          int qPos = positionMapping.get(Q);
-          if (qPos > groundPos) {
-            list[qPos] = list[groundPos];
-            list[groundPos] = Q;
-            positionMapping.put(Q, groundPos);
-            positionMapping.put(list[qPos], qPos);
-            groundPos++;
-            if (!s.contains(Q.value())) {
-              for (int i = groundPos; i < list.length; i++) {
-                list[i].domain.inComplement(store.level, list[i], Q.min());
-              }
-            }
-          } else if (qPos == groundPos) {
-            groundPos++;
-            if (!s.contains(Q.value())) {
-              for (int i = groundPos; i < list.length; i++) {
-                list[i].domain.inComplement(store.level, list[i], Q.min());
-              }
-            }
-          }
-        }
-      }
-
+      groundPos = processGroundedVariables(store, groundPos);
     } while (store.propagationHasOccurred);
     grounded.update(groundPos);
 
-    ArrayList<IntVar> vars = new ArrayList<>();
-    for (int i = groundPos; i < list.length; i++) {
-      if (!s.isIntersecting(list[i].dom())) {
-        vars.add(list[i]);
-      }
-    }
-
-    // we only check for more than two variables since two
-    // variables with domains of size at least two (they are not
-    // ground) are always satisfied.
-    if (vars.size() > 2 && notSatisfied(vars.toArray(new IntVar[0]))) {
-      throw Store.failException;
-    }
+    checkMatchingExcept(store, groundPos);
   }
 
-  /**
-   * Checks if the constraint cannot be satisfied using bipartite matching algorithm. Determines if
-   * there exists a valid assignment where all variables except those with exception values can take
-   * different values.
-   *
-   * @param vs the array of variables to check
-   * @return true if the constraint cannot be satisfied, false otherwise
-   */
-  public boolean notSatisfied(IntVar[] vs) {
-    return notSatisfiedByMatching(vs);
+  @Override
+  protected boolean isExceptionValue(int value) {
+    return s.contains(value);
+  }
+
+  @Override
+  protected boolean hasExceptionValues(IntVar var) {
+    return s.isIntersecting(var.dom());
   }
 
   @Override
