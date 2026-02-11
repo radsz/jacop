@@ -56,6 +56,12 @@ public class SinPeqR extends Constraint
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
+  private static final int INCREASING = 0;
+  private static final int DECREASING = 1;
+  private static final int PEAK = 2;
+  private static final int TROUGH = 3;
+  private static final int FULL_RANGE = 4;
+
   /** It contains variable p. */
   public final FloatVar p;
 
@@ -130,116 +136,30 @@ public class SinPeqR extends Constraint
       int intervalForMin = intervalNo(min);
       int intervalForMax = intervalNo(max);
 
+      int category = classifyBounds(intervalForMin, intervalForMax);
       double qMin;
       double qMax;
-      switch (intervalForMin) {
-        case 1:
-          switch (intervalForMax) {
-            case 1:
-              qMin = Math.sin(min);
-              qMax = Math.sin(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 2:
-              qMin = Math.min(Math.sin(min), Math.sin(max));
-              qMax = 1.0;
-              qMin = FloatDomain.down(qMin);
-              break;
-            case 3:
-            case 4:
-            case 5:
-              qMin = -1.0;
-              qMax = 1.0;
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+      switch (category) {
+        case INCREASING:
+          qMin = FloatDomain.down(Math.sin(min));
+          qMax = FloatDomain.up(Math.sin(max));
           break;
-
-        case 2:
-          switch (intervalForMax) {
-            case 2:
-              qMin = Math.sin(max);
-              qMax = Math.sin(min);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 3:
-              qMin = -1.0;
-              qMax = Math.max(Math.sin(min), Math.sin(max));
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 4:
-            case 5:
-              qMin = -1.0;
-              qMax = 1.0;
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        case DECREASING:
+          qMin = FloatDomain.down(Math.sin(max));
+          qMax = FloatDomain.up(Math.sin(min));
           break;
-
-        case 3:
-          switch (intervalForMax) {
-            case 3:
-              qMin = Math.sin(min);
-              qMax = Math.sin(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 4:
-              qMin = Math.min(Math.sin(min), Math.sin(max));
-              qMax = 1.0;
-              qMin = FloatDomain.down(qMin);
-              break;
-            case 5:
-              qMin = -1.0;
-              qMax = 1.0;
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        case PEAK:
+          qMin = FloatDomain.down(Math.min(Math.sin(min), Math.sin(max)));
+          qMax = 1.0;
           break;
-
-        case 4:
-          switch (intervalForMax) {
-            case 4:
-              qMin = Math.sin(max);
-              qMax = Math.sin(min);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            case 5:
-              qMin = -1.0;
-              qMax = Math.max(Math.sin(min), Math.sin(max));
-              qMax = FloatDomain.up(qMax);
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        case TROUGH:
+          qMin = -1.0;
+          qMax = FloatDomain.up(Math.max(Math.sin(min), Math.sin(max)));
           break;
-
-        case 5:
-          switch (intervalForMax) {
-            case 5:
-              qMin = Math.sin(min);
-              qMax = Math.sin(max);
-              qMin = FloatDomain.down(qMin);
-              qMax = FloatDomain.up(qMax);
-              break;
-            default:
-              throw new InternalException(
-                  "Selected impossible case in sin, cos, asin or acos constraint");
-          }
+        default: // FULL_RANGE
+          qMin = -1.0;
+          qMax = 1.0;
           break;
-        default:
-          throw new InternalException(
-              "Selected impossible case in sin, cos, asin or acos constraint");
       }
 
       q.domain.in(store.level, q, qMin, qMax);
@@ -296,6 +216,27 @@ public class SinPeqR extends Constraint
     }
   }
 
+  /**
+   * Classifies the bound-computation pattern for a pair of sin intervals.
+   *
+   * <p>Odd intervals (1, 3, 5) are increasing; even intervals (2, 4) are decreasing. When min and
+   * max fall in the same interval the function is monotone. Adjacent intervals cross a peak
+   * (odd-to-even) or trough (even-to-odd). Wider spans cover the full range.
+   */
+  private static int classifyBounds(int intervalForMin, int intervalForMax) {
+    if (intervalForMax < intervalForMin) {
+      throw new InternalException("Selected impossible case in sin, cos, asin or acos constraint");
+    }
+    int diff = intervalForMax - intervalForMin;
+    if (diff == 0) {
+      return (intervalForMin % 2 == 1) ? INCREASING : DECREASING;
+    }
+    if (diff == 1) {
+      return (intervalForMin % 2 == 1) ? PEAK : TROUGH;
+    }
+    return FULL_RANGE;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
@@ -343,8 +284,8 @@ public class SinPeqR extends Constraint
     if (f.equals(q)) {
       // f = sin(p)
       // f' = cos(p) * d(p)
-      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = newDeriv(store);
+      FloatVar v1 = newDeriv(store);
       Derivative.poseDerivativeConstraint(new CosPeqR(p, v1));
       Derivative.poseDerivativeConstraint(
           new PmulQeqR(v1, Derivative.getDerivative(store, p, vars, x), v));
@@ -352,11 +293,11 @@ public class SinPeqR extends Constraint
     } else if (f.equals(p)) {
       // f = asin(q)
       // f' = d(q) * 1/sqrt(1-q^2)
-      FloatVar v = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v1 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v2 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v3 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
-      FloatVar v4 = new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
+      FloatVar v = newDeriv(store);
+      FloatVar v1 = newDeriv(store);
+      FloatVar v2 = newDeriv(store);
+      FloatVar v3 = newDeriv(store);
+      FloatVar v4 = newDeriv(store);
       Derivative.poseDerivativeConstraint(new PmulQeqR(q, q, v1));
       Derivative.poseDerivativeConstraint(new PminusQeqR(new FloatVar(store, 1.0, 1.0), v1, v2));
       Derivative.poseDerivativeConstraint(new SqrtPeqR(v2, v3));
@@ -367,5 +308,10 @@ public class SinPeqR extends Constraint
     }
 
     return null;
+  }
+
+  /** Creates a new derivative variable with full float range. */
+  private static FloatVar newDeriv(Store store) {
+    return new FloatVar(store, Derivative.MIN_FLOAT, Derivative.MAX_FLOAT);
   }
 }
