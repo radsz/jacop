@@ -31,7 +31,6 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -42,32 +41,18 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PltQ extends PrimitiveConstraint {
+public class PltQ extends AbstractPcompQ {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies variable p to be lower than q. */
-  public final FloatVar p;
-
-  /** It specifies the second parameter. */
-  public final FloatVar q;
-
   /**
-   * It constructs constraint P {@literal <} C.
+   * It constructs constraint P {@literal <} Q.
    *
    * @param p variable p.
    * @param q constant q.
    */
   public PltQ(FloatVar p, FloatVar q) {
-
-    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.p = p;
-    this.q = q;
-
-    setScope(p, q);
+    super(idNumber, p, q);
   }
 
   @Override
@@ -91,26 +76,6 @@ public class PltQ extends PrimitiveConstraint {
   @Override
   public boolean notSatisfied() {
     return p.min() >= q.max();
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return FloatDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return FloatDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return FloatDomain.BOUND;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return FloatDomain.BOUND;
   }
 
   @Override

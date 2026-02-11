@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -43,19 +42,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class OrBoolSimple extends PrimitiveConstraint {
+public class OrBoolSimple extends AbstractBoolSimple {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variables which all must be equal to 1 to set result variable to 1. */
-  public final IntVar a;
-
-  public final IntVar b;
-
-  /**
-   * It specifies variable result, storing the result of or function performed a list of variables.
-   */
-  public final IntVar result;
 
   /**
    * It constructs orBool.
@@ -65,20 +54,7 @@ public class OrBoolSimple extends PrimitiveConstraint {
    * @param result variable which is equal 0 if none of x is equal to zero.
    */
   public OrBoolSimple(IntVar a, IntVar b, IntVar result) {
-
-    checkInputForNullness(new String[] {"a", "b", "result"}, new Object[] {a, b, result});
-
-    this.numberId = idNumber.incrementAndGet();
-
-    this.a = a;
-    this.b = b;
-    this.result = result;
-
-    assert checkInvariants() == null : checkInvariants();
-
-    queueIndex = 0;
-
-    setScope(a, b, result);
+    super(idNumber, a, b, result);
   }
 
   /**
@@ -141,35 +117,5 @@ public class OrBoolSimple extends PrimitiveConstraint {
   public String toString() {
 
     return id() + " : orBoolSimple([ " + a + ", " + b + "], " + result + ")";
-  }
-
-  /**
-   * It checks invariants required by the constraint. Namely that boolean variables have boolean
-   * domain.
-   *
-   * @return the string describing the violation of the invariant, null otherwise.
-   */
-  public String checkInvariants() {
-    return checkBooleanDomains(a, b);
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
   }
 }

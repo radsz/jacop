@@ -32,11 +32,6 @@ package org.jacop.search;
 
 import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.constraints.XeqC;
-import org.jacop.constraints.XgtC;
-import org.jacop.constraints.XltC;
-import org.jacop.constraints.XlteqC;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -44,21 +39,15 @@ import org.jacop.core.Store;
  * It is simple and customizable selector of decisions (constraints) which will be enforced by
  * search. However, it does not use X=c as a search decision but rather X {@literal <=} c
  * (potentially splitting the domain), unless c is equal to the maximal value in the domain of X
- * then the constraint X {@literal <} c is used.
+ * then the constraint X {@literal <} c is used. The left/right branch direction is chosen randomly.
  *
  * @param <T> type of variable being used in the search.
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
+public class SplitRandomSelect<T extends IntVar> extends SplitSelect<T> {
 
   private final Random generator;
-
-  /**
-   * It specifies if the left branch (values smaller or equal to the value selected) are first
-   * considered.
-   */
-  public boolean leftFirst = true;
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -91,39 +80,10 @@ public class SplitRandomSelect<T extends IntVar> extends SimpleSelect<T> {
   }
 
   @Override
-  public T getChoiceVariable(int index) {
-    return null;
-  }
-
-  @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
-
-    T var = super.getChoiceVariable(index);
-
-    if (var == null) {
-      return null;
-    }
-
-    var.min();
-    int value;
-    if (var.domain.getSize() == 2 && var.dom().domainId() == IntDomain.BoundDomainID) {
-      value = var.min();
-    } else {
-      value = super.getChoiceValue();
-    }
 
     leftFirst = generator.nextBoolean();
 
-    if (leftFirst) {
-      if (var.max() != value) {
-        return new XlteqC(var, value);
-      } else {
-        return new XltC(var, value);
-      }
-    } else if (var.max() != value) {
-      return new XgtC(var, value);
-    } else {
-      return new XeqC(var, value);
-    }
+    return super.getChoiceConstraint(index);
   }
 }

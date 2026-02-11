@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -41,15 +40,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XltY extends PrimitiveConstraint {
+public class XltY extends AbstractXcompY {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies x variable in constraint x {@literal <} y. */
-  public final IntVar x;
-
-  /** It specifies y variable in constraint x {@literal <} y. */
-  public final IntVar y;
 
   /**
    * It constructs the constraint X {@literal <} Y.
@@ -58,15 +51,7 @@ public class XltY extends PrimitiveConstraint {
    * @param y variable y.
    */
   public XltY(IntVar x, IntVar y) {
-
-    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.y = y;
-
-    setScope(x, y);
+    super(idNumber, x, y);
   }
 
   @Override
@@ -86,26 +71,6 @@ public class XltY extends PrimitiveConstraint {
 
     x.domain.inMax(store.level, x, y.max() - 1);
     y.domain.inMin(store.level, y, x.min() + 1);
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
   }
 
   @Override

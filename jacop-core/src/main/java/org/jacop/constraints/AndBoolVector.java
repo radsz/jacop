@@ -30,18 +30,10 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable is equal
@@ -50,26 +42,9 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AndBoolVector extends PrimitiveConstraint {
+public class AndBoolVector extends AbstractBoolVector {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies a list of variables which all must be equal to 1 to set result variable to 1. */
-  public final IntVar[] list;
-
-  /**
-   * It specifies variable result, storing the result of and function performed a list of variables.
-   */
-  public final IntVar result;
-
-  /** It specifies the length of the list. */
-  final int l;
-
-  List<Constraint> constraints;
-  /*
-   * Defines first position of the variable that is not ground to 1
-   */
-  private TimeStamp<Integer> position;
 
   /**
    * It constructs AndBoolVector.
@@ -78,26 +53,7 @@ public class AndBoolVector extends PrimitiveConstraint {
    * @param result variable which is equal 0 if any of x is equal to zero.
    */
   public AndBoolVector(IntVar[] list, IntVar result) {
-
-    checkInputForNullness(new String[] {"list", "result"}, list, new Object[] {result});
-
-    this.numberId = idNumber.incrementAndGet();
-
-    Set<IntVar> varSet = new HashSet<>(Arrays.asList(list));
-
-    this.l = varSet.size();
-    this.list = varSet.toArray(new IntVar[0]);
-    this.result = result;
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (l > 2) {
-      queueIndex = 1;
-    } else {
-      queueIndex = 0;
-    }
-
-    setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
+    super(idNumber, list, result);
   }
 
   /**
@@ -107,43 +63,12 @@ public class AndBoolVector extends PrimitiveConstraint {
    * @param result variable which is equal 0 if any of x is equal to zero.
    */
   public AndBoolVector(List<? extends IntVar> list, IntVar result) {
-
-    this(list.toArray(new IntVar[0]), result);
-  }
-
-  /**
-   * It checks invariants required by the constraint. Namely that boolean variables have boolean
-   * domain.
-   *
-   * @return the string describing the violation of the invariant, null otherwise.
-   */
-  public String checkInvariants() {
-    return checkBooleanDomains(list);
+    super(idNumber, list, result);
   }
 
   @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
-  public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
+  protected PrimitiveConstraint createCombiner(PrimitiveConstraint[] boolConstraints) {
+    return new And(boolConstraints);
   }
 
   /**
@@ -154,7 +79,7 @@ public class AndBoolVector extends PrimitiveConstraint {
   public void consistency(Store store) {
 
     int start = position.value();
-    final int index_01 = l - 1;
+    final int index01 = l - 1;
 
     if (result.min() == 1) {
       for (int i = start; i < l; i++) {
@@ -181,19 +106,11 @@ public class AndBoolVector extends PrimitiveConstraint {
     }
 
     if (result.max() == 0 && start == l - 1) {
-      list[index_01].domain.inValue(store.level, list[index_01], 0);
+      list[index01].domain.inValue(store.level, list[index01], 0);
     }
 
     if ((l - start) < 3) {
       queueIndex = 0;
-    }
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
     }
   }
 
@@ -202,7 +119,7 @@ public class AndBoolVector extends PrimitiveConstraint {
 
     int start = position.value();
 
-    final int index_01 = l - 1;
+    final int index01 = l - 1;
 
     if (result.max() == 0) {
       for (int i = start; i < l; i++) {
@@ -228,7 +145,7 @@ public class AndBoolVector extends PrimitiveConstraint {
     }
 
     if (result.max() == 0 && start == l - 1) {
-      list[index_01].domain.inValue(store.level, list[index_01], 1);
+      list[index01].domain.inValue(store.level, list[index01], 1);
     }
 
     if ((l - start) < 3) {
@@ -317,38 +234,5 @@ public class AndBoolVector extends PrimitiveConstraint {
     resultString.append(result);
     resultString.append(")");
     return resultString.toString();
-  }
-
-  @Override
-  public List<Constraint> decompose(Store store) {
-
-    constraints = new ArrayList<>();
-
-    PrimitiveConstraint[] andConstraints = new PrimitiveConstraint[l];
-
-    IntervalDomain booleanDom = new IntervalDomain(0, 1);
-
-    for (int i = 0; i < andConstraints.length; i++) {
-      andConstraints[0] = new XeqC(list[i], 1);
-      constraints.add(new In(list[i], booleanDom));
-    }
-
-    constraints.add(new In(result, booleanDom));
-
-    constraints.add(new Eq(new And(andConstraints), new XeqC(result, 1)));
-
-    return constraints;
-  }
-
-  @Override
-  public void imposeDecomposition(Store store) {
-
-    if (constraints == null) {
-      constraints = decompose(store);
-    }
-
-    for (Constraint c : constraints) {
-      store.impose(c, queueIndex);
-    }
   }
 }

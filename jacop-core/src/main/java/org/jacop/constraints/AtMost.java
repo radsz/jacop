@@ -30,13 +30,9 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * AtMost constraint implements the counting over number of occurrences of a given value in a list
@@ -45,30 +41,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AtMost extends PrimitiveConstraint {
-
-  static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /*
-   * It specifies variable idNumber to count the number of occurences of the specified value in a list.
-   */
-  public final int counter;
-
-  /*
-   * The list of variables which are checked and counted if equal to specified value.
-   */
-  public final IntVar[] list;
-
-  /*
-   * The value to which is any variable is equal to makes the constraint count it.
-   */
-  public final int value;
-
-  boolean reified = true;
-
-  private TimeStamp<Integer> position;
-
-  private TimeStamp<Integer> equal;
+public class AtMost extends AbstractAtLeastMost {
 
   /**
    * It constructs a AtMost constraint.
@@ -78,17 +51,7 @@ public class AtMost extends PrimitiveConstraint {
    * @param counter number of variables equal to val.
    */
   public AtMost(IntVar[] list, int counter, int value) {
-
-    checkInputForNullness("list", list);
-
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-
-    this.list = Arrays.copyOf(list, list.length);
-    this.counter = counter;
-    this.value = value;
-
-    setScope(list);
+    super(list, counter, value);
   }
 
   /**
@@ -99,64 +62,16 @@ public class AtMost extends PrimitiveConstraint {
    * @param counter number of variables equal to val.
    */
   public AtMost(List<? extends IntVar> list, int counter, int value) {
-    this(list.toArray(new IntVar[0]), counter, value);
-  }
-
-  @Override
-  public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    reified = false;
-
-    super.impose(store);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
+    super(list, counter, value);
   }
 
   @Override
   public void consistency(final Store store) {
 
-    int numberEq = equal.value();
-    int numberMayBe = 0;
-    int start = position.value();
-    for (int i = start; i < list.length; i++) {
-      IntVar v = list[i];
-      if (v.domain.contains(value)) {
-        if (v.singleton()) {
-          numberEq++;
-          swap(start, i);
-          start++;
-        } else {
-          numberMayBe++;
-        }
-      } else { // does not have the value in its domain
-        swap(start, i);
-        start++;
-      }
-    }
+    int[] counts = computeCounts();
+    int numberEq = counts[0];
+    int numberMayBe = counts[1];
+    int start = counts[2];
 
     if (numberEq > counter) {
       throw Store.failException;
@@ -176,31 +91,16 @@ public class AtMost extends PrimitiveConstraint {
       }
     }
 
-    equal.update(numberEq);
-    position.update(start);
+    updateState(numberEq, start);
   }
 
   @Override
   public void notConsistency(final Store store) {
     // at least counter + 1 values
-    int numberEq = equal.value();
-    int numberMayBe = 0;
-    int start = position.value();
-    for (int i = start; i < list.length; i++) {
-      IntVar v = list[i];
-      if (v.domain.contains(value)) {
-        if (v.singleton()) {
-          numberEq++;
-          swap(start, i);
-          start++;
-        } else {
-          numberMayBe++;
-        }
-      } else { // does not have the value in its domain
-        swap(start, i);
-        start++;
-      }
-    }
+    int[] counts = computeCounts();
+    int numberEq = counts[0];
+    int numberMayBe = counts[1];
+    int start = counts[2];
 
     if (numberMayBe + numberEq < counter + 1) {
       throw Store.failException;
@@ -218,16 +118,7 @@ public class AtMost extends PrimitiveConstraint {
       }
     }
 
-    equal.update(numberEq);
-    position.update(start);
-  }
-
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
+    updateState(numberEq, start);
   }
 
   @Override

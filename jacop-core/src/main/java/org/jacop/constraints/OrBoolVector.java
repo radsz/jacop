@@ -30,18 +30,10 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
  * If at least one variable from the list is equal 1 then result variable is equal 1 too. Otherwise,
@@ -51,29 +43,9 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class OrBoolVector extends PrimitiveConstraint {
+public class OrBoolVector extends AbstractBoolVector {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /**
-   * It specifies a list of variables among which one must be equal to 1 to set result variable to
-   * 1.
-   */
-  public final IntVar[] list;
-
-  /**
-   * It specifies variable result, storing the result of or function performed a list of variables.
-   */
-  public final IntVar result;
-
-  /** It specifies the length of the list of variables. */
-  final int l;
-
-  List<Constraint> constraints;
-  /*
-   * Defines first position of the variable that is not ground to 0
-   */
-  private TimeStamp<Integer> position;
 
   /**
    * It constructs orBool.
@@ -82,26 +54,7 @@ public class OrBoolVector extends PrimitiveConstraint {
    * @param result variable which is equal 0 if none of x is equal to zero.
    */
   public OrBoolVector(IntVar[] list, IntVar result) {
-
-    checkInputForNullness("list", list);
-    checkInputForNullness("result", new Object[] {result});
-
-    this.numberId = idNumber.incrementAndGet();
-
-    Set<IntVar> varSet = new HashSet<>(Arrays.asList(list));
-    this.l = varSet.size();
-    this.list = varSet.toArray(new IntVar[0]);
-    this.result = result;
-
-    assert checkInvariants() == null : checkInvariants();
-
-    if (l > 2) {
-      queueIndex = 1;
-    } else {
-      queueIndex = 0;
-    }
-
-    setScope(Stream.concat(Arrays.stream(list), Stream.of(result)));
+    super(idNumber, list, result);
   }
 
   /**
@@ -111,42 +64,12 @@ public class OrBoolVector extends PrimitiveConstraint {
    * @param result variable which is equal 0 if none of x is equal to zero.
    */
   public OrBoolVector(List<? extends IntVar> list, IntVar result) {
-    this(list.toArray(new IntVar[0]), result);
-  }
-
-  /**
-   * It checks invariants required by the constraint. Namely that boolean variables have boolean
-   * domain.
-   *
-   * @return the string describing the violation of the invariant, null otherwise.
-   */
-  public String checkInvariants() {
-    return checkBooleanDomains(list);
+    super(idNumber, list, result);
   }
 
   @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
-  public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
+  protected PrimitiveConstraint createCombiner(PrimitiveConstraint[] boolConstraints) {
+    return new Or(boolConstraints);
   }
 
   /**
@@ -157,7 +80,7 @@ public class OrBoolVector extends PrimitiveConstraint {
   public void consistency(Store store) {
 
     int start = position.value();
-    final int index_01 = l - 1;
+    final int index01 = l - 1;
 
     for (int i = start; i < l; i++) {
       if (list[i].min() == 1) {
@@ -177,7 +100,7 @@ public class OrBoolVector extends PrimitiveConstraint {
 
     // for case >, then the in() will fail as the constraint should.
     if (result.min() == 1 && start >= l - 1) {
-      list[index_01].domain.inValue(store.level, list[index_01], 1);
+      list[index01].domain.inValue(store.level, list[index01], 1);
     }
 
     if (result.max() == 0 && start < l) {
@@ -191,21 +114,11 @@ public class OrBoolVector extends PrimitiveConstraint {
     }
   }
 
-  private void swap(int i, int j) {
-    if (i != j) {
-      IntVar tmp = list[i];
-      list[i] = list[j];
-      list[j] = tmp;
-    }
-  }
-
   @Override
   public void notConsistency(Store store) {
 
-    //     store.propagationHasOccurred = false;
-
     int start = position.value();
-    final int index_01 = l - 1;
+    final int index01 = l - 1;
 
     for (int i = start; i < l; i++) {
       if (list[i].min() == 1) {
@@ -230,10 +143,8 @@ public class OrBoolVector extends PrimitiveConstraint {
     }
 
     if (result.max() == 0 && start >= l - 1) {
-      list[index_01].domain.inValue(store.level, list[index_01], 1);
+      list[index01].domain.inValue(store.level, list[index01], 1);
     }
-
-    // } while (store.propagationHasOccurred);
 
     if ((l - start) < 3) {
       queueIndex = 0;
@@ -311,38 +222,5 @@ public class OrBoolVector extends PrimitiveConstraint {
     resultString.append(result);
     resultString.append(")");
     return resultString.toString();
-  }
-
-  @Override
-  public List<Constraint> decompose(Store store) {
-
-    constraints = new ArrayList<>();
-
-    PrimitiveConstraint[] orConstraints = new PrimitiveConstraint[l];
-
-    IntervalDomain booleanDom = new IntervalDomain(0, 1);
-
-    for (int i = 0; i < orConstraints.length; i++) {
-      orConstraints[0] = new XeqC(list[i], 1);
-      constraints.add(new In(list[i], booleanDom));
-    }
-
-    constraints.add(new In(result, booleanDom));
-
-    constraints.add(new Eq(new Or(orConstraints), new XeqC(result, 1)));
-
-    return constraints;
-  }
-
-  @Override
-  public void imposeDecomposition(Store store) {
-
-    if (constraints == null) {
-      constraints = decompose(store);
-    }
-
-    for (Constraint c : constraints) {
-      store.impose(c, queueIndex);
-    }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * PgteqQ.java
+ * AbstractXcompY.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -25,61 +25,66 @@
  * License version 3.
  * <p>
  * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-package org.jacop.floats.constraints;
+package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.Store;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 
 /**
- * Constraints P {@literal >=} Q for floats.
+ * Abstract base for two-variable integer comparison constraints (XgtY, XltY, XgteqY, XlteqY).
+ * Provides shared fields, constructor logic, and pruning event configuration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PgteqQ extends AbstractPcompQ {
+public abstract class AbstractXcompY extends PrimitiveConstraint {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+  /** It specifies the first variable. */
+  public final IntVar x;
+
+  /** It specifies the second variable. */
+  public final IntVar y;
 
   /**
-   * It constructs constraint P {@literal >=} Q.
+   * Constructs a comparison constraint between two integer variables.
    *
-   * @param p variable p.
-   * @param q variable q.
+   * @param idNum the id counter for the concrete subclass.
+   * @param x variable x.
+   * @param y variable y.
    */
-  public PgteqQ(FloatVar p, FloatVar q) {
-    super(idNumber, p, q);
+  protected AbstractXcompY(AtomicInteger idNum, IntVar x, IntVar y) {
+
+    checkInputForNullness(new String[] {"x", "y"}, new Object[] {x, y});
+
+    numberId = idNum.incrementAndGet();
+
+    this.x = x;
+    this.y = y;
+
+    setScope(x, y);
   }
 
   @Override
-  public void consistency(Store store) {
-
-    p.domain.inMin(store.level, p, q.min());
-    q.domain.inMax(store.level, q, p.max());
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 
   @Override
-  public void notConsistency(Store store) {
-    p.domain.inMax(store.level, p, FloatDomain.previous(q.max()));
-    q.domain.inMin(store.level, q, FloatDomain.next(p.min()));
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 
   @Override
-  public boolean satisfied() {
-    return p.min() >= q.max();
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 
   @Override
-  public boolean notSatisfied() {
-    return p.max() < q.min();
-  }
-
-  @Override
-  public String toString() {
-    return id() + " : PgteqQ(" + p + ", " + q + " )";
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 }
