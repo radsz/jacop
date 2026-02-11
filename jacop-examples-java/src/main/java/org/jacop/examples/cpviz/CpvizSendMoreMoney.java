@@ -32,18 +32,14 @@ package org.jacop.examples.cpviz;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
+import org.jacop.examples.fd.SendMoreMoney;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
-import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.TraceGenerator;
@@ -54,23 +50,7 @@ import org.jacop.search.TraceGenerator;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class CpvizSendMoreMoney {
-
-  Store store = new Store();
-  List<IntVar> vars;
-  Search<IntVar> search;
-
-  // Find for the equation on the left
-  // what digits are represented by the letters
-  // different letters represent different digits
-
-  // SEND 9567
-  // +MORE =======> +1085
-  // MONEY 10652
-
-  /*
-   * This creates a standard model using simple basic constraints.
-   */
+public class CpvizSendMoreMoney extends SendMoreMoney {
 
   static void main(String[] args) {
 
@@ -80,16 +60,12 @@ public class CpvizSendMoreMoney {
   }
 
   /** Creates the constraint model for the SEND+MORE=MONEY problem using basic constraints. */
+  @Override
   public void model() {
 
     vars = new ArrayList<>();
-    store = new Store();
+    store = new org.jacop.core.Store();
 
-    // Creating an array for IntVars
-    IntVar[] letters = new IntVar[8];
-
-    // Creating IntVar (finite domain variables)
-    // with indexes for accessing
     final int iS = 0;
     final int iE = 1;
     final int iN = 2;
@@ -98,6 +74,8 @@ public class CpvizSendMoreMoney {
     final int iO = 5;
     final int iR = 6;
     final int iY = 7;
+
+    IntVar[] letters = new IntVar[8];
     letters[iS] = new IntVar(store, "S", 0, 9);
     letters[iE] = new IntVar(store, "E", 0, 9);
     letters[iN] = new IntVar(store, "N", 0, 9);
@@ -109,23 +87,12 @@ public class CpvizSendMoreMoney {
 
     vars.addAll(Arrays.asList(letters));
 
-    // Imposing inequalities constraints between letters
-    // This nested loop imposes inequality constraint
-    // for all pairs of letters
-    // Since there are 8 different letters this will create
-    // 0+1+2+3+4+5+6+7 = 28 inequality constraints
-
     for (int i = 0; i < letters.length; i++) {
       for (int j = i - 1; j >= 0; j--) {
         store.impose(new XneqY(letters[j], letters[i]));
       }
     }
 
-    //     // Main equation of the problem SEND + MORE = MONEY
-
-    // Since S is the first digit of SEND
-    // and M is the first digit of MORE or MONEY
-    // both letters can not be equal to zero
     store.impose(new XneqC(letters[iS], 0));
     store.impose(new XneqC(letters[iM], 0));
 
@@ -157,101 +124,34 @@ public class CpvizSendMoreMoney {
 
     store.consistency();
 
-    //   /**
-    //    * This creates a standard search, which looks for a single solution.
-    //    */
-
-    //   public boolean search() {
-
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
+        new SimpleSelect<>(vars.toArray(IntVar[]::new), null, new IndomainMin<>());
 
     search = new DepthFirstSearch<>();
 
-    // Trace --->
+    TraceGenerator<IntVar> traceSelect = new TraceGenerator<>(search, varSelect);
+    traceSelect.addTracedVar(letters[iE]);
 
-    TraceGenerator<IntVar> select = new TraceGenerator<>(search, varSelect);
-
-    select.addTracedVar(letters[iE]);
-
-    // <---
-
-    search.labeling(store, select);
+    search.labeling(store, traceSelect);
   }
 
   /**
    * Creates the constraint model for the SEND+MORE=MONEY problem using global constraints. This
-   * provides more concise modeling using Alldifferent and LinearInt constraints.
+   * provides more concise modeling using Alldiff and LinearInt constraints.
    */
   public void modelGlobal() {
 
-    vars = new ArrayList<>();
-    store = new Store();
-
-    // Creating IntVar (finite domain variables)
-    IntVar s = new IntVar(store, "S", 0, 9);
-    IntVar e = new IntVar(store, "E", 0, 9);
-    IntVar n = new IntVar(store, "N", 0, 9);
-    IntVar d = new IntVar(store, "D", 0, 9);
-    IntVar m = new IntVar(store, "M", 0, 9);
-    IntVar o = new IntVar(store, "O", 0, 9);
-    IntVar r = new IntVar(store, "R", 0, 9);
-    IntVar y = new IntVar(store, "Y", 0, 9);
-
-    IntVar valueSend = new IntVar(store, "v(SEND)", 0, 9999);
-    IntVar valueMore = new IntVar(store, "v(MORE)", 0, 9999);
-    IntVar valueMoney = new IntVar(store, "v(MONEY)", 0, 99999);
-
-    // Creating arrays for IntVars
-    IntVar[] digits = {s, e, n, d, m, o, r, y};
-    IntVar[] send = {s, e, n, d, valueSend};
-    IntVar[] more = {m, o, r, e, valueMore};
-    IntVar[] money = {m, o, n, e, y, valueMoney};
-
-    vars.addAll(Arrays.asList(digits));
-
-    // Imposing inequalities constraints between letters
-    // Only one global constraint
-    store.impose(new Alldifferent(digits));
-
-    int[] weights5 = {10000, 1000, 100, 10, 1, -1};
-    int[] weights4 = {1000, 100, 10, 1, -1};
-
-    // Constraints for getting value for words
-    // SEND = 1000 * S + 100 * E + N * 10 + D * 1
-    // MORE = 1000 * M + 100 * O + R * 10 + E * 1
-    // MONEY = 10000 * M + 1000 * O + 100 * N + E * 10 + Y * 1
-    store.impose(new LinearInt(send, weights4, "==", 0));
-    store.impose(new LinearInt(more, weights4, "==", 0));
-    store.impose(new LinearInt(money, weights5, "==", 0));
-
-    // Main equation of the problem SEND + MORE = MONEY
-    store.impose(new XplusYeqZ(valueSend, valueMore, valueMoney));
-
-    //     // 1000*S + 91*E - 90*N + D - 9000*M - 900*O + 10*R = Y
-
-    // Since S is the first digit of SEND
-    // and M is the first digit of MORE or MONEY
-    // both letters can not be equal to zero
-    store.impose(new XneqC(s, 0));
-    store.impose(new XneqC(m, 0));
-
+    buildModel();
     store.consistency();
 
     SelectChoicePoint<IntVar> varSelect =
-        new SimpleSelect<>(vars.toArray(new IntVar[1]), null, new IndomainMin<>());
+        new SimpleSelect<>(vars.toArray(IntVar[]::new), null, new IndomainMin<>());
 
     search = new DepthFirstSearch<>();
 
-    // Trace --->
-    TraceGenerator<IntVar> select =
-        new TraceGenerator<>(search, varSelect, new IntVar[] {s, e, n, d, m, o, r, y});
+    TraceGenerator<IntVar> traceSelect =
+        new TraceGenerator<>(search, varSelect, vars.toArray(IntVar[]::new));
 
-    //     TraceGenerator<IntVar> select = new TraceGenerator<IntVar>(varSelect, true, new IntVar[]
-    // {s, e, n, d, m, o, r, y});
-
-    // <---
-
-    search.labeling(store, select);
+    search.labeling(store, traceSelect);
   }
 }

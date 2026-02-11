@@ -60,6 +60,13 @@ import org.jacop.core.Store;
  */
 public class Newspaper extends ExampleFd {
 
+  /** Start times for each person (algy, bertie, charlie, digby) and newspaper index. */
+  protected IntVar[] algy;
+
+  protected IntVar[] bertie;
+  protected IntVar[] charlie;
+  protected IntVar[] digby;
+
   /**
    * It executes the program which solves this newspaper problem.
    *
@@ -76,8 +83,13 @@ public class Newspaper extends ExampleFd {
     }
   }
 
-  @Override
-  public void model() {
+  /**
+   * Builds the newspaper model with configurable domain upper bound.
+   *
+   * @param upperBound maximum value for time variables
+   * @return the makespan variable
+   */
+  protected IntVar buildModel(int upperBound) {
 
     // Creating constraint store
     store = new Store();
@@ -112,10 +124,10 @@ public class Newspaper extends ExampleFd {
 
     // algy[0], bertie[0], charlie[0], digby[0]
     // - when a person starts reading guardian
-    IntVar[] algy = new IntVar[4];
-    IntVar[] bertie = new IntVar[4];
-    IntVar[] charlie = new IntVar[4];
-    IntVar[] digby = new IntVar[4];
+    algy = new IntVar[4];
+    bertie = new IntVar[4];
+    charlie = new IntVar[4];
+    digby = new IntVar[4];
 
     for (int i = 0; i < 4; i++) {
 
@@ -124,28 +136,28 @@ public class Newspaper extends ExampleFd {
 
       // The first one if possible to use is by providing minimal and maximal
       // values within the constructor of the variable.
-      algy[i] = new IntVar(store, "algy[" + i + "]", 0, 1000);
+      algy[i] = new IntVar(store, "algy[" + i + "]", 0, upperBound);
 
-      // bertie[i] = new Variable(store, "bertie[" + i + "]", 15, 1000);
-      bertie[i] = new IntVar(store, "bertie[" + i + "]", -1000, 1000);
+      // bertie[i] = new Variable(store, "bertie[" + i + "]", 15, upperBound);
+      bertie[i] = new IntVar(store, "bertie[" + i + "]", -upperBound, upperBound);
       // Bertie wakes up 15 minutes after Algy
       // The second one is by imposing In constraint after initially creating
       // a variable with too large domain.
-      store.impose(new In(bertie[i], new IntervalDomain(15, 1000)));
+      store.impose(new In(bertie[i], new IntervalDomain(15, upperBound)));
 
       // Charlie wakes up 15 minutes after Algy
       // The third is to create a domain before creating a variable
       // and using it. Please use clone() function, so one domain
       // object is not used in multiple variables.
       IntervalDomain dom = new IntervalDomain();
-      dom.unionAdapt(15, 1000);
+      dom.unionAdapt(15, upperBound);
       charlie[i] = new IntVar(store, "charlie[" + i + "]", dom);
 
       // Digby wakes up 60 minutes after Algy
-      // digby[i] = new Variable(store, "digby[" + i + "]", 60, 1000);
+      // digby[i] = new Variable(store, "digby[" + i + "]", 60, upperBound);
       // The fourth way which is the slight variation of the third is
       // by creating it directly in the constructor of the variable.
-      digby[i] = new IntVar(store, "digby[" + i + "]", new IntervalDomain(60, 1000));
+      digby[i] = new IntVar(store, "digby[" + i + "]", new IntervalDomain(60, upperBound));
 
       vars.add(algy[i]);
       vars.add(bertie[i]);
@@ -185,7 +197,7 @@ public class Newspaper extends ExampleFd {
     // Sun newspaper is read at any time by only one person
     store.impose(new CumulativeUnary(four, sun, fourOnes, one));
 
-    IntVar makespan = new IntVar(store, "makespan", 0, 1000);
+    IntVar makespan = new IntVar(store, "makespan", 0, upperBound);
 
     int[] algyPrecedence = {2, 1, 3, 4};
     // Constraints imposed below in for loop make sure that
@@ -247,7 +259,12 @@ public class Newspaper extends ExampleFd {
     // the time point when digby finishes reading express
     store.impose(new XplusYlteqZ(digby[2], express[3], makespan));
 
-    cost = makespan;
     vars.add(makespan);
+    return makespan;
+  }
+
+  @Override
+  public void model() {
+    cost = buildModel(1000);
   }
 }

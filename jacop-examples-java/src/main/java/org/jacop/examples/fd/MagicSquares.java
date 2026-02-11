@@ -61,6 +61,28 @@ public class MagicSquares extends ExampleFd {
   /** It specifies the list of constraints which can be used for guiding shaving. */
   public List<Constraint> guidingShaving;
 
+  /** Parses size from args and runs model + modelDual. */
+  private static void runModelAndDual(String[] args) {
+
+    MagicSquares example = new MagicSquares();
+    if (args.length != 0) {
+      example.number = Integer.parseInt(args[0]);
+    }
+    example.model();
+    if (example.searchMiddle()) {
+      IO.println("Solution(s) found");
+    }
+
+    MagicSquares exampleDual = new MagicSquares();
+    if (args.length != 0) {
+      exampleDual.number = Integer.parseInt(args[0]);
+    }
+    exampleDual.modelDual();
+    if (exampleDual.creditSearch(64, 5000, 10)) {
+      IO.println("Solution(s) found");
+    }
+  }
+
   /**
    * It executes the program which solves the MagicSquare problem using many different model and
    * searches.
@@ -69,38 +91,13 @@ public class MagicSquares extends ExampleFd {
    */
   public static void test(String[] args) {
 
-    MagicSquares example = new MagicSquares();
-
-    if (args.length != 0) {
-      example.number = Integer.parseInt(args[0]);
-    }
-
-    example.model();
-
-    if (example.searchMiddle()) {
-      IO.println("Solution(s) found");
-    }
-
-    MagicSquares exampleDual = new MagicSquares();
-
-    if (args.length != 0) {
-      exampleDual.number = Integer.parseInt(args[0]);
-    }
-
-    exampleDual.modelDual();
-
-    if (exampleDual.creditSearch(64, 5000, 10)) {
-      IO.println("Solution(s) found");
-    }
+    runModelAndDual(args);
 
     MagicSquares exampleShave = new MagicSquares();
-
     if (args.length != 0) {
       exampleShave.number = Integer.parseInt(args[0]);
     }
-
     exampleShave.model4Shaving();
-
     if (exampleShave.shavingSearch(exampleShave.guidingShaving, true)) {
       IO.println("Solution(s) found");
     }
@@ -112,36 +109,19 @@ public class MagicSquares extends ExampleFd {
    * @param args the first argument allows to specify the size of magic square.
    */
   static void main(String[] args) {
-
-    MagicSquares example = new MagicSquares();
-
-    if (args.length != 0) {
-      example.number = Integer.parseInt(args[0]);
-    }
-
-    example.model();
-
-    if (example.searchMiddle()) {
-      IO.println("Solution(s) found");
-    }
-
-    MagicSquares exampleDual = new MagicSquares();
-
-    if (args.length != 0) {
-      exampleDual.number = Integer.parseInt(args[0]);
-    }
-
-    exampleDual.modelDual();
-
-    if (exampleDual.creditSearch(64, 5000, 10)) {
-      IO.println("Solution(s) found");
-    }
+    runModelAndDual(args);
   }
 
-  @Override
-  public void model() {
+  /**
+   * Builds the core magic square model; optionally collects row/column/diagonal constraints for
+   * shaving.
+   */
+  protected void buildModel(boolean collectForShaving) {
 
-    // Creating constraint store
+    if (collectForShaving) {
+      guidingShaving = new ArrayList<>();
+    }
+
     store = new Store();
     vars = new ArrayList<>();
 
@@ -160,72 +140,6 @@ public class MagicSquares extends ExampleFd {
     }
     vars.addAll(Arrays.asList(squares));
 
-    // Imposing inequalities constraints between squares
-    store.impose(new Alldiff(squares));
-
-    IntVar k =
-        new IntVar(
-            store, "K", (number * (number * number + 1)) / 2, (number * (number * number + 1)) / 2);
-    IntVar[] row = new IntVar[number];
-
-    for (int i = 0; i < number; i++) {
-      System.arraycopy(squares, i * number, row, 0, number);
-      store.impose(new SumInt(row, "==", k));
-    }
-
-    IntVar[] column = new IntVar[number];
-
-    for (int j = 0; j < number; j++) {
-      for (int i = 0; i < number; i++) {
-        column[i] = squares[i * number + j];
-      }
-      store.impose(new SumInt(column, "==", k));
-    }
-
-    IntVar[] diagonal = new IntVar[number];
-
-    for (int i = 0; i < number; i++) {
-      diagonal[i] = squares[i * number + i];
-    }
-
-    store.impose(new SumInt(diagonal, "==", k));
-
-    for (int i = number; i > 0; i--) {
-      diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
-    }
-    store.impose(new SumInt(diagonal, "==", k));
-
-    // symmetry breaking
-    store.impose(new XltY(squares[0], squares[number - 1]));
-    store.impose(new XltY(squares[0], squares[number * number - 1]));
-    store.impose(new XltY(squares[0], squares[number * number - number]));
-  }
-
-  /** It creates the model with specification of what constraint can help in guiding shaving. */
-  public void model4Shaving() {
-
-    guidingShaving = new ArrayList<>();
-
-    // Creating constraint store
-    store = new Store();
-    vars = new ArrayList<>();
-
-    IntVar[] squares = new IntVar[number * number];
-
-    for (int i = 0; i < number; i++) {
-      for (int j = 0; j < number; j++) {
-        squares[i * number + j] =
-            new IntVar(store, "S" + (i + 1) + "," + (j + 1), 1, number * number);
-      }
-    }
-
-    vars.addAll(Arrays.asList(squares).subList(0, number));
-    for (int i = number; i > 0; i--) {
-      vars.add(squares[(i - 1) * number + (number - i)]);
-    }
-    vars.addAll(Arrays.asList(squares));
-
-    // Imposing inequalities constraints between squares
     store.impose(new Alldiff(squares));
 
     IntVar k =
@@ -237,7 +151,9 @@ public class MagicSquares extends ExampleFd {
       System.arraycopy(squares, i * number, row, 0, number);
       Constraint cx = new SumInt(row, "==", k);
       store.impose(cx);
-      guidingShaving.add(cx);
+      if (collectForShaving) {
+        guidingShaving.add(cx);
+      }
     }
 
     IntVar[] column = new IntVar[number];
@@ -246,10 +162,11 @@ public class MagicSquares extends ExampleFd {
       for (int i = 0; i < number; i++) {
         column[i] = squares[i * number + j];
       }
-
       Constraint cx = new SumInt(column, "==", k);
       store.impose(cx);
-      guidingShaving.add(cx);
+      if (collectForShaving) {
+        guidingShaving.add(cx);
+      }
     }
 
     IntVar[] diagonal = new IntVar[number];
@@ -260,17 +177,28 @@ public class MagicSquares extends ExampleFd {
 
     Constraint cx = new SumInt(diagonal, "==", k);
     store.impose(cx);
-    guidingShaving.add(cx);
+    if (collectForShaving) {
+      guidingShaving.add(cx);
+    }
 
     for (int i = number; i > 0; i--) {
       diagonal[i - 1] = squares[(i - 1) * number + (number - i)];
     }
     store.impose(new SumInt(diagonal, "==", k));
 
-    // symmetry breaking
     store.impose(new XltY(squares[0], squares[number - 1]));
     store.impose(new XltY(squares[0], squares[number * number - 1]));
     store.impose(new XltY(squares[0], squares[number * number - number]));
+  }
+
+  @Override
+  public void model() {
+    buildModel(false);
+  }
+
+  /** It creates the model with specification of what constraint can help in guiding shaving. */
+  public void model4Shaving() {
+    buildModel(true);
   }
 
   /** IT creates a dual model. */

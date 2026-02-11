@@ -254,15 +254,12 @@ public class SendMoreMoney extends ExampleFd {
   }
 
   /**
-   * 1. Every CP program consists of two parts. The first one is a model and the second one is the
-   * specification of the search. This creates a model which uses global constraints to provide
-   * consize modeling. The model consists of variables and constraints.
+   * Builds the global constraint model (Alldiff + LinearInt). Subclasses may call this and then run
+   * custom search (e.g. TraceGenerator).
    */
-  @Override
-  public void model() {
+  protected void buildModel() {
 
     vars = new ArrayList<>();
-
     store = new Store();
 
     IntVar s = new IntVar(store, "S", 0, 9);
@@ -278,7 +275,6 @@ public class SendMoreMoney extends ExampleFd {
     IntVar valueMore = new IntVar(store, "v(MORE)", 0, 9999);
     IntVar valueMoney = new IntVar(store, "v(MONEY)", 0, 99999);
 
-    // Creating arrays for FDVs
     IntVar[] digits = {s, e, n, d, m, o, r, y};
     IntVar[] send = {s, e, n, d};
     IntVar[] more = {m, o, r, e};
@@ -303,5 +299,15 @@ public class SendMoreMoney extends ExampleFd {
 
     store.impose(new XneqC(s, 0));
     store.impose(new XneqC(m, 0));
+  }
+
+  /**
+   * 1. Every CP program consists of two parts. The first one is a model and the second one is the
+   * specification of the search. This creates a model which uses global constraints to provide
+   * consize modeling. The model consists of variables and constraints.
+   */
+  @Override
+  public void model() {
+    buildModel();
   }
 }

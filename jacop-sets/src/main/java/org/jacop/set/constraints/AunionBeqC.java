@@ -65,12 +65,10 @@ public class AunionBeqC extends AbstractSetOpBeqC {
     SetDomain bDom = b.dom();
     SetDomain cDom = c.dom();
 
-    if (cHasChanged || bHasChanged) {
-      if (cDom.lub().getSize() > 0) {
-        IntDomain glbA = cDom.glb().subtract(bDom.lub());
-        if (glbA.getSize() > 0) {
-          a.domain.inGlb(store.level, a, glbA);
-        }
+    if ((cHasChanged || bHasChanged) && cDom.lub().getSize() > 0) {
+      IntDomain glbA = cDom.glb().subtract(bDom.lub());
+      if (glbA.getSize() > 0) {
+        a.domain.inGlb(store.level, a, glbA);
       }
     }
 
@@ -78,12 +76,10 @@ public class AunionBeqC extends AbstractSetOpBeqC {
       a.domain.inLub(store.level, a, cDom.lub());
     }
 
-    if (aHasChanged || cHasChanged) {
-      if (cDom.lub().getSize() > 0) {
-        IntDomain glbB = cDom.glb().subtract(aDom.lub());
-        if (glbB.getSize() > 0) {
-          b.domain.inGlb(store.level, b, glbB);
-        }
+    if ((aHasChanged || cHasChanged) && cDom.lub().getSize() > 0) {
+      IntDomain glbB = cDom.glb().subtract(aDom.lub());
+      if (glbB.getSize() > 0) {
+        b.domain.inGlb(store.level, b, glbB);
       }
     }
 

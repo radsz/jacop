@@ -46,7 +46,28 @@ import org.jacop.core.Store;
  */
 public class Sudoku extends ExampleFd {
 
-  IntVar[][] elements;
+  /** The Sudoku grid; shared with subclasses. */
+  protected IntVar[][] elements;
+
+  /** Returns the puzzle description for model(); 0 = unknown, &gt;0 = known value. */
+  protected int[][] getDescription() {
+    return new int[][] {
+      {0, 1, 0, 4, 2, 0, 0, 0, 5},
+      {0, 0, 2, 0, 7, 1, 0, 3, 9},
+      {0, 0, 0, 0, 0, 0, 0, 4, 0},
+      {2, 0, 7, 1, 0, 0, 0, 0, 6},
+      {0, 0, 0, 0, 4, 0, 0, 0, 0},
+      {6, 0, 0, 0, 0, 7, 4, 0, 3},
+      {0, 7, 0, 0, 0, 0, 0, 0, 0},
+      {1, 2, 0, 7, 3, 0, 5, 0, 0},
+      {3, 0, 0, 0, 8, 2, 0, 7, 0}
+    };
+  }
+
+  /** Returns the puzzle description for modelBasic(). */
+  protected int[][] getDescriptionBasic() {
+    return getDescription();
+  }
 
   /**
    * It specifies the main executable function creating a model for a particular Sudoku.
@@ -63,7 +84,7 @@ public class Sudoku extends ExampleFd {
       IO.println("Solution(s) found");
     }
 
-    ExampleFd.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+    printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
 
   /**
@@ -81,7 +102,7 @@ public class Sudoku extends ExampleFd {
       IO.println("Solution(s) found");
     }
 
-    ExampleFd.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+    printMatrix(example.elements, example.elements.length, example.elements[0].length);
 
     example = new Sudoku();
 
@@ -91,27 +112,12 @@ public class Sudoku extends ExampleFd {
       IO.println("Solution(s) found");
     }
 
-    ExampleFd.printMatrix(example.elements, example.elements.length, example.elements[0].length);
+    printMatrix(example.elements, example.elements.length, example.elements[0].length);
   }
 
-  @Override
-  public void model() {
+  /** Builds the Sudoku model using Alldistinct constraints. */
+  protected void buildModel(int[][] description) {
 
-    // >0 - known element
-    // 0 - unknown element
-    int[][] description = {
-      {0, 1, 0, 4, 2, 0, 0, 0, 5},
-      {0, 0, 2, 0, 7, 1, 0, 3, 9},
-      {0, 0, 0, 0, 0, 0, 0, 4, 0},
-      {2, 0, 7, 1, 0, 0, 0, 0, 6},
-      {0, 0, 0, 0, 4, 0, 0, 0, 0},
-      {6, 0, 0, 0, 0, 7, 4, 0, 3},
-      {0, 7, 0, 0, 0, 0, 0, 0, 0},
-      {1, 2, 0, 7, 3, 0, 5, 0, 0},
-      {3, 0, 0, 0, 8, 2, 0, 7, 0}
-    };
-
-    // No of rows and columns in a box.
     int noRows = 3;
     int noColumns = 3;
 
@@ -120,7 +126,6 @@ public class Sudoku extends ExampleFd {
 
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
-    // Creating variables.
     for (int i = 0; i < noRows * noColumns; i++) {
       for (int j = 0; j < noRows * noColumns; j++) {
         if (description[i][j] == 0) {
@@ -132,54 +137,33 @@ public class Sudoku extends ExampleFd {
       }
     }
 
-    // Creating constraints for rows.
     for (int i = 0; i < noRows * noColumns; i++) {
       store.impose(new Alldistinct(elements[i]));
     }
 
-    // Creating constraints for columns.
     for (int j = 0; j < noRows * noColumns; j++) {
       IntVar[] column = new IntVar[noRows * noColumns];
       for (int i = 0; i < noRows * noColumns; i++) {
         column[i] = elements[i][j];
       }
-
       store.impose(new Alldistinct(column));
     }
 
-    // Creating constraints for blocks.
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
-
         List<IntVar> block = new ArrayList<>();
         for (int k = 0; k < noColumns; k++) {
           block.addAll(
               Arrays.asList(elements[i * noColumns + k]).subList(j * noRows, noRows + j * noRows));
         }
-
         store.impose(new Alldistinct(block));
       }
     }
   }
 
-  /** It specifies the model using mostly primitive constraints. */
-  public void modelBasic() {
+  /** Builds the Sudoku model using primitive XneqY constraints. */
+  protected void buildModelBasic(int[][] description) {
 
-    // >0 - known element
-    // 0 - unknown element
-    int[][] description = {
-      {0, 1, 0, 4, 2, 0, 0, 0, 5},
-      {0, 0, 2, 0, 7, 1, 0, 3, 9},
-      {0, 0, 0, 0, 0, 0, 0, 4, 0},
-      {2, 0, 7, 1, 0, 0, 0, 0, 6},
-      {0, 0, 0, 0, 4, 0, 0, 0, 0},
-      {6, 0, 0, 0, 0, 7, 4, 0, 3},
-      {0, 7, 0, 0, 0, 0, 0, 0, 0},
-      {1, 2, 0, 7, 3, 0, 5, 0, 0},
-      {3, 0, 0, 0, 8, 2, 0, 7, 0}
-    };
-
-    // No of rows and columns in a box.
     int noRows = 3;
     int noColumns = 3;
 
@@ -188,7 +172,6 @@ public class Sudoku extends ExampleFd {
 
     elements = new IntVar[noRows * noColumns][noRows * noColumns];
 
-    // Creating variables.
     for (int i = 0; i < noRows * noColumns; i++) {
       for (int j = 0; j < noRows * noColumns; j++) {
         if (description[i][j] == 0) {
@@ -200,7 +183,6 @@ public class Sudoku extends ExampleFd {
       }
     }
 
-    // Creating constraints for rows.
     for (int i = 0; i < noRows * noColumns; i++) {
       for (int k = 0; k < noRows * noColumns; k++) {
         for (int j = k + 1; j < noRows * noColumns; j++) {
@@ -209,7 +191,6 @@ public class Sudoku extends ExampleFd {
       }
     }
 
-    // Creating constraints for columns.
     for (int i = 0; i < noRows * noColumns; i++) {
       for (int k = 0; k < noRows * noColumns; k++) {
         for (int j = k + 1; j < noRows * noColumns; j++) {
@@ -218,16 +199,13 @@ public class Sudoku extends ExampleFd {
       }
     }
 
-    // Creating constraints for blocks.
     for (int i = 0; i < noRows; i++) {
       for (int j = 0; j < noColumns; j++) {
-
         List<IntVar> block = new ArrayList<>();
         for (int k = 0; k < noColumns; k++) {
           block.addAll(
               Arrays.asList(elements[i * noColumns + k]).subList(j * noRows, noRows + j * noRows));
         }
-
         for (int k = 0; k < noColumns * noRows; k++) {
           for (int m = k + 1; m < noColumns * noRows; m++) {
             store.impose(new XneqY(block.get(k), block.get(m)));
@@ -235,5 +213,15 @@ public class Sudoku extends ExampleFd {
         }
       }
     }
+  }
+
+  @Override
+  public void model() {
+    buildModel(getDescription());
+  }
+
+  /** It specifies the model using mostly primitive constraints. */
+  public void modelBasic() {
+    buildModelBasic(getDescriptionBasic());
   }
 }
