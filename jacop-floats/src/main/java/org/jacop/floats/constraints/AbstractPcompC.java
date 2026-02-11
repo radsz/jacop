@@ -1,8 +1,8 @@
 /*
- * PeqC.java
- * This file is part of org.jacop.
+ * AbstractPcompC.java
+ * This file is part of JaCoP.
  * <p>
- * org.jacop is a Java Constraint Programming solver.
+ * JaCoP is a Java Constraint Programming solver.
  * <p>
  * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
  * <p>
@@ -31,79 +31,52 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
-import org.jacop.core.Store;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.Domain;
 import org.jacop.floats.core.FloatVar;
 
 /**
- * Constraints P #= C.
- *
- * <p>Domain consistency is used.
+ * Abstract base for float variable-vs-constant comparison constraints (PgtC, PltC, PgteqC, PlteqC,
+ * PeqC, PneqC). Provides shared fields, constructor logic, and the two non-nested pruning event
+ * methods.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PeqC extends AbstractPcompC {
+public abstract class AbstractPcompC extends PrimitiveConstraint {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+  /** It specifies the float variable. */
+  public final FloatVar p;
+
+  /** It specifies the constant. */
+  public final double c;
 
   /**
-   * It constructs the constraint P = C.
+   * Constructs a comparison constraint between a float variable and a constant.
    *
+   * @param idNum the id counter for the concrete subclass.
    * @param p variable p.
    * @param c constant c.
    */
-  public PeqC(FloatVar p, double c) {
+  protected AbstractPcompC(AtomicInteger idNum, FloatVar p, double c) {
 
-    super(idNumber, p, c);
+    checkInputForNullness("p", new Object[] {p});
 
-    // TODO: BUG? why Integer constants used here?
-    assert c >= IntDomain.MinInt && c <= IntDomain.MaxInt
-        : "Constant c " + c + " is not in the allowed range ";
+    numberId = idNum.incrementAndGet();
+
+    this.p = p;
+    this.c = c;
+
+    setScope(p);
   }
 
   @Override
-  public void consistency(Store store) {
-
-    p.domain.in(store.level, p, c, c);
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
   }
 
   @Override
-  public void notConsistency(Store store) {
-    p.domain.inComplement(store.level, p, c);
-  }
-
-  @Override
-  public boolean satisfied() {
-    return p.singleton(c);
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return !p.domain.contains(c);
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.ANY;
-  }
-
-  @Override
-  public String toString() {
-    return id() + " : PeqC(" + p + ", " + c + " )";
-  }
-
-  /**
-   * It returns the constant to which a given variable should be equal to.
-   *
-   * @return the constant to which the variable should be equal to.
-   */
-  public double getC() {
-    return c;
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
   }
 }

@@ -30,49 +30,33 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 /**
- * ArgMin constraint provides the index of the maximum variable from all variables on the list.
+ * ArgMin constraint provides the index of the minimum variable from all variables on the list.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ArgMin extends Constraint implements SatisfiedPresent {
+public class ArgMin extends AbstractArgMinMax {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies a list of variables among which a maximum value is being searched for. */
-  public final IntVar[] list;
-
-  /** It specifies variable max which stores the maximum value present in the list. */
-  public final IntVar minIndex;
-
-  /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  public int indexOffset;
-
-  boolean firstConsistencyCheck = true;
-
   /**
-   * It constructs max constraint.
+   * It constructs min constraint.
    *
-   * @param minIndex variable denoting the index of the maximum value
-   * @param list the array of variables for which the index of the maximum value is imposed.
+   * @param minIndex variable denoting the index of the minimum value
+   * @param list the array of variables for which the index of the minimum value is imposed.
    * @param indexOffset the offset for the index that is computed from 1 by default (if needed from
    *     0, use -1 for this parameter)
    */
   public ArgMin(IntVar[] list, IntVar minIndex, int indexOffset) {
-
     this(list, minIndex);
     this.indexOffset = indexOffset;
   }
@@ -84,20 +68,11 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
    * @param minIndex variable denoting the index of the minimum value
    */
   public ArgMin(IntVar[] list, IntVar minIndex) {
-
-    checkInputForNullness(new String[] {"list", "minIndex"}, new Object[][] {list, {minIndex}});
-
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-    this.indexOffset = 0;
-    this.minIndex = minIndex;
-    this.list = Arrays.copyOf(list, list.length);
-
-    setScope(Stream.concat(Stream.of(minIndex), Stream.of(list)));
+    super(idNumber, list, minIndex);
   }
 
   /**
-   * It constructs max constraint.
+   * It constructs min constraint.
    *
    * @param minIndex variable denoting the index of minimum value
    * @param variables the array of variables for which the minimum value is imposed.
@@ -116,7 +91,6 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
    * @param minIndex variable denoting the index of the minimum value
    */
   public ArgMin(List<? extends IntVar> variables, IntVar minIndex) {
-
     this(variables.toArray(new IntVar[0]), minIndex);
   }
 
@@ -124,7 +98,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      minIndex.domain.in(store.level, minIndex, 1 + indexOffset, list.length + indexOffset);
+      extremeIndex.domain.in(store.level, extremeIndex, 1 + indexOffset, list.length + indexOffset);
       firstConsistencyCheck = false;
     }
 
@@ -152,7 +126,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
       }
 
       if (lb == ub) {
-        minIndex.domain.inMax(store.level, minIndex, pos + 1 + indexOffset);
+        extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
       }
 
       // find min/max values for index
@@ -171,13 +145,13 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
       if (idxDomain.isEmpty()) {
         throw Store.failException;
       } else {
-        minIndex.domain.in(store.level, minIndex, idxDomain);
+        extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
       }
 
       // find min value for variables indexed by index variable
       lb = IntDomain.MaxInt;
       pos = -1;
-      for (ValueEnumeration e = minIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
         int i = e.nextElement() - 1 - indexOffset;
 
         int vDomMin = list[i].dom().min();
@@ -187,12 +161,13 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         }
       }
       if (list[pos].singleton()) {
-        minIndex.domain.in(store.level, minIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+        extremeIndex.domain.in(
+            store.level, extremeIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
       }
 
-      if (minIndex.singleton()) {
+      if (extremeIndex.singleton()) {
 
-        int idx = minIndex.value() - 1 - indexOffset;
+        int idx = extremeIndex.value() - 1 - indexOffset;
         IntVar y = list[idx];
 
         for (int i = 0; i < list.length; i++) {
@@ -211,7 +186,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
         }
       } else {
         // prune values on the list
-        int im = minIndex.min();
+        int im = extremeIndex.min();
         for (int i = 0; i < list.length; i++) {
           int cp = i + 1 + indexOffset;
 
@@ -226,38 +201,15 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var var) {
-
-    // If consistency function mode
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-
-    if (var == minIndex) {
-      return IntDomain.ANY;
-    } else {
-      return IntDomain.BOUND;
-    }
-  }
-
-  @Override
   public boolean satisfied() {
 
-    boolean sat = minIndex.singleton();
+    boolean sat = extremeIndex.singleton();
 
     if (!sat) {
       return false;
     }
 
-    int minVal = list[minIndex.value() - 1 - indexOffset].value();
+    int minVal = list[extremeIndex.value() - 1 - indexOffset].value();
     int i = 0;
     int eq = 0;
     while (sat && i < list.length) {
@@ -279,7 +231,7 @@ public class ArgMin extends Constraint implements SatisfiedPresent {
     result.append(" : ArgMin(  [ ");
     appendArrayToString(result, list);
 
-    result.append("], ").append(this.minIndex);
+    result.append("], ").append(this.extremeIndex);
     result.append(", ").append(indexOffset).append(")");
 
     return result.toString();

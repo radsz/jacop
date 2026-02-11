@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -42,15 +41,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XneqC extends PrimitiveConstraint {
+public class XneqC extends AbstractXcompC {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x in constraint x != c. */
-  public final IntVar x;
-
-  /** It specifies constant c in constraint x != c. */
-  public final int c;
 
   /**
    * It constructs x != c constraint.
@@ -59,17 +52,7 @@ public class XneqC extends PrimitiveConstraint {
    * @param c constant c.
    */
   public XneqC(IntVar x, int c) {
-
-    if (x == null) {
-      throw new IllegalArgumentException("Constraint XgtC has variable x that is null.");
-    }
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.c = c;
-
-    setScope(x);
+    super(idNumber, x, c);
   }
 
   @Override
@@ -86,16 +69,6 @@ public class XneqC extends PrimitiveConstraint {
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
     return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return Domain.NONE;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return Domain.NONE;
   }
 
   @Override

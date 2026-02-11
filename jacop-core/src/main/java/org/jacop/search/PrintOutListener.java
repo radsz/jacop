@@ -49,35 +49,13 @@ public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
 
     final boolean parent = super.executeAfterSolution(search, select);
 
-    StringBuilder buf = new StringBuilder("\n");
+    StringBuilder buf = new StringBuilder();
 
     if (search.getCostVariable() != null) {
-      buf.append("Solution cost ").append(search.getCostVariable()).append("\n");
+      buf.append("\nSolution cost ").append(search.getCostVariable());
     }
 
-    if (noSolutions > 1) {
-      buf.append("No of solutions : ").append(noSolutions);
-      buf.append("\nLast Solution : [");
-    } else {
-      buf.append("\nSolution : [");
-    }
-
-    int solutionIndex = 0;
-
-    if (recordSolutions) {
-      solutionIndex = noSolutions - 1;
-    }
-
-    if (vars != null) {
-      for (int i = 0; i < vars.length; i++) {
-        buf.append(vars[i].id()).append("=").append(solutions[solutionIndex][i]);
-        if (i < vars.length - 1) {
-          buf.append(", ");
-        }
-      }
-    }
-
-    buf.append("]\n");
+    buf.append(super.toString());
 
     log.info("{}", buf);
 

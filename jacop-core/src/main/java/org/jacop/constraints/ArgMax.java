@@ -30,17 +30,13 @@
 
 package org.jacop.constraints;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
-import org.jacop.core.Var;
 
 /**
  * ArgMax constraint provides the index of the maximum variable from all variables on the list.
@@ -48,20 +44,9 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ArgMax extends Constraint implements SatisfiedPresent {
+public class ArgMax extends AbstractArgMinMax {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies a list of variables among which a maximum value is being searched for. */
-  public final IntVar[] list;
-
-  /** It specifies variable max which stores the maximum value present in the list. */
-  public final IntVar maxIndex;
-
-  /** It specifies indexOffset within an element constraint list[index-indexOffset] = value. */
-  public int indexOffset;
-
-  boolean firstConsistencyCheck = true;
 
   /**
    * It constructs max constraint.
@@ -83,16 +68,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
    * @param maxIndex variable denoting the index of the maximum value
    */
   public ArgMax(IntVar[] list, IntVar maxIndex) {
-
-    checkInputForNullness(new String[] {"list", "maxIndex"}, new Object[][] {list, {maxIndex}});
-
-    this.queueIndex = 1;
-    this.numberId = idNumber.incrementAndGet();
-    this.indexOffset = 0;
-    this.maxIndex = maxIndex;
-    this.list = Arrays.copyOf(list, list.length);
-
-    setScope(Stream.concat(Arrays.stream(list), Stream.of(maxIndex)));
+    super(idNumber, list, maxIndex);
   }
 
   /**
@@ -122,7 +98,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
   public void consistency(Store store) {
 
     if (firstConsistencyCheck) {
-      maxIndex.domain.in(store.level, maxIndex, 1 + indexOffset, list.length + indexOffset);
+      extremeIndex.domain.in(store.level, extremeIndex, 1 + indexOffset, list.length + indexOffset);
       firstConsistencyCheck = false;
     }
 
@@ -135,7 +111,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
       int pos = -1;
 
       // find lower/upper bounds for indexed elements on list
-      for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
         int cp = e.nextElement();
         int i = cp - 1 - indexOffset;
 
@@ -151,12 +127,12 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
         }
       }
       if (lb == ub) {
-        maxIndex.domain.inMax(store.level, maxIndex, pos + 1 + indexOffset);
+        extremeIndex.domain.inMax(store.level, extremeIndex, pos + 1 + indexOffset);
       }
 
       // find min/max values for index
       IntervalDomain idxDomain = new IntervalDomain();
-      for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
         int cp = e.nextElement();
         int i = cp - 1 - indexOffset;
 
@@ -171,12 +147,12 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
       if (idxDomain.isEmpty()) {
         throw Store.failException;
       } else {
-        maxIndex.domain.in(store.level, maxIndex, idxDomain);
+        extremeIndex.domain.in(store.level, extremeIndex, idxDomain);
       }
 
       ub = IntDomain.MinInt;
       pos = -1;
-      for (ValueEnumeration e = maxIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      for (ValueEnumeration e = extremeIndex.dom().valueEnumeration(); e.hasMoreElements(); ) {
         int i = e.nextElement() - 1 - indexOffset;
 
         int vDomMax = list[i].max();
@@ -186,12 +162,13 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
         }
       }
       if (list[pos].singleton()) {
-        maxIndex.domain.in(store.level, maxIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
+        extremeIndex.domain.in(
+            store.level, extremeIndex, pos + 1 + indexOffset, pos + 1 + indexOffset);
       }
 
-      if (maxIndex.singleton()) {
+      if (extremeIndex.singleton()) {
 
-        int idx = maxIndex.value() - 1 - indexOffset;
+        int idx = extremeIndex.value() - 1 - indexOffset;
         IntVar y = list[idx];
 
         for (int i = 0; i < list.length; i++) {
@@ -210,7 +187,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
         }
       } else {
         // prune values on the list
-        int im = maxIndex.min();
+        int im = extremeIndex.min();
         for (int i = 0; i < list.length; i++) {
           int cp = i + 1 + indexOffset;
 
@@ -227,34 +204,11 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
   }
 
   @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var var) {
-
-    // If consistency function mode
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(var);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-
-    if (var == maxIndex) {
-      return IntDomain.ANY;
-    } else {
-      return IntDomain.BOUND;
-    }
-  }
-
-  @Override
   public boolean satisfied() {
 
-    boolean sat = maxIndex.singleton();
+    boolean sat = extremeIndex.singleton();
 
-    int maxVal = list[maxIndex.value() - 1 - indexOffset].value();
+    int maxVal = list[extremeIndex.value() - 1 - indexOffset].value();
     int i = 0;
     int eq = 0;
     while (sat && i < list.length) {
@@ -276,7 +230,7 @@ public class ArgMax extends Constraint implements SatisfiedPresent {
     result.append(" : ArgMax(  [ ");
     appendArrayToString(result, list);
 
-    result.append("], ").append(this.maxIndex);
+    result.append("], ").append(this.extremeIndex);
     result.append(", ").append(indexOffset).append(")");
 
     return result.toString();

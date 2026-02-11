@@ -31,8 +31,6 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
@@ -45,35 +43,24 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PneqC extends PrimitiveConstraint {
+public class PneqC extends AbstractPcompC {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  /** It specifies the constant to which a specified variable should be equal to. */
-  public double c;
-
-  /** It specifies the variable which is constrained to be equal to the specified value. */
-  public FloatVar p;
-
   /**
-   * It constructs the constraint P = C.
+   * It constructs the constraint P != C.
    *
    * @param p variable p.
    * @param c constant c.
    */
   public PneqC(FloatVar p, double c) {
 
-    checkInputForNullness(new String[] {"p"}, new Object[][] {{p}});
+    super(idNumber, p, c);
+
     if (!(c >= IntDomain.MinInt && c <= IntDomain.MaxInt)) {
       throw new IllegalArgumentException(
           "PneqC constraint has constant c " + c + " in the not allowed range.");
     }
-
-    numberId = idNumber.incrementAndGet();
-    this.p = p;
-    this.c = c;
-
-    setScope(p);
   }
 
   @Override
@@ -106,16 +93,6 @@ public class PneqC extends PrimitiveConstraint {
   @Override
   protected int getDefaultNestedConsistencyPruningEvent() {
     return IntDomain.ANY;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return Domain.NONE;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return Domain.NONE;
   }
 
   @Override

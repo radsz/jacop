@@ -1,5 +1,5 @@
 /*
- * PlteqC.java
+ * AbstractXcompC.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -25,69 +25,57 @@
  * License version 3.
  * <p>
  * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-package org.jacop.floats.constraints;
+package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.Store;
-import org.jacop.floats.core.FloatDomain;
-import org.jacop.floats.core.FloatVar;
+import org.jacop.core.Domain;
+import org.jacop.core.IntVar;
 
 /**
- * Constraint X {@literal <=} C for floats.
+ * Abstract base for variable-vs-constant integer comparison constraints (XgtC, XltC, XgteqC,
+ * XlteqC, XeqC, XneqC). Provides shared fields, constructor logic, and the two non-nested pruning
+ * event methods.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PlteqC extends AbstractPcompC {
+public abstract class AbstractXcompC extends PrimitiveConstraint {
 
-  static final AtomicInteger idNumber = new AtomicInteger(0);
+  /** It specifies the variable. */
+  public final IntVar x;
+
+  /** It specifies the constant. */
+  public final int c;
 
   /**
-   * It constructs constraint P {@literal <=} C.
+   * Constructs a comparison constraint between a variable and a constant.
    *
-   * @param p variable p.
+   * @param idNum the id counter for the concrete subclass.
+   * @param x variable x.
    * @param c constant c.
    */
-  public PlteqC(FloatVar p, double c) {
-    super(idNumber, p, c);
+  protected AbstractXcompC(AtomicInteger idNum, IntVar x, int c) {
+
+    checkInputForNullness("x", new Object[] {x});
+
+    numberId = idNum.incrementAndGet();
+
+    this.x = x;
+    this.c = c;
+
+    setScope(x);
   }
 
   @Override
-  public void consistency(Store store) {
-
-    p.domain.inMax(store.level, p, c);
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return Domain.NONE;
   }
 
   @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return FloatDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return FloatDomain.BOUND;
-  }
-
-  @Override
-  public void notConsistency(Store store) {
-    p.domain.inMin(store.level, p, FloatDomain.next(c));
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return p.min() > c;
-  }
-
-  @Override
-  public boolean satisfied() {
-    return p.max() <= c;
-  }
-
-  @Override
-  public String toString() {
-    return id() + " : PlteqC(" + p + ", " + c + " )";
+  public int getDefaultConsistencyPruningEvent() {
+    return Domain.NONE;
   }
 }

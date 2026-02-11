@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -42,15 +41,9 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XltC extends PrimitiveConstraint {
+public class XltC extends AbstractXcompC {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x to be lower than a given constant. */
-  public final IntVar x;
-
-  /** It specifies constant. */
-  public final int c;
 
   /**
    * It constructs constraint X {@literal <} C.
@@ -59,17 +52,7 @@ public class XltC extends PrimitiveConstraint {
    * @param c constant c.
    */
   public XltC(IntVar x, int c) {
-
-    if (x == null) {
-      throw new IllegalArgumentException("Constraint XltC has variable x that is null.");
-    }
-
-    numberId = idNumber.incrementAndGet();
-
-    this.x = x;
-    this.c = c;
-
-    setScope(x);
+    super(idNumber, x, c);
   }
 
   @Override
@@ -85,16 +68,6 @@ public class XltC extends PrimitiveConstraint {
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
     return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return Domain.NONE;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return Domain.NONE;
   }
 
   @Override

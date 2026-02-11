@@ -31,7 +31,6 @@
 package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -42,15 +41,9 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class PltC extends PrimitiveConstraint {
+public class PltC extends AbstractPcompC {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x to be lower than a given constant. */
-  public final FloatVar p;
-
-  /** It specifies constant. */
-  public final double c;
 
   /**
    * It constructs constraint P {@literal <} C.
@@ -59,15 +52,7 @@ public class PltC extends PrimitiveConstraint {
    * @param c constant c.
    */
   public PltC(FloatVar p, double c) {
-
-    checkInputForNullness("p", new Object[] {p});
-
-    numberId = idNumber.incrementAndGet();
-
-    this.p = p;
-    this.c = c;
-
-    setScope(p);
+    super(idNumber, p, c);
   }
 
   @Override
@@ -84,16 +69,6 @@ public class PltC extends PrimitiveConstraint {
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
     return FloatDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return FloatDomain.NONE;
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return FloatDomain.NONE;
   }
 
   @Override
