@@ -96,6 +96,21 @@ public abstract class ExampleFd {
   /** It specifies a standard way of modeling the problem. */
   public abstract void model();
 
+  /** Prints search statistics (nodes, decisions, wrong decisions, backtracks, max depth). */
+  protected void printSearchStats() {
+    IO.println();
+    IO.print(search.getNodes() + "\t");
+    IO.print(search.getDecisions() + "\t");
+    IO.print(search.getWrongDecisions() + "\t");
+    IO.print(search.getBacktracks() + "\t");
+    IO.print(search.getMaximumDepth() + "\t");
+  }
+
+  /** Prints execution time in ms since the given start time. */
+  protected void printExecutionTime(long t1) {
+    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+  }
+
   /**
    * It specifies simple search method based on input order and lexigraphical ordering of values.
    *
@@ -118,17 +133,8 @@ public abstract class ExampleFd {
       store.print();
     }
 
-    T2 = System.currentTimeMillis();
-
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-
-    IO.println();
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
-
+    printExecutionTime(T1);
+    printSearchStats();
     return result;
   }
 
@@ -155,10 +161,7 @@ public abstract class ExampleFd {
       store.print();
     }
 
-    T2 = System.currentTimeMillis();
-
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-
+    printExecutionTime(T1);
     return result;
   }
 
@@ -211,18 +214,8 @@ public abstract class ExampleFd {
     }
 
     final boolean result = false;
-
-    IO.println();
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
-
-    long T2 = System.currentTimeMillis();
-
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-
+    printSearchStats();
+    printExecutionTime(T1);
     return result;
   }
 
@@ -247,22 +240,11 @@ public abstract class ExampleFd {
     search = new DepthFirstSearch<>();
 
     final boolean result = search.labeling(store, select);
-
-    IO.println();
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
-
+    printSearchStats();
     if (result) {
       store.print();
     }
-
-    long T2 = System.currentTimeMillis();
-
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-
+    printExecutionTime(T1);
     return result;
   }
 
@@ -281,18 +263,10 @@ public abstract class ExampleFd {
             vars.toArray(new IntVar[1]), new MostConstrainedStatic<>(), new IndomainMin<>());
 
     final boolean result = search.labeling(store, select);
-
-    IO.println();
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
-
+    printSearchStats();
     if (!result) {
       IO.println("**** No Solution ****");
     }
-
     return result;
   }
 
@@ -318,16 +292,12 @@ public abstract class ExampleFd {
 
     boolean result = search.labeling(store, select);
 
-    long T2 = System.currentTimeMillis();
-
     if (result) {
       IO.println("Number of solutions " + search.getSolutionListener().solutionsNo());
     } else {
       IO.println("Failed to find any solution");
     }
-
-    IO.println("\n\t*** Execution time = " + (T2 - T1) + " ms");
-
+    printExecutionTime(T1);
     return result;
   }
 
@@ -489,21 +459,9 @@ public abstract class ExampleFd {
     search.setTimeOutListener(credit);
 
     final boolean result = search.labeling(store, select);
-
     store.print();
-
-    IO.print(search.getNodes() + "\t");
-    IO.print(search.getDecisions() + "\t");
-    IO.print(search.getWrongDecisions() + "\t");
-    IO.print(search.getBacktracks() + "\t");
-    IO.print(search.getMaximumDepth() + "\t");
-
-    if (result) {
-      IO.println(1);
-    } else {
-      IO.println(0);
-    }
-
+    printSearchStats();
+    IO.println(result ? 1 : 0);
     return result;
   }
 

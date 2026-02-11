@@ -90,9 +90,30 @@ public class KnapsackExample extends ExampleFd {
     }
   }
 
-  @Override
-  public void model() {
+  /**
+   * Parsed knapsack data for quantity-based models (model, modelNoKnapsackConstraint, modelBoth).
+   */
+  protected static final class KnapsackData {
+    final int noItems;
+    final int volume;
+    final int[] weights;
+    final int[] profits;
+    final int[] maxs;
+    final String[] names;
 
+    KnapsackData(
+        int noItems, int volume, int[] weights, int[] profits, int[] maxs, String[] names) {
+      this.noItems = noItems;
+      this.volume = volume;
+      this.weights = weights;
+      this.profits = profits;
+      this.maxs = maxs;
+      this.names = names;
+    }
+  }
+
+  /** Parses args or returns default knapsack data for quantity-based models. */
+  protected KnapsackData parseQuantityKnapsackData() {
     int noItems = 3;
     int volume = 9;
     int[] weights = {4, 3, 2};
@@ -104,9 +125,6 @@ public class KnapsackExample extends ExampleFd {
       maxs[i] = volume / weights[i];
     }
 
-    // It is possible to supply the program
-    // with the volume size and items (weight, profit, maximum_quantity,
-    // name )
     if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
       volume = Integer.parseInt(args[0]);
       noItems = (args.length - 1) / 4;
@@ -122,173 +140,84 @@ public class KnapsackExample extends ExampleFd {
       }
     }
 
-    // Creating constraint store
-    store = new Store();
+    return new KnapsackData(noItems, volume, weights, profits, maxs, names);
+  }
 
+  /** Holder for quantity-based model variables. */
+  protected static final class QuantityModelVars {
+    final IntVar[] quantity;
+    final IntVar weight;
+    final IntVar profit;
+
+    QuantityModelVars(IntVar[] quantity, IntVar weight, IntVar profit) {
+      this.quantity = quantity;
+      this.weight = weight;
+      this.profit = profit;
+    }
+  }
+
+  /**
+   * Builds store, vars, quantity, weight, profit and cost; returns vars for model-specific
+   * constraints.
+   */
+  protected QuantityModelVars buildQuantityBase(KnapsackData data) {
+    store = new Store();
     vars = new ArrayList<>();
 
-    // I-th variable represents if i-th item is taken
-    IntVar[] quantity = new IntVar[noItems];
-
-    // Each quantity variable has a domain from 0 to max value
+    IntVar[] quantity = new IntVar[data.noItems];
     for (int i = 0; i < quantity.length; i++) {
-      quantity[i] = new IntVar(store, "Quantity_" + names[i], 0, maxs[i]);
+      quantity[i] = new IntVar(store, "Quantity_" + data.names[i], 0, data.maxs[i]);
       vars.add(quantity[i]);
     }
 
     IntVar profit = new IntVar(store, "Profit", 0, 1000000);
     IntVar weight = new IntVar(store, "Weight", 0, 1000000);
 
-    //  Redundant constraints.
-
-    store.impose(
-        Knapsack.builder()
-            .profits(profits)
-            .weights(weights)
-            .quantity(quantity)
-            .knapsackCapacity(weight)
-            .knapsackProfit(profit)
-            .build());
-
-    store.impose(new XlteqC(weight, volume));
+    store.impose(new XlteqC(weight, data.volume));
 
     IntVar profitNegation = new IntVar(store, "ProfitNegation", -100000, 0);
-
     store.impose(new XplusYeqC(profit, profitNegation, 0));
-
     cost = profitNegation;
+
+    return new QuantityModelVars(quantity, weight, profit);
+  }
+
+  @Override
+  public void model() {
+    KnapsackData data = parseQuantityKnapsackData();
+    QuantityModelVars v = buildQuantityBase(data);
+    store.impose(
+        Knapsack.builder()
+            .profits(data.profits)
+            .weights(data.weights)
+            .quantity(v.quantity)
+            .knapsackCapacity(v.weight)
+            .knapsackProfit(v.profit)
+            .build());
   }
 
   /** It does not use Knapsack constraint only SumWeight constraints. */
   public void modelNoKnapsackConstraint() {
-
-    int noItems = 3;
-    int volume = 9;
-    int[] weights = {4, 3, 2};
-    int[] profits = {15, 10, 7};
-    String[] names = {"whisky", "perfumes", "cigarets"};
-
-    int[] maxs = new int[noItems];
-    for (int i = 0; i < noItems; i++) {
-      maxs[i] = volume / weights[i];
-    }
-
-    // It is possible to supply the program
-    // with the volume size and items (weight, profit, maximum_quantity,
-    // name )
-    if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
-      volume = Integer.parseInt(args[0]);
-      noItems = (args.length - 1) / 4;
-      weights = new int[noItems];
-      profits = new int[noItems];
-      maxs = new int[noItems];
-      names = new String[noItems];
-      for (int i = 1; i < args.length; ) {
-        weights[(i - 1) / 4] = Integer.parseInt(args[i++]);
-        profits[(i - 1) / 4] = Integer.parseInt(args[i++]);
-        maxs[(i - 1) / 4] = Integer.parseInt(args[i++]);
-        names[(i - 1) / 4] = args[i++];
-      }
-    }
-
-    // Creating constraint store
-    store = new Store();
-
-    vars = new ArrayList<>();
-
-    // I-th variable represents if i-th item is taken
-    IntVar[] quantity = new IntVar[noItems];
-
-    // Each quantity variable has a domain from 0 to max value
-    for (int i = 0; i < quantity.length; i++) {
-      quantity[i] = new IntVar(store, "Quantity_" + names[i], 0, maxs[i]);
-      vars.add(quantity[i]);
-    }
-
-    IntVar profit = new IntVar(store, "Profit", 0, 1000000);
-    IntVar weight = new IntVar(store, "Weight", 0, 1000000);
-
-    store.impose(new LinearInt(quantity, weights, "==", weight));
-    store.impose(new LinearInt(quantity, profits, "==", profit));
-
-    store.impose(new XlteqC(weight, volume));
-
-    IntVar profitNegation = new IntVar(store, "ProfitNegation", -100000, 0);
-
-    store.impose(new XplusYeqC(profit, profitNegation, 0));
-
-    cost = profitNegation;
+    KnapsackData data = parseQuantityKnapsackData();
+    QuantityModelVars v = buildQuantityBase(data);
+    store.impose(new LinearInt(v.quantity, data.weights, "==", v.weight));
+    store.impose(new LinearInt(v.quantity, data.profits, "==", v.profit));
   }
 
-  /** It does not use Knapsack constraint only SumWeight constraints. */
+  /** Uses both Knapsack and LinearInt constraints. */
   public void modelBoth() {
-
-    int noItems = 3;
-    int volume = 9;
-    int[] weights = {4, 3, 2};
-    int[] profits = {15, 10, 7};
-    String[] names = {"whisky", "perfumes", "cigarets"};
-
-    int[] maxs = new int[noItems];
-    for (int i = 0; i < noItems; i++) {
-      maxs[i] = volume / weights[i];
-    }
-
-    // It is possible to supply the program
-    // with the volume size and items (weight, profit, maximum_quantity,
-    // name )
-    if (args.length >= 5 && ((args.length - 1) % 4) == 0) {
-      volume = Integer.parseInt(args[0]);
-      noItems = (args.length - 1) / 4;
-      weights = new int[noItems];
-      profits = new int[noItems];
-      maxs = new int[noItems];
-      names = new String[noItems];
-      for (int i = 1; i < args.length; ) {
-        weights[(i - 1) / 4] = Integer.parseInt(args[i++]);
-        profits[(i - 1) / 4] = Integer.parseInt(args[i++]);
-        maxs[(i - 1) / 4] = Integer.parseInt(args[i++]);
-        names[(i - 1) / 4] = args[i++];
-      }
-    }
-
-    // Creating constraint store
-    store = new Store();
-
-    vars = new ArrayList<>();
-
-    // I-th variable represents if i-th item is taken
-    IntVar[] quantity = new IntVar[noItems];
-
-    // Each quantity variable has a domain from 0 to max value
-    for (int i = 0; i < quantity.length; i++) {
-      quantity[i] = new IntVar(store, "Quantity_" + names[i], 0, maxs[i]);
-      vars.add(quantity[i]);
-    }
-
-    IntVar profit = new IntVar(store, "Profit", 0, 1000000);
-    IntVar weight = new IntVar(store, "Weight", 0, 1000000);
-
-    store.impose(new LinearInt(quantity, weights, "==", weight));
-
+    KnapsackData data = parseQuantityKnapsackData();
+    QuantityModelVars v = buildQuantityBase(data);
+    store.impose(new LinearInt(v.quantity, data.weights, "==", v.weight));
     store.impose(
         Knapsack.builder()
-            .profits(profits)
-            .weights(weights)
-            .quantity(quantity)
-            .knapsackCapacity(weight)
-            .knapsackProfit(profit)
+            .profits(data.profits)
+            .weights(data.weights)
+            .quantity(v.quantity)
+            .knapsackCapacity(v.weight)
+            .knapsackProfit(v.profit)
             .build());
-
-    store.impose(new LinearInt(quantity, profits, "==", profit));
-
-    store.impose(new XlteqC(weight, volume));
-
-    IntVar profitNegation = new IntVar(store, "ProfitNegation", -100000, 0);
-
-    store.impose(new XplusYeqC(profit, profitNegation, 0));
-
-    cost = profitNegation;
+    store.impose(new LinearInt(v.quantity, data.profits, "==", v.profit));
   }
 
   /**

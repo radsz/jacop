@@ -78,6 +78,140 @@ public class FilterBenchmark {
   /** Default constructor. */
   protected FilterBenchmark() {}
 
+  /** Converts taskVars to IntVar[][] for SimpleMatrixSelect. */
+  private static IntVar[][] taskVarsToMatrix(List<List<IntVar>> taskVars) {
+    IntVar[][] vars = new IntVar[taskVars.size()][];
+    for (int i = 0; i < vars.length; i++) {
+      vars[i] = taskVars.get(i).toArray(IntVar[]::new);
+    }
+    return vars;
+  }
+
+  /** Prints standard experiment header. */
+  private static void printExperimentHeader(Filter filter, int addNum, int mulNum) {
+    IO.println("\n\nTest of scheduling for " + filter.name() + " example");
+    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+  }
+
+  /** Prints experiment header with clock length. */
+  private static void printExperimentHeader(Filter filter, int addNum, int mulNum, int clock) {
+    IO.println("\n\nTest of scheduling for " + filter.name() + " example");
+    IO.println(
+        "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
+    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+  }
+
+  /** Prints store stats and runs consistency; returns consistency result. */
+  private static boolean checkConsistency(Store store, String consistentMsg) {
+    return checkConsistency(store, consistentMsg, null);
+  }
+
+  /** Same as above but runs given action before consistency (e.g. impose extra constraint). */
+  private static boolean checkConsistency(
+      Store store, String consistentMsg, Runnable beforeConsistency) {
+    IO.println(
+        "\nVariable store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+    if (beforeConsistency != null) {
+      beforeConsistency.run();
+    }
+    boolean result = store.consistency();
+    IO.println(consistentMsg + " = " + result);
+    return result;
+  }
+
+  /** Computes pipeline lower bound from filter and resource counts. */
+  private static int computePipelineLowerBound(Filter filter, int addNum, int mulNum) {
+    int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
+    int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
+    int addLb = rAdd == 0 ? tAdd : tAdd + 1;
+    int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
+    int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
+    int mulLb = rMul == 0 ? tMul : tMul + 1;
+    return Math.max(addLb, mulLb);
+  }
+
+  /** Attaches credit calculator to search listeners. */
+  private static void attachCreditListeners(
+      Search<IntVar> search, CreditCalculator<IntVar> credit) {
+    if (search.getConsistencyListener() == null) {
+      search.setConsistencyListener(credit);
+    } else {
+      search.getConsistencyListener().setChildrenListeners(credit);
+    }
+    if (search.getExitChildListener() == null) {
+      search.setExitChildListener(credit);
+    } else {
+      search.getExitChildListener().setChildrenListeners(credit);
+    }
+    if (search.getTimeOutListener() == null) {
+      search.setTimeOutListener(credit);
+    } else {
+      search.getTimeOutListener().setChildrenListeners(credit);
+    }
+  }
+
+  /** Runs labeling with timing, prints time, returns search result. */
+  private static boolean runLabelingWithTiming(Store store, SelectChoicePoint<IntVar> select) {
+    final long t1 = System.currentTimeMillis();
+    Search<IntVar> label = new DepthFirstSearch<>();
+    boolean result = label.labeling(store, select, cost);
+    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    return result;
+  }
+
+  /** Runs two-phase labeling (cost then IO) with timing; returns search result. */
+  private static boolean runTwoPhaseLabelingWithTiming(
+      Store store, SelectChoicePoint<IntVar> selectMc, SelectChoicePoint<IntVar> selectIo) {
+    return runTwoPhaseLabelingWithTiming(store, selectMc, selectIo, null);
+  }
+
+  /** Same but uses firstPhaseSearch for first phase when non-null. */
+  private static boolean runTwoPhaseLabelingWithTiming(
+      Store store,
+      SelectChoicePoint<IntVar> selectMc,
+      SelectChoicePoint<IntVar> selectIo,
+      Search<IntVar> firstPhaseSearch) {
+    final long t1 = System.currentTimeMillis();
+    Search<IntVar> label = firstPhaseSearch != null ? firstPhaseSearch : new DepthFirstSearch<>();
+    boolean result = label.labeling(store, selectMc, cost);
+    if (result) {
+      label = new DepthFirstSearch<>();
+      result = label.labeling(store, selectIo);
+    }
+    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
+    return result;
+  }
+
+  /** Converts List of IntVar to array. */
+  private static IntVar[] listToArray(List<IntVar> list) {
+    return list.toArray(IntVar[]::new);
+  }
+
+  /** Prints success/failure and returns cost value or -1. */
+  private static int reportResult(boolean result) {
+    return reportResult(result, null);
+  }
+
+  /** Prints success/failure with optional extra line; returns cost value or -1. */
+  private static int reportResult(boolean result, String extraSuccessLine) {
+    if (result) {
+      IO.println("\n*** Yes");
+      if (extraSuccessLine != null) {
+        IO.println(extraSuccessLine);
+      }
+      PrintSchedule sch = new PrintSchedule(Ns, Ts, Ds, Rs);
+      IO.println(sch);
+      return cost.value();
+    } else {
+      IO.println("*** No");
+      return -1;
+    }
+  }
+
   /**
    * It executes the program for number of filters, number of resources (adders, multipliers) and
    * number of different synthesis techniques ( algorithmic pipelining, multiplier pipelining,
@@ -353,56 +487,16 @@ public class FilterBenchmark {
    */
   public static int experiment1(Store store, Filter filter, int addNum, int mulNum) {
 
-    IO.println(
-        "\n\nTest of scheduling for "
-            + filter.name()
-            + " example"); // without cumulative constraint");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    printExperimentHeader(filter, addNum, mulNum);
 
     List<List<IntVar>> taskVars = makeConstraints(store, filter, addNum, mulNum);
-
-    IntVar[][] vars = new IntVar[taskVars.size()][];
-    for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[taskVars.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = taskVars.get(i).get(j);
-      }
-    }
-
+    IntVar[][] vars = taskVarsToMatrix(taskVars);
     SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(
             vars, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    boolean result = store.consistency();
-
-    IO.println("1. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    Search<IntVar> label = new DepthFirstSearch<>();
-
-    result = label.labeling(store, select, cost);
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    checkConsistency(store, "1. Constraints consistent");
+    return reportResult(runLabelingWithTiming(store, select));
   }
 
   /**
@@ -418,55 +512,17 @@ public class FilterBenchmark {
    */
   public static int experiment1C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
-    IO.println("\n\nTest of scheduling for " + filter.name() + " example");
-    IO.println(
-        "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    printExperimentHeader(filter, addNum, mulNum, clock);
 
     List<List<IntVar>> taskVars = makeConstraintsChain(store, filter, addNum, mulNum, clock);
-
-    IntVar[][] vars = new IntVar[taskVars.size()][];
-    for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[taskVars.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = taskVars.get(i).get(j);
-      }
-    }
-
+    IntVar[][] vars = taskVarsToMatrix(taskVars);
     SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(
             vars, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    boolean result = store.consistency();
-
-    IO.println("2. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    Search<IntVar> label = new DepthFirstSearch<>();
-
-    result = label.labeling(store, select, cost);
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      IO.println("Schedule length: " + div(cost.min(), clock));
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    checkConsistency(store, "2. Constraints consistent");
+    boolean result = runLabelingWithTiming(store, select);
+    return reportResult(result, "Schedule length: " + div(cost.min(), clock));
   }
 
   /**
@@ -497,57 +553,18 @@ public class FilterBenchmark {
    */
   public static int experiment1Pm(Store store, Filter filter, int addNum, int mulNum) {
 
-    IO.println(
-        "\n\nTest of scheduling for "
-            + filter.name()
-            + " example with pipeline multiplier"); // without cumulative
-    // constraint");
+    IO.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier");
     IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> taskVars = makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
-
-    IntVar[][] vars = new IntVar[taskVars.size()][];
-    for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[taskVars.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = taskVars.get(i).get(j);
-      }
-    }
-
+    IntVar[][] vars = taskVarsToMatrix(taskVars);
     SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(
             vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
 
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    boolean result = store.consistency();
-
-    IO.println("3. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    Search<IntVar> label = new DepthFirstSearch<>();
-
-    result = label.labeling(store, select, cost);
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    checkConsistency(store, "3. Constraints consistent");
+    return reportResult(runLabelingWithTiming(store, select));
   }
 
   /**
@@ -562,66 +579,23 @@ public class FilterBenchmark {
    */
   public static int experiment2Pm(Store store, Filter filter, int addNum, int mulNum) {
 
-    IO.println(
-        "\n\nTest of scheduling for "
-            + filter.name()
-            + " example with pipeline multiplier"); // without cumulative
-    // constraint");
+    IO.println("\n\nTest of scheduling for " + filter.name() + " example with pipeline multiplier");
     IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     makeConstraintsPipeMultiplier(store, filter, addNum, mulNum);
 
-    IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) {
-      varsTs[j] = Ts.get(j);
-    }
-
-    IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) {
-      varsRs[j] = Rs.get(j);
-    }
-
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
+            listToArray(Ts),
+            new MostConstrainedStatic<>(),
+            new SmallestDomain<>(),
+            new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
 
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    boolean result = store.consistency();
-
-    IO.println("4. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    Search<IntVar> label = new DepthFirstSearch<>();
-
-    result = label.labeling(store, selectMc, cost);
-
-    if (result) {
-      label = new DepthFirstSearch<>();
-      result = label.labeling(store, selectIo);
-    }
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    checkConsistency(store, "4. Constraints consistent");
+    return reportResult(runTwoPhaseLabelingWithTiming(store, selectMc, selectIo));
   }
 
   /**
@@ -644,13 +618,7 @@ public class FilterBenchmark {
 
     List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
 
-    int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
-    int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
-    int addLb = rAdd == 0 ? tAdd : tAdd + 1;
-    int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
-    int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
-    int mulLb = rMul == 0 ? tMul : tMul + 1;
-    int pipeLb = Math.max(addLb, mulLb);
+    int pipeLb = computePipelineLowerBound(filter, addNum, mulNum);
     IO.println("Lower bound = " + pipeLb);
 
     List<IntVar> cc = new ArrayList<>();
@@ -658,68 +626,26 @@ public class FilterBenchmark {
     cc.add(cost);
     taskVars.add(cc);
 
-    IntVar[][] vars = new IntVar[taskVars.size()][];
-    for (int i = 0; i < vars.length; i++) {
-      vars[i] = new IntVar[taskVars.get(i).size()];
-      for (int j = 0; j < vars[i].length; j++) {
-        vars[i][j] = taskVars.get(i).get(j);
-      }
-    }
-
     final SelectChoicePoint<IntVar> select =
         new SimpleMatrixSelect<>(
-            vars, new SmallestMax<>(), new MostConstrainedStatic<>(), new IndomainMin<>(), 0);
+            taskVarsToMatrix(taskVars),
+            new SmallestMax<>(),
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>(),
+            0);
 
     CreditCalculator<IntVar> credit = new CreditCalculator<>(taskVars.size(), 20, 10);
-
     Search<IntVar> search = new DepthFirstSearch<>();
+    attachCreditListeners(search, credit);
 
-    if (search.getConsistencyListener() == null) {
-      search.setConsistencyListener(credit);
-    } else {
-      search.getConsistencyListener().setChildrenListeners(credit);
-    }
+    checkConsistency(
+        store, "6. Constraints consistent", () -> store.impose(new XgteqC(cost, pipeLb)));
 
-    if (search.getExitChildListener() == null) {
-      search.setExitChildListener(credit);
-    } else {
-      search.getExitChildListener().setChildrenListeners(credit);
-    }
+    final long t1 = System.currentTimeMillis();
+    boolean result = search.labeling(store, select, cost);
+    IO.println("\n\t*** Execution time = " + (System.currentTimeMillis() - t1) + " ms");
 
-    if (search.getTimeOutListener() == null) {
-      search.setTimeOutListener(credit);
-    } else {
-      search.getTimeOutListener().setChildrenListeners(credit);
-    }
-
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    store.impose(new XgteqC(cost, pipeLb));
-    boolean result = store.consistency();
-
-    IO.println("6. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    result = search.labeling(store, select, cost);
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    return reportResult(result);
   }
 
   /**
@@ -741,73 +667,26 @@ public class FilterBenchmark {
     IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
 
     List<List<IntVar>> taskVars = makeConstraintsPipeline(store, filter, addNum, mulNum);
-
-    int tAdd = (filter.noAdd() * filter.addDel()) / addNum;
-    int rAdd = (filter.noAdd() * filter.addDel()) % addNum;
-    int addLb = rAdd == 0 ? tAdd : tAdd + 1;
-    int tMul = (filter.noMul() * filter.mulDel()) / mulNum;
-    int rMul = (filter.noMul() * filter.mulDel()) % mulNum;
-    int mulLb = rMul == 0 ? tMul : tMul + 1;
-    int pipeLb = Math.max(addLb, mulLb);
+    int pipeLb = computePipelineLowerBound(filter, addNum, mulNum);
     IO.println("Lower bound = " + pipeLb);
-
-    IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) {
-      varsTs[j] = Ts.get(j);
-    }
-
-    IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) {
-      varsRs[j] = Rs.get(j);
-    }
 
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
+            listToArray(Ts),
+            new SmallestMin<>(),
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
 
     CreditCalculator<IntVar> credit = new CreditCalculator<>(taskVars.size() / 2, 5, 10);
-
     Search<IntVar> search = new DepthFirstSearch<>();
+    attachCreditListeners(search, credit);
 
-    if (search.getConsistencyListener() == null) {
-      search.setConsistencyListener(credit);
-    } else {
-      search.getConsistencyListener().setChildrenListeners(credit);
-    }
+    checkConsistency(
+        store, "7. Constraints consistent", () -> store.impose(new XgteqC(cost, pipeLb)));
 
-    search.getExitChildListener().setChildrenListeners(credit);
-    search.getTimeOutListener().setChildrenListeners(credit);
-
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    store.impose(new XgteqC(cost, pipeLb));
-
-    boolean result = store.consistency();
-
-    IO.println("7. Constraints consistent = " + result);
-
-    result = search.labeling(store, selectMc, cost);
-
-    if (result) {
-      search = new DepthFirstSearch<>();
-      result = search.labeling(store, selectIo);
-    }
-
-    if (result) {
-      IO.println("\n*** Yes");
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    return reportResult(runTwoPhaseLabelingWithTiming(store, selectMc, selectIo, search));
   }
 
   /**
@@ -821,65 +700,21 @@ public class FilterBenchmark {
    */
   public static int experiment2(Store store, Filter filter, int addNum, int mulNum) {
 
-    IO.println(
-        "\n\nTest of scheduling for "
-            + filter.name()
-            + " example"); // without cumulative constraint");
-    IO.println("with " + addNum + " adders and " + mulNum + " multipliers");
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    printExperimentHeader(filter, addNum, mulNum);
 
     makeConstraints(store, filter, addNum, mulNum);
 
-    IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) {
-      varsTs[j] = Ts.get(j);
-    }
-
-    IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) {
-      varsRs[j] = Rs.get(j);
-    }
-
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            varsTs, new MostConstrainedStatic<>(), new SmallestDomain<>(), new IndomainMin<>());
+            listToArray(Ts),
+            new MostConstrainedStatic<>(),
+            new SmallestDomain<>(),
+            new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
 
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    boolean result = store.consistency();
-
-    IO.println("8. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    Search<IntVar> search = new DepthFirstSearch<>();
-
-    result = search.labeling(store, selectMc, cost);
-
-    if (result) {
-      search = new DepthFirstSearch<>();
-      result = search.labeling(store, selectIo);
-    }
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    checkConsistency(store, "8. Constraints consistent");
+    return reportResult(runTwoPhaseLabelingWithTiming(store, selectMc, selectIo));
   }
 
   /**
@@ -895,67 +730,23 @@ public class FilterBenchmark {
    */
   public static int experiment2C(Store store, Filter filter, int addNum, int mulNum, int clock) {
 
-    IO.println(
-        "\n\nTest of scheduling for "
-            + filter.name()
-            + " example"); // without cumulative constraint");
-    IO.println(
-        "with " + addNum + " adders and " + mulNum + " multipliers;\nclock length: " + clock);
-    IO.println("add duration " + filter.addDel() + " and mul duration " + filter.mulDel());
+    printExperimentHeader(filter, addNum, mulNum, clock);
 
     makeConstraintsChain(store, filter, addNum, mulNum, clock);
 
-    IntVar[] varsTs = new IntVar[Ts.size()];
-    for (int j = 0; j < varsTs.length; j++) {
-      varsTs[j] = Ts.get(j);
-    }
-
-    IntVar[] varsRs = new IntVar[Rs.size()];
-    for (int j = 0; j < varsRs.length; j++) {
-      varsRs[j] = Rs.get(j);
-    }
-
     final SelectChoicePoint<IntVar> selectMc =
         new SimpleSelect<>(
-            varsTs, new SmallestMin<>(), new MostConstrainedStatic<>(), new IndomainMin<>());
+            listToArray(Ts),
+            new SmallestMin<>(),
+            new MostConstrainedStatic<>(),
+            new IndomainMin<>());
     final SelectChoicePoint<IntVar> selectIo =
-        new SimpleSelect<>(varsRs, null, null, new IndomainMin<>());
+        new SimpleSelect<>(listToArray(Rs), null, null, new IndomainMin<>());
 
-    IO.println(
-        "\nVariable store size: "
-            + store.size()
-            + "\nNumber of constraints: "
-            + store.numberConstraints());
-
-    boolean result = store.consistency();
-
-    IO.println("10. Constraints consistent = " + result);
-
-    final long T1 = System.currentTimeMillis();
-
-    Search<IntVar> search = new DepthFirstSearch<>();
-
-    result = search.labeling(store, selectMc, cost);
-
-    if (result) {
-      search = new DepthFirstSearch<>();
-      result = search.labeling(store, selectIo);
-    }
-
-    long T2 = System.currentTimeMillis();
-    long T = T2 - T1;
-    IO.println("\n\t*** Execution time = " + T + " ms");
-
-    if (result) {
-      IO.println("\n*** Yes");
-      IO.println("Schedule length: " + div(cost.min(), clock));
-      PrintSchedule Sch = new PrintSchedule(Ns, Ts, Ds, Rs);
-      IO.println(Sch);
-      return cost.value();
-    } else {
-      IO.println("*** No");
-      return -1;
-    }
+    checkConsistency(store, "10. Constraints consistent");
+    return reportResult(
+        runTwoPhaseLabelingWithTiming(store, selectMc, selectIo),
+        "Schedule length: " + div(cost.min(), clock));
   }
 
   /**

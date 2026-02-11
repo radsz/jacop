@@ -72,17 +72,17 @@ public class Queens extends ExampleFd {
   static void main(String[] args) {
 
     Queens example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) {
-      example.numberQ = Integer.parseInt(args[0]);
-    }
-
+    example.parseArgs(args);
     example.model();
-
     if (example.searchSmallestMiddle()) {
       IO.println("Solution(s) found");
+    }
+  }
+
+  /** Parses numberQ from args if provided. */
+  private void parseArgs(String[] args) {
+    if (args.length != 0) {
+      numberQ = Integer.parseInt(args[0]);
     }
   }
 
@@ -94,43 +94,22 @@ public class Queens extends ExampleFd {
   public static void test(String[] args) {
 
     Queens example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) {
-      example.numberQ = Integer.parseInt(args[0]);
-    }
-
+    example.parseArgs(args);
     example.model();
-
     if (example.searchSmallestMiddle()) {
       IO.println("Solution(s) found");
     }
 
     example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) {
-      example.numberQ = Integer.parseInt(args[0]);
-    }
-
+    example.parseArgs(args);
     example.modelBasic();
-
     if (example.searchLds(3)) {
       IO.println("Solution(s) found");
     }
 
     example = new Queens();
-
-    // It is possible to supply the program
-    // with the chessboard size
-    if (args.length != 0) {
-      example.numberQ = Integer.parseInt(args[0]);
-    }
-
+    example.parseArgs(args);
     example.modelChanneling();
-
     if (example.searchSmallestMiddle()) {
       IO.println("Solution(s) found");
     }
@@ -139,21 +118,7 @@ public class Queens extends ExampleFd {
   /** This model uses only primitive constraints. */
   public void modelBasic() {
 
-    // Creating constraint store
-    store = new Store();
-    vars = new ArrayList<>();
-
-    // I-th queen variable represents the placement
-    // of a queen in i-th column
-    // There are n columns so there are n variables
-    IntVar[] queens = new IntVar[numberQ];
-
-    // Each queen variable has a domain from 1 to numberQ
-    // Value of queen variable represents the row
-    for (int i = 0; i < numberQ; i++) {
-      queens[i] = new IntVar(store, "Q" + (i + 1), 1, numberQ);
-      vars.add(queens[i]);
-    }
+    IntVar[] queens = createStoreAndQueens();
     // Queens from different columns can not be placed
     // in the same row, therefore the values
     // must be different
@@ -189,41 +154,40 @@ public class Queens extends ExampleFd {
     }
   }
 
-  /** This model uses dual model to solve Queens problems. */
-  public void modelChanneling() {
-
-    // Creating constraint store
+  /** Creates store, vars, and queens array. */
+  protected IntVar[] createStoreAndQueens() {
     store = new Store();
     vars = new ArrayList<>();
-
-    // Global model
-
     IntVar[] queens = new IntVar[numberQ];
-
     for (int i = 0; i < numberQ; i++) {
       queens[i] = new IntVar(store, "Q" + (i + 1), 1, numberQ);
       vars.add(queens[i]);
     }
+    return queens;
+  }
 
-    store.impose(new Alldiff(queens));
-
+  /** Adds diagonal constraints for the Alldiff+diagonals model. */
+  protected void addDiagonalConstraints(IntVar[] queens) {
     IntVar[] diagonalUp = new IntVar[queens.length];
     IntVar[] diagonalDown = new IntVar[queens.length];
-
-    diagonalUp[0] = queens[0]; // diagonal like this /
-    diagonalDown[0] = queens[0]; // diagonal like this \
-
+    diagonalUp[0] = queens[0];
+    diagonalDown[0] = queens[0];
     for (int i = 1; i < queens.length; i++) {
-
       diagonalUp[i] = new IntVar(store, -2 * numberQ, 2 * numberQ);
       store.impose(new XplusCeqZ(queens[i], i, diagonalUp[i]));
-
       diagonalDown[i] = new IntVar(store, -2 * numberQ, 2 * numberQ);
       store.impose(new XplusCeqZ(queens[i], -i, diagonalDown[i]));
     }
-
     store.impose(new Alldiff(diagonalUp));
     store.impose(new Alldiff(diagonalDown));
+  }
+
+  /** This model uses dual model to solve Queens problems. */
+  public void modelChanneling() {
+
+    IntVar[] queens = createStoreAndQueens();
+    store.impose(new Alldiff(queens));
+    addDiagonalConstraints(queens);
 
     // Channeling constraints
 
@@ -248,46 +212,8 @@ public class Queens extends ExampleFd {
   @Override
   public void model() {
 
-    // Creating constraint store
-    store = new Store();
-    vars = new ArrayList<>();
-
-    // I-th queen variable represents the placement
-    // of a queen in i-th column
-    // There are n columns so there are n variables
-    IntVar[] queens = new IntVar[numberQ];
-
-    for (int i = 0; i < numberQ; i++) {
-      queens[i] = new IntVar(store, "Q" + (i + 1), 1, numberQ);
-      vars.add(queens[i]);
-    }
-    // symmetry breaking - not usefull in this problem
-
+    IntVar[] queens = createStoreAndQueens();
     store.impose(new Alldiff(queens));
-
-    IntVar[] diagonalUp = new IntVar[queens.length];
-    IntVar[] diagonalDown = new IntVar[queens.length];
-
-    diagonalUp[0] = queens[0]; // diagonal like this /
-    diagonalDown[0] = queens[0]; // diagonal like this \
-
-    for (int i = 1; i < queens.length; i++) {
-
-      // Position of every queen is shifted based on a distance
-      // to column 1, If any queen can check another on diagonal
-      // then the position after shifting will be equal to the
-      // position of the checked queen. Therefore the diagonal list
-      // is used in Alldifferent constraint
-      diagonalUp[i] = new IntVar(store, -2 * numberQ, 2 * numberQ);
-      store.impose(new XplusCeqZ(queens[i], i, diagonalUp[i]));
-
-      diagonalDown[i] = new IntVar(store, -2 * numberQ, 2 * numberQ);
-      store.impose(new XplusCeqZ(queens[i], -i, diagonalDown[i]));
-    }
-
-    // Imposes constraints so queens can not check each other using
-    // diagonals.
-    store.impose(new Alldiff(diagonalUp));
-    store.impose(new Alldiff(diagonalDown));
+    addDiagonalConstraints(queens);
   }
 }
