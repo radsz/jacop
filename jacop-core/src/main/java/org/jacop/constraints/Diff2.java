@@ -57,7 +57,7 @@ public class Diff2 extends Diff {
   /** It specifies a list of pairs of rectangles which can overlap. */
   private int[] exclusiveList = new int[0];
 
-  Diff2Var[] EvalRects;
+  Diff2Var[] evalRects;
   boolean exceptionListPresent;
 
   /**
@@ -317,17 +317,17 @@ public class Diff2 extends Diff {
     super.impose(store);
 
     if (this.exclusiveList.length == 0) {
-      EvalRects = new Diff2Var[rectangles.length];
+      evalRects = new Diff2Var[rectangles.length];
 
-      for (int j = 0; j < EvalRects.length; j++) {
-        EvalRects[j] = new Diff2Var(store, this.rectangles);
+      for (int j = 0; j < evalRects.length; j++) {
+        evalRects[j] = new Diff2Var(store, this.rectangles);
       }
     } else {
 
-      EvalRects = new Diff2Var[rectangles.length];
+      evalRects = new Diff2Var[rectangles.length];
 
-      for (int j = 0; j < EvalRects.length; j++) {
-        EvalRects[j] = new Diff2Var(store, onList(j, exclusiveList));
+      for (int j = 0; j < evalRects.length; j++) {
+        evalRects[j] = new Diff2Var(store, onList(j, exclusiveList));
       }
     }
   }
@@ -378,10 +378,10 @@ public class Diff2 extends Diff {
         // Checking r against all s with minUse in the domain of r
         if (needToNarrow) {
 
-          if (overlappingRects.size() != ((Diff2VarValue) EvalRects[l].value()).Rects.length) {
+          if (overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).rects.length) {
             Diff2VarValue newRects = new Diff2VarValue();
             newRects.setValue(overlappingRects);
-            EvalRects[l].update(newRects);
+            evalRects[l].update(newRects);
           }
 
           narrowRectangle(r, usedRect, profileCandidates);
@@ -421,7 +421,7 @@ public class Diff2 extends Diff {
       r_max[i] = rOriginDom.max() + rLengthDom.max();
     }
 
-    for (Rectangle s : ((Diff2VarValue) EvalRects[index].value()).Rects) {
+    for (Rectangle s : ((Diff2VarValue) evalRects[index].value()).rects) {
       boolean overlap = true;
 
       if (r != s) {
@@ -606,7 +606,7 @@ public class Diff2 extends Diff {
     while (sat && i < rectangles.length) {
       recti = rectangles[i];
       int j = 0;
-      Rectangle[] toEvaluate = ((Diff2VarValue) EvalRects[i].value()).Rects;
+      Rectangle[] toEvaluate = ((Diff2VarValue) evalRects[i].value()).rects;
       while (sat && j < toEvaluate.length) {
         rectj = toEvaluate[j];
         sat = !recti.domOverlap(rectj);

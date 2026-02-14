@@ -273,7 +273,7 @@ public class Disjoint extends Diff {
         // Checking r against all s with minUse in the domain of r
         if (needToNarrow) {
 
-          if (overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).Rects.length) {
+          if (overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).rects.length) {
             Diff2VarValue newRects = new Diff2VarValue();
             newRects.setValue(overlappingRects);
             evalRects[l].update(newRects);
@@ -316,7 +316,7 @@ public class Disjoint extends Diff {
       r_max[i] = rOriginDom.max() + rLengthDom.max();
     }
 
-    for (Rectangle s : ((Diff2VarValue) evalRects[index].value()).Rects) {
+    for (Rectangle s : ((Diff2VarValue) evalRects[index].value()).rects) {
       boolean overlap = true;
 
       if (r != s) {
@@ -524,7 +524,7 @@ public class Disjoint extends Diff {
     while (sat && i < rectangles.length) {
       recti = rectangles[i];
       int j = 0;
-      Rectangle[] toEvaluate = ((Diff2VarValue) evalRects[i].value()).Rects;
+      Rectangle[] toEvaluate = ((Diff2VarValue) evalRects[i].value()).rects;
       while (sat && j < toEvaluate.length) {
         rectj = toEvaluate[j];
         sat = !recti.domOverlap(rectj);

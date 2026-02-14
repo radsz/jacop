@@ -68,7 +68,7 @@ public class Count extends AbstractCount {
 
     super(idNumber, list);
 
-    checkInputForNullness(new String[] {"list", "counter"}, new Object[][] {list, {counter}});
+    checkInputForNullness(new String[] {"list", "counter"}, list, new Object[] {counter});
 
     this.counter = counter;
     this.value = value;

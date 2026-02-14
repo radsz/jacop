@@ -30,7 +30,7 @@
 
 package org.jacop.core;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -74,7 +74,7 @@ public abstract class Var implements Backtrackable {
    * @return a new empty map.
    */
   public static <T extends Var, R> Map<T, R> createEmptyPositioning() {
-    return new HashMap<>();
+    return new LinkedHashMap<>();
   }
 
   /**
@@ -89,7 +89,7 @@ public abstract class Var implements Backtrackable {
   public static <T extends Var> Map<T, Integer> positionMapping(
       T[] list, boolean skipSingletons, Class<?> clazz) {
 
-    Map<T, Integer> position = new HashMap<>();
+    Map<T, Integer> position = new LinkedHashMap<>();
     addPositionMapping(position, list, skipSingletons, clazz);
     return position;
   }
@@ -108,7 +108,7 @@ public abstract class Var implements Backtrackable {
   public static <T extends Var, R> Map<T, R> positionMapping(
       T[] list, Function<T, R> function, boolean skipSingletons, Class<?> clazz) {
 
-    Map<T, R> position = new HashMap<>();
+    Map<T, R> position = new LinkedHashMap<>();
     addPositionMapping(position, list, function, skipSingletons, clazz);
     return position;
   }

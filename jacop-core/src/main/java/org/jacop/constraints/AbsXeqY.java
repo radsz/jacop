@@ -288,11 +288,6 @@ public class AbsXeqY extends PrimitiveConstraint implements Stateful {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public int getDefaultConsistencyPruningEvent() {
     if (domainConsistent) {
       return IntDomain.ANY;

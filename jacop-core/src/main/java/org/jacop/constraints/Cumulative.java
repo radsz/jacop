@@ -61,7 +61,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   private static boolean debugEnabled = DEBUG;
   private static boolean debugNarrEnabled = DEBUG_NARR;
   private final CumulativeProfiles cumulativeProfiles = new CumulativeProfiles();
-  private final Task[] Ts;
+  private final Task[] ts;
   private final Comparator<IntDomain> domainMaxComparator = (o1, o2) -> o2.max() - o1.max();
   private final Comparator<IntDomain> domainMinComparator = Comparator.comparingInt(IntDomain::min);
   private final Comparator<Task> taskAscEctComparator = Comparator.comparingInt(Task::ect);
@@ -118,7 +118,10 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
     checkInputForNullness(
         new String[] {"starts", "durations", "resources", "limit"},
-        new Object[][] {starts, durations, resources, {limit}});
+        starts,
+        durations,
+        resources,
+        new Object[] {limit});
 
     checkInput(durations, d -> d.min() >= 0, "duration can not have negative values in the domain");
     checkInput(
@@ -142,20 +145,20 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     this.queueIndex = 2;
     this.numberId = idNumber.incrementAndGet();
 
-    this.Ts = new Task[starts.length];
+    this.ts = new Task[starts.length];
     this.starts = Arrays.copyOf(starts, starts.length);
     this.durations = Arrays.copyOf(durations, durations.length);
     this.resources = Arrays.copyOf(resources, resources.length);
 
     for (int i = 0; i < starts.length; i++) {
-      Ts[i] = new Task(starts[i], durations[i], resources[i]);
+      ts[i] = new Task(starts[i], durations[i], resources[i]);
     }
 
     this.doEdgeFinding = doEdgeFinding;
     this.doProfile = doProfile;
 
     // check for possible overflow
-    for (Task t : Ts) {
+    for (Task t : ts) {
       Math.multiplyExact(t.start().max() + t.dur().max(), limit.max());
     }
 
@@ -375,7 +378,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       if (doProfile) {
 
-        cumulativeProfiles.make(Ts, setLimit);
+        cumulativeProfiles.make(ts, setLimit);
 
         minProfile = cumulativeProfiles.minProfile();
         if (setLimit) {
@@ -424,7 +427,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       log.debug(
           "------------------------------------------------\nEdge Finding Down\n------------------------------------------------");
     }
-    for (Task t : Ts) {
+    for (Task t : ts) {
       if (t.nonZeroTask()) {
         estUpList.add(t.start().dom());
       }
@@ -438,9 +441,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       // Create S = {t|EST(t) >= est0}
       // Create L = {t|EST(t) < est0 && LCT(t) > est0}
-      List<Task> S = new ArrayList<>(Ts.length);
-      List<Task> L = new ArrayList<>(Ts.length);
-      for (Task t : Ts) {
+      List<Task> S = new ArrayList<>(ts.length);
+      List<Task> L = new ArrayList<>(ts.length);
+      for (Task t : ts) {
         if (t.nonZeroTask()) {
           if (t.est() >= est0) {
             S.add(t);
@@ -605,7 +608,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
       log.debug(
           "------------------------------------------------\nEdge Finding Up\n------------------------------------------------");
     }
-    for (Task t : Ts) {
+    for (Task t : ts) {
       if (t.nonZeroTask()) {
         lctDownList.add(t.completion());
       }
@@ -620,9 +623,9 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
       // Create S = {t|EST(t) <= lct0}
       // Create L = {t|EST(t) < lct0 && LCT(t) > lct0}
-      List<Task> S = new ArrayList<>(Ts.length);
-      List<Task> L = new ArrayList<>(Ts.length);
-      for (Task t : Ts) {
+      List<Task> S = new ArrayList<>(ts.length);
+      List<Task> L = new ArrayList<>(ts.length);
+      for (Task t : ts) {
         if (t.nonZeroTask()) {
           if (t.lct() <= lct0) {
             S.add(t);
@@ -870,7 +873,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   }
 
   Task[] getTasks() {
-    return Ts;
+    return ts;
   }
 
   private boolean intervalOverlap(int min1, int max1, int min2, int max2) {
@@ -1217,7 +1220,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
   private void profileCheckTasks(Store store) {
     IntTask minUse = new IntTask();
 
-    for (Task t : Ts) {
+    for (Task t : ts) {
       // check only for tasks which cannot allow to have duration or resources = 0
       if (t.nonZeroTask()) {
         int a = -1;
@@ -1302,11 +1305,11 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
     StringBuilder result = new StringBuilder(id());
 
     result.append(" : cumulative([ ");
-    for (int i = 0; i < Ts.length - 1; i++) {
-      result.append(Ts[i]).append(", ");
+    for (int i = 0; i < ts.length - 1; i++) {
+      result.append(ts[i]).append(", ");
     }
 
-    result.append(Ts[Ts.length - 1]);
+    result.append(ts[ts.length - 1]);
 
     result
         .append(" ]")
@@ -1323,7 +1326,7 @@ public class Cumulative extends Constraint implements SatisfiedPresent {
 
   private void updateTasksRes(Store store) {
     int limitMax = limit.max();
-    for (Task t : Ts) {
+    for (Task t : ts) {
       t.res().domain.inMax(store.level, t.res(), limitMax);
     }
   }

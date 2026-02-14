@@ -137,11 +137,6 @@ public class BoolClause extends PrimitiveConstraint {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public void include(Store store) {
     positionX = new TimeStamp<>(store, 0);
     positionY = new TimeStamp<>(store, 0);

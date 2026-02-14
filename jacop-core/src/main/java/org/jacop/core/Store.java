@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -95,7 +94,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed before it has actually began.
    */
-  public final Set<Stateful> removeLevelListeners = new HashSet<>(10);
+  public final Set<Stateful> removeLevelListeners = new LinkedHashSet<>(10);
 
   /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
@@ -103,7 +102,7 @@ public class Store {
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
    * be informed about level being removed after it has been removed.
    */
-  public final Set<RemoveLevelLate> removeLevelLateListeners = new HashSet<>(10);
+  public final Set<RemoveLevelLate> removeLevelLateListeners = new LinkedHashSet<>(10);
 
   /**
    * It indicates that consistency function should immediately return fail if last inconsistency was
@@ -399,7 +398,7 @@ public class Store {
     if (forVariable != null) {
       forVariable.add(c);
     } else {
-      forVariable = new HashSet<>();
+      forVariable = new LinkedHashSet<>();
       forVariable.add(c);
       watchedConstraints.put(v, forVariable);
     }
@@ -988,7 +987,7 @@ public class Store {
   public boolean registerReplacement(Replaceable<? extends Constraint> replacement) {
 
     if (!replacements.containsKey(replacement.forClass())) {
-      replacements.put(replacement.forClass(), new HashSet<>());
+      replacements.put(replacement.forClass(), new LinkedHashSet<>());
     }
 
     Set<Replaceable<? extends Constraint>> current = replacements.get(replacement.forClass());
@@ -1225,7 +1224,7 @@ public class Store {
    */
   public Set<Constraint> getConstraints() {
 
-    Set<Constraint> constraints = new HashSet<>();
+    Set<Constraint> constraints = new LinkedHashSet<>();
 
     for (Var v : variablesHashMap.values()) {
       Domain d = v.dom();
@@ -1265,7 +1264,7 @@ public class Store {
    */
   public void activityManagement(boolean m) {
     variableActivityManagement = m;
-    variablesPrunned = new HashSet<>();
+    variablesPrunned = new LinkedHashSet<>();
   }
 
   void updateActivities(Constraint constraint) {

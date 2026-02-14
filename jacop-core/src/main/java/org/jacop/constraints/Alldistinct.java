@@ -120,7 +120,7 @@ public class Alldistinct extends Constraint
   final Map<Integer, Integer> valueIndex;
   // valueMapVariable specifies which Variable posses given integer
   final Map<Integer, ArrayList<IntVar>> valueMapVariable;
-  final boolean greedy = true;
+  static final boolean greedy = true;
 
   /** It counts the number of executions of the consistency function. */
   private int consistencyChecks;

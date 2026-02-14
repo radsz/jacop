@@ -67,8 +67,7 @@ public abstract class AbstractArgMinMax extends Constraint implements SatisfiedP
    */
   protected AbstractArgMinMax(AtomicInteger idNum, IntVar[] list, IntVar extremeIndex) {
 
-    checkInputForNullness(
-        new String[] {"list", "extremeIndex"}, new Object[][] {list, {extremeIndex}});
+    checkInputForNullness(new String[] {"list", "extremeIndex"}, list, new Object[] {extremeIndex});
 
     this.queueIndex = 1;
     this.numberId = idNum.incrementAndGet();

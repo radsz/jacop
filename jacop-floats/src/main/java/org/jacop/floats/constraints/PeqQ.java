@@ -32,7 +32,6 @@ package org.jacop.floats.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.constraints.PrimitiveConstraint;
-import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -100,11 +99,6 @@ public class PeqQ extends PrimitiveConstraint {
     if (p.singleton()) {
       q.domain.inComplement(store.level, q, p.value());
     }
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
   }
 
   @Override

@@ -133,11 +133,6 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public void include(Store store) {
     position = new TimeStamp<>(store, 0);
   }

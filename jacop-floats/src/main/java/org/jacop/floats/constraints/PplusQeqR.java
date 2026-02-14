@@ -108,11 +108,6 @@ public class PplusQeqR extends PrimitiveConstraint implements FloatDerivableCons
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
   }

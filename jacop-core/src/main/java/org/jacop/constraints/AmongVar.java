@@ -72,7 +72,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   /** It turns out printing debugging information. */
   public static final boolean DEBUG_ALL = false;
 
-  public static boolean debugAll = DEBUG_ALL;
+  public static final boolean debugAll = DEBUG_ALL;
 
   /** Number of Among constraints created. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -115,7 +115,7 @@ public class AmongVar extends Constraint implements UsesQueueVariable, Stateful,
   public AmongVar(IntVar[] listOfX, IntVar[] listOfY, IntVar n) {
 
     checkInputForNullness(
-        new String[] {"listOfX", "listOfY", "n"}, new Object[][] {listOfX, listOfY, {n}});
+        new String[] {"listOfX", "listOfY", "n"}, listOfX, listOfY, new Object[] {n});
     checkInputForDuplication("listOfX", listOfX);
     checkInputForDuplication("listOfY", listOfY);
 

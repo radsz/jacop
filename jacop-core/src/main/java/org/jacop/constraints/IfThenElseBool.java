@@ -134,11 +134,6 @@ public class IfThenElseBool extends PrimitiveConstraint {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.GROUND;
   }

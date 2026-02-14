@@ -43,19 +43,19 @@ class DisjointCondVarValue implements MutableVarValue {
 
   DisjointCondVarValue previousDisjointCondVarValue;
 
-  RectangleWithCondition[] Rects;
+  RectangleWithCondition[] rects;
 
   int stamp;
 
   DisjointCondVarValue() {}
 
   DisjointCondVarValue(RectangleWithCondition[] rectangles) {
-    Rects = rectangles;
+    rects = rectangles;
   }
 
   @Override
   public DisjointCondVarValue copy() {
-    DisjointCondVarValue val = new DisjointCondVarValue(Rects);
+    DisjointCondVarValue val = new DisjointCondVarValue(rects);
     val.stamp = stamp;
     val.previousDisjointCondVarValue = previousDisjointCondVarValue;
     return val;
@@ -74,13 +74,13 @@ class DisjointCondVarValue implements MutableVarValue {
   }
 
   void setValue(RectangleWithCondition[] rectangles) {
-    Rects = rectangles;
+    rects = rectangles;
   }
 
   void setValue(List<RectangleWithCondition> rectangles) {
-    Rects = new RectangleWithCondition[rectangles.size()];
-    for (int i = 0; i < Rects.length; i++) {
-      Rects[i] = rectangles.get(i);
+    rects = new RectangleWithCondition[rectangles.size()];
+    for (int i = 0; i < rects.length; i++) {
+      rects[i] = rectangles.get(i);
     }
   }
 
@@ -93,11 +93,11 @@ class DisjointCondVarValue implements MutableVarValue {
 
     StringBuilder result = new StringBuilder();
 
-    for (int i = 0; i < Rects.length; i++) {
-      if (i == Rects.length - 1) {
-        result.append(Rects[i]);
+    for (int i = 0; i < rects.length; i++) {
+      if (i == rects.length - 1) {
+        result.append(rects[i]);
       } else {
-        result.append(Rects[i]).append(", ");
+        result.append(rects[i]).append(", ");
       }
     }
 

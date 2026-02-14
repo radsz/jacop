@@ -105,11 +105,6 @@ public class XplusCeqZ extends PrimitiveConstraint {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public void notConsistency(final Store store) {
 
     do {

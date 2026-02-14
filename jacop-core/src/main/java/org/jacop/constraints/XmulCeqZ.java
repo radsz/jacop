@@ -157,11 +157,6 @@ public class XmulCeqZ extends PrimitiveConstraint {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public String toString() {
 
     return id() + " : XmulCeqZ(" + x + ", " + c + ", " + z + " )";

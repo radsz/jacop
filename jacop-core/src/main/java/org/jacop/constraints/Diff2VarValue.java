@@ -43,7 +43,7 @@ class Diff2VarValue implements MutableVarValue {
 
   Diff2VarValue previousDiff2VarValue;
 
-  Rectangle[] Rects;
+  Rectangle[] rects;
 
   int stamp;
 
@@ -51,7 +51,7 @@ class Diff2VarValue implements MutableVarValue {
   Diff2VarValue() {}
 
   Diff2VarValue(Rectangle[] rectangles) {
-    Rects = rectangles;
+    rects = rectangles;
   }
 
   // Methods
@@ -59,7 +59,7 @@ class Diff2VarValue implements MutableVarValue {
   @Override
   public Diff2VarValue copy() {
 
-    Diff2VarValue Val = new Diff2VarValue(Rects);
+    Diff2VarValue Val = new Diff2VarValue(rects);
     Val.stamp = stamp;
     Val.previousDiff2VarValue = previousDiff2VarValue;
     return Val;
@@ -78,14 +78,14 @@ class Diff2VarValue implements MutableVarValue {
   }
 
   void setValue(List<Rectangle> rectangles) {
-    Rects = new Rectangle[rectangles.size()];
-    for (int i = 0; i < Rects.length; i++) {
-      Rects[i] = rectangles.get(i);
+    rects = new Rectangle[rectangles.size()];
+    for (int i = 0; i < rects.length; i++) {
+      rects[i] = rectangles.get(i);
     }
   }
 
   void setValue(Rectangle[] rectangles) {
-    Rects = rectangles;
+    rects = rectangles;
   }
 
   public int stamp() {
@@ -97,11 +97,11 @@ class Diff2VarValue implements MutableVarValue {
 
     StringBuilder s = new StringBuilder();
 
-    for (int i = 0; i < Rects.length; i++) {
-      if (i == Rects.length - 1) {
-        s.append(Rects[i]);
+    for (int i = 0; i < rects.length; i++) {
+      if (i == rects.length - 1) {
+        s.append(rects[i]);
       } else {
-        s.append(Rects[i]).append(",");
+        s.append(rects[i]).append(",");
       }
     }
     return s.toString();

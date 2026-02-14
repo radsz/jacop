@@ -35,6 +35,7 @@ import java.util.Map;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.StoreAware;
 import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -166,7 +167,9 @@ public abstract class PrimitiveConstraint extends Constraint
    *
    * @return the default pruning event for notConsistency evaluation.
    */
-  protected abstract int getDefaultNotConsistencyPruningEvent();
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.GROUND;
+  }
 
   /**
    * It makes pruning in such a way that constraint is notConsistent. It removes values which always

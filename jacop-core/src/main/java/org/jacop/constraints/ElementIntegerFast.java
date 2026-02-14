@@ -74,7 +74,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
   /** It specifies indexOffset within an element constraint list[index - indexOffset] = value. */
   protected final int indexOffset;
 
-  private final short detect = 0;
+  private static final short detect = 0;
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   /*
@@ -113,7 +113,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    * @param list list of variables from which an index-th element is taken
    * @param value a value of the index-th element from list
    */
-  public ElementIntegerFast(IntVar index, List<? extends Integer> list, IntVar value) {
+  public ElementIntegerFast(IntVar index, List<Integer> list, IntVar value) {
     this(index, list, value, 0);
   }
 
@@ -125,8 +125,7 @@ public class ElementIntegerFast extends Constraint implements Stateful, Satisfie
    * @param value a value of the index-th element from list
    * @param indexOffset shift applied to index variable.
    */
-  public ElementIntegerFast(
-      IntVar index, List<? extends Integer> list, IntVar value, int indexOffset) {
+  public ElementIntegerFast(IntVar index, List<Integer> list, IntVar value, int indexOffset) {
     this(index, list.stream().mapToInt(i -> i).toArray(), value, indexOffset);
   }
 

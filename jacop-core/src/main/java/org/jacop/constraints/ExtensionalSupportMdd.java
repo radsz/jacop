@@ -63,10 +63,10 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
   /** It specifies a multiple value decision diagram used by this constraint. */
   private final Mdd mdd;
 
-  final SparseSet G_no;
+  final SparseSet gNo;
   final IndexDomainView[] views;
-  TimeStamp<Integer> G_no_size;
-  SparseSet G_yes;
+  TimeStamp<Integer> gNoSize;
+  SparseSet gYes;
 
   /**
    * It creates an extensional constraint.
@@ -83,7 +83,7 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
     this.mdd = diagram;
     this.views = diagram.views;
-    G_no = new SparseSet(diagram.freePosition);
+    gNo = new SparseSet(diagram.freePosition);
     numberId = idNumber.incrementAndGet();
 
     setScope(this.mdd.vars);
@@ -106,7 +106,7 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
 
     super.impose(store);
 
-    this.G_no_size = new TimeStamp<>(store, 0);
+    this.gNoSize = new TimeStamp<>(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
 
@@ -121,11 +121,11 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
   @Override
   public void consistency(Store s) {
 
-    G_yes = s.sparseSet;
+    gYes = s.sparseSet;
 
-    G_yes.clear();
+    gYes.clear();
 
-    G_no.setSize(G_no_size.value());
+    gNo.setSize(gNoSize.value());
 
     // TODO: initialize notSupportedIndexesYes to 0..domainLimits
     for (IndexDomainView indexDomainView : views) {
@@ -138,7 +138,7 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
       view.removeUnSupportedValues(s);
     }
 
-    G_no_size.update(G_no.members);
+    gNoSize.update(gNo.members);
   }
 
   /**
@@ -150,11 +150,11 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
    */
   public boolean seekSupport(int nodeId, int level) {
 
-    if (G_yes.isMember(nodeId)) {
+    if (gYes.isMember(nodeId)) {
       return true;
     }
 
-    if (G_no.isMember(nodeId)) {
+    if (gNo.isMember(nodeId)) {
       return false;
     }
 
@@ -191,9 +191,9 @@ public class ExtensionalSupportMdd extends Constraint implements SatisfiedPresen
     }
 
     if (result) {
-      G_yes.addMember(nodeId);
+      gYes.addMember(nodeId);
     } else {
-      G_no.addMember(nodeId);
+      gNo.addMember(nodeId);
     }
 
     return result;

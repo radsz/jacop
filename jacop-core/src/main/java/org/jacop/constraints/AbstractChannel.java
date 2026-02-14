@@ -59,7 +59,7 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent {
               + value.length);
     }
 
-    checkInputForNullness(new String[] {"x", "bs"}, new Object[][] {{x}, bs});
+    checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x}, bs);
     for (IntVar b : bs) {
       if (b.min() > 1 || b.max() < 0) {
         throw new IllegalArgumentException(

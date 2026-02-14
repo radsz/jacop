@@ -296,11 +296,6 @@ public class Distance extends PrimitiveConstraint implements Stateful {
   }
 
   @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
-  @Override
   public boolean satisfied() {
     IntDomain Xdom = x.dom();
     IntDomain Ydom = y.dom();
@@ -326,7 +321,7 @@ public class Distance extends PrimitiveConstraint implements Stateful {
     return Xdom.singleton()
         && Ydom.singleton()
         && Zdom.singleton()
-        && !(Math.abs(Xdom.min() - Ydom.min()) == Zdom.min());
+        && Math.abs(Xdom.min() - Ydom.min()) != Zdom.min();
   }
 
   @Override

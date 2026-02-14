@@ -65,7 +65,7 @@ public class CountValues extends AbstractCountValues {
 
     super(idNumber, list, values);
 
-    checkInputForNullness(new String[] {"list", "counter"}, new Object[][] {list, {counter}});
+    checkInputForNullness(new String[] {"list", "counter"}, list, new Object[] {counter});
 
     this.counter = counter;
     this.counterRest = new IntVar(counter[0].getStore(), 0, n);

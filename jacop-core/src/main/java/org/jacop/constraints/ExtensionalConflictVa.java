@@ -51,7 +51,7 @@ import org.jacop.core.Var;
 public class ExtensionalConflictVa extends AbstractExtensionalVa {
 
   static final boolean DEBUG_ALL = false;
-  static boolean DEBUG_ALLLocal = DEBUG_ALL;
+  static boolean debugAllLocal = DEBUG_ALL;
 
   static final boolean DEBUG_PRUNING = false;
   static boolean debugPruning = DEBUG_PRUNING;
@@ -261,7 +261,7 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
 
     int position = (left + right) >> 1;
 
-    while (!(left + 1 >= right)) {
+    while (left + 1 < right) {
 
       if (smaller(t, tuplesForGivenVariableValuePair[position])) {
         right = position;

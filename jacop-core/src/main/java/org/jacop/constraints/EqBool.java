@@ -67,7 +67,7 @@ public class EqBool extends PrimitiveConstraint {
    */
   public EqBool(IntVar[] list, IntVar result) {
 
-    checkInputForNullness(new String[] {"list", "result"}, new Object[][] {list, {result}});
+    checkInputForNullness(new String[] {"list", "result"}, list, new Object[] {result});
 
     numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
@@ -110,11 +110,6 @@ public class EqBool extends PrimitiveConstraint {
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
   }
 
   /**

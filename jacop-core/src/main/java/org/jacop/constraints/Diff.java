@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.function.IntFunction;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SatisfiedPresent;
@@ -69,7 +69,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean TRACE_NARR = false;
   private static boolean traceNarrOn = TRACE_NARR;
-  protected final Function<Integer, Comparator<IntRectangle>> dimIthMinComparator =
+  protected final IntFunction<Comparator<IntRectangle>> dimIthMinComparator =
       dim ->
           (IntRectangle o1, IntRectangle o2) -> {
             int v1 = o1.origins[dim];

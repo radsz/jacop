@@ -100,9 +100,4 @@ public abstract class AbstractBoolSimple extends PrimitiveConstraint {
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
   }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
 }

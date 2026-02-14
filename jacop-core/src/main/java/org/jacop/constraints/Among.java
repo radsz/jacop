@@ -97,7 +97,8 @@ public class Among extends Constraint implements UsesQueueVariable, Stateful, Sa
    */
   public Among(IntVar[] list, IntervalDomain kset, IntVar n) {
 
-    checkInputForNullness(new String[] {"list", "kset", "n"}, new Object[][] {list, {kset}, {n}});
+    checkInputForNullness(
+        new String[] {"list", "kset", "n"}, list, new Object[] {kset}, new Object[] {n});
     checkInputForDuplication("list", list);
 
     this.queueIndex = 1;

@@ -82,7 +82,7 @@ public class DisjointConditional extends Diff {
       Rectangle[] rectangles, ExclusiveList exclusionList, boolean doProfile) {
 
     checkInputForNullness(
-        new String[] {"rectangles", "exclusionList"}, new Object[][] {rectangles, {exclusionList}});
+        new String[] {"rectangles", "exclusionList"}, rectangles, new Object[] {exclusionList});
     checkInput(rectangles, i -> i.dim == 2, "rectangle needs to have exactly two dimensions");
 
     this.queueIndex = 2;
@@ -240,9 +240,12 @@ public class DisjointConditional extends Diff {
         new String[] {
           "origin1", "origin2", "length1", "length2", "exceptionIndices", "exceptionCondition"
         },
-        new Object[][] {
-          origin1, origin2, length1, length2, {exceptionIndices}, {exceptionCondition}
-        });
+        origin1,
+        origin2,
+        length1,
+        length2,
+        new Object[] {exceptionIndices},
+        new Object[] {exceptionCondition});
 
     this.queueIndex = 2;
 
@@ -452,7 +455,7 @@ public class DisjointConditional extends Diff {
       r_max[i] = rOriginDom.max() + rLengthDom.max();
     }
 
-    for (RectangleWithCondition s : ((DisjointCondVarValue) evalRects[index].value()).Rects) {
+    for (RectangleWithCondition s : ((DisjointCondVarValue) evalRects[index].value()).rects) {
       boolean overlap = true;
 
       boolean sChanged =
@@ -815,7 +818,7 @@ public class DisjointConditional extends Diff {
         if (needToNarrow) {
 
           if (overlappingRects.size()
-              != ((DisjointCondVarValue) evalRects[l].value()).Rects.length) {
+              != ((DisjointCondVarValue) evalRects[l].value()).rects.length) {
             DisjointCondVarValue newRects = new DisjointCondVarValue();
             newRects.setValue(overlappingRects);
             evalRects[l].update(newRects);
@@ -980,7 +983,7 @@ public class DisjointConditional extends Diff {
     while (sat && i < rectangles.length) {
       recti = rectangles[i];
       int j = 0;
-      Rectangle[] toEvaluate = ((DisjointCondVarValue) evalRects[i].value()).Rects;
+      Rectangle[] toEvaluate = ((DisjointCondVarValue) evalRects[i].value()).rects;
       while (sat && j < toEvaluate.length) {
         rectj = toEvaluate[j];
         sat = !recti.domOverlap(rectj);

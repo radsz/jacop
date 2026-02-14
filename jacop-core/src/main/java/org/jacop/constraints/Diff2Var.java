@@ -59,7 +59,7 @@ class Diff2Var implements MutableVar {
 
   Diff2Var(Store store, Rectangle[] rectangles) {
     Diff2VarValue val = new Diff2VarValue();
-    val.Rects = rectangles;
+    val.rects = rectangles;
     value = val;
     index = store.putMutableVar(this);
     this.store = store;
@@ -95,7 +95,7 @@ class Diff2Var implements MutableVar {
 
   public void update(MutableVarValue val) {
     if (value.stamp == store.level) {
-      value.setValue(((Diff2VarValue) val).Rects);
+      value.setValue(((Diff2VarValue) val).rects);
     } else if (value.stamp < store.level) {
 
       val.setStamp(store.level);

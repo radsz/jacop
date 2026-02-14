@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.jacop.core.Store;
@@ -280,12 +281,12 @@ public abstract class DecomposedConstraint<T extends Constraint> {
   /**
    * Validates that all elements in the array satisfy the given condition.
    *
-   * @param <T> the type of the array elements.
+   * @param <U> the type of the array elements.
    * @param list the array of elements to validate.
    * @param condition the predicate that each element must satisfy.
    * @param conditionDescription description of the condition, used in error messages.
    */
-  public <T> void checkInput(T[] list, Predicate<T> condition, String conditionDescription) {
+  public <U> void checkInput(U[] list, Predicate<U> condition, String conditionDescription) {
 
     for (int i = 0; i < list.length; i++) {
       if (!condition.test(list[i])) {
@@ -308,7 +309,7 @@ public abstract class DecomposedConstraint<T extends Constraint> {
    * @param condition the predicate that each element must satisfy.
    * @param conditionDescription description of the condition, used in error messages.
    */
-  public void checkInput(int[] list, Predicate<Integer> condition, String conditionDescription) {
+  public void checkInput(int[] list, IntPredicate condition, String conditionDescription) {
 
     for (int i = 0; i < list.length; i++) {
       if (!condition.test(list[i])) {

@@ -122,11 +122,6 @@ public abstract class AbstractAtLeastMost extends PrimitiveConstraint {
     return IntDomain.GROUND;
   }
 
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
-
   /**
    * Swaps two elements in the list array.
    *
