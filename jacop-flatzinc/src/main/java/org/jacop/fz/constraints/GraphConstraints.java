@@ -93,173 +93,54 @@ class GraphConstraints implements ParserTreeConstants {
   }
 
   void gen_jacop_graph_match(SimpleNode node) {
-    int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
-    int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-    int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
-    int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
-    IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
-    int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
-    String cName = "GraphMatch";
-
-    try {
-      IntVar[] matchVars = null;
-      if (index_min == 0) {
-        for (int i = 0; i < match.length; i++) {
-          matchVars = match;
-        }
-      } else {
-        matchVars = new IntVar[match.length];
-        for (int i = 0; i < match.length; i++) {
-          matchVars[i] = new IntVar(store, "node_" + i, 0, pattern_type.length - 1);
-          support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-        }
-      }
-
-      Class<?> c = Class.forName("org.jacop.graph." + cName);
-      Constructor<?> cons =
-          c.getConstructor(
-              Store.class,
-              int[].class,
-              int[].class,
-              int[].class,
-              int[].class,
-              int.class,
-              IntVar[].class,
-              boolean.class);
-      Object constraint =
-          cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, true);
-      support.pose((Constraint) constraint);
-
-    } catch (ClassNotFoundException
-        | InvocationTargetException
-        | IllegalAccessException
-        | InstantiationException
-        | NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    }
+    genGraphMatchConstraint(node, "GraphMatch", true, false);
   }
 
   void gen_jacop_digraph_match(SimpleNode node) {
-    int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
-    int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-    int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
-    int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
-    IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
-    int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
-    String cName = "GraphMatch";
-
-    try {
-      IntVar[] matchVars = null;
-      if (index_min == 0) {
-        for (int i = 0; i < match.length; i++) {
-          matchVars = match;
-        }
-      } else {
-        matchVars = new IntVar[match.length];
-        for (int i = 0; i < match.length; i++) {
-          matchVars[i] = new IntVar(store, "node_" + i, 0, pattern_type.length - 1);
-          support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-        }
-      }
-
-      Class<?> c = Class.forName("org.jacop.graph." + cName);
-      Constructor<?> cons =
-          c.getConstructor(
-              Store.class,
-              int[].class,
-              int[].class,
-              int[].class,
-              int[].class,
-              int.class,
-              IntVar[].class,
-              boolean.class);
-      Object constraint =
-          cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, false);
-      support.pose((Constraint) constraint);
-
-    } catch (ClassNotFoundException
-        | InvocationTargetException
-        | IllegalAccessException
-        | InstantiationException
-        | NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    }
+    genGraphMatchConstraint(node, "GraphMatch", false, false);
   }
 
   void gen_jacop_sub_graph_match(SimpleNode node) {
-    int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
-    int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
-    int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
-    int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
-    IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
-    int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
-    String cName = "SubGraphMatch";
-
-    try {
-      IntVar[] matchVars = null;
-      if (index_min == 0) {
-        for (int i = 0; i < match.length; i++) {
-          matchVars = match;
-        }
-      } else {
-        matchVars = new IntVar[match.length];
-        for (int i = 0; i < match.length; i++) {
-          matchVars[i] = new IntVar(store, "node_" + i, 0, target_type.length - 1);
-          support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
-        }
-      }
-
-      Class<?> c = Class.forName("org.jacop.graph." + cName);
-      Constructor<?> cons =
-          c.getConstructor(
-              Store.class,
-              int[].class,
-              int[].class,
-              int[].class,
-              int[].class,
-              int.class,
-              IntVar[].class,
-              boolean.class);
-      Object constraint =
-          cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, true);
-      support.pose((Constraint) constraint);
-
-    } catch (ClassNotFoundException
-        | InvocationTargetException
-        | IllegalAccessException
-        | InstantiationException
-        | NoSuchMethodException _) {
-      throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
-    }
+    genGraphMatchConstraint(node, "SubGraphMatch", true, true);
   }
 
   void gen_jacop_sub_digraph_match(SimpleNode node) {
+    genGraphMatchConstraint(node, "SubGraphMatch", false, true);
+  }
+
+  /**
+   * Shared helper for graph/digraph match and sub-graph/sub-digraph match constraint generation.
+   *
+   * @param node the AST node containing constraint parameters.
+   * @param constraintName the constraint class name (e.g. "GraphMatch" or "SubGraphMatch").
+   * @param isUndirected true for undirected graph, false for directed graph.
+   * @param useTargetTypeForBound if true, uses target_type length for matchVars upper bound;
+   *     otherwise uses pattern_type length.
+   */
+  private void genGraphMatchConstraint(
+      SimpleNode node, String constraintName, boolean isUndirected, boolean useTargetTypeForBound) {
+
     int[] t = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     int[] p = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     int[] target_type = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     int[] pattern_type = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     IntVar[] match = support.getVarArray((SimpleNode) node.jjtGetChild(4));
     int index_min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
-    String cName = "SubGraphMatch";
 
     try {
-      IntVar[] matchVars = null;
+      IntVar[] matchVars;
       if (index_min == 0) {
-        for (int i = 0; i < match.length; i++) {
-          matchVars = match;
-        }
+        matchVars = match;
       } else {
+        int upperBound = (useTargetTypeForBound ? target_type.length : pattern_type.length) - 1;
         matchVars = new IntVar[match.length];
         for (int i = 0; i < match.length; i++) {
-          matchVars[i] = new IntVar(store, "node_" + i, 0, target_type.length - 1);
+          matchVars[i] = new IntVar(store, "node_" + i, 0, upperBound);
           support.pose(new XplusCeqZ(matchVars[i], index_min, match[i]));
         }
       }
 
-      Class<?> c = Class.forName("org.jacop.graph." + cName);
+      Class<?> c = Class.forName("org.jacop.graph." + constraintName);
       Constructor<?> cons =
           c.getConstructor(
               Store.class,
@@ -271,7 +152,8 @@ class GraphConstraints implements ParserTreeConstants {
               IntVar[].class,
               boolean.class);
       Object constraint =
-          cons.newInstance(store, t, p, target_type, pattern_type, index_min, matchVars, false);
+          cons.newInstance(
+              store, t, p, target_type, pattern_type, index_min, matchVars, isUndirected);
       support.pose((Constraint) constraint);
 
     } catch (ClassNotFoundException
@@ -280,7 +162,9 @@ class GraphConstraints implements ParserTreeConstants {
         | InstantiationException
         | NoSuchMethodException _) {
       throw new RuntimeException(
-          "% Constraint " + cName + " is not available in this version; requires org.jacop.graph.");
+          "% Constraint "
+              + constraintName
+              + " is not available in this version; requires org.jacop.graph.");
     }
   }
 

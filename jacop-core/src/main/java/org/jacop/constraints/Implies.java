@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.UsesQueueVariable;
@@ -118,17 +119,7 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-
-    if (consistencyPruningEvents != null) {
-      Integer possibleEvent = consistencyPruningEvents.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    if (v == b) {
-      return IntDomain.GROUND;
-    }
-    return computeMaxPruningEvent(v, c);
+    return getPruningEventFor(v, consistencyPruningEvents);
   }
 
   @Override
@@ -138,9 +129,12 @@ public class Implies extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
+    return getPruningEventFor(v, notConsistencyPruningEvents);
+  }
 
-    if (notConsistencyPruningEvents != null) {
-      Integer possibleEvent = notConsistencyPruningEvents.get(v);
+  private int getPruningEventFor(Var v, Map<Var, Integer> eventsMap) {
+    if (eventsMap != null) {
+      Integer possibleEvent = eventsMap.get(v);
       if (possibleEvent != null) {
         return possibleEvent;
       }

@@ -111,4 +111,60 @@ public abstract class AbstractCount extends PrimitiveConstraint {
     equal.update(numberEq);
     position.update(start);
   }
+
+  /** Holds the result of counting occurrences of a value in the list. */
+  protected record CountResult(int numberEq, int numberMayBe, int start) {}
+
+  /**
+   * Counts how many variables are definitely equal to the given value and how many might still
+   * become equal. This method has a side effect: it swaps decided variables to the front of the
+   * list.
+   *
+   * @param value the value to count.
+   * @return a record with the counts and the new start position.
+   */
+  protected CountResult countOccurrences(int value) {
+    int numberEq = equal.value();
+    int numberMayBe = 0;
+    int start = position.value();
+    for (int i = start; i < list.length; i++) {
+      IntVar v = list[i];
+      if (v.domain.contains(value)) {
+        if (v.singleton()) {
+          numberEq++;
+          swap(start, i);
+          start++;
+        } else {
+          numberMayBe++;
+        }
+      } else {
+        swap(start, i);
+        start++;
+      }
+    }
+    return new CountResult(numberEq, numberMayBe, start);
+  }
+
+  /** Holds the counts of variables that are satisfied or definitely not equal. */
+  protected record SatisfactionCounts(int eq, int notEq) {}
+
+  /**
+   * Counts variables that are grounded to the given value and those that definitely cannot equal
+   * it.
+   *
+   * @param value the value to check.
+   * @return a record with eq and notEq counts.
+   */
+  protected SatisfactionCounts countSatisfaction(int value) {
+    int eq = 0;
+    int notEq = 0;
+    for (IntVar v : list) {
+      if (v.singleton(value)) {
+        eq++;
+      } else if (!v.domain.contains(value)) {
+        notEq++;
+      }
+    }
+    return new SatisfactionCounts(eq, notEq);
+  }
 }

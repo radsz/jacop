@@ -91,24 +91,10 @@ public class CountBounds extends AbstractCount {
   @Override
   public void consistency(final Store store) {
 
-    int numberEq = equal.value();
-    int numberMayBe = 0;
-    int start = position.value();
-    for (int i = start; i < list.length; i++) {
-      IntVar v = list[i];
-      if (v.domain.contains(value)) {
-        if (v.singleton()) {
-          numberEq++;
-          swap(start, i);
-          start++;
-        } else {
-          numberMayBe++;
-        }
-      } else { // does not have the value in its domain
-        swap(start, i);
-        start++;
-      }
-    }
+    CountResult cr = countOccurrences(value);
+    int numberEq = cr.numberEq();
+    int numberMayBe = cr.numberMayBe();
+    int start = cr.start();
 
     if (numberEq > ub || numberMayBe + numberEq < lb) {
       throw Store.failException;
@@ -136,24 +122,10 @@ public class CountBounds extends AbstractCount {
   @Override
   public void notConsistency(final Store store) {
 
-    int numberEq = equal.value();
-    int numberMayBe = 0;
-    int start = position.value();
-    for (int i = start; i < list.length; i++) {
-      IntVar v = list[i];
-      if (v.domain.contains(value)) {
-        if (v.singleton()) {
-          numberEq++;
-          swap(start, i);
-          start++;
-        } else {
-          numberMayBe++;
-        }
-      } else { // does not have the value in its domain
-        swap(start, i);
-        start++;
-      }
-    }
+    CountResult cr = countOccurrences(value);
+    int numberEq = cr.numberEq();
+    int numberMayBe = cr.numberMayBe();
+    int start = cr.start();
 
     if (numberEq > ub || numberEq + numberMayBe < lb) {
       removeConstraint();
@@ -169,36 +141,14 @@ public class CountBounds extends AbstractCount {
 
   @Override
   public boolean satisfied() {
-
-    int eq = 0;
-    int notEq = 0;
-
-    for (IntVar v : list) {
-      if (v.singleton(value)) {
-        eq++;
-      } else if (!v.domain.contains(value)) {
-        notEq++;
-      }
-    }
-
-    return eq + notEq == list.length && eq >= lb && eq <= ub;
+    SatisfactionCounts sc = countSatisfaction(value);
+    return sc.eq() + sc.notEq() == list.length && sc.eq() >= lb && sc.eq() <= ub;
   }
 
   @Override
   public boolean notSatisfied() {
-
-    int eq = 0;
-    int notEq = 0;
-
-    for (IntVar v : list) {
-      if (v.singleton(value)) {
-        eq++;
-      } else if (!v.domain.contains(value)) {
-        notEq++;
-      }
-    }
-
-    return eq + notEq == list.length && (eq < lb || eq > ub);
+    SatisfactionCounts sc = countSatisfaction(value);
+    return sc.eq() + sc.notEq() == list.length && (sc.eq() < lb || sc.eq() > ub);
   }
 
   @Override

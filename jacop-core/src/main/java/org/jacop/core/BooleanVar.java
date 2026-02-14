@@ -186,37 +186,12 @@ public class BooleanVar extends IntVar {
   }
 
   @Override
-  public int sizeConstraints() {
-    return domain.sizeConstraints();
-  }
-
-  @Override
-  public int sizeConstraintsOriginal() {
-    return domain.sizeConstraintsOriginal();
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>For boolean variables, this returns the number of search constraints.
-   */
-  @Override
-  public int sizeSearchConstraints() {
-    return domain.searchConstraintsToEvaluate;
-  }
-
-  @Override
   public String toString() {
     if (domain.singleton()) {
       return id + "=" + domain;
     } else {
       return id + "::" + domain;
     }
-  }
-
-  @Override
-  public String toStringFull() {
-    return id + domain.toStringFull();
   }
 
   /**
@@ -258,14 +233,5 @@ public class BooleanVar extends IntVar {
   public BoundDomain recentDomainPruning() {
 
     return (BoundDomain) domain.recentDomainPruning(store.level);
-  }
-
-  /**
-   * It adds a constraint to the boolean variable as a model constraint with any pruning event.
-   *
-   * @param c the constraint being added to the variable.
-   */
-  public void putConstraint(Constraint c) {
-    putModelConstraint(c, IntDomain.ANY);
   }
 }

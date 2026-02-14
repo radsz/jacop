@@ -918,6 +918,332 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
     return sat;
   }
 
+  /**
+   * Checks satisfaction using evalRects (backtrackable rectangle sets). Shared by Diff2 and
+   * Disjoint.
+   *
+   * @param evalRects the backtrackable rectangle variables.
+   * @return true if no evaluated rectangle pairs overlap.
+   */
+  protected boolean satisfiedEval(Diff2Var[] evalRects) {
+    boolean sat = true;
+    int i = 0;
+    while (sat && i < rectangles.length) {
+      Rectangle recti = rectangles[i];
+      Rectangle[] toEvaluate = ((Diff2VarValue) evalRects[i].value()).rects;
+      int j = 0;
+      while (sat && j < toEvaluate.length) {
+        sat = !recti.domOverlap(toEvaluate[j]);
+        j++;
+      }
+      i++;
+    }
+    return sat;
+  }
+
+  /**
+   * Shared narrowRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
+   *
+   * @param evalRects the backtrackable rectangle variables.
+   * @param fdvQueue set of changed variables.
+   * @param allowZeroLength if true, zero-length rectangles are not excluded from narrowing
+   *     (Disjoint semantics); if false, they are excluded (Diff2 semantics).
+   * @param checkAreaAlways if true, area-based failure checks are always performed; if false, they
+   *     are skipped.
+   */
+  protected void narrowRectanglesEval(
+      Diff2Var[] evalRects,
+      Set<IntVar> fdvQueue,
+      boolean allowZeroLength,
+      boolean checkAreaAlways) {
+
+    boolean needToNarrow = false;
+
+    for (int l = 0; l < rectangles.length; l++) {
+      Rectangle r = rectangles[l];
+
+      boolean settled = true;
+      boolean minLengthEq0 = false;
+      int maxLevel = 0;
+      for (int i = 0; i < r.dim(); i++) {
+        IntDomain rOrigin = r.origin[i].dom();
+        IntDomain rLength = r.length[i].dom();
+        settled = settled && rOrigin.singleton() && rLength.singleton();
+
+        minLengthEq0 = minLengthEq0 || (allowZeroLength ? rLength.min() < 0 : rLength.min() <= 0);
+
+        int originStamp = rOrigin.stamp;
+        int lengthStamp = rLength.stamp;
+        if (maxLevel < originStamp) {
+          maxLevel = originStamp;
+        }
+        if (maxLevel < lengthStamp) {
+          maxLevel = lengthStamp;
+        }
+      }
+
+      if (!minLengthEq0 && !(settled && maxLevel < currentStore.level)) {
+
+        needToNarrow = needToNarrow || containsChangedVariable(r, fdvQueue);
+
+        List<IntRectangle> usedRect = new ArrayList<>();
+        List<Rectangle> profileCandidates = new ArrayList<>();
+        List<Rectangle> overlappingRects = new ArrayList<>();
+        boolean ntN =
+            findRectanglesEval(
+                evalRects,
+                r,
+                l,
+                usedRect,
+                profileCandidates,
+                overlappingRects,
+                fdvQueue,
+                allowZeroLength,
+                checkAreaAlways);
+
+        needToNarrow = needToNarrow || ntN;
+
+        // Checking r against all s with minUse in the domain of r
+        if (needToNarrow) {
+
+          if (overlappingRects.size() != ((Diff2VarValue) evalRects[l].value()).rects.length) {
+            Diff2VarValue newRects = new Diff2VarValue();
+            newRects.setValue(overlappingRects);
+            evalRects[l].update(newRects);
+          }
+
+          narrowRectangle(r, usedRect, profileCandidates);
+        }
+      }
+    }
+  }
+
+  /**
+   * Shared findRectangles implementation for subclasses that use evalRects (Diff2 and Disjoint).
+   *
+   * @param evalRects the backtrackable rectangle variables.
+   * @param r the rectangle being narrowed.
+   * @param index the index of rectangle r in the rectangles array.
+   * @param usedRect output list of used rectangles.
+   * @param profileCandidates output list of profile candidate rectangles.
+   * @param overlappingRects output list of overlapping rectangles.
+   * @param fdvQueue set of changed variables.
+   * @param allowZeroLength if true, zero-width occupies space (Disjoint); if false, it does not
+   *     (Diff2).
+   * @param checkAreaAlways if true, area-based failure checks are always performed.
+   * @return true if the set of changed variables contains a variable from the overlapping
+   *     rectangles.
+   */
+  @SuppressWarnings("java:S3776") // cognitive complexity inherited from original code
+  protected boolean findRectanglesEval(
+      Diff2Var[] evalRects,
+      Rectangle r,
+      int index,
+      List<IntRectangle> usedRect,
+      List<Rectangle> profileCandidates,
+      List<Rectangle> overlappingRects,
+      Set<IntVar> fdvQueue,
+      boolean allowZeroLength,
+      boolean checkAreaAlways) {
+
+    boolean contains = false;
+    boolean checkArea = false;
+
+    long area = 0;
+    long commonArea = 0;
+    int totalNumberOfRectangles = 0;
+    int dim = r.dim();
+    int[] startMin = new int[dim];
+    int[] stopMax = new int[dim];
+    int[] minLength = new int[dim];
+    int[] r_min = new int[dim];
+    int[] r_max = new int[dim];
+    for (int i = 0; i < startMin.length; i++) {
+      IntDomain rLengthDom = r.length[i].dom();
+      startMin[i] = IntDomain.MAX_INT;
+      stopMax[i] = 0;
+      minLength[i] = rLengthDom.min();
+
+      IntDomain rOriginDom = r.origin[i].dom();
+      r_min[i] = rOriginDom.min();
+      r_max[i] = rOriginDom.max() + rLengthDom.max();
+    }
+
+    for (Rectangle s : ((Diff2VarValue) evalRects[index].value()).rects) {
+      boolean overlap = true;
+
+      if (r != s) {
+
+        boolean sChanged = containsChangedVariable(s, fdvQueue);
+
+        IntRectangle Use = new IntRectangle(dim);
+        long sArea = 1;
+        long partialCommonArea = 1;
+
+        boolean use = true;
+        boolean minLength0 = false;
+        int s_min;
+        int s_max;
+        int start;
+        int stop;
+        int m = 0;
+        int j = 0;
+        int[] sOriginMin = new int[dim];
+        int[] sOriginMax = new int[dim];
+        int[] sLengthMin = new int[dim];
+
+        while (overlap && m < dim) {
+          // check if domains of r and s overlap
+          IntDomain sOriginIdom = s.origin[m].dom();
+          IntDomain sLengthIdom = s.length[m].dom();
+          final int sLengthiMin = sLengthIdom.min();
+          int sOriginiMax = sOriginIdom.max();
+          s_min = sOriginIdom.min();
+          s_max = sOriginiMax + sLengthIdom.max();
+          overlap = intervalOverlap(r_min[m], r_max[m], s_min, s_max);
+
+          // min start, max stop and min length
+          sOriginMin[m] = s_min;
+          sOriginMax[m] = sOriginiMax + sLengthiMin;
+          sLengthMin[m] = sLengthiMin;
+
+          // check if s occupies some space
+          start = sOriginiMax;
+          stop = s_min + sLengthiMin;
+          if (allowZeroLength ? start <= stop : start < stop) {
+            Use.add(start, stop - start);
+            j++;
+          } else {
+            use = false;
+          }
+
+          minLength0 = minLength0 || (sLengthMin[m] <= 0);
+
+          m++;
+        }
+
+        if (overlap) {
+
+          overlappingRects.add(s);
+
+          if (use) { // rectangles taking space
+            usedRect.add(Use);
+            contains = contains || sChanged;
+          }
+
+          if (!minLength0) { // profile candidates
+            if (j > 0) {
+              profileCandidates.add(s);
+              contains = contains || sChanged;
+            }
+
+            checkArea = true;
+            totalNumberOfRectangles++;
+            for (int i = 0; i < dim; i++) {
+              if (sOriginMin[i] < startMin[i]) {
+                startMin[i] = sOriginMin[i];
+              }
+              if (sOriginMax[i] > stopMax[i]) {
+                stopMax[i] = sOriginMax[i];
+              }
+              if (minLength[i] > sLengthMin[i]) {
+                minLength[i] = sLengthMin[i];
+              }
+
+              sArea = sArea * sLengthMin[i];
+            }
+            area += sArea;
+          } // profile candidate end
+
+          // calculate area within rectangle r possible placement
+          for (int i = 0; i < dim; i++) {
+            if (sOriginMin[i] <= r_min[i]) {
+              if (sOriginMax[i] <= r_max[i]) {
+                int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
+                sLengthMin[i] = Math.max(distance1, 0);
+              } else {
+                // sOriginMax[i] > r_max[i])
+                int rmax = r.origin[i].max() + r.length[i].min();
+
+                int distance1 = sOriginMin[i] + sLengthMin[i] - r_min[i];
+                int distance2 = sLengthMin[i] - (sOriginMax[i] - rmax);
+                if (distance1 > rmax - r_min[i]) {
+                  distance1 = rmax - r_min[i];
+                }
+                if (distance2 > rmax - r_min[i]) {
+                  distance2 = rmax - r_min[i];
+                }
+                if (distance1 < distance2) {
+                  sLengthMin[i] = Math.max(distance1, 0);
+                } else if (distance2 > 0) {
+                  if (distance2 < sLengthMin[i]) {
+                    sLengthMin[i] = distance2;
+                  }
+                } else {
+                  sLengthMin[i] = 0;
+                }
+              }
+            } else // sOriginMin[i] > r_min[i]
+            if (sOriginMax[i] > r_max[i]) {
+              int distance2 =
+                  sLengthMin[i] - (sOriginMax[i] - (r.origin[i].max() + r.length[i].min()));
+              if (distance2 > 0) {
+                if (distance2 < sLengthMin[i]) {
+                  sLengthMin[i] = distance2;
+                }
+              } else {
+                sLengthMin[i] = 0;
+              }
+            }
+            partialCommonArea = partialCommonArea * sLengthMin[i];
+          }
+          commonArea += partialCommonArea;
+        }
+        if (checkAreaAlways
+            && commonArea + r.minArea() > (long) (r_max[0] - r_min[0]) * (r_max[1] - r_min[1])) {
+          throw Store.failException;
+        }
+      }
+    }
+
+    if (checkArea) { // check whether there is
+      // enough room for all rectangles
+      area += r.minArea();
+      long availArea = 1;
+      long rectNumber = 1;
+      for (int i = 0; i < startMin.length; i++) {
+        IntDomain rOriginIdom = r.origin[i].dom();
+        IntDomain rLengthIdom = r.length[i].dom();
+        int rOriginiMin = rOriginIdom.min();
+        int rOriginiMax = rOriginIdom.max();
+        int rLengthiMin = rLengthIdom.min();
+        if (rOriginiMin < startMin[i]) {
+          startMin[i] = rOriginiMin;
+        }
+        if (rOriginiMax + rLengthiMin > stopMax[i]) {
+          stopMax[i] = rOriginiMax + rLengthiMin;
+        }
+      }
+      boolean checkRectNumber = true;
+      for (int i = 0; i < startMin.length; i++) {
+        availArea = availArea * (stopMax[i] - startMin[i]);
+        if (minLength[i] != 0) {
+          rectNumber *= (stopMax[i] - startMin[i]) / minLength[i];
+        } else {
+          checkRectNumber = false;
+        }
+      }
+
+      if (checkAreaAlways
+          && (availArea < area
+              || (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1)))) {
+        throw Store.failException;
+      }
+    }
+
+    return contains;
+  }
+
   @Override
   public String toString() {
 
