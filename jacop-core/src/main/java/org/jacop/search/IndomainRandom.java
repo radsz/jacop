@@ -30,6 +30,7 @@
 
 package org.jacop.search;
 
+import java.security.SecureRandom;
 import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
@@ -51,7 +52,7 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
   /** It specifies Indomain function, which assigns values randomly. */
   public IndomainRandom() {
-    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
+    generator = Store.getRandom();
   }
 
   /**
@@ -60,7 +61,9 @@ public class IndomainRandom<T extends IntVar> implements Indomain<T> {
    * @param seed it specifies the seed of the random generator.
    */
   public IndomainRandom(int seed) {
-    generator = new Random(seed);
+    SecureRandom seeded = new SecureRandom();
+    seeded.setSeed(seed);
+    generator = seeded;
   }
 
   /**

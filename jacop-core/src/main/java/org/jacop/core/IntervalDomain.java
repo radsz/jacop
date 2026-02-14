@@ -31,7 +31,6 @@
 package org.jacop.core;
 
 import java.util.Iterator;
-import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 
@@ -56,9 +55,6 @@ public class IntervalDomain extends IntDomain {
 
   /** It specifies an empty integer domain. */
   public static final IntDomain EMPTY = emptyDomain;
-
-  private static final Random generator =
-      Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /**
    * Extra capacity added to size-based Interval[] allocations for headroom and fewer resizes. Helps
@@ -5094,7 +5090,7 @@ public class IntervalDomain extends IntDomain {
       return min;
     }
 
-    int value = min + generator.nextInt(size);
+    int value = min + Store.getRandom().nextInt(size);
     int domainSize = noIntervals();
     if (domainSize == 1) {
       return value;

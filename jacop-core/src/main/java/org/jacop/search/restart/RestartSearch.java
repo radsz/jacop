@@ -30,7 +30,6 @@
 
 package org.jacop.search.restart;
 
-import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltC;
@@ -63,7 +62,6 @@ public class RestartSearch<T extends Var> {
   final Calculator calculator;
   final Var cost;
   // relax and reconstruct
-  private final Random generator;
   SolutionListener<T> lastSolutionListener;
   CustomReport reportSolution;
   Search<T> lastNotNullSearch;
@@ -126,8 +124,6 @@ public class RestartSearch<T extends Var> {
       lastSolutionListener = lastNotNullSearch.getSolutionListener();
       lastSolutionListener.setChildrenListeners(new CostListener<>());
     }
-
-    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   /**
@@ -336,7 +332,7 @@ public class RestartSearch<T extends Var> {
 
     for (int i = 0; i < rarVars.length; i++) {
       IntVar v = rarVars[i];
-      int rn = generator.nextInt(101);
+      int rn = Store.getRandom().nextInt(101);
       if (rn <= probability) {
         v.domain.inValue(store.level, v, values[i]);
       }

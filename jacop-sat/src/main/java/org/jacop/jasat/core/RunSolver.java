@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.jasat.modules.DebugModule;
 import org.jacop.jasat.modules.SearchModule;
 import org.jacop.jasat.modules.StatModule;
@@ -53,6 +54,7 @@ import org.jacop.jasat.utils.structures.IntVec;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public final class RunSolver {
 
   private static final OptParse<Config> parser = new OptParse<>();
@@ -233,8 +235,7 @@ public final class RunSolver {
     try {
       parser = new CnfParser(core.pool, input);
     } catch (ParseException e1) {
-      System.err.println("error while parsing:");
-      e1.printStackTrace();
+      log.error("Error while parsing input", e1);
       System.exit(1);
       return; // just to prevent the compiler from complaining
     }

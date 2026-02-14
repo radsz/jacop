@@ -35,7 +35,6 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
@@ -84,7 +83,6 @@ public class ElementVariable extends Constraint
   final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
   final Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
   final Map<IntVar, List<Integer>> duplicates = Var.createEmptyPositioning();
-  final Random generator = new Random(2);
   boolean firstConsistencyCheck = true;
   int firstConsistencyLevel;
   boolean indexHasChanged;
@@ -273,7 +271,7 @@ public class ElementVariable extends Constraint
               for (ValueEnumeration enumer = lostSupports.valueEnumeration();
                   enumer.hasMoreElements(); ) {
                 int lostSupport = enumer.nextElement();
-                int endingPosition = generator.nextInt(list.length - 1);
+                int endingPosition = Store.getRandom().nextInt(list.length - 1);
                 int nextSupportPosition = -1;
                 for (int i = endingPosition + 1; ; ) {
                   if (i == list.length) {

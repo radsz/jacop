@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
 
 /**
@@ -42,6 +43,7 @@ import org.jacop.core.FailException;
  * @author Krzysztof Kuchcinki
  * @version 5.0
  */
+@Slf4j
 public class Fz2jacop {
 
   /**
@@ -88,7 +90,7 @@ public class Fz2jacop {
         try {
           Files.writeString(Path.of(opt.getOutputFilename()), st);
         } catch (IOException e1) {
-          e1.printStackTrace();
+          log.error("Failed to write output to {}", opt.getOutputFilename(), e1);
         }
       }
       if (opt.getStatistics()) {

@@ -30,7 +30,6 @@
 
 package org.jacop.floats.search;
 
-import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -48,8 +47,6 @@ import org.jacop.search.ComparatorVariable;
  */
 public class SplitRandomSelectFloat<T extends Var> extends SplitSelectFloat<T> {
 
-  private final Random generator;
-
   /**
    * The constructor to create a simple choice select mechanism.
    *
@@ -60,8 +57,6 @@ public class SplitRandomSelectFloat<T extends Var> extends SplitSelectFloat<T> {
   public SplitRandomSelectFloat(Store store, T[] variables, ComparatorVariable<T> varSelect) {
 
     super(store, variables, varSelect);
-
-    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   /**
@@ -80,14 +75,12 @@ public class SplitRandomSelectFloat<T extends Var> extends SplitSelectFloat<T> {
       ComparatorVariable<T> tieBreakerVarSelect) {
 
     super(store, variables, varSelect, tieBreakerVarSelect);
-
-    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
-    leftFirst = generator.nextBoolean();
+    leftFirst = Store.getRandom().nextBoolean();
 
     return super.getChoiceConstraint(index);
   }

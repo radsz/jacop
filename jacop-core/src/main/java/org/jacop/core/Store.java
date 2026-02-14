@@ -30,6 +30,7 @@
 
 package org.jacop.core;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -69,6 +70,18 @@ public class Store {
   static long seed;
 
   static boolean seedPresent;
+
+  /** Centralized random number generator used by all JaCoP components. */
+  private static SecureRandom random = new SecureRandom();
+
+  /**
+   * Returns the centralized random number generator.
+   *
+   * @return the shared {@link SecureRandom} instance.
+   */
+  public static SecureRandom getRandom() {
+    return random;
+  }
 
   /**
    * It stores constraints scheduled for reevaluation. It does not register constraints which are
@@ -306,6 +319,8 @@ public class Store {
   public static void setSeed(long s) {
     seed = s;
     seedPresent = true;
+    random = new SecureRandom();
+    random.setSeed(s);
   }
 
   /**
@@ -320,6 +335,7 @@ public class Store {
   /** Resets the seed for the random number generator, marking it as not present. */
   public static void resetSeed() {
     seedPresent = false;
+    random = new SecureRandom();
   }
 
   /**

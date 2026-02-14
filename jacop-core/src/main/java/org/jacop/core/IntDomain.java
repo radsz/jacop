@@ -31,7 +31,6 @@
 package org.jacop.core;
 
 import java.util.ArrayList;
-import java.util.Random;
 import org.jacop.constraints.Constraint;
 
 /**
@@ -87,9 +86,6 @@ public abstract class IntDomain extends Domain {
     {BOUND, ANY}, // BOUND event
     {ANY}
   }; // ANY event
-
-  private static final Random generator =
-      Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /**
    * It specifies the previous domain which was used by this domain. The old domain is stored here
@@ -1518,6 +1514,6 @@ public abstract class IntDomain extends Domain {
    * @return random value.
    */
   public int getRandomValue() {
-    return getElementAt(generator.nextInt(getSize()));
+    return getElementAt(Store.getRandom().nextInt(getSize()));
   }
 }

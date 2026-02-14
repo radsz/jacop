@@ -37,6 +37,7 @@ import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Locale;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
@@ -83,6 +84,7 @@ import org.jacop.set.search.IndomainSetMin;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
+@Slf4j
 public class Solve<T extends Var> implements ParserTreeConstants {
 
   static final String P = System.getProperty("fz_system_timer");
@@ -845,7 +847,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         try {
           Files.writeString(Path.of(options.getOutputFilename()), st);
         } catch (IOException e1) {
-          e1.printStackTrace();
+          log.error("Failed to write output to {}", options.getOutputFilename(), e1);
         }
       }
     } else {
@@ -2147,7 +2149,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             StandardOpenOption.CREATE,
             StandardOpenOption.TRUNCATE_EXISTING);
       } catch (IOException e) {
-        e.printStackTrace();
+        log.error("Failed to write solution to {}", options.getOutputFilename(), e);
       }
     }
   }

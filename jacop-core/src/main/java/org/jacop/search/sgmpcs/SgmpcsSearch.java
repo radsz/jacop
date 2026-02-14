@@ -32,7 +32,6 @@ package org.jacop.search.sgmpcs;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Random;
 import java.util.function.Function;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -256,8 +255,7 @@ public class SgmpcsSearch {
    */
   boolean improveSolution() {
 
-    Random rand = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
-    Random randomSolution = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
+    java.security.SecureRandom rand = Store.getRandom();
 
     searchStartTime = System.currentTimeMillis();
 
@@ -308,7 +306,7 @@ public class SgmpcsSearch {
       } else {
 
         // select random solution from e elite solutions
-        int n = randomSolution.nextInt(e);
+        int n = rand.nextInt(e);
 
         boolean result = search.searchFromEliteSolution(elite[n], l);
 

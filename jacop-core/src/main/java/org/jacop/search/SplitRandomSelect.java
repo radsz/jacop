@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.Random;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,8 +46,6 @@ import org.jacop.core.Store;
  */
 public class SplitRandomSelect<T extends IntVar> extends SplitSelect<T> {
 
-  private final Random generator;
-
   /**
    * The constructor to create a simple choice select mechanism.
    *
@@ -58,7 +55,6 @@ public class SplitRandomSelect<T extends IntVar> extends SplitSelect<T> {
    */
   public SplitRandomSelect(T[] variables, ComparatorVariable<T> varSelect, Indomain<T> indomain) {
     super(variables, varSelect, indomain);
-    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   /**
@@ -76,13 +72,12 @@ public class SplitRandomSelect<T extends IntVar> extends SplitSelect<T> {
       ComparatorVariable<T> tieBreakerVarSelect,
       Indomain<T> indomain) {
     super(variables, varSelect, tieBreakerVarSelect, indomain);
-    generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
   }
 
   @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
-    leftFirst = generator.nextBoolean();
+    leftFirst = Store.getRandom().nextBoolean();
 
     return super.getChoiceConstraint(index);
   }

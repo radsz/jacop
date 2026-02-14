@@ -30,7 +30,6 @@
 
 package org.jacop.core;
 
-import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -115,8 +114,6 @@ public class SmallDenseDomain extends IntDomain {
         0x8000000000000000L
       };
   private static final long[] SEQ_ARRAY = new long[64];
-  private static final Random generator =
-      Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   static {
     SEQ_ARRAY[0] = 1L;
@@ -2300,7 +2297,7 @@ public class SmallDenseDomain extends IntDomain {
   @Override
   public int getRandomValue() {
 
-    int number = generator.nextInt(size);
+    int number = Store.getRandom().nextInt(size);
     int pos = 0;
     long temp = bits;
     while (number >= 0) {

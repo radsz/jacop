@@ -50,7 +50,7 @@ public class IndomainSetRandom<T extends SetVar> implements Indomain<T> {
 
   /** It creates random indomain heuristic with randomly generated seed for random generated. */
   public IndomainSetRandom() {
-    seed = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
+    seed = Store.getRandom();
   }
 
   /**

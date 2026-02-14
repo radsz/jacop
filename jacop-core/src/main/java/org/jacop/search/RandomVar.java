@@ -30,7 +30,6 @@
 
 package org.jacop.search;
 
-import java.util.Random;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -43,8 +42,6 @@ import org.jacop.core.Var;
  */
 public class RandomVar<T extends Var> implements ComparatorVariable<T> {
 
-  final Random generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
-
   /** It constructs RandomVar Comparator. */
   public RandomVar() {}
 
@@ -56,7 +53,7 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
    * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
   public int compare(double left, T v) {
-    double right = generator.nextFloat();
+    double right = Store.getRandom().nextFloat();
     return Double.compare(right, left);
   }
 
@@ -70,8 +67,8 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
    *     equal.
    */
   public int compare(T leftVar, T rightVar) {
-    double left = generator.nextFloat();
-    double right = generator.nextFloat();
+    double left = Store.getRandom().nextFloat();
+    double right = Store.getRandom().nextFloat();
     return Double.compare(right, left);
   }
 
@@ -82,6 +79,6 @@ public class RandomVar<T extends Var> implements ComparatorVariable<T> {
    * @return a random value between 0 and 1.
    */
   public double metric(T o) {
-    return generator.nextFloat();
+    return Store.getRandom().nextFloat();
   }
 }

@@ -35,7 +35,6 @@ import java.util.BitSet;
 import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -59,7 +58,6 @@ public class Subcircuit extends Alldiff {
   final Hashtable<Var, Integer> valueIndex = new Hashtable<>();
   final SophisticatedLengauerTarjan graphDominance;
   final int[] stack; // stack for strongly connected compoents algorithm
-  final Random random = new Random(0);
   boolean firstConsistencyCheck = true;
   boolean useScc = true;
   boolean useDominance = true;
@@ -353,8 +351,8 @@ public class Subcircuit extends Alldiff {
       }
     }
 
-    if (pr > 0 && !graphDominance(possibleRoots[random.nextInt(pr)])) {
-      reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
+    if (pr > 0 && !graphDominance(possibleRoots[Store.getRandom().nextInt(pr)])) {
+      reversedGraphDominance(possibleRoots[Store.getRandom().nextInt(pr)]);
     }
   }
 

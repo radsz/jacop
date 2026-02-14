@@ -31,7 +31,6 @@
 package org.jacop.core;
 
 import java.util.Iterator;
-import java.util.Random;
 import org.jacop.constraints.Constraint;
 
 /**
@@ -45,9 +44,6 @@ class BoundDomain extends IntDomain {
 
   /** It predefines empty domain so there is no need to constantly create it when needed. */
   public static final BoundDomain emptyDomain = new BoundDomain();
-
-  private static final Random generator =
-      Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /** The minimal value of the domain. */
   public int minBound;
@@ -1128,7 +1124,7 @@ class BoundDomain extends IntDomain {
   @Override
   public int getRandomValue() {
 
-    if (generator.nextInt(2) == 0) {
+    if (Store.getRandom().nextInt(2) == 0) {
       return min();
     } else {
       return max();

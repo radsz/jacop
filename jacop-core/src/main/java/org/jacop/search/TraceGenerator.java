@@ -47,6 +47,7 @@ import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Domain;
@@ -85,6 +86,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * values within domain and create required String. It should be more or less the same what
  * toString() of domain is doing.
  */
+@Slf4j
 public class TraceGenerator<T extends Var>
     implements SelectChoicePoint<T>, ConsistencyListener, ExitChildListener<T>, ExitListener {
 
@@ -523,7 +525,7 @@ public class TraceGenerator<T extends Var>
       hdVis.endDocument();
 
     } catch (SAXException e) {
-      e.printStackTrace();
+      log.error("Failed to close XML documents", e);
     }
   }
 
@@ -538,7 +540,7 @@ public class TraceGenerator<T extends Var>
           new OutputStreamWriter(
               new FileOutputStream(treeFilename), StandardCharsets.UTF_8.newEncoder());
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      log.error("Failed to open tree output file {}", treeFilename, e);
       printWriter = new OutputStreamWriter(System.out, StandardCharsets.UTF_8.newEncoder());
     }
 
@@ -576,8 +578,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "root");
 
     } catch (TransformerConfigurationException | SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to configure XML transformer for tree", e);
     }
   }
 
@@ -590,7 +591,7 @@ public class TraceGenerator<T extends Var>
           new OutputStreamWriter(
               new FileOutputStream(visFilename), StandardCharsets.UTF_8.newEncoder());
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      log.error("Failed to open visualization output file {}", visFilename, e);
       printWriter = new OutputStreamWriter(System.out, StandardCharsets.UTF_8.newEncoder());
     }
 
@@ -647,8 +648,7 @@ public class TraceGenerator<T extends Var>
       generateVisualizationNode(0, true);
 
     } catch (TransformerConfigurationException | SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to configure XML transformer for visualization", e);
     }
   }
 
@@ -697,8 +697,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "succ");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate success XML node", e);
     }
   }
 
@@ -714,8 +713,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "try");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate try XML node", e);
     }
   }
 
@@ -731,8 +729,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "fail");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate fail XML node", e);
     }
   }
 
@@ -761,8 +758,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "tryc");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate tryc XML node", e);
     }
   }
 
@@ -776,8 +772,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "tryc");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate tryc XML node", e);
     }
   }
 
@@ -797,8 +792,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "failc");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate failc XML node", e);
     }
   }
 
@@ -813,8 +807,7 @@ public class TraceGenerator<T extends Var>
       hdTree.endElement("", "", "failc");
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate failc XML node", e);
     }
   }
 
@@ -901,8 +894,7 @@ public class TraceGenerator<T extends Var>
       visualisationNodeId++;
 
     } catch (SAXException e) {
-      // TODO: Auto-generated catch block
-      e.printStackTrace();
+      log.error("Failed to generate visualization XML node", e);
     }
   }
 

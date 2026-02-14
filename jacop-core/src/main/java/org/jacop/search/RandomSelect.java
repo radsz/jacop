@@ -31,7 +31,6 @@
 package org.jacop.search;
 
 import java.util.Arrays;
-import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -45,8 +44,6 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class RandomSelect<T extends Var> extends AbstractSelect<T> {
-
-  final Random random = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   /**
    * The constructor to create a simple choice select mechanism.
@@ -86,7 +83,7 @@ public class RandomSelect<T extends Var> extends AbstractSelect<T> {
 
       int size = finalIndex - index;
 
-      int selectedIndex = index + random.nextInt(size);
+      int selectedIndex = index + Store.getRandom().nextInt(size);
       currentVariable = placeSearchVariable(index, selectedIndex);
 
     } while (currentVariable.singleton() && ++index < finalIndex);

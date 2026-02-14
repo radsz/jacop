@@ -30,12 +30,12 @@
 
 package org.jacop.examples.fd;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.In;
@@ -154,7 +154,8 @@ public class ConferenceTalkPlacement {
   private Map<Integer, Map<Integer, Integer>> randomCosts(
       int noOfTalks, int randomSeed, int maxSingleCost) {
 
-    Random seed = new Random(randomSeed);
+    SecureRandom seed = new SecureRandom();
+    seed.setSeed(randomSeed);
 
     Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
 

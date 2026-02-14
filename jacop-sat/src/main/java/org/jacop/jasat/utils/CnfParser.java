@@ -43,7 +43,7 @@ import org.jacop.jasat.utils.structures.IntVec;
  * @author Simon Cruanes and Radoslaw Szymanek
  * @version 5.0
  */
-public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
+public final class CnfParser implements Iterable<IntVec> {
 
   // stream from which to read values
   private final InputStream stream;
@@ -57,9 +57,6 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
 
   // next clause
   private IntVec nextClause;
-
-  // have we already given an iterator on clauses
-  private boolean hasGivenIterator;
 
   /**
    * Creates an instance of the parser for some input stream.
@@ -216,46 +213,25 @@ public final class CnfParser implements Iterable<IntVec>, Iterator<IntVec> {
     }
   }
 
-  /**
-   * Checks if there are more clauses to parse.
-   *
-   * @return true if more clauses are available
-   */
-  public boolean hasNext() {
-    return nextClause != null;
-  }
-
-  /**
-   * Returns the next clause and advances the parser.
-   *
-   * @return the next clause
-   */
-  public IntVec next() {
-    if (nextClause == null) {
-      throw new NoSuchElementException();
-    }
-
-    IntVec answer = nextClause;
-    // prepare next clause
-    parseNextClause();
-    return answer;
-  }
-
-  /** Removes the current clause (unsupported operation). */
-  public void remove() {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * Returns an iterator over parsed clauses. This parser is single-pass and does not support
-   * multiple traversals; calling this method a second time throws {@link IllegalStateException}.
-   */
+  /** {@inheritDoc} */
+  @Override
   public Iterator<IntVec> iterator() {
-    if (hasGivenIterator) {
-      throw new IllegalStateException("CnfParser supports only a single traversal");
-    }
-    hasGivenIterator = true;
-    return this;
+    return new Iterator<>() {
+      @Override
+      public boolean hasNext() {
+        return nextClause != null;
+      }
+
+      @Override
+      public IntVec next() {
+        if (nextClause == null) {
+          throw new NoSuchElementException();
+        }
+        IntVec answer = nextClause;
+        parseNextClause();
+        return answer;
+      }
+    };
   }
 
   /**

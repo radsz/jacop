@@ -32,7 +32,6 @@
 package org.jacop.jasat.core.clauses;
 
 import java.io.BufferedWriter;
-import java.util.Random;
 import org.jacop.core.Store;
 import org.jacop.jasat.utils.Utils;
 
@@ -52,11 +51,6 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
   private static final int DEFAULT_INITIAL_NUMBER_OF_CLAUSES = 100;
 
   private static final int SIZE_OF_CLAUSE_CACHE = 8;
-
-  /**
-   * Put it one place so there is only one Random generator for the whole SAT solver. TODO: Radek.
-   */
-  final Random generator = Store.seedPresent() ? new Random(Store.getSeed()) : new Random();
 
   // the index of the current empty slot.
   private int currentIndex;
@@ -165,7 +159,7 @@ public final class LongClausesDatabase extends AbstractClausesDatabase {
       // maybe watch replacement can be find in main clause array.
       // replace cache with new potential watches later on.
       int[] clause = clauses[clauseIndex];
-      int startingPosition = generator.nextInt(clause.length - 1);
+      int startingPosition = Store.getRandom().nextInt(clause.length - 1);
       int currentPosition = startingPosition + 1;
       int right = cache.length - 1;
 
