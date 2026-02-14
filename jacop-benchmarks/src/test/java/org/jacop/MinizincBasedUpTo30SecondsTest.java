@@ -1,5 +1,5 @@
 /*
- * MizincBasedChosen.java
+ * MinizincBasedUpTo30SecondsTest.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -32,21 +32,23 @@ package org.jacop;
 
 import java.io.IOException;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Minizinc based tests for problems that run chosen minizinc based problems as specified by the
- * problem listing in minizincbasedchosen directory.
+ * Minizinc based tests for problems that run upTo30seconds and do not belong to other shorter time
+ * category.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
-class MizincBasedChosen extends MinizincBasedTestsHelper {
+class MinizincBasedUpTo30SecondsTest extends MinizincBasedTestsHelper {
 
-  protected static final String TIME_CATEGORY = "mizincbasedchosen/";
+  protected static final String TIME_CATEGORY =
+      "upTo30sec/"; // The test will be completed within 1.6 minutes
 
-  public MizincBasedChosen() {
+  public MinizincBasedUpTo30SecondsTest() {
     super(TIME_CATEGORY);
   }
 
@@ -56,8 +58,9 @@ class MizincBasedChosen extends MinizincBasedTestsHelper {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
+  @Timeout(100)
   void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
-    testExecution("/");
+    testExecution(TIME_CATEGORY);
   }
 }

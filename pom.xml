@@ -189,16 +189,16 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-                                <include>**/MinizincBasedTestUpTo10Minutes.java</include>
-                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>
+                                <include>**/MinizincBasedUpTo10MinutesTest.java</include>
+                                <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -220,16 +220,16 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo10MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -251,16 +251,16 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo1Minutes.java</include>
-                                <include>**/MinizincBasedTestUpTo5Minutes.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo30SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo1MinutesTest.java</include>
+                                <include>**/MinizincBasedUpTo5MinutesTest.java</include>
                             </includes>
                             <excludes>
-                                <exclude>**/MinizincBasedTestUpTo10Minutes.java</exclude>
-                                <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <exclude>**/MinizincBasedUpTo10MinutesTest.java</exclude>
+                                <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -282,16 +282,16 @@ setup to run configuration. -->
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
-                                <include>**/MinizincBasedTestUpTo5Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo30Seconds.java</include>
-                                <include>**/MinizincBasedTestUpTo1Minutes.java</include>
-                                <include>**/MinizincBasedTestUpTo5Minutes.java</include>
-                                <include>**/MinizincBasedTestUpTo10Minutes.java</include>
+                                <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo30SecondsTest.java</include>
+                                <include>**/MinizincBasedUpTo1MinutesTest.java</include>
+                                <include>**/MinizincBasedUpTo5MinutesTest.java</include>
+                                <include>**/MinizincBasedUpTo10MinutesTest.java</include>
                             </includes>
                             <excludes>
-                                <include>**/MinizincBasedTestUpTo1Hours.java</include>
-                                <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                                <exclude>**/MinizincBasedChosen.java</exclude>
+                                <include>**/MinizincBasedUpTo1HoursTest.java</include>
+                                <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                                <exclude>**/MizincBasedChosenTest.java</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -694,14 +694,14 @@ setup to run configuration. -->
                         <include>**/SingleConstraintTest.java</include>
                     </includes>
                     <excludes>
-                        <exclude>**/MinizincBasedTestUpTo5Seconds.java</exclude>
-                        <exclude>**/MinizincBasedTestUpTo30Seconds.java</exclude>
-                        <exclude>**/MinizincBasedTestUpTo1Minutes.java</exclude>
-                        <exclude>**/MinizincBasedTestUpTo5Minutes.java</exclude>
-                        <include>**/MinizincBasedTestUpTo10Minutes.java</include>
-                        <exclude>**/MinizincBasedTestUpTo1Hours.java</exclude>
-                        <exclude>**/MinizincBasedTestAbove1Hours.java</exclude>
-                        <exclude>**/MinizincBasedChosen.java</exclude>
+                        <exclude>**/MinizincBasedUpTo5SecondsTest.java</exclude>
+                        <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
+                        <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
+                        <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>
+                        <include>**/MinizincBasedUpTo10MinutesTest.java</include>
+                        <exclude>**/MinizincBasedUpTo1HoursTest.java</exclude>
+                        <exclude>**/MinizincBasedAbove1HoursTest.java</exclude>
+                        <exclude>**/MizincBasedChosenTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

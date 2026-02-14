@@ -71,6 +71,7 @@ public class ConferenceTalkPlacement {
   List<IntVar> vars;
   IntVar[][] varsMatrix;
   DepthFirstSearch<IntVar> searchLabel;
+  SecureRandom random = new SecureRandom();
 
   /**
    * It executes the program to solve this Travelling Salesman Problem.
@@ -154,8 +155,7 @@ public class ConferenceTalkPlacement {
   private Map<Integer, Map<Integer, Integer>> randomCosts(
       int noOfTalks, int randomSeed, int maxSingleCost) {
 
-    SecureRandom seed = new SecureRandom();
-    seed.setSeed(randomSeed);
+    random.setSeed(randomSeed);
 
     Map<Integer, Map<Integer, Integer>> result = new HashMap<>();
 
@@ -165,7 +165,7 @@ public class ConferenceTalkPlacement {
 
     for (int i = 0; i < noOfTalks; i++) {
       for (int j = i + 1; j < noOfTalks; j++) {
-        result.get(i).put(j, seed.nextInt(maxSingleCost));
+        result.get(i).put(j, random.nextInt(maxSingleCost));
       }
     }
 

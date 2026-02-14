@@ -1,5 +1,5 @@
 /*
- * MinizincBasedTestUpTo5Minutes.java
+ * MinizincBasedUpTo5MinutesTest.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -43,10 +43,10 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
-class MinizincBasedTestUpTo5Minutes extends MinizincBasedTestsHelper {
+class MinizincBasedUpTo5MinutesTest extends MinizincBasedTestsHelper {
   protected static final String TIME_CATEGORY = "upTo5min/";
 
-  public MinizincBasedTestUpTo5Minutes() {
+  public MinizincBasedUpTo5MinutesTest() {
     super(TIME_CATEGORY);
   }
 

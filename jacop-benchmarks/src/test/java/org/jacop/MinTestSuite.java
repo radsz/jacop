@@ -40,5 +40,5 @@ import org.junit.platform.suite.api.Suite;
  * @version 5.0
  */
 @Suite
-@SelectClasses({MinizincBasedTestUpTo5Seconds.class})
+@SelectClasses({MinizincBasedUpTo5SecondsTest.class})
 public class MinTestSuite {}

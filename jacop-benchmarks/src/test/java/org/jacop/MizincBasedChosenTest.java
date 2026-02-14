@@ -1,5 +1,5 @@
 /*
- * MinizincBasedTestAbove1Hours.java
+ * MizincBasedChosenTest.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -36,16 +36,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Test class for running problems above 1hour. It is not really used except to see if some problems
- * are now being executed faster.
+ * Minizinc based tests for problems that run chosen minizinc based problems as specified by the
+ * problem listing in minizincbasedchosen directory.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
-class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
-  protected static final String TIME_CATEGORY = "above1hour/";
+class MizincBasedChosenTest extends MinizincBasedTestsHelper {
 
-  public MinizincBasedTestAbove1Hours() {
+  protected static final String TIME_CATEGORY = "mizincbasedchosen/";
+
+  public MizincBasedChosenTest() {
     super(TIME_CATEGORY);
   }
 
@@ -57,6 +58,6 @@ class MinizincBasedTestAbove1Hours extends MinizincBasedTestsHelper {
   @MethodSource("parametricTest")
   void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
-    testExecution(TIME_CATEGORY);
+    testExecution("/");
   }
 }

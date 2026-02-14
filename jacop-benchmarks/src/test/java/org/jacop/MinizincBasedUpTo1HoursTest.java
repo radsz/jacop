@@ -1,5 +1,5 @@
 /*
- * MinizincBasedTestUpTo5Seconds.java
+ * MinizincBasedUpTo1HoursTest.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -37,15 +37,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Minizinc based tests for problems that run upTo5seconds.
+ * Minizinc based tests for problems that run upTo1hour and do not belong to other shorter time
+ * category.
  *
  * @author Mariusz Świerkot and Radoslaw Szymanek
  * @version 5.0
  */
-class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper {
-  protected static final String TIME_CATEGORY = "upTo5sec/";
+class MinizincBasedUpTo1HoursTest extends MinizincBasedTestsHelper {
+  protected static final String TIME_CATEGORY = "upTo1hour/";
 
-  public MinizincBasedTestUpTo5Seconds() {
+  public MinizincBasedUpTo1HoursTest() {
     super(TIME_CATEGORY);
   }
 
@@ -55,7 +56,7 @@ class MinizincBasedTestUpTo5Seconds extends MinizincBasedTestsHelper {
 
   @ParameterizedTest
   @MethodSource("parametricTest")
-  @Timeout(20) // The test will be completed within 20 seconds
+  @Timeout(5400) // The test will be completed within 90 minutes
   void testMinizinc(String testFilename) throws IOException {
     this.testFilename = testFilename;
     testExecution(TIME_CATEGORY);
