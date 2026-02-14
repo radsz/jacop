@@ -114,10 +114,10 @@ public abstract class DecomposedConstraint<T extends Constraint> {
   /**
    * Returns auxiliary variables created during constraint decomposition.
    *
-   * @return null if no auxiliary variables were created, otherwise a list with variables.
+   * @return empty list if no auxiliary variables were created, otherwise a list with variables.
    */
   public List<Var> auxiliaryVariables() {
-    return null;
+    return Collections.emptyList();
   }
 
   /**

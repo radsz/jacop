@@ -483,12 +483,7 @@ public class Disjoint extends Diff {
         rectNumber = Long.MAX_VALUE;
       }
 
-      if (availArea < area) {
-        throw Store.failException;
-      } else
-      // check whether there is enough room for
-      // all minimal rectangles
-      if (rectNumber < (totalNumberOfRectangles + 1)) {
+      if (availArea < area || rectNumber < (totalNumberOfRectangles + 1)) {
         throw Store.failException;
       }
     }

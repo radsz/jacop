@@ -471,12 +471,7 @@ public class Diff extends Constraint implements UsesQueueVariable, Stateful, Sat
         }
       }
 
-      if (availArea < area) {
-        throw Store.failException;
-      } else
-      // check whether there is enough room for
-      // all minimal rectangles
-      if (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1)) {
+      if (availArea < area || (checkRectNumber && rectNumber < (totalNumberOfRectangles + 1))) {
         throw Store.failException;
       }
     }

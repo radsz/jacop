@@ -507,9 +507,7 @@ public class DisjointConditional extends Diff {
       }
 
       if (overlap) {
-        if (s.condition() == null) {
-          overlappingRects.add(s);
-        } else if (s.condition().max() != 0) {
+        if (s.condition() == null || s.condition().max() != 0) {
           overlappingRects.add(s);
         }
 
@@ -581,9 +579,7 @@ public class DisjointConditional extends Diff {
         rectNumber = Long.MAX_VALUE;
       }
 
-      if (availArea < area) {
-        throw Store.failException;
-      } else if (rectNumber < (totalNumberOfRectangles + 1)) {
+      if (availArea < area || rectNumber < (totalNumberOfRectangles + 1)) {
         throw Store.failException;
       }
     }

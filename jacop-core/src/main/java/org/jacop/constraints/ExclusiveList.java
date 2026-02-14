@@ -66,9 +66,7 @@ class ExclusiveList extends ArrayList<ExclusiveItem> {
     List<IntVar> list = new ArrayList<>();
     for (int i = 0; i < size(); i++) {
       ExclusiveItem v = get(i);
-      if (index == v.i1() && !v.cond().singleton()) {
-        list.add(v.cond());
-      } else if (index == v.i2() && !v.cond().singleton()) {
+      if ((index == v.i1() || index == v.i2()) && !v.cond().singleton()) {
         list.add(v.cond());
       }
     }

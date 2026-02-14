@@ -54,10 +54,13 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
    */
   public OrBool(IntVar[] a, IntVar result) {
 
-    IntVar[] r = filter(a);
+    int[] shortCircuit = {-1};
+    IntVar[] r = filter(a, shortCircuit);
 
-    if (r == null) {
+    if (shortCircuit[0] == 1) {
       c = new XeqC(result, 1);
+    } else if (r.length == 0) {
+      c = new XeqC(result, 0);
     } else if (r.length == 1) {
       c = new XeqY(r[0], result);
     } else if (r.length == 2) {
@@ -108,11 +111,12 @@ public class OrBool extends DecomposedConstraint<PrimitiveConstraint> {
     return c.toString();
   }
 
-  IntVar[] filter(IntVar[] xs) {
+  IntVar[] filter(IntVar[] xs, int[] shortCircuit) {
     List<IntVar> result = new ArrayList<>();
     for (IntVar x : xs) {
       if (x.min() == 1) {
-        return null;
+        shortCircuit[0] = 1;
+        return new IntVar[0];
       } else if (x.max() != 0) {
         result.add(x);
       }
